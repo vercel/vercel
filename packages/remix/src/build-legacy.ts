@@ -110,6 +110,7 @@ export const build: BuildV2 = async ({
     packageJson,
     lockfileVersion,
     lockfilePath,
+    turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
   if (!packageJsonPath) {
@@ -133,6 +134,7 @@ export const build: BuildV2 = async ({
     packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env,
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {

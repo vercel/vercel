@@ -807,6 +807,35 @@ it('should detect package.json in nested frontend', async () => {
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
+it('should detect turborepo project supporting corepack', async () => {
+  const base = path.join(
+    __dirname,
+    'fixtures',
+    '41-turborepo-supporting-corepack-home'
+  );
+  const fixture = path.join(base, '/apps/web');
+  const result = await scanParentDirs(fixture, true, base);
+  expect(result.turboSupportsCorepackHome).toEqual(true);
+});
+
+it('should detect turborepo project not supporting corepack', async () => {
+  const base = path.join(
+    __dirname,
+    'fixtures',
+    '42-turborepo-not-supporting-corepack-home'
+  );
+  const fixture = path.join(base, '/apps/web');
+  const result = await scanParentDirs(fixture, true, base);
+  expect(result.turboSupportsCorepackHome).toEqual(false);
+});
+
+it('should detect non-turborepo monorepo', async () => {
+  const base = path.join(__dirname, 'fixtures', '23-pnpm-workspaces');
+  const fixture = path.join(base, '/c');
+  const result = await scanParentDirs(fixture, true, base);
+  expect(result.turboSupportsCorepackHome).toEqual(undefined);
+});
+
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {
   const nodeMajor = Number(process.versions.node.split('.')[0]);
   if (nodeMajor !== 16) {
