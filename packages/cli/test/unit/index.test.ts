@@ -2,12 +2,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
-import { TelemetryBaseClient } from '../../src/util/telemetry/base';
+import { RootTelemetryClient } from '../../src/util/telemetry/root';
 
 describe('main', () => {
   describe('telemetry', () => {
     describe('CI Vendor Name', () => {
-      let telemetry: TelemetryBaseClient;
+      let telemetry: RootTelemetryClient;
       let telemetryEventStore: TelemetryEventStore;
       beforeEach(() => {
         // stubbing so that when we run this in Github Actions these tests can work
@@ -20,15 +20,19 @@ describe('main', () => {
         telemetryEventStore = new TelemetryEventStore({
           isDebug: true,
           output,
+          config: {
+            enabled: true,
+          },
         });
 
-        telemetry = new TelemetryBaseClient({
+        telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
             output,
           },
         });
       });
+
       afterEach(() => {
         vi.unstubAllEnvs();
       });
@@ -354,7 +358,7 @@ describe('main', () => {
           ]);
         });
       });
-      undefined;
+
       describe('Magnum CI', () => {
         it('tracks when MAGNUM is present', () => {
           vi.stubEnv('MAGNUM', '1');
