@@ -11,11 +11,11 @@ let value: GetConfigurationResponseBodyIntegrationsResponseScopesQueue = {
       "read-write:domain",
     ],
     upgraded: [
-      "read-write:edge-config",
+      "read-write:otel-endpoint",
     ],
   },
   note: "<value>",
-  requestedAt: 3730.55,
+  requestedAt: 329.45,
 };
 ```
 

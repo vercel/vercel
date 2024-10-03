@@ -1,11 +1,18 @@
 # Teams
 
-## Example Usage
+
+## Supported Types
+
+### `components.Team`
 
 ```typescript
-import { Teams } from "@vercel/sdk/models/operations/getteams.js";
+const value: components.Team = {};
+```
 
-let value: Teams = {
+### `components.TeamLimited`
+
+```typescript
+const value: components.TeamLimited = {
   limited: false,
   saml: {
     connection: {
@@ -31,19 +38,5 @@ let value: Teams = {
   created: "<value>",
   createdAt: 1630748523395,
 };
-```
-
-## Supported Types
-
-### `components.Team`
-
-```typescript
-const value: components.Team = /* values here */
-```
-
-### `components.TeamLimited`
-
-```typescript
-const value: components.TeamLimited = /* values here */
 ```
 

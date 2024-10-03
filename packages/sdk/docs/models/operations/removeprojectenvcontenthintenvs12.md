@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHintEnvs12 } from "@vercel/sdk/models/operations
 
 let value: RemoveProjectEnvContentHintEnvs12 = {
   type: "postgres-database",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

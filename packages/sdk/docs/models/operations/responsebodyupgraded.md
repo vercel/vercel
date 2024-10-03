@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyUpgraded } from "@vercel/sdk/models/operations/getconfigurations.js";
 
-let value: ResponseBodyUpgraded = "read-write:project";
+let value: ResponseBodyUpgraded = "read:domain";
 ```
 
 ## Values

@@ -1,26 +1,19 @@
 # FilterProjectEnvsResponseBodyTarget
 
-## Example Usage
-
-```typescript
-import { FilterProjectEnvsResponseBodyTarget } from "@vercel/sdk/models/operations/filterprojectenvs.js";
-
-let value: FilterProjectEnvsResponseBodyTarget = [
-  "preview",
-];
-```
 
 ## Supported Types
 
 ### `operations.FilterProjectEnvsTarget1[]`
 
 ```typescript
-const value: operations.FilterProjectEnvsTarget1[] = /* values here */
+const value: operations.FilterProjectEnvsTarget1[] = [
+  "production",
+];
 ```
 
 ### `operations.FilterProjectEnvsTarget2`
 
 ```typescript
-const value: operations.FilterProjectEnvsTarget2 = /* values here */
+const value: operations.FilterProjectEnvsTarget2 = "production";
 ```
 

@@ -7,7 +7,7 @@ import { DeleteTeamRequest } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: DeleteTeamRequest = {
   newDefaultTeamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",
-  teamId: "<value>",
+  teamId: "<id>",
 };
 ```
 

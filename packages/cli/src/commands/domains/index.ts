@@ -12,6 +12,7 @@ import move from './move';
 import { domainsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -36,14 +37,20 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
+  const telemetry = new DomainsTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+      output,
+    },
+  });
 
   if (parsedArgs.flags['--help']) {
     output.print(help(domainsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { subcommand, args } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
@@ -59,6 +66,7 @@ export default async function main(client: Client) {
     case 'rm':
       return rm(client, parsedArgs.flags, args);
     case 'transferIn':
+      telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, parsedArgs.flags, args);
     default:
       return ls(client, parsedArgs.flags, args);

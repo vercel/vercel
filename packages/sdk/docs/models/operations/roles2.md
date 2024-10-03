@@ -6,7 +6,7 @@
 import { Roles2 } from "@vercel/sdk/models/operations/patchteam.js";
 
 let value: Roles2 = {
-  accessGroupId: "<value>",
+  accessGroupId: "<id>",
 };
 ```
 

@@ -5,7 +5,7 @@
 ```typescript
 import { Upgraded } from "@vercel/sdk/models/operations/getconfigurations.js";
 
-let value: Upgraded = "read-write:domain";
+let value: Upgraded = "read:team";
 ```
 
 ## Values

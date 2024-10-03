@@ -1,24 +1,17 @@
 # ResponseBodyAliasAssignedAt
 
-## Example Usage
-
-```typescript
-import { ResponseBodyAliasAssignedAt } from "@vercel/sdk/models/operations/getdeployment.js";
-
-let value: ResponseBodyAliasAssignedAt = false;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 180.96;
 ```
 
 ### `boolean`
 
 ```typescript
-const value: boolean = /* values here */
+const value: boolean = false;
 ```
 

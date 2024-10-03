@@ -141,7 +141,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.3.0
@@ -198,7 +198,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -322,7 +322,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
@@ -334,10 +334,10 @@ importers:
         specifier: 1.0.6
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.3.10
+        specifier: 4.3.11
         version: link:../next
       '@vercel/node':
-        specifier: 3.2.16
+        specifier: 3.2.17
         version: link:../node
       '@vercel/python':
         specifier: 4.3.1
@@ -352,7 +352,7 @@ importers:
         specifier: 2.1.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.5.26
+        specifier: 2.5.27
         version: link:../static-build
       chokidar:
         specifier: 3.3.1
@@ -460,9 +460,6 @@ importers:
       '@types/pluralize':
         specifier: 0.0.29
         version: 0.0.29
-      '@types/psl':
-        specifier: 1.1.0
-        version: 1.1.0
       '@types/qs':
         specifier: 6.9.7
         version: 6.9.7
@@ -497,10 +494,10 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 2.0.8
+        specifier: 2.0.9
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.4.8
+        specifier: 13.4.9
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -679,9 +676,6 @@ importers:
       proxy-agent:
         specifier: 6.3.0
         version: 6.3.0
-      psl:
-        specifier: 1.1.31
-        version: 1.1.31
       qr-image:
         specifier: 3.2.0
         version: 3.2.0
@@ -712,6 +706,9 @@ importers:
       title:
         specifier: 3.4.1
         version: 3.4.1
+      tldts:
+        specifier: 6.1.47
+        version: 6.1.47
       tmp-promise:
         specifier: 1.0.3
         version: 1.0.3
@@ -746,7 +743,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -754,9 +751,6 @@ importers:
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils
-      '@zeit/fetch':
-        specifier: 5.2.0
-        version: 5.2.0(@types/node-fetch@2.5.4)(node-fetch@2.6.7)
       async-retry:
         specifier: 1.2.3
         version: 1.2.3
@@ -980,7 +974,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1035,7 +1029,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1102,7 +1096,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1151,7 +1145,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1212,7 +1206,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1299,7 +1293,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -1429,7 +1423,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       execa:
         specifier: ^1.0.0
@@ -1472,7 +1466,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1512,7 +1506,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1565,7 +1559,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1616,7 +1610,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.48
+        specifier: 2.0.49
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1653,7 +1647,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 8.4.4
+        specifier: 8.4.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.2
@@ -5664,6 +5658,7 @@ packages:
 
   /@types/async-retry@1.2.1:
     resolution: {integrity: sha512-yMQ6CVgICWtyFNBqJT3zqOc+TnqqEPLo4nKJNPFwcialiylil38Ie6q1ENeFTjvaLOkVim9K5LisHgAKJWidGQ==}
+    dev: true
 
   /@types/async-retry@1.4.5:
     resolution: {integrity: sha512-YrdjSD+yQv7h6d5Ip+PMxh3H6ZxKyQk0Ts+PvaNRInxneG9PFVZjFg77ILAN+N6qYf7g4giSJ1l+ZjQ1zeegvA==}
@@ -5749,7 +5744,7 @@ packages:
   /@types/connect@3.4.35:
     resolution: {integrity: sha512-cdeYyv4KWoEgpBISTxWvqYsVy444DOqehiF3fM3ne10AmJ62RSyNkUnxMJXHQWRQQX2eR94m5y1IZyDwBjV9FQ==}
     dependencies:
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
     dev: true
 
   /@types/content-type@1.1.5:
@@ -6039,10 +6034,6 @@ packages:
     resolution: {integrity: sha512-NrH6jPlV77QCVPhAHofWeiOr77TgpKt82c2RVxSBChWBJqyY/u4ngl3CA4mcsAg/w7rNLrkR7dkObMV0ihLLXw==}
     dev: true
 
-  /@types/lru-cache@4.1.1:
-    resolution: {integrity: sha512-8mNEUG6diOrI6pMqOHrHPDBB1JsrpedeMK9AWGzVCQ7StRRribiT9BRvUmF8aUws9iBbVlgVekOT5Sgzc1MTKw==}
-    dev: false
-
   /@types/mdast@3.0.15:
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
     dependencies:
@@ -6090,7 +6081,7 @@ packages:
   /@types/mute-stream@0.0.4:
     resolution: {integrity: sha512-CPM9nzrCPPJHQNA9keH9CVkVI+WR5kMa+7XEs5jcGQ0VoAGnLv242w8lIVgwAEfmE4oufJRaTc9PNLQl0ioAow==}
     dependencies:
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
     dev: true
 
   /@types/next-server@8.0.0:
@@ -6112,6 +6103,7 @@ packages:
     resolution: {integrity: sha512-Oz6id++2qAOFuOlE1j0ouk1dzl3mmI1+qINPNBhi9nt/gVOz0G+13Ao6qjhdF0Ys+eOkhu6JnFmt38bR3H0POQ==}
     dependencies:
       '@types/node': 22.5.0
+    dev: true
 
   /@types/node-fetch@2.5.8:
     resolution: {integrity: sha512-fbjI6ja0N5ZA8TV53RUqzsKNkl9fv8Oj3T7zxW7FGv1GSH7gwJaNF8dzCjrqKaxKeUpTz4yT1DaJFq/omNpGfw==}
@@ -6126,10 +6118,6 @@ packages:
       '@types/node': 22.5.0
       form-data: 3.0.1
     dev: true
-
-  /@types/node@10.12.18:
-    resolution: {integrity: sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==}
-    dev: false
 
   /@types/node@12.20.55:
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
@@ -6159,6 +6147,7 @@ packages:
     resolution: {integrity: sha512-DkFrJOe+rfdHTqqMg0bSNlGlQ85hSoh2TPzZyhHsXnMtligRWpxUySiyw8FY14ITt24HVCiQPWxS3KO/QlGmWg==}
     dependencies:
       undici-types: 6.19.8
+    dev: true
 
   /@types/normalize-package-data@2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
@@ -6182,10 +6171,6 @@ packages:
 
   /@types/prop-types@15.7.5:
     resolution: {integrity: sha512-JCB8C6SnDoQf0cNycqd/35A7MjcnK+ZTqE7judS6o7utxUCg6imJg3QK2qzHKszlTjcj2cn+NwMB2i96ubpj7w==}
-    dev: true
-
-  /@types/psl@1.1.0:
-    resolution: {integrity: sha512-HhZnoLAvI2koev3czVPzBNRYvdrzJGLjQbWZhqFmS9Q6a0yumc5qtfSahBGb5g+6qWvA8iiQktqGkwoIXa/BNQ==}
     dev: true
 
   /@types/qs@6.9.7:
@@ -6331,7 +6316,7 @@ packages:
   /@types/webpack@4.41.33:
     resolution: {integrity: sha512-PPajH64Ft2vWevkerISMtnZ8rTs4YmRbs+23c402J0INmxDKCrhZNvwZYtzx96gY2wAtXdrK1BS2fiC8MlLr3g==}
     dependencies:
-      '@types/node': 18.19.3
+      '@types/node': 22.5.0
       '@types/tapable': 1.0.8
       '@types/uglify-js': 3.17.1
       '@types/webpack-sources': 3.2.0
@@ -7504,54 +7489,6 @@ packages:
     resolution: {integrity: sha512-BEO6al7BYqcnfX15W2cnGR+Q566ACXAT9UQykORCWW80lmkpWsnEob6zJS1ZVBKsSJC8+7vJkHwlp+lXG1UCdw==}
     dev: true
 
-  /@zeit/dns-cached-resolve@2.1.0:
-    resolution: {integrity: sha512-KD2zyRZEBNs9PJ3/ob7zx0CvR4wM0oV4G5s5gFfPwmM74GpFbUN2pAAivP2AXnUrJ14Nkh8NumNKOzOyc4LbFQ==}
-    dependencies:
-      '@types/async-retry': 1.2.1
-      '@types/lru-cache': 4.1.1
-      '@types/node': 10.12.18
-      async-retry: 1.2.3
-      lru-cache: 5.1.1
-    dev: false
-
-  /@zeit/fetch-cached-dns@1.2.0(node-fetch@2.6.7):
-    resolution: {integrity: sha512-fEKOrDQJy3CewywYVwe2mHsv3H1rITmkfB68h2TiVOz6QWWuXU0C5xBIFG9Ov59sioEQdlk5829PXwJYyx6X0A==}
-    peerDependencies:
-      node-fetch: '*'
-    dependencies:
-      '@zeit/dns-cached-resolve': 2.1.0
-      node-fetch: 2.6.7
-    dev: false
-
-  /@zeit/fetch-retry@4.1.0(node-fetch@2.6.7):
-    resolution: {integrity: sha512-2/vtTzIs3/Bp5tNOmCpICCRooa+v0wL4e+3Afl4etyqZrjOmCMfKshWPSHTxLe20qfsn010qXy/hK6yqD4t0zg==}
-    peerDependencies:
-      node-fetch: '*'
-    dependencies:
-      async-retry: 1.3.3
-      debug: 3.1.0
-      node-fetch: 2.6.7
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
-  /@zeit/fetch@5.2.0(@types/node-fetch@2.5.4)(node-fetch@2.6.7):
-    resolution: {integrity: sha512-S4TFaT210j/lgzHjaxN2SiaMxXGeoB4hghNlhlvSqwTFSDNIqyJIDKFZQy+r3NKJOQU+RB5yGKJt8LS1pPHUrw==}
-    peerDependencies:
-      '@types/node-fetch': '2'
-      node-fetch: '2'
-    dependencies:
-      '@types/async-retry': 1.2.1
-      '@types/node-fetch': 2.5.4
-      '@zeit/fetch-cached-dns': 1.2.0(node-fetch@2.6.7)
-      '@zeit/fetch-retry': 4.1.0(node-fetch@2.6.7)
-      agentkeepalive: 3.4.1
-      debug: 3.1.0
-      node-fetch: 2.6.7
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
   /@zxing/text-encoding@0.9.0:
     resolution: {integrity: sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==}
     requiresBuild: true
@@ -7634,13 +7571,6 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
-
-  /agentkeepalive@3.4.1:
-    resolution: {integrity: sha512-MPIwsZU9PP9kOrZpyu2042kYA8Fdt/AedQYkYXucHgF9QoD9dXVp0ypuGnHXSR0hTstBxdt85Xkh4JolYfK5wg==}
-    engines: {node: '>= 4.0.0'}
-    dependencies:
-      humanize-ms: 1.2.1
-    dev: false
 
   /aggregate-error@3.0.1:
     resolution: {integrity: sha512-quoaXsZ9/BLNae5yiNoUz+Nhkwz83GhWwtYFglcjEQB2NDHCIpApbqXxIFnm4Pq/Nvhrsq5sYJFyohrrxnTGAA==}
@@ -8021,6 +7951,7 @@ packages:
     resolution: {integrity: sha512-wfr/jstw9xNi/0teMHrRW7dsz3Lt5ARhYNZ2ewpadnhaIp5mbALhOAP+EAdsC7t4Z6wqsDVv9+W6gm1Dk9mEyw==}
     dependencies:
       retry: 0.13.1
+    dev: true
 
   /async-sema@2.1.4:
     resolution: {integrity: sha512-NKdMgXT9RfmkscybzytzK/6uGF4cL8Mt3PSeO9QHXYKs3oFWkUwIepnAkzLWkqttOdDDFoED3c8kriS8RzP+ow==}
@@ -9080,6 +9011,7 @@ packages:
         optional: true
     dependencies:
       ms: 2.0.0
+    dev: true
 
   /debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -12116,12 +12048,6 @@ packages:
     engines: {node: '>=16.17.0'}
     dev: true
 
-  /humanize-ms@1.2.1:
-    resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
-    dependencies:
-      ms: 2.1.2
-    dev: false
-
   /husky@7.0.4:
     resolution: {integrity: sha512-vbaCKN2QLtP/vD4yvs6iz6hBEo6wkSzs8HpRah1Z6aGmF2KW5PdYuAd7uX5a+OyBZHBhd+TFLqgjUgytQr4RvQ==}
     engines: {node: '>=12'}
@@ -13785,6 +13711,7 @@ packages:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
     dependencies:
       yallist: 3.1.1
+    dev: true
 
   /lru-cache@6.0.0:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
@@ -14531,6 +14458,7 @@ packages:
 
   /ms@2.0.0:
     resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
+    dev: true
 
   /ms@2.1.1:
     resolution: {integrity: sha512-tgp+dl5cGk28utYktBsrFqA7HKgrhgPsg6Z/EfhWI4gl1Hwq8B/GmY/0oXZ6nF8hDVesS/FpnYaD/kOWhYQvyg==}
@@ -15772,10 +15700,6 @@ packages:
     resolution: {integrity: sha512-b/YwNhb8lk1Zz2+bXXpS/LK9OisiZZ1SNsSLxN1x2OXVEhW2Ckr/7mWE5vrC1ZTiJlD9g19jWszTmJsB+oEpFQ==}
     dev: true
 
-  /psl@1.1.31:
-    resolution: {integrity: sha512-/6pt4+C+T+wZUieKR620OpzN/LlnNKuWjy1iFLQ/UG35JqHlR/89MP1d96dUfkf6Dne3TuLQzOYEYshJ+Hx8mw==}
-    dev: true
-
   /pump@1.0.3:
     resolution: {integrity: sha512-8k0JupWme55+9tCVE+FS5ULT3K6AbgqrGa58lTT49RpyfwwcGedHqaC5LlQNdEAumn/wFsu6aPwkuPMioy8kqw==}
     dependencies:
@@ -16238,6 +16162,7 @@ packages:
   /retry@0.13.1:
     resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
     engines: {node: '>= 4'}
+    dev: true
 
   /reusify@1.0.4:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
@@ -17322,6 +17247,17 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /tldts-core@6.1.47:
+    resolution: {integrity: sha512-6SWyFMnlst1fEt7GQVAAu16EGgFK0cLouH/2Mk6Ftlwhv3Ol40L0dlpGMcnnNiiOMyD2EV/aF3S+U2nKvvLvrA==}
+    dev: true
+
+  /tldts@6.1.47:
+    resolution: {integrity: sha512-R/K2tZ5MiY+mVrnSkNJkwqYT2vUv1lcT6wJvd2emGaMJ7PHUGRY4e3tUsdFCXgqxi2QgbHjL3yJgXCo40v9Hxw==}
+    hasBin: true
+    dependencies:
+      tldts-core: 6.1.47
+    dev: true
+
   /tmp-promise@1.0.3:
     resolution: {integrity: sha512-jXOAjsm29lsfg3Wanosgh7AJzO+NQ8FF1iQANLTBXtsVM3vD+EoPrA96xKt2ArV3wFh5kuwcP1cg9LANtRXCZw==}
     dependencies:
@@ -17923,6 +17859,7 @@ packages:
 
   /undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
+    dev: true
 
   /undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}

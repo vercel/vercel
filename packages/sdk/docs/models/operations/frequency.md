@@ -6,8 +6,8 @@
 import { Frequency } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: Frequency = {
-  interval: "week",
-  intervalCount: 633.69,
+  interval: "year",
+  intervalCount: 6444.16,
 };
 ```
 

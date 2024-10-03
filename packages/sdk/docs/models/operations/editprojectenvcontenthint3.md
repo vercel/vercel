@@ -7,7 +7,7 @@ import { EditProjectEnvContentHint3 } from "@vercel/sdk/models/operations/editpr
 
 let value: EditProjectEnvContentHint3 = {
   type: "redis-rest-api-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

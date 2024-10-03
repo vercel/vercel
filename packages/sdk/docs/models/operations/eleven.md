@@ -7,7 +7,7 @@ import { Eleven } from "@vercel/sdk/models/operations/updateprojectdatacache.js"
 
 let value: Eleven = {
   type: "postgres-password",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

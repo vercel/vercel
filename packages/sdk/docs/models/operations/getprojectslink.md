@@ -1,39 +1,50 @@
 # GetProjectsLink
 
-## Example Usage
-
-```typescript
-import { GetProjectsLink } from "@vercel/sdk/models/operations/getprojects.js";
-
-let value: GetProjectsLink = {
-  deployHooks: [
-    {
-      id: "<id>",
-      name: "<value>",
-      ref: "<value>",
-      url: "https://troubled-illusion.biz",
-    },
-  ],
-};
-```
 
 ## Supported Types
 
 ### `operations.GetProjectsLink1`
 
 ```typescript
-const value: operations.GetProjectsLink1 = /* values here */
+const value: operations.GetProjectsLink1 = {
+  deployHooks: [
+    {
+      id: "<id>",
+      name: "<value>",
+      ref: "<value>",
+      url: "https://buzzing-underneath.org",
+    },
+  ],
+};
 ```
 
 ### `operations.GetProjectsLink2`
 
 ```typescript
-const value: operations.GetProjectsLink2 = /* values here */
+const value: operations.GetProjectsLink2 = {
+  deployHooks: [
+    {
+      id: "<id>",
+      name: "<value>",
+      ref: "<value>",
+      url: "https://good-department.name/",
+    },
+  ],
+};
 ```
 
 ### `operations.GetProjectsLink3`
 
 ```typescript
-const value: operations.GetProjectsLink3 = /* values here */
+const value: operations.GetProjectsLink3 = {
+  deployHooks: [
+    {
+      id: "<id>",
+      name: "<value>",
+      ref: "<value>",
+      url: "https://aggravating-horde.com/",
+    },
+  ],
+};
 ```
 

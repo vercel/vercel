@@ -1,24 +1,19 @@
 # GetProjectsOidcTokenClaims
 
-## Example Usage
-
-```typescript
-import { GetProjectsOidcTokenClaims } from "@vercel/sdk/models/operations/getprojects.js";
-
-let value: GetProjectsOidcTokenClaims = "<value>";
-```
 
 ## Supported Types
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 
 ### `string[]`
 
 ```typescript
-const value: string[] = /* values here */
+const value: string[] = [
+  "<value>",
+];
 ```
 

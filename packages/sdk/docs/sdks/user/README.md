@@ -25,9 +25,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.user.getAuthUser();
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -57,7 +57,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -97,9 +97,9 @@ const vercel = new Vercel({
 
 async function run() {
   const result = await vercel.user.requestDelete();
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -129,7 +129,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

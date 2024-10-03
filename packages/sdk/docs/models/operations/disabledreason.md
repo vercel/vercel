@@ -5,7 +5,7 @@
 ```typescript
 import { DisabledReason } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
-let value: DisabledReason = "account-plan-downgrade";
+let value: DisabledReason = "feature-not-available";
 ```
 
 ## Values

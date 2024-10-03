@@ -7,7 +7,7 @@ import { ContentHint6 } from "@vercel/sdk/models/operations/updateprojectdatacac
 
 let value: ContentHint6 = {
   type: "postgres-url",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

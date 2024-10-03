@@ -5,7 +5,6 @@ export const defaultGlobalConfig: GlobalConfig = {
     'This is your Vercel config file. For more information see the global configuration documentation.',
   '// Docs':
     'https://vercel.com/docs/projects/project-configuration/global-configuration#config.json',
-  collectMetrics: true,
 };
 
 export const defaultAuthConfig: AuthConfig = {

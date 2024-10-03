@@ -7,7 +7,7 @@ import { AwsMarketplace } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: AwsMarketplace = {
   productCode: "<value>",
-  customerId: "<value>",
+  customerId: "<id>",
 };
 ```
 

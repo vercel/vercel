@@ -7,7 +7,7 @@ import { AuthUserBillingInvoiceItemsPreviewDeploymentSuffixFrequency } from "@ve
 
 let value: AuthUserBillingInvoiceItemsPreviewDeploymentSuffixFrequency = {
   interval: "month",
-  intervalCount: 105.86,
+  intervalCount: 1182.36,
 };
 ```
 

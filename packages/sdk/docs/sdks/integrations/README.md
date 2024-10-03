@@ -30,9 +30,9 @@ async function run() {
   const result = await vercel.integrations.getConfigurations({
     view: "account",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -64,7 +64,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -107,9 +107,9 @@ async function run() {
   const result = await vercel.integrations.getConfiguration({
     id: "icfg_cuwj0AdCdH3BwWT4LPijCC7t",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -141,7 +141,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -184,6 +184,8 @@ async function run() {
   await vercel.integrations.deleteConfiguration({
     id: "<id>",
   });
+
+
 }
 
 run();
@@ -257,9 +259,9 @@ async function run() {
   const result = await vercel.integrations.getGitNamespaces({
     host: "ghes-test.now.systems",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -291,7 +293,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -334,9 +336,9 @@ async function run() {
   const result = await vercel.integrations.searchRepos({
     host: "ghes-test.now.systems",
   });
-  
+
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();
@@ -368,7 +370,7 @@ async function run() {
   const { value: result } = res;
 
   // Handle the result
-  console.log(result)
+  console.log(result);
 }
 
 run();

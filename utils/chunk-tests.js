@@ -10,6 +10,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+      nodeVersions: ['16', '18', '20', '22'],
     },
   ],
   [
@@ -41,7 +42,7 @@ const runnersMap = new Map([
       max: 5,
       runners: ['ubuntu-latest'],
       testScript: 'test',
-      nodeVersion: '18',
+      nodeVersions: ['18'],
     },
   ],
   [
@@ -52,7 +53,7 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest'],
 
       testScript: 'test',
-      nodeVersion: '16',
+      nodeVersions: ['16'],
     },
   ],
   [
@@ -140,28 +141,36 @@ async function getChunkedTests() {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         const runnerOptions = getRunnerOptions(scriptName, packageName);
-        const { runners, min, max, testScript, nodeVersion } = runnerOptions;
+        const {
+          runners,
+          min,
+          max,
+          testScript,
+          nodeVersions = ['16'],
+        } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
-            return runners.map(runner => {
-              return {
-                runner,
-                packagePath,
-                packageName,
-                scriptName,
-                testScript,
-                nodeVersion,
-                testPaths: chunk.map(testFile =>
-                  path.relative(
-                    path.join(__dirname, '../', packagePath),
-                    testFile
-                  )
-                ),
-                chunkNumber: chunkNumber + 1,
-                allChunksLength: allChunks.length,
-              };
+            return nodeVersions.flatMap(nodeVersion => {
+              return runners.map(runner => {
+                return {
+                  runner,
+                  packagePath,
+                  packageName,
+                  scriptName,
+                  testScript,
+                  nodeVersion,
+                  testPaths: chunk.map(testFile =>
+                    path.relative(
+                      path.join(__dirname, '../', packagePath),
+                      testFile
+                    )
+                  ),
+                  chunkNumber: chunkNumber + 1,
+                  allChunksLength: allChunks.length,
+                };
+              });
             });
           }
         );

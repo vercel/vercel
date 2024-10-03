@@ -9,7 +9,7 @@ import { Builds } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
 
 let value: Builds = {
   id: "<id>",
-  deploymentId: "<value>",
+  deploymentId: "<id>",
   entrypoint: "<value>",
   readyState: "DEPLOYING",
   output: [

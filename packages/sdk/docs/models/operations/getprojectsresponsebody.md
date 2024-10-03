@@ -10,12 +10,12 @@ import { GetProjectsResponseBody } from "@vercel/sdk/models/operations/getprojec
 let value: GetProjectsResponseBody = {
   projects: [
     {
-      accountId: "<value>",
+      accountId: "<id>",
       crons: {
         enabledAt: 9221.11,
         disabledAt: 894.95,
         updatedAt: 4059.42,
-        deploymentId: "<value>",
+        deploymentId: "<id>",
         definitions: [
           {
             host: "vercel.com",
@@ -32,7 +32,7 @@ let value: GetProjectsResponseBody = {
           createdIn: "<value>",
           creator: {
             email: "Lily57@yahoo.com",
-            uid: "<value>",
+            uid: "<id>",
             username: "Margarett_Abernathy",
           },
           deploymentHostname: "<value>",
@@ -43,7 +43,7 @@ let value: GetProjectsResponseBody = {
           readyState: "BUILDING",
           type: "LAMBDAS",
           url: "https://stylish-language.info",
-          userId: "<value>",
+          userId: "<id>",
           previewCommentsEnabled: false,
         },
       ],
@@ -55,7 +55,7 @@ let value: GetProjectsResponseBody = {
           createdIn: "<value>",
           creator: {
             email: "Josie.Borer@yahoo.com",
-            uid: "<value>",
+            uid: "<id>",
             username: "Sherman_Collier",
           },
           deploymentHostname: "<value>",
@@ -66,7 +66,7 @@ let value: GetProjectsResponseBody = {
           readyState: "QUEUED",
           type: "LAMBDAS",
           url: "https://svelte-video.org",
-          userId: "<value>",
+          userId: "<id>",
           previewCommentsEnabled: false,
         },
       },

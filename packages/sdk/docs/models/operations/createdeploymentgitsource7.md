@@ -9,7 +9,7 @@ let value: CreateDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 357.43,
+  repoId: 445.71,
 };
 ```
 

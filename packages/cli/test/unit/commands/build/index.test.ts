@@ -950,6 +950,7 @@ describe('build', () => {
         sizes: [256, 384, 600, 1000],
         domains: [],
         minimumCacheTTL: 60,
+        localPatterns: [{ search: '' }],
         formats: ['image/avif', 'image/webp'],
         contentDispositionType: 'attachment',
       },

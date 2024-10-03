@@ -7,7 +7,7 @@ import { FilterProjectEnvsContentHintEnvs9 } from "@vercel/sdk/models/operations
 
 let value: FilterProjectEnvsContentHintEnvs9 = {
   type: "postgres-user",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

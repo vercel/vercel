@@ -6,8 +6,8 @@
 import { Mitigate } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Mitigate = {
-  action: "bypass",
-  ruleId: "<value>",
+  action: "redirect",
+  ruleId: "<id>",
 };
 ```
 

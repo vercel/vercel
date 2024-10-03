@@ -162,7 +162,6 @@ export async function dnsListRecords(
     >
   > => {
     const nextCursor = dlv(responseData, "pagination.since");
-
     if (nextCursor == null) {
       return () => null;
     }

@@ -8,9 +8,9 @@ import { Coupon } from "@vercel/sdk/models/components/authuser.js";
 let value: Coupon = {
   id: "<id>",
   name: "<value>",
-  amountOff: 9246.23,
-  percentageOff: 9747.87,
-  durationInMonths: 4498.62,
+  amountOff: 6493.73,
+  percentageOff: 5006.92,
+  durationInMonths: 2835.58,
   duration: "forever",
 };
 ```

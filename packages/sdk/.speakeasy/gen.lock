@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 2b328f77-299a-476f-8aa9-59080c9107fe
 management:
-  docChecksum: a158405287b30de9a76985749d70eb87
+  docChecksum: 629c70d9c00d0e86180ca53e321f7c96
   docVersion: 0.0.1
-  speakeasyVersion: 1.402.0
-  generationVersion: 2.422.6
-  releaseVersion: 14.0.0-canary.1
-  configChecksum: e7dd850e9514bd8a0dae301d426f34e3
+  speakeasyVersion: 1.404.4
+  generationVersion: 2.426.2
+  releaseVersion: 14.0.0-canary.3
+  configChecksum: d6b31bd61ce8dcbd662865c959e9ae99
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk
@@ -16,13 +16,14 @@ features:
     acceptHeaders: 2.81.2
     additionalDependencies: 0.1.0
     constsAndDefaults: 0.1.11
-    core: 3.17.6
+    core: 3.18.0
     defaultEnabledRetries: 0.1.0
     deprecations: 2.81.1
     devContainers: 2.90.0
     downloadStreams: 0.1.1
     enumUnions: 0.1.0
     envVarSecurityUsage: 0.1.1
+    examples: 2.81.4
     globalSecurity: 2.82.11
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -30,7 +31,7 @@ features:
     groups: 2.81.2
     nameOverrides: 2.81.2
     nullables: 0.1.0
-    pagination: 2.82.6
+    pagination: 2.82.7
     responseFormat: 0.2.3
     retries: 2.83.0
     sdkHooks: 0.1.0
@@ -3047,7 +3048,7 @@ examples:
       responses:
         "200":
           application/json: []
-          application/stream+json: {"created": "3413.80", "date": "1121.90", "deploymentId": "<value>", "id": "<id>", "info": {"type": "<value>", "name": "<value>"}, "serial": "<value>", "type": "middleware-invocation"}
+          application/stream+json: {"created": "3413.80", "date": "1121.90", "deploymentId": "<id>", "id": "<id>", "info": {"type": "<value>", "name": "<value>"}, "serial": "<value>", "type": "middleware-invocation"}
   getDeployment:
     speakeasy-default-get-deployment:
       parameters:
@@ -3057,7 +3058,7 @@ examples:
           withGitRepoInfo: "true"
       responses:
         "200":
-          application/json: {"aliasAssigned": false, "bootedAt": "5442.21", "buildingAt": "5212.35", "buildSkipped": false, "creator": {"uid": "<value>"}, "public": true, "status": "ERROR", "id": "<id>", "type": "LAMBDAS", "createdAt": "2627.96", "name": "<value>", "readyState": "BUILDING", "meta": {"key": "<value>", "key1": "<value>", "key2": "<value>"}, "regions": ["<value>"], "url": "https://boiling-dash.biz", "version": "945.89"}
+          application/json: {"aliasAssigned": false, "bootedAt": "5442.21", "buildingAt": "5212.35", "buildSkipped": false, "creator": {"uid": "<id>"}, "public": true, "status": "ERROR", "id": "<id>", "type": "LAMBDAS", "createdAt": "2627.96", "name": "<value>", "readyState": "BUILDING", "meta": {"key": "<value>", "key1": "<value>", "key2": "<value>"}, "regions": ["<value>"], "url": "https://boiling-dash.biz", "version": "945.89"}
   createDeployment:
     speakeasy-default-create-deployment:
       requestBody:
@@ -3754,7 +3755,7 @@ examples:
     speakeasy-default-get-auth-user:
       responses:
         "200":
-          application/json: {"user": {"createdAt": 1630748523395, "softBlock": {"blockedAt": "7708.70", "reason": "UNPAID_INVOICE"}, "billing": {"period": {"start": "1278.66", "end": "2579.17"}, "plan": "pro"}, "stagingPrefix": "<value>", "hasTrialAvailable": false, "id": "AEIIDYVk59zbFF2Sxfyxxmua", "email": "me@example.com", "name": "John Doe", "username": "jdoe", "avatar": "22cb30c85ff45ac4c72de8981500006b28114aa1", "defaultTeamId": "<value>", "version": "northstar"}}
+          application/json: {"user": {"createdAt": 1630748523395, "softBlock": {"blockedAt": "7708.70", "reason": "UNPAID_INVOICE"}, "billing": {"period": {"start": "1278.66", "end": "2579.17"}, "plan": "pro"}, "stagingPrefix": "<value>", "hasTrialAvailable": false, "id": "AEIIDYVk59zbFF2Sxfyxxmua", "email": "me@example.com", "name": "John Doe", "username": "jdoe", "avatar": "22cb30c85ff45ac4c72de8981500006b28114aa1", "defaultTeamId": "<id>", "version": "northstar"}}
   requestDelete:
     speakeasy-default-request-delete:
       responses:

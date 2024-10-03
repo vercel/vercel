@@ -155,7 +155,6 @@ export async function domainsList(
     >
   > => {
     const nextCursor = dlv(responseData, "pagination.since");
-
     if (nextCursor == null) {
       return () => null;
     }

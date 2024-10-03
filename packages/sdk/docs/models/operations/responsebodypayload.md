@@ -6,9 +6,9 @@
 import { ResponseBodyPayload } from "@vercel/sdk/models/operations/getdeploymentevents.js";
 
 let value: ResponseBodyPayload = {
-  deploymentId: "<value>",
+  deploymentId: "<id>",
   id: "<id>",
-  date: 7275.44,
+  date: 8532.46,
   serial: "<value>",
 };
 ```

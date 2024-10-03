@@ -1,24 +1,17 @@
 # ProjectId
 
-## Example Usage
-
-```typescript
-import { ProjectId } from "@vercel/sdk/models/operations/createdeployment.js";
-
-let value: ProjectId = 9650.95;
-```
 
 ## Supported Types
 
 ### `number`
 
 ```typescript
-const value: number = /* values here */
+const value: number = 6605.36;
 ```
 
 ### `string`
 
 ```typescript
-const value: string = /* values here */
+const value: string = "<value>";
 ```
 

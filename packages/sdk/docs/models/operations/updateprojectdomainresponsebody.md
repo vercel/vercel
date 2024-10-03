@@ -10,7 +10,7 @@ import { UpdateProjectDomainResponseBody } from "@vercel/sdk/models/operations/u
 let value: UpdateProjectDomainResponseBody = {
   name: "<value>",
   apexName: "<value>",
-  projectId: "<value>",
+  projectId: "<id>",
   verified: false,
 };
 ```

@@ -11,7 +11,7 @@ let value: UpdateProjectLink2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://guilty-curl.com",
+      url: "https://stunning-follower.biz/",
     },
   ],
 };

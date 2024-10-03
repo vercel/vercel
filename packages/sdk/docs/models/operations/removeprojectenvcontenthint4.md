@@ -7,7 +7,7 @@ import { RemoveProjectEnvContentHint4 } from "@vercel/sdk/models/operations/remo
 
 let value: RemoveProjectEnvContentHint4 = {
   type: "redis-rest-api-read-only-token",
-  storeId: "<value>",
+  storeId: "<id>",
 };
 ```
 

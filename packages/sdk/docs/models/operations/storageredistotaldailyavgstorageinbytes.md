@@ -6,9 +6,9 @@
 import { StorageRedisTotalDailyAvgStorageInBytes } from "@vercel/sdk/models/operations/createteam.js";
 
 let value: StorageRedisTotalDailyAvgStorageInBytes = {
-  price: 352.20,
-  batch: 1806.61,
-  threshold: 3385.14,
+  price: 9669.56,
+  batch: 4144.38,
+  threshold: 3553.80,
   hidden: false,
 };
 ```
