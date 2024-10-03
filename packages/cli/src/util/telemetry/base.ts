@@ -11,6 +11,10 @@ export class TelemetryBaseClient extends TelemetryClient {
   trackCIVendorName() {
     this.trackCI(getContinuousIntegrationVendorName());
   }
+
+  trackVersion(version?: string) {
+    super.trackVersion(version);
+  }
 }
 
 interface Vendor {

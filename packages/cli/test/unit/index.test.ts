@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import './test/mocks/matchers';
 
 import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
@@ -6,6 +7,54 @@ import { TelemetryBaseClient } from '../../src/util/telemetry/base';
 
 describe('main', () => {
   describe('telemetry', () => {
+    describe('version', () => {
+      it('tracks nothing when version is empty', () => {
+        const output = new Output(process.stderr, {
+          debug: true,
+          noColor: false,
+        });
+
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          output,
+        });
+
+        const telemetry = new TelemetryBaseClient({
+          opts: {
+            store: telemetryEventStore,
+            output,
+          },
+        });
+
+        telemetry.trackVersion(undefined);
+        expect(telemetryEventStore).toHaveTelemetryEvents([]);
+      });
+
+      it('tracks version', () => {
+        const output = new Output(process.stderr, {
+          debug: true,
+          noColor: false,
+        });
+
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          output,
+        });
+
+        const telemetry = new TelemetryBaseClient({
+          opts: {
+            store: telemetryEventStore,
+            output,
+          },
+        });
+
+        telemetry.trackVersion('1.0.0');
+        expect(telemetryEventStore).toHaveTelemetryEvents([
+          { key: 'version', value: '1.0.0' },
+        ]);
+      });
+    });
+
     describe('CI Vendor Name', () => {
       let telemetry: TelemetryBaseClient;
       let telemetryEventStore: TelemetryEventStore;
