@@ -172,7 +172,7 @@ export class TelemetryEventStore {
     this.events = [];
   }
 
-  enabled() {
+  get enabled() {
     if (process.env.VERCEL_TELEMETRY_DISABLED) {
       return false;
     }
@@ -189,7 +189,7 @@ export class TelemetryEventStore {
         this.output.log(JSON.stringify(event));
       });
     }
-    if (this.enabled()) {
+    if (this.enabled) {
       // send events to the server
     }
   }
