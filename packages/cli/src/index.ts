@@ -245,7 +245,7 @@ const main = async () => {
   }
 
   const telemetryEventStore = new TelemetryEventStore({
-    isDebug: isDebugging,
+    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     output,
     config: config.telemetry,
   });
@@ -257,6 +257,9 @@ const main = async () => {
     },
   });
 
+  telemetry.trackCPUs();
+  telemetry.trackPlatform();
+  telemetry.trackArch();
   telemetry.trackCIVendorName();
   telemetry.trackVersion(pkg.version);
 

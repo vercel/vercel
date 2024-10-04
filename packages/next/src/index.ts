@@ -261,10 +261,8 @@ export const build: BuildV2 = async buildOptions => {
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entryPath,
-    true
-  );
+  const { cliType, lockfileVersion, packageJson, turboSupportsCorepackHome } =
+    await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
@@ -272,6 +270,7 @@ export const build: BuildV2 = async buildOptions => {
     packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
