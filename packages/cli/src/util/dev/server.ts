@@ -1,6 +1,7 @@
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
+import ms from 'ms';
 import chalk from 'chalk';
 import fetch from 'node-fetch';
 import plural from 'pluralize';
@@ -101,6 +102,8 @@ import { replaceLocalhost } from './parse-listen';
 const frontendRuntimeSet = new Set(
   frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
 );
+
+const DEV_SERVER_PORT_BIND_TIMEOUT = ms('5m');
 
 interface FSEvent {
   type: string;
@@ -2306,7 +2309,10 @@ export default class DevServer {
       this.devProcessOrigin = undefined;
     });
 
-    const devProcessHost = await checkForPort(port, 1000 * 60 * 5);
+    const devProcessHost = await checkForPort(
+      port,
+      DEV_SERVER_PORT_BIND_TIMEOUT
+    );
     this.devProcessOrigin = `http://${devProcessHost}:${port}`;
   }
 }
