@@ -8,6 +8,18 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCPUs() {
+    super.trackCPUs();
+  }
+
+  trackArch() {
+    super.trackArch();
+  }
+
+  trackPlatform(): void {
+    super.trackPlatform();
+  }
+
   trackCIVendorName() {
     this.trackCI(getContinuousIntegrationVendorName());
   }

@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import './test/mocks/matchers';
 
@@ -5,8 +6,92 @@ import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 
+import './test/mocks/matchers';
+
 describe('main', () => {
   describe('telemetry', () => {
+    it('tracks number of cpus', () => {
+      vi.spyOn(os, 'cpus').mockImplementation(() => [
+        {
+          model: 'mock',
+          speed: 0,
+          times: {
+            user: 0,
+            nice: 0,
+            sys: 0,
+            idle: 0,
+            irq: 0,
+          },
+        },
+      ]);
+      const output = new Output(process.stderr, {
+        debug: true,
+        noColor: false,
+      });
+
+      const telemetryEventStore = new TelemetryEventStore({
+        isDebug: true,
+        output,
+      });
+
+      const telemetry = new RootTelemetryClient({
+        opts: {
+          store: telemetryEventStore,
+          output,
+        },
+      });
+      telemetry.trackCPUs();
+      expect(telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'cpu_count', value: '1' },
+      ]);
+    });
+    it('tracks platform', () => {
+      vi.spyOn(os, 'platform').mockImplementation(() => 'linux');
+      const output = new Output(process.stderr, {
+        debug: true,
+        noColor: false,
+      });
+
+      const telemetryEventStore = new TelemetryEventStore({
+        isDebug: true,
+        output,
+      });
+
+      const telemetry = new RootTelemetryClient({
+        opts: {
+          store: telemetryEventStore,
+          output,
+        },
+      });
+      telemetry.trackPlatform();
+      expect(telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'platform', value: 'linux' },
+      ]);
+    });
+    it('tracks arch', () => {
+      vi.spyOn(os, 'arch').mockImplementation(() => 'x86');
+      const output = new Output(process.stderr, {
+        debug: true,
+        noColor: false,
+      });
+
+      const telemetryEventStore = new TelemetryEventStore({
+        isDebug: true,
+        output,
+      });
+
+      const telemetry = new RootTelemetryClient({
+        opts: {
+          store: telemetryEventStore,
+          output,
+        },
+      });
+      telemetry.trackArch();
+      expect(telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'arch', value: 'x86' },
+      ]);
+    });
+
     describe('version', () => {
       it('tracks nothing when version is empty', () => {
         const output = new Output(process.stderr, {
