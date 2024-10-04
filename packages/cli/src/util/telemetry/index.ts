@@ -173,6 +173,10 @@ export class TelemetryEventStore {
   }
 
   enabled() {
+    if (process.env.VERCEL_TELEMETRY_DISABLED) {
+      return false;
+    }
+
     return this.config?.enabled === false ? false : true;
   }
 

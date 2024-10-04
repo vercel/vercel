@@ -45,6 +45,7 @@ describe('main', () => {
         { key: 'cpu_count', value: '1' },
       ]);
     });
+
     it('tracks platform', () => {
       vi.spyOn(os, 'platform').mockImplementation(() => 'linux');
       const output = new Output(process.stderr, {
@@ -68,6 +69,7 @@ describe('main', () => {
         { key: 'platform', value: 'linux' },
       ]);
     });
+
     it('tracks arch', () => {
       vi.spyOn(os, 'arch').mockImplementation(() => 'x86');
       const output = new Output(process.stderr, {
@@ -137,6 +139,28 @@ describe('main', () => {
         expect(telemetryEventStore).toHaveTelemetryEvents([
           { key: 'version', value: '1.0.0' },
         ]);
+      });
+    });
+
+    describe('tracking enabled', () => {
+      it('is false when VERCEL_TELEMETRY_DISABLED set', () => {
+        const configThatWillBeIgnoredAnyway = {
+          enabled: true,
+        };
+
+        vi.stubEnv('VERCEL_TELEMETRY_DISABLED', '1');
+        const output = new Output(process.stderr, {
+          debug: true,
+          noColor: false,
+        });
+
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: true,
+          output,
+          config: configThatWillBeIgnoredAnyway,
+        });
+
+        expect(telemetryEventStore.enabled).toBe(false);
       });
     });
 
