@@ -1,5 +1,12 @@
 # @vercel/node
 
+## 3.2.18
+
+### Patch Changes
+
+- Updated dependencies [[`5431ffd5de6a572f247e63f737576b4a04884f7b`](https://github.com/vercel/vercel/commit/5431ffd5de6a572f247e63f737576b4a04884f7b)]:
+  - @vercel/build-utils@8.4.6
+
 ## 3.2.17
 
 ### Patch Changes
