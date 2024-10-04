@@ -31,7 +31,10 @@ describe('integration', () => {
         const teamId = 'team_dummy';
 
         beforeEach(() => {
-          useTeams(teamId);
+          const teams = useTeams(teamId);
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
+
           useConfiguration();
         });
 
@@ -103,7 +106,9 @@ describe('integration', () => {
         });
 
         it('should error when no configuration exists for the provided slug', async () => {
-          useTeams('team_dummy');
+          const teams = useTeams('team_dummy');
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
           useConfiguration();
 
           const cwd = setupUnitFixture('vercel-integration-open');
@@ -117,7 +122,9 @@ describe('integration', () => {
         });
 
         it('should error when the configurations API responds erroneously', async () => {
-          useTeams('team_dummy');
+          const teams = useTeams('team_dummy');
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
           client.scenario.get(
             '/:version/integrations/configurations',
             (_, res) => {
