@@ -188,7 +188,10 @@ export class TelemetryEventStore {
       this.events.forEach(event => {
         this.output.log(JSON.stringify(event));
       });
+
+      return;
     }
+
     if (this.enabled) {
       // send events to the server
     }
