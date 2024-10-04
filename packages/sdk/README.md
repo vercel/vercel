@@ -19,11 +19,7 @@ The `@vercel/sdk` is a type-safe Typescript SDK that gives you full control over
     </a>
 </div>
 
-<!-- Start Summary [summary] -->
-## Summary
-
-Vercel API: Vercel combines the best developer experience with an obsessive focus on end-user performance. Our platform enables frontend teams to do their best work.
-<!-- End Summary [summary] -->
+<!-- No Summary [summary] -->
 
 <!-- Start Table of Contents [toc] -->
 ## Table of Contents
