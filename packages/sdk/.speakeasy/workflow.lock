@@ -1,4 +1,4 @@
-speakeasyVersion: 1.404.4
+speakeasyVersion: 1.409.0
 sources: {}
 targets:
     vercel:

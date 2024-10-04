@@ -48,10 +48,8 @@ export async function certsIssue(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => IssueCertRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

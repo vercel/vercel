@@ -49,10 +49,8 @@ export async function integrationsGetGitNamespaces(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GitNamespacesRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

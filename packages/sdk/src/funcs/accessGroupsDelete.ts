@@ -47,10 +47,8 @@ export async function accessGroupsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteAccessGroupRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

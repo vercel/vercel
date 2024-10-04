@@ -48,10 +48,8 @@ export async function domainsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteDomainRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

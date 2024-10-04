@@ -48,10 +48,8 @@ export async function integrationsGetConfigurations(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetConfigurationsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

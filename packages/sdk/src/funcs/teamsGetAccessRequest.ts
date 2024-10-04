@@ -48,10 +48,8 @@ export async function teamsGetAccessRequest(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetTeamAccessRequestRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

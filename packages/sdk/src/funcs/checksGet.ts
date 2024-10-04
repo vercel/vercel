@@ -48,10 +48,8 @@ export async function checksGet(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetCheckRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

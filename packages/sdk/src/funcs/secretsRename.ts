@@ -48,10 +48,8 @@ export async function secretsRename(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RenameSecretRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

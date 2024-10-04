@@ -48,10 +48,8 @@ export async function deploymentsGet(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetDeploymentRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

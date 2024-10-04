@@ -48,10 +48,8 @@ export async function certsGetById(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetCertByIdRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

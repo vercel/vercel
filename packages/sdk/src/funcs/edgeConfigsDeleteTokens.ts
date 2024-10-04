@@ -47,10 +47,8 @@ export async function edgeConfigsDeleteTokens(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteEdgeConfigTokensRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

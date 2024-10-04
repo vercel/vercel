@@ -47,10 +47,8 @@ export async function artifactsDownload(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DownloadArtifactRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

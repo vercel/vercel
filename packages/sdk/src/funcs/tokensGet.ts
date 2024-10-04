@@ -48,10 +48,8 @@ export async function tokensGet(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetAuthTokenRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

@@ -44,10 +44,8 @@ export async function listDeploymentBuilds(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListDeploymentBuildsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

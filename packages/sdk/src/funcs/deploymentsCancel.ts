@@ -48,10 +48,8 @@ export async function deploymentsCancel(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CancelDeploymentRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

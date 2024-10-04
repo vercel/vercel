@@ -48,10 +48,8 @@ export async function deploymentsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteDeploymentRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

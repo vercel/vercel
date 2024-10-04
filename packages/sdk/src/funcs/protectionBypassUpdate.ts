@@ -48,10 +48,8 @@ export async function protectionBypassUpdate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => UpdateProjectProtectionBypassRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

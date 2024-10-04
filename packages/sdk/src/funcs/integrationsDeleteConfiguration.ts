@@ -47,10 +47,8 @@ export async function integrationsDeleteConfiguration(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteConfigurationRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

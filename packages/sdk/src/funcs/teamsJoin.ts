@@ -48,10 +48,8 @@ export async function teamsJoin(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => JoinTeamRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

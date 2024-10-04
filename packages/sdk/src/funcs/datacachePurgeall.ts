@@ -40,10 +40,8 @@ export async function datacachePurgeall(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DatacachePurgeallRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

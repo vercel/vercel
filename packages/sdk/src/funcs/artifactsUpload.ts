@@ -48,10 +48,8 @@ export async function artifactsUpload(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => UploadArtifactRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

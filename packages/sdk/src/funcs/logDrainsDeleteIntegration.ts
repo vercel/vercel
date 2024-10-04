@@ -47,10 +47,8 @@ export async function logDrainsDeleteIntegration(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteIntegrationLogDrainRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

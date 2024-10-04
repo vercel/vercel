@@ -48,10 +48,8 @@ export async function secretsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateSecretRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

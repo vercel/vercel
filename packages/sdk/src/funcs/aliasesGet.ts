@@ -48,10 +48,8 @@ export async function aliasesGet(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetAliasRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

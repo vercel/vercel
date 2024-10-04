@@ -48,10 +48,8 @@ export async function teamsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateTeamRequestBody$outboundSchema.optional().parse(value),
     "Input validation failed",
   );

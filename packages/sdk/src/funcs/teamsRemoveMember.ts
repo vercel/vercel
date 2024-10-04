@@ -48,10 +48,8 @@ export async function teamsRemoveMember(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RemoveTeamMemberRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

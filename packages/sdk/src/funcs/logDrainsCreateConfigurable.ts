@@ -48,10 +48,8 @@ export async function logDrainsCreateConfigurable(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateConfigurableLogDrainRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

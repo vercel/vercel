@@ -48,10 +48,8 @@ export async function teamsList(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetTeamsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

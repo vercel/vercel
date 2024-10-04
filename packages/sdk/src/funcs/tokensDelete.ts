@@ -48,10 +48,8 @@ export async function tokensDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteAuthTokenRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

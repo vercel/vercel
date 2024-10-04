@@ -48,10 +48,8 @@ export async function teamsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteTeamRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

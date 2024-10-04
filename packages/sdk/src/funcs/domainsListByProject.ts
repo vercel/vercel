@@ -57,10 +57,8 @@ export async function domainsListByProject(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetProjectDomainsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -176,7 +174,7 @@ export async function domainsListByProject(
       domainsListByProject(
         client,
         {
-          ...input,
+          ...request,
           since: nextCursor,
         },
         options,

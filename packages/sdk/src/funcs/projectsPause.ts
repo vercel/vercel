@@ -47,10 +47,8 @@ export async function projectsPause(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => PauseProjectRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

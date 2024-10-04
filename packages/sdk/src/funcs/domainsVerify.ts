@@ -48,10 +48,8 @@ export async function domainsVerify(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => VerifyProjectDomainRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

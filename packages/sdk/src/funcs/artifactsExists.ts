@@ -47,10 +47,8 @@ export async function artifactsExists(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ArtifactExistsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
