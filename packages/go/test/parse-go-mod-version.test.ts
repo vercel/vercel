@@ -39,6 +39,10 @@ describe('parseGoModVersion', function () {
     const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22.1');
     expect(version).toEqual('1.22.1');
   });
+  it('returns toolchain version when go minor version is lower than 21', async () => {
+    const version = parseGoModVersion('go 1.16\ntoolchain go1.22.1');
+    expect(version).toEqual('1.22.1');
+  });
   it('returns toolchain version with prerelease if exists', async () => {
     const version = parseGoModVersion('go 1.21.1\ntoolchain go1.22rc1');
     expect(version).toEqual('1.22rc1');
