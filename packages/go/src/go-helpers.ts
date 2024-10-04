@@ -464,7 +464,7 @@ async function parseGoModVersionFromModule(
  * Attempts to parse the preferred Go version from the `go.mod` file.
  *
  * @param content The content of the `go.mod` file
- * @returns The version in `${major}.${minor}.${patch}` format, or undefined if no version was found
+ * @returns The version in { go: `${major}.${minor}.${patch}`, toolchain: `${major}.${minor}.${patch}` | undefined } format, or undefined if no version was found
  * @throws GoError If the go version is not supported
  */
 export function parseGoModVersion(content: string): GoVersions | undefined {
