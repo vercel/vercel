@@ -102,7 +102,7 @@ describe('integration', () => {
           client.setArgv('integration', 'open', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
-          await expect(client.stderr).toOutput('Error: Team not found.');
+          await expect(client.stderr).toOutput('Error: Team not found');
         });
 
         it('should error when no configuration exists for the provided slug', async () => {
@@ -113,7 +113,7 @@ describe('integration', () => {
 
           const cwd = setupUnitFixture('vercel-integration-open');
           client.cwd = cwd;
-          client.setArgv('integration', 'open', 'acme');
+          client.setArgv('integration', 'open', 'acme-no-products');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput(

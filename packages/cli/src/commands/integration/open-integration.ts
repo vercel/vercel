@@ -7,7 +7,7 @@ import { fetchMarketplaceIntegrations } from './client';
 
 export async function openIntegration(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error('Cannot open more than one integration at a time');
+    client.output.error('Cannot open more than one dashboard at a time');
     return 1;
   }
 
