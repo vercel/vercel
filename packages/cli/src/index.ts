@@ -606,6 +606,9 @@ const main = async () => {
         case 'logout':
           func = require('./commands/logout').default;
           break;
+        case 'open':
+          func = require('./commands/open').default;
+          break;
         case 'project':
           func = require('./commands/project').default;
           break;
