@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { Command } from '../help';
+import type { Command } from '../help';
 
 export const integrationCommand: Command = {
   name: 'integration',
@@ -24,6 +24,18 @@ export const integrationCommand: Command = {
       options: [],
       examples: [],
     },
+    {
+      name: 'open',
+      description: "Opens a marketplace integration's dashboard",
+      arguments: [
+        {
+          name: 'name',
+          required: true,
+        },
+      ],
+      options: [],
+      examples: [],
+    },
   ],
   examples: [
     {
@@ -31,6 +43,13 @@ export const integrationCommand: Command = {
       value: [
         `${packageName} integration add <integration-name>`,
         `${packageName} integration add acme`,
+      ],
+    },
+    {
+      name: "Open a marketplace integration's dashboard",
+      value: [
+        `${packageName} integration open <integration-name>`,
+        `${packageName} integration open acme`,
       ],
     },
   ],

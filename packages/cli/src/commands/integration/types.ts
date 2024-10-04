@@ -37,6 +37,19 @@ export interface IntegrationProduct {
   metadataSchema: MetadataSchema;
 }
 
+export interface Configuration {
+  id: string;
+  integrationId: string;
+  ownerId: string;
+  slug: string;
+  teamId: string;
+  userId: string;
+  scopes: string[];
+  source: string;
+  installationType: string;
+  projects: string[];
+}
+
 export interface Integration {
   id: string;
   slug: string;
