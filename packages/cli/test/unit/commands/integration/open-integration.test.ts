@@ -48,8 +48,8 @@ describe('integration', () => {
           client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme');
           const exitCodePromise = integrationCommand(client);
-          await expect(client.stderr).toOutput('Opening the acme dashboard...');
           await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(client.stderr).toOutput('Opening the acme dashboard...');
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1'
           );
@@ -65,8 +65,8 @@ describe('integration', () => {
           client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme-two-products');
           const exitCodePromise = integrationCommand(client);
-          await expect(client.stderr).toOutput('Opening the acme dashboard...');
           await expect(exitCodePromise).resolves.toEqual(0);
+          await expect(client.stderr).toOutput('Opening the acme dashboard...');
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-first'
           );
@@ -92,7 +92,7 @@ describe('integration', () => {
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput(
-            'Cannot open more than one dashboard at a time'
+            'Error: Cannot open more than one dashboard at a time'
           );
         });
 
@@ -102,7 +102,7 @@ describe('integration', () => {
           client.setArgv('integration', 'open', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
-          await expect(client.stderr).toOutput('Error: no team found.');
+          await expect(client.stderr).toOutput('Error: Team not found.');
         });
 
         it('should error when no configuration exists for the provided slug', async () => {
@@ -117,7 +117,7 @@ describe('integration', () => {
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput(
-            'No configuration found for "acme-no-products".'
+            'Error: No configuration found for "acme-no-products".'
           );
         });
 
