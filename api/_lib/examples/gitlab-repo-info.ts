@@ -23,7 +23,7 @@ export async function getGitLabRepoInfo(repo: Repo) {
     return null;
   }
 
-  const parsed = await response.json();
+  const parsed: any = await response.json();
   if (parsed.path_with_namespace !== repo.repo) {
     console.log(`Invalid response from GitLab`);
     return null;
