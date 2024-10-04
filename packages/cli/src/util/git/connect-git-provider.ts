@@ -6,6 +6,7 @@ import { isAPIError } from '../errors-ts';
 import { Output } from '../output';
 import { Dictionary } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
+import { Headers } from 'node-fetch';
 
 export interface RepoInfo {
   url: string;
@@ -22,9 +23,7 @@ export async function disconnectGitProvider(
   const fetchUrl = `/v9/projects/${projectId}/link`;
   return client.fetch(fetchUrl, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: new Headers({ 'Content-Type': 'application/json' }),
   });
 }
 
@@ -39,9 +38,7 @@ export async function connectGitProvider(
   try {
     return await client.fetch(fetchUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: new Headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         type,
         repo,
