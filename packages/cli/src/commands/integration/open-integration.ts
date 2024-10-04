@@ -14,14 +14,14 @@ export async function openIntegration(client: Client, args: string[]) {
   const integrationSlug = args[0];
 
   if (!integrationSlug) {
-    client.output.error('Error: You must pass an integration slug');
+    client.output.error('You must pass an integration slug');
     return 1;
   }
 
   const { team } = await getScope(client);
 
   if (!team) {
-    client.output.error('Error: no team found.');
+    client.output.error('no team found.');
     return 1;
   }
 
@@ -33,7 +33,7 @@ export async function openIntegration(client: Client, args: string[]) {
     )[0];
   } catch (error) {
     client.output.error(
-      `Error: Failed to fetch configurations for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
+      `Failed to fetch configurations for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
   }
 
