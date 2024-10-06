@@ -59,7 +59,7 @@ The location information of the request, in this way:
 
 #### Defined in
 
-[packages/functions/src/headers.ts:158](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L158)
+[packages/functions/src/headers.ts:166](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L166)
 
 ---
 
@@ -144,7 +144,7 @@ The IP address of the request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:111](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L111)
+[packages/functions/src/headers.ts:119](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L119)
 
 ---
 
