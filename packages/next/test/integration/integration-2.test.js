@@ -6,14 +6,8 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { normalizeReactVersion } = require('../utils');
 
-const runBuildLambda = async projectPath => {
-  const innerRunBuildLambda = createRunBuildLambda(builder);
-
-  await normalizeReactVersion(projectPath);
-  return innerRunBuildLambda(projectPath);
-};
+const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 

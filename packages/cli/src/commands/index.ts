@@ -41,5 +41,6 @@ export default new Map([
   ['targets', 'target'],
   ['team', 'teams'],
   ['teams', 'teams'],
+  ['telemetry', 'telemetry'],
   ['whoami', 'whoami'],
 ]);

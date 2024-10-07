@@ -261,17 +261,20 @@ export const build: BuildV2 = async buildOptions => {
   const nextVersionRange = await getNextVersionRange(entryPath);
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entryPath,
-    true
-  );
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
@@ -777,6 +780,13 @@ export const build: BuildV2 = async buildOptions => {
             code: 'NEXT_IMAGES_REMOTEPATTERNS',
             message:
               'image-manifest.json "images.remotePatterns" must be an array. Contact support if this continues to happen',
+          });
+        }
+        if (images.localPatterns && !Array.isArray(images.localPatterns)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_LOCALPATTERNS',
+            message:
+              'image-manifest.json "images.localPatterns" must be an array. Contact support if this continues to happen',
           });
         }
         if (

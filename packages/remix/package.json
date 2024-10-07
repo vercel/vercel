@@ -33,7 +33,7 @@
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.13",
-    "@vercel/build-utils": "8.4.5",
+    "@vercel/build-utils": "8.4.6",
     "glob": "10.3.16",
     "jest-junit": "16.0.0",
     "path-to-regexp": "6.2.1",

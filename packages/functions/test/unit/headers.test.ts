@@ -121,4 +121,27 @@ describe('`geolocation`', () => {
       countryRegion: '13',
     });
   });
+
+  test('reads values from headers (city with multi-byte chars)', () => {
+    const req = new Request('https://example.vercel.sh', {
+      headers: {
+        // São Paulo
+        [CITY_HEADER_NAME]: 'S%C3%A3o%20Paulo',
+        [COUNTRY_HEADER_NAME]: 'BR',
+        [LATITUDE_HEADER_NAME]: '-23.6283',
+        [LONGITUDE_HEADER_NAME]: '-46.6409',
+        [REGION_HEADER_NAME]: 'SP',
+        [REQUEST_ID_HEADER_NAME]: 'gru1::kpwjx-123455678-c0ffee',
+      },
+    });
+    expect(geolocation(req)).toEqual<Geo>({
+      city: 'São Paulo',
+      flag: '🇧🇷',
+      country: 'BR',
+      latitude: '-23.6283',
+      longitude: '-46.6409',
+      region: 'gru1',
+      countryRegion: 'SP',
+    });
+  });
 });

@@ -89,7 +89,6 @@ export const certsCommand = {
       description: 'Show next page of results',
     },
     { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
-    { name: 'output', shorthand: null, type: String, deprecated: false },
   ],
   examples: [
     {

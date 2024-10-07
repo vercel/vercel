@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
+import os from 'node:os';
+import { GlobalConfig } from '@vercel-internals/types';
 
 const LogLabel = `['telemetry']:`;
 
@@ -89,11 +91,41 @@ export class TelemetryClient {
     });
   }
 
+  protected trackCPUs() {
+    this.track({
+      key: 'cpu_count',
+      value: String(os.cpus().length),
+    });
+  }
+
+  protected trackPlatform() {
+    this.track({
+      key: 'platform',
+      value: os.platform(),
+    });
+  }
+
+  protected trackArch() {
+    this.track({
+      key: 'arch',
+      value: os.arch(),
+    });
+  }
+
   protected trackCI(ciVendorName?: string) {
     if (ciVendorName) {
       this.track({
         key: 'ci',
         value: ciVendorName,
+      });
+    }
+  }
+
+  protected trackVersion(version?: string) {
+    if (version) {
+      this.track({
+        key: 'version',
+        value: version,
       });
     }
   }
@@ -113,12 +145,18 @@ export class TelemetryEventStore {
   private output: Output;
   private isDebug: boolean;
   private sessionId: string;
+  private config: GlobalConfig['telemetry'];
 
-  constructor(opts: { output: Output; isDebug?: boolean }) {
+  constructor(opts: {
+    output: Output;
+    isDebug?: boolean;
+    config: GlobalConfig['telemetry'];
+  }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
     this.sessionId = randomUUID();
     this.events = [];
+    this.config = opts.config;
   }
 
   add(event: Event) {
@@ -134,12 +172,28 @@ export class TelemetryEventStore {
     this.events = [];
   }
 
+  get enabled() {
+    if (process.env.VERCEL_TELEMETRY_DISABLED) {
+      return false;
+    }
+
+    return this.config?.enabled === false ? false : true;
+  }
+
   save() {
     if (this.isDebug) {
-      this.output.debug(`${LogLabel} Flushing Events`);
+      // Intentionally not using `this.output.debug` as it will
+      // not write to stderr unless it is run with `--debug`
+      this.output.log(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
-        this.output.debug(JSON.stringify(event));
+        this.output.log(JSON.stringify(event));
       });
+
+      return;
+    }
+
+    if (this.enabled) {
+      // send events to the server
     }
   }
 }

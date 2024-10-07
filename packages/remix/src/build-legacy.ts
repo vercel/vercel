@@ -107,9 +107,10 @@ export const build: BuildV2 = async ({
   const {
     cliType,
     packageJsonPath,
-    packageJson,
     lockfileVersion,
     lockfilePath,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
   if (!packageJsonPath) {
@@ -130,9 +131,10 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env,
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
