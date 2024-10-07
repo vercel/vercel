@@ -63,10 +63,12 @@ describe('integration', () => {
           });
           const cwd = setupUnitFixture('vercel-integration-open');
           client.cwd = cwd;
-          client.setArgv('integration', 'open', 'acme-two-products');
+          client.setArgv('integration', 'open', 'acme-two-configurations');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(0);
-          await expect(client.stderr).toOutput('Opening the acme dashboard...');
+          await expect(client.stderr).toOutput(
+            'Opening the acme-two-configurations dashboard...'
+          );
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-first'
           );
@@ -113,11 +115,11 @@ describe('integration', () => {
 
           const cwd = setupUnitFixture('vercel-integration-open');
           client.cwd = cwd;
-          client.setArgv('integration', 'open', 'acme-no-products');
+          client.setArgv('integration', 'open', 'acme-no-results');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput(
-            'Error: No configuration found for "acme-no-products".'
+            'Error: No configuration found for "acme-no-results".'
           );
         });
 
@@ -125,21 +127,16 @@ describe('integration', () => {
           const teams = useTeams('team_dummy');
           const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
           client.config.currentTeam = team.id;
-          client.scenario.get(
-            '/:version/integrations/configurations',
-            (_, res) => {
-              res.status(500);
-              res.end();
-            }
-          );
+          useConfiguration();
 
           const cwd = setupUnitFixture('vercel-integration-open');
           client.cwd = cwd;
-          client.setArgv('integration', 'open', 'acme');
+          client.setArgv('integration', 'open', 'error');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput(
-            'Error: Failed to fetch configurations for "acme": Response Error (500)'
+            'Error: Failed to fetch configuration for "error": Response Error (500)',
+            20000
           );
         });
       });

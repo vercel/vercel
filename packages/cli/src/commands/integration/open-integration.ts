@@ -33,8 +33,9 @@ export async function openIntegration(client: Client, args: string[]) {
     )[0];
   } catch (error) {
     client.output.error(
-      `Failed to fetch configurations for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
+      `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
+    return 1;
   }
 
   if (!configuration) {

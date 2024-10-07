@@ -314,6 +314,13 @@ const integrationPlans: Record<string, unknown> = {
 export function useConfiguration() {
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
     const { integrationIdOrSlug } = req.query;
+
+    if (integrationIdOrSlug === 'error') {
+      res.status(500);
+      res.end();
+      return;
+    }
+
     const foundConfigs =
       configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
 

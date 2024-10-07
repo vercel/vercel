@@ -25,8 +25,7 @@ export async function fetchMarketplaceIntegrations(
   searchParams.set('view', 'account');
   searchParams.set('installationType', 'marketplace');
   searchParams.set('integrationIdOrSlug', slug);
-
-  return client.fetch<Configuration[]>(
+  return await client.fetch<Configuration[]>(
     `/v1/integrations/configurations?${searchParams}`,
     {
       json: true,
