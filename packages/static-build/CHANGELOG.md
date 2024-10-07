@@ -1,5 +1,16 @@
 # @vercel/static-build
 
+## 2.5.29
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.51
+
 ## 2.5.28
 
 ### Patch Changes
