@@ -53,7 +53,7 @@ import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
-import { TelemetryBaseClient } from './util/telemetry/base';
+import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 
@@ -245,19 +245,23 @@ const main = async () => {
   }
 
   const telemetryEventStore = new TelemetryEventStore({
-    isDebug: isDebugging,
+    isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     output,
     config: config.telemetry,
   });
 
-  const telemetry = new TelemetryBaseClient({
+  const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
       output,
     },
   });
 
+  telemetry.trackCPUs();
+  telemetry.trackPlatform();
+  telemetry.trackArch();
   telemetry.trackCIVendorName();
+  telemetry.trackVersion(pkg.version);
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];

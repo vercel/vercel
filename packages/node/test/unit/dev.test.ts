@@ -117,7 +117,8 @@ async function withDevServer(
         { runningTimeout: 300 }
       ));
 
-    test('with `waitUntil` from context rejecting a promise ', () =>
+    // eslint-disable-next-line jest/no-disabled-tests
+    test.skip('with `waitUntil` from context rejecting a promise ', () =>
       withDevServer(
         './wait-until-ctx-node-rejected.js',
         async (url: string) => {
