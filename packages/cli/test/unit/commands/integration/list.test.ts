@@ -99,7 +99,7 @@ describe('integration', () => {
       });
 
       it('returns only the current project when flagged', async () => {
-        client.setArgv('integration', 'list', '--currentProject');
+        client.setArgv('integration', 'list', '--current-project');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(0);
         const lines = createLineIterator(client.stderr);
@@ -205,7 +205,7 @@ describe('integration', () => {
         client.setArgv(
           'integration',
           'list',
-          '--currentProject',
+          '--current-project',
           '--integration',
           'acme'
         );
@@ -259,7 +259,7 @@ describe('integration', () => {
         const cwd = setupUnitFixture('vercel-integration-add');
         client.cwd = cwd;
 
-        client.setArgv('integration', 'list', '--currentProject');
+        client.setArgv('integration', 'list', '--current-project');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(1);
         await expect(client.stderr).toOutput(

@@ -48,7 +48,7 @@ export async function list(client: Client) {
     return null;
   });
 
-  if (parsedArguments.flags['--currentProject'] && !project) {
+  if (parsedArguments.flags['--current-project'] && !project) {
     client.output.error(
       'Cannot filter on current project: project is not linked'
     );
@@ -69,7 +69,7 @@ export async function list(client: Client) {
 
   const filterIntegration =
     parsedArguments.flags['--integration']?.toLocaleLowerCase();
-  const currentProject = parsedArguments.flags['--currentProject']
+  const currentProject = parsedArguments.flags['--current-project']
     ? project?.id
     : undefined;
 

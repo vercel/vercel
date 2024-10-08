@@ -35,9 +35,9 @@ export const listSubcommand = {
       argument: 'NAME',
     },
     {
-      name: 'currentProject',
+      name: 'current-project',
       description: 'limits the resources listed to the current project',
-      shorthand: 'p',
+      shorthand: 'cp',
       type: Boolean,
       deprecated: false,
     },
@@ -58,8 +58,8 @@ export const listSubcommand = {
     {
       name: 'List all resources from the current project',
       value: [
-        `${packageName} integrations list --currentProject`,
-        `${packageName} integrations list -p`,
+        `${packageName} integrations list --current-project`,
+        `${packageName} integrations list -cp`,
       ],
     },
   ],
