@@ -1,6 +1,7 @@
 import {
   Integration,
   MetadataSchema,
+  Store,
 } from '../../src/commands/integration/types';
 import { client } from './client';
 
@@ -265,6 +266,97 @@ const integrationPlans: Record<string, unknown> = {
     ],
   },
 };
+
+const resources: { stores: Store[] } = {
+  stores: [
+    {
+      id: 'store_not_marketplace',
+      type: 'postgres',
+      name: 'foobar',
+      status: 'available',
+      product: {},
+    },
+    {
+      id: 'store_1',
+      type: 'integration',
+      name: 'store-acme-connected-project',
+      status: null,
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_1',
+          projectId: 'prj_connected',
+          name: 'Connected Project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_2',
+      type: 'integration',
+      name: 'store-acme-other-project',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_2',
+          projectId: 'prj_otherProject',
+          name: 'Other Project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_3',
+      type: 'integration',
+      name: 'store-foo-bar-both-projects',
+      status: 'provisioning',
+      product: { name: 'Foo Bar', slug: 'foo-bar' },
+      projectsMetadata: [
+        {
+          id: 'spc_3',
+          projectId: 'prj_connected',
+          name: 'Connected Project',
+          environments: ['production', 'preview', 'development'],
+        },
+        {
+          id: 'spc_4',
+          projectId: 'prj_otherProject',
+          name: 'Other Project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_4',
+      type: 'integration',
+      name: 'store-acme-no-projects',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [],
+    },
+  ],
+};
+
+export function useResources(returnError?: number) {
+  client.scenario.get('/:version/storage/stores', (req, res) => {
+    if (returnError) {
+      res.status(returnError);
+      res.end();
+      return;
+    }
+
+    const { teamId } = req.query;
+
+    if (!teamId) {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    res.json(resources);
+  });
+}
 
 export function useIntegration({
   withInstallation,

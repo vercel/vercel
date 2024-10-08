@@ -58,9 +58,12 @@ export async function list(client: Client) {
   let resources: Store[] | undefined;
 
   try {
+    client.output.spinner('Retrieving resources…', 1000);
     resources = await getStores(client, team.id);
   } catch (error) {
-    client.output.error(JSON.stringify(error, null, 2));
+    client.output.error(
+      `Failed to fetch resources: ${(error as Error).message}`
+    );
     return 1;
   }
 
@@ -87,20 +90,20 @@ export async function list(client: Client) {
     );
   }
 
+  function filterOnFlags(resource: Store): boolean {
+    return filterOnIntegration(resource) && filterOnCurrentProject(resource);
+  }
+
   const results = resources
-    .filter(
-      resource =>
-        resourceIsFromMarketplace(resource) &&
-        filterOnIntegration(resource) &&
-        filterOnCurrentProject(resource)
-    )
-    .map(store => {
+    .filter(resourceIsFromMarketplace)
+    .filter(filterOnFlags)
+    .map(resource => {
       return {
-        name: store.name,
-        status: store.status,
-        product: store.product?.name,
-        integration: store.product?.slug,
-        projects: store.projectsMetadata
+        name: resource.name,
+        status: resource.status,
+        product: resource.product?.name,
+        integration: resource.product?.slug,
+        projects: resource.projectsMetadata
           ?.map(metadata => metadata.name)
           .join(', '),
       };

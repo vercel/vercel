@@ -73,17 +73,15 @@ export interface Store {
   id: string;
   type: string;
   name?: string;
-  status?: string;
+  status?: string | null;
   product?: {
     name?: string;
     slug?: string;
   };
-  projectsMetadata?: [
-    {
-      id: string;
-      projectId: string;
-      name: string;
-      environments: string[];
-    },
-  ];
+  projectsMetadata?: {
+    id: string;
+    projectId: string;
+    name: string;
+    environments: string[];
+  }[];
 }
