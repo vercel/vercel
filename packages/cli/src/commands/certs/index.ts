@@ -17,7 +17,6 @@ const COMMAND_CONFIG = {
   add: ['add'],
   issue: ['issue'],
   ls: ['ls', 'list'],
-  renew: ['renew'],
   rm: ['rm', 'remove'],
 };
 
@@ -54,9 +53,6 @@ export default async function main(client: Client) {
       return rm(client, parsedArgs.flags, args);
     case 'add':
       return add(client, parsedArgs.flags, args);
-    case 'renew':
-      output.error('Renewing certificates is deprecated, issue a new one.');
-      return 1;
     default:
       output.error('Please specify a valid subcommand: ls | issue | rm');
       client.output.print(
