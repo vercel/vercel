@@ -5,6 +5,7 @@ import type {
   IntegrationProduct,
   Metadata,
   BillingPlan,
+  Store,
 } from './types';
 
 export async function fetchIntegration(client: Client, slug: string) {
@@ -84,4 +85,21 @@ export async function provisionStoreResource(
       },
     }
   );
+}
+
+export async function getStores(
+  client: Client,
+  teamId: string
+): Promise<Store[]> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('teamId', teamId);
+
+  const storesResponse = await client.fetch<{ stores: Store[] }>(
+    `/v1/storage/stores?teamId=${searchParams}`,
+    {
+      json: true,
+    }
+  );
+
+  return storesResponse.stores;
 }

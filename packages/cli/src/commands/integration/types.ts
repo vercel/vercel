@@ -68,3 +68,22 @@ export interface BillingPlan {
   }[];
   disabled?: boolean;
 }
+
+export interface Store {
+  id: string;
+  type: string;
+  name?: string;
+  status?: string;
+  product?: {
+    name?: string;
+    slug?: string;
+  };
+  projectsMetadata?: [
+    {
+      id: string;
+      projectId: string;
+      name: string;
+      environments: string[];
+    },
+  ];
+}
