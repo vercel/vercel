@@ -554,6 +554,7 @@ const main = async () => {
       let func: any;
       switch (targetCommand) {
         case 'alias':
+          telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = require('./commands/alias').default;
           break;
         case 'bisect':
