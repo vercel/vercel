@@ -21,6 +21,27 @@ export const addSubCommand = {
   ],
 } as const;
 
+export const openSubCommand = {
+  name: 'open',
+  description: "Opens a marketplace integration's dashboard",
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: "Open a marketplace integration's dashboard",
+      value: [
+        `${packageName} integration open <integration-name>`,
+        `${packageName} integration open acme`,
+      ],
+    },
+  ],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   description: 'Lists all resources from marketplace integrations',
