@@ -107,9 +107,9 @@ export const build: BuildV2 = async ({
   const {
     cliType,
     packageJsonPath,
+    packageJson,
     lockfileVersion,
     lockfilePath,
-    packageJsonPackageManager,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -131,7 +131,7 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
