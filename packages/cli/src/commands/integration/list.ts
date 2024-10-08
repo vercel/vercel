@@ -68,7 +68,7 @@ export async function list(client: Client) {
     parsedArguments.flags['--integration']?.toLocaleLowerCase();
   const currentProject = parsedArguments.flags['--currentProject']
     ? project?.id
-    : null;
+    : undefined;
 
   function resourceIsFromMarketplace(resource: Store): boolean {
     return resource.type === 'integration';
@@ -80,7 +80,7 @@ export async function list(client: Client) {
 
   function filterOnCurrentProject(resource: Store): boolean {
     return (
-      !!currentProject &&
+      !currentProject ||
       !!resource.projectsMetadata?.find(
         metadata => metadata.projectId === project?.id
       )
