@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 8.4.7
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
 ## 8.4.6
 
 ### Patch Changes
