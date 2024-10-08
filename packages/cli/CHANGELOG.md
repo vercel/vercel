@@ -1,5 +1,18 @@
 # vercel
 
+## 37.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`226028a8f205a4f795ce8dfdeffc0265cca8d9e2`](https://github.com/vercel/vercel/commit/226028a8f205a4f795ce8dfdeffc0265cca8d9e2)]:
+  - @vercel/build-utils@8.4.8
+  - @vercel/hydrogen@1.0.8
+  - @vercel/next@4.3.14
+  - @vercel/redwood@2.1.7
+  - @vercel/remix-builder@2.2.11
+  - @vercel/static-build@2.5.30
+  - @vercel/node@3.2.20
+
 ## 37.6.2
 
 ### Patch Changes
