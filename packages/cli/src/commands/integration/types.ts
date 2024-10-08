@@ -37,6 +37,21 @@ export interface IntegrationProduct {
   metadataSchema: MetadataSchema;
 }
 
+export type InstallationType = 'marketplace' | 'external';
+
+export interface Configuration {
+  id: string;
+  integrationId: string;
+  ownerId: string;
+  slug: string;
+  teamId: string;
+  userId: string;
+  scopes: string[];
+  source: string;
+  installationType: InstallationType;
+  projects: string[];
+}
+
 export interface Integration {
   id: string;
   slug: string;
@@ -46,7 +61,7 @@ export interface Integration {
 
 export interface IntegrationInstallation {
   id: string;
-  installationType: 'marketplace' | 'external';
+  installationType: InstallationType;
   ownerId: string;
 }
 
