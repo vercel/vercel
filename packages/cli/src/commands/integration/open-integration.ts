@@ -3,7 +3,7 @@ import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import type { Configuration } from './types';
-import { fetchMarketplaceIntegrations } from '../../util/integration/fetchMarketplaceIntegrations';
+import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
 
 export async function openIntegration(client: Client, args: string[]) {
   if (args.length > 1) {

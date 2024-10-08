@@ -1,15 +1,3 @@
-/*
-    const url = new URL(`${VERCEL_API_URL}/v1/storage/stores`);
-
-    url.searchParams.append('skip-metadata', 'true');
-
-    if (teamId) {
-      url.searchParams.append('teamId', teamId);
-    }
-
-    const endpoint = url.toString();
-*/
-
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
