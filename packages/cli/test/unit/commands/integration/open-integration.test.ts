@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useConfiguration } from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -47,8 +46,6 @@ describe('integration', () => {
             id: 'vercel-integration-open',
             name: 'vercel-integration-open',
           });
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(0);
@@ -64,8 +61,6 @@ describe('integration', () => {
             id: 'vercel-integration-open',
             name: 'vercel-integration-open',
           });
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme-two-configurations');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(0);
@@ -80,8 +75,6 @@ describe('integration', () => {
 
       describe('errors', () => {
         it('should error when no integration arugment is passed', async () => {
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -91,8 +84,6 @@ describe('integration', () => {
         });
 
         it('should error when more than one integration arugment is passed', async () => {
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme', 'foobar');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -102,8 +93,6 @@ describe('integration', () => {
         });
 
         it('should error when no team is present', async () => {
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -116,8 +105,6 @@ describe('integration', () => {
           client.config.currentTeam = team.id;
           useConfiguration();
 
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'acme-no-results');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -132,8 +119,6 @@ describe('integration', () => {
           client.config.currentTeam = team.id;
           useConfiguration();
 
-          const cwd = setupUnitFixture('vercel-integration-open');
-          client.cwd = cwd;
           client.setArgv('integration', 'open', 'error');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
