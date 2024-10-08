@@ -79,17 +79,13 @@ export const build: BuildV2 = async ({
   if (!spawnOpts.env) {
     spawnOpts.env = {};
   }
-  const {
-    cliType,
-    lockfileVersion,
-    packageJsonPackageManager,
-    turboSupportsCorepackHome,
-  } = await scanParentDirs(entrypointFsDirname, true);
+  const { cliType, lockfileVersion, packageJson, turboSupportsCorepackHome } =
+    await scanParentDirs(entrypointFsDirname, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager,
+    packageJsonPackageManager: packageJson?.packageManager,
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
