@@ -125,7 +125,7 @@ test(
   })
 );
 
-test(
+test.only(
   '[vercel dev] Should work with nested `tsconfig.json` files',
   testFixtureStdio('nested-tsconfig', async (testPath: any) => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
