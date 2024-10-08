@@ -22,7 +22,7 @@ export function checkTelemetryStatus({
   client.output.log(
     "You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:"
   );
-  client.output.log('https://vercel.com/docs/cli/about-telemerty');
+  client.output.log('https://vercel.com/docs/cli/about-telemetry');
 
   config.telemetry = {
     enabled: true,
