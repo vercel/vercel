@@ -28,9 +28,7 @@ export async function openIntegration(client: Client, args: string[]) {
   let configuration: Configuration | undefined;
 
   try {
-    configuration = (
-      await fetchMarketplaceIntegrations(client, integrationSlug)
-    )[0];
+    configuration = await getFirstConfiguration(client, integrationSlug);
   } catch (error) {
     client.output.error(
       `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
@@ -55,4 +53,12 @@ export async function openIntegration(client: Client, args: string[]) {
   open(url.href);
 
   return 0;
+}
+
+async function getFirstConfiguration(client: Client, integrationSlug: string) {
+  const configurations = await fetchMarketplaceIntegrations(
+    client,
+    integrationSlug
+  );
+  return configurations.length > 0 ? configurations[0] : undefined;
 }
