@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.0.8
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
 ## 1.0.7
 
 ### Patch Changes
