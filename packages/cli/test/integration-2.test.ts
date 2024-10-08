@@ -734,8 +734,7 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr).toContain('> Projects found under');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip(
+test(
   'deploy gatsby twice and print cached directories',
   async () => {
     const directory = example('gatsby');
