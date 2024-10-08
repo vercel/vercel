@@ -96,6 +96,6 @@ export const integrationCommand = {
       required: true,
     },
   ],
-  subcommands: [addSubCommand, listSubcommand],
+  subcommands: [addSubCommand, openSubCommand, listSubcommand],
   examples: [],
 } as const;
