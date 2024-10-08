@@ -15,7 +15,7 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 import type { Store } from './types';
-import { getStores } from './client';
+import { getResources } from '../../util/integration/get-resources';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
@@ -59,7 +59,7 @@ export async function list(client: Client) {
 
   try {
     client.output.spinner('Retrieving resources…', 1000);
-    resources = await getStores(client, team.id);
+    resources = await getResources(client, team.id);
   } catch (error) {
     client.output.error(
       `Failed to fetch resources: ${(error as Error).message}`

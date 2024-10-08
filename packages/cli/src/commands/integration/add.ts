@@ -16,13 +16,11 @@ import {
   Metadata,
 } from './types';
 import { createMetadataWizard, MetadataWizard } from './wizard';
-import {
-  fetchIntegration,
-  fetchInstallations,
-  fetchBillingPlans,
-  provisionStoreResource,
-  connectStoreToProject,
-} from './client';
+import { provisionStoreResource } from '../../util/integration/provisionStoreResource';
+import { connectStoreToProject } from '../../util/integration/connectStoreToProject';
+import { fetchBillingPlans } from '../../util/integration/fetchBillingPlans';
+import { fetchInstallations } from '../../util/integration/fetchInstallations';
+import { fetchIntegration } from '../../util/integration/fetchIntegration';
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
