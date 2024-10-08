@@ -196,7 +196,7 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'https://telemetry.vercel.com/';
+      const url = 'https://telemetry.vercel.com/api/vercel-cli/v0/events';
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
@@ -221,12 +221,18 @@ export class TelemetryEventStore {
         });
         const wasRecorded =
           response.headers.get('x-vercel-cli-tracked') === '1';
-        if (wasRecorded) {
-          this.output.debug(`Telemetry event tracked`);
-        } else {
+        if (response.status !== 204) {
           this.output.debug(
-            `Telemetry event ignored due to progressive rollout`
+            `Unexpected response from telemetry server: ${response.status}`
           );
+        } else {
+          if (wasRecorded) {
+            this.output.debug(`Telemetry event tracked`);
+          } else {
+            this.output.debug(
+              `Telemetry event ignored due to progressive rollout`
+            );
+          }
         }
       } catch (error) {
         if (error instanceof Error) {
