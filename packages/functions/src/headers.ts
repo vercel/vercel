@@ -74,6 +74,14 @@ function getHeader(request: Request, key: string): string | undefined {
   return request.headers.get(key) ?? undefined;
 }
 
+function getHeaderWithDecode(
+  request: Request,
+  key: string
+): string | undefined {
+  const header = getHeader(request, key);
+  return header ? decodeURIComponent(header) : undefined;
+}
+
 /**
  * Converts the 2 digit countryCode into a flag emoji by adding the current character value to the emoji flag unicode starting position. See [Country Code to Flag Emoji](https://dev.to/jorik/country-code-to-flag-emoji-a21) by Jorik Tangelder.
  *
@@ -157,7 +165,8 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  */
 export function geolocation(request: Request): Geo {
   return {
-    city: getHeader(request, CITY_HEADER_NAME),
+    // city name may be encoded to support multi-byte characters
+    city: getHeaderWithDecode(request, CITY_HEADER_NAME),
     country: getHeader(request, COUNTRY_HEADER_NAME),
     flag: getFlag(getHeader(request, COUNTRY_HEADER_NAME)),
     countryRegion: getHeader(request, REGION_HEADER_NAME),
