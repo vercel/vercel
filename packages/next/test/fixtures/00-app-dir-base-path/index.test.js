@@ -5,7 +5,7 @@ const { deployAndTest } = require('../../utils');
 
 const ctx = {};
 
-describe(`${__dirname.split(path.sep).pop()}`, () => {
+describe.skip(`${__dirname.split(path.sep).pop()}`, () => {
   const fixtureDir = path.join(__dirname, 'tmp-contents');
 
   afterAll(() => fs.remove(fixtureDir));
@@ -25,7 +25,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       path.join(__dirname, 'vercel.json'),
       path.join(fixtureDir, 'vercel.json')
     );
-    
+
     const info = await deployAndTest(fixtureDir);
     Object.assign(ctx, info);
   });

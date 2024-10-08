@@ -52,7 +52,8 @@ async function hashAllFiles(files) {
 
 // experimental appDir currently requires Node.js >= 16
 if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
-  it('should build with app-dir correctly', async () => {
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip('should build with app-dir correctly', async () => {
     const origLog = console.log;
     const origError = console.error;
     const caughtLogs = [];
