@@ -52,5 +52,10 @@
     "semver": "6.3.1",
     "typescript": "4.9.5",
     "yazl": "2.5.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-fetch@2.x>whatwg-url": "12.0.1"
+    }
   }
 }

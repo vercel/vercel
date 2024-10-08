@@ -175,5 +175,10 @@
     "write-json-file": "2.2.0",
     "xdg-app-paths": "5.1.0",
     "yauzl-promise": "2.1.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-fetch@2.x>whatwg-url": "12.0.1"
+    }
   }
 }

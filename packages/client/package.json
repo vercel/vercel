@@ -50,5 +50,10 @@
     "querystring": "^0.2.0",
     "sleep-promise": "8.0.1",
     "tar-fs": "1.16.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-fetch@2.x>whatwg-url": "12.0.1"
+    }
   }
 }

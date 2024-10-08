@@ -64,5 +64,10 @@
     "tree-kill": "1.2.2",
     "vite": "5.1.6",
     "vitest": "2.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-fetch@2.x>whatwg-url": "12.0.1"
+    }
   }
 }

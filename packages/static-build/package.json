@@ -50,5 +50,10 @@
     "rc9": "1.2.0",
     "semver": "7.5.2",
     "tree-kill": "1.2.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "node-fetch@2.x>whatwg-url": "12.0.1"
+    }
   }
 }
