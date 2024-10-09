@@ -1,5 +1,24 @@
 # vercel
 
+## 37.7.0
+
+### Minor Changes
+
+- Enable direct access to marketplace integration dashboards via `vc integration open [integration]` command ([#12233](https://github.com/vercel/vercel/pull/12233))
+
+- [cli] remove deprecated `certs renew` command ([#12248](https://github.com/vercel/vercel/pull/12248))
+
+### Patch Changes
+
+- [cli] track invocation of `vercel alias *` ([#12250](https://github.com/vercel/vercel/pull/12250))
+
+- [tests] skip flakey gatsby test ([#12244](https://github.com/vercel/vercel/pull/12244))
+
+- Updated dependencies [[`dfad4af5c65a565e0afe28731d3918d03d5085b2`](https://github.com/vercel/vercel/commit/dfad4af5c65a565e0afe28731d3918d03d5085b2)]:
+  - @vercel/build-utils@8.4.9
+  - @vercel/node@3.2.21
+  - @vercel/static-build@2.5.31
+
 ## 37.6.3
 
 ### Patch Changes

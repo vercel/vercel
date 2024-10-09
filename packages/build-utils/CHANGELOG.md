@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.9
+
+### Patch Changes
+
+- Fix special version specifier handling for `turbo` ([#12249](https://github.com/vercel/vercel/pull/12249))
+
 ## 8.4.8
 
 ### Patch Changes
