@@ -1,8 +1,8 @@
-import {
+import type {
   Configuration,
   Integration,
   MetadataSchema,
-  Store,
+  Resource,
 } from '../../src/commands/integration/types';
 import { client } from './client';
 
@@ -312,7 +312,7 @@ const integrationPlans: Record<string, unknown> = {
   },
 };
 
-const resources: { stores: Store[] } = {
+const resources: { stores: Resource[] } = {
   stores: [
     {
       id: 'store_not_marketplace',
@@ -425,7 +425,7 @@ export function useIntegration({
 }: {
   withInstallation: boolean;
 }) {
-  let storeId = 'store_123';
+  const storeId = 'store_123';
 
   client.scenario.get(
     '/:version/integrations/integration/:slug',
@@ -444,7 +444,7 @@ export function useIntegration({
   );
 
   client.scenario.get(
-    `/:version/integrations/integration/:integrationId/installed`,
+    '/:version/integrations/integration/:integrationId/installed',
     (req, res) => {
       const { integrationId } = req.params;
       const { teamId, source } = req.query;

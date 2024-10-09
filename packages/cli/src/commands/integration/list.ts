@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
-import type { Store } from './types';
+import type { Resource } from './types';
 import { getResources } from '../../util/integration/get-resources';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -43,7 +43,7 @@ export async function list(client: Client) {
     return 1;
   }
 
-  let resources: Store[] | undefined;
+  let resources: Resource[] | undefined;
 
   try {
     client.output.spinner('Retrieving resources…', 1000);
@@ -61,15 +61,15 @@ export async function list(client: Client) {
     ? project?.id
     : undefined;
 
-  function resourceIsFromMarketplace(resource: Store): boolean {
+  function resourceIsFromMarketplace(resource: Resource): boolean {
     return resource.type === 'integration';
   }
 
-  function filterOnIntegration(resource: Store): boolean {
+  function filterOnIntegration(resource: Resource): boolean {
     return !filterIntegration || filterIntegration === resource.product?.slug;
   }
 
-  function filterOnCurrentProject(resource: Store): boolean {
+  function filterOnCurrentProject(resource: Resource): boolean {
     return (
       !currentProject ||
       !!resource.projectsMetadata?.find(
@@ -78,7 +78,7 @@ export async function list(client: Client) {
     );
   }
 
-  function filterOnFlags(resource: Store): boolean {
+  function filterOnFlags(resource: Resource): boolean {
     return filterOnIntegration(resource) && filterOnCurrentProject(resource);
   }
 

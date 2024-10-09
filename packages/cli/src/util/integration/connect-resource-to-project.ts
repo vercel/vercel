@@ -1,6 +1,6 @@
 import type Client from '../client';
 
-export async function connectStoreToProject(
+export async function connectResourceToProject(
   client: Client,
   projectId: string,
   storeId: string,

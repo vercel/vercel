@@ -17,7 +17,7 @@ import type {
 } from './types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
-import { connectStoreToProject } from '../../util/integration/connect-store-to-project';
+import { connectResourceToProject } from '../../util/integration/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
@@ -419,7 +419,7 @@ async function provisionStorageProduct(
     `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
   );
   try {
-    await connectStoreToProject(
+    await connectResourceToProject(
       client,
       projectLink.project.id,
       storeId,

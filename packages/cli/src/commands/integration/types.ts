@@ -84,7 +84,7 @@ export interface BillingPlan {
   disabled?: boolean;
 }
 
-export interface Store {
+export interface Resource {
   id: string;
   type: string;
   name?: string;
