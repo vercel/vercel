@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import { join } from 'path';
 import { getNodeBinPaths } from '../src/fs/run-user-scripts';
 

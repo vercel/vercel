@@ -1,3 +1,4 @@
+import { it, describe } from 'vitest';
 import assert from 'assert';
 import { getScriptName } from '../src';
 

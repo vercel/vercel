@@ -1,3 +1,4 @@
+import { it, describe } from 'vitest';
 import { walkParentDirs } from '../src';
 import { strict } from 'assert';
 import { join } from 'path';

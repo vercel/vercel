@@ -1,3 +1,4 @@
+import { it, expect, describe } from 'vitest';
 import { join } from 'path';
 import { validateNpmrc } from '../src/validate-npmrc';
 

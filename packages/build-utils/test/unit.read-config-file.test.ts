@@ -1,3 +1,4 @@
+import { it, expect, describe, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { writeFile, rm } from 'fs/promises';
 import { readConfigFile } from '../src';
