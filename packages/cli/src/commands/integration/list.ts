@@ -9,6 +9,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import table from '../../util/output/table';
+import title from 'title';
+import type { Output } from '../../util/output';
+import type { Team } from '@vercel-internals/types';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
 
 export async function list(client: Client) {
   let parsedArguments = null;
@@ -87,10 +91,12 @@ export async function list(client: Client) {
     .filter(filterOnFlags)
     .map(resource => {
       return {
+        id: resource.id,
         name: resource.name,
         status: resource.status,
         product: resource.product?.name,
         integration: resource.product?.slug,
+        configurationId: resource.product?.integrationConfigurationId,
         projects: resource.projectsMetadata
           ?.map(metadata => metadata.name)
           .join(', '),
@@ -101,18 +107,78 @@ export async function list(client: Client) {
     `Integrations in ${chalk.bold(contextName)}:\n${table(
       [
         ['Name', 'Status', 'Product', 'Integration', 'Projects'].map(header =>
-          chalk.gray(header)
+          chalk.bold(chalk.cyan(header))
         ),
         ...results.map(result => [
-          result.name ?? chalk.gray('–'),
-          result.status ?? chalk.gray('–'),
+          resourceLink(client.output, contextName, result) ?? chalk.gray('–'),
+          resourceStatus(result.status ?? '–'),
           result.product ?? chalk.gray('–'),
-          result.integration ?? chalk.gray('–'),
-          result.projects ? result.projects : chalk.gray('–'),
+          integrationLink(client.output, result, team) ?? chalk.gray('–'),
+          chalk.grey(result.projects ? result.projects : '–'),
         ]),
       ],
       { hsep: 8 }
     )}`
   );
   return 0;
+}
+
+// Builds a string with an appropriately coloured indicator
+function resourceStatus(status: string) {
+  const CIRCLE = '● ';
+  const statusTitleCase = title(status);
+  switch (status) {
+    case 'initializing':
+      return chalk.yellow(CIRCLE) + statusTitleCase;
+    case 'error':
+      return chalk.red(CIRCLE) + statusTitleCase;
+    case 'available':
+      return chalk.green(CIRCLE) + statusTitleCase;
+    case 'suspended':
+      return chalk.white(CIRCLE) + statusTitleCase;
+    case 'limits-exceeded-suspended':
+      return `${chalk.white(CIRCLE)}Limits exceeded`;
+    default:
+      return chalk.gray(statusTitleCase);
+  }
+}
+
+// Builds a deep link to the vercel dashboard resource page
+function resourceLink(
+  output: Output,
+  orgSlug: string,
+  resource: { id: string; name?: string }
+): string | undefined {
+  if (!resource.name) {
+    return;
+  }
+
+  const projectUrl = `https://vercel.com/${orgSlug}/~`;
+  return output.link(
+    resource.name,
+    `${projectUrl}/stores/integration/${resource.id}`,
+    { fallback: () => resource.name ?? '–', color: false }
+  );
+}
+
+// Builds a deep link to the integration dashboard
+function integrationLink(
+  output: Output,
+  integration: { integration?: string; configurationId?: string },
+  team: Team
+): string | undefined {
+  if (!integration.integration) {
+    return;
+  }
+
+  if (!integration.configurationId) {
+    return integration.integration;
+  }
+
+  const boldName = chalk.bold(integration.integration);
+  const integrationDeepLink = buildSSOLink(team, integration.configurationId);
+  return output.link(boldName, integrationDeepLink, {
+    fallback: () => boldName,
+    color: false,
+  });
 }

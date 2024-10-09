@@ -87,11 +87,12 @@ export interface BillingPlan {
 export interface Resource {
   id: string;
   type: string;
-  name?: string;
+  name: string;
   status?: string | null;
   product?: {
     name?: string;
     slug?: string;
+    integrationConfigurationId?: string;
   };
   projectsMetadata?: {
     id: string;

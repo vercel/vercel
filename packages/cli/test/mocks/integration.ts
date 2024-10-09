@@ -355,7 +355,7 @@ const resources: { stores: Resource[] } = {
       id: 'store_3',
       type: 'integration',
       name: 'store-foo-bar-both-projects',
-      status: 'provisioning',
+      status: 'initializing',
       product: { name: 'Foo Bar', slug: 'foo-bar' },
       projectsMetadata: [
         {

@@ -70,7 +70,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-acme-other-project',
-          'available',
+          '● Available',
           'Acme',
           'acme',
           'Other Project',
@@ -80,7 +80,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-foo-bar-both-projects',
-          'provisioning',
+          '● Initializing',
           'Foo Bar',
           'foo-bar',
           'Connected Project',
@@ -91,7 +91,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-acme-no-projects',
-          'available',
+          '● Available',
           'Acme',
           'acme',
           '–',
@@ -137,7 +137,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-foo-bar-both-projects',
-          'provisioning',
+          '● Initializing',
           'Foo Bar',
           'foo-bar',
           'Connected Project',
@@ -184,7 +184,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-acme-other-project',
-          'available',
+          '● Available',
           'Acme',
           'acme',
           'Other Project',
@@ -194,7 +194,7 @@ describe('integration', () => {
         data = parseSpacedTableRow(line.value ?? '');
         expect(data).toEqual([
           'store-acme-no-projects',
-          'available',
+          '● Available',
           'Acme',
           'acme',
           '–',
