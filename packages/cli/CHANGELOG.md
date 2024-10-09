@@ -1,5 +1,66 @@
 # vercel
 
+## 37.7.0
+
+### Minor Changes
+
+- Enable direct access to marketplace integration dashboards via `vc integration open [integration]` command ([#12233](https://github.com/vercel/vercel/pull/12233))
+
+- [cli] remove deprecated `certs renew` command ([#12248](https://github.com/vercel/vercel/pull/12248))
+
+### Patch Changes
+
+- [cli] track invocation of `vercel alias *` ([#12250](https://github.com/vercel/vercel/pull/12250))
+
+- [tests] skip flakey gatsby test ([#12244](https://github.com/vercel/vercel/pull/12244))
+
+- Updated dependencies [[`dfad4af5c65a565e0afe28731d3918d03d5085b2`](https://github.com/vercel/vercel/commit/dfad4af5c65a565e0afe28731d3918d03d5085b2)]:
+  - @vercel/build-utils@8.4.9
+  - @vercel/node@3.2.21
+  - @vercel/static-build@2.5.31
+
+## 37.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`226028a8f205a4f795ce8dfdeffc0265cca8d9e2`](https://github.com/vercel/vercel/commit/226028a8f205a4f795ce8dfdeffc0265cca8d9e2)]:
+  - @vercel/build-utils@8.4.8
+  - @vercel/hydrogen@1.0.8
+  - @vercel/next@4.3.14
+  - @vercel/redwood@2.1.7
+  - @vercel/remix-builder@2.2.11
+  - @vercel/static-build@2.5.30
+  - @vercel/node@3.2.20
+
+## 37.6.2
+
+### Patch Changes
+
+- [cli] Remove documented `--next` option from `target ls` ([#12221](https://github.com/vercel/vercel/pull/12221))
+
+- [cli] Add tracking event for Vercel CLI version ([#12212](https://github.com/vercel/vercel/pull/12212))
+
+- [cli] Don't send telemetry if debugging ([#12228](https://github.com/vercel/vercel/pull/12228))
+
+- [cli] set telemetry enabled to false with VERCEL_TELEMETRY_DISABLED ([#12229](https://github.com/vercel/vercel/pull/12229))
+
+- [cli] use `ms` for timeout values ([#12220](https://github.com/vercel/vercel/pull/12220))
+
+- Add tracking events for platform, arch, and cpu_count. ([#12190](https://github.com/vercel/vercel/pull/12190))
+
+- Add support for telemetry debugging via VERCEL_TELEMETRY_DEBUG. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12209](https://github.com/vercel/vercel/pull/12209))
+
+- [cli] Remove incorrect --output docs for `vercel certs` ([#12230](https://github.com/vercel/vercel/pull/12230))
+
+- Updated dependencies [[`a6227a56d7feec77b5355d2cd5fc07f151021d73`](https://github.com/vercel/vercel/commit/a6227a56d7feec77b5355d2cd5fc07f151021d73), [`e312d610177b28cf1592b18ca85b8d4e088ffc05`](https://github.com/vercel/vercel/commit/e312d610177b28cf1592b18ca85b8d4e088ffc05)]:
+  - @vercel/static-build@2.5.29
+  - @vercel/build-utils@8.4.7
+  - @vercel/hydrogen@1.0.7
+  - @vercel/redwood@2.1.6
+  - @vercel/remix-builder@2.2.10
+  - @vercel/next@4.3.13
+  - @vercel/node@3.2.19
+
 ## 37.6.1
 
 ### Patch Changes

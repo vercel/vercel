@@ -1,13 +1,15 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
 import { add } from './add';
 import { integrationCommand } from './command';
+import { openIntegration } from './open-integration';
 
 const COMMAND_CONFIG = {
   add: ['add'],
+  open: ['open'],
 };
 
 export default async function main(client: Client) {
@@ -27,6 +29,9 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'add': {
       return add(client, subArgs);
+    }
+    case 'open': {
+      return openIntegration(client, subArgs);
     }
     default: {
       client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
