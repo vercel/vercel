@@ -1,15 +1,32 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import type {
   Integration,
   IntegrationInstallation,
   IntegrationProduct,
   Metadata,
   BillingPlan,
+  Configuration,
 } from './types';
 
 export async function fetchIntegration(client: Client, slug: string) {
   return client.fetch<Integration>(
     `/v1/integrations/integration/${slug}?public=1`,
+    {
+      json: true,
+    }
+  );
+}
+
+export async function fetchMarketplaceIntegrations(
+  client: Client,
+  slug: string
+) {
+  const searchParams = new URLSearchParams();
+  searchParams.set('view', 'account');
+  searchParams.set('installationType', 'marketplace');
+  searchParams.set('integrationIdOrSlug', slug);
+  return await client.fetch<Configuration[]>(
+    `/v1/integrations/configurations?${searchParams}`,
     {
       json: true,
     }

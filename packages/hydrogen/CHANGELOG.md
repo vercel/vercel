@@ -1,5 +1,19 @@
 # @vercel/hydrogen
 
+## 1.0.8
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 1.0.7
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
 ## 1.0.6
 
 ### Patch Changes

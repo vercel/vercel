@@ -1,4 +1,5 @@
 import {
+  Configuration,
   Integration,
   MetadataSchema,
 } from '../../src/commands/integration/types';
@@ -194,6 +195,50 @@ const integrations: Record<string, Integration> = {
   },
 };
 
+const configurations: Record<string, Configuration[]> = {
+  acme: [
+    {
+      id: 'acme-1',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
+  'acme-two-configurations': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+    {
+      id: 'acme-second',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
+  'acme-no-results': [],
+};
+
 const integrationPlans: Record<string, unknown> = {
   acme: {
     plans: [
@@ -265,6 +310,23 @@ const integrationPlans: Record<string, unknown> = {
     ],
   },
 };
+
+export function useConfiguration() {
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { integrationIdOrSlug } = req.query;
+
+    if (integrationIdOrSlug === 'error') {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    const foundConfigs =
+      configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
+
+    res.json(foundConfigs);
+  });
+}
 
 export function useIntegration({
   withInstallation,
