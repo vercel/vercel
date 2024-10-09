@@ -25,6 +25,7 @@ import {
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
+import json5 from 'json5';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -447,7 +448,7 @@ async function checkTurboSupportsCorepack(
   const turboJsonPath = path.join(rootDir, 'turbo.json');
   const turboJsonExists = await fs.pathExists(turboJsonPath);
   const turboJson = turboJsonExists
-    ? (JSON.parse(await fs.readFile(turboJsonPath, 'utf8')) as TurboJson)
+    ? (json5.parse(await fs.readFile(turboJsonPath, 'utf8')) as TurboJson)
     : undefined;
   return turboJson?.globalPassThroughEnv?.includes('COREPACK_HOME') || false;
 }
