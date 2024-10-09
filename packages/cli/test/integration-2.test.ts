@@ -748,14 +748,11 @@ test(
     async function tryDeploy(cwd: string) {
       const { exitCode, stdout, stderr } = await execCli(
         binaryPath,
-        [
-          'deploy',
-          '--public',
-          '--yes',
-          '--build-env',
-          'VERCEL_FORCE_NO_BUILD_CACHE=1',
-        ],
+        ['deploy', '--public', '--yes'],
         {
+          env: {
+            VERCEL_FORCE_NO_BUILD_CACHE: '1',
+          },
           cwd,
           stdio: 'inherit',
         }
