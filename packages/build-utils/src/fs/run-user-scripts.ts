@@ -441,7 +441,7 @@ async function checkTurboSupportsCorepack(
   turboVersionRange: string,
   rootDir: string
 ) {
-  if (turboRangeSupportsCorepack(turboVersionRange)) {
+  if (turboVersionSpecifierSupportsCorepack(turboVersionRange)) {
     return true;
   }
   const turboJsonPath = path.join(rootDir, 'turbo.json');
@@ -452,9 +452,18 @@ async function checkTurboSupportsCorepack(
   return turboJson?.globalPassThroughEnv?.includes('COREPACK_HOME') || false;
 }
 
-function turboRangeSupportsCorepack(turboVersionRange: string) {
+export function turboVersionSpecifierSupportsCorepack(
+  turboVersionSpecifier: string
+) {
+  if (!validRange(turboVersionSpecifier)) {
+    // Version specifiers can be things that aren't version ranges
+    //   ex: "latest", "catalog:", tarball or git URLs
+    // In these cases we can't easily determine if that version
+    // supports corepack, so we assume it doesn't.
+    return false;
+  }
   const versionSupportingCorepack = '2.1.3';
-  const minTurboBeingUsed = minVersion(turboVersionRange);
+  const minTurboBeingUsed = minVersion(turboVersionSpecifier);
   if (!minTurboBeingUsed) {
     return false;
   }
