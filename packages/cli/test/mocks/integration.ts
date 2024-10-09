@@ -331,7 +331,7 @@ const resources: { stores: Resource[] } = {
         {
           id: 'spc_1',
           projectId: 'prj_connected',
-          name: 'Connected Project',
+          name: 'connected-project',
           environments: ['production', 'preview', 'development'],
         },
       ],
@@ -346,7 +346,7 @@ const resources: { stores: Resource[] } = {
         {
           id: 'spc_2',
           projectId: 'prj_otherProject',
-          name: 'Other Project',
+          name: 'other-project',
           environments: ['production', 'preview', 'development'],
         },
       ],
@@ -361,13 +361,13 @@ const resources: { stores: Resource[] } = {
         {
           id: 'spc_3',
           projectId: 'prj_connected',
-          name: 'Connected Project',
+          name: 'connected-project',
           environments: ['production', 'preview', 'development'],
         },
         {
           id: 'spc_4',
           projectId: 'prj_otherProject',
-          name: 'Other Project',
+          name: 'other-project',
           environments: ['production', 'preview', 'development'],
         },
       ],

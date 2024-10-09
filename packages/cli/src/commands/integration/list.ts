@@ -26,31 +26,50 @@ export async function list(client: Client) {
   }
 
   const { contextName, team } = await getScope(client);
+  let project: { id?: string; name?: string } | undefined;
 
   if (!team) {
-    client.output.error('Team not found');
+    client.output.error('Team not found.');
     return 1;
   }
 
-  const project = await getLinkedProject(client).then(result => {
-    if (result.status === 'linked') {
-      return result.project;
-    }
-
-    return null;
-  });
-
-  if (parsedArguments.flags['--current-project'] && !project) {
+  if (parsedArguments.args.length > 2) {
     client.output.error(
-      'Cannot filter on current project: project is not linked'
+      'Cannot specify more than one project at a time. Use `--all` to show all resources.'
     );
     return 1;
+  }
+
+  if (parsedArguments.args.length === 2) {
+    if (parsedArguments.flags['--all']) {
+      client.output.error(
+        'Cannot specify a project when using the `--all` flag.'
+      );
+      return 1;
+    }
+
+    project = { name: parsedArguments.args[1] };
+  }
+
+  if (!parsedArguments.flags['--all']) {
+    project = await getLinkedProject(client).then(result => {
+      if (result.status === 'linked') {
+        return result.project;
+      }
+      return;
+    });
+    if (!project) {
+      client.output.error(
+        'No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+      );
+      return 1;
+    }
   }
 
   let resources: Resource[] | undefined;
 
   try {
-    client.output.spinner('Retrieving resources…', 1000);
+    client.output.spinner('Retrieving resources…', 500);
     resources = await getResources(client, team.id);
   } catch (error) {
     client.output.error(
@@ -61,9 +80,6 @@ export async function list(client: Client) {
 
   const filterIntegration =
     parsedArguments.flags['--integration']?.toLocaleLowerCase();
-  const currentProject = parsedArguments.flags['--current-project']
-    ? project?.id
-    : undefined;
 
   function resourceIsFromMarketplace(resource: Resource): boolean {
     return resource.type === 'integration';
@@ -73,17 +89,18 @@ export async function list(client: Client) {
     return !filterIntegration || filterIntegration === resource.product?.slug;
   }
 
-  function filterOnCurrentProject(resource: Resource): boolean {
+  function filterOnProject(resource: Resource): boolean {
     return (
-      !currentProject ||
+      !project ||
       !!resource.projectsMetadata?.find(
-        metadata => metadata.projectId === project?.id
+        metadata =>
+          metadata.projectId === project?.id || metadata.name === project?.name
       )
     );
   }
 
   function filterOnFlags(resource: Resource): boolean {
-    return filterOnIntegration(resource) && filterOnCurrentProject(resource);
+    return filterOnIntegration(resource) && filterOnProject(resource);
   }
 
   const results = resources
@@ -102,6 +119,11 @@ export async function list(client: Client) {
           .join(', '),
       };
     });
+
+  if (results.length === 0) {
+    client.output.log('No resources found.');
+    return 0;
+  }
 
   client.output.log(
     `Integrations in ${chalk.bold(contextName)}:\n${table(

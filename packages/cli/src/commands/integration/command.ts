@@ -45,7 +45,12 @@ export const openSubCommand = {
 export const listSubcommand = {
   name: 'list',
   description: 'Lists all resources from marketplace integrations',
-  arguments: [],
+  arguments: [
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
   options: [
     {
       name: 'integration',
@@ -56,9 +61,9 @@ export const listSubcommand = {
       argument: 'NAME',
     },
     {
-      name: 'current-project',
-      description: 'limits the resources listed to the current project',
-      shorthand: 'c',
+      name: 'all',
+      description: 'lists all resources regardless of project',
+      shorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
@@ -69,7 +74,7 @@ export const listSubcommand = {
       value: [`${packageName} integrations list`],
     },
     {
-      name: 'List all resources from a single integration',
+      name: 'Filter the resources to a single integration',
       value: [
         `${packageName} integrations list --integration <integration>`,
         `${packageName} integrations list --integration acme`,
@@ -77,10 +82,10 @@ export const listSubcommand = {
       ],
     },
     {
-      name: 'List all resources from the current project',
+      name: 'List all marketplace resources for the current team',
       value: [
-        `${packageName} integrations list --current-project`,
-        `${packageName} integrations list -c`,
+        `${packageName} integrations list --all`,
+        `${packageName} integrations list -a`,
       ],
     },
   ],

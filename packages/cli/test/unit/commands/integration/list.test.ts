@@ -27,11 +27,11 @@ describe('integration', () => {
         useProject({
           ...defaultProject,
           id: 'prj_connected',
-          name: 'Connected Project',
+          name: 'connected-project',
         });
       });
 
-      it('returns only marketplace resources', async () => {
+      it('returns only marketplace resources for the linked project', async () => {
         client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(0);
@@ -63,17 +63,7 @@ describe('integration', () => {
           '–',
           'Acme',
           'acme',
-          'Connected Project',
-        ]);
-
-        line = await lines.next();
-        data = parseSpacedTableRow(line.value ?? '');
-        expect(data).toEqual([
-          'store-acme-other-project',
-          '● Available',
-          'Acme',
-          'acme',
-          'Other Project',
+          'connected-project',
         ]);
 
         line = await lines.next();
@@ -83,31 +73,18 @@ describe('integration', () => {
           '● Initializing',
           'Foo Bar',
           'foo-bar',
-          'Connected Project',
-          ' Other Project',
-        ]);
-
-        line = await lines.next();
-        data = parseSpacedTableRow(line.value ?? '');
-        expect(data).toEqual([
-          'store-acme-no-projects',
-          '● Available',
-          'Acme',
-          'acme',
-          '–',
+          'connected-project',
+          ' other-project',
         ]);
       });
 
-      it('returns only the current project when flagged', async () => {
-        client.setArgv('integration', 'list', '--current-project');
+      it('returns all projects with the --all flag', async () => {
+        client.setArgv('integration', 'list', '--all');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
-        expect(line.value).toEqual('Retrieving project…');
-
-        line = await lines.next();
         expect(line.value).toEqual('Retrieving resources…');
 
         line = await lines.next();
@@ -130,7 +107,17 @@ describe('integration', () => {
           '–',
           'Acme',
           'acme',
-          'Connected Project',
+          'connected-project',
+        ]);
+
+        line = await lines.next();
+        data = parseSpacedTableRow(line.value ?? '');
+        expect(data).toEqual([
+          'store-acme-other-project',
+          '● Available',
+          'Acme',
+          'acme',
+          'other-project',
         ]);
 
         line = await lines.next();
@@ -140,75 +127,23 @@ describe('integration', () => {
           '● Initializing',
           'Foo Bar',
           'foo-bar',
-          'Connected Project',
-          ' Other Project',
+          'connected-project',
+          ' other-project',
+        ]);
+
+        line = await lines.next();
+        data = parseSpacedTableRow(line.value ?? '');
+        expect(data).toEqual([
+          'store-acme-no-projects',
+          '● Available',
+          'Acme',
+          'acme',
+          '–',
         ]);
       });
 
       it('returns only the selected integration when filtering', async () => {
         client.setArgv('integration', 'list', '--integration', 'acme');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
-        const lines = createLineIterator(client.stderr);
-
-        let line = await lines.next();
-        expect(line.value).toEqual('Retrieving project…');
-
-        line = await lines.next();
-        expect(line.value).toEqual('Retrieving resources…');
-
-        line = await lines.next();
-        expect(line.value).toEqual(`> Integrations in ${team.slug}:`);
-
-        line = await lines.next();
-        const header = parseSpacedTableRow(line.value ?? '');
-        expect(header).toEqual([
-          'Name',
-          'Status',
-          'Product',
-          'Integration',
-          'Projects',
-        ]);
-
-        line = await lines.next();
-        let data = parseSpacedTableRow(line.value ?? '');
-        expect(data).toEqual([
-          'store-acme-connected-project',
-          '–',
-          'Acme',
-          'acme',
-          'Connected Project',
-        ]);
-
-        line = await lines.next();
-        data = parseSpacedTableRow(line.value ?? '');
-        expect(data).toEqual([
-          'store-acme-other-project',
-          '● Available',
-          'Acme',
-          'acme',
-          'Other Project',
-        ]);
-
-        line = await lines.next();
-        data = parseSpacedTableRow(line.value ?? '');
-        expect(data).toEqual([
-          'store-acme-no-projects',
-          '● Available',
-          'Acme',
-          'acme',
-          '–',
-        ]);
-      });
-
-      it('handles integration and current project filtering simultaneously', async () => {
-        client.setArgv(
-          'integration',
-          'list',
-          '--current-project',
-          '--integration',
-          'acme'
-        );
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(0);
         const lines = createLineIterator(client.stderr);
@@ -239,7 +174,60 @@ describe('integration', () => {
           '–',
           'Acme',
           'acme',
-          'Connected Project',
+          'connected-project',
+        ]);
+      });
+
+      it('handles --integration and --all flags simultaneously', async () => {
+        client.setArgv('integration', 'list', '--all', '--integration', 'acme');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(0);
+        const lines = createLineIterator(client.stderr);
+
+        let line = await lines.next();
+        expect(line.value).toEqual('Retrieving resources…');
+
+        line = await lines.next();
+        expect(line.value).toEqual(`> Integrations in ${team.slug}:`);
+
+        line = await lines.next();
+        const header = parseSpacedTableRow(line.value ?? '');
+        expect(header).toEqual([
+          'Name',
+          'Status',
+          'Product',
+          'Integration',
+          'Projects',
+        ]);
+
+        line = await lines.next();
+        let data = parseSpacedTableRow(line.value ?? '');
+        expect(data).toEqual([
+          'store-acme-connected-project',
+          '–',
+          'Acme',
+          'acme',
+          'connected-project',
+        ]);
+
+        line = await lines.next();
+        data = parseSpacedTableRow(line.value ?? '');
+        expect(data).toEqual([
+          'store-acme-other-project',
+          '● Available',
+          'Acme',
+          'acme',
+          'other-project',
+        ]);
+
+        line = await lines.next();
+        data = parseSpacedTableRow(line.value ?? '');
+        expect(data).toEqual([
+          'store-acme-no-projects',
+          '● Available',
+          'Acme',
+          'acme',
+          '–',
         ]);
       });
     });
@@ -249,21 +237,57 @@ describe('integration', () => {
         client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(1);
-        await expect(client.stderr).toOutput('Error: Team not found');
+        await expect(client.stderr).toOutput('Error: Team not found.');
       });
 
-      it('should error when filtering on current project with no linked project', async () => {
+      it('should error when no project linked and no project specified', async () => {
         const teams = useTeams('team_dummy');
         const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
-        const cwd = setupUnitFixture('vercel-integration-add');
+
+        const cwd = setupUnitFixture('commands/integration/list');
         client.cwd = cwd;
 
-        client.setArgv('integration', 'list', '--current-project');
+        client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
         await expect(exitCodePromise).resolves.toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: Cannot filter on current project: project is not linked'
+          'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+        );
+      });
+
+      it('should error when multiple arguments passed', async () => {
+        const teams = useTeams('team_dummy');
+        const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        const cwd = setupUnitFixture('commands/integration/list');
+        client.cwd = cwd;
+
+        client.setArgv(
+          'integration',
+          'list',
+          'current-project',
+          'other-project'
+        );
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Cannot specify more than one project at a time. Use `--all` to show all resources.'
+        );
+      });
+
+      it('should error when an argument is passed with the --all flag at the same time', async () => {
+        const teams = useTeams('team_dummy');
+        const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        const cwd = setupUnitFixture('commands/integration/list');
+        client.cwd = cwd;
+
+        client.setArgv('integration', 'list', 'other-project', '--all');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Cannot specify a project when using the `--all` flag.'
         );
       });
     });
