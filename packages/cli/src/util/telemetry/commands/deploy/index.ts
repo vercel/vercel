@@ -57,6 +57,17 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
+  trackCliOptionTarget(target?: string) {
+    if (target) {
+      const value = ['production', 'preview'].includes(target)
+        ? target
+        : 'customIdOrSlug';
+      this.trackCliOption({
+        flag: 'target',
+        value,
+      });
+    }
+  }
   trackCliFlagConfirm(flag?: boolean) {
     if (flag) {
       this.trackCliFlag('confirm');
@@ -72,8 +83,10 @@ export class DeployTelemetryClient extends TelemetryClient {
       this.trackCliFlag('logs');
     }
   }
-  trackCliFlagNoClipboard() {
-    this.trackCliFlag('no-clipboard');
+  trackCliFlagNoClipboard(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('no-clipboard');
+    }
   }
   trackCliFlagNoWait(flag?: boolean) {
     if (flag) {
@@ -95,20 +108,9 @@ export class DeployTelemetryClient extends TelemetryClient {
       this.trackCliFlag('public');
     }
   }
-  trackCliFlagSkipDomain(skipDomain?: boolean) {
-    if (skipDomain) {
+  trackCliFlagSkipDomain(flag?: boolean) {
+    if (flag) {
       this.trackCliFlag('skip-domain');
-    }
-  }
-  trackCliFlagTarget(target?: string) {
-    if (target) {
-      const value = ['production', 'preview'].includes(target)
-        ? target
-        : 'customIdOrSlug';
-      this.trackCliOption({
-        flag: 'target',
-        value,
-      });
     }
   }
   trackCliFlagWithCache(flag?: boolean) {

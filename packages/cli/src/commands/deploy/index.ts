@@ -105,7 +105,7 @@ export default async (client: Client): Promise<number> => {
     telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
     telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
     telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
-    telemetryClient.trackCliFlagTarget(parsedArguments.flags['--target']);
+    telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
     telemetryClient.trackCliFlagSkipDomain(
       parsedArguments.flags['--skip-domain']
@@ -215,7 +215,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
-    telemetryClient.trackCliFlagNoClipboard();
+    telemetryClient.trackCliFlagNoClipboard(true);
   }
   // #endregion
 
