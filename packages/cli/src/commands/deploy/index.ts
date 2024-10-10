@@ -76,8 +76,15 @@ import validatePaths, {
 import { help } from '../help';
 import { deployCommand } from './command';
 import parseTarget from '../../util/parse-target';
+import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 
 export default async (client: Client): Promise<number> => {
+  let telemetryClient = new DeployTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   const { output } = client;
 
   let parsedArguments = null;
@@ -88,7 +95,11 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
+    if (parsedArguments.flags['--yes']) {
+      telemetryClient.trackCliFlagYes();
+    }
     if ('--confirm' in parsedArguments.flags) {
+      telemetryClient.trackCliFlagConfirm();
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
@@ -113,6 +124,7 @@ export default async (client: Client): Promise<number> => {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
     paths = parsedArguments.args.map(item => resolve(client.cwd, item));
+    telemetryClient.trackCliArgumentProjectPath(paths);
   } else {
     paths = [client.cwd];
   }
@@ -171,6 +183,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliOptionName(parsedArguments.flags['--name']);
   }
 
   if (parsedArguments.flags['--no-clipboard']) {
@@ -182,6 +195,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliFlagNoClipboard();
   }
   // #endregion
 
@@ -190,11 +204,16 @@ export default async (client: Client): Promise<number> => {
     flagName: 'target',
     flags: parsedArguments.flags,
   });
+  telemetryClient.trackCliFlagTarget(parsedArguments.flags['--target']);
 
   const archive = parsedArguments.flags['--archive'];
   if (typeof archive === 'string' && !isValidArchive(archive)) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
+  }
+
+  if (archive) {
+    telemetryClient.trackCliOptionArchive(archive);
   }
 
   // retrieve `project` and `org` from .vercel
@@ -296,6 +315,7 @@ export default async (client: Client): Promise<number> => {
   // #region Build `--prebuilt`
   let vercelOutputDir: string | undefined;
   if (parsedArguments.flags['--prebuilt']) {
+    telemetryClient.trackCliFlagPrebuilt();
     vercelOutputDir = join(cwd, '.vercel/output');
 
     // For repo-style linking, update `cwd` to be the Project
@@ -309,6 +329,7 @@ export default async (client: Client): Promise<number> => {
     }
 
     const prebuiltExists = await fs.pathExists(vercelOutputDir);
+    // throw new Error(prebuiltExists === true ? 'ye' : 'na');
     if (!prebuiltExists) {
       error(
         `The ${param(
@@ -458,6 +479,7 @@ export default async (client: Client): Promise<number> => {
     }
   }
 
+  telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
   // #region Meta
   const meta = Object.assign(
     {},
@@ -468,6 +490,8 @@ export default async (client: Client): Promise<number> => {
   const gitMetadata = await createGitMeta(cwd, output, project);
   // #endregion
 
+  telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
+
   // #region Env vars validation
   // Merge dotenv config, `env` from vercel.json, and `--env` / `-e` arguments
   const deploymentEnv = Object.assign(
@@ -475,6 +499,8 @@ export default async (client: Client): Promise<number> => {
     parseEnv(localConfig.env),
     parseEnv(parsedArguments.flags['--env'])
   );
+
+  telemetryClient.trackCliOptionBuildEnv(parsedArguments.flags['--build-env']);
 
   // Merge build env out of  `build.env` from vercel.json, and `--build-env` args
   const deploymentBuildEnv = Object.assign(
@@ -498,6 +524,7 @@ export default async (client: Client): Promise<number> => {
     .split(',')
     .map((s: string) => s.trim())
     .filter(Boolean);
+  telemetryClient.trackCliOptionRegions(regionFlag);
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
   // #endregion
 
@@ -509,6 +536,9 @@ export default async (client: Client): Promise<number> => {
   let deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
+  if (noWait) {
+    telemetryClient.trackCliFlagNoWait();
+  }
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -524,6 +554,13 @@ export default async (client: Client): Promise<number> => {
     const autoAssignCustomDomains = parsedArguments.flags['--skip-domain']
       ? false
       : undefined;
+    if (autoAssignCustomDomains === false) {
+      telemetryClient.trackCliFlagSkipDomain();
+    }
+
+    if (parsedArguments.flags['--public']) {
+      telemetryClient.trackCliFlagPublic();
+    }
 
     const createArgs: CreateOptions = {
       name,
@@ -554,6 +591,15 @@ export default async (client: Client): Promise<number> => {
       withLogs: parsedArguments.flags['--logs'],
       autoAssignCustomDomains,
     };
+    if (createArgs.withLogs) {
+      telemetryClient.trackCliFlagLogs();
+    }
+    if (createArgs.forceNew) {
+      telemetryClient.trackCliFlagForce();
+    }
+    if (createArgs.withCache) {
+      telemetryClient.trackCliFlagWithCache();
+    }
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
       // Only add projectSettings for zero config deployments
