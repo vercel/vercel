@@ -1,19 +1,26 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
 import { add } from './add';
 import { integrationCommand } from './command';
+import { list } from './list';
 import { openIntegration } from './open-integration';
 
 const COMMAND_CONFIG = {
   add: ['add'],
   open: ['open'],
+  list: ['list', 'ls'],
 };
 
 export default async function main(client: Client) {
-  const { args, flags } = parseArguments(client.argv.slice(2));
+  const { args, flags } = parseArguments(
+    client.argv.slice(2),
+    getFlagsSpecification(integrationCommand.options),
+    { permissive: true }
+  );
   const { subcommand, args: subArgs } = getSubcommand(
     args.slice(1),
     COMMAND_CONFIG
@@ -29,6 +36,9 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'add': {
       return add(client, subArgs);
+    }
+    case 'list': {
+      return list(client);
     }
     case 'open': {
       return openIntegration(client, subArgs);

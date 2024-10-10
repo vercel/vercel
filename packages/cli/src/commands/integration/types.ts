@@ -83,3 +83,21 @@ export interface BillingPlan {
   }[];
   disabled?: boolean;
 }
+
+export interface Resource {
+  id: string;
+  type: string;
+  name: string;
+  status?: string | null;
+  product?: {
+    name?: string;
+    slug?: string;
+    integrationConfigurationId?: string;
+  };
+  projectsMetadata?: {
+    id: string;
+    projectId: string;
+    name: string;
+    environments: string[];
+  }[];
+}
