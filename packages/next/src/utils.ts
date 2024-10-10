@@ -2152,6 +2152,19 @@ export const onPrerenderRoute =
       } = pr);
     }
 
+    // Prior to v14.3.0-canary.78, prefetchDataRoute was not set for all the app
+    // path routes, and was only set for routes with PPR enabled. This affects
+    // all apps that use incremental PPR with an older version of Next.js. This
+    // patches the prefetchDataRoute for those apps.
+    if (
+      isAppPPREnabled &&
+      !prefetchDataRoute &&
+      dataRoute &&
+      dataRoute.endsWith('.rsc')
+    ) {
+      prefetchDataRoute = dataRoute.replace(/\.rsc$/, RSC_PREFETCH_SUFFIX);
+    }
+
     let isAppPathRoute = false;
 
     // `renderingMode === RenderingMode.PARTIALLY_STATIC` signals app path route
@@ -2273,6 +2286,7 @@ export const onPrerenderRoute =
               ),
             });
     }
+
     const jsonFsRef =
       // JSON data does not exist for fallback or blocking pages
       isFallback || isBlocking || (isNotFound && !static404Page) || !dataRoute
@@ -2293,7 +2307,7 @@ export const onPrerenderRoute =
                       // be from the prefetch data route. If this isn't enabled
                       // for ppr, the only way to get the data is from the data
                       // route.
-                      renderingMode === RenderingMode.PARTIALLY_STATIC
+                      isAppPPREnabled
                       ? prefetchDataRoute
                       : dataRoute
                     : routeFileNoExt + '.json'
