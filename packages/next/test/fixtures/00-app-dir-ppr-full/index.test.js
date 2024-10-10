@@ -266,7 +266,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
         html = await res.text();
         $ = cheerio.load(html);
-        assertRouteShell($);
+        assertFallbackShell($);
       });
     });
 
@@ -326,7 +326,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     it('should revalidate the pages and perform a blocking render when the fallback is revalidated', async () => {
       let res = await fetch(`${ctx.deploymentUrl}/fallback/static-01/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
+      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
 
       let html = await res.text();
       let $ = cheerio.load(html);
@@ -364,7 +364,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       // The remaining requests should be cached.
       res = await fetch(`${ctx.deploymentUrl}/fallback/static-02/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
+      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
 
       html = await res.text();
       $ = cheerio.load(html);
