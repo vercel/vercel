@@ -449,9 +449,15 @@ async function checkTurboSupportsCorepack(
   }
   const turboJsonPath = path.join(rootDir, 'turbo.json');
   const turboJsonExists = await fs.pathExists(turboJsonPath);
-  const turboJson = turboJsonExists
-    ? json5.parse<unknown>(await fs.readFile(turboJsonPath, 'utf8'))
-    : undefined;
+
+  let turboJson: null | unknown = null;
+  if (turboJsonExists) {
+    try {
+      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+    } catch (err) {
+      console.warn(`WARNING: Failed to parse turbo.json`);
+    }
+  }
 
   const turboJsonIncludesCorepackHome =
     turboJson !== null &&
