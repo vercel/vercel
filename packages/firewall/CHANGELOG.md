@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 0.1.3
+
+### Patch Changes
+
+- Link to docs ([#12216](https://github.com/vercel/vercel/pull/12216))
+
 ## 0.1.1
 
 ### Patch Changes

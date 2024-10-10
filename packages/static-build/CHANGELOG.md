@@ -1,5 +1,46 @@
 # @vercel/static-build
 
+## 2.5.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.54
+
+## 2.5.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.53
+
+## 2.5.30
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.52
+
+## 2.5.29
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.51
+
+## 2.5.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.50
+
 ## 2.5.27
 
 ### Patch Changes

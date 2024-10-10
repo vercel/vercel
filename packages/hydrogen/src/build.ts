@@ -51,17 +51,20 @@ export const build: BuildV2 = async ({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entrypointDir,
-    true
-  );
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointDir, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
