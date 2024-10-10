@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
+import fetch from 'node-fetch';
 
 const LogLabel = `['telemetry']:`;
 
@@ -17,6 +18,7 @@ interface Options {
 
 interface Event {
   sessionId?: string;
+  eventTime: number;
   id: string;
   key: string;
   value: string;
@@ -42,6 +44,7 @@ export class TelemetryClient {
 
     const event: Event = {
       id: randomUUID(),
+      eventTime: Date.now(),
       ...eventData,
     };
 
@@ -150,7 +153,7 @@ export class TelemetryEventStore {
   constructor(opts: {
     output: Output;
     isDebug?: boolean;
-    config: GlobalConfig['telemetry'];
+    config?: GlobalConfig['telemetry'];
   }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
@@ -180,7 +183,7 @@ export class TelemetryEventStore {
     return this.config?.enabled === false ? false : true;
   }
 
-  save() {
+  async save() {
     if (this.isDebug) {
       // Intentionally not using `this.output.debug` as it will
       // not write to stderr unless it is run with `--debug`
@@ -193,7 +196,51 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      // send events to the server
+      const url = 'https://telemetry.vercel.com/api/vercel-cli/v0/events';
+
+      const sessionId = this.events[0].sessionId;
+      if (!sessionId) {
+        this.output.debug('Unable to send metrics: no session ID');
+        return;
+      }
+      const events = this.events.map(event => {
+        delete event.sessionId;
+        const { eventTime, ...rest } = event;
+        return { event_time: eventTime, ...rest };
+      });
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-id': 'vercel-cli',
+            'x-vercel-cli-topic-id': 'generic',
+            'x-vercel-cli-session-id': sessionId,
+          },
+          body: JSON.stringify(events),
+        });
+        const wasRecorded =
+          response.headers.get('x-vercel-cli-tracked') === '1';
+        if (response.status !== 204) {
+          this.output.debug(
+            `Unexpected response from telemetry server: ${response.status}`
+          );
+        } else {
+          if (wasRecorded) {
+            this.output.debug(`Telemetry event tracked`);
+          } else {
+            this.output.debug(
+              `Telemetry event ignored due to progressive rollout`
+            );
+          }
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          this.output.debug(
+            `Error while sending telemetry data: ${error.message}`
+          );
+        }
+      }
     }
   }
 }

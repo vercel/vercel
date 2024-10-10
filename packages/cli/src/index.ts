@@ -734,7 +734,7 @@ const main = async () => {
   }
 
   // specifically don't await this, we want to fire and forget
-  telemetryEventStore.save();
+  await telemetryEventStore.save();
   return exitCode;
 };
 
