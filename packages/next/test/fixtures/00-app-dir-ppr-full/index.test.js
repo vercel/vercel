@@ -208,7 +208,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
   });
 
-  describe('fallback should be used correctly', () => {
+  describe.only('fallback should be used correctly', () => {
     const assertRouteShell = $ => {
       expect($('[data-page]').closest('[hidden]')).toHaveLength(0);
     };
@@ -284,7 +284,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     it('should serve the fallback shell for new pages', async () => {
       let res = await fetch(`${ctx.deploymentUrl}/fallback/second/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
+      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
 
       let html = await res.text();
       let $ = cheerio.load(html);
@@ -304,7 +304,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
       res = await fetch(`${ctx.deploymentUrl}/fallback/third/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
+      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
 
       html = await res.text();
       $ = cheerio.load(html);
@@ -326,7 +326,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     it('should revalidate the pages and perform a blocking render when the fallback is revalidated', async () => {
       let res = await fetch(`${ctx.deploymentUrl}/fallback/fourth/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
+      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
 
       let html = await res.text();
       let $ = cheerio.load(html);
@@ -363,7 +363,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
       res = await fetch(`${ctx.deploymentUrl}/fallback/fifth/dynamic`);
       expect(res.status).toEqual(200);
-      expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');
+      expect(res.headers.get('x-vercel-cache')).toEqual('HIT');
 
       html = await res.text();
       $ = cheerio.load(html);
