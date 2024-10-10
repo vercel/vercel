@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.4.10
+
+### Patch Changes
+
+- Parse `turbo.json` as json5 ([#12259](https://github.com/vercel/vercel/pull/12259))
+
 ## 8.4.9
 
 ### Patch Changes

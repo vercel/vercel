@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import open from 'open';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import { packageName } from '../../util/pkg-name';
 import getScope from '../../util/get-scope';
@@ -8,21 +8,19 @@ import list from '../../util/input/list';
 import cmd from '../../util/output/cmd';
 import indent from '../../util/output/indent';
 import { getLinkedProject } from '../../util/projects/link';
-import {
+import type {
   BillingPlan,
   Integration,
   IntegrationInstallation,
   IntegrationProduct,
   Metadata,
 } from './types';
-import { createMetadataWizard, MetadataWizard } from './wizard';
-import {
-  fetchIntegration,
-  fetchInstallations,
-  fetchBillingPlans,
-  provisionStoreResource,
-  connectStoreToProject,
-} from './client';
+import { createMetadataWizard, type MetadataWizard } from './wizard';
+import { provisionStoreResource } from '../../util/integration/provision-store-resource';
+import { connectResourceToProject } from '../../util/integration/connect-resource-to-project';
+import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
+import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { fetchIntegration } from '../../util/integration/fetch-integration';
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
@@ -180,7 +178,7 @@ function privisionResourceViaWebUI(
   productId: string,
   projectId?: string
 ) {
-  const url = new URL(`/api/marketplace/cli`, 'https://vercel.com');
+  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('integrationId', integrationId);
   url.searchParams.set('productId', productId);
@@ -189,7 +187,7 @@ function privisionResourceViaWebUI(
   }
   url.searchParams.set('cmd', 'add');
   client.output.print(
-    `Opening the Vercel Dashboard to continue the installation...`
+    'Opening the Vercel Dashboard to continue the installation...'
   );
   open(url.href);
 }
@@ -351,14 +349,14 @@ async function confirmProductSelection(
   billingPlan: BillingPlan
 ) {
   client.output.print('Selected product:\n');
-  client.output.print(`${chalk.dim(`- ${chalk.bold(`Name:`)} ${name}`)}\n`);
+  client.output.print(`${chalk.dim(`- ${chalk.bold('Name:')} ${name}`)}\n`);
   for (const [key, value] of Object.entries(metadata)) {
     client.output.print(
       `${chalk.dim(`- ${chalk.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
     );
   }
   client.output.print(
-    `${chalk.dim(`- ${chalk.bold(`Plan:`)} ${billingPlan.name}`)}\n`
+    `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
   );
 
   return client.input.confirm({
@@ -421,7 +419,7 @@ async function provisionStorageProduct(
     `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
   );
   try {
-    await connectStoreToProject(
+    await connectResourceToProject(
       client,
       projectLink.project.id,
       storeId,

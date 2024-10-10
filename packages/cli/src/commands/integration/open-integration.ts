@@ -3,7 +3,8 @@ import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import type { Configuration } from './types';
-import { fetchMarketplaceIntegrations } from './client';
+import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
 
 export async function openIntegration(client: Client, args: string[]) {
   if (args.length > 1) {
@@ -47,10 +48,7 @@ export async function openIntegration(client: Client, args: string[]) {
     `Opening the ${chalk.bold(integrationSlug)} dashboard...`
   );
 
-  const url = new URL('/api/marketplace/sso', 'https://vercel.com');
-  url.searchParams.set('teamId', team.id);
-  url.searchParams.set('integrationConfigurationId', configuration.id);
-  open(url.href);
+  open(buildSSOLink(team, configuration.id));
 
   return 0;
 }
