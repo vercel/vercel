@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.2.0
+
+### Minor Changes
+
+- Support parse go patch version in go.mod and allows to use specific toolchain ([#11064](https://github.com/vercel/vercel/pull/11064))
+
 ## 3.1.3
 
 ### Patch Changes

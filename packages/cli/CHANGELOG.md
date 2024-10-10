@@ -1,5 +1,17 @@
 # vercel
 
+## 37.7.1
+
+### Patch Changes
+
+- [cli] remove extraneous `--yes` option from docs ([#12256](https://github.com/vercel/vercel/pull/12256))
+
+- Updated dependencies [[`6bc94805af7550967ca675194b5b956284da8797`](https://github.com/vercel/vercel/commit/6bc94805af7550967ca675194b5b956284da8797), [`fac89652a412d21b70c015db0863bc89cb45c453`](https://github.com/vercel/vercel/commit/fac89652a412d21b70c015db0863bc89cb45c453)]:
+  - @vercel/build-utils@8.4.10
+  - @vercel/go@3.2.0
+  - @vercel/node@3.2.22
+  - @vercel/static-build@2.5.32
+
 ## 37.7.0
 
 ### Minor Changes
