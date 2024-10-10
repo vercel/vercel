@@ -9,11 +9,13 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionArchive(format: string | boolean) {
-    this.trackCliOption({
-      flag: 'archive',
-      value: typeof format === 'string' ? format : String(format),
-    });
+  trackCliOptionArchive(format?: string) {
+    if (format) {
+      this.trackCliOption({
+        flag: 'archive',
+        value: format,
+      });
+    }
   }
   trackCliOptionBuildEnv(buildEnv?: string[]) {
     if (buildEnv && buildEnv.length > 0) {
@@ -47,40 +49,56 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionRegions(regions?: string[]) {
-    if (regions && regions.length > 0) {
+  trackCliOptionRegions(regions?: string) {
+    if (regions) {
       this.trackCliOption({
         flag: 'regions',
-        value: regions.join(','),
+        value: regions,
       });
     }
   }
-  trackCliFlagConfirm() {
-    this.trackCliFlag('confirm');
+  trackCliFlagConfirm(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('confirm');
+    }
   }
-  trackCliFlagForce() {
-    this.trackCliFlag('force');
+  trackCliFlagForce(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('force');
+    }
   }
-  trackCliFlagLogs() {
-    this.trackCliFlag('logs');
+  trackCliFlagLogs(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('logs');
+    }
   }
   trackCliFlagNoClipboard() {
     this.trackCliFlag('no-clipboard');
   }
-  trackCliFlagNoWait() {
-    this.trackCliFlag('no-wait');
+  trackCliFlagNoWait(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('no-wait');
+    }
   }
-  trackCliFlagPrebuilt() {
-    this.trackCliFlag('prebuilt');
+  trackCliFlagPrebuilt(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('prebuilt');
+    }
   }
-  trackCliFlagProd() {
-    this.trackCliFlag('prod');
+  trackCliFlagProd(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('prod');
+    }
   }
-  trackCliFlagPublic() {
-    this.trackCliFlag('public');
+  trackCliFlagPublic(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('public');
+    }
   }
-  trackCliFlagSkipDomain() {
-    this.trackCliFlag('skip-domain');
+  trackCliFlagSkipDomain(skipDomain?: boolean) {
+    if (skipDomain) {
+      this.trackCliFlag('skip-domain');
+    }
   }
   trackCliFlagTarget(target?: string) {
     if (target) {
@@ -93,10 +111,14 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliFlagWithCache() {
-    this.trackCliFlag('with-cache');
+  trackCliFlagWithCache(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('with-cache');
+    }
   }
-  trackCliFlagYes() {
-    this.trackCliFlag('yes');
+  trackCliFlagYes(flag?: boolean) {
+    if (flag) {
+      this.trackCliFlag('yes');
+    }
   }
 }
