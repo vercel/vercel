@@ -56,6 +56,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import { checkTelemetryStatus } from './util/telemetry/check-status';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -250,6 +251,27 @@ const main = async () => {
     config: config.telemetry,
   });
 
+  // Shared API `Client` instance for all sub-commands to utilize
+  client = new Client({
+    agent: new ProxyAgent({ keepAlive: true }),
+    apiUrl,
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: output.stream,
+    output,
+    config,
+    authConfig,
+    localConfig,
+    localConfigPath,
+    argv: process.argv,
+    telemetryEventStore,
+  });
+
+  checkTelemetryStatus({
+    config,
+    client,
+  });
+
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -275,22 +297,6 @@ const main = async () => {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
-
-  // Shared API `Client` instance for all sub-commands to utilize
-  client = new Client({
-    agent: new ProxyAgent({ keepAlive: true }),
-    apiUrl,
-    stdin: process.stdin,
-    stdout: process.stdout,
-    stderr: output.stream,
-    output,
-    config,
-    authConfig,
-    localConfig,
-    localConfigPath,
-    argv: process.argv,
-    telemetryEventStore,
-  });
 
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
