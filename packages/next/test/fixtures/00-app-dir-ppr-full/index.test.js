@@ -239,6 +239,31 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       throw err;
     };
 
+    describe('cache should be resilient to poisoning', () => {
+      it.each([
+        { pathname: '/fallback/poison/static-01/dynamic', slug: 'static-01' },
+        { pathname: '/fallback/poison/static-02/dynamic', slug: 'static-02' },
+        { pathname: '/fallback/poison/test-01/dynamic', slug: 'test-01' },
+        { pathname: '/fallback/poison/test-02/dynamic', slug: 'test-02' },
+        { pathname: '/fallback/poison/test-03/dynamic', slug: 'test-03' },
+        { pathname: '/fallback/poison/static-01', slug: 'static-01' },
+        { pathname: '/fallback/poison/static-02', slug: 'static-02' },
+        { pathname: '/fallback/poison/test-04', slug: 'test-04' },
+        { pathname: '/fallback/poison/test-05', slug: 'test-05' },
+        { pathname: '/fallback/poison/test-06', slug: 'test-06' },
+      ])('for $pathname', async ({ pathname, slug }) => {
+        const res = await fetch(`${ctx.deploymentUrl}${pathname}`);
+        expect(res.status).toEqual(200);
+
+        const html = await res.text();
+        const $ = cheerio.load(html);
+
+        // Expect that the poisoned page contains the correct slug. A failure
+        // here means that the cache was poisoned.
+        expect($('[data-slug]').data('slug')).toEqual(slug);
+      });
+    });
+
     it('should use the fallback shell on the first request', async () => {
       const res = await fetch(`${ctx.deploymentUrl}/fallback/first`);
       expect(res.status).toEqual(200);
