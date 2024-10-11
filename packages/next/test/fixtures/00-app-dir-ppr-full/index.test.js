@@ -208,7 +208,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
   });
 
-  describe.only('fallback should be used correctly', () => {
+  describe('fallback should be used correctly', () => {
     const assertRouteShell = $ => {
       expect($('[data-page]').closest('[hidden]')).toHaveLength(0);
     };
