@@ -10,6 +10,8 @@ import { setTimeout } from 'timers/promises';
 
 vi.setConfig({ testTimeout: 20 * 1000 });
 
+const isWindows = process.platform === 'win32';
+
 const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 function testForkDevServer(entrypoint: string) {
@@ -117,19 +119,21 @@ async function withDevServer(
         { runningTimeout: 300 }
       ));
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    test.skip('with `waitUntil` from context rejecting a promise ', () =>
-      withDevServer(
-        './wait-until-ctx-node-rejected.js',
-        async (url: string) => {
-          const response = await fetch(
-            `${url}/api/wait-until-ctx-node-rejected`
-          );
-          await setTimeout(100); // wait a bit for waitUntil resolution
-          expect(response.status).toBe(200);
-        },
-        { runningTimeout: 100 }
-      ));
+    test.skipIf(isWindows)(
+      'with `waitUntil` from context rejecting a promise ',
+      () =>
+        withDevServer(
+          './wait-until-ctx-node-rejected.js',
+          async (url: string) => {
+            const response = await fetch(
+              `${url}/api/wait-until-ctx-node-rejected`
+            );
+            await setTimeout(100); // wait a bit for waitUntil resolution
+            expect(response.status).toBe(200);
+          },
+          { runningTimeout: 100 }
+        )
+    );
 
     test('exporting GET', () =>
       withDevServer('./web-handlers-node.js', async (url: string) => {

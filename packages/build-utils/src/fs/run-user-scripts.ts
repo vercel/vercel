@@ -25,6 +25,7 @@ import {
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
+import json5 from 'json5';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -61,6 +62,12 @@ export interface ScanParentDirsResult {
    * or `undefined` if not found.
    */
   lockfileVersion?: number;
+  /**
+   * The contents of the `packageManager` field from `package.json` if found.
+   * The value may come from a different `package.json` file than the one
+   * specified by `packageJsonPath`, in the case of a monorepo.
+   */
+  packageJsonPackageManager?: string;
   /**
    * Whether Turborepo supports the `COREPACK_HOME` environment variable.
    * `undefined` if not a Turborepo project.
@@ -348,17 +355,19 @@ export async function scanParentDirs(
     readPackageJson && pkgJsonPath
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
-  const [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath] =
-    await walkParentDirsMulti({
-      base,
-      start: destPath,
-      filenames: [
-        'yarn.lock',
-        'package-lock.json',
-        'pnpm-lock.yaml',
-        'bun.lockb',
-      ],
-    });
+  const {
+    paths: [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath],
+    packageJsonPackageManager,
+  } = await walkParentDirsMulti({
+    base,
+    start: destPath,
+    filenames: [
+      'yarn.lock',
+      'package-lock.json',
+      'pnpm-lock.yaml',
+      'bun.lockb',
+    ],
+  });
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
@@ -413,19 +422,17 @@ export async function scanParentDirs(
     // TODO: read "bun-lockfile-format-v0"
     lockfileVersion = 0;
   } else {
-    cliType =
-      packageJson && rootProjectInfo
-        ? detectPackageManagerNameWithoutLockfile(
-            packageJson,
-            turboSupportsCorepackHome
-          )
-        : 'npm';
+    cliType = detectPackageManagerNameWithoutLockfile(
+      packageJsonPackageManager,
+      turboSupportsCorepackHome
+    );
   }
 
   const packageJsonPath = pkgJsonPath || undefined;
   return {
     cliType,
     packageJson,
+    packageJsonPackageManager,
     lockfilePath,
     lockfileVersion,
     packageJsonPath,
@@ -433,28 +440,47 @@ export async function scanParentDirs(
   };
 }
 
-type TurboJson = {
-  globalPassThroughEnv?: string[];
-};
-
 async function checkTurboSupportsCorepack(
   turboVersionRange: string,
   rootDir: string
 ) {
-  if (turboRangeSupportsCorepack(turboVersionRange)) {
+  if (turboVersionSpecifierSupportsCorepack(turboVersionRange)) {
     return true;
   }
   const turboJsonPath = path.join(rootDir, 'turbo.json');
   const turboJsonExists = await fs.pathExists(turboJsonPath);
-  const turboJson = turboJsonExists
-    ? (JSON.parse(await fs.readFile(turboJsonPath, 'utf8')) as TurboJson)
-    : undefined;
-  return turboJson?.globalPassThroughEnv?.includes('COREPACK_HOME') || false;
+
+  let turboJson: null | unknown = null;
+  if (turboJsonExists) {
+    try {
+      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+    } catch (err) {
+      console.warn(`WARNING: Failed to parse turbo.json`);
+    }
+  }
+
+  const turboJsonIncludesCorepackHome =
+    turboJson !== null &&
+    typeof turboJson === 'object' &&
+    'globalPassThroughEnv' in turboJson &&
+    Array.isArray(turboJson.globalPassThroughEnv) &&
+    turboJson.globalPassThroughEnv.includes('COREPACK_HOME');
+
+  return turboJsonIncludesCorepackHome;
 }
 
-function turboRangeSupportsCorepack(turboVersionRange: string) {
+export function turboVersionSpecifierSupportsCorepack(
+  turboVersionSpecifier: string
+) {
+  if (!validRange(turboVersionSpecifier)) {
+    // Version specifiers can be things that aren't version ranges
+    //   ex: "latest", "catalog:", tarball or git URLs
+    // In these cases we can't easily determine if that version
+    // supports corepack, so we assume it doesn't.
+    return false;
+  }
   const versionSupportingCorepack = '2.1.3';
-  const minTurboBeingUsed = minVersion(turboVersionRange);
+  const minTurboBeingUsed = minVersion(turboVersionSpecifier);
   if (!minTurboBeingUsed) {
     return false;
   }
@@ -462,10 +488,9 @@ function turboRangeSupportsCorepack(turboVersionRange: string) {
 }
 
 function detectPackageManagerNameWithoutLockfile(
-  packageJson: PackageJson,
+  packageJsonPackageManager: string | undefined,
   turboSupportsCorepackHome: boolean | undefined
 ) {
-  const packageJsonPackageManager = packageJson.packageManager;
   if (
     usingCorepack(
       process.env,
@@ -537,20 +562,35 @@ async function walkParentDirsMulti({
   base,
   start,
   filenames,
-}: WalkParentDirsMultiProps): Promise<(string | undefined)[]> {
+}: WalkParentDirsMultiProps): Promise<{
+  paths: (string | undefined)[];
+  packageJsonPackageManager?: string;
+}> {
+  let packageManager: string | undefined;
+
   for (const dir of traverseUpDirectories({ start, base })) {
     const fullPaths = filenames.map(f => path.join(dir, f));
     const existResults = await Promise.all(
       fullPaths.map(f => fs.pathExists(f))
     );
     const foundOneOrMore = existResults.some(b => b);
+    const packageJsonPath = path.join(dir, 'package.json');
+    const packageJson: PackageJson | null = await fs
+      .readJSON(packageJsonPath)
+      .catch(() => null);
+    if (packageJson?.packageManager) {
+      packageManager = packageJson.packageManager;
+    }
 
     if (foundOneOrMore) {
-      return fullPaths.map((f, i) => (existResults[i] ? f : undefined));
+      return {
+        paths: fullPaths.map((f, i) => (existResults[i] ? f : undefined)),
+        packageJsonPackageManager: packageManager,
+      };
     }
   }
 
-  return [];
+  return { paths: [], packageJsonPackageManager: packageManager };
 }
 
 function isSet<T>(v: any): v is Set<T> {
@@ -578,6 +618,7 @@ export async function runNpmInstall(
       packageJsonPath,
       packageJson,
       lockfileVersion,
+      packageJsonPackageManager,
       turboSupportsCorepackHome,
     } = await scanParentDirs(destPath, true);
 
@@ -614,7 +655,7 @@ export async function runNpmInstall(
     opts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager: packageJson?.packageManager,
+      packageJsonPackageManager,
       nodeVersion,
       env,
       packageJsonEngines: packageJson?.engines,
@@ -1154,12 +1195,17 @@ export async function runCustomInstallCommand({
   spawnOpts?: SpawnOptions;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
-  const { cliType, lockfileVersion, packageJson, turboSupportsCorepackHome } =
-    await scanParentDirs(destPath, true);
+  const {
+    cliType,
+    lockfileVersion,
+    packageJson,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
@@ -1180,8 +1226,13 @@ export async function runPackageJsonScript(
 ) {
   assert(path.isAbsolute(destPath));
 
-  const { packageJson, cliType, lockfileVersion, turboSupportsCorepackHome } =
-    await scanParentDirs(destPath, true);
+  const {
+    packageJson,
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
@@ -1197,7 +1248,7 @@ export async function runPackageJsonScript(
     env: getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager: packageJson?.packageManager,
+      packageJsonPackageManager,
       nodeVersion: undefined,
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
