@@ -240,27 +240,48 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     };
 
     describe('cache should be resilient to poisoning', () => {
-      it.each([
-        { pathname: '/fallback/poison/static-01/dynamic', slug: 'static-01' },
-        { pathname: '/fallback/poison/static-02/dynamic', slug: 'static-02' },
+      const routes = [
         { pathname: '/fallback/poison/test-01/dynamic', slug: 'test-01' },
         { pathname: '/fallback/poison/test-02/dynamic', slug: 'test-02' },
         { pathname: '/fallback/poison/test-03/dynamic', slug: 'test-03' },
-        { pathname: '/fallback/poison/static-01', slug: 'static-01' },
-        { pathname: '/fallback/poison/static-02', slug: 'static-02' },
+        { pathname: '/fallback/poison/static-01/dynamic', slug: 'static-01' },
+        { pathname: '/fallback/poison/static-02/dynamic', slug: 'static-02' },
         { pathname: '/fallback/poison/test-04', slug: 'test-04' },
         { pathname: '/fallback/poison/test-05', slug: 'test-05' },
         { pathname: '/fallback/poison/test-06', slug: 'test-06' },
-      ])('for $pathname', async ({ pathname, slug }) => {
-        const res = await fetch(`${ctx.deploymentUrl}${pathname}`);
-        expect(res.status).toEqual(200);
+        { pathname: '/fallback/poison/static-01', slug: 'static-01' },
+        { pathname: '/fallback/poison/static-02', slug: 'static-02' },
+      ];
 
-        const html = await res.text();
-        const $ = cheerio.load(html);
+      it('should not poison the cache', async () => {
+        for (const { pathname, slug } of routes) {
+          let res = await fetch(`${ctx.deploymentUrl}${pathname}`);
+          expect(res.status).toEqual(200);
 
-        // Expect that the poisoned page contains the correct slug. A failure
-        // here means that the cache was poisoned.
-        expect($('[data-slug]').data('slug')).toEqual(slug);
+          let html = await res.text();
+          let $ = cheerio.load(html);
+
+          // Expect that the poisoned page contains the correct slug. A failure
+          // here means that the cache was poisoned.
+          expect($('[data-slug]').data('slug')).toEqual(slug);
+
+          // Send the revalidation request.
+          res = await fetch(`${ctx.deploymentUrl}/api/revalidate${pathname}`, {
+            method: 'DELETE',
+          });
+          expect(res.status).toEqual(200);
+
+          // Should still have the correct results.
+          res = await fetch(`${ctx.deploymentUrl}${pathname}`);
+          expect(res.status).toEqual(200);
+
+          html = await res.text();
+          $ = cheerio.load(html);
+
+          // Expect that the poisoned page contains the correct slug. If it's
+          // poisoned, the slug will be incorrect.
+          expect($('[data-slug]').data('slug')).toEqual(slug);
+        }
       });
     });
 
