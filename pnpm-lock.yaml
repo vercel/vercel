@@ -1530,8 +1530,8 @@ importers:
   packages/routing-utils:
     dependencies:
       path-to-regexp:
-        specifier: 6.3.0
-        version: 6.3.0
+        specifier: git@github.com:pillarjs/path-to-regexp.git#762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3
+        version: github.com/pillarjs/path-to-regexp/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3
     optionalDependencies:
       ajv:
         specifier: ^6.0.0
@@ -18671,3 +18671,11 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
+
+  github.com/pillarjs/path-to-regexp/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3:
+    resolution: {tarball: https://codeload.github.com/pillarjs/path-to-regexp/tar.gz/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3}
+    name: path-to-regexp
+    version: 6.2.0
+    prepare: true
+    requiresBuild: true
+    dev: false
