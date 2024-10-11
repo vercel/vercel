@@ -15,6 +15,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandWhoami(actual: string) {
+    this.trackCliCommand({
+      command: 'whoami',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
