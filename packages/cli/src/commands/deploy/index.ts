@@ -343,7 +343,6 @@ export default async (client: Client): Promise<number> => {
     }
 
     const prebuiltExists = await fs.pathExists(vercelOutputDir);
-    // throw new Error(prebuiltExists === true ? 'ye' : 'na');
     if (!prebuiltExists) {
       error(
         `The ${param(

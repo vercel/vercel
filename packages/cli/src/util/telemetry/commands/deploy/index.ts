@@ -1,8 +1,8 @@
 import { TelemetryClient } from '../..';
 
 export class DeployTelemetryClient extends TelemetryClient {
-  trackCliArgumentProjectPath(projectPaths: string[]) {
-    if (projectPaths.length > 0) {
+  trackCliArgumentProjectPath(projectPaths?: string[]) {
+    if (projectPaths && projectPaths.length > 0) {
       this.trackCliArgument({
         arg: 'project-path',
         value: this.redactedValue,
@@ -61,7 +61,7 @@ export class DeployTelemetryClient extends TelemetryClient {
     if (target) {
       const value = ['production', 'preview'].includes(target)
         ? target
-        : 'customIdOrSlug';
+        : 'CUSTOM_ID_OR_SLUG';
       this.trackCliOption({
         flag: 'target',
         value,

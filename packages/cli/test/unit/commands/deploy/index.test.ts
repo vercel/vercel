@@ -1070,7 +1070,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:target',
-          value: 'customIdOrSlug',
+          value: 'CUSTOM_ID_OR_SLUG',
         },
       ]);
     });
