@@ -10,7 +10,9 @@ export default async function Page(props) {
 
   return (
     <>
-      <div data-page>This is the validation page: {slug}</div>
+      <div data-page data-slug={slug}>
+        This is the validation page: {slug}
+      </div>
       <Suspense>
         <Agent />
       </Suspense>
