@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.1.8
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
 ## 2.1.7
 
 ### Patch Changes

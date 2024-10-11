@@ -1,5 +1,34 @@
 # vercel
 
+## 37.8.0
+
+### Minor Changes
+
+- Enable viewing a list of team's Marketplace resources via the `vc integration list` command (with the alternative alias `vc integration ls` and basic filtering `--current-project` and `--integration [integration-slug]`) ([#12251](https://github.com/vercel/vercel/pull/12251))
+
+### Patch Changes
+
+- Updated dependencies [[`d01c6b98d6f5f2718b69edec71b4aec40822bfe6`](https://github.com/vercel/vercel/commit/d01c6b98d6f5f2718b69edec71b4aec40822bfe6), [`3a2c2529c642cc2efc11d08a18f2da2ff423b15f`](https://github.com/vercel/vercel/commit/3a2c2529c642cc2efc11d08a18f2da2ff423b15f)]:
+  - @vercel/build-utils@8.4.11
+  - @vercel/static-build@2.5.33
+  - @vercel/hydrogen@1.0.9
+  - @vercel/redwood@2.1.8
+  - @vercel/remix-builder@2.2.12
+  - @vercel/next@4.3.15
+  - @vercel/node@3.2.23
+
+## 37.7.1
+
+### Patch Changes
+
+- [cli] remove extraneous `--yes` option from docs ([#12256](https://github.com/vercel/vercel/pull/12256))
+
+- Updated dependencies [[`6bc94805af7550967ca675194b5b956284da8797`](https://github.com/vercel/vercel/commit/6bc94805af7550967ca675194b5b956284da8797), [`fac89652a412d21b70c015db0863bc89cb45c453`](https://github.com/vercel/vercel/commit/fac89652a412d21b70c015db0863bc89cb45c453)]:
+  - @vercel/build-utils@8.4.10
+  - @vercel/go@3.2.0
+  - @vercel/node@3.2.22
+  - @vercel/static-build@2.5.32
+
 ## 37.7.0
 
 ### Minor Changes
