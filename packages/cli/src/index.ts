@@ -640,6 +640,7 @@ const main = async () => {
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':
+          telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
           break;
         default:
