@@ -330,7 +330,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
       let html = await res.text();
       let $ = cheerio.load(html);
-      assertFallbackShell($);
+      assertRouteShell($);
 
       await retry(async () => {
         res = await fetch(`${ctx.deploymentUrl}/fallback/static-01/dynamic`);
@@ -368,7 +368,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
       html = await res.text();
       $ = cheerio.load(html);
-      assertFallbackShell($);
       assertDynamicPostponed($);
 
       await retry(async () => {
