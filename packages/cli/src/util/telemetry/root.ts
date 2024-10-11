@@ -22,6 +22,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandTeams(actual: string) {
+    this.trackCliCommand({
+      command: 'teams',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
