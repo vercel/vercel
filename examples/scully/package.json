@@ -17,7 +17,7 @@
     "@angular/animations": "~9.0.0-rc.7",
     "@angular/common": "~9.0.0-rc.7",
     "@angular/compiler": "~9.0.0-rc.7",
-    "@angular/core": "~9.0.0-rc.7",
+    "@angular/core": "~10.2.5",
     "@angular/forms": "~9.0.0-rc.7",
     "@angular/platform-browser": "~9.0.0-rc.7",
     "@angular/platform-browser-dynamic": "~9.0.0-rc.7",
