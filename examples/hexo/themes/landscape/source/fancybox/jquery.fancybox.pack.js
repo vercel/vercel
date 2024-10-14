@@ -1,4 +1,5 @@
 /*! fancyBox v2.1.5 fancyapps.com | fancyapps.com/fancybox/#license */
+var DOMPurify = require('dompurify')(window);
 (function(s, H, f, w) {
   var K = f('html'),
     q = f(s),
@@ -1181,6 +1182,7 @@
           !1 !== b.open(h, a) && g.preventDefault());
       };
     a = a || {};
+    a = DOMPurify.sanitize(a); // Sanitize the input
     d = a.index || 0;
     c && !1 !== a.live
       ? p
