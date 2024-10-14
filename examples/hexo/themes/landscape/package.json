@@ -8,5 +8,8 @@
     "grunt-git": "~0.2.2",
     "grunt-contrib-clean": "~0.5.0",
     "grunt-contrib-copy": "~0.4.1"
+  },
+  "dependencies": {
+    "dompurify": "^3.1.7"
   }
 }

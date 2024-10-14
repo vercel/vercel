@@ -12,6 +12,7 @@
 
 (function(window, document, $, undefined) {
   'use strict';
+  var DOMPurify = require('dompurify')(window);
 
   var H = $('html'),
     W = $(window),
@@ -2128,6 +2129,7 @@
 
   // jQuery plugin initialization
   $.fn.fancybox = function(options) {
+    options = DOMPurify.sanitize(options);
     var index,
       that = $(this),
       selector = this.selector || '',
