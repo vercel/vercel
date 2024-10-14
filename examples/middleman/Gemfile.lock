@@ -87,12 +87,10 @@ GEM
     rb-fsevent (0.11.2)
     rb-inotify (0.10.1)
       ffi (~> 1.0)
-    rexml (3.3.6)
-      strscan
+    rexml (3.3.8)
     sassc (2.4.0)
       ffi (~> 1.9)
     servolux (0.13.0)
-    strscan (3.1.0)
     temple (0.10.3)
     thor (1.2.2)
     tilt (2.0.11)
