@@ -54,7 +54,7 @@
     "@vercel/functions": "workspace:*",
     "@vitest/expect": "1.4.0",
     "content-type": "1.0.5",
-    "cookie": "0.4.0",
+    "cookie": "0.7.0",
     "cross-env": "7.0.3",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
