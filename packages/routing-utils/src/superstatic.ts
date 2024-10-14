@@ -404,6 +404,7 @@ function safelyCompile(
     }
   }
   value = value
+    .replace(/\\/g, '\\\\') // Escape backslashes
     .replace(/(:|\*|\?|\+|\(|\)|\{|\})/g, '\\$1')
     .replace(/--ESCAPED_PARAM_PLUS/g, '+')
     .replace(/--ESCAPED_PARAM_COLON/g, ':')
