@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
+import { quote } from 'shell-quote';
 import {
   coerce,
   intersects,
@@ -124,7 +125,8 @@ export function spawnAsync(
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
     opts = { stdio: 'inherit', ...opts };
-    const child = spawn(command, args, opts);
+    const escapedArgs = args.map(arg => quote([arg]));
+    const child = spawn(command, escapedArgs, opts);
 
     if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
