@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "express": "4.20.0",
-    "fs-extra": "8.0.1"
+    "fs-extra": "8.0.1",
+    "escape-html": "^1.0.3"
   }
 }

@@ -1,4 +1,5 @@
 const express = require('express');
+const escapeHtml = require('escape-html');
 
 const app = express();
 
@@ -11,7 +12,8 @@ app.post('*', (req, res) => {
     return res.status(400).send({ error: 'no JSON object in the request' });
   }
 
-  return res.status(200).send(JSON.stringify(req.body, null, 4));
+  const sanitizedBody = escapeHtml(JSON.stringify(req.body, null, 4));
+  return res.status(200).send(sanitizedBody);
 });
 
 app.all('*', (req, res) => {
