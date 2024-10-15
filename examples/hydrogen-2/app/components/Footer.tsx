@@ -18,8 +18,15 @@ function FooterMenu({menu}: Pick<FooterQuery, 'menu'>) {
         if (!item.url) return null;
         // if the url is internal, we strip the domain
         const url =
-          item.url.includes('myshopify.com') ||
-          item.url.includes(publicStoreDomain)
+          (() => {
+            try {
+              const parsedUrl = new URL(item.url);
+              const allowedHosts = ['myshopify.com', publicStoreDomain];
+              return allowedHosts.includes(parsedUrl.host);
+            } catch (e) {
+              return false;
+            }
+          })()
             ? new URL(item.url).pathname
             : item.url;
         const isExternal = !url.startsWith('/');
