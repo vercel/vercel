@@ -2083,6 +2083,8 @@
         return;
       }
 
+      text = DOMPurify.sanitize(text);
+
       title = $(
         '<div class="fancybox-title fancybox-title-' +
           type +
