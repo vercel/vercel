@@ -1132,7 +1132,7 @@ var DOMPurify = require('dompurify')(window);
           '<div class="fancybox-title fancybox-title-' +
             c +
             '-wrap">' +
-            e +
+            DOMPurify.sanitize(e) +
             '</div>'
         );
         switch (c) {
