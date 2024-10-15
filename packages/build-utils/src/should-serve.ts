@@ -8,7 +8,7 @@ export const shouldServe: ShouldServe = ({
   requestPath,
 }) => {
   requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
-  entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility
+  entrypoint = entrypoint.replace(/\\/g, '/'); // windows compatibility
 
   if (entrypoint === requestPath && hasProp(files, entrypoint)) {
     return true;
