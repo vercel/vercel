@@ -871,7 +871,7 @@ var DOMPurify = require('dompurify')(window);
               .appendTo(b.outer)
               .bind('click.fb', b.prev),
           (a.loop || a.index < b.group.length - 1) &&
-            f(a.tpl.next)
+            f(DOMPurify.sanitize(a.tpl.next))
               .appendTo(b.outer)
               .bind('click.fb', b.next)),
         b.trigger('afterShow'),
