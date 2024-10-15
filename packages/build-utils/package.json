@@ -53,5 +53,8 @@
     "typescript": "4.9.5",
     "yazl": "2.5.1",
     "json5": "2.2.3"
+  },
+  "dependencies": {
+    "shell-quote": "^1.8.1"
   }
 }
