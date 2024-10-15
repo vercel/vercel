@@ -2328,10 +2328,25 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
+  const allowedDestinations: { [key: string]: string } = {
+    'example1': 'https://example1.com/data',
+    'example2': 'https://example2.com/data',
+    // Add more allowed destinations as needed
+  };
+
+  const urlObj = new URL(dest);
+  const safeDest = allowedDestinations[urlObj.hostname];
+
+  if (!safeDest) {
+    devServer.output.debug(`Blocked request to unallowed destination: ${dest}`);
+    devServer.sendError(req, res, requestId, 'FORBIDDEN');
+    return;
+  }
+
   return devServer.proxy.web(
     req,
     res,
-    { target: dest, ignorePath },
+    { target: safeDest, ignorePath },
     (error: NodeJS.ErrnoException) => {
       // only debug output this error because it's always something generic like
       // "Error: socket hang up"
