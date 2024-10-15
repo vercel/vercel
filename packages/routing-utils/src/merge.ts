@@ -1,22 +1,18 @@
 import { Route, MergeRoutesProps, Build } from './types';
 import { isHandler, HandleValue } from './index';
 
-interface BuilderToRoute {
-  [use: string]: Route[];
-}
+type BuilderToRoute = Map<string, Route[]>;
 
-interface BuilderRoutes {
-  [entrypoint: string]: BuilderToRoute;
-}
+type BuilderRoutes = Map<string, BuilderToRoute>;
 
-function getBuilderRoutesMapping(builds: Build[]) {
-  const builderRoutes: BuilderRoutes = {};
+function getBuilderRoutesMapping(builds: Build[]): BuilderRoutes {
+  const builderRoutes: BuilderRoutes = new Map();
   for (const { entrypoint, routes, use } of builds) {
     if (routes) {
-      if (!builderRoutes[entrypoint]) {
-        builderRoutes[entrypoint] = {};
+      if (!builderRoutes.has(entrypoint)) {
+        builderRoutes.set(entrypoint, new Map());
       }
-      builderRoutes[entrypoint][use] = routes;
+      builderRoutes.get(entrypoint)!.set(use, routes);
     }
   }
   return builderRoutes;
@@ -68,13 +64,13 @@ export function mergeRoutes({ userRoutes, builds }: MergeRoutesProps): Route[] {
 
   const builderHandleMap = new Map<HandleValue | null, Route[]>();
   const builderRoutes = getBuilderRoutesMapping(builds);
-  const sortedPaths = Object.keys(builderRoutes).sort();
+  const sortedPaths = Array.from(builderRoutes.keys()).sort();
   sortedPaths.forEach(path => {
-    const br = builderRoutes[path];
-    const sortedBuilders = Object.keys(br).sort();
+    const br = builderRoutes.get(path)!;
+    const sortedBuilders = Array.from(br.keys()).sort();
     sortedBuilders.forEach(use => {
       let builderPrevHandle: HandleValue | null = null;
-      br[use].forEach(route => {
+      br.get(use)!.forEach(route => {
         if (isHandler(route)) {
           builderPrevHandle = route.handle;
         } else {
