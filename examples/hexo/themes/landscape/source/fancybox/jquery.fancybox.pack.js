@@ -672,6 +672,7 @@ var DOMPurify = require('dompurify')(window);
               e = a.tpl.image.replace(/\{href\}/g, g);
               break;
             case 'swf':
+              g = DOMPurify.sanitize(g); // Sanitize the variable g
               (e =
                 '<object id="fancybox-swf" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="100%" height="100%"><param name="movie" value="' +
                 g +
