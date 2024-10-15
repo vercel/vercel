@@ -68,7 +68,7 @@
     "stylelint-config-standard": "^33.0.0",
     "stylelint-prettier": "^3.0.0",
     "tracked-built-ins": "^3.1.1",
-    "webpack": "^5.88.1"
+    "webpack": "^5.95.0"
   },
   "ember": {
     "edition": "octane"
