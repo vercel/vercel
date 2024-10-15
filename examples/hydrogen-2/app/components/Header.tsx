@@ -54,10 +54,11 @@ export function HeaderMenu({
         if (!item.url) return null;
 
         // if the url is internal, we strip the domain
+        const parsedUrl = new URL(item.url);
+        const allowedHosts = ['myshopify.com', publicStoreDomain];
         const url =
-          item.url.includes('myshopify.com') ||
-          item.url.includes(publicStoreDomain)
-            ? new URL(item.url).pathname
+          allowedHosts.some(host => parsedUrl.hostname === host || parsedUrl.hostname.endsWith(`.${host}`))
+            ? parsedUrl.pathname
             : item.url;
         return (
           <NavLink
