@@ -592,7 +592,7 @@ var DOMPurify = require('dompurify')(window);
             .show();
           b._afterLoad();
         }));
-      a.content = d.appendTo(a.inner);
+      a.content = d.appendTo(DOMPurify.sanitize(a.inner));
       a.iframe.preload || b._afterLoad();
     },
     _preloadImages: function() {
