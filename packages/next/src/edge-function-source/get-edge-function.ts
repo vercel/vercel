@@ -1,5 +1,6 @@
 /// <reference lib="DOM" />
 
+import { withNextRequestContext } from '../next-request-context';
 import { toPlainHeaders } from './to-plain-headers';
 
 export interface NextjsParams {
@@ -108,26 +109,30 @@ export default function getNextjsEdgeFunction(
     }
 
     // Invoke the function injecting missing parameters
-    const result = await _ENTRIES[`middleware_${params.name}`].default.call(
-      {},
-      {
-        request: {
-          url: request.url,
-          method: request.method,
-          headers: toPlainHeaders(request.headers),
-          ip: header(request.headers, IncomingHeaders.Ip),
-          geo: {
-            city: header(request.headers, IncomingHeaders.City, true),
-            country: header(request.headers, IncomingHeaders.Country, true),
-            latitude: header(request.headers, IncomingHeaders.Latitude),
-            longitude: header(request.headers, IncomingHeaders.Longitude),
-            region: header(request.headers, IncomingHeaders.Region, true),
-          },
-          nextConfig: params.nextConfig,
-          page: pageMatch,
-          body: request.body,
-        },
-      }
+    const result = await withNextRequestContext(
+      { waitUntil: context.waitUntil },
+      () =>
+        _ENTRIES[`middleware_${params.name}`].default.call(
+          {},
+          {
+            request: {
+              url: request.url,
+              method: request.method,
+              headers: toPlainHeaders(request.headers),
+              ip: header(request.headers, IncomingHeaders.Ip),
+              geo: {
+                city: header(request.headers, IncomingHeaders.City, true),
+                country: header(request.headers, IncomingHeaders.Country, true),
+                latitude: header(request.headers, IncomingHeaders.Latitude),
+                longitude: header(request.headers, IncomingHeaders.Longitude),
+                region: header(request.headers, IncomingHeaders.Region, true),
+              },
+              nextConfig: params.nextConfig,
+              page: pageMatch,
+              body: request.body,
+            },
+          }
+        )
     );
 
     if (result.waitUntil) {
