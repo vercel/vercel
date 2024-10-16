@@ -1,5 +1,26 @@
 # vercel
 
+## 37.9.0
+
+### Minor Changes
+
+- [cli] Add telemetry for `vercel logout` ([#12289](https://github.com/vercel/vercel/pull/12289))
+
+- [cli] add telemetry for vercel rollback ([#12287](https://github.com/vercel/vercel/pull/12287))
+
+### Patch Changes
+
+- [cli] Add telemetry for `vercel teams invite email1, email2` ([#12276](https://github.com/vercel/vercel/pull/12276))
+
+- Collect telemetry for `vc whoami`. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12271](https://github.com/vercel/vercel/pull/12271))
+
+- Partial Prerendering Fallback Shells now respect the revalidate config and now do not produce route shells on-demand. ([#12268](https://github.com/vercel/vercel/pull/12268))
+
+- Add telemetry to the deploy command. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12269](https://github.com/vercel/vercel/pull/12269))
+
+- Updated dependencies [[`b4aa388c78d6b682c0f1dff38a2a48258e56ff50`](https://github.com/vercel/vercel/commit/b4aa388c78d6b682c0f1dff38a2a48258e56ff50), [`9f797261eabd45d492fdfc198dfd4be33e397582`](https://github.com/vercel/vercel/commit/9f797261eabd45d492fdfc198dfd4be33e397582)]:
+  - @vercel/next@4.3.16
+
 ## 37.8.0
 
 ### Minor Changes
