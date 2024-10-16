@@ -1624,13 +1624,13 @@
       // Create navigation arrows
       if (current.arrows && F.group.length > 1) {
         if (current.loop || current.index > 0) {
-          $(current.tpl.prev)
+          $(DOMPurify.sanitize(current.tpl.prev))
             .appendTo(F.outer)
             .bind('click.fb', F.prev);
         }
 
         if (current.loop || current.index < F.group.length - 1) {
-          $(current.tpl.next)
+          $(DOMPurify.sanitize(current.tpl.next))
             .appendTo(F.outer)
             .bind('click.fb', F.next);
         }
