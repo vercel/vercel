@@ -567,6 +567,7 @@ const main = async () => {
           func = require('./commands/certs').default;
           break;
         case 'deploy':
+          telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           func = require('./commands/deploy').default;
           break;
         case 'dev':
@@ -638,6 +639,7 @@ const main = async () => {
           func = require('./commands/teams').default;
           break;
         case 'telemetry':
+          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':

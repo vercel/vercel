@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "routes": [
+    {
+      "handle": "error"
+    },
+    {
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404.html"
+    }
+  ],
+  "crons": []
+}
