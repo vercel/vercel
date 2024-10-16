@@ -1218,8 +1218,8 @@
 
           $.each(current.swf, function(name, val) {
             content +=
-              '<param name="' + name + '" value="' + val + '"></param>';
-            embed += ' ' + name + '="' + val + '"';
+              '<param name="' + DOMPurify.sanitize(name) + '" value="' + DOMPurify.sanitize(val) + '"></param>';
+            embed += ' ' + DOMPurify.sanitize(name) + '="' + DOMPurify.sanitize(val) + '"';
           });
 
           content +=
