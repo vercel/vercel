@@ -29,6 +29,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandRollback(actual: string) {
+    this.trackCliCommand({
+      command: 'rollback',
+      value: actual,
+    });
+  }
+
   trackCliCommandTeams(actual: string) {
     this.trackCliCommand({
       command: 'teams',
