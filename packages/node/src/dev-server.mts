@@ -152,7 +152,8 @@ async function onDevRequest(
     }
   } catch (error: any) {
     res.statusCode = 500;
-    res.end(error.stack);
+    logError("Exception occurred", error.stack);
+    res.end("An internal server error occurred");
   }
 }
 
