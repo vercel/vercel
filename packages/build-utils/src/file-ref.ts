@@ -1,9 +1,23 @@
 import assert from 'assert';
-import fetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
 import { FileBase } from './types';
+
+let fetchFunction: Awaited<typeof import('node-fetch').default> | undefined;
+async function initFetchFunction() {
+  if (fetchFunction !== undefined) {
+    return fetchFunction;
+  }
+  const nodeVersion = process.version;
+  if (nodeVersion.startsWith('v22')) {
+    fetchFunction = (globalThis as any).fetch;
+  } else {
+    const nodeFetch = await import('node-fetch');
+    fetchFunction = nodeFetch.default;
+  }
+  return fetchFunction;
+}
 
 interface FileRefOptions {
   mode?: number;
@@ -67,10 +81,13 @@ export default class FileRef implements FileBase {
 
     await semaToDownloadFromS3.acquire();
     // console.time(`downloading ${url}`);
+    if (!fetchFunction) {
+      await initFetchFunction();
+    }
     try {
       return await retry(
         async () => {
-          const resp = await fetch(url);
+          const resp = await fetchFunction!(url);
           if (!resp.ok) {
             const error = new BailableError(
               `download: ${resp.status} ${resp.statusText} for ${url}`
