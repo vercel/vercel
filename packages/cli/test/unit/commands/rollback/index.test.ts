@@ -15,8 +15,26 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
-  describe.todo('--status');
   describe.todo('--timeout');
+  describe.todo('--yes');
+
+  describe('telemetry', () => {
+    it('tracks usage', async () => {
+      const { cwd, previousDeployment } = initRollbackTest();
+      client.cwd = cwd;
+      client.setArgv(
+        'rollback',
+        previousDeployment.id,
+        '--timeout',
+        '1',
+        '--yes'
+      );
+      const exitCodePromise = rollback(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
+    });
+  });
 
   it('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
