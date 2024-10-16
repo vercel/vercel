@@ -1308,7 +1308,8 @@ export default class DevServer {
 
       if (!res.finished) {
         res.statusCode = 500;
-        res.end(errorToString(err));
+        this.output.debug(`Error occurred: ${errorToString(err)}`);
+        res.end("An internal server error occurred.");
       }
     }
   };
