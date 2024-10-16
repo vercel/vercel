@@ -26,13 +26,22 @@ describe('rollback', () => {
         'rollback',
         previousDeployment.id,
         '--timeout',
-        '1',
+        '0',
         '--yes'
       );
       const exitCodePromise = rollback(client);
       await expect(exitCodePromise).resolves.toEqual(0);
 
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:timeout',
+          value: '[TIME]',
+        },
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+      ]);
     });
   });
 
@@ -83,6 +92,13 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput('No deployment rollback in progress');
 
     await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:status',
+        value: 'status',
+      },
+    ]);
   });
 
   it('should rollback by deployment id', async () => {
