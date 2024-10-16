@@ -7,4 +7,11 @@ export class AliasTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandSet(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'set',
+      value: actual,
+    });
+  }
 }

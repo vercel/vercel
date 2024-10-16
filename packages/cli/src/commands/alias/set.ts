@@ -18,6 +18,7 @@ import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
 import type { VercelConfig } from '@vercel/client';
+import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
 
 type Options = {
   '--debug': boolean;
@@ -31,6 +32,14 @@ export default async function set(
 ) {
   const setStamp = stamp();
   const { output, localConfig } = client;
+  const telemetryClient = new AliasSetTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagDebug(opts['--debug']);
+  telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
   const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
@@ -54,6 +63,10 @@ export default async function set(
     output.error(`The provided argument "${args[1]}" is not a valid domain`);
     return 1;
   }
+
+  const [deploymentUrl, customDomain] = args;
+  telemetryClient.trackCliArgumentDeploymentUrl(deploymentUrl);
+  telemetryClient.trackCliArgumentCustomDomain(customDomain);
 
   if (args.length === 0) {
     output.error(
