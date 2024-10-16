@@ -1212,7 +1212,7 @@
         case 'swf':
           content =
             '<object id="fancybox-swf" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="100%" height="100%"><param name="movie" value="' +
-            href +
+            DOMPurify.sanitize(href) +
             '"></param>';
           embed = '';
 
@@ -1224,7 +1224,7 @@
 
           content +=
             '<embed src="' +
-            href +
+            DOMPurify.sanitize(href) +
             '" type="application/x-shockwave-flash" width="100%" height="100%"' +
             embed +
             '></embed></object>';
