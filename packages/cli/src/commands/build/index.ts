@@ -75,6 +75,7 @@ import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import parseTarget from '../../util/parse-target';
+import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -116,6 +117,12 @@ export interface BuildsManifest {
 }
 
 export default async function main(client: Client): Promise<number> {
+  let telemetryClient = new BuildTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   let { cwd } = client;
   const { output } = client;
 
@@ -143,6 +150,10 @@ export default async function main(client: Client): Promise<number> {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliOptionOutput(parsedArgs.flags['--output']);
+    telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
+    telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
+    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
     handleError(error);
     return 1;
