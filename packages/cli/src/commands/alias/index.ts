@@ -53,6 +53,7 @@ export default async function alias(client: Client) {
     case 'rm':
       return rm(client, parsedArguments.flags, args);
     default:
+      telemetryClient.trackCliSubcommandSet(subcommandOriginal);
       return set(client, parsedArguments.flags, args);
   }
 }

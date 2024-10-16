@@ -340,6 +340,9 @@ describe('build', () => {
       deploymentTarget: 'v8-worker',
       entrypoint: 'api/edge.js',
     });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:prod', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "preview" env vars by default', async () => {
@@ -371,6 +374,9 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "production" env vars with `--prod`', async () => {
@@ -406,6 +412,10 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:prod', value: 'TRUE' },
+      { key: 'flag:yes', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "production" env vars with `--target production`', async () => {
@@ -441,6 +451,9 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:target', value: 'production' },
+    ]);
   });
 
   it('should build root-level `middleware.js` and exclude from static files', async () => {

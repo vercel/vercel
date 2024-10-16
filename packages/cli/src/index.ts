@@ -561,6 +561,7 @@ const main = async () => {
           func = require('./commands/bisect').default;
           break;
         case 'build':
+          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
           break;
         case 'certs':
