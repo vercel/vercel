@@ -1180,7 +1180,7 @@ var DOMPurify = require('dompurify')(window);
             (h = h.filter('[' + l + '="' + m + '"]')),
             (k = h.index(this))),
           (a.index = k),
-          !1 !== b.open(h, a) && g.preventDefault());
+          !1 !== b.open(h, DOMPurify.sanitize(a)) && g.preventDefault()); // Sanitize the input before opening
       };
     a = a || {};
     a = DOMPurify.sanitize(a); // Sanitize the input
