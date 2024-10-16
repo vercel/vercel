@@ -1613,7 +1613,7 @@
       // Create a close button
       if (current.closeBtn) {
         $(current.tpl.closeBtn)
-          .appendTo(F.skin)
+          .appendTo(DOMPurify.sanitize(F.skin))
           .bind('click.fb', function(e) {
             e.preventDefault();
 
