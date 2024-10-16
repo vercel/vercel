@@ -64,10 +64,6 @@ export default async function set(
     return 1;
   }
 
-  const [deploymentUrl, customDomain] = args;
-  telemetryClient.trackCliArgumentDeploymentUrl(deploymentUrl);
-  telemetryClient.trackCliArgumentCustomDomain(customDomain);
-
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
@@ -79,6 +75,8 @@ export default async function set(
 
   // For `vercel alias set <argument>`
   if (args.length === 1) {
+    const [aliasTarget] = args;
+    telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
     const deployment = handleCertError(
       output,
       await getDeploymentForAlias(
@@ -147,6 +145,8 @@ export default async function set(
   }
 
   const [deploymentIdOrHost, aliasTarget] = args;
+  telemetryClient.trackCliArgumentDeploymentUrl(deploymentIdOrHost);
+  telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
   const deployment = handleCertError(
     output,
     await getDeployment(client, contextName, deploymentIdOrHost)

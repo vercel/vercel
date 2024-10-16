@@ -19,6 +19,44 @@ describe('alias set', () => {
     it.todo('errors');
   });
 
+  describe('[custom domain]', () => {
+    it('tracks argument', async () => {
+      const user = useUser();
+      const deployment = {
+        uid: 'an id',
+        state: 'READY',
+        creator: { uid: user.id },
+        created: Date.now(),
+      };
+      client.scenario.post(
+        '/:version/deployments/:id/aliases',
+        (request, response) => {
+          response.json({});
+        }
+      );
+      client.scenario.get('/:version/now/deployments', (request, response) => {
+        response.json({ deployments: [deployment] });
+      });
+      client.scenario.get('/:version/deployments/:id', (request, response) => {
+        response.json({ deployment });
+      });
+      client.setArgv('alias', 'set', 'custom');
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `subcommand:set`,
+          value: 'set',
+        },
+        {
+          key: `argument:custom-domain`,
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
   describe('[deployment url] [custom domain]', () => {
     it('tracks arguments', async () => {
       const user = useUser();
