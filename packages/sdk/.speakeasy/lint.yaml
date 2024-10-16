@@ -1,7 +1,7 @@
 lintVersion: 1.0.0
 defaultRuleset: speakeasyBarRuleset
 rulesets:
- barRuleset:
+ vercelRestAPIRuleset:
     rulesets:
       - speakeasy-generation
     rules:
