@@ -118,12 +118,13 @@ import DOMPurify from 'dompurify';
         )
           return;
 
-        var alt = this.alt;
+        var alt = DOMPurify.sanitize(this.alt);
+        var src = DOMPurify.sanitize(this.src);
 
         if (alt) $(this).after('<span class="caption">' + alt + '</span>');
 
         $(this).wrap(
-          '<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>'
+          '<a href="' + src + '" title="' + alt + '" class="fancybox"></a>'
         );
       });
 
