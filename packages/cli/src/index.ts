@@ -638,10 +638,11 @@ const main = async () => {
           func = require('./commands/target').default;
           break;
         case 'teams':
+          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = require('./commands/teams').default;
           break;
         case 'telemetry':
-          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
+          telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':
