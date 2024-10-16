@@ -611,6 +611,7 @@ const main = async () => {
           func = require('./commands/login').default;
           break;
         case 'logout':
+          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
           func = require('./commands/logout').default;
           break;
         case 'project':
