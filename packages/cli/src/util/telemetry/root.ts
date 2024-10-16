@@ -50,6 +50,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandLogout(actual: string) {
+    this.trackCliCommand({
+      command: 'logout',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
