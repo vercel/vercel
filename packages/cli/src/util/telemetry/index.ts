@@ -28,6 +28,14 @@ export class TelemetryClient {
   store: TelemetryEventStore;
 
   protected redactedValue = '[REDACTED]';
+  protected redactedArgumentsLength = (args: string[]) => {
+    if (args && args.length === 1) {
+      return 'ONE';
+    } else if (args.length > 1) {
+      return 'MANY';
+    }
+    return 'NONE';
+  };
 
   constructor({ opts }: Args) {
     this.output = opts.output;
