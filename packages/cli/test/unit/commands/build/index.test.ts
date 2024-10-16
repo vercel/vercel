@@ -452,7 +452,7 @@ describe('build', () => {
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'flag:target', value: 'production' },
+      { key: 'option:target', value: 'production' },
     ]);
   });
 
