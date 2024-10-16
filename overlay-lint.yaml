@@ -1,0 +1,568 @@
+overlay: 1.0.0
+info:
+  title: Fix https://openapi.vercel.sh/ with lint issues
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/data-cache/purge-all"]["delete"]
+    update:
+      operationId: datacachePurgeall
+  - target: $["paths"]["/data-cache/billing-settings"]["patch"]
+    update:
+      operationId: dataCacheBillingSettings
+  - target: $["paths"]["/certs"]["get"]
+    update:
+      operationId: getCerts
+  - target: $["paths"]["/v13/deployments"]["post"]["parameters"][0]
+    remove: true
+  - target: $["paths"]["/v13/deployments"]["post"]["parameters"][2]
+    remove: true
+  - target: $["paths"]["/v1/domains/{domain}/registry"]["get"]["parameters"]
+    update:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          example: example.com
+  - target: $["paths"]["/v1/security/firewall/config/{configVersion}"]["get"]["parameters"]
+    update:
+        - description: The deployed configVersion for the firewall configuration
+          in: path
+          name: configVersion
+          required: true
+          schema:
+            type: string
+  - target: $["paths"]["/v2/teams/{teamId}/members"]["get"]["parameters"]
+    update:
+      - description: The Team identifier to perform the request on behalf of.
+        required: true
+        in: path
+        name: teamId
+        schema:
+          type: string
+  - target: $["paths"]["/v1/teams/{teamId}/members"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request/{userId}"]["get"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request/{userId}"]["get"]["parameters"][?(@.name == 'userId')]
+    update:
+      name: userId
+      required: true
+      in: path
+      schema:
+        type: string
+        description: The unique user identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/teams/join"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/{uid}"]["delete"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/{uid}"]["patch"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v2/teams/{teamId}"]["get"]["parameters"][0]
+    remove: true
+  - target: $["paths"]["/v2/teams/{teamId}"]["get"]["parameters"][?(@.name == 'teamId')]["required"]
+    update:
+      true
+  - target: $["paths"]["/v1/teams/{teamId}/invites/{inviteId}"]["delete"]["parameters"]
+    update:
+      - name: teamId
+        description: The Team identifier to perform the request on behalf of.
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The Team identifier to perform the request on behalf of.
+          example: team_LLHUOMOoDlqOp8wPE4kFo9pE
+  - target: $["paths"]["/v2/secrets/{name}"]["post"]["parameters"]
+    update:
+      - name: name
+        description: The name of the secret.
+        in: path
+        required: true
+        schema:
+          description: The name of the secret.
+          type: string
+          example: my-api-key
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects'].get.responses['200'].content['application/json'].schema.properties['projects'].items.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects'].get.responses['200'].content['application/json'].schema.properties['projects'].items.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}'].get.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].get.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['envs'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['envs'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[0].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[0].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['value'].oneOf[1].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['value'].oneOf[1].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members'].post.requestBody.content['application/json'].schema.properties['role'].default
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members'].post.requestBody.content['application/json'].schema.properties['role']
+    update:
+      default: MEMBER
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['role'].default
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['role']
+    update:
+      default: MEMBER
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['priority'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['priority']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['weight'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['weight']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['port'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['port']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[7].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['https']['properties']['priority'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['https']['properties']['priority']
+    update:
+      nullable: true
+  - target: $.paths['/v1/domains/records/{recordId}'].patch.requestBody.content['application/json'].schema.properties['additionalProperties']
+    remove: true
+  - target: $.paths['/v3/domains/{domain}'].patch.parameters[0]
+    update:
+      required: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['propertyNames']
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][0].oneOf[3].type
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][0].oneOf[3].type
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][1].items['oneOf'][3].type
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][1].items
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[0].oneOf[3].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[1].items['oneOf'][3].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[1].items
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['description'].oneOf[1].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['description']
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[0].properties['operation']['const']
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[0].properties['operation']
+    update:
+      type: string
+      enum: [create]
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[3].properties['operation']['const']
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[3].properties['operation']
+    update:
+      type: string
+      enum: [delete]
+  - target: $.paths['/v1/integrations/search-repo'].get.parameters[1].schema.type
+    remove: true
+  - target: $.paths['/v1/integrations/search-repo'].get.parameters[1].schema
+    update:
+      oneOf:
+        - type: string
+        - type: number
+  - target: $.paths['/v1/log-drains'].post.requestBody.content['application/json'].schema.properties['samplingRate']['multiplesOf']
+    remove: true
+  - target: $.paths['/v1/log-drains'].post.requestBody.content['application/json'].schema.properties['samplingRate']
+    update:
+      multipleOf: 0.01
+  - target: $.paths['/v1/projects/{idOrName}/protection-bypass'].patch.requestBody.content['application/json'].schema.properties['generate'].properties['secret']['errorMessage']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['action']
+    update:
+      type: string
+      enum: [firewallEnabled]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['action']
+    update:
+      type: string
+      enum: [rules.insert]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['action']
+    update:
+      type: string
+      enum: [rules.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['action']
+    update:
+      type: string
+      enum: [rules.remove]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[4].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[4].properties['action']
+    update:
+      type: string
+      enum: [rules.priority]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[5].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[5].properties['action']
+    update:
+      type: string
+      enum: [crs.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['action']
+    update:
+      type: string
+      enum: [crs.disable]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['action']
+    update:
+      type: string
+      enum: [ip.insert]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[8].properties['action'].const
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[8].properties['action']
+    update:
+      type: string
+      enum: [ip.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['action'].const
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['action']
+    update:
+      type: string
+      enum: [ip.remove]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[10].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[10].properties['action']
+    update:
+      type: string
+      enum: [managedRules.update]
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['joinedFrom'].properties['ssoUserId'].type
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['joinedFrom'].properties['ssoUserId']
+    update:
+      nullable: true
+  - target: $.paths['/v4/aliases'].get.parameters[?(@.name == 'domain')]['schema'].items
+    remove: true
+  - target: $.paths['/v4/aliases'].get.parameters[?(@.name == 'domain')]['schema'].oneOf[0]
+    update:
+      items:
+        type: string
