@@ -1114,13 +1114,18 @@ export async function serverBuild({
               break;
             }
             case 'server/app-paths-manifest.json': {
+              console.log(normalizedPages);
+
               for (const key of Object.keys(manifestData)) {
-                const normalizedKey = key.replace(/(^|\/)(page|route)$/, '');
+                const normalizedKey =
+                  appPathRoutesManifest?.[key] ||
+                  key.replace(/(^|\/)(page|route)$/, '');
 
                 if (
                   isDynamicRoute(normalizedKey) &&
                   !normalizedPages.has(normalizedKey)
                 ) {
+                  console.log('filtering', { key, normalizedKey });
                   delete manifestData[key];
                 }
               }
