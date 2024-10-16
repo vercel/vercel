@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 (function($) {
   // Search
   var $searchWrap = $('#search-form-wrap'),
@@ -40,7 +42,7 @@
       e.stopPropagation();
 
       var $this = $(this),
-        url = $this.attr('data-url'),
+        url = DOMPurify.sanitize($this.attr('data-url')),
         encodedUrl = encodeURIComponent(url),
         id = 'article-share-box-' + $this.attr('data-id'),
         offset = $this.offset();
