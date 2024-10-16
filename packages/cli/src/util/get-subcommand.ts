@@ -24,7 +24,7 @@ export default function getSubcommand(
   }
   return {
     subcommand: config.default,
-    subcommandOriginal: '',
+    subcommandOriginal: 'default',
     args: cliArgs,
   };
 }
