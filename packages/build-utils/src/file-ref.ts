@@ -7,13 +7,13 @@ import { FileBase } from './types';
 // This dynamic import makes test `[vercel dev] Should work with nested `tsconfig.json` files`
 // succeed for some reason I don't understand. If node-fetch is imported at the top of the file,
 // that test fails.
-let fetchFunction: Awaited<typeof import('node-fetch').default> | undefined;
-async function initFetchFunction() {
-  if (fetchFunction !== undefined) {
+let fetch: Awaited<typeof import('node-fetch').default> | undefined;
+async function initFetch() {
+  if (fetch !== undefined) {
     return;
   }
   const nodeFetch = await import('node-fetch');
-  fetchFunction = nodeFetch.default;
+  fetch = nodeFetch.default;
 }
 
 interface FileRefOptions {
@@ -78,13 +78,13 @@ export default class FileRef implements FileBase {
 
     await semaToDownloadFromS3.acquire();
     // console.time(`downloading ${url}`);
-    if (!fetchFunction) {
-      await initFetchFunction();
+    if (!fetch) {
+      await initFetch();
     }
     try {
       return await retry(
         async () => {
-          const resp = await fetchFunction!(url);
+          const resp = await fetch!(url);
           if (!resp.ok) {
             const error = new BailableError(
               `download: ${resp.status} ${resp.statusText} for ${url}`
