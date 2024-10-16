@@ -1078,6 +1078,7 @@ export async function serverBuild({
         for (const manifest of [
           'routes-manifest.json',
           'server/pages-manifest.json',
+          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
         ] as const) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
@@ -1107,6 +1108,21 @@ export async function serverBuild({
             case 'server/pages-manifest.json': {
               for (const key of Object.keys(manifestData)) {
                 if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                  delete manifestData[key];
+                }
+              }
+              break;
+            }
+            case 'server/app-paths-manifest.json': {
+              for (const key of Object.keys(manifestData)) {
+                const normalizedKey =
+                  appPathRoutesManifest?.[key] ||
+                  key.replace(/(^|\/)(page|route)$/, '');
+
+                if (
+                  isDynamicRoute(normalizedKey) &&
+                  !normalizedPages.has(normalizedKey)
+                ) {
                   delete manifestData[key];
                 }
               }
