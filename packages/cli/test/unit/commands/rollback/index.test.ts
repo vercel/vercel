@@ -15,8 +15,35 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
-  describe.todo('--status');
   describe.todo('--timeout');
+  describe.todo('--yes');
+
+  describe('telemetry', () => {
+    it('tracks usage', async () => {
+      const { cwd, previousDeployment } = initRollbackTest();
+      client.cwd = cwd;
+      client.setArgv(
+        'rollback',
+        previousDeployment.id,
+        '--timeout',
+        '0',
+        '--yes'
+      );
+      const exitCodePromise = rollback(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:timeout',
+          value: '[TIME]',
+        },
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
 
   it('should error if timeout is invalid', async () => {
     const { cwd } = initRollbackTest();
@@ -65,6 +92,13 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput('No deployment rollback in progress');
 
     await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:status',
+        value: 'status',
+      },
+    ]);
   });
 
   it('should rollback by deployment id', async () => {
