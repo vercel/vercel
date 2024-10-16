@@ -629,6 +629,7 @@ const main = async () => {
           func = require('./commands/remove').default;
           break;
         case 'rollback':
+          telemetry.trackCliCommandRollback(userSuppliedSubCommand);
           func = require('./commands/rollback').default;
           break;
         case 'target':
@@ -638,6 +639,7 @@ const main = async () => {
           func = require('./commands/teams').default;
           break;
         case 'telemetry':
+          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':
