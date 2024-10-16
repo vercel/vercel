@@ -4,9 +4,8 @@ import retry from 'async-retry';
 import Sema from 'async-sema';
 import { FileBase } from './types';
 
-// This dynamic import makes test `[vercel dev] Should work with nested `tsconfig.json` files`
-// succeed for some reason I don't understand. If node-fetch is imported at the top of the file,
-// that test fails.
+// Necessary for `[vercel dev] Should work with nested `tsconfig.json` files`
+// to succeed
 let fetch: Awaited<typeof import('node-fetch').default> | undefined;
 async function initFetch() {
   if (fetch !== undefined) {
