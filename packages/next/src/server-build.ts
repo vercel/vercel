@@ -1078,7 +1078,7 @@ export async function serverBuild({
         for (const manifest of [
           'routes-manifest.json',
           'server/pages-manifest.json',
-          'server/app-paths-manifest.json',
+          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
         ] as const) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
