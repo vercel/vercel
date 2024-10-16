@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class TeamsInviteTelemetryClient extends TelemetryClient {
-  trackCliArugmentEmail(count: number) {
+  trackCliArgumentEmail(count: number) {
     if (count > 0) {
       this.trackCliArgument({
         arg: 'email',
