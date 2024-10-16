@@ -138,6 +138,13 @@ export class TelemetryClient {
     }
   }
 
+  protected trackDefaultDeploy() {
+    this.track({
+      key: 'default-deploy',
+      value: 'TRUE',
+    });
+  }
+
   trackCommandError(error: string): Event | undefined {
     this.output.error(error);
     return;
