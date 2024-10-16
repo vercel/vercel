@@ -130,7 +130,9 @@ export default function getNextjsEdgeFunction(
       }
     );
 
-    context.waitUntil(result.waitUntil);
+    if (result.waitUntil) {
+      context.waitUntil(result.waitUntil);
+    }
 
     return result.response;
   };
