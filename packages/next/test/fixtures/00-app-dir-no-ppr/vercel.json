@@ -19,6 +19,21 @@
   ],
   "probes": [
     {
+      "path": "/nested-dynamic-params/params-false/first",
+      "status": 200,
+      "mustContain": "nested-dynamic-params-false"
+    },
+    {
+      "path": "/nested-dynamic-params/params-false/second",
+      "status": 200,
+      "mustContain": "nested-dynamic-params-catchall"
+    },
+    {
+      "path": "/nested-dynamic-params/first",
+      "status": 200,
+      "mustContain": "nested-dynamic-params-catchall"
+    },
+    {
       "path": "/dynamic-mixed/first",
       "status": 200,
       "mustContain": "hello world"
