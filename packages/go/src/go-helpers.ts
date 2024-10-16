@@ -22,8 +22,8 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.23', '1.23.1'],
-  ['1.22', '1.22.7'],
+  ['1.23', '1.23.2'],
+  ['1.22', '1.22.8'],
   ['1.21', '1.21.13'],
   ['1.20', '1.20.14'],
   ['1.19', '1.19.13'],
@@ -42,7 +42,8 @@ const platformMap = new Map([['win32', 'windows']]);
 export const localCacheDir = join('.vercel', 'cache', 'golang');
 
 const GO_FLAGS = process.platform === 'win32' ? [] : ['-ldflags', '-s -w'];
-const GO_MIN_VERSION = 13;
+const GO_MIN_MAJOR_VERSION = 1;
+const GO_MIN_MINOR_VERSION = 13;
 
 /**
  * Determines the URL to download the Golang SDK.
@@ -55,12 +56,12 @@ function getGoUrl(version: string) {
   const goPlatform = platformMap.get(platform) || platform;
   let goArch = archMap.get(arch) || arch;
 
-  // Go 1.16 was the first version to support arm64, so if the version is older
+  // Go 1.16 was the first version to support arm64, so if the version is younger
   // we need to download the amd64 version
   if (
     platform === 'darwin' &&
     goArch === 'arm64' &&
-    parseInt(version.split('.')[1], 10) < 16
+    parseInt((/^\d+.(\d+)/.exec(version) as string[])[1], 10) < 16
   ) {
     goArch = 'amd64';
   }
@@ -247,14 +248,15 @@ export async function createGo({
   workPath,
 }: CreateGoOptions): Promise<GoWrapper> {
   // parse the `go.mod`, if exists
-  let goPreferredVersion: string | undefined;
+  let goPreferredVersion: GoVersions | undefined;
   if (modulePath) {
-    goPreferredVersion = await getFullVersionFromGoMod(modulePath);
+    goPreferredVersion = await parseGoModVersionFromModule(modulePath);
   }
 
   // default to newest (first) supported go version
-  const goSelectedVersion =
-    goPreferredVersion || Array.from(versionMap.values())[0];
+  const goSelectedVersion = goPreferredVersion
+    ? goPreferredVersion.toolchain || goPreferredVersion.go
+    : Array.from(versionMap.values())[0];
 
   const env = cloneEnv(process.env, opts.env);
   const { PATH } = env;
@@ -266,7 +268,7 @@ export async function createGo({
   const goCacheDir = join(workPath, localCacheDir);
 
   if (goPreferredVersion) {
-    debug(`Preferred go version ${goPreferredVersion} (from go.mod)`);
+    debug(`Preferred go version ${goSelectedVersion} (from go.mod)`);
     env.GO111MODULE = 'on';
   } else {
     debug(
@@ -305,9 +307,12 @@ export async function createGo({
       env.PATH = goBinDir || PATH;
 
       const { stdout } = await execa('go', ['version'], { env });
-      const { minor, short, version } = parseGoVersionString(stdout);
+      const { major, minor, short, version } = parseGoVersionString(stdout);
 
-      if (minor < GO_MIN_VERSION) {
+      if (
+        major < GO_MIN_MAJOR_VERSION ||
+        (major === GO_MIN_MAJOR_VERSION && minor < GO_MIN_MINOR_VERSION)
+      ) {
         debug(`Found go ${version} in ${label}, but version is unsupported`);
       }
       if (version === goSelectedVersion || short === goSelectedVersion) {
@@ -423,20 +428,31 @@ class GoError extends Error {
   code: string | undefined;
 }
 
+interface GoVersions {
+  go: string;
+  toolchain?: string;
+}
+
 /**
  * Attempts to parse the preferred Go version from the `go.mod` file.
  *
  * @param modulePath The directory containing the `go.mod` file
  * @returns
  */
-async function getFullVersionFromGoMod(modulePath: string) {
+async function parseGoModVersionFromModule(
+  modulePath: string
+): Promise<GoVersions | undefined> {
+  let version: GoVersions | undefined;
   const file = join(modulePath, 'go.mod');
 
-  let content;
   try {
-    content = await readFile(file, 'utf8');
+    const content = await readFile(file, 'utf8');
+    version = parseGoModVersion(content);
+    if (!version) {
+      console.log(`Warning: Unknown Go version in ${file}`);
+    }
   } catch (err: any) {
-    if (err.code === 'ENOENT') {
+    if (typeof err === 'object' && err.code === 'ENOENT') {
       debug(`File not found: ${file}`);
       return undefined;
     } else {
@@ -444,38 +460,47 @@ async function getFullVersionFromGoMod(modulePath: string) {
     }
   }
 
-  const version = parseGoVersion(content);
-  if (!version) {
-    console.log(`Warning: Unknown Go version in ${file}`);
-    return undefined;
-  }
-  if (version.major === 1 && version.minor >= GO_MIN_VERSION) {
-    return version.patch === null
-      ? versionMap.get(`${version.major}.${version.minor}`)
-      : `${version.major}.${version.minor}.${version.patch}`;
-  } else {
-    const versionString = version.patch
-      ? `${version.major}.${version.minor}.${version.patch}`
-      : `${version.major}.${version.minor}`;
-    const err = new GoError(
-      `Unsupported Go version ${versionString} in ${file}`
-    );
-    err.code = 'ERR_UNSUPPORTED_GO_VERSION';
-    throw err;
-  }
+  return version;
 }
 
-function parseGoVersion(goModContent: string) {
-  const goVersionRegex = /^go\s+(\d+)\.(\d+)(?:\.(\d+))?$/m;
-  const match = goModContent.match(goVersionRegex);
-  if (match) {
-    const major = parseInt(match[1], 10);
-    const minor = parseInt(match[2], 10);
-    const patch = match[3] ? parseInt(match[3], 10) : null;
-    if (isNaN(major) || isNaN(minor) || (patch !== null && isNaN(patch))) {
-      return null;
-    }
-    return { major, minor, patch };
+/**
+ * Attempts to parse the preferred Go version from the `go.mod` file.
+ *
+ * @param content The content of the `go.mod` file
+ * @returns The version in { go: `${major}.${minor}.${patch}`, toolchain: `${major}.${minor}.${patch}` | undefined } format, or undefined if no version was found
+ * @throws GoError If the go version is not supported
+ */
+export function parseGoModVersion(content: string): GoVersions | undefined {
+  const goMatches = /^\s*go\s+(\d+)\.(\d+)(?:\.(\d+))?\s*(?:\/\/.*)?$/gm.exec(
+    content
+  );
+  if (!goMatches) {
+    return undefined;
   }
-  return null;
+  const major = parseInt(goMatches[1], 10);
+  const minor = parseInt(goMatches[2], 10);
+  const patch = goMatches[3] && parseInt(goMatches[3], 10);
+  const toolchainMatches =
+    /^\s*toolchain\s+go((\d+)\.(\d+)(?:\.(\d+)|\w+\d+)?)\s*(?:\/\/.*)?$/gm.exec(
+      content
+    );
+  const toolchain = toolchainMatches ? toolchainMatches[1] : undefined;
+  if (major >= GO_MIN_MAJOR_VERSION && minor >= GO_MIN_MINOR_VERSION) {
+    if (patch) {
+      return {
+        go: `${major}.${minor}.${patch}`,
+        toolchain,
+      };
+    }
+    const full = versionMap.get(`${major}.${minor}`);
+    if (full) {
+      return {
+        go: full,
+        toolchain,
+      };
+    }
+  }
+  const err = new GoError(`Unsupported Go version ${major}.${minor}`);
+  err.code = 'ERR_UNSUPPORTED_GO_VERSION';
+  throw err;
 }

@@ -76,8 +76,15 @@ import validatePaths, {
 import { help } from '../help';
 import { deployCommand } from './command';
 import parseTarget from '../../util/parse-target';
+import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 
 export default async (client: Client): Promise<number> => {
+  let telemetryClient = new DeployTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   const { output } = client;
 
   let parsedArguments = null;
@@ -88,7 +95,31 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
+    telemetryClient.trackCliOptionArchive(parsedArguments.flags['--archive']);
+    telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
+    telemetryClient.trackCliOptionBuildEnv(
+      parsedArguments.flags['--build-env']
+    );
+    telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
+    telemetryClient.trackCliFlagPrebuilt(parsedArguments.flags['--prebuilt']);
+    telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
+    telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
+    telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
+    telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
+    telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
+    telemetryClient.trackCliFlagSkipDomain(
+      parsedArguments.flags['--skip-domain']
+    );
+    telemetryClient.trackCliFlagPublic(parsedArguments.flags['--public']);
+    telemetryClient.trackCliFlagLogs(parsedArguments.flags['--logs']);
+    telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
+    telemetryClient.trackCliFlagWithCache(
+      parsedArguments.flags['--with-cache']
+    );
+
     if ('--confirm' in parsedArguments.flags) {
+      // Deprecated flag so it's not in the type definition
+      telemetryClient.trackCliFlagConfirm(true);
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
@@ -113,6 +144,7 @@ export default async (client: Client): Promise<number> => {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
     paths = parsedArguments.args.map(item => resolve(client.cwd, item));
+    telemetryClient.trackCliArgumentProjectPath(paths);
   } else {
     paths = [client.cwd];
   }
@@ -171,6 +203,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliOptionName(parsedArguments.flags['--name']);
   }
 
   if (parsedArguments.flags['--no-clipboard']) {
@@ -182,6 +215,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliFlagNoClipboard(true);
   }
   // #endregion
 

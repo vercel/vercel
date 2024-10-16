@@ -1,5 +1,5 @@
-import Client from '../../util/client';
-import list, { ListChoice } from '../../util/input/list';
+import type Client from '../../util/client';
+import list, { type ListChoice } from '../../util/input/list';
 import type {
   Metadata,
   MetadataEntry,
@@ -43,7 +43,7 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
           validate: value => {
             const number = Number(value);
 
-            if (isNaN(number)) {
+            if (Number.isNaN(number)) {
               return `Value "${value}" must be a number.`;
             }
 
