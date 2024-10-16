@@ -2,6 +2,7 @@ overlay: 1.0.0
 info:
   title: Fix https://openapi.vercel.sh/ with lint issues
   version: 0.0.0
+# The fixes below from the errors found with speakeasy openapi lint
 actions:
   - target: $["paths"]["/data-cache/purge-all"]["delete"]
     update:
@@ -566,3 +567,53 @@ actions:
     update:
       items:
         type: string
+# The fixes below are from test performed with using the SDK - https://www.notion.so/vercel/Vercel-SDK-Edits-104e06b059c48085ad11f9288118b604
+  - target: $.paths['/v4/aliases'].get.responses['200'].content['application/json'].schema.properties['aliases'].items.properties.deletedAt
+    update:
+      nullable: true
+  - target: $.paths['/v1/projects/{projectId}/pause'].post.responses['200']
+    update:
+      description: Project successfully paused
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+              type: boolean
+              description: Whether the project was successfully paused
+              example: true
+  - target: $.paths['/v1/projects/{projectId}/unpause'].post.responses['200']
+    update:
+      description: Project successfully unpaused
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+              type: boolean
+              description: Whether the project was successfully unpaused
+              example: true
+  - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.type
+    update: object
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items.properties['createdFrom']['enum']
+    update:
+      - integration
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items.required
+    remove: true
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items
+    update:
+      required:
+        - id
+        - deliveryFormat
+        - url
+        - name
+        - ownerId
+        - createdAt
+        - deletedAt
+        - updatedAt
+        - environments
+  - target: components.schemas['Team']
+    update:
+      additionalProperties: true
