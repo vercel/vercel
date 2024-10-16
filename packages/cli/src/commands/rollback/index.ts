@@ -9,6 +9,7 @@ import rollbackStatus from './status';
 import { help } from '../help';
 import { rollbackCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
 
 /**
  * `vc rollback` command
@@ -19,6 +20,12 @@ export default async (client: Client): Promise<number> => {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
+  const telemetry = new RollbackTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
 
   // Parse CLI args
   try {
@@ -27,6 +34,9 @@ export default async (client: Client): Promise<number> => {
     handleError(error);
     return 1;
   }
+
+  telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   const { output } = client;
 
@@ -46,6 +56,7 @@ export default async (client: Client): Promise<number> => {
 
   try {
     if (actionOrDeployId === 'status') {
+      telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
         autoConfirm: Boolean(parsedArgs.flags['--yes']),
         client,
