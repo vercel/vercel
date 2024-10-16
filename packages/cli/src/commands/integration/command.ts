@@ -1,3 +1,4 @@
+import { yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const addSubCommand = {
@@ -91,6 +92,77 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const removeSubcommand = {
+  name: 'remove',
+  description:
+    'Unlink and delete resources, and uninstall marketplace integrations',
+  arguments: [
+    {
+      name: 'resource/integration',
+      required: true,
+    },
+    {
+      name: 'project',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'delete',
+      description: 'limits the resources listed to a designated integration',
+      shorthand: 'D',
+      type: Boolean,
+      deprecated: false,
+      argument: 'NAME',
+    },
+    {
+      name: 'unlink-all',
+      description: 'lists all resources regardless of project',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when deleting a resource or removing an integration',
+    },
+  ],
+  examples: [
+    {
+      name: 'Unlink a project from a resource',
+      value: [
+        `${packageName} integrations remove <resource> <project>`,
+        `${packageName} integrations remove my-acme-resource my-project`,
+      ],
+    },
+    {
+      name: 'Unlink all projects from a resource',
+      value: [
+        `${packageName} integrations remove <resource> --unlink-all`,
+        `${packageName} integrations remove my-acme-resource --unlink-all`,
+        `${packageName} integrations remove my-acme-resource -a`,
+      ],
+    },
+    {
+      name: 'Delete an unlinked resource',
+      value: [
+        `${packageName} integrations remove <resource> --delete`,
+        `${packageName} integrations remove my-acme-resource --delete`,
+        `${packageName} integrations remove my-acme-resource -D --yes`,
+        `${packageName} integrations remove my-acme-resource --unlink-all --delete`,
+      ],
+    },
+    {
+      name: 'Uninstall an integration',
+      value: [
+        `${packageName} integrations remove <inegration>`,
+        `${packageName} integrations remove acme`,
+      ],
+    },
+  ],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   description: 'Manage marketplace integrations',
@@ -101,6 +173,11 @@ export const integrationCommand = {
       required: true,
     },
   ],
-  subcommands: [addSubCommand, openSubCommand, listSubcommand],
+  subcommands: [
+    addSubCommand,
+    openSubCommand,
+    listSubcommand,
+    removeSubcommand,
+  ],
   examples: [],
 } as const;

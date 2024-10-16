@@ -16,3 +16,14 @@ export async function fetchMarketplaceIntegrations(
     }
   );
 }
+
+export async function getFirstConfiguration(
+  client: Client,
+  integrationSlug: string
+) {
+  const configurations = await fetchMarketplaceIntegrations(
+    client,
+    integrationSlug
+  );
+  return configurations.length > 0 ? configurations[0] : undefined;
+}
