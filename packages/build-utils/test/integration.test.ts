@@ -22,6 +22,7 @@ const skipFixtures: string[] = [
   '23-pnpm-workspaces',
   '41-turborepo-supporting-corepack-home',
   '42-turborepo-not-supporting-corepack-home',
+  '43-turborepo-with-comments-in-turbo-json',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

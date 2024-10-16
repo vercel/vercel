@@ -8,8 +8,16 @@ import { teamsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 
 export default async (client: Client) => {
+  const telemetryClient = new TeamsTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   let subcommand;
 
   let parsedArgs = null;
@@ -62,6 +70,7 @@ export default async (client: Client) => {
     }
 
     case 'invite': {
+      telemetryClient.trackCliSubcommandInvite('invite');
       exitCode = await invite(client, parsedArgs.args);
       break;
     }

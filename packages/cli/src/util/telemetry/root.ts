@@ -15,6 +15,34 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandDeploy(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandWhoami(actual: string) {
+    this.trackCliCommand({
+      command: 'whoami',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRollback(actual: string) {
+    this.trackCliCommand({
+      command: 'rollback',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTeams(actual: string) {
+    this.trackCliCommand({
+      command: 'teams',
+      value: actual,
+    });
+  }
+
   trackCPUs() {
     super.trackCPUs();
   }
