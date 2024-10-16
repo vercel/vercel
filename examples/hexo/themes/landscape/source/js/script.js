@@ -44,7 +44,7 @@ import DOMPurify from 'dompurify';
       var $this = $(this),
         url = DOMPurify.sanitize($this.attr('data-url')),
         encodedUrl = encodeURIComponent(url),
-        id = 'article-share-box-' + $this.attr('data-id'),
+        id = 'article-share-box-' + DOMPurify.sanitize($this.attr('data-id')),
         offset = $this.offset();
 
       if ($('#' + id).length) {
