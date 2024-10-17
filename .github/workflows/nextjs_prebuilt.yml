@@ -1,0 +1,49 @@
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+
+jobs:
+  clone-build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - run: |
+          node --version
+          npm --version
+
+      - run: |
+          npm install -g vercel@latest
+          vc --version
+
+      - working-directory: ./examples/nextjs
+        run: |
+          npm ci
+        env:
+          NPM_CONFIG_LOGLEVEL: http
+
+      - working-directory: ./examples/nextjs
+        run: |
+          vc build --debug --token $VERCEL_TOKEN --yes --prod
+        env:
+          VERCEL_TOKEN: ${{ secrets.NEXTJS_PREBUILT_VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_ORG_ID }}
+
+      - working-directory: ./examples/nextjs
+        run: |
+          vc deploy --debug --token $VERCEL_TOKEN --yes --prod --prebuilt --archive=tgz
+        env:
+          VERCEL_TOKEN: ${{ secrets.NEXTJS_PREBUILT_VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_ORG_ID }}
+
