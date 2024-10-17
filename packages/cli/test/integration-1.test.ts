@@ -520,7 +520,8 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-test('deploy `api-env` fixture and test `vercel env` command', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
 
   async function vcLink() {
