@@ -9,7 +9,7 @@ import promoteStatus from './status';
 import { promoteCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-
+import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
 /**
  * `vc promote` command
  * @param {Client} client
@@ -30,12 +30,20 @@ export default async (client: Client): Promise<number> => {
 
   const { output } = client;
 
+  const telemetry = new PromoteTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
     output.print(help(promoteCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   const yes = parsedArgs.flags['--yes'] ?? false;
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   // validate the timeout
   let timeout = parsedArgs.flags['--timeout'];
@@ -44,10 +52,13 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
+  telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
+
   const actionOrDeployId = parsedArgs.args[1] || 'status';
 
   try {
     if (actionOrDeployId === 'status') {
+      telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
         autoConfirm: Boolean(parsedArgs.flags['--yes']),
         client,
