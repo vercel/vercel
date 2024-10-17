@@ -62,7 +62,13 @@ describe('pull', () => {
   });
 
   it('should fail without message to pull without a link and with --env', async () => {
-    const cwd = setupUnitFixture('vercel-pull-next');
+    const fixtureName = 'vercel-pull-next';
+    const cwd = setupUnitFixture(fixtureName);
+
+    client.scenario.get(`/v9/projects/${fixtureName}`, (req, res) => {
+      return res.status(404).json({});
+    });
+
     useUser();
     useTeams('team_dummy');
 
