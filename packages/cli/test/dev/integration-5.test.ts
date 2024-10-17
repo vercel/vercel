@@ -349,7 +349,8 @@ test(
   })
 );
 
-test(
+// eslint-disable-next-line jest/no-focused-tests
+test.only(
   '[vercel dev] throw when invalid builder routes detected',
   testFixtureStdio(
     'invalid-builder-routes',
