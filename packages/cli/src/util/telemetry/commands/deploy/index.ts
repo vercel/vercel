@@ -12,7 +12,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionArchive(format?: string) {
     if (format) {
       this.trackCliOption({
-        flag: 'archive',
+        option: 'archive',
         value: format,
       });
     }
@@ -20,7 +20,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionBuildEnv(buildEnv?: string[]) {
     if (buildEnv && buildEnv.length > 0) {
       this.trackCliOption({
-        flag: 'build-env',
+        option: 'build-env',
         value: this.redactedValue,
       });
     }
@@ -28,7 +28,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionEnv(env?: string[]) {
     if (env && env.length > 0) {
       this.trackCliOption({
-        flag: 'env',
+        option: 'env',
         value: this.redactedValue,
       });
     }
@@ -36,7 +36,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionMeta(meta?: string[]) {
     if (meta && meta.length > 0) {
       this.trackCliOption({
-        flag: 'meta',
+        option: 'meta',
         value: this.redactedValue,
       });
     }
@@ -44,7 +44,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionName(name?: string) {
     if (name) {
       this.trackCliOption({
-        flag: 'name',
+        option: 'name',
         value: this.redactedValue,
       });
     }
@@ -52,7 +52,7 @@ export class DeployTelemetryClient extends TelemetryClient {
   trackCliOptionRegions(regions?: string) {
     if (regions) {
       this.trackCliOption({
-        flag: 'regions',
+        option: 'regions',
         value: regions,
       });
     }
@@ -63,7 +63,7 @@ export class DeployTelemetryClient extends TelemetryClient {
         ? target
         : 'CUSTOM_ID_OR_SLUG';
       this.trackCliOption({
-        flag: 'target',
+        option: 'target',
         value,
       });
     }

@@ -85,9 +85,9 @@ export class TelemetryClient {
     }
   }
 
-  protected trackCliOption(eventData: { flag: string; value: string }) {
+  protected trackCliOption(eventData: { option: string; value: string }) {
     this.track({
-      key: `flag:${eventData.flag}`,
+      key: `option:${eventData.option}`,
       value: eventData.value,
     });
   }

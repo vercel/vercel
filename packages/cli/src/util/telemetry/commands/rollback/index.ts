@@ -11,7 +11,7 @@ export class RollbackTelemetryClient extends TelemetryClient {
   trackCliOptionTimeout(time: string | undefined) {
     if (time) {
       this.trackCliOption({
-        flag: 'timeout',
+        option: 'timeout',
         value: '[TIME]',
       });
     }
