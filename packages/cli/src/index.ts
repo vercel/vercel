@@ -262,6 +262,15 @@ const main = async () => {
   telemetry.trackArch();
   telemetry.trackCIVendorName();
   telemetry.trackVersion(pkg.version);
+  telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
+  telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
+  telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
+  telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
+  telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
+  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
+  telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
+  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
+  telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
@@ -298,6 +307,7 @@ const main = async () => {
   }
   const { cwd } = client;
 
+  let defaultDeploy = false;
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
@@ -332,6 +342,7 @@ const main = async () => {
   } else {
     debug('user supplied no target, defaulting to deploy');
     subcommand = 'deploy';
+    defaultDeploy = true;
   }
 
   if (subcommand === 'help') {
@@ -558,22 +569,28 @@ const main = async () => {
           func = require('./commands/alias').default;
           break;
         case 'bisect':
+          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
           break;
         case 'build':
+          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
           break;
         case 'certs':
+          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
           break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
+          telemetry.trackCliDefaultDeploy(defaultDeploy);
           func = require('./commands/deploy').default;
           break;
         case 'dev':
+          telemetry.trackCliCommandDev(userSuppliedSubCommand);
           func = require('./commands/dev').default;
           break;
         case 'dns':
+          telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = require('./commands/dns').default;
           break;
         case 'domains':
@@ -581,51 +598,67 @@ const main = async () => {
           func = require('./commands/domains').default;
           break;
         case 'env':
+          telemetry.trackCliCommandEnv(userSuppliedSubCommand);
           func = require('./commands/env').default;
           break;
         case 'git':
+          telemetry.trackCliCommandGit(userSuppliedSubCommand);
           func = require('./commands/git').default;
           break;
         case 'init':
+          telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
           break;
         case 'inspect':
+          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
           func = require('./commands/inspect').default;
           break;
         case 'install':
+          telemetry.trackCliCommandInstall(userSuppliedSubCommand);
           func = require('./commands/install').default;
           break;
         case 'integration':
+          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
           func = require('./commands/integration').default;
           break;
         case 'link':
+          telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = require('./commands/link').default;
           break;
         case 'list':
+          telemetry.trackCliCommandList(userSuppliedSubCommand);
           func = require('./commands/list').default;
           break;
         case 'logs':
+          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = require('./commands/logs').default;
           break;
         case 'login':
+          telemetry.trackCliCommandLogin(userSuppliedSubCommand);
           func = require('./commands/login').default;
           break;
         case 'logout':
+          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
           func = require('./commands/logout').default;
           break;
         case 'project':
+          telemetry.trackCliCommandProject(userSuppliedSubCommand);
           func = require('./commands/project').default;
           break;
         case 'promote':
+          telemetry.trackCliCommandPromote(userSuppliedSubCommand);
           func = require('./commands/promote').default;
           break;
         case 'pull':
+          telemetry.trackCliCommandPull(userSuppliedSubCommand);
           func = require('./commands/pull').default;
           break;
         case 'redeploy':
+          telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
           break;
         case 'remove':
+          telemetry.trackCliCommandRemove(userSuppliedSubCommand);
           func = require('./commands/remove').default;
           break;
         case 'rollback':
@@ -633,13 +666,15 @@ const main = async () => {
           func = require('./commands/rollback').default;
           break;
         case 'target':
+          telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = require('./commands/target').default;
           break;
         case 'teams':
+          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = require('./commands/teams').default;
           break;
         case 'telemetry':
-          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
+          telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':

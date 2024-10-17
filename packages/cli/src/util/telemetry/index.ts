@@ -28,6 +28,14 @@ export class TelemetryClient {
   store: TelemetryEventStore;
 
   protected redactedValue = '[REDACTED]';
+  protected redactedArgumentsLength = (args: string[]) => {
+    if (args && args.length === 1) {
+      return 'ONE';
+    } else if (args.length > 1) {
+      return 'MANY';
+    }
+    return 'NONE';
+  };
 
   constructor({ opts }: Args) {
     this.output = opts.output;
@@ -77,9 +85,9 @@ export class TelemetryClient {
     }
   }
 
-  protected trackCliOption(eventData: { flag: string; value: string }) {
+  protected trackCliOption(eventData: { option: string; value: string }) {
     this.track({
-      key: `flag:${eventData.flag}`,
+      key: `option:${eventData.option}`,
       value: eventData.value,
     });
   }
@@ -128,6 +136,13 @@ export class TelemetryClient {
         value: version,
       });
     }
+  }
+
+  protected trackDefaultDeploy() {
+    this.track({
+      key: 'default-deploy',
+      value: 'TRUE',
+    });
   }
 
   trackCommandError(error: string): Event | undefined {

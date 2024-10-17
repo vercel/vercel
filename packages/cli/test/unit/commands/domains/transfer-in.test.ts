@@ -114,7 +114,7 @@ describe('domains transfer-in', () => {
             value: 'transfer-in',
           },
           {
-            key: `flag:code`,
+            key: `option:code`,
             value: '[REDACTED]',
           },
           {

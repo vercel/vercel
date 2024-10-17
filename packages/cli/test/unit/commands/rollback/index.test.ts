@@ -34,7 +34,7 @@ describe('rollback', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:timeout',
+          key: 'option:timeout',
           value: '[TIME]',
         },
         {

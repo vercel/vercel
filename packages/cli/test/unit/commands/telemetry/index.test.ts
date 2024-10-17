@@ -11,7 +11,7 @@ describe('telemetry', () => {
   });
 
   it('should show an error with the telemetry help menu when no subcommands are passed', async () => {
-    const args = [];
+    const args: string[] = [];
 
     client.setArgv('telemetry', ...args);
     const exitCode = await telemetry(client);
@@ -47,6 +47,12 @@ describe('telemetry', () => {
         You have opted in to Vercel CLI telemetry"
       `);
       expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:status',
+          value: 'status',
+        },
+      ]);
     });
     it('should show enabled if telemetry.enabled = true in the global config file', async () => {
       const args = ['status'];
@@ -91,6 +97,12 @@ describe('telemetry', () => {
         telemetry: { enabled: true },
       });
       expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:enable',
+          value: 'enable',
+        },
+      ]);
     });
   });
 

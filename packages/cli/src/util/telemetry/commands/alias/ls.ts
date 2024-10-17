@@ -4,7 +4,7 @@ export class AliasLsTelemetryClient extends TelemetryClient {
   trackCliOptionLimit(limit?: number) {
     if (limit) {
       this.trackCliOption({
-        flag: 'limit',
+        option: 'limit',
         value: String(limit),
       });
     }
@@ -13,8 +13,8 @@ export class AliasLsTelemetryClient extends TelemetryClient {
   trackCliOptionNext(next?: number) {
     if (next) {
       this.trackCliOption({
-        flag: 'next',
-        value: '[REDACTED]',
+        option: 'next',
+        value: this.redactedValue,
       });
     }
   }

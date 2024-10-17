@@ -8,6 +8,7 @@ import enable from './enable';
 import disable from './disable';
 import { telemetryCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
 
 const COMMAND_CONFIG = {
@@ -17,6 +18,12 @@ const COMMAND_CONFIG = {
 };
 
 export default async function telemetry(client: Client) {
+  let telemetryClient = new TelemetryTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(telemetryCommand.options);
@@ -41,8 +48,10 @@ export default async function telemetry(client: Client) {
 
   switch (subcommand) {
     case 'status':
+      telemetryClient.trackCliSubcommandStatus(subcommand);
       return status(client);
     case 'enable':
+      telemetryClient.trackCliSubcommandEnable(subcommand);
       return enable(client);
     case 'disable':
       return disable(client);
