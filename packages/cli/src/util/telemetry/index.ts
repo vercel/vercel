@@ -16,7 +16,7 @@ interface Options {
 }
 
 interface Event {
-  teamId: string;
+  teamId?: string;
   sessionId?: string;
   id: string;
   key: string;
