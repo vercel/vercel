@@ -1,3 +1,5 @@
+name: Prebuild Next.js Example
+
 on:
   push:
     branches:
