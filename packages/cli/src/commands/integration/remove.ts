@@ -103,13 +103,6 @@ async function handleRemoveIntegration(
     return 0;
   }
 
-  if (integrationConfiguration.projects.length > 0) {
-    client.output.error(
-      `${chalk.bold(integrationName)} has connected projects. Please unlink all projects before removing the integration.`
-    );
-    return 1;
-  }
-
   // Confirm removal desired
   if (
     !skipConfirmation &&

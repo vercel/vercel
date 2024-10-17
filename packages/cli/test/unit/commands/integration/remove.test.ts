@@ -540,17 +540,29 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(1);
         });
 
-        it('should error when attempting to remove an integration with resources linked to projects', async () => {
+        it('should error when attempting to remove an integration with resources', async () => {
           useConfiguration();
-          const integration = 'acme-two-projects';
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
 
           client.setArgv('integration', 'remove', integration);
           const exitCodePromise = integrationCommand(client);
 
           await expect(client.stderr).toOutput('Retrieving integration…');
+          await expect(client.stderr).toOutput(
+            `> The ${integration} integration will be removed permanently from team ${team.name}.`
+          );
+          await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: ${integration} has connected projects. Please unlink all projects before removing the integration.`
+            `Error: removing ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -595,11 +607,18 @@ describe('integration', () => {
   });
 });
 
-function mockDeleteIntegration(): void {
+function mockDeleteIntegration(options?: {
+  errorStatus: number;
+  errorMessage: string;
+}): void {
   client.scenario.post(
     '/:version/integrations/installations/:integrationIdOrSlug/uninstall',
     (req, res) => {
       const { integrationIdOrSlug } = req.query;
+
+      if (options) {
+        res.status(options.errorStatus).send(options.errorMessage);
+      }
 
       if (integrationIdOrSlug === 'error') {
         res.status(500);
