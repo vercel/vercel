@@ -1,22 +1,16 @@
 import { TelemetryClient } from '.';
 
 export class RootTelemetryClient extends TelemetryClient {
-  trackCliDefaultDeploy(defaultDeploy: boolean) {
-    if (defaultDeploy) {
-      this.trackDefaultDeploy();
-    }
-  }
-
-  trackCliCommandDomains(actual: string) {
+  trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
-      command: 'domains',
+      command: 'alias',
       value: actual,
     });
   }
 
-  trackCliCommandAlias(actual: string) {
+  trackCliCommandBisect(actual: string) {
     this.trackCliCommand({
-      command: 'alias',
+      command: 'bisect',
       value: actual,
     });
   }
@@ -28,6 +22,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandCerts(actual: string) {
+    this.trackCliCommand({
+      command: 'certs',
+      value: actual,
+    });
+  }
+
   trackCliCommandDeploy(actual: string) {
     this.trackCliCommand({
       command: 'deploy',
@@ -35,9 +36,127 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandWhoami(actual: string) {
+  trackCliDefaultDeploy(defaultDeploy: boolean) {
+    if (defaultDeploy) {
+      this.trackDefaultDeploy();
+    }
+  }
+
+  trackCliCommandDev(actual: string) {
     this.trackCliCommand({
-      command: 'whoami',
+      command: 'dev',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDomains(actual: string) {
+    this.trackCliCommand({
+      command: 'domains',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDns(actual: string) {
+    this.trackCliCommand({
+      command: 'dns',
+      value: actual,
+    });
+  }
+
+  trackCliCommandEnv(actual: string) {
+    this.trackCliCommand({
+      command: 'env',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGit(actual: string) {
+    this.trackCliCommand({
+      command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInit(actual: string) {
+    this.trackCliCommand({
+      command: 'init',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInspect(actual: string) {
+    this.trackCliCommand({
+      command: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInstall(actual: string) {
+    this.trackCliCommand({
+      command: 'install',
+      value: actual,
+    });
+  }
+
+  trackCliCommandIntegration(actual: string) {
+    this.trackCliCommand({
+      command: 'integration',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLink(actual: string) {
+    this.trackCliCommand({
+      command: 'link',
+      value: actual,
+    });
+  }
+
+  trackCliCommandList(actual: string) {
+    this.trackCliCommand({
+      command: 'list',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogin(actual: string) {
+    this.trackCliCommand({
+      command: 'login',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogout(actual: string) {
+    this.trackCliCommand({
+      command: 'logout',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogs(actual: string) {
+    this.trackCliCommand({
+      command: 'logs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandProject(actual: string) {
+    this.trackCliCommand({
+      command: 'project',
+      value: actual,
+    });
+  }
+
+  trackCliCommandPromote(actual: string) {
+    this.trackCliCommand({
+      command: 'promote',
+      value: actual,
+    });
+  }
+
+  trackCliCommandPull(actual: string) {
+    this.trackCliCommand({
+      command: 'pull',
       value: actual,
     });
   }
@@ -45,6 +164,27 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRollback(actual: string) {
     this.trackCliCommand({
       command: 'rollback',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRedeploy(actual: string) {
+    this.trackCliCommand({
+      command: 'redeploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRemove(actual: string) {
+    this.trackCliCommand({
+      command: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTarget(actual: string) {
+    this.trackCliCommand({
+      command: 'target',
       value: actual,
     });
   }
@@ -63,9 +203,9 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandLogout(actual: string) {
+  trackCliCommandWhoami(actual: string) {
     this.trackCliCommand({
-      command: 'logout',
+      command: 'whoami',
       value: actual,
     });
   }
