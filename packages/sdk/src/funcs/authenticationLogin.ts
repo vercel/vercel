@@ -47,10 +47,8 @@ export async function authenticationLogin(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => EmailLoginRequestBody$outboundSchema.optional().parse(value),
     "Input validation failed",
   );

@@ -48,10 +48,8 @@ export async function teamsInviteUser(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => InviteUserToTeamRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

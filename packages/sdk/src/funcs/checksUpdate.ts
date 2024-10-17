@@ -48,10 +48,8 @@ export async function checksUpdate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => UpdateCheckRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

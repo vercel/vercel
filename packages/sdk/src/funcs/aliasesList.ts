@@ -57,10 +57,8 @@ export async function aliasesList(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListAliasesRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -167,7 +165,7 @@ export async function aliasesList(
       aliasesList(
         client,
         {
-          ...input,
+          ...request,
           since: nextCursor,
         },
         options,

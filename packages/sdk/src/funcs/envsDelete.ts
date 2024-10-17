@@ -48,10 +48,8 @@ export async function envsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RemoveProjectEnvRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

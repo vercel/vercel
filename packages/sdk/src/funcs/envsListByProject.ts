@@ -48,10 +48,8 @@ export async function envsListByProject(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => FilterProjectEnvsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

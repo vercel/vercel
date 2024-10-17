@@ -49,10 +49,8 @@ export async function artifactsQuery(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ArtifactQueryRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

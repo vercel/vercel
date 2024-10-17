@@ -57,10 +57,8 @@ export async function promotionsListAliases(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListPromoteAliasesRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -173,7 +171,7 @@ export async function promotionsListAliases(
       promotionsListAliases(
         client,
         {
-          ...input,
+          ...request,
           since: nextCursor,
         },
         options,

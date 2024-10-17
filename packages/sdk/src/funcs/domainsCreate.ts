@@ -48,10 +48,8 @@ export async function domainsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => AddProjectDomainRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
