@@ -1,5 +1,19 @@
 # vercel
 
+## 37.10.0
+
+### Minor Changes
+
+- Add telemetry for `vercel alias set` ([#12292](https://github.com/vercel/vercel/pull/12292))
+
+### Patch Changes
+
+- Collect telemetry for `vc telemetry status` and `vc telemetry enable`. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12273](https://github.com/vercel/vercel/pull/12273))
+
+- [cli] Use centralized value for [REDACTED] ([#12295](https://github.com/vercel/vercel/pull/12295))
+
+- Add telemetry to the build command. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12293](https://github.com/vercel/vercel/pull/12293))
+
 ## 37.9.0
 
 ### Minor Changes

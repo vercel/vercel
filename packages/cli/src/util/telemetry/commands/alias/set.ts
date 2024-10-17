@@ -10,7 +10,7 @@ export class AliasSetTelemetryClient extends TelemetryClient {
   trackCliOptionLocalConfig(localConfig?: string) {
     if (localConfig) {
       this.trackCliOption({
-        flag: 'local-config',
+        option: 'local-config',
         value: this.redactedValue,
       });
     }
