@@ -307,6 +307,7 @@ const main = async () => {
   }
   const { cwd } = client;
 
+  let defaultDeploy = false;
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
@@ -341,6 +342,7 @@ const main = async () => {
   } else {
     debug('user supplied no target, defaulting to deploy');
     subcommand = 'deploy';
+    defaultDeploy = true;
   }
 
   if (subcommand === 'help') {
@@ -578,6 +580,7 @@ const main = async () => {
           break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
+          telemetry.trackCliDefaultDeploy(defaultDeploy);
           func = require('./commands/deploy').default;
           break;
         case 'dev':

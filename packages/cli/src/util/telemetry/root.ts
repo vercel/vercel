@@ -1,6 +1,12 @@
 import { TelemetryClient } from '.';
 
 export class RootTelemetryClient extends TelemetryClient {
+  trackCliDefaultDeploy(defaultDeploy: boolean) {
+    if (defaultDeploy) {
+      this.trackDefaultDeploy();
+    }
+  }
+
   trackCliCommandDomains(actual: string) {
     this.trackCliCommand({
       command: 'domains',
