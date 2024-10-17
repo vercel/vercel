@@ -13,6 +13,7 @@ export async function removeIntegration(
     `/v2/integrations/installations/${configuration.id}/uninstall?${params}`,
     {
       json: true,
+      body: {},
       method: 'POST',
     }
   );
