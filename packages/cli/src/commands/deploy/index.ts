@@ -296,7 +296,7 @@ export default async (client: Client): Promise<number> => {
 
     if (typeof projectOrNewProjectName === 'string') {
       newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(client, cwd, autoConfirm);
+      rootDirectory = parsedArguments.flags['--root-directory'] || await inputRootDirectory(client, cwd, autoConfirm);
     } else {
       project = projectOrNewProjectName;
       rootDirectory = project.rootDirectory;
