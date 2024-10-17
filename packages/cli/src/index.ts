@@ -85,38 +85,6 @@ let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
 
-function initializeOutput(parsedArgs: {
-  args: string[];
-  flags: {
-    '--help'?: boolean | undefined;
-    '--version'?: boolean | undefined;
-    '--cwd'?: string | undefined;
-    '--local-config'?: string | undefined;
-    '--global-config'?: string | undefined;
-    '--debug'?: boolean | undefined;
-    '--no-color'?: boolean | undefined;
-    '--scope'?: string | undefined;
-    '--token'?: string | undefined;
-    '--team'?: string | undefined;
-    '--api'?: string | undefined;
-    '-h'?: undefined;
-    '-v'?: undefined;
-    '-A'?: undefined;
-    '-Q'?: undefined;
-    '-d'?: undefined;
-    '-S'?: undefined;
-    '-t'?: undefined;
-    '-T'?: undefined;
-  };
-}) {
-  const isDebugging = parsedArgs.flags['--debug'];
-  const isNoColor = parsedArgs.flags['--no-color'];
-  output.initialize({
-    debug: isDebugging,
-    noColor: isNoColor,
-  });
-}
-
 const main = async () => {
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -132,7 +100,12 @@ const main = async () => {
       { '--version': Boolean, '-v': '--version' },
       { permissive: true }
     );
-    initializeOutput(parsedArgs);
+    const isDebugging = parsedArgs.flags['--debug'];
+    const isNoColor = parsedArgs.flags['--no-color'];
+    output.initialize({
+      debug: isDebugging,
+      noColor: isNoColor,
+    });
   } catch (err: unknown) {
     handleError(err);
     return 1;
