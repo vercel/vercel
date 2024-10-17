@@ -263,7 +263,7 @@ async function handleUnlinkAllProjects(
       }) ?? [];
     try {
       client.output.spinner('Unlinking projects from resource…', 500);
-      await Promise.all(unlinkApiCalls);
+      await Promise.allSettled(unlinkApiCalls);
       client.output.success(
         `Unlinked all projects from ${chalk.bold(resource.name)}`
       );
