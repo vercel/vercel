@@ -1,5 +1,27 @@
 # vercel
 
+## 37.11.0
+
+### Minor Changes
+
+- [cli] Add default team id for logged out users ([#12310](https://github.com/vercel/vercel/pull/12310))
+
+- [cli] add telemetry for `vercel promote` ([#12304](https://github.com/vercel/vercel/pull/12304))
+
+- [cli] add remaining root command tracking ([#12301](https://github.com/vercel/vercel/pull/12301))
+
+### Patch Changes
+
+- [cli] Add tracking for cli extensions ([#12302](https://github.com/vercel/vercel/pull/12302))
+
+- [cli] remove duplicate global option ([#12303](https://github.com/vercel/vercel/pull/12303))
+
+- [cli] separately track if deploy is done by default ([#12296](https://github.com/vercel/vercel/pull/12296))
+
+- [cli] Add tracking for most global flags and options ([#12300](https://github.com/vercel/vercel/pull/12300))
+
+- [cli] update option tracking to be prefixed appropriately ([#12288](https://github.com/vercel/vercel/pull/12288))
+
 ## 37.10.0
 
 ### Minor Changes
