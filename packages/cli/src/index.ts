@@ -21,8 +21,11 @@ try {
   // eslint-disable-next-line no-console
   const originalError = console.error;
   // eslint-disable-next-line no-console
-  console.error = msg => {
-    if (SILENCED_ERRORS.some(error => msg.includes(error))) {
+  console.error = (msg: unknown) => {
+    const msgIsSilencedError = SILENCED_ERRORS.some(
+      error => typeof msg === 'string' && msg.includes(error)
+    );
+    if (msgIsSilencedError) {
       return;
     }
     originalError(msg);
