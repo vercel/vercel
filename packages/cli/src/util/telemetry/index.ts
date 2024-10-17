@@ -145,6 +145,13 @@ export class TelemetryClient {
     });
   }
 
+  protected trackExtension(extension: string) {
+    this.track({
+      key: 'extension',
+      value: extension,
+    });
+  }
+
   trackCommandError(error: string): Event | undefined {
     this.output.error(error);
     return;
