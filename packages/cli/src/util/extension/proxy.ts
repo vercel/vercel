@@ -15,9 +15,10 @@ export function createProxy(client: Client): Server {
     try {
       // Proxy to the upstream Vercel REST API
       const headers = toHeaders(req.headers);
+
       headers.delete('host');
       const fetchRes = await client.fetch(req.url || '/', {
-        headers,
+        headers: headers as Headers,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
         useCurrentTeam: false,
@@ -25,7 +26,7 @@ export function createProxy(client: Client): Server {
       });
       res.statusCode = fetchRes.status;
       mergeIntoServerResponse(toOutgoingHeaders(fetchRes.headers), res);
-      fetchRes.body.pipe(res);
+      fetchRes.body?.pipe(res);
     } catch (err: unknown) {
       client.output.prettyError(err);
       if (!res.headersSent) {
