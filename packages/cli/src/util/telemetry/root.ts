@@ -89,6 +89,78 @@ export class RootTelemetryClient extends TelemetryClient {
   trackVersion(version?: string) {
     super.trackVersion(version);
   }
+
+  trackCliOptionCwd(cwd?: string) {
+    if (cwd) {
+      this.trackCliOption({ option: 'cwd', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionLocalConfig(localConfig?: string) {
+    if (localConfig) {
+      this.trackCliOption({
+        option: 'local-config',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionGlobalConfig(globalConfig?: string) {
+    if (globalConfig) {
+      this.trackCliOption({
+        option: 'global-config',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionScope(scope?: string) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionToken(token?: string) {
+    if (token) {
+      this.trackCliOption({
+        option: 'token',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTeam(team?: string) {
+    if (team) {
+      this.trackCliOption({
+        option: 'team',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionApi(api?: string) {
+    if (api) {
+      this.trackCliOption({
+        option: 'api',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagDebug(debug?: boolean) {
+    if (debug) {
+      this.trackCliFlag('debug');
+    }
+  }
+
+  trackCliFlagNoColor(noColor?: boolean) {
+    if (noColor) {
+      this.trackCliFlag('no-color');
+    }
+  }
 }
 
 interface Vendor {
