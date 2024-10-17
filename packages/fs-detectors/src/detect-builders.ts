@@ -15,7 +15,7 @@ import { isOfficialRuntime } from './is-official-runtime';
 /**
  * Pattern for finding all supported middleware files.
  */
-export const REGEX_MIDDLEWARE_FILES = 'middleware.[jt]s';
+export const REGEX_MIDDLEWARE_FILES = 'middleware.(?:j|t|mj|mt)s';
 
 /**
  * Pattern for files that the Vercel platform cares about separately from frameworks.
@@ -387,8 +387,7 @@ function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ) {
-  const middleware =
-    fileName === 'middleware.js' || fileName === 'middleware.ts';
+  const middleware = fileName.match(new RegExp(REGEX_MIDDLEWARE_FILES, 'g'));
 
   // Root-level Middleware file is handled by `@vercel/next`, so don't
   // schedule a separate Builder when "nextjs" framework is selected
@@ -478,7 +477,7 @@ function getApiMatches(): Builder[] {
       use: `@vercel/node`,
       config: { ...config, middleware: true },
     },
-    { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
+    { src: 'api/**/*.+(js|mjs|ts|mts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
