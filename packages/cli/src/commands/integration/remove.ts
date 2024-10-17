@@ -123,7 +123,7 @@ async function handleRemoveIntegration(
   } catch (error) {
     client.output.error(
       chalk.red(
-        `Error removing ${chalk.bold(integrationName)}: ${(error as Error).message}`
+        `Failed to remove ${chalk.bold(integrationName)}: ${(error as Error).message}`
       )
     );
     return 1;

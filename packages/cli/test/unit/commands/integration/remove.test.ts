@@ -562,7 +562,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: removing ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
+            `Error: Failed to remove ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);
@@ -617,17 +617,18 @@ function mockDeleteIntegration(options?: {
       const { integrationIdOrSlug } = req.query;
 
       if (options) {
-        res.status(options.errorStatus).send(options.errorMessage);
-      }
-
-      if (integrationIdOrSlug === 'error') {
-        res.status(500);
-        res.end();
+        res
+          .status(options.errorStatus)
+          .json({ error: { message: options.errorMessage } });
         return;
       }
 
-      res.status(200);
-      res.end();
+      if (integrationIdOrSlug === 'error') {
+        res.sendStatus(500);
+        return;
+      }
+
+      res.sendStatus(200);
     }
   );
 }
