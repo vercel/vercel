@@ -18,8 +18,35 @@ const projectName = 'vercel-promote';
 
 describe('promote', () => {
   describe('[deployment id/url]', () => {
-    describe.todo('--status');
     describe.todo('--timeout');
+    describe.todo('--yes');
+
+    describe('telemetry', () => {
+      it('tracks usage', async () => {
+        const { cwd, previousDeployment } = initPromoteTest();
+        client.cwd = cwd;
+        client.setArgv(
+          'rollback',
+          previousDeployment.id,
+          '--timeout',
+          '0',
+          '--yes'
+        );
+        const exitCodePromise = promote(client);
+        await expect(exitCodePromise).resolves.toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+          {
+            key: 'option:timeout',
+            value: '[TIME]',
+          },
+        ]);
+      });
+    });
 
     it('should error if timeout is invalid', async () => {
       const { cwd } = initPromoteTest();
@@ -71,6 +98,13 @@ describe('promote', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:status',
+          value: 'status',
+        },
+      ]);
     });
 
     it('should promote by deployment id', async () => {
