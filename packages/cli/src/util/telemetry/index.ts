@@ -189,6 +189,12 @@ export class TelemetryEventStore {
     this.events.push(event);
   }
 
+  updateTeamId(teamId?: string) {
+    if (teamId) {
+      this.teamId = teamId;
+    }
+  }
+
   get readonlyEvents() {
     return Array.from(this.events);
   }

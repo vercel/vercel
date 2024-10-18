@@ -553,6 +553,8 @@ const main = async () => {
     }
   }
 
+  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
+
   let exitCode;
 
   try {
