@@ -48,4 +48,3 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.NEXTJS_PREBUILT_VERCEL_TOKEN }}
           VERCEL_PROJECT_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_PROJECT_ID }}
           VERCEL_ORG_ID: ${{ secrets.NEXTJS_PREBUILT_VERCEL_ORG_ID }}
-
