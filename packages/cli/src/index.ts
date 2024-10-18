@@ -13,6 +13,25 @@ try {
   }
 }
 
+{
+  const SILENCED_ERRORS = [
+    'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
+  ];
+
+  // eslint-disable-next-line no-console
+  const originalError = console.error;
+  // eslint-disable-next-line no-console
+  console.error = (msg: unknown) => {
+    const isSilencedError = SILENCED_ERRORS.some(
+      error => typeof msg === 'string' && msg.includes(error)
+    );
+    if (isSilencedError) {
+      return;
+    }
+    originalError(msg);
+  };
+}
+
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
