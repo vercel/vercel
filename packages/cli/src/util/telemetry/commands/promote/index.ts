@@ -1,6 +1,6 @@
 import { TelemetryClient } from '../..';
 
-export class RollbackTelemetryClient extends TelemetryClient {
+export class PromoteTelemetryClient extends TelemetryClient {
   trackCliSubcommandStatus() {
     this.trackCliSubcommand({
       subcommand: 'status',

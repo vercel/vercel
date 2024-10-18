@@ -4,7 +4,7 @@ export class BuildTelemetryClient extends TelemetryClient {
   trackCliOptionOutput(path?: string) {
     if (path) {
       this.trackCliOption({
-        flag: 'output',
+        option: 'output',
         value: this.redactedValue,
       });
     }
@@ -13,7 +13,7 @@ export class BuildTelemetryClient extends TelemetryClient {
   trackCliOptionTarget(option?: string) {
     if (option) {
       this.trackCliOption({
-        flag: 'target',
+        option: 'target',
         value: option,
       });
     }

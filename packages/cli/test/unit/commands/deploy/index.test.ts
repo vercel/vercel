@@ -232,7 +232,7 @@ describe('deploy', () => {
     expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'flag:archive',
+        key: 'option:archive',
         value: 'tgz',
       },
     ]);
@@ -818,7 +818,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:env', value: '[REDACTED]' },
+        { key: 'option:env', value: '[REDACTED]' },
       ]);
     });
     it('--build-env', async () => {
@@ -842,7 +842,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:build-env', value: '[REDACTED]' },
+        { key: 'option:build-env', value: '[REDACTED]' },
       ]);
     });
     it('--meta', async () => {
@@ -860,7 +860,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:meta', value: '[REDACTED]' },
+        { key: 'option:meta', value: '[REDACTED]' },
       ]);
     });
     it('--regions', async () => {
@@ -878,7 +878,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:regions', value: 'us-east-1,us-east-2' },
+        { key: 'option:regions', value: 'us-east-1,us-east-2' },
       ]);
     });
     it('--prebuilt', async () => {
@@ -913,7 +913,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:archive', value: 'tgz' },
+        { key: 'option:archive', value: 'tgz' },
       ]);
     });
     it('--no-wait', async () => {
@@ -995,7 +995,7 @@ describe('deploy', () => {
       expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:name', value: '[REDACTED]' },
+        { key: 'option:name', value: '[REDACTED]' },
       ]);
     });
     it('--no-clipboard', async () => {
@@ -1025,7 +1025,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:target',
+          key: 'option:target',
           value: 'preview',
         },
       ]);
@@ -1047,7 +1047,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:target',
+          key: 'option:target',
           value: 'production',
         },
       ]);
@@ -1069,7 +1069,7 @@ describe('deploy', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:target',
+          key: 'option:target',
           value: 'CUSTOM_ID_OR_SLUG',
         },
       ]);

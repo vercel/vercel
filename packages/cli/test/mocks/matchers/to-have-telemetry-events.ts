@@ -24,6 +24,7 @@ export function toHaveTelemetryEvents(
       const expectCommonSessionEventObject = (event?: EventData) =>
         expect.objectContaining({
           id: expect.any(String),
+          teamId: expect.any(String),
           sessionId: firstEvent?.sessionId,
           key: event?.key,
           value: event?.value,
