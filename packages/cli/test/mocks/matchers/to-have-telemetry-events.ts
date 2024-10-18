@@ -19,7 +19,7 @@ export function toHaveTelemetryEvents(
   const expectEventsArray = (events: Array<EventData>) => {
     const [firstEvent] = received.readonlyEvents;
     if (events.length === 0) {
-      return expect.arrayContaining([]);
+      return [];
     } else {
       const expectCommonSessionEventObject = (event?: EventData) =>
         expect.objectContaining({
@@ -29,7 +29,7 @@ export function toHaveTelemetryEvents(
           key: event?.key,
           value: event?.value,
         });
-      return expect.arrayContaining(events.map(expectCommonSessionEventObject));
+      return events.map(expectCommonSessionEventObject);
     }
   };
 

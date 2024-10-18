@@ -100,6 +100,7 @@ describe('promote', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:yes', value: 'TRUE' },
         {
           key: 'subcommand:status',
           value: 'status',

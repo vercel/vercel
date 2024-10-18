@@ -51,6 +51,7 @@ export default async function alias(client: Client) {
       telemetryClient.trackCliSubcommandLs(subcommandOriginal);
       return ls(client, parsedArguments.flags, args);
     case 'rm':
+      telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArguments.flags, args);
     default:
       telemetryClient.trackCliSubcommandSet(subcommandOriginal);
