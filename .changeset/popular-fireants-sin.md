@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-[cli] add telemetry tracking to `alias ls`
+[cli] add telemetry tracking to `project rm`
