@@ -48,10 +48,8 @@ export async function webhooksGet(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetWebhookRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

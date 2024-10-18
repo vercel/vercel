@@ -47,10 +47,8 @@ export async function authenticationVerify(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => VerifyTokenRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

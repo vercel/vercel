@@ -48,10 +48,8 @@ export async function projectsUpdateDataCache(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => UpdateProjectDataCacheRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

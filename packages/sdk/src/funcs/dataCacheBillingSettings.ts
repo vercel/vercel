@@ -41,10 +41,8 @@ export async function dataCacheBillingSettings(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) =>
       DataCacheBillingSettingsRequestBody$outboundSchema.optional().parse(
         value,

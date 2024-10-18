@@ -48,10 +48,8 @@ export async function edgeConfigsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateEdgeConfigRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

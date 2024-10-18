@@ -48,10 +48,8 @@ export async function domainsCheckPrice(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CheckDomainPriceRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

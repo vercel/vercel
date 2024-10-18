@@ -57,10 +57,8 @@ export async function deploymentsList(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetDeploymentsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -171,7 +169,7 @@ export async function deploymentsList(
       deploymentsList(
         client,
         {
-          ...input,
+          ...request,
           since: nextCursor,
         },
         options,

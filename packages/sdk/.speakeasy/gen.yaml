@@ -15,7 +15,7 @@ generation:
   auth:
     oAuth2ClientCredentialsEnabled: false
 typescript:
-  version: 14.0.0-canary.3
+  version: 14.0.0-canary.4
   additionalDependencies:
     dependencies: {}
     devDependencies: {}
@@ -30,6 +30,7 @@ typescript:
     - '@vercel/sdk'
   enumFormat: union
   flattenGlobalSecurity: true
+  flatteningOrder: body-first
   imports:
     option: openapi
     paths:

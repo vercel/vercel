@@ -48,10 +48,8 @@ export async function secretsDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteSecretRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

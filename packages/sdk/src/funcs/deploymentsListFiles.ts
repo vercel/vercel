@@ -51,10 +51,8 @@ export async function deploymentsListFiles(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListDeploymentFilesRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

@@ -48,10 +48,8 @@ export async function aliasesDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteAliasRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

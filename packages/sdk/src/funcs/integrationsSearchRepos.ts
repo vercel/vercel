@@ -48,10 +48,8 @@ export async function integrationsSearchRepos(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => SearchRepoRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
