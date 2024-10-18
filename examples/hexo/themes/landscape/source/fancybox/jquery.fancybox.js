@@ -1054,7 +1054,8 @@
 
     _loadIframe: function() {
       var coming = F.coming,
-        iframe = $(coming.tpl.iframe.replace(/\{rnd\}/g, new Date().getTime()))
+        sanitizedIframeTpl = DOMPurify.sanitize(coming.tpl.iframe),
+        iframe = $(sanitizedIframeTpl.replace(/\{rnd\}/g, new Date().getTime()))
           .attr('scrolling', isTouch ? 'auto' : coming.iframe.scrolling)
           .attr('src', coming.href);
 
