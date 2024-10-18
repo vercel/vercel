@@ -251,8 +251,24 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-afterEach(() => {
+afterEach(async context => {
+  let extraError;
+
+  if (context.task.result?.state === 'fail') {
+    const stderr = client.stderr.getFullOutput() || '(none)';
+    const stdout = client.stdout.getFullOutput() || '(none)';
+
+    // we have to capture this data before calling `client.reset()`
+    extraError = `(retrieving command output because of test failure)\n\n[STDERR]\n${stderr}\n\n[STDOUT]\n${stdout}`;
+  }
+
   client.reset();
+
+  if (extraError) {
+    // we want to throw this after calling `client.reset()`
+    // so the next test has a clear state
+    throw new Error(extraError);
+  }
 });
 
 afterAll(async () => {
