@@ -325,8 +325,8 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: https://s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-build-utils-8.4.11.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%2F20241018%2Fus-west-001%2Fs3%2Faws4_request&X-Amz-Date=20241018T210630Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=44d319221d222bac4ba9a61b67a20306fb27771f91a998d9439bfe6d0add4c69
-        version: '@s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-build-utils-8.4.11.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%252F20241018%252Fus-west-001%252Fs3%252Faws4_request&X-Amz-Date=20241018T210630Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=44d319221d222bac4ba9a61b67a20306fb27771f91a998d9439bfe6d0add4c69'
+        specifier: 8.4.11
+        version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.0
         version: 1.1.0
@@ -337,8 +337,8 @@ importers:
         specifier: 1.0.9
         version: link:../hydrogen
       '@vercel/next':
-        specifier: https://s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-next-4.3.16.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%2F20241018%2Fus-west-001%2Fs3%2Faws4_request&X-Amz-Date=20241018T210627Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=bb4da1592f719d88c076d3bb785b8219af516842e3c619b46af34adabba42ab7
-        version: '@s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-next-4.3.16.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%252F20241018%252Fus-west-001%252Fs3%252Faws4_request&X-Amz-Date=20241018T210627Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=bb4da1592f719d88c076d3bb785b8219af516842e3c619b46af34adabba42ab7'
+        specifier: 4.3.16
+        version: link:../next
       '@vercel/node':
         specifier: 3.2.23
         version: link:../node
@@ -18670,20 +18670,3 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-  '@s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-build-utils-8.4.11.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%252F20241018%252Fus-west-001%252Fs3%252Faws4_request&X-Amz-Date=20241018T210630Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=44d319221d222bac4ba9a61b67a20306fb27771f91a998d9439bfe6d0add4c69':
-    resolution: {tarball: https://s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-build-utils-8.4.11.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%2F20241018%2Fus-west-001%2Fs3%2Faws4_request&X-Amz-Date=20241018T210630Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=44d319221d222bac4ba9a61b67a20306fb27771f91a998d9439bfe6d0add4c69}
-    name: '@vercel/build-utils'
-    version: 8.4.11
-    dev: false
-
-  '@s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-next-4.3.16.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%252F20241018%252Fus-west-001%252Fs3%252Faws4_request&X-Amz-Date=20241018T210627Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=bb4da1592f719d88c076d3bb785b8219af516842e3c619b46af34adabba42ab7':
-    resolution: {tarball: https://s3.us-west-001.backblazeb2.com/wyattjoh-vercel/vercel-next-4.3.16.tgz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=0018cbe909a61220000000005%2F20241018%2Fus-west-001%2Fs3%2Faws4_request&X-Amz-Date=20241018T210627Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=bb4da1592f719d88c076d3bb785b8219af516842e3c619b46af34adabba42ab7}
-    name: '@vercel/next'
-    version: 4.3.16
-    dependencies:
-      '@vercel/nft': 0.27.3
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
-    dev: false
