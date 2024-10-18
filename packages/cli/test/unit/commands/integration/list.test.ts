@@ -241,6 +241,9 @@ describe('integration', () => {
       });
 
       it('should error when no project linked and no project specified', async () => {
+        client.scenario.get(`/v9/projects/:projectName`, (req, res) => {
+          return res.status(404).json({});
+        });
         const teams = useTeams('team_dummy');
         const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
