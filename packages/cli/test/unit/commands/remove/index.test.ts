@@ -64,6 +64,7 @@ describe('remove', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:hard', value: 'TRUE' },
+        { key: 'flag:yes', value: 'TRUE' },
       ]);
     });
 
@@ -95,6 +96,7 @@ describe('remove', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:safe', value: 'TRUE' },
+        { key: 'flag:yes', value: 'TRUE' },
       ]);
     });
 
