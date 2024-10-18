@@ -184,6 +184,7 @@ async function compile(
     ? ['edge-light', 'browser', 'module', 'import', 'require']
     : undefined;
 
+  console.log('starting trace:');
   const { fileList, esmFileList, warnings } = await nodeFileTrace(
     [...inputFiles],
     {
@@ -266,6 +267,8 @@ async function compile(
       },
     }
   );
+  console.log('nft res:');
+  console.log({ fileList, esmFileList, warnings });
 
   for (const warning of warnings) {
     debug(`Warning from trace: ${warning.message}`);
