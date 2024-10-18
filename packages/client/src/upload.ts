@@ -10,6 +10,7 @@ import { fetch, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import { VercelClientOptions, DeploymentOptions } from './types';
+import { Headers } from 'node-fetch';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {
@@ -134,12 +135,12 @@ export async function* upload(
             {
               agent: clientOptions.agent || defaultAgent,
               method: 'POST',
-              headers: {
+              headers: new Headers({
                 'Content-Type': 'application/octet-stream',
-                'Content-Length': data.length,
+                'Content-Length': String(data.length),
                 'x-now-digest': sha,
-                'x-now-size': data.length,
-              },
+                'x-now-size': String(data.length),
+              }),
               body,
               teamId,
               apiUrl,

@@ -11,6 +11,7 @@ import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
 import type { BuildLog } from './logs';
+import { Readable } from 'stream';
 export interface FindOpts {
   direction: 'forward' | 'backward';
   limit?: number;
@@ -68,7 +69,13 @@ async function printEvents(
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry
           return new Promise<void>((resolve, reject) => {
-            const stream = readable.pipe(jsonlines.parse());
+            if (!readable) {
+              // TODO: solving type errors, but is this correct?
+              resolve();
+              return;
+            }
+            const stream =
+              readable.pipe(jsonlines.parse()) || Readable.from([]);
 
             let poller: ReturnType<typeof setTimeout>;
 

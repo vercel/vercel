@@ -34,7 +34,47 @@
     "typescript": "^5.4.5",
     "zod": "^3.23.4"
   },
-  "dependencies": {
-    
-  }
+  "dependencies": {},
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "source": "./src/index.ts",
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json",
+    "./*.js": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/esm/*.d.ts",
+        "default": "./dist/esm/*.js"
+      },
+      "require": {
+        "source": "./src/*.ts",
+        "types": "./dist/commonjs/*.d.ts",
+        "default": "./dist/commonjs/*.js"
+      }
+    },
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/esm/*.d.ts",
+        "default": "./dist/esm/*.js"
+      },
+      "require": {
+        "source": "./src/*.ts",
+        "types": "./dist/commonjs/*.d.ts",
+        "default": "./dist/commonjs/*.js"
+      }
+    }
+  },
+  "main": "./dist/commonjs/index.js",
+  "types": "./dist/commonjs/index.d.ts",
+  "type": "module"
 }
