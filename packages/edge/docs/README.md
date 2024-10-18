@@ -26,6 +26,7 @@
 - [ipAddress](README.md#ipaddress)
 - [json](README.md#json)
 - [next](README.md#next)
+- [potentiallyLongRunningResponse](README.md#potentiallylongrunningresponse)
 - [rewrite](README.md#rewrite)
 
 ## Variables
@@ -272,6 +273,43 @@ export default function middleware(_req: Request) {
 #### Defined in
 
 [packages/edge/src/middleware-helpers.ts:145](https://github.com/vercel/vercel/blob/main/packages/edge/src/middleware-helpers.ts#L145)
+
+---
+
+### potentiallyLongRunningResponse
+
+▸ **potentiallyLongRunningResponse**(`dataPromise`, `init?`): `Response`
+
+Builds a response for returning data based on promise that take many seconds to resolve.
+The response is returned immediately, but data is only written to it when the promise resolves.
+
+**`Example`**
+
+```ts
+import { potentiallyLongRunningResponse } from '@vercel/edge';
+
+export default () => {
+  const slowPromise = new Promise(resolve =>
+    setTimeout(() => resolve('Done'), 20000)
+  );
+  return potentiallyLongRunningResponse(slowPromise);
+};
+```
+
+#### Parameters
+
+| Name          | Type                                                                                                                                                                                                                            | Description                                                                                                                                                                                                      |
+| :------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dataPromise` | [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`string` \| [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)\> | Promise for data to be sent as the response body. Note, that if this promise is rejected, then a plain text "ERROR" is returned to the cliet. Catch errors on the promise yourself to add custom error handling. |
+| `init?`       | `ResponseInit`                                                                                                                                                                                                                  | optional custom response status, statusText and headers                                                                                                                                                          |
+
+#### Returns
+
+`Response`
+
+#### Defined in
+
+[src/response.ts:43](https://github.com/vercel/vercel/blob/main/packages/edge/src/response.ts#L43)
 
 ---
 
