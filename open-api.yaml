@@ -34095,6 +34095,7 @@ paths:
                           description: >-
                             The date when the alias was deleted in milliseconds since the UNIX epoch
                           example: 1540095775941
+                          nullable: true
                         deployment:
                           properties:
                             id:
@@ -34376,6 +34377,7 @@ paths:
                     description: >-
                       The date when the alias was deleted in milliseconds since the UNIX epoch
                     example: 1540095775941
+                    nullable: true
                   deployment:
                     properties:
                       id:
