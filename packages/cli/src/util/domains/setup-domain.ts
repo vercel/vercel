@@ -58,12 +58,12 @@ export default async function setupDomain(
     }
 
     output.debug(
-      `Domain ${domain} successfuly added and automatically verified`
+      `Domain ${domain} successfully added and automatically verified`
     );
     return addResult;
   }
 
-  output.debug(`The domain ${aliasDomain} was successfuly purchased`);
+  output.debug(`The domain ${aliasDomain} was successfully purchased`);
   const purchasedDomain = (await maybeGetDomainByName(
     client,
     contextName,
