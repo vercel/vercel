@@ -18,7 +18,7 @@ const COMMAND_CONFIG = {
 };
 
 export default async function alias(client: Client) {
-  let telemetryClient = new AliasTelemetryClient({
+  const telemetryClient = new AliasTelemetryClient({
     opts: {
       output: client.output,
       store: client.telemetryEventStore,
