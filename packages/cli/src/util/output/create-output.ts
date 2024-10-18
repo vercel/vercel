@@ -25,31 +25,56 @@ export interface LinkOptions {
   fallback?: false | (() => string);
 }
 
+let defaultChalkColorLevel: chalk.Level = 0;
+
 export class Output {
   stream: tty.WriteStream;
-  debugEnabled: boolean;
+  debugEnabled!: boolean;
   supportsHyperlink: boolean;
-  colorDisabled: boolean;
+  colorDisabled!: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
-  constructor(
-    stream: tty.WriteStream,
-    {
-      debug: debugEnabled = false,
-      supportsHyperlink = detectSupportsHyperlink(stream),
-      noColor = false,
-    }: OutputOptions = {}
-  ) {
+  constructor(stream: tty.WriteStream, options: OutputOptions = {}) {
     this.stream = stream;
-    this.debugEnabled = debugEnabled;
-    this.supportsHyperlink = supportsHyperlink;
+
+    if (options.supportsHyperlink === undefined) {
+      this.supportsHyperlink = detectSupportsHyperlink(stream);
+    } else {
+      this.supportsHyperlink = options.supportsHyperlink;
+    }
+
     this.spinnerMessage = '';
     this._spinner = null;
 
-    this.colorDisabled = getNoColor(noColor);
-    if (this.colorDisabled) {
-      chalk.level = 0;
+    this.initialize(options);
+  }
+
+  /**
+   * Parts of the constructor logic that can be called again after construction
+   * to change some values.
+   */
+  initialize({
+    debug: debugEnabled,
+    supportsHyperlink,
+    noColor,
+  }: OutputOptions = {}) {
+    if (debugEnabled !== undefined) {
+      this.debugEnabled = debugEnabled;
+    }
+
+    if (supportsHyperlink !== undefined) {
+      this.supportsHyperlink = supportsHyperlink;
+    }
+
+    if (noColor !== undefined) {
+      this.colorDisabled = getNoColor(noColor);
+      if (this.colorDisabled) {
+        defaultChalkColorLevel = chalk.level;
+        chalk.level = 0;
+      } else {
+        chalk.level = defaultChalkColorLevel;
+      }
     }
   }
 

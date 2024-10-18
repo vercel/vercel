@@ -43,7 +43,6 @@ import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
 import commands from './commands';
 import pkg from './util/pkg';
-import { Output } from './util/output';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
@@ -75,6 +74,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import output from './output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -99,9 +99,9 @@ Sentry.init({
 });
 
 let client: Client;
-let output: Output;
+
 let { isTTY } = process.stdout;
-let debug: (s: string) => void = () => {};
+
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
@@ -119,20 +119,16 @@ const main = async () => {
       { '--version': Boolean, '-v': '--version' },
       { permissive: true }
     );
+    const isDebugging = parsedArgs.flags['--debug'];
+    const isNoColor = parsedArgs.flags['--no-color'];
+    output.initialize({
+      debug: isDebugging,
+      noColor: isNoColor,
+    });
   } catch (err: unknown) {
     handleError(err);
     return 1;
   }
-
-  const isDebugging = parsedArgs.flags['--debug'];
-  const isNoColor = parsedArgs.flags['--no-color'];
-
-  output = new Output(process.stderr, {
-    debug: isDebugging,
-    noColor: isNoColor,
-  });
-
-  debug = output.debug;
 
   const localConfigPath = parsedArgs.flags['--local-config'];
   let localConfig: VercelConfig | Error | undefined = await getConfig(
@@ -352,14 +348,16 @@ const main = async () => {
     }
 
     if (subcommandExists) {
-      debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
+      output.debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
       userSuppliedSubCommand = targetOrSubcommand;
     } else {
-      debug('user supplied a possible target for deployment or an extension');
+      output.debug(
+        'user supplied a possible target for deployment or an extension'
+      );
     }
   } else {
-    debug('user supplied no target, defaulting to deploy');
+    output.debug('user supplied no target, defaulting to deploy');
     subcommand = 'deploy';
     defaultDeploy = true;
   }
@@ -794,8 +792,6 @@ const main = async () => {
 };
 
 const handleRejection = async (err: any) => {
-  debug('handling rejection');
-
   if (err) {
     if (err instanceof Error) {
       await handleUnexpected(err);
@@ -815,7 +811,7 @@ const handleUnexpected = async (err: Error) => {
 
   // We do not want to render errors about Sentry not being reachable
   if (message.includes('sentry') && message.includes('ENOTFOUND')) {
-    debug(`Sentry is not reachable: ${err}`);
+    output.error(`Sentry is not reachable: ${err}`);
     return;
   }
 
