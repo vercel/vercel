@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "path-to-regexp": "6.1.0"
+    "path-to-regexp": "6.3.0"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
