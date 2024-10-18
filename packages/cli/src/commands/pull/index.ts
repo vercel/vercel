@@ -1,21 +1,13 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../../util/client';
-import type {
-  Project,
-  ProjectEnvTarget,
-  ProjectLinked,
-} from '@vercel-internals/types';
+import type { Project, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
 import { writeProjectSettings } from '../../util/projects/project-settings';
 import envPull from '../env/pull';
-import {
-  isValidEnvTarget,
-  getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
 import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
@@ -45,17 +37,6 @@ async function pullAllEnvFiles(
   );
 }
 
-export function parseEnvironment(
-  environment = 'development'
-): ProjectEnvTarget {
-  if (!isValidEnvTarget(environment)) {
-    throw new Error(
-      `environment "${environment}" not supported; must be one of ${getEnvTargetPlaceholder()}`
-    );
-  }
-  return environment;
-}
-
 export default async function main(client: Client) {
   let parsedArgs = null;
 
@@ -78,12 +59,6 @@ export default async function main(client: Client) {
 
   let cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
-  const environment =
-    parseTarget({
-      output: client.output,
-      flagName: 'environment',
-      flags: parsedArgs.flags,
-    }) || 'development';
 
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
@@ -97,6 +72,13 @@ export default async function main(client: Client) {
   }
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  const environment =
+    parseTarget({
+      output: client.output,
+      flagName: 'environment',
+      flags: parsedArgs.flags,
+    }) || 'development';
 
   const pullResultCode = await pullAllEnvFiles(
     environment,

@@ -61,9 +61,7 @@ export default async function setupAndLink(
   }
   const isTTY = client.stdin.isTTY;
   const quiet = !isTTY;
-  let rootDirectory: string | null = null;
   let sourceFilesOutsideRootDirectory = true;
-  let newProjectName: string;
   let org;
 
   if (!forceDelete && link.status === 'linked') {
@@ -124,6 +122,8 @@ export default async function setupAndLink(
     autoConfirm
   );
 
+  let newProjectName: string;
+  let rootDirectory: string | null = null;
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
     rootDirectory = await inputRootDirectory(client, path, autoConfirm);
