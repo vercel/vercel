@@ -99,7 +99,7 @@ describe('integration', () => {
         useResources();
         const resource = 'store-acme-connected-project';
         const project = 'connected-project';
-        mockUnlinkResource();
+        mockUnlinkResourceFromProject();
 
         client.setArgv('integration', 'remove', resource, project);
         const exitCodePromise = integrationCommand(client);
@@ -123,7 +123,7 @@ describe('integration', () => {
         useResources();
         const resource = 'store-acme-connected-project';
         const project = 'connected-project';
-        mockUnlinkResource();
+        mockUnlinkResourceFromProject();
 
         client.setArgv('integration', 'remove', resource, project, '--yes');
         const exitCodePromise = integrationCommand(client);
@@ -141,7 +141,7 @@ describe('integration', () => {
         useResources();
         const resource = 'store-acme-connected-project';
         const project = 'connected-project';
-        mockUnlinkResource();
+        mockUnlinkResourceFromProject();
 
         client.setArgv('integration', 'remove', resource, project);
         const exitCodePromise = integrationCommand(client);
@@ -177,7 +177,7 @@ describe('integration', () => {
       it('unlinks all projects from a resource using the `--unlink-all` flag', async () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
-        mockUnlinkResource();
+        mockUnlinkResourceFromAllProjects();
 
         client.setArgv('integration', 'remove', resource, '--unlink-all');
         const exitCodePromise = integrationCommand(client);
@@ -294,7 +294,7 @@ describe('integration', () => {
       it('deletes a resource with a single connected project after unlinking the project and using the `--delete` flag ', async () => {
         useResources();
         mockDeleteResource();
-        mockUnlinkResource();
+        mockUnlinkResourceFromProject();
         const resource = 'store-acme-connected-project';
         const project = 'connected-project';
 
@@ -331,7 +331,7 @@ describe('integration', () => {
       it('unlinks all projects from a resource and deletes it using both the `--unlink-all` and `--delete` flags', async () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
-        mockUnlinkResource();
+        mockUnlinkResourceFromAllProjects();
         mockDeleteResource();
 
         client.setArgv(
@@ -408,7 +408,7 @@ describe('integration', () => {
       it('skips confirmations using the `--yes` flag when unlinking a project from a resource and deleting it', async () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
-        mockUnlinkResource();
+        mockUnlinkResourceFromAllProjects();
         mockDeleteResource();
 
         client.setArgv(
@@ -466,7 +466,7 @@ describe('integration', () => {
       it('exits gracefully when cancelling during confirmation for deleting a resource when doing both with `--unlink-all` and `--delete` flags', async () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
-        mockUnlinkResource();
+        mockUnlinkResourceFromAllProjects();
 
         client.setArgv(
           'integration',
@@ -570,7 +570,7 @@ describe('integration', () => {
 
         it('should error when attempting to delete a resource that has two connected projects after unlinking one project', async () => {
           useResources();
-          mockUnlinkResource();
+          mockUnlinkResourceFromProject();
           const resource = 'store-foo-bar-both-projects';
           const project = 'connected-project';
 
@@ -633,9 +633,25 @@ function mockDeleteIntegration(options?: {
   );
 }
 
-function mockUnlinkResource(options?: { error?: number }): void {
+function mockUnlinkResourceFromProject(options?: { error?: number }): void {
   client.scenario.delete(
     '/:version/storage/stores/:resourceId/connections/:connectionId',
+    (req, res) => {
+      if (options?.error) {
+        res.status(options.error);
+        res.end();
+        return;
+      }
+
+      res.status(200);
+      res.end();
+    }
+  );
+}
+
+function mockUnlinkResourceFromAllProjects(options?: { error?: number }): void {
+  client.scenario.delete(
+    '/:version/storage/stores/:resourceId/connections',
     (req, res) => {
       if (options?.error) {
         res.status(options.error);

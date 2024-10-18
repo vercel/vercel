@@ -17,3 +17,13 @@ export async function disconnectResourceFromProject(
     }
   );
 }
+
+export async function disconnectResourceFromAllProjects(
+  client: Client,
+  resource: Resource
+) {
+  return client.fetch(`/v1/storage/stores/${resource.id}/connections`, {
+    json: true,
+    method: 'DELETE',
+  });
+}

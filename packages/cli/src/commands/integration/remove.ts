@@ -11,7 +11,10 @@ import type { Team } from '@vercel-internals/types';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import confirm from '../../util/input/confirm';
 import { removeIntegration } from '../../util/integration/remove-integration';
-import { disconnectResourceFromProject } from '../../util/integration/disconnect-resource-from-project';
+import {
+  disconnectResourceFromAllProjects,
+  disconnectResourceFromProject,
+} from '../../util/integration/disconnect-resource-from-project';
 import { deleteResource } from '../../util/integration/delete-resource';
 
 interface RemoveCommandFlags {
@@ -257,13 +260,9 @@ async function handleUnlinkAllProjects(
       return 0;
     }
 
-    const unlinkApiCalls =
-      resource.projectsMetadata?.map(connection => {
-        return disconnectResourceFromProject(client, resource, connection);
-      }) ?? [];
     try {
       client.output.spinner('Unlinking projects from resource…', 500);
-      await Promise.allSettled(unlinkApiCalls);
+      await disconnectResourceFromAllProjects(client, resource);
       client.output.success(
         `Unlinked all projects from ${chalk.bold(resource.name)}`
       );
