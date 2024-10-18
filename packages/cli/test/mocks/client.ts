@@ -119,7 +119,7 @@ export class MockClient extends Client {
       const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
       // eslint-disable-next-line no-console
       console.warn(message);
-      res.status(404).json({
+      res.status(500).json({
         error: {
           code: 'not_found',
           message,
@@ -195,6 +195,7 @@ export class MockClient extends Client {
     const lastScreen = stderr.getLastChunk({ raw });
     return raw ? lastScreen : stripAnsi(lastScreen).trim();
   }
+
   getFullOutput(): string {
     const stderr = client.stderr;
     return stderr.getFullOutput();
