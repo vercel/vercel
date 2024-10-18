@@ -8,11 +8,13 @@ import { add } from './add';
 import { integrationCommand } from './command';
 import { list } from './list';
 import { openIntegration } from './open-integration';
+import { remove } from './remove';
 
 const COMMAND_CONFIG = {
   add: ['add'],
   open: ['open'],
   list: ['list', 'ls'],
+  remove: ['remove', 'rm'],
 };
 
 export default async function main(client: Client) {
@@ -42,6 +44,9 @@ export default async function main(client: Client) {
     }
     case 'open': {
       return openIntegration(client, subArgs);
+    }
+    case 'remove': {
+      return remove(client);
     }
     default: {
       client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
