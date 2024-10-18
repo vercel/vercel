@@ -29,7 +29,7 @@ type DeploymentWithAliases = Deployment & {
 };
 
 export default async function remove(client: Client) {
-  let telemetryClient = new RemoveTelemetryClient({
+  const telemetryClient = new RemoveTelemetryClient({
     opts: {
       output: client.output,
       store: client.telemetryEventStore,

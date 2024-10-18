@@ -79,7 +79,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 
 export default async (client: Client): Promise<number> => {
-  let telemetryClient = new DeployTelemetryClient({
+  const telemetryClient = new DeployTelemetryClient({
     opts: {
       output: client.output,
       store: client.telemetryEventStore,
