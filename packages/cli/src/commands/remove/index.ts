@@ -22,12 +22,20 @@ import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RemoveTelemetryClient } from '../../util/telemetry/commands/remove';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
 };
 
 export default async function remove(client: Client) {
+  let telemetryClient = new RemoveTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(removeCommand.options);
@@ -35,6 +43,9 @@ export default async function remove(client: Client) {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
+    telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
+    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
     handleError(error);
     return 1;

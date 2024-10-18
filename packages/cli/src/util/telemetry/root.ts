@@ -1,6 +1,18 @@
 import { TelemetryClient } from '.';
 
 export class RootTelemetryClient extends TelemetryClient {
+  trackCliExtension(extension?: string) {
+    if (extension) {
+      this.trackExtension(extension);
+    }
+  }
+
+  trackCliDefaultDeploy(defaultDeploy: boolean) {
+    if (defaultDeploy) {
+      this.trackDefaultDeploy();
+    }
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
@@ -34,12 +46,6 @@ export class RootTelemetryClient extends TelemetryClient {
       command: 'deploy',
       value: actual,
     });
-  }
-
-  trackCliDefaultDeploy(defaultDeploy: boolean) {
-    if (defaultDeploy) {
-      this.trackDefaultDeploy();
-    }
   }
 
   trackCliCommandDev(actual: string) {
