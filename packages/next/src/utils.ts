@@ -952,7 +952,6 @@ export type NextPrerenderedRoutes = {
       fallback: string;
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
-      fallbackRevalidate?: number | false;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1191,7 +1190,6 @@ export async function getPrerenderManifest(
             fallback: string | false;
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
-            fallbackRevalidate: number | false | undefined;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1329,7 +1327,6 @@ export async function getPrerenderManifest(
         let fallbackStatus: undefined | number;
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
-        let fallbackRevalidate: number | false | undefined;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
@@ -1347,8 +1344,6 @@ export async function getPrerenderManifest(
             (manifest.dynamicRoutes[lazyRoute].experimentalPPR
               ? RenderingMode.PARTIALLY_STATIC
               : RenderingMode.STATIC);
-          fallbackRevalidate =
-            manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
         }
 
         if (typeof fallback === 'string') {
@@ -1362,7 +1357,6 @@ export async function getPrerenderManifest(
             dataRouteRegex,
             prefetchDataRoute,
             prefetchDataRouteRegex,
-            fallbackRevalidate,
             renderingMode,
           };
         } else if (fallback === null) {
@@ -2167,7 +2161,7 @@ export const onPrerenderRoute =
       // When the route has PPR enabled and has a fallback defined, we should
       // read the value from the manifest and use it as the value for the route.
       if (isFallback) {
-        const { fallbackStatus, fallbackHeaders, fallbackRevalidate } =
+        const { fallbackStatus, fallbackHeaders } =
           prerenderManifest.fallbackRoutes[routeKey];
 
         if (fallbackStatus) {
@@ -2176,15 +2170,6 @@ export const onPrerenderRoute =
 
         if (fallbackHeaders) {
           initialHeaders = fallbackHeaders;
-        }
-
-        // If we're rendering with PPR and as this is a fallback, we should use
-        // the revalidation time to also apply to the fallback shell.
-        if (
-          renderingMode === RenderingMode.PARTIALLY_STATIC &&
-          typeof fallbackRevalidate !== 'undefined'
-        ) {
-          initialRevalidate = fallbackRevalidate;
         }
       }
     }
@@ -2467,13 +2452,7 @@ export const onPrerenderRoute =
       if (isEmptyAllowQueryForPrendered) {
         const isDynamic = isDynamicRoute(routeKey);
 
-        // If this is a page being rendered with PPR and it's the fallback, then
-        // we shouldn't allow any dynamic parameters to poison the cache during
-        // revalidation and should instead just use the fallback until it needs
-        // to get revalidated in the background.
-        if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-          allowQuery = [];
-        } else if (!isDynamic) {
+        if (!isDynamic) {
           // for non-dynamic routes we use an empty array since
           // no query values bust the cache for non-dynamic prerenders
           // prerendered paths also do not pass allowQuery as they match
