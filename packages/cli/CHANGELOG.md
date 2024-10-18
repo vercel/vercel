@@ -1,5 +1,23 @@
 # vercel
 
+## 37.12.0
+
+### Minor Changes
+
+- [cli] track team id ([#12312](https://github.com/vercel/vercel/pull/12312))
+
+- [cli] add telemetry tracking to `project rm` ([#12326](https://github.com/vercel/vercel/pull/12326))
+
+### Patch Changes
+
+- [cli] add telemetry tracking to `alias rm` ([#12320](https://github.com/vercel/vercel/pull/12320))
+
+- [cli] add telemetry to "remove" command ([#12315](https://github.com/vercel/vercel/pull/12315))
+
+- Silence `punycode` deprecation warning ([#12306](https://github.com/vercel/vercel/pull/12306))
+
+- [cli] fix typo ([#12317](https://github.com/vercel/vercel/pull/12317))
+
 ## 37.11.0
 
 ### Minor Changes
