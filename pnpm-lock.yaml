@@ -337,7 +337,7 @@ importers:
         specifier: 1.0.9
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.3.16
+        specifier: 4.3.17
         version: link:../next
       '@vercel/node':
         specifier: 3.2.23
