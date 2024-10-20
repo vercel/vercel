@@ -290,10 +290,10 @@
           }
         }
 
-        href = opts.href || obj.href || (isString(element) ? element : null);
+        href = DOMPurify.sanitize(opts.href) || obj.href || (isString(element) ? element : null);
         title = opts.title !== undefined ? opts.title : obj.title || '';
 
-        content = opts.content || obj.content;
+        content = DOMPurify.sanitize(opts.content) || obj.content;
         type = content ? 'html' : opts.type || obj.type;
 
         if (!type && obj.isDom) {
@@ -332,10 +332,9 @@
         if (!content) {
           if (type === 'inline') {
             if (href) {
+              href = isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href;
               href = isString(href) ? DOMPurify.sanitize(href) : href;
-              content = $(
-                isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href
-              ); //strip for ie7
+              content = $(href); //strip for ie7
             } else if (obj.isDom) {
               content = element;
             }
