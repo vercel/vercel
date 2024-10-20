@@ -332,8 +332,8 @@
         if (!content) {
           if (type === 'inline') {
             if (href) {
-              href = isString(href) ? DOMPurify.sanitize(href) : href;
               href = isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href;
+              href = isString(href) ? DOMPurify.sanitize(href) : href;
               content = $(href); //strip for ie7
             } else if (obj.isDom) {
               content = element;
