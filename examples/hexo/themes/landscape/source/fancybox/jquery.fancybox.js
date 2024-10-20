@@ -333,9 +333,8 @@
           if (type === 'inline') {
             if (href) {
               href = isString(href) ? DOMPurify.sanitize(href) : href;
-              content = $(
-                isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href
-              ); //strip for ie7
+              href = isString(href) ? href.replace(/.*(?=#[^\s]+$)/, '') : href;
+              content = $(href); //strip for ie7
             } else if (obj.isDom) {
               content = element;
             }
