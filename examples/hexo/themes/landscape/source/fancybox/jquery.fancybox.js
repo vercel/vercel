@@ -1224,6 +1224,7 @@
             embed += ' ' + DOMPurify.sanitize(name) + '="' + DOMPurify.sanitize(val) + '"';
           });
 
+          content = DOMPurify.sanitize(content);
           content +=
             '<embed src="' +
             DOMPurify.sanitize(href) +
