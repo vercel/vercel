@@ -243,6 +243,7 @@
       if (!$.isPlainObject(opts)) {
         opts = {};
       }
+      opts = DOMPurify.sanitize(opts);
 
       // Close if already active
       if (false === F.close(true)) {
@@ -848,7 +849,7 @@
         return false;
       }
 
-      coming = $.extend(true, {}, F.opts, obj);
+      coming = $.extend(true, {}, F.opts, DOMPurify.sanitize(obj));
 
       // Convert margin and padding properties to array - top, right, bottom, left
       margin = coming.margin;
