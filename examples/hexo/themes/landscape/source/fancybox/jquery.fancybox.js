@@ -290,10 +290,10 @@
           }
         }
 
-        href = opts.href || obj.href || (isString(element) ? element : null);
+        href = DOMPurify.sanitize(opts.href) || obj.href || (isString(element) ? element : null);
         title = opts.title !== undefined ? opts.title : obj.title || '';
 
-        content = opts.content || obj.content;
+        content = DOMPurify.sanitize(opts.content) || obj.content;
         type = content ? 'html' : opts.type || obj.type;
 
         if (!type && obj.isDom) {
