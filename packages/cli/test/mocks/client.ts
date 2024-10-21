@@ -102,9 +102,7 @@ export class MockClient extends Client {
       output: new Output(new PassThrough()),
     });
 
-    this.telemetryEventStore = new MockTelemetryEventStore({
-      output: this.output,
-    });
+    this.telemetryEventStore = new MockTelemetryEventStore();
 
     this.app = express();
     this.app.use(express.json());
