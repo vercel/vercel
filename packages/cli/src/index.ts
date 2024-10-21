@@ -242,14 +242,12 @@ const main = async () => {
 
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
-    output,
     config: config.telemetry,
   });
 
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
 
@@ -789,7 +787,7 @@ const handleUnexpected = async (err: Error) => {
 
   // We do not want to render errors about Sentry not being reachable
   if (message.includes('sentry') && message.includes('ENOTFOUND')) {
-    output.error(`Sentry is not reachable: ${err}`);
+    output.debug(`Sentry is not reachable: ${err}`);
     return;
   }
 

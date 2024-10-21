@@ -1,20 +1,19 @@
-import { describe, beforeEach, it, expect } from 'vitest';
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import parseTarget from '../../../src/util/parse-target';
-import { Output } from '../../../src/util/output';
-import { vi } from 'vitest';
+import output from '../../../src/output-manager';
 
 describe('parseTarget', () => {
-  let output: Output;
-
   beforeEach(() => {
-    output = new Output();
-    output.warn = vi.fn();
-    output.debug = vi.fn();
+    vi.spyOn(output, 'debug');
+    vi.spyOn(output, 'warn');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('defaults to `undefined`', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: {},
     });
@@ -23,7 +22,6 @@ describe('parseTarget', () => {
 
   it('parses "production" target', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: { '--target': 'production' },
     });
@@ -33,7 +31,6 @@ describe('parseTarget', () => {
 
   it('parses "staging" target', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: { '--target': 'staging' },
     });
@@ -43,7 +40,6 @@ describe('parseTarget', () => {
 
   it('prefers target over production argument', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: { '--target': 'staging', '--prod': true },
     });
@@ -55,7 +51,6 @@ describe('parseTarget', () => {
 
   it('parses production argument when `true`', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: { '--prod': true },
     });
@@ -64,7 +59,6 @@ describe('parseTarget', () => {
 
   it('parses production argument when `false`', () => {
     let result = parseTarget({
-      output,
       flagName: 'target',
       flags: { '--prod': false },
     });
