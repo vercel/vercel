@@ -15,6 +15,7 @@ interface Options {
 }
 
 interface Event {
+  teamId?: string;
   sessionId?: string;
   id: string;
   key: string;
@@ -142,6 +143,13 @@ export class TelemetryClient {
     });
   }
 
+  protected trackExtension(extension: string) {
+    this.track({
+      key: 'extension',
+      value: extension,
+    });
+  }
+
   trackCommandError(error: string): Event | undefined {
     output.error(error);
     return;
@@ -156,6 +164,7 @@ export class TelemetryEventStore {
   private events: Event[];
   private isDebug: boolean;
   private sessionId: string;
+  private teamId: string = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
   constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
@@ -167,7 +176,14 @@ export class TelemetryEventStore {
 
   add(event: Event) {
     event.sessionId = this.sessionId;
+    event.teamId = this.teamId;
     this.events.push(event);
+  }
+
+  updateTeamId(teamId?: string) {
+    if (teamId) {
+      this.teamId = teamId;
+    }
   }
 
   get readonlyEvents() {

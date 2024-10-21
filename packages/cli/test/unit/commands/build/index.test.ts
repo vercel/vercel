@@ -453,6 +453,7 @@ describe('build', () => {
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'option:target', value: 'production' },
+      { key: 'flag:yes', value: 'TRUE' },
     ]);
   });
 

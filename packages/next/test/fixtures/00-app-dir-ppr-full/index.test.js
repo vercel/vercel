@@ -265,6 +265,20 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
           // here means that the cache was poisoned.
           expect($('[data-slug]').data('slug')).toEqual(slug);
 
+          res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+            headers: {
+              "RSC": "1",
+              "Next-Router-Prefetch": "1",
+            }
+          });
+          expect(res.status).toEqual(200);
+
+          let rsc = await res.text();
+
+          // Expect that the page contains the correct slug in the RSC payload.
+          // A failure here means that the cache was poisoned.
+          expect(rsc).toContain(slug);
+
           // Send the revalidation request.
           res = await fetch(`${ctx.deploymentUrl}/api/revalidate${pathname}`, {
             method: 'DELETE',
@@ -281,6 +295,20 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
           // Expect that the poisoned page contains the correct slug. If it's
           // poisoned, the slug will be incorrect.
           expect($('[data-slug]').data('slug')).toEqual(slug);
+
+          res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
+            headers: {
+              "RSC": "1",
+              "Next-Router-Prefetch": "1",
+            }
+          });
+          expect(res.status).toEqual(200);
+
+          rsc = await res.text();
+
+          // Expect that the page contains the correct slug in the RSC payload.
+          // A failure here means that the cache was poisoned.
+          expect(rsc).toContain(slug);
         }
       });
     });
