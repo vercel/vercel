@@ -43,7 +43,6 @@ export default async function invite(
   const { currentTeam: currentTeamId } = config;
   const telemetry = new TeamsInviteTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });

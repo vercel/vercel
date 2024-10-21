@@ -41,7 +41,6 @@ export default async function main(client: Client) {
   const telemetry = new DomainsTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
 

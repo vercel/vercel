@@ -20,7 +20,6 @@ const COMMAND_CONFIG = {
 export default async function telemetry(client: Client) {
   const telemetryClient = new TelemetryTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

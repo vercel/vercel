@@ -29,7 +29,6 @@ export default async function transferIn(
   const telemetry = new DomainsTransferInTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
   telemetry.trackCliOptionCode(opts['--code']);

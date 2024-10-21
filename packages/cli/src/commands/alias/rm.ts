@@ -26,7 +26,6 @@ export default async function rm(
   const { contextName } = await getScope(client);
   const telemetryClient = new AliasRmTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

@@ -25,7 +25,6 @@ export default async function ls(
 
   const telemetryClient = new AliasLsTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

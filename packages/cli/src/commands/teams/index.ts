@@ -13,7 +13,6 @@ import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 export default async (client: Client) => {
   const telemetryClient = new TeamsTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

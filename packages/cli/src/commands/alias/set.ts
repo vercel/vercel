@@ -34,7 +34,6 @@ export default async function set(
   const { output, localConfig } = client;
   const telemetryClient = new AliasSetTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

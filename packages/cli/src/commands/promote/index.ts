@@ -32,7 +32,6 @@ export default async (client: Client): Promise<number> => {
 
   const telemetry = new PromoteTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

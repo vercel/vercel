@@ -81,7 +81,6 @@ import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

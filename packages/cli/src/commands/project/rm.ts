@@ -12,7 +12,6 @@ const e = encodeURIComponent;
 export default async function rm(client: Client, args: string[]) {
   const telemetryClient = new ProjectRmTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

@@ -22,7 +22,6 @@ export default async (client: Client): Promise<number> => {
   const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
   const telemetry = new RollbackTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
