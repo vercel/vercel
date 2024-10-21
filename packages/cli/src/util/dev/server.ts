@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';

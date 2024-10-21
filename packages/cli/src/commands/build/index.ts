@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import semver from 'semver';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
