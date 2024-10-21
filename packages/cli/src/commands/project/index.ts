@@ -10,6 +10,7 @@ import rm from './rm';
 import { projectCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -38,8 +39,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(projectCommand, { columns: client.stderr.columns }));
     return 2;
@@ -65,9 +64,7 @@ export default async function main(client: Client) {
       return await rm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      client.output.print(
-        help(projectCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(projectCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

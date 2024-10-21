@@ -2,13 +2,13 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {};
 
@@ -17,7 +17,6 @@ export default async function rm(
   _opts: Options,
   args: string[]
 ) {
-  const { output } = client;
   await getScope(client);
 
   const [recordId] = args;
@@ -39,7 +38,6 @@ export default async function rm(
 
   const { domain: domainName } = record;
   const yes = await readConfirmation(
-    output,
     'The following record will be removed permanently',
     domainName,
     record
@@ -58,12 +56,7 @@ export default async function rm(
   return 0;
 }
 
-function readConfirmation(
-  output: Output,
-  msg: string,
-  domainName: string,
-  record: DNSRecord
-) {
+function readConfirmation(msg: string, domainName: string, record: DNSRecord) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(

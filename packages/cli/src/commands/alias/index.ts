@@ -9,6 +9,7 @@ import set from './set';
 import { aliasCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   default: ['set'],
@@ -36,7 +37,7 @@ export default async function alias(client: Client) {
   }
 
   if (parsedArguments.flags['--help']) {
-    client.output.print(help(aliasCommand, { columns: client.stderr.columns }));
+    output.print(help(aliasCommand, { columns: client.stderr.columns }));
     return 2;
   }
 

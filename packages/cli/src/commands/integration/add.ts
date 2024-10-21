@@ -21,24 +21,25 @@ import { connectResourceToProject } from '../../util/integration/connect-resourc
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import output from '../../output-manager';
 
 export async function add(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error('Cannot install more than one integration at a time');
+    output.error('Cannot install more than one integration at a time');
     return 1;
   }
 
   const integrationSlug = args[0];
 
   if (!integrationSlug) {
-    client.output.error('You must pass an integration slug');
+    output.error('You must pass an integration slug');
     return 1;
   }
 
   const { contextName, team } = await getScope(client);
 
   if (!team) {
-    client.output.error('Team not found');
+    output.error('Team not found');
     return 1;
   }
 
@@ -46,14 +47,14 @@ export async function add(client: Client, args: string[]) {
   try {
     integration = await fetchIntegration(client, integrationSlug);
   } catch (error) {
-    client.output.error(
+    output.error(
       `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
     );
     return 1;
   }
 
   if (!integration.products) {
-    client.output.error(
+    output.error(
       `Integration "${integrationSlug}" is not a Marketplace integration`
     );
     return 1;
@@ -65,12 +66,12 @@ export async function add(client: Client, args: string[]) {
   ]);
 
   if (productResult.status === 'rejected' || !productResult.value) {
-    client.output.error('Product not found');
+    output.error('Product not found');
     return 1;
   }
 
   if (installationsResult.status === 'rejected') {
-    client.output.error(
+    output.error(
       `Failed to get integration installations: ${installationsResult.reason}`
     );
     return 1;
@@ -85,7 +86,7 @@ export async function add(client: Client, args: string[]) {
   );
 
   if (teamInstallations.length > 1) {
-    client.output.error(
+    output.error(
       `Found more than one existing installation of ${integration.name}. Please contact Vercel Support at https://vercel.com/help`
     );
     return 1;
@@ -95,7 +96,7 @@ export async function add(client: Client, args: string[]) {
     | IntegrationInstallation
     | undefined;
 
-  client.output.log(
+  output.log(
     `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
   );
 
@@ -129,7 +130,6 @@ export async function add(client: Client, args: string[]) {
 
     if (openInWeb) {
       privisionResourceViaWebUI(
-        client,
         team.id,
         integration.id,
         product.id,
@@ -172,7 +172,6 @@ async function getOptionalLinkedProject(client: Client) {
 }
 
 function privisionResourceViaWebUI(
-  client: Client,
   teamId: string,
   integrationId: string,
   productId: string,
@@ -186,9 +185,7 @@ function privisionResourceViaWebUI(
     url.searchParams.set('projectId', projectId);
   }
   url.searchParams.set('cmd', 'add');
-  client.output.print(
-    'Opening the Vercel Dashboard to continue the installation...'
-  );
+  output.print('Opening the Vercel Dashboard to continue the installation...');
   open(url.href);
 }
 
@@ -215,23 +212,21 @@ async function provisionResourceViaCLI(
     );
     billingPlans = billingPlansResponse.plans;
   } catch (error) {
-    client.output.error(
-      `Failed to get billing plans: ${(error as Error).message}`
-    );
+    output.error(`Failed to get billing plans: ${(error as Error).message}`);
     return 1;
   }
 
   const enabledBillingPlans = billingPlans.filter(plan => !plan.disabled);
 
   if (!enabledBillingPlans.length) {
-    client.output.error('No billing plans available');
+    output.error('No billing plans available');
     return 1;
   }
 
   const billingPlan = await selectBillingPlan(client, enabledBillingPlans);
 
   if (!billingPlan) {
-    client.output.error('No billing plan selected');
+    output.error('No billing plan selected');
     return 1;
   }
 
@@ -348,14 +343,14 @@ async function confirmProductSelection(
   metadata: Metadata,
   billingPlan: BillingPlan
 ) {
-  client.output.print('Selected product:\n');
-  client.output.print(`${chalk.dim(`- ${chalk.bold('Name:')} ${name}`)}\n`);
+  output.print('Selected product:\n');
+  output.print(`${chalk.dim(`- ${chalk.bold('Name:')} ${name}`)}\n`);
   for (const [key, value] of Object.entries(metadata)) {
-    client.output.print(
+    output.print(
       `${chalk.dim(`- ${chalk.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
     );
   }
-  client.output.print(
+  output.print(
     `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
   );
 
@@ -372,7 +367,7 @@ async function provisionStorageProduct(
   metadata: Metadata,
   billingPlan: BillingPlan
 ) {
-  client.output.spinner('Provisioning resource...');
+  output.spinner('Provisioning resource...');
   let storeId: string;
   try {
     const result = await provisionStoreResource(
@@ -385,14 +380,14 @@ async function provisionStorageProduct(
     );
     storeId = result.store.id;
   } catch (error) {
-    client.output.error(
+    output.error(
       `Failed to provision ${product.name}: ${(error as Error).message}`
     );
     return 1;
   } finally {
-    client.output.stopSpinner();
+    output.stopSpinner();
   }
-  client.output.log(`${product.name} successfully provisioned`);
+  output.log(`${product.name} successfully provisioned`);
 
   const projectLink = await getOptionalLinkedProject(client);
 
@@ -415,7 +410,7 @@ async function provisionStorageProduct(
     ],
   });
 
-  client.output.spinner(
+  output.spinner(
     `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
   );
   try {
@@ -426,14 +421,14 @@ async function provisionStorageProduct(
       environments
     );
   } catch (error) {
-    client.output.error(
+    output.error(
       `Failed to connect store to project: ${(error as Error).message}`
     );
     return 1;
   } finally {
-    client.output.stopSpinner();
+    output.stopSpinner();
   }
-  client.output.log(
+  output.log(
     `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
 
 ${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`

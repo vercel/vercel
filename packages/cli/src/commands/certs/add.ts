@@ -6,6 +6,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
 import type { Cert } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 interface Options {
   '--overwrite'?: boolean;
@@ -19,7 +20,6 @@ async function add(
   opts: Options,
   args: string[]
 ): Promise<number> {
-  const { output } = client;
   const addStamp = stamp();
 
   let cert: Cert | Error;

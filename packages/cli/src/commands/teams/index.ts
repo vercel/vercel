@@ -9,6 +9,7 @@ import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
+import output from '../../output-manager';
 
 export default async (client: Client) => {
   const telemetryClient = new TeamsTelemetryClient({
@@ -32,8 +33,6 @@ export default async (client: Client) => {
     handleError(error);
     return 1;
   }
-
-  const { output } = client;
 
   if (parsedArgs.flags['--help']) {
     output.print(help(teamsCommand, { columns: client.stderr.columns }));
@@ -80,9 +79,7 @@ export default async (client: Client) => {
         );
       }
       exitCode = 2;
-      client.output.print(
-        help(teamsCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(teamsCommand, { columns: client.stderr.columns }));
     }
   }
   return exitCode;

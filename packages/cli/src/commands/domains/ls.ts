@@ -17,14 +17,13 @@ import {
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import output from '../../output-manager';
 
 export default async function ls(
   client: Client,
   opts: Partial<PaginationOptions>,
   args: string[]
 ) {
-  const { output } = client;
-
   let paginationOptions;
 
   try {

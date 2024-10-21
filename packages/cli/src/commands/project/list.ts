@@ -6,6 +6,7 @@ import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import { NODE_VERSIONS } from '@vercel/build-utils';
+import output from '../../output-manager';
 
 export default async function list(
   client: Client,
@@ -13,7 +14,6 @@ export default async function list(
   args: string[],
   contextName: string
 ) {
-  const { output } = client;
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(

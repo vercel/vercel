@@ -18,12 +18,12 @@ import { help } from '../help';
 import { bisectCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
 
 interface Deployments {
   deployments: Deployment[];
 }
 export default async function bisect(client: Client): Promise<number> {
-  const { output } = client;
   const scope = await getScope(client);
   const { contextName } = scope;
 

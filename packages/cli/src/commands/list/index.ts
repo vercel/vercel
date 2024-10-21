@@ -25,6 +25,7 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import type { Deployment, Project } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -39,7 +40,7 @@ function toDate(timestamp: number): string {
 }
 
 export default async function list(client: Client) {
-  const { print, log, warn, error, note, debug, spinner } = client.output;
+  const { print, log, warn, error, note, debug, spinner } = output;
 
   let parsedArgs = null;
 
@@ -158,7 +159,7 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  const projectSlugLink = formatProject(client, contextName, project.name);
+  const projectSlugLink = formatProject(contextName, project.name);
 
   if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
@@ -233,7 +234,7 @@ export default async function list(client: Client) {
             chalk.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            formatEnvironment(client, contextName, project.name, {
+            formatEnvironment(contextName, project.name, {
               id: targetSlug,
               name: targetName,
             }),

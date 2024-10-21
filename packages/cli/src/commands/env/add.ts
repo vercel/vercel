@@ -15,6 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import type { ProjectLinked } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 type Options = {
   '--debug': boolean;
@@ -28,7 +29,6 @@ export default async function add(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const { project } = link;
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;

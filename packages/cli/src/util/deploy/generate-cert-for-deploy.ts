@@ -4,13 +4,13 @@ import Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';
+import output from '../../output-manager';
 
 export default async function generateCertForDeploy(
   client: Client,
   contextName: string,
   deployURL: string
 ) {
-  const { output } = client;
   const parsedDomain = parse(deployURL);
   const { domain } = parsedDomain;
   if (!domain) {

@@ -7,6 +7,7 @@ import { help } from '../help';
 import { linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -21,15 +22,13 @@ export default async function link(client: Client) {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(linkCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   if ('--confirm' in parsedArgs.flags) {
-    client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
@@ -37,7 +36,7 @@ export default async function link(client: Client) {
 
   let cwd = parsedArgs.args[1];
   if (cwd) {
-    client.output.warn(
+    output.warn(
       `The ${cmd('vc link <directory>')} syntax is deprecated, please use ${cmd(
         `vc link --cwd ${cwd}`
       )} instead`
@@ -47,9 +46,7 @@ export default async function link(client: Client) {
   }
 
   if (parsedArgs.flags['--repo']) {
-    client.output.warn(
-      `The ${cmd('--repo')} flag is in alpha, please report issues`
-    );
+    output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
     await ensureRepoLink(client, cwd, { yes, overwrite: true });
   } else {
     const link = await ensureLink('link', client, cwd, {

@@ -12,6 +12,7 @@ import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import { AliasLsTelemetryClient } from '../../util/telemetry/commands/alias/ls';
+import output from '../../output-manager';
 
 import type { Alias } from '@vercel-internals/types';
 
@@ -20,7 +21,6 @@ export default async function ls(
   opts: PaginationOptions,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   const telemetryClient = new AliasLsTelemetryClient({

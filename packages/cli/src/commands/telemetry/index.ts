@@ -10,6 +10,7 @@ import { telemetryCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   status: ['status'],
@@ -35,9 +36,7 @@ export default async function telemetry(client: Client) {
   }
 
   if (parsedArguments.flags['--help']) {
-    client.output.print(
-      help(telemetryCommand, { columns: client.stderr.columns })
-    );
+    output.print(help(telemetryCommand, { columns: client.stderr.columns }));
   }
 
   const { subcommand } = getSubcommand(
@@ -59,12 +58,10 @@ export default async function telemetry(client: Client) {
         parsedArguments.args.length !== 2
           ? `Invalid number of arguments`
           : `Invalid subcommand`;
-      client.output.print(
+      output.print(
         `${chalk.red('Error')}: ${errorMessage}. See help instructions for usage:\n`
       );
-      client.output.print(
-        help(telemetryCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(telemetryCommand, { columns: client.stderr.columns }));
       return 2;
     }
   }

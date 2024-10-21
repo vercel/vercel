@@ -7,14 +7,13 @@ import { isError } from '@vercel/error-utils';
 import { help } from '../help';
 import { initCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   init: ['init'],
 };
 
 export default async function main(client: Client) {
-  const { output } = client;
-
   let args;
 
   let parsedArgs = null;

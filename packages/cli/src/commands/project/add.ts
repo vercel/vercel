@@ -4,13 +4,13 @@ import Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import createProject from '../../util/projects/create-project';
+import output from '../../output-manager';
 
 export default async function add(
   client: Client,
   args: string[],
   contextName: string
 ) {
-  const { output } = client;
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(

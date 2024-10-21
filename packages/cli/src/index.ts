@@ -214,7 +214,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       config = defaultGlobalConfig;
       try {
-        configFiles.writeToConfigFile(output, config);
+        configFiles.writeToConfigFile(config);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to save the config to "${hp(
@@ -240,7 +240,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       authConfig = defaultAuthConfig;
       try {
-        configFiles.writeToAuthConfigFile(output, authConfig);
+        configFiles.writeToAuthConfigFile(authConfig);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
@@ -305,7 +305,6 @@ const main = async () => {
     stdin: process.stdin,
     stdout: process.stdout,
     stderr: output.stream,
-    output,
     config,
     authConfig,
     localConfig,
