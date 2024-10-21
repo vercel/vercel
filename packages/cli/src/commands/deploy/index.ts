@@ -219,7 +219,6 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   const target = parseTarget({
-    output: output,
     flagName: 'target',
     flags: parsedArguments.flags,
   });

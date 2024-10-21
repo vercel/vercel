@@ -166,7 +166,6 @@ export default async function main(client: Client): Promise<number> {
   // Build `target` influences which environment variables will be used
   const target =
     parseTarget({
-      output,
       flagName: 'target',
       flags: parsedArgs.flags,
     }) || 'preview';

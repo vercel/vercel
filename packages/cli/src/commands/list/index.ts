@@ -72,7 +72,6 @@ export default async function list(client: Client) {
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
   const target = parseTarget({
-    output: client.output,
     flagName: 'environment',
     flags: parsedArgs.flags,
   });

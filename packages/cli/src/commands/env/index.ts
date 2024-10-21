@@ -48,7 +48,6 @@ export default async function main(client: Client) {
 
   const target =
     parseTarget({
-      output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';

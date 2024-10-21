@@ -80,7 +80,6 @@ export default async function main(client: Client) {
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const environment =
     parseTarget({
-      output: client.output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
