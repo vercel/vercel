@@ -63,9 +63,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
     return 0;
   }
 
-  await Promise.all(
-    certs.map(cert => deleteCertById(output, client, cert.uid))
-  );
+  await Promise.all(certs.map(cert => deleteCertById(client, cert.uid)));
   output.success(
     `${chalk.bold(
       plural('Certificate', certs.length, true)

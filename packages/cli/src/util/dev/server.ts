@@ -425,7 +425,7 @@ export default class DevServer {
         output.debug(`Removing build match for "${src}"`);
         const match = this.buildMatches.get(src);
         if (match) {
-          ops.push(shutdownBuilder(match, output));
+          ops.push(shutdownBuilder(match));
         }
         this.buildMatches.delete(src);
       }
@@ -989,7 +989,7 @@ export default class DevServer {
     const ops: Promise<any>[] = [];
 
     for (const match of this.buildMatches.values()) {
-      ops.push(shutdownBuilder(match, output));
+      ops.push(shutdownBuilder(match));
     }
 
     if (devProcess) {

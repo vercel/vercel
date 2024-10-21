@@ -3,7 +3,6 @@ import Client from '../client';
 import createAlias from './create-alias';
 import isDomainExternal from '../domains/is-domain-external';
 import setupDomain from '../domains/setup-domain';
-import output from '../../output-manager';
 
 export default async function assignAlias(
   client: Client,
@@ -21,7 +20,7 @@ export default async function assignAlias(
     !alias.endsWith('.vercel.app')
   ) {
     // Now the domain shouldn't be available and it might or might not belong to the user
-    const result = await setupDomain(output, client, alias, contextName);
+    const result = await setupDomain(client, alias, contextName);
     if (result instanceof Error) {
       return result;
     }
@@ -32,7 +31,6 @@ export default async function assignAlias(
 
   // Create the alias and the certificate if it's missing
   const record = await createAlias(
-    output,
     client,
     contextName,
     deployment,

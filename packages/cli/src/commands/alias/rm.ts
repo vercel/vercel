@@ -54,7 +54,7 @@ export default async function rm(
     return 1;
   }
 
-  const alias = await findAliasByAliasOrId(output, client, aliasOrId);
+  const alias = await findAliasByAliasOrId(client, aliasOrId);
 
   if (!alias) {
     output.error(

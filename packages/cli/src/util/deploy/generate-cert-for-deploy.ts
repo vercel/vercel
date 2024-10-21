@@ -18,7 +18,7 @@ export default async function generateCertForDeploy(
   }
 
   output.spinner(`Setting custom suffix domain ${domain}`);
-  const result = await setupDomain(output, client, domain, contextName);
+  const result = await setupDomain(client, domain, contextName);
   output.stopSpinner();
   if (result instanceof NowError) {
     return result;

@@ -131,10 +131,8 @@ const main = async () => {
   }
 
   const localConfigPath = parsedArgs.flags['--local-config'];
-  let localConfig: VercelConfig | Error | undefined = await getConfig(
-    output,
-    localConfigPath
-  );
+  let localConfig: VercelConfig | Error | undefined =
+    await getConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
@@ -388,10 +386,10 @@ const main = async () => {
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
 
-      await updateCurrentTeamAfterLogin(client, output, result.teamId);
+      await updateCurrentTeamAfterLogin(client, result.teamId);
 
-      configFiles.writeToAuthConfigFile(output, client.authConfig);
-      configFiles.writeToConfigFile(output, client.config);
+      configFiles.writeToAuthConfigFile(client.authConfig);
+      configFiles.writeToConfigFile(client.config);
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
@@ -828,7 +826,6 @@ main()
       // Check if an update is available. If so, `latest` will contain a string
       // of the latest version, otherwise `undefined`.
       const latest = getLatestVersion({
-        output,
         pkg,
       });
       if (latest) {

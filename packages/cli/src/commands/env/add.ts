@@ -144,7 +144,6 @@ export default async function add(
   try {
     output.spinner('Saving');
     await addEnvRecord(
-      output,
       client,
       project.id,
       upsert,

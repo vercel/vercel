@@ -729,7 +729,6 @@ export default async (client: Client): Promise<number> => {
       );
 
       const purchase = await purchaseDomainIfAvailable(
-        output,
         client,
         err.meta.domain,
         contextName

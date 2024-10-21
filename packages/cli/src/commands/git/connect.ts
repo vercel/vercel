@@ -276,7 +276,7 @@ async function promptConnectArg({
 }: PromptConnectArgParams) {
   if (Object.keys(remoteUrls).length > 1) {
     output.log('Found multiple Git repositories in your local Git config:');
-    printRemoteUrls(output, remoteUrls);
+    printRemoteUrls(remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
     const repoInfoFromGitConfig = parseRepoUrl(url);

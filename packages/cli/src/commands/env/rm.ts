@@ -98,7 +98,7 @@ export default async function rm(
 
   try {
     output.spinner('Removing');
-    await removeEnvRecord(output, client, project.id, env);
+    await removeEnvRecord(client, project.id, env);
   } catch (err: unknown) {
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);

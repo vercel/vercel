@@ -29,7 +29,6 @@ export default async function createAlias(
 
   if (result instanceof ERRORS.CertMissing) {
     const cert = await createCertForAlias(
-      output,
       client,
       contextName,
       alias,

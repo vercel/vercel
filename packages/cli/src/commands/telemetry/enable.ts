@@ -1,7 +1,6 @@
 import Client from '../../util/client';
 import { writeToConfigFile } from '../../util/config/files';
 import status from './status';
-import output from '../../output-manager';
 
 export default async function enable(client: Client) {
   client.config = {
@@ -12,7 +11,7 @@ export default async function enable(client: Client) {
     },
   };
 
-  writeToConfigFile(output, client.config);
+  writeToConfigFile(client.config);
   await status(client);
   return 0;
 }

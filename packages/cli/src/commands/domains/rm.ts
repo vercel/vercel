@@ -121,7 +121,7 @@ async function removeDomain(
   for (const id of certIds) {
     output.debug(`Removing cert ${id}`);
     try {
-      await deleteCertById(output, client, id);
+      await deleteCertById(client, id);
     } catch (err: unknown) {
       // Ignore if the cert does not exist anymore
       if (!ERRORS.isAPIError(err) || err.status !== 404) {

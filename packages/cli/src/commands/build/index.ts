@@ -363,11 +363,11 @@ async function doBuild(
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
-    await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+    await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
   // Get a list of source files
-  const files = (await getFiles(workPath, { output })).map(f =>
+  const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
   );
 
@@ -492,7 +492,7 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath }, output);
+  const corepackShimDir = await initCorepack({ repoRootPath });
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
