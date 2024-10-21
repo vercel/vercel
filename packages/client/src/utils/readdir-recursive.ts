@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 import fs from 'fs';
 import p from 'path';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 
 function patternMatcher(pattern: string) {
   return function (path: string, stats: fs.Stats) {
