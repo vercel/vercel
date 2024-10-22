@@ -31,22 +31,19 @@ let defaultChalkColorLevel: chalk.Level = 0;
 export class Output {
   stream!: tty.WriteStream;
   debugEnabled!: boolean;
-  supportsHyperlink: boolean;
+  supportsHyperlink!: boolean;
   colorDisabled!: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
   constructor(stream: tty.WriteStream, options: OutputOptions = {}) {
-    if (options.supportsHyperlink === undefined) {
-      this.supportsHyperlink = detectSupportsHyperlink(stream);
-    } else {
-      this.supportsHyperlink = options.supportsHyperlink;
-    }
-
     this.spinnerMessage = '';
     this._spinner = null;
 
-    this.initialize(options);
+    this.initialize({
+      ...options,
+      stream,
+    });
   }
 
   /**
@@ -68,6 +65,12 @@ export class Output {
     }
 
     if (supportsHyperlink !== undefined) {
+      this.supportsHyperlink = supportsHyperlink;
+    }
+
+    if (supportsHyperlink === undefined) {
+      this.supportsHyperlink = detectSupportsHyperlink(this.stream);
+    } else {
       this.supportsHyperlink = supportsHyperlink;
     }
 
