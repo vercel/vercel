@@ -109,7 +109,8 @@ export const removeSubcommand = {
   options: [
     {
       name: 'delete',
-      description: 'limits the resources listed to a designated integration',
+      description:
+        'attempts to delete the specified resource, not to be used with entire integrations',
       shorthand: 'D',
       type: Boolean,
       deprecated: false,
@@ -117,7 +118,8 @@ export const removeSubcommand = {
     },
     {
       name: 'unlink-all',
-      description: 'lists all resources regardless of project',
+      description:
+        'unlinks all projects from the specified resource, not to be used with entire integrations',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
