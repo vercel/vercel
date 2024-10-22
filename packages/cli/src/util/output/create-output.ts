@@ -29,7 +29,7 @@ export interface LinkOptions {
 let defaultChalkColorLevel: chalk.Level = 0;
 
 export class Output {
-  stream: tty.WriteStream;
+  stream!: tty.WriteStream;
   debugEnabled!: boolean;
   supportsHyperlink: boolean;
   colorDisabled!: boolean;
