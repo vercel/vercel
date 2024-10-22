@@ -14,13 +14,13 @@ describe('Output', () => {
     });
 
     it('should return default fallback when `supportsHyperlink=false`', () => {
-      output.initialize({ supportsHyperlink: true });
+      output.initialize({ supportsHyperlink: false });
       const val = output.link('Click Here', 'https://example.com');
       expect(val).toEqual('Click Here (https://example.com)');
     });
 
     it('should return text fallback when `supportsHyperlink=false` with `fallback: false`', () => {
-      output.initialize({ supportsHyperlink: true });
+      output.initialize({ supportsHyperlink: false });
       const val = output.link('Click Here', 'https://example.com', {
         fallback: false,
       });
@@ -28,7 +28,7 @@ describe('Output', () => {
     });
 
     it('should return fallback when `supportsHyperlink=false` with `fallback` function', () => {
-      output.initialize({ supportsHyperlink: true });
+      output.initialize({ supportsHyperlink: false });
       const val = output.link('Click Here', 'https://example.com', {
         fallback: () => 'other',
       });
