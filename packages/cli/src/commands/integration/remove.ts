@@ -251,28 +251,29 @@ async function handleUnlinkAllProjects(
     client.output.log(
       `${chalk.bold(resource.name)} has no projects to unlink.`
     );
-  } else {
-    if (
-      !skipConfirmation &&
-      !(await confirmUnlinkAllProjects(client, resource))
-    ) {
-      client.output.log('Canceled');
-      return 0;
-    }
+    return;
+  }
 
-    try {
-      client.output.spinner('Unlinking projects from resource…', 500);
-      await disconnectResourceFromAllProjects(client, resource);
-      client.output.success(
-        `Unlinked all projects from ${chalk.bold(resource.name)}`
-      );
-      resource.projectsMetadata = [];
-    } catch (error) {
-      client.output.error(
-        `A problem occurred while unlinking all projects: ${(error as Error).message}`
-      );
-      return 1;
-    }
+  if (
+    !skipConfirmation &&
+    !(await confirmUnlinkAllProjects(client, resource))
+  ) {
+    client.output.log('Canceled');
+    return 0;
+  }
+
+  try {
+    client.output.spinner('Unlinking projects from resource…', 500);
+    await disconnectResourceFromAllProjects(client, resource);
+    client.output.success(
+      `Unlinked all projects from ${chalk.bold(resource.name)}`
+    );
+    resource.projectsMetadata = [];
+  } catch (error) {
+    client.output.error(
+      `A problem occurred while unlinking all projects: ${(error as Error).message}`
+    );
+    return 1;
   }
 }
 
