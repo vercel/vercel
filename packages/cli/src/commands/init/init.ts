@@ -141,10 +141,10 @@ async function extractExample(
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        res.body?.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        res.body?.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

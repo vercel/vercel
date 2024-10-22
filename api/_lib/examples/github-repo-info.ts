@@ -22,7 +22,7 @@ export async function getGitHubRepoInfo(repo: Repo) {
     return null;
   }
 
-  const parsed = await response.json();
+  const parsed: any = await response.json();
 
   if (parsed.full_name !== repo.repo) {
     console.log(`Invalid response from GitHub`);

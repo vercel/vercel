@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { Response } from 'node-fetch';
 import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
 import Client from '../client';
+import { Headers } from 'node-fetch';
 
 type JSONResponse = {
   recordIds: string[];
@@ -24,7 +25,7 @@ export default async function importZonefile(
     const res = await client.fetch<Response>(
       `/v3/domains/${encodeURIComponent(domain)}/records`,
       {
-        headers: { 'Content-Type': 'text/dns' },
+        headers: new Headers({ 'Content-Type': 'text/dns' }),
         body: zonefile,
         method: 'PUT',
         json: false,

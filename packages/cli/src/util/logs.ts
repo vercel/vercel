@@ -132,7 +132,7 @@ export async function displayRuntimeLogs(
   // handle the event stream and make the promise get rejected
   // if errors occur so we can retry
   return new Promise<number>((resolve, reject) => {
-    const stream = response.body.pipe(parse ? jsonlines.parse() : split());
+    const stream = response.body?.pipe(parse ? jsonlines.parse() : split());
     let finished = false;
     let errored = false;
 
@@ -168,7 +168,7 @@ export async function displayRuntimeLogs(
         finish();
         return;
       }
-      stream.destroy();
+      stream?.destroy();
       errored = true;
       debug(`Runtime logs stream error: ${err.message ?? err}`);
 
@@ -182,10 +182,10 @@ export async function displayRuntimeLogs(
       }, 2000);
     };
 
-    stream.on('end', finish);
-    stream.on('data', handleData);
-    stream.on('error', handleError);
-    response.body.on('error', handleError);
+    stream?.on('end', finish);
+    stream?.on('data', handleData);
+    stream?.on('error', handleError);
+    response.body?.on('error', handleError);
   });
 }
 

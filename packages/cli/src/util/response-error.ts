@@ -9,7 +9,7 @@ export default async function responseError(
   let bodyError;
 
   if (!res.ok) {
-    let body;
+    let body: any;
 
     try {
       body = await res.json();
@@ -18,7 +18,7 @@ export default async function responseError(
     }
 
     // Some APIs wrongly return `err` instead of `error`
-    bodyError = body.error || body.err || body;
+    bodyError = body?.error || body?.err || body;
   }
 
   const msg = bodyError?.message || fallbackMessage || 'Response Error';

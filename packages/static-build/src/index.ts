@@ -284,7 +284,7 @@ async function fetchBinary(
   const cp = spawn('tar', ['-zx', '-C', dest], {
     stdio: ['pipe', 'ignore', 'ignore'],
   });
-  res.body.pipe(cp.stdin);
+  res.body?.pipe(cp.stdin);
   const [exitCode] = await once(cp, 'exit');
   if (exitCode !== 0) {
     throw new Error(

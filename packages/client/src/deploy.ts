@@ -14,6 +14,7 @@ import {
   VercelClientOptions,
   DeploymentEventType,
 } from './types';
+import { Headers } from 'node-fetch';
 
 async function* postDeployment(
   files: FilesMap,
@@ -52,10 +53,10 @@ async function* postDeployment(
       clientOptions.token,
       {
         method: 'POST',
-        headers: {
+        headers: new Headers({
           Accept: 'application/json',
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({
           ...deploymentOptions,
           files: preparedFiles,

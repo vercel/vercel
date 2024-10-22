@@ -1,5 +1,5 @@
 import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
+import nodeFetch, { Headers, RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -234,7 +234,6 @@ interface FetchOpts extends RequestInit {
   apiUrl?: string;
   method?: string;
   teamId?: string;
-  headers?: { [key: string]: any };
   userAgent?: string;
 }
 
@@ -267,12 +266,10 @@ export const fetch = async (
   const userAgent = opts.userAgent || `client-v${pkgVersion}`;
   delete opts.userAgent;
 
-  opts.headers = {
-    ...opts.headers,
-    authorization: `Bearer ${token}`,
-    accept: 'application/json',
-    'user-agent': userAgent,
-  };
+  opts.headers = opts.headers || new Headers();
+  opts.headers.set('authorization', `Bearer ${token}`);
+  opts.headers.set('accept', 'application/json');
+  opts.headers.set('user-agent', userAgent);
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
