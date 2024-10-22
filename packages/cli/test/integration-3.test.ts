@@ -146,6 +146,7 @@ test('output the version', async () => {
 });
 
 test('login with unregistered user', async () => {
+  // bump to trigger test
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['login', `${session}@${session}.com`],
