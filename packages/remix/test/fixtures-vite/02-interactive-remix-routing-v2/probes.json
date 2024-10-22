@@ -111,7 +111,7 @@
       "mustContain": "Not Found"
     },
     {
-      "path": "/assets/manifest-4eb87c14.js",
+      "path": "/assets/manifest-bb69b2ba.js",
       "status": 200,
       "responseHeaders": {
         "cache-control": "public, max-age=31536000, immutable"
