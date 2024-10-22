@@ -34,7 +34,7 @@ describe('rollback', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:timeout',
+          key: 'option:timeout',
           value: '[TIME]',
         },
         {
@@ -94,6 +94,7 @@ describe('rollback', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
       {
         key: 'subcommand:status',
         value: 'status',

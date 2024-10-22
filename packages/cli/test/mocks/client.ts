@@ -119,7 +119,7 @@ export class MockClient extends Client {
       const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
       // eslint-disable-next-line no-console
       console.warn(message);
-      res.status(404).json({
+      res.status(500).json({
         error: {
           code: 'not_found',
           message,
@@ -195,6 +195,7 @@ export class MockClient extends Client {
     const lastScreen = stderr.getLastChunk({ raw });
     return raw ? lastScreen : stripAnsi(lastScreen).trim();
   }
+
   getFullOutput(): string {
     const stderr = client.stderr;
     return stderr.getFullOutput();
@@ -251,8 +252,24 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-afterEach(() => {
+afterEach(async context => {
+  let extraError;
+
+  if (context.task.result?.state === 'fail') {
+    const stderr = client.stderr.getFullOutput() || '(none)';
+    const stdout = client.stdout.getFullOutput() || '(none)';
+
+    // we have to capture this data before calling `client.reset()`
+    extraError = `(retrieving command output because of test failure)\n\n[STDERR]\n${stderr}\n\n[STDOUT]\n${stdout}`;
+  }
+
   client.reset();
+
+  if (extraError) {
+    // we want to throw this after calling `client.reset()`
+    // so the next test has a clear state
+    throw new Error(extraError);
+  }
 });
 
 afterAll(async () => {

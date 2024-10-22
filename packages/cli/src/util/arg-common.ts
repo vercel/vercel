@@ -71,7 +71,6 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
-  { name: 'cwd', shorthand: null, type: String, deprecated: false },
 ] as const;
 
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);

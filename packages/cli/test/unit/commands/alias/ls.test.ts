@@ -30,7 +30,7 @@ describe('alias ls', () => {
           value: 'ls',
         },
         {
-          key: `flag:next`,
+          key: `option:next`,
           value: '[REDACTED]',
         },
       ]);
@@ -58,7 +58,7 @@ describe('alias ls', () => {
           value: 'ls',
         },
         {
-          key: `flag:limit`,
+          key: `option:limit`,
           value: '2',
         },
       ]);

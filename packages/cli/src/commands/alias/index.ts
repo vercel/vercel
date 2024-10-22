@@ -1,5 +1,5 @@
 import { handleError } from '../../util/error';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
@@ -18,7 +18,7 @@ const COMMAND_CONFIG = {
 };
 
 export default async function alias(client: Client) {
-  let telemetryClient = new AliasTelemetryClient({
+  const telemetryClient = new AliasTelemetryClient({
     opts: {
       output: client.output,
       store: client.telemetryEventStore,
@@ -51,8 +51,10 @@ export default async function alias(client: Client) {
       telemetryClient.trackCliSubcommandLs(subcommandOriginal);
       return ls(client, parsedArguments.flags, args);
     case 'rm':
+      telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArguments.flags, args);
     default:
+      telemetryClient.trackCliSubcommandSet(subcommandOriginal);
       return set(client, parsedArguments.flags, args);
   }
 }
