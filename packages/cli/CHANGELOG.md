@@ -1,5 +1,30 @@
 # vercel
 
+## 37.12.0
+
+### Minor Changes
+
+- [cli] track team id ([#12312](https://github.com/vercel/vercel/pull/12312))
+
+- [cli] add telemetry tracking to `project rm` ([#12326](https://github.com/vercel/vercel/pull/12326))
+
+### Patch Changes
+
+- [cli] add telemetry tracking to `alias rm` ([#12320](https://github.com/vercel/vercel/pull/12320))
+
+- [cli] add telemetry to "remove" command ([#12315](https://github.com/vercel/vercel/pull/12315))
+
+- Fix caching issue with prerenders while Partial Prerendering is enabled ([#12325](https://github.com/vercel/vercel/pull/12325))
+
+- Revert disabling generation of route shells ([#12323](https://github.com/vercel/vercel/pull/12323))
+
+- Silence `punycode` deprecation warning ([#12306](https://github.com/vercel/vercel/pull/12306))
+
+- [cli] fix typo ([#12317](https://github.com/vercel/vercel/pull/12317))
+
+- Updated dependencies [[`b0728d1f6a378f15d32a5416a4a09ad0301f06f5`](https://github.com/vercel/vercel/commit/b0728d1f6a378f15d32a5416a4a09ad0301f06f5), [`78e60bf3acd17c446486059f15a99cca99f1c4dc`](https://github.com/vercel/vercel/commit/78e60bf3acd17c446486059f15a99cca99f1c4dc)]:
+  - @vercel/next@4.3.17
+
 ## 37.11.0
 
 ### Minor Changes

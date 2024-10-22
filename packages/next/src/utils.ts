@@ -2459,21 +2459,14 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
+      const isDynamic = isDynamicRoute(routeKey);
       const routeKeys = route?.routeKeys;
       // by default allowQuery should be undefined and only set when
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
 
       if (isEmptyAllowQueryForPrendered) {
-        const isDynamic = isDynamicRoute(routeKey);
-
-        // If this is a page being rendered with PPR and it's the fallback, then
-        // we shouldn't allow any dynamic parameters to poison the cache during
-        // revalidation and should instead just use the fallback until it needs
-        // to get revalidated in the background.
-        if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-          allowQuery = [];
-        } else if (!isDynamic) {
+        if (!isDynamic) {
           // for non-dynamic routes we use an empty array since
           // no query values bust the cache for non-dynamic prerenders
           // prerendered paths also do not pass allowQuery as they match
@@ -2564,10 +2557,18 @@ export const onPrerenderRoute =
         }
       }
 
+      // If this is a fallback page with PPR enabled, we should not have the
+      // cache key vary based on the route parameters to ensure that we always
+      // have a HIT for the fallback page.
+      let htmlAllowQuery = allowQuery;
+      if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
+        htmlAllowQuery = [];
+      }
+
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
         lambda,
-        allowQuery,
+        allowQuery: htmlAllowQuery,
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
@@ -2607,6 +2608,14 @@ export const onPrerenderRoute =
       };
 
       if (outputPathData || outputPathPrefetchData) {
+        // If the allowQuery is different than the original allowQuery, then we
+        // shouldn't use the same prerender group as the HTML prerender because
+        // they should not be revalidated together (one needs to be revalidated
+        // when the allowQuery changes, one does not).
+        if (htmlAllowQuery !== allowQuery) {
+          prerenderGroup++;
+        }
+
         const prerender = new Prerender({
           expiration: initialRevalidate,
           lambda,
