@@ -127,7 +127,7 @@ async function withDevServer(
           await setTimeout(50); // wait a bit for waitUntil resolution
           expect(response.status).toBe(200);
         },
-        { runningTimeout: 50 }
+        { runningTimeout: 75 }
       ));
 
     test('exporting GET', () =>

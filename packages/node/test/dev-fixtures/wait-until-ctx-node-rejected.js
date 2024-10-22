@@ -1,3 +1,10 @@
+/**
+ * Timeout before the waitUntil promise rejects;
+ * Must be before the dev server is shut down for a proper test
+ * that the serverless function doesn't crash when this happens
+ **/
+const REJECTION_TIMEOUT = 10;
+
 function lazyError() {
   return new Promise((_, reject) => {
     setTimeout(() => {
@@ -6,7 +13,7 @@ function lazyError() {
           'Side Effect (via waitUntil) Promise Rejection: intentional rejection'
         )
       );
-    }, 10);
+    }, REJECTION_TIMEOUT);
   });
 }
 
