@@ -55,6 +55,7 @@ export default async (client: Client) => {
   switch (subcommand) {
     case 'list':
     case 'ls': {
+      telemetryClient.trackCliSubcommandList('list');
       exitCode = await list(client);
       break;
     }

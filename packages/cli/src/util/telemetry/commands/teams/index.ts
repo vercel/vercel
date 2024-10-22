@@ -21,4 +21,11 @@ export class TeamsTelemetryClient extends TelemetryClient {
       value: actual ? this.redactedValue : this.noValueToTriggerPrompt,
     });
   }
+
+  trackCliSubcommandList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list',
+      value: actual,
+    });
+  }
 }
