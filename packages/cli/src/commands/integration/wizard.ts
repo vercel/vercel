@@ -1,6 +1,7 @@
 import type Client from '../../util/client';
 import list, { type ListChoice } from '../../util/input/list';
 import type {
+  Expression,
   Metadata,
   MetadataEntry,
   MetadataSchema,
@@ -134,17 +135,29 @@ export function createMetadataWizard(
   const steps: Step[] = [];
 
   for (const [key, schema] of Object.entries(properties)) {
-    if (isHidden(schema)) {
-      continue;
-    }
+    try {
+      if (isHidden(schema)) {
+        continue;
+      }
 
-    if (!supportedUIControls.has(schema['ui:control'])) {
-      isSupported = false;
-      break;
-    }
+      if (isDisabled(schema)) {
+        continue;
+      }
 
-    if (!isReadOnly(schema)) {
-      allFieldsAreReadonly = false;
+      if (!supportedUIControls.has(schema['ui:control'])) {
+        isSupported = false;
+        break;
+      }
+
+      if (!isReadOnly(schema)) {
+        allFieldsAreReadonly = false;
+      }
+    } catch (error) {
+      if (error instanceof ExpressionError) {
+        isSupported = false;
+        break;
+      }
+      throw error;
     }
 
     switch (schema['ui:control']) {
@@ -207,11 +220,38 @@ async function getMetadataFromSteps(
 }
 
 function isHidden(schema: MetadataSchemaProperty) {
+  if (instanceOfExpression(schema['ui:hidden'])) {
+    throw new ExpressionError('Expression found in schema');
+  }
   return Boolean(
     schema['ui:hidden'] === true || schema['ui:hidden'] === 'create'
   );
 }
 
 function isReadOnly(schema: MetadataSchemaProperty) {
-  return Boolean(schema['ui:read-only']);
+  if (instanceOfExpression(schema['ui:read-only'])) {
+    throw new ExpressionError('Expression found in schema');
+  }
+  return Boolean(
+    schema['ui:read-only'] === true || schema['ui:read-only'] === 'create'
+  );
 }
+
+function isDisabled(schema: MetadataSchemaProperty) {
+  if (instanceOfExpression(schema['ui:disabled'])) {
+    throw new ExpressionError('Expression found in schema');
+  }
+  return Boolean(
+    schema['ui:disabled'] === true || schema['ui:disabled'] === 'create'
+  );
+}
+
+function instanceOfExpression(obj: unknown): obj is Expression {
+  const checkedAsObject = Object(obj);
+  if (obj !== checkedAsObject) {
+    return false;
+  }
+  return 'expr' in checkedAsObject;
+}
+
+class ExpressionError extends Error {}
