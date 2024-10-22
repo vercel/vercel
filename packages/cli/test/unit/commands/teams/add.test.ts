@@ -30,7 +30,6 @@ describe('teams add', () => {
     client.setArgv('teams', 'add');
     const exitCodePromise = teams(client);
 
-    // await expect(client.stderr).toOutput('? Enter your email address:');
     await expect(client.stderr).toOutput(`Pick a team identifier for its URL`);
 
     client.stdin.write(`${team.slug}\n`);
