@@ -106,7 +106,6 @@ async function handleRemoveIntegration(
     return 0;
   }
 
-  // Confirm removal desired
   if (
     !skipConfirmation &&
     !(await confirmIntegrationRemoval(
@@ -119,7 +118,6 @@ async function handleRemoveIntegration(
     return 0;
   }
 
-  // Uninstall Integration
   try {
     client.output.spinner('Uninstalling integration…', 1000);
     await removeIntegration(client, integrationConfiguration, team);
