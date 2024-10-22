@@ -65,6 +65,7 @@ export default async (client: Client) => {
     }
     case 'add':
     case 'create': {
+      telemetryClient.trackCliSubcommandAdd('add');
       exitCode = await add(client);
       break;
     }

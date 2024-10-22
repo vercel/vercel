@@ -7,4 +7,11 @@ export class TeamsTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
 }
