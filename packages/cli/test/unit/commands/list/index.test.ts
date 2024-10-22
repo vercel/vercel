@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -15,11 +15,22 @@ import {
   parseSpacedTableRow,
   pluckIdentifiersFromDeploymentList,
 } from '../../../helpers/parse-table';
+import output from '../../../../src/output-manager';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
+  beforeAll(() => {
+    // There seems to be some test pollution elsehwere, causing us to have to reset to what should
+    // be the default state here
+    output.initialize({
+      debug: false,
+      noColor: false,
+      supportsHyperlink: false,
+    });
+  });
+
   describe.todo('[app]');
   describe.todo('--meta');
   describe.todo('--policy');
