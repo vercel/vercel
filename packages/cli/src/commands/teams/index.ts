@@ -60,6 +60,7 @@ export default async (client: Client) => {
     }
     case 'switch':
     case 'change': {
+      telemetryClient.trackCliSubcommandSwitch(parsedArgs.args[0]);
       exitCode = await change(client, parsedArgs.args[0]);
       break;
     }

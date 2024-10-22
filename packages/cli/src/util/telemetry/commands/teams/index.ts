@@ -14,4 +14,11 @@ export class TeamsTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandSwitch(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'switch',
+      value: actual ? this.redactedValue : this.noValueToTriggerPrompt,
+    });
+  }
 }
