@@ -246,12 +246,12 @@ function isDisabled(schema: MetadataSchemaProperty) {
   );
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-function instanceOfExpression(obj: any): obj is Expression {
-  if (obj !== Object(obj)) {
+function instanceOfExpression(obj: unknown): obj is Expression {
+  const checkedAsObject = Object(obj);
+  if (obj !== checkedAsObject) {
     return false;
   }
-  return 'expr' in obj;
+  return 'expr' in checkedAsObject;
 }
 
 class ExpressionError extends Error {}
