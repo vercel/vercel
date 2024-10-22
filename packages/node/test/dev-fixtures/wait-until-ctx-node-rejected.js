@@ -1,8 +1,12 @@
 function lazyError() {
   return new Promise((_, reject) => {
     setTimeout(() => {
-      reject(new Error('oh no'));
-    }, 100);
+      reject(
+        new Error(
+          'Side Effect (via waitUntil) Promise Rejection: intentional rejection'
+        )
+      );
+    }, 10);
   });
 }
 
