@@ -40,24 +40,25 @@ export async function remove(client: Client) {
     return 1;
   }
 
-  if (parsedArguments.args.length < 2) {
+  const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
+  if (isMissingResourceOrIntegration) {
     client.output.error(
       'You must specify a resource or integration. See `--help` for details.'
     );
     return 1;
   }
 
-  if (parsedArguments.args.length > 3) {
+  const hasTooManyArguments = parsedArguments.args.length > 3;
+  if (hasTooManyArguments) {
     client.output.error(
       'Cannot specify more than one project at a time. Use `--unlink-all` to unlink the specified resource from all projects.'
     );
     return 1;
   }
 
-  if (
-    parsedArguments.args.length === 3 &&
-    parsedArguments.flags['--unlink-all']
-  ) {
+  const isUnlinkingProjectAndIncludesUnlinkAllFlag =
+    parsedArguments.args.length === 3 && parsedArguments.flags['--unlink-all'];
+  if (isUnlinkingProjectAndIncludesUnlinkAllFlag) {
     client.output.error(
       'Cannot specify a project while using the `--unlink-all` flag.'
     );
@@ -152,7 +153,8 @@ async function handleUnlinkOrDeleteResource(
     return 0;
   }
 
-  if (args.length === 3) {
+  const isProjectSpecified = args.length === 3;
+  if (isProjectSpecified) {
     if (flags['--unlink-all']) {
       client.output.error(
         'Cannot specify a project when using the `--unlink-all` flag.'
@@ -169,7 +171,9 @@ async function handleUnlinkOrDeleteResource(
     if (unlinkProjectResults !== undefined) {
       return unlinkProjectResults;
     }
-  } else if (flags['--unlink-all']) {
+  }
+
+  if (flags['--unlink-all']) {
     const unlinkAllResults = await handleUnlinkAllProjects(
       client,
       targetedResource,
