@@ -14,16 +14,16 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@remix-run/node": "2.7.2",
-    "@remix-run/react": "2.7.2",
-    "@remix-run/serve": "2.7.2",
-    "@vercel/remix": "2.7.2-preset.1",
+    "@remix-run/node": "2.13.1",
+    "@remix-run/react": "2.13.1",
+    "@remix-run/serve": "2.13.1",
+    "@vercel/remix": "2.13.1",
     "isbot": "4.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "https://remix-e7asp269z.vercel.sh/remix-dev.tgz",
+    "@remix-run/dev": "2.13.1",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
