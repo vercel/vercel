@@ -771,7 +771,3 @@ actions:
         - marketplace.invoice.notpaid
         - marketplace.invoice.refunded
         - test-webhook
-  - target: $["paths"]["/v13/deployments/{id}"]
-    remove: true
-  - target: $["paths"]["/v2/secrets/{name}"]
-    remove: true
