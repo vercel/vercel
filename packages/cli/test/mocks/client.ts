@@ -144,7 +144,10 @@ export class MockClient extends Client {
     this.stderr.pause();
     this.stderr.isTTY = true;
 
-    output.initialize({ supportsHyperlink: false });
+    output.initialize({
+      stream: this.stderr,
+      supportsHyperlink: false,
+    });
 
     this.argv = [];
     this.authConfig = {

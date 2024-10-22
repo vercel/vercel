@@ -11,6 +11,7 @@ import { inspect } from 'util';
 const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
+  stream?: tty.WriteStream;
   debug?: boolean;
   supportsHyperlink?: boolean;
   noColor?: boolean;
@@ -36,8 +37,6 @@ export class Output {
   private _spinner: StopSpinner | null;
 
   constructor(stream: tty.WriteStream, options: OutputOptions = {}) {
-    this.stream = stream;
-
     if (options.supportsHyperlink === undefined) {
       this.supportsHyperlink = detectSupportsHyperlink(stream);
     } else {
@@ -55,10 +54,15 @@ export class Output {
    * to change some values.
    */
   initialize({
+    stream,
     debug: debugEnabled,
     supportsHyperlink,
     noColor,
   }: OutputOptions = {}) {
+    if (stream !== undefined) {
+      this.stream = stream;
+    }
+
     if (debugEnabled !== undefined) {
       this.debugEnabled = debugEnabled;
     }
