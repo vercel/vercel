@@ -1,10 +1,8 @@
 lintVersion: 1.0.0
 defaultRuleset: vercelRestAPIRuleset
 rulesets:
- vercelRestAPIRuleset:
+  vercelRestAPIRuleset:
     rulesets:
       - speakeasy-generation
     rules:
-      validate-enums: {
-          severity: warn, # drop the severity of the `validate-enums` rule as we don't want this to block the pipeline
-        }
+      path-params: { severity: warn }
