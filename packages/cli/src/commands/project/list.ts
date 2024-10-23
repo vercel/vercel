@@ -17,7 +17,6 @@ export default async function list(
 ) {
   const telemetryClient = new ProjectListTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
