@@ -118,7 +118,8 @@ export default async (client: Client): Promise<number> => {
     );
 
     if ('--confirm' in parsedArguments.flags) {
-      telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
+      // Deprecated flag so it's not in the type definition
+      telemetryClient.trackCliFlagConfirm(true);
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
