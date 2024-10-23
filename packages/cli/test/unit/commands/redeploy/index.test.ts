@@ -10,8 +10,44 @@ import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
   describe('[deploymentId|deploymentName]', () => {
-    describe.todo('--yes');
-    describe.todo('--no-wait');
+    it('tracks redacted deploymentId|deploymentName', async () => {
+      const { fromDeployment, toDeployment } = initRedeployTest();
+      toDeployment.readyState = 'QUEUED';
+      client.setArgv('rollback', fromDeployment.id);
+
+      const exitCodePromise = redeploy(client);
+
+      toDeployment.readyState = 'READY';
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:idOrName',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    describe('--no-wait', () => {
+      it('tracks use of --no-wait', async () => {
+        const { fromDeployment, toDeployment } = initRedeployTest();
+        toDeployment.readyState = 'QUEUED';
+        client.setArgv('rollback', fromDeployment.id, '--no-wait');
+
+        const exitCodePromise = redeploy(client);
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:idOrName',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:no-wait',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
   });
 
   it('should error if missing deployment url', async () => {
