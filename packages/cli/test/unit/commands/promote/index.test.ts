@@ -301,8 +301,7 @@ describe('promote', () => {
         `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
       );
 
-      // we need to wait a super long time because fetch will return on 500
-      await expect(client.stderr).toOutput('Response Error (500)', 20000);
+      await expect(client.stderr).toOutput('Response Error (500)');
 
       await expect(exitCodePromise).resolves.toEqual(1);
     });
@@ -480,6 +479,7 @@ function initPromoteTest({
     '/:version/projects/:project/promote/:id',
     (req: Request, res: Response) => {
       if (promoteStatusCode === 500) {
+        client.output.log(`scenario ${new Date().toISOString()}`);
         res.statusCode = 500;
         res.end('Server error');
         return;
@@ -532,6 +532,10 @@ function initPromoteTest({
       });
     }
   );
+
+  client.scenario.get('/:version/deployments/:id', (req, res) => {
+    res.json(currentDeployment);
+  });
 
   return {
     cwd,

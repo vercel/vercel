@@ -183,7 +183,7 @@ describe('rollback', () => {
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
     // we need to wait a super long time because fetch will return on 500
-    await expect(client.stderr).toOutput('Response Error (500)', 20000);
+    await expect(client.stderr).toOutput('Response Error (500)');
 
     await expect(exitCodePromise).resolves.toEqual(1);
   });
