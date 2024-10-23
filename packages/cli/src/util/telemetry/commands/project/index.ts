@@ -1,9 +1,9 @@
 import { TelemetryClient } from '../..';
 
 export class ProjectTelemetryClient extends TelemetryClient {
-  trackCliSubcommandLs(actual: string) {
+  trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'ls',
+      subcommand: 'list',
       value: actual,
     });
   }
