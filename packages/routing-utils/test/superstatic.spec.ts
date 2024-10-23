@@ -938,7 +938,7 @@ test('convertRewrites', () => {
 test('convertHeaders', () => {
   const actual = convertHeaders([
     {
-      source: '(.*)+/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
+      source: '(.*)/(.*)\\.(eot|otf|ttf|ttc|woff|font\\.css)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
@@ -1155,7 +1155,7 @@ test('convertHeaders', () => {
 
   const expected = [
     {
-      src: '^(.*)+(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
+      src: '^(.*)(?:\\/(.*))\\.(eot|otf|ttf|ttc|woff|font\\.css)$',
       headers: { 'Access-Control-Allow-Origin': '*' },
       continue: true,
     },
