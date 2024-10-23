@@ -152,9 +152,6 @@ async function handleDisconnectProject(
     client.output.success(
       `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
     );
-    resource.projectsMetadata = resource.projectsMetadata?.filter(
-      project => projectName !== project.name
-    );
   } catch (error) {
     client.output.error(
       `A problem occurred while disconnecting: ${(error as Error).message}`
@@ -191,7 +188,6 @@ export async function handleDisconnectAllProjects(
     client.output.success(
       `Disconnected all projects from ${chalk.bold(resource.name)}`
     );
-    resource.projectsMetadata = [];
   } catch (error) {
     client.output.error(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`
