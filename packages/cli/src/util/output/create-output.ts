@@ -64,10 +64,6 @@ export class Output {
       this.debugEnabled = debugEnabled;
     }
 
-    if (supportsHyperlink !== undefined) {
-      this.supportsHyperlink = supportsHyperlink;
-    }
-
     if (supportsHyperlink === undefined) {
       this.supportsHyperlink = detectSupportsHyperlink(this.stream);
     } else {
