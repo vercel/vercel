@@ -1,7 +1,7 @@
 import { yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const addSubCommand = {
+export const addSubcommand = {
   name: 'add',
   description: 'Installs a marketplace integration',
   arguments: [
@@ -22,7 +22,7 @@ export const addSubCommand = {
   ],
 } as const;
 
-export const openSubCommand = {
+export const openSubcommand = {
   name: 'open',
   description: "Opens a marketplace integration's dashboard",
   arguments: [
@@ -119,7 +119,7 @@ export const uninstallSubcommand = {
   ],
 } as const;
 
-export const removeSubcommand = {
+export const deleteSubcommand = {
   name: 'delete',
   description: 'Delete an integration resource',
   arguments: [
@@ -223,12 +223,12 @@ export const integrationCommand = {
     },
   ],
   subcommands: [
-    addSubCommand,
-    openSubCommand,
+    addSubcommand,
     listSubcommand,
-    uninstallSubcommand,
-    removeSubcommand,
+    openSubcommand,
     disconnectSubcommand,
+    deleteSubcommand,
+    uninstallSubcommand,
   ],
   examples: [],
 } as const;

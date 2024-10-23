@@ -3,7 +3,7 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { CancelledError, FailedError, type Resource } from './types';
 import { getResources } from '../../util/integration/get-resources';
-import { removeSubcommand } from './command';
+import { deleteSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
@@ -14,7 +14,7 @@ import { handleDisconnectAllProjects } from './disconnect';
 
 export async function deleteResource(client: Client) {
   let parsedArguments = null;
-  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(deleteSubcommand.options);
 
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
