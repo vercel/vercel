@@ -6,15 +6,19 @@ import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
 import { add } from './add';
 import { integrationCommand } from './command';
+import { remove } from './remove';
+import { disconnect } from './disconnect';
 import { list } from './list';
 import { openIntegration } from './open-integration';
-import { remove } from './remove';
+import { uninstall } from './uninstall';
 
 const COMMAND_CONFIG = {
   add: ['add'],
   open: ['open'],
   list: ['list', 'ls'],
   remove: ['remove', 'rm'],
+  uninstall: ['uninstall'],
+  disconnect: ['disconnect'],
 };
 
 export default async function main(client: Client) {
@@ -45,8 +49,14 @@ export default async function main(client: Client) {
     case 'open': {
       return openIntegration(client, subArgs);
     }
+    case 'uninstall': {
+      return uninstall(client);
+    }
     case 'remove': {
       return remove(client);
+    }
+    case 'disconnect': {
+      return disconnect(client);
     }
     default: {
       client.output.error(getInvalidSubcommand(COMMAND_CONFIG));

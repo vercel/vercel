@@ -94,11 +94,78 @@ export const listSubcommand = {
 
 export const removeSubcommand = {
   name: 'remove',
-  description:
-    'Unlink and delete resources, and uninstall marketplace integrations',
+  description: 'Uninstalls a marketplace integration',
   arguments: [
     {
-      name: 'resource/integration',
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when uninstalling an integration',
+    },
+  ],
+  examples: [
+    {
+      name: 'Uninstall an integration',
+      value: [
+        `${packageName} integrations remove <inegration>`,
+        `${packageName} integrations remove acme`,
+      ],
+    },
+  ],
+} as const;
+
+export const deleteSubcommand = {
+  name: 'remove',
+  description: 'Delete an integration resource',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'disconnect-all',
+      description: 'disconnects all projects from the specified resource',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting a resource',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete a resource',
+      value: [
+        `${packageName} integrations delete <resource>`,
+        `${packageName} integrations delete my-acme-resource`,
+      ],
+    },
+    {
+      name: 'Disconnect all projects from a resource, then delete it',
+      value: [
+        `${packageName} integrations delete <resource> --disconnect-all`,
+        `${packageName} integrations delete my-acme-resource --disconnect-all`,
+        `${packageName} integrations delete my-acme-resource -a`,
+      ],
+    },
+  ],
+} as const;
+
+export const disconnectSubcommand = {
+  name: 'disconnect',
+  description: 'Disconnect a resource from a project, or the current project',
+  arguments: [
+    {
+      name: 'resource',
       required: true,
     },
     {
@@ -108,58 +175,38 @@ export const removeSubcommand = {
   ],
   options: [
     {
-      name: 'delete',
-      description:
-        'attempts to delete the specified resource, not to be used with entire integrations',
-      shorthand: 'D',
-      type: Boolean,
-      deprecated: false,
-      argument: 'NAME',
-    },
-    {
-      name: 'unlink-all',
-      description:
-        'unlinks all projects from the specified resource, not to be used with entire integrations',
+      name: 'all',
+      description: 'disconnects all projects from the specified resource',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
     {
       ...yesOption,
-      description:
-        'Skip the confirmation prompt when deleting a resource or removing an integration',
+      description: 'Skip the confirmation prompt when disconnecting a resource',
     },
   ],
   examples: [
     {
-      name: 'Unlink a project from a resource',
+      name: 'Disconnect a resource from the current projecct',
       value: [
-        `${packageName} integrations remove <resource> <project>`,
-        `${packageName} integrations remove my-acme-resource my-project`,
+        `${packageName} integrations disconnect <resource>`,
+        `${packageName} integrations disconnect my-acme-resource`,
       ],
     },
     {
-      name: 'Unlink all projects from a resource',
+      name: 'Disconnect all projects from a resource',
       value: [
-        `${packageName} integrations remove <resource> --unlink-all`,
-        `${packageName} integrations remove my-acme-resource --unlink-all`,
-        `${packageName} integrations remove my-acme-resource -a`,
+        `${packageName} integrations disconnect <resource> --unlink-all`,
+        `${packageName} integrations disconnect my-acme-resource --all`,
+        `${packageName} integrations disconnect my-acme-resource -a`,
       ],
     },
     {
-      name: 'Delete an unlinked resource',
+      name: 'Disconnect a resource from a specified project',
       value: [
-        `${packageName} integrations remove <resource> --delete`,
-        `${packageName} integrations remove my-acme-resource --delete`,
-        `${packageName} integrations remove my-acme-resource -D --yes`,
-        `${packageName} integrations remove my-acme-resource --unlink-all --delete`,
-      ],
-    },
-    {
-      name: 'Uninstall an integration',
-      value: [
-        `${packageName} integrations remove <inegration>`,
-        `${packageName} integrations remove acme`,
+        `${packageName} integrations disconnect <resource> <project>`,
+        `${packageName} integrations disconnect my-acme-resource my-project`,
       ],
     },
   ],
@@ -180,6 +227,8 @@ export const integrationCommand = {
     openSubCommand,
     listSubcommand,
     removeSubcommand,
+    deleteSubcommand,
+    disconnectSubcommand,
   ],
   examples: [],
 } as const;
