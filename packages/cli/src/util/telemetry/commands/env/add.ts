@@ -39,10 +39,4 @@ export class EnvAddTelemetryClient extends TelemetryClient {
       this.trackCliFlag('force');
     }
   }
-
-  trackCliFlagDebug(debug?: boolean) {
-    if (debug) {
-      this.trackCliFlag('debug');
-    }
-  }
 }

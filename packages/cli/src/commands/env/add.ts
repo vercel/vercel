@@ -45,7 +45,6 @@ export default async function add(
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
-  telemetryClient.trackCliFlagDebug(opts['--debug']);
 
   if (args.length > 3) {
     output.error(
