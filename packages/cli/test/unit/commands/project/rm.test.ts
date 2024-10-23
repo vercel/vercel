@@ -25,5 +25,36 @@ describe('rm', () => {
       const exitCode = await projectsPromise;
       expect(exitCode).toEqual(0);
     });
+
+    it('tracks argument', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+
+      client.setArgv('project', 'rm', 'test-project');
+      const projectsPromise = projects(client);
+
+      await expect(client.stderr).toOutput(
+        `The project test-project will be removed permanently.`
+      );
+      client.stdin.write('y\n');
+
+      const exitCode = await projectsPromise;
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `subcommand:rm`,
+          value: 'rm',
+        },
+        {
+          key: `argument:name`,
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 });

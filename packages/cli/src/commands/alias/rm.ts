@@ -11,6 +11,7 @@ import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
+import { AliasRmTelemetryClient } from '../../util/telemetry/commands/alias/remove';
 
 type Options = {
   '--yes': boolean;
@@ -23,8 +24,16 @@ export default async function rm(
 ) {
   const { output } = client;
   const { contextName } = await getScope(client);
+  const telemetryClient = new AliasRmTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   const [aliasOrId] = args;
+  telemetryClient.trackCliArgumentAlias(aliasOrId);
 
   if (args.length !== 1) {
     output.error(

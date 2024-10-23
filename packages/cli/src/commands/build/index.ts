@@ -117,7 +117,7 @@ export interface BuildsManifest {
 }
 
 export default async function main(client: Client): Promise<number> {
-  let telemetryClient = new BuildTelemetryClient({
+  const telemetryClient = new BuildTelemetryClient({
     opts: {
       output: client.output,
       store: client.telemetryEventStore,

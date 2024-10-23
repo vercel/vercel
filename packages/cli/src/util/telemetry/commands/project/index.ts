@@ -1,21 +1,21 @@
 import { TelemetryClient } from '../..';
 
-export class AliasTelemetryClient extends TelemetryClient {
-  trackCliSubcommandLs(actual: string) {
+export class ProjectTelemetryClient extends TelemetryClient {
+  trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'ls',
+      subcommand: 'list',
       value: actual,
     });
   }
 
-  trackCliSubcommandSet(actual: string) {
+  trackCliSubcommandAdd(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'set',
+      subcommand: 'add',
       value: actual,
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandRm(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
       value: actual,

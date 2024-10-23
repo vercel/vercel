@@ -6,6 +6,7 @@ import Client from '../../util/client';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import { NODE_VERSIONS } from '@vercel/build-utils';
+import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
 
 export default async function list(
   client: Client,
@@ -13,6 +14,13 @@ export default async function list(
   args: string[],
   contextName: string
 ) {
+  const telemetryClient = new ProjectListTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   const { output } = client;
   if (args.length !== 0) {
     output.error(
@@ -30,11 +38,13 @@ export default async function list(
   let projectsUrl = `/v9/projects?limit=20`;
 
   const deprecated = argv['--update-required'] || false;
+  telemetryClient.trackCliFlagUpdateRequired(deprecated);
   if (deprecated) {
     projectsUrl += `&deprecated=${deprecated}`;
   }
 
   const next = argv['--next'] || false;
+  telemetryClient.trackCliOptionNext(next);
   if (next) {
     projectsUrl += `&until=${next}`;
   }

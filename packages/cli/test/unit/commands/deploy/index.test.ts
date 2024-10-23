@@ -282,6 +282,7 @@ describe('deploy', () => {
       version: 2,
     });
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:prod', value: 'TRUE' },
       {
         key: 'flag:skip-domain',
         value: 'TRUE',
