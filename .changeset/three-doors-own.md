@@ -2,4 +2,6 @@
 "vercel": minor
 ---
 
-Enable removal Marketplace integrations and their resources via the `vc integration remove` command (with the alternative alias `vc integration rm`.
+Adds `vercel integration disconnect` to disconnect Marketplace integraion resources from projects
+Adds `vercel integration delete` to delete Marketplace integration resources
+Adds `vercel integration uninstall` to uninstall Marketplace integrations from teams
