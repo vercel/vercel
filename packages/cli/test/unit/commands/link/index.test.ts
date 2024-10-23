@@ -318,4 +318,35 @@ describe('link', () => {
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(proj2.id);
   });
+
+  it('should track use of deprecated `cwd` positional argument', async () => {
+    useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: basename(cwd),
+      name: basename(cwd),
+    });
+    useUnknownProject();
+
+    client.setArgv('link', cwd, '--yes');
+    const exitCodePromise = link(client);
+    await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(client.stderr).toOutput(
+      `The \`vc link <directory>\` syntax is deprecated, please use \`vc link --cwd ${cwd}\` instead`
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'argument:cwd',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
 });

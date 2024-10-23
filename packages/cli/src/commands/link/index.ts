@@ -50,6 +50,7 @@ export default async function link(client: Client) {
 
   let cwd = parsedArgs.args[1];
   if (cwd) {
+    telemetry.trackCliArgumentCwd();
     client.output.warn(
       `The ${cmd('vc link <directory>')} syntax is deprecated, please use ${cmd(
         `vc link --cwd ${cwd}`

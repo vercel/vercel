@@ -1,6 +1,13 @@
 import { TelemetryClient } from '../..';
 
 export class LinkTelemetryClient extends TelemetryClient {
+  trackCliArgumentCwd() {
+    this.trackCliArgument({
+      arg: 'cwd',
+      value: this.redactedValue,
+    });
+  }
+
   trackCliFlagRepo(flag?: boolean) {
     if (flag) {
       this.trackCliFlag('repo');
