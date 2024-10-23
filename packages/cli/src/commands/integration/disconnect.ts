@@ -1,7 +1,12 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import type { Resource, ResourceConnection } from './types';
+import {
+  CancelledError,
+  FailedError,
+  type Resource,
+  type ResourceConnection,
+} from './types';
 import { getResources } from '../../util/integration/get-resources';
 import { disconnectSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -83,11 +88,11 @@ export async function disconnect(client: Client) {
       );
       return 0;
     } catch (error) {
-      if (error instanceof ExitedGracefullyError) {
+      if (error instanceof CancelledError) {
         client.output.log(error.message);
         return 0;
       }
-      if (error instanceof ExitedErroneouslyError) {
+      if (error instanceof FailedError) {
         client.output.error(error.message);
         return 1;
       }
@@ -180,7 +185,7 @@ export async function handleDisconnectAllProjects(
     !skipConfirmation &&
     !(await confirmDisconnectAllProjects(client, resource))
   ) {
-    throw new ExitedGracefullyError('Canceled');
+    throw new CancelledError('Canceled');
   }
 
   try {
@@ -190,7 +195,7 @@ export async function handleDisconnectAllProjects(
       `Disconnected all projects from ${chalk.bold(resource.name)}`
     );
   } catch (error) {
-    throw new ExitedErroneouslyError(
+    throw new FailedError(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`
     );
   }
@@ -222,6 +227,3 @@ async function confirmDisconnectAllProjects(
   }
   return confirm(client, chalk.red('Are you sure?'), false);
 }
-
-export class ExitedGracefullyError extends Error {}
-export class ExitedErroneouslyError extends Error {}

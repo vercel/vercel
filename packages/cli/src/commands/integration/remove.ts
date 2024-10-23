@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import type { Resource } from './types';
+import { CancelledError, FailedError, type Resource } from './types';
 import { getResources } from '../../util/integration/get-resources';
 import { deleteSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -10,11 +10,7 @@ import handleError from '../../util/handle-error';
 import type { Team } from '@vercel-internals/types';
 import confirm from '../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../util/integration/delete-resource';
-import {
-  ExitedErroneouslyError as ExitErroneouslyError,
-  ExitedGracefullyError as ExitEarlyError,
-  handleDisconnectAllProjects,
-} from './disconnect';
+import { handleDisconnectAllProjects } from './disconnect';
 
 export async function remove(client: Client) {
   let parsedArguments = null;
@@ -72,11 +68,11 @@ export async function remove(client: Client) {
         skipConfirmation
       );
     } catch (error) {
-      if (error instanceof ExitEarlyError) {
+      if (error instanceof CancelledError) {
         client.output.log(error.message);
         return 0;
       }
-      if (error instanceof ExitErroneouslyError) {
+      if (error instanceof FailedError) {
         client.output.error(error.message);
         return 1;
       }

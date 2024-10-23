@@ -103,3 +103,6 @@ export interface ResourceConnection {
   name: string;
   environments: string[];
 }
+
+export class CancelledError extends Error {}
+export class FailedError extends Error {}
