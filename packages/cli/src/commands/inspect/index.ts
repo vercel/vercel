@@ -21,9 +21,16 @@ import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
 import { help } from '../help';
 import { inspectCommand } from './command';
+import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
 
 export default async function inspect(client: Client) {
   const { print, error, warn } = client.output;
+  const telemetry = new InspectTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(inspectCommand.options);
@@ -61,6 +68,11 @@ export default async function inspect(client: Client) {
     print(help(inspectCommand, { columns: client.stderr.columns }));
     return 1;
   }
+
+  telemetry.trackCliArgumentDeploymentIdOrHost(deploymentIdOrHost);
+  telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
+  telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
+  telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
 
   // validate the timeout
   const timeout = ms(parsedArguments.flags['--timeout'] ?? '3m');
