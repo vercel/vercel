@@ -1,5 +1,12 @@
 # vercel
 
+## 37.12.1
+
+### Patch Changes
+
+- - Appropriately handle hidden properties in `vercel install` flows ([#12336](https://github.com/vercel/vercel/pull/12336))
+  - Treat complex expressions during `vercel install` flows as unsupported
+
 ## 37.12.0
 
 ### Minor Changes
