@@ -144,6 +144,40 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataUnsupported: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Primary Region',
+      default: 'us-east-1',
+      description: 'Primary region where your database will be hosted',
+      'ui:placeholder': 'Choose your region',
+      type: 'string',
+      'ui:options': [
+        {
+          value: 'us-west-1',
+          label: 'West US (North California)',
+        },
+        {
+          value: 'us-east-1',
+          label: 'East US (North Virginia)',
+        },
+      ],
+    },
+    storage: {
+      type: 'number',
+      'ui:control': 'input',
+      'ui:hidden': { expr: "Region == 'us-east-1" },
+      'ui:label': 'Storage',
+      description: 'Disk space in GiB',
+      minimum: 1,
+      maximum: 256,
+    },
+  },
+  required: ['region'],
+};
+
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
@@ -193,6 +227,21 @@ const integrations: Record<string, Integration> = {
     name: 'Acme Integration No Products',
     slug: 'acme-no-products',
     products: [],
+  },
+  'acme-unsupported': {
+    id: 'acme',
+    name: 'Acme Integration',
+    slug: 'acme',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataUnsupported,
+      },
+    ],
   },
 };
 

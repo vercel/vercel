@@ -238,6 +238,58 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
         });
+
+        it('should require the vercel dashboard for expressions in UI wizard', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme-unsupported');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Do you want to link this resource to the current project? (Y/n)'
+          );
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
+          );
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
+          );
+        });
+
+        it('should gracefully exit when the user does not want to continue the setup wizard in the Vercel dashboard for an install flow using expressions in UI display rules', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme-unsupported');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Do you want to link this resource to the current project? (Y/n)'
+          );
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
+          );
+          client.stdin.write('n\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+        });
       });
 
       describe('errors', () => {
