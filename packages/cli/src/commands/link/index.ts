@@ -7,6 +7,7 @@ import { help } from '../help';
 import { linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -21,6 +22,13 @@ export default async function link(client: Client) {
     return 1;
   }
 
+  const telemetry = new LinkTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   const { output } = client;
 
   if (parsedArgs.flags['--help']) {
@@ -28,7 +36,12 @@ export default async function link(client: Client) {
     return 2;
   }
 
+  telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+
   if ('--confirm' in parsedArgs.flags) {
+    telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
     client.output.warn('`--confirm` is deprecated, please use `--yes` instead');
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
