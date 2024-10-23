@@ -704,8 +704,8 @@ export default class DevServer {
     allEnv['NOW_REGION'] = 'dev1';
 
     // simulate parts of the platform for local environment
-    runEnv['VERCEL_ENV'] = 'development';
-    runEnv['VERCEL'] = '1';
+    allEnv['VERCEL_ENV'] = 'development';
+    allEnv['VERCEL'] = '1';
 
     // mirror how VERCEL_REGION is injected in prod/preview
     // only inject in `runEnvs`, because `allEnvs` is exposed to dev command
