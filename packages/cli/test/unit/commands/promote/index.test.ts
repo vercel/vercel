@@ -479,7 +479,6 @@ function initPromoteTest({
     '/:version/projects/:project/promote/:id',
     (req: Request, res: Response) => {
       if (promoteStatusCode === 500) {
-        client.output.log(`scenario ${new Date().toISOString()}`);
         res.statusCode = 500;
         res.end('Server error');
         return;
@@ -532,10 +531,6 @@ function initPromoteTest({
       });
     }
   );
-
-  client.scenario.get('/:version/deployments/:id', (req, res) => {
-    res.json(currentDeployment);
-  });
 
   return {
     cwd,
