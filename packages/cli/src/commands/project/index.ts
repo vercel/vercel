@@ -55,7 +55,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'ls':
     case 'list':
-      telemetryClient.trackCliSubcommandLs(subcommand);
+      telemetryClient.trackCliSubcommandList(subcommand);
       return await list(client, parsedArgs.flags, args, contextName);
     case 'add':
       telemetryClient.trackCliSubcommandAdd(subcommand);
