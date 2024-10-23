@@ -1,5 +1,5 @@
 import { handleError } from '../../util/error';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
@@ -51,6 +51,7 @@ export default async function alias(client: Client) {
       telemetryClient.trackCliSubcommandLs(subcommandOriginal);
       return ls(client, parsedArguments.flags, args);
     case 'rm':
+      telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArguments.flags, args);
     default:
       telemetryClient.trackCliSubcommandSet(subcommandOriginal);

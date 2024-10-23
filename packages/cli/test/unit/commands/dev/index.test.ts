@@ -80,7 +80,7 @@ describe('dev', () => {
       client.setArgv('dev', '--listen=9090');
       const exitCodePromise = dev(client);
 
-      // dev is an odd duck in that normally only exists on SIGTERM
+      // dev is an odd duck in that normally only exits on SIGTERM
       await expect(exitCodePromise).resolves.toEqual(undefined);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
