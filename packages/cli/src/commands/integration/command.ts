@@ -92,8 +92,8 @@ export const listSubcommand = {
   ],
 } as const;
 
-export const removeSubcommand = {
-  name: 'remove',
+export const uninstallSubcommand = {
+  name: 'uninstall',
   description: 'Uninstalls a marketplace integration',
   arguments: [
     {
@@ -112,15 +112,15 @@ export const removeSubcommand = {
     {
       name: 'Uninstall an integration',
       value: [
-        `${packageName} integrations remove <inegration>`,
-        `${packageName} integrations remove acme`,
+        `${packageName} integrations uninstall <inegration>`,
+        `${packageName} integrations uninstall acme`,
       ],
     },
   ],
 } as const;
 
-export const deleteSubcommand = {
-  name: 'remove',
+export const removeSubcommand = {
+  name: 'delete',
   description: 'Delete an integration resource',
   arguments: [
     {
@@ -226,8 +226,8 @@ export const integrationCommand = {
     addSubCommand,
     openSubCommand,
     listSubcommand,
+    uninstallSubcommand,
     removeSubcommand,
-    deleteSubcommand,
     disconnectSubcommand,
   ],
   examples: [],

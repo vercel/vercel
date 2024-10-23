@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { removeSubcommand } from './command';
+import { uninstallSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
@@ -12,7 +12,7 @@ import { removeIntegration } from '../../util/integration/remove-integration';
 
 export async function uninstall(client: Client) {
   let parsedArguments = null;
-  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(uninstallSubcommand.options);
 
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);

@@ -6,7 +6,7 @@ import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('integration', () => {
-  describe('remove', () => {
+  describe('delete', () => {
     beforeEach(() => {
       useUser();
     });
@@ -25,7 +25,7 @@ describe('integration', () => {
         mockDeleteResource();
         const resource = 'store-acme-no-projects';
 
-        client.setArgv('integration', 'remove', resource);
+        client.setArgv('integration', 'delete', resource);
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -49,7 +49,7 @@ describe('integration', () => {
         mockDeleteResource();
         const resource = 'store-acme-no-projects';
 
-        client.setArgv('integration', 'remove', resource, '--yes');
+        client.setArgv('integration', 'delete', resource, '--yes');
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -66,7 +66,7 @@ describe('integration', () => {
         useResources();
         const resource = 'not-a-real-project-to-find';
 
-        client.setArgv('integration', 'remove', resource);
+        client.setArgv('integration', 'delete', resource);
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -81,7 +81,7 @@ describe('integration', () => {
         useResources();
         const resource = 'store-acme-no-projects';
 
-        client.setArgv('integration', 'remove', resource);
+        client.setArgv('integration', 'delete', resource);
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -103,7 +103,7 @@ describe('integration', () => {
         mockDisconnectResourceFromAllProjects();
         mockDeleteResource();
 
-        client.setArgv('integration', 'remove', resource, '--disconnect-all');
+        client.setArgv('integration', 'delete', resource, '--disconnect-all');
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -139,7 +139,7 @@ describe('integration', () => {
         const resource = 'store-acme-no-projects';
         mockDeleteResource();
 
-        client.setArgv('integration', 'remove', resource, '--disconnect-all');
+        client.setArgv('integration', 'delete', resource, '--disconnect-all');
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -170,7 +170,7 @@ describe('integration', () => {
 
         client.setArgv(
           'integration',
-          'remove',
+          'delete',
           resource,
           '--disconnect-all',
           '--yes'
@@ -198,7 +198,7 @@ describe('integration', () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
 
-        client.setArgv('integration', 'remove', resource, '--disconnect-all');
+        client.setArgv('integration', 'delete', resource, '--disconnect-all');
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -218,7 +218,7 @@ describe('integration', () => {
         const resource = 'store-foo-bar-both-projects';
         mockDisconnectResourceFromAllProjects();
 
-        client.setArgv('integration', 'remove', resource, '--disconnect-all');
+        client.setArgv('integration', 'delete', resource, '--disconnect-all');
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
@@ -250,7 +250,7 @@ describe('integration', () => {
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
-          client.setArgv('integration', 'remove', 'acme');
+          client.setArgv('integration', 'delete', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput('Error: Team not found.');
@@ -267,7 +267,7 @@ describe('integration', () => {
         });
 
         it('should error when no arguments passed', async () => {
-          client.setArgv('integration', 'remove');
+          client.setArgv('integration', 'delete');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             'You must specify a resource. See `--help` for details.'
@@ -276,7 +276,7 @@ describe('integration', () => {
         });
 
         it('should error when more than one resource is passed', async () => {
-          client.setArgv('integration', 'remove', 'a', 'b');
+          client.setArgv('integration', 'delete', 'a', 'b');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
             'Cannot specify more than one resource at a time.'
@@ -288,7 +288,7 @@ describe('integration', () => {
           useResources();
           const resource = 'store-acme-connected-project';
 
-          client.setArgv('integration', 'remove', resource);
+          client.setArgv('integration', 'delete', resource);
           const exitCodePromise = integrationCommand(client);
 
           await expect(client.stderr).toOutput('Retrieving resource…');

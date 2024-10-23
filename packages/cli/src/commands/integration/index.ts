@@ -6,7 +6,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
 import { add } from './add';
 import { integrationCommand } from './command';
-import { remove } from './remove';
+import { deleteResource } from './delete-resource';
 import { disconnect } from './disconnect';
 import { list } from './list';
 import { openIntegration } from './open-integration';
@@ -16,7 +16,7 @@ const COMMAND_CONFIG = {
   add: ['add'],
   open: ['open'],
   list: ['list', 'ls'],
-  remove: ['remove', 'rm'],
+  delete: ['delete', 'rm'],
   uninstall: ['uninstall'],
   disconnect: ['disconnect'],
 };
@@ -52,8 +52,8 @@ export default async function main(client: Client) {
     case 'uninstall': {
       return uninstall(client);
     }
-    case 'remove': {
-      return remove(client);
+    case 'delete': {
+      return deleteResource(client);
     }
     case 'disconnect': {
       return disconnect(client);
