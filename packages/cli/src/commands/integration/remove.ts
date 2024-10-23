@@ -11,8 +11,8 @@ import type { Team } from '@vercel-internals/types';
 import confirm from '../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../util/integration/delete-resource';
 import {
-  ExitedErroneouslyError,
-  ExitedGracefullyError,
+  ExitedErroneouslyError as ExitErroneouslyError,
+  ExitedGracefullyError as ExitEarlyError,
   handleDisconnectAllProjects,
 } from './disconnect';
 
@@ -72,10 +72,12 @@ export async function remove(client: Client) {
         skipConfirmation
       );
     } catch (error) {
-      if (error instanceof ExitedGracefullyError) {
+      if (error instanceof ExitEarlyError) {
+        client.output.log(error.message);
         return 0;
       }
-      if (error instanceof ExitedErroneouslyError) {
+      if (error instanceof ExitErroneouslyError) {
+        client.output.error(error.message);
         return 1;
       }
       throw error;

@@ -84,9 +84,11 @@ export async function disconnect(client: Client) {
       return 0;
     } catch (error) {
       if (error instanceof ExitedGracefullyError) {
+        client.output.log(error.message);
         return 0;
       }
       if (error instanceof ExitedErroneouslyError) {
+        client.output.error(error.message);
         return 1;
       }
       throw error;
@@ -178,8 +180,7 @@ export async function handleDisconnectAllProjects(
     !skipConfirmation &&
     !(await confirmDisconnectAllProjects(client, resource))
   ) {
-    client.output.log('Canceled');
-    throw new ExitedGracefullyError();
+    throw new ExitedGracefullyError('Canceled');
   }
 
   try {
@@ -189,10 +190,9 @@ export async function handleDisconnectAllProjects(
       `Disconnected all projects from ${chalk.bold(resource.name)}`
     );
   } catch (error) {
-    client.output.error(
+    throw new ExitedErroneouslyError(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`
     );
-    throw new ExitedErroneouslyError();
   }
 
   return;
