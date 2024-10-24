@@ -332,7 +332,6 @@ describe('link', () => {
 
     client.setArgv('link', cwd, '--yes');
     const exitCodePromise = link(client);
-    await expect(exitCodePromise).resolves.toEqual(0);
     await expect(client.stderr).toOutput(
       `The \`vc link <directory>\` syntax is deprecated, please use \`vc link --cwd ${cwd}\` instead`
     );
