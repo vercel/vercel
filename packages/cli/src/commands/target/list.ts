@@ -6,6 +6,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 export default async function list(
   client: Client,
@@ -13,7 +14,6 @@ export default async function list(
   args: string[],
   link: ProjectLinked
 ) {
-  const { output } = client;
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -24,11 +24,7 @@ export default async function list(
   }
 
   const start = Date.now();
-  const projectSlugLink = formatProject(
-    client,
-    link.org.slug,
-    link.project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
@@ -70,12 +66,7 @@ export default async function list(
                 : 'Preview';
           return [
             [
-              formatEnvironment(
-                client,
-                link.org.slug,
-                link.project.name,
-                target
-              ),
+              formatEnvironment(link.org.slug, link.project.name, target),
               target.slug,
               target.id,
               type,

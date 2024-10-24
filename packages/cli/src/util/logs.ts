@@ -8,6 +8,7 @@ import { URLSearchParams } from 'url';
 import Client from '../util/client';
 import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
+import output from '../output-manager';
 
 type Printer = (l: string) => void;
 
@@ -25,7 +26,7 @@ export function displayBuildLogs(
     deployment.id,
     {
       mode: 'logs',
-      onEvent: (event: BuildLog) => printBuildLog(event, client.output.print),
+      onEvent: (event: BuildLog) => printBuildLog(event, output.print),
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },
@@ -98,7 +99,7 @@ export async function displayRuntimeLogs(
   options: DisplayRuntimeLogsOptions,
   abortController: AbortController
 ): Promise<number> {
-  const { log, debug, print, spinner, stopSpinner, warn } = client.output;
+  const { log, debug, print, spinner, stopSpinner, warn } = output;
   const { projectId, deploymentId, parse } = options;
 
   const query = new URLSearchParams({ format: 'lines' });

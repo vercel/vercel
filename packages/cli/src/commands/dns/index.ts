@@ -10,6 +10,7 @@ import rm from './rm';
 import { dnsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -19,8 +20,6 @@ const COMMAND_CONFIG = {
 };
 
 export default async function dns(client: Client) {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(dnsCommand.options);

@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { Output } from '../output';
 import Client from '../client';
 import eraseLines from '../output/erase-lines';
 import getDomainPrice from './get-domain-price';
@@ -10,11 +9,11 @@ import confirm from '../input/confirm';
 import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
 import * as ERRORS from '../errors-ts';
+import output from '../../output-manager';
 
 const isTTY = process.stdout.isTTY;
 
 export default async function purchaseDomainIfAvailable(
-  output: Output,
   client: Client,
   domain: string,
   contextName: string

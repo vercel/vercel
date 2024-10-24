@@ -5,6 +5,7 @@ import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {};
 
@@ -13,7 +14,6 @@ export default async function add(
   opts: Options,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   if (args.length !== 2) {

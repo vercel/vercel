@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import { resolve } from 'path';
 import { getVercelIgnore } from '@vercel/client';
 import uniqueStrings from './unique-strings';
-import { Output } from './output/create-output';
+import output from '../output-manager';
 
 type NullableString = string | null;
 
@@ -37,7 +37,6 @@ const asAbsolute = function (path: string, parent: string) {
 };
 
 interface StaticFilesOptions {
-  output: Output;
   src?: string;
 }
 
@@ -55,7 +54,7 @@ interface StaticFilesOptions {
 
 export async function staticFiles(
   path: string,
-  { output, src }: StaticFilesOptions
+  { src }: StaticFilesOptions
 ): Promise<string[]> {
   const { debug, time } = output;
   let files: string[] = [];
@@ -98,7 +97,6 @@ export async function staticFiles(
     `Locating files ${path}`,
     explode([search], {
       accepts,
-      output,
     })
   );
 
@@ -108,7 +106,6 @@ export async function staticFiles(
 
 interface ExplodeOptions {
   accepts: (file: string) => boolean;
-  output: Output;
 }
 
 /**
@@ -126,7 +123,7 @@ interface ExplodeOptions {
  */
 async function explode(
   paths: string[],
-  { accepts, output }: ExplodeOptions
+  { accepts }: ExplodeOptions
 ): Promise<string[]> {
   const { debug } = output;
   const list = async (file: string): Promise<string | null> => {

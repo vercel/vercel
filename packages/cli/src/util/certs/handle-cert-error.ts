@@ -2,12 +2,11 @@ import ms from 'ms';
 import { parse } from 'tldts';
 import chalk from 'chalk';
 import * as ERRORS from '../errors-ts';
-import { Output } from '../output';
 import dnsTable from '../format-dns-table';
 import { getCommandName } from '../pkg-name';
+import output from '../../output-manager';
 
 export default function handleCertError<T>(
-  output: Output,
   error:
     | ERRORS.CertError
     | ERRORS.TooManyRequests

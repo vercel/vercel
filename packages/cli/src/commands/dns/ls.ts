@@ -16,13 +16,13 @@ import {
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 export default async function ls(
   client: Client,
   opts: PaginationOptions,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   const [domainName] = args;
@@ -48,7 +48,6 @@ export default async function ls(
 
   if (domainName) {
     const data = await getDomainDNSRecords(
-      output,
       client,
       domainName,
       4,
@@ -85,7 +84,6 @@ export default async function ls(
   }
 
   const { records: dnsRecords, pagination } = await getDNSRecords(
-    output,
     client,
     contextName,
     ...paginationOptions

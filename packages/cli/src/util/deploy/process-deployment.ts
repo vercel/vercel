@@ -11,13 +11,12 @@ import type { Agent } from 'http';
 import Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs } from '../logs';
-import { Output } from '../output';
 import { progress } from '../output/progress';
 import { linkFolderToProject } from '../projects/link';
 import ua from '../ua';
+import output from '../../output-manager';
 
 function printInspectUrl(
-  output: Output,
   inspectorUrl: string | null | undefined,
   deployStamp: () => string
 ) {
@@ -80,7 +79,7 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
-  const { output } = client;
+
   const { env = {} } = requestBody;
   const token = now._token;
   if (!token) {
@@ -91,7 +90,7 @@ export default async function processDeployment({
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token,
-    debug: client.output.isDebugEnabled(),
+    debug: output.isDebugEnabled(),
     userAgent: ua,
     path,
     force,
@@ -196,7 +195,7 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(output, deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl, deployStamp);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;

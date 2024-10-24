@@ -14,6 +14,7 @@ import rm from './rm';
 import { envCommand } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 
 const COMMAND_CONFIG = {
@@ -26,7 +27,6 @@ const COMMAND_CONFIG = {
 export default async function main(client: Client) {
   const telemetryClient = new EnvTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -43,8 +43,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(envCommand, { columns: client.stderr.columns }));
     return 2;
@@ -56,7 +54,6 @@ export default async function main(client: Client) {
 
   const target =
     parseTarget({
-      output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
@@ -96,9 +93,7 @@ export default async function main(client: Client) {
         );
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        client.output.print(
-          help(envCommand, { columns: client.stderr.columns })
-        );
+        output.print(help(envCommand, { columns: client.stderr.columns }));
         return 2;
     }
   }

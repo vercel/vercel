@@ -35,7 +35,6 @@ export async function inputRootDirectory(
 
     if (
       (await validateRootDirectory(
-        client.output,
         cwd,
         fullPath,
         'Please choose a different one.'

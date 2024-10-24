@@ -1,9 +1,6 @@
-// @ts-ignore
 import { handleError } from '../../util/error';
-
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-
 import add from './add';
 import issue from './issue';
 import ls from './ls';
@@ -12,6 +9,7 @@ import { certsCommand } from './command';
 import { help } from '../help';
 import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -21,8 +19,6 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(certsCommand.options);
@@ -55,9 +51,7 @@ export default async function main(client: Client) {
       return add(client, parsedArgs.flags, args);
     default:
       output.error('Please specify a valid subcommand: ls | issue | rm');
-      client.output.print(
-        help(certsCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(certsCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

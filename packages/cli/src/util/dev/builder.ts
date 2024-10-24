@@ -19,7 +19,6 @@ import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
 import minimatch from 'minimatch';
 
-import { Output } from '../output';
 import highlight from '../output/highlight';
 import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
@@ -41,6 +40,7 @@ import { normalizeRoutes } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
 import { importBuilders } from '../build/import-builders';
+import output from '../../output-manager';
 
 interface BuildMessage {
   type: string;
@@ -55,8 +55,7 @@ interface BuildMessageResult extends BuildMessage {
 async function createBuildProcess(
   match: BuildMatch,
   envConfigs: EnvConfigs,
-  workPath: string,
-  output: Output
+  workPath: string
 ): Promise<ChildProcess> {
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
@@ -117,14 +116,14 @@ export async function executeBuild(
   const { entrypoint, use } = match;
   const isStatic = isStaticRuntime(use);
   const { envConfigs, cwd: workPath, devCacheDir } = devServer;
-  const debug = devServer.output.isDebugEnabled();
+  const debug = output.isDebugEnabled();
 
   const startTime = Date.now();
   const showBuildTimestamp = !isStatic && (!isInitialBuild || debug);
 
   if (showBuildTimestamp) {
-    devServer.output.log(`Building ${use}:${entrypoint}`);
-    devServer.output.debug(
+    output.log(`Building ${use}:${entrypoint}`);
+    output.debug(
       `Using \`${pkg.name}${pkg.version ? `@${pkg.version}` : ''}\``
     );
   }
@@ -135,12 +134,7 @@ export async function executeBuild(
 
   let { buildProcess } = match;
   if (!isStatic && !buildProcess) {
-    buildProcess = await createBuildProcess(
-      match,
-      envConfigs,
-      workPath,
-      devServer.output
-    );
+    buildProcess = await createBuildProcess(match, envConfigs, workPath);
   }
 
   const buildOptions: BuildOptions = {
@@ -266,11 +260,11 @@ export async function executeBuild(
     result.routes = normalized.routes || [];
   }
 
-  const { output } = result;
+  const { output: buildOutput } = result;
   const { cleanUrls } = vercelConfig;
 
   // Mimic fmeta-util and perform file renaming
-  for (const [originalPath, value] of Object.entries(output)) {
+  for (const [originalPath, value] of Object.entries(buildOutput)) {
     let path = normalizePath(originalPath);
 
     if (cleanUrls && path.endsWith('.html')) {
@@ -286,31 +280,31 @@ export async function executeBuild(
       path = extensionless;
     }
 
-    output[path] = value;
+    buildOutput[path] = value;
   }
 
   // Convert the JSON-ified output map back into their corresponding `File`
   // subclass type instances.
-  for (const name of Object.keys(output)) {
-    const obj = output[name] as File | Lambda;
+  for (const name of Object.keys(buildOutput)) {
+    const obj = buildOutput[name] as File | Lambda;
     let lambda: BuiltLambda;
     let fileRef: FileFsRef;
     let fileBlob: FileBlob;
     switch (obj.type) {
       case 'FileFsRef':
         fileRef = Object.assign(Object.create(FileFsRef.prototype), obj);
-        output[name] = fileRef;
+        buildOutput[name] = fileRef;
         break;
       case 'FileBlob':
         fileBlob = Object.assign(Object.create(FileBlob.prototype), obj);
         fileBlob.data = Buffer.from((obj as any).data.data);
-        output[name] = fileBlob;
+        buildOutput[name] = fileBlob;
         break;
       case 'Lambda':
         lambda = Object.assign(Object.create(Lambda.prototype), obj);
         // Convert the JSON-ified Buffer object back into an actual Buffer
         lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
-        output[name] = lambda;
+        buildOutput[name] = lambda;
         break;
       default:
         throw new Error(`Unknown file type: ${obj.type}`);
@@ -387,16 +381,13 @@ export async function executeBuild(
 
   if (showBuildTimestamp) {
     const endTime = Date.now();
-    devServer.output.log(
-      `Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`
-    );
+    output.log(`Built ${use}:${entrypoint} [${ms(endTime - startTime)}]`);
   }
 }
 
 export async function getBuildMatches(
   vercelConfig: VercelConfig,
   cwd: string,
-  output: Output,
   devServer: DevServer,
   fileList: string[]
 ): Promise<BuildMatch[]> {
@@ -411,7 +402,7 @@ export async function getBuildMatches(
   const noMatches: Builder[] = [];
   const builds = vercelConfig.builds || [{ src: '**', use: '@vercel/static' }];
   const builderSpecs = new Set(builds.map(b => b.use).filter(Boolean));
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   for (const buildConfig of builds) {
     let { src = '**', use, config = {} } = buildConfig;
@@ -491,21 +482,18 @@ export async function getBuildMatches(
   return matches;
 }
 
-export async function shutdownBuilder(
-  match: BuildMatch,
-  { debug }: Output
-): Promise<void> {
+export async function shutdownBuilder(match: BuildMatch): Promise<void> {
   const ops: Promise<void>[] = [];
 
   if (match.buildProcess) {
     const { pid } = match.buildProcess;
-    debug(`Killing builder sub-process with PID ${pid}`);
+    output.debug(`Killing builder sub-process with PID ${pid}`);
     const killPromise = treeKill(pid)
       .then(() => {
-        debug(`Killed builder with PID ${pid}`);
+        output.debug(`Killed builder with PID ${pid}`);
       })
       .catch((err: Error) => {
-        debug(`Failed to kill builder with PID ${pid}: ${err}`);
+        output.debug(`Failed to kill builder with PID ${pid}: ${err}`);
       });
     ops.push(killPromise);
     delete match.buildProcess;
@@ -514,7 +502,7 @@ export async function shutdownBuilder(
   if (match.buildOutput) {
     for (const asset of Object.values(match.buildOutput)) {
       if (asset.type === 'Lambda' && asset.fn) {
-        debug(`Shutting down Lambda function`);
+        output.debug(`Shutting down Lambda function`);
         ops.push(asset.fn.destroy());
       }
     }

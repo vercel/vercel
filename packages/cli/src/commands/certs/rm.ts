@@ -4,7 +4,6 @@ import plural from 'pluralize';
 import table from '../../util/output/table';
 import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
-import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
@@ -13,12 +12,13 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {};
 
 async function rm(client: Client, opts: Options, args: string[]) {
   const rmStamp = stamp();
-  const { output } = client;
+
   const { contextName } = await getScope(client);
 
   if (args.length !== 1) {
@@ -31,7 +31,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
   }
 
   const id = args[0];
-  const certs = await getCertsToDelete(output, client, contextName, id);
+  const certs = await getCertsToDelete(client, contextName, id);
   if (certs instanceof ERRORS.CertsPermissionDenied) {
     output.error(
       `You don't have access to ${param(id)}'s certs under ${contextName}.`
@@ -55,7 +55,6 @@ async function rm(client: Client, opts: Options, args: string[]) {
   }
 
   const yes = await readConfirmation(
-    output,
     'The following certificates will be removed permanently',
     certs
   );
@@ -64,9 +63,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
     return 0;
   }
 
-  await Promise.all(
-    certs.map(cert => deleteCertById(output, client, cert.uid))
-  );
+  await Promise.all(certs.map(cert => deleteCertById(client, cert.uid)));
   output.success(
     `${chalk.bold(
       plural('Certificate', certs.length, true)
@@ -76,7 +73,6 @@ async function rm(client: Client, opts: Options, args: string[]) {
 }
 
 async function getCertsToDelete(
-  output: Output,
   client: Client,
   contextName: string,
   id: string
@@ -92,7 +88,7 @@ async function getCertsToDelete(
   return [cert];
 }
 
-function readConfirmation(output: Output, msg: string, certs: Cert[]) {
+function readConfirmation(msg: string, certs: Cert[]) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(

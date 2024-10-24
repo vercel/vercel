@@ -1,6 +1,5 @@
 import title from 'title';
 import { formatEnvironment } from '../target/format-environment';
-import type Client from '../client';
 import type {
   CustomEnvironment,
   ProjectEnvVariable,
@@ -8,7 +7,6 @@ import type {
 } from '@vercel-internals/types';
 
 export default function formatEnvironments(
-  client: Client,
   link: ProjectLinked,
   env: ProjectEnvVariable,
   customEnvironments: CustomEnvironment[]
@@ -16,7 +14,7 @@ export default function formatEnvironments(
   const defaultTargets = (
     Array.isArray(env.target) ? env.target : [env.target || '']
   ).map(t => {
-    return formatEnvironment(client, link.org.slug, link.project.name, {
+    return formatEnvironment(link.org.slug, link.project.name, {
       id: t,
       name: title(t),
     });
@@ -25,9 +23,7 @@ export default function formatEnvironments(
     ? env.customEnvironmentIds
         .map(id => customEnvironments.find(e => e.id === id))
         .filter(Boolean)
-        .map(e =>
-          formatEnvironment(client, link.org.slug, link.project.name, e!)
-        )
+        .map(e => formatEnvironment(link.org.slug, link.project.name, e!))
     : [];
   const targetsString = [...defaultTargets, ...customTargets].join(', ');
   return env.gitBranch ? `${targetsString} (${env.gitBranch})` : targetsString;

@@ -4,6 +4,7 @@ import { frameworkList, Framework } from '@vercel/frameworks';
 import Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 const settingMap = {
   buildCommand: 'Build Command',
@@ -27,8 +28,6 @@ export default async function editProjectSettings(
   autoConfirm: boolean,
   localConfigurationOverrides: PartialProjectSettings | null
 ): Promise<ProjectSettings> {
-  const { output } = client;
-
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
     {

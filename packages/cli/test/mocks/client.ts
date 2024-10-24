@@ -10,10 +10,10 @@ import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
 import Client, { FetchOptions } from '../../src/util/client';
-import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
+import output from '../../src/output-manager';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -99,12 +99,9 @@ export class MockClient extends Client {
       stdin: new PassThrough(),
       stdout: new PassThrough(),
       stderr: new PassThrough(),
-      output: new Output(new PassThrough()),
     });
 
-    this.telemetryEventStore = new MockTelemetryEventStore({
-      output: this.output,
-    });
+    this.telemetryEventStore = new MockTelemetryEventStore();
 
     this.app = express();
     this.app.use(express.json());
@@ -146,7 +143,9 @@ export class MockClient extends Client {
     this.stderr.pause();
     this.stderr.isTTY = true;
 
-    this.output = new Output(this.stderr, { supportsHyperlink: false });
+    output.initialize({
+      stream: this.stderr,
+    });
 
     this.argv = [];
     this.authConfig = {
@@ -230,7 +229,8 @@ export class MockClient extends Client {
 
   setArgv(...argv: string[]) {
     this.argv = [process.execPath, 'cli.js', ...argv];
-    this.output = new Output(this.stderr, {
+
+    output.initialize({
       debug: argv.includes('--debug') || argv.includes('-d'),
       noColor: argv.includes('--no-color'),
       supportsHyperlink: false,
@@ -238,7 +238,11 @@ export class MockClient extends Client {
   }
 
   resetOutput() {
-    this.output = new Output(this.stderr);
+    output.initialize({
+      debug: false,
+      noColor: false,
+      supportsHyperlink: true,
+    });
   }
 
   useScenario(scenario: Scenario) {

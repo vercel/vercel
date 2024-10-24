@@ -13,6 +13,7 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import confirm from '../../util/input/confirm';
 import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {
   '--yes': boolean;
@@ -23,7 +24,6 @@ export default async function move(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {

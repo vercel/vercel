@@ -21,6 +21,7 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -66,8 +67,6 @@ export default async function pull(
   cwd: string,
   source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
-  const { output } = client;
-
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
@@ -99,11 +98,7 @@ export default async function pull(
     return 0;
   }
 
-  const projectSlugLink = formatProject(
-    client,
-    link.org.slug,
-    link.project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.log(
     `Downloading \`${chalk.cyan(
@@ -115,7 +110,7 @@ export default async function pull(
   output.spinner('Downloading');
 
   const records = (
-    await pullEnvRecords(output, client, link.project.id, source, {
+    await pullEnvRecords(client, link.project.id, source, {
       target: environment || 'development',
       gitBranch,
     })
@@ -124,7 +119,7 @@ export default async function pull(
   let deltaString = '';
   let oldEnv;
   if (exists) {
-    oldEnv = await createEnvObject(fullPath, output);
+    oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
       // Removes any double quotes from `records`, if they exist
       // We need this because double quotes are stripped from the local .env file,

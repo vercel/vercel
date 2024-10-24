@@ -6,6 +6,7 @@ import {
   DomainNotFound,
   isAPIError,
 } from '../errors-ts';
+import output from '../../output-manager';
 
 type Response = {
   domain: Domain;
@@ -20,7 +21,7 @@ export default async function getDomainByName(
   } = {}
 ) {
   if (!options.ignoreWait) {
-    client.output.spinner(
+    output.spinner(
       `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
     );
   }

@@ -13,6 +13,7 @@ import { getDomainConfig } from '../../util/domains/get-domain-config';
 import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
+import output from '../../output-manager';
 
 type Options = {
   '--debug': boolean;
@@ -24,7 +25,6 @@ export default async function add(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const force = opts['--force'];
   const { contextName } = await getScope(client);
 

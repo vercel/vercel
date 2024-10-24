@@ -13,6 +13,7 @@ import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '@vercel/error-utils';
 import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
+import output from '../../output-manager';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -39,11 +40,10 @@ export default async function invite(
   emails: string[] = [],
   { introMsg = '', noopMsg = 'No changes made' } = {}
 ): Promise<number> {
-  const { config, output, telemetryEventStore } = client;
+  const { config, telemetryEventStore } = client;
   const { currentTeam: currentTeamId } = config;
   const telemetry = new TeamsInviteTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });

@@ -8,6 +8,7 @@ import disconnect from './disconnect';
 import { help } from '../help';
 import { gitCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],
@@ -28,7 +29,7 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
-  const { output } = client;
+
   if (parsedArgs.flags['--help']) {
     output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;

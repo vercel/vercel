@@ -12,6 +12,7 @@ import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { errorToString } from '@vercel/error-utils';
+import output from '../../output-manager';
 
 type Options = {};
 
@@ -20,7 +21,6 @@ export default async function buy(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   const skipConfirmation = !!process.env.CI;

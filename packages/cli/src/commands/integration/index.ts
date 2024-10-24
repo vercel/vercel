@@ -8,6 +8,7 @@ import { add } from './add';
 import { integrationCommand } from './command';
 import { list } from './list';
 import { openIntegration } from './open-integration';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -27,9 +28,7 @@ export default async function main(client: Client) {
   );
 
   if (flags['--help']) {
-    client.output.print(
-      help(integrationCommand, { columns: client.stderr.columns })
-    );
+    output.print(help(integrationCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -44,7 +43,7 @@ export default async function main(client: Client) {
       return openIntegration(client, subArgs);
     }
     default: {
-      client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       return 2;
     }
   }

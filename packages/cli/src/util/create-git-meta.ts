@@ -4,12 +4,11 @@ import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
 import { GitMetadata, Project } from '@vercel-internals/types';
-import { Output } from './output';
 import { errorToString, normalizeError } from '@vercel/error-utils';
+import output from '../output-manager';
 
 export async function createGitMeta(
   directory: string,
-  output: Output,
   project?: Project | null
 ): Promise<GitMetadata | undefined> {
   // If a Git repository is already connected via `vc git`, use that remote url
@@ -18,10 +17,7 @@ export async function createGitMeta(
     // in the form of org/repo
     const { repo } = project.link;
 
-    const remoteUrls = await getRemoteUrls(
-      join(directory, '.git/config'),
-      output
-    );
+    const remoteUrls = await getRemoteUrls(join(directory, '.git/config'));
     if (remoteUrls) {
       for (const urlValue of Object.values(remoteUrls)) {
         if (urlValue.includes(repo)) {
@@ -33,7 +29,7 @@ export async function createGitMeta(
 
   // If we couldn't get a remote url from the connected repo, default to the origin url
   if (!remoteUrl) {
-    remoteUrl = await getOriginUrl(join(directory, '.git/config'), output);
+    remoteUrl = await getOriginUrl(join(directory, '.git/config'));
   }
 
   const [commitResult, dirtyResult] = await Promise.allSettled([
@@ -107,7 +103,7 @@ export function isDirty(directory: string): Promise<boolean> {
   });
 }
 
-export async function parseGitConfig(configPath: string, output: Output) {
+export async function parseGitConfig(configPath: string) {
   try {
     return ini.parse(await fs.readFile(configPath, 'utf-8'));
   } catch (err: unknown) {
@@ -139,10 +135,9 @@ export function pluckRemoteUrls(gitConfig: {
 }
 
 export async function getRemoteUrls(
-  configPath: string,
-  output: Output
+  configPath: string
 ): Promise<{ [key: string]: string } | undefined> {
-  const config = await parseGitConfig(configPath, output);
+  const config = await parseGitConfig(configPath);
   if (!config) {
     return;
   }
@@ -158,11 +153,8 @@ export function pluckOriginUrl(gitConfig: {
   return gitConfig['remote "origin"']?.url;
 }
 
-export async function getOriginUrl(
-  configPath: string,
-  output: Output
-): Promise<string | null> {
-  let gitConfig = await parseGitConfig(configPath, output);
+export async function getOriginUrl(configPath: string): Promise<string | null> {
+  let gitConfig = await parseGitConfig(configPath);
   if (!gitConfig) {
     return null;
   }

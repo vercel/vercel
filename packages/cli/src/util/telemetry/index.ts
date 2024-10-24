@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Output } from '../output';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 const LogLabel = `['telemetry']:`;
 
@@ -10,7 +10,6 @@ interface Args {
 }
 
 interface Options {
-  output: Output;
   store: TelemetryEventStore;
   isDebug?: boolean;
 }
@@ -24,7 +23,6 @@ interface Event {
 }
 
 export class TelemetryClient {
-  private output: Output;
   private isDebug: boolean;
   store: TelemetryEventStore;
 
@@ -39,14 +37,13 @@ export class TelemetryClient {
   };
 
   constructor({ opts }: Args) {
-    this.output = opts.output;
     this.isDebug = opts.isDebug || false;
     this.store = opts.store;
   }
 
   private track(eventData: { key: string; value: string }) {
     if (this.isDebug) {
-      this.output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
+      output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
     }
 
     const event: Event = {
@@ -154,7 +151,7 @@ export class TelemetryClient {
   }
 
   trackCommandError(error: string): Event | undefined {
-    this.output.error(error);
+    output.error(error);
     return;
   }
 
@@ -165,22 +162,16 @@ export class TelemetryClient {
 
 export class TelemetryEventStore {
   private events: Event[];
-  private output: Output;
   private isDebug: boolean;
   private sessionId: string;
   private teamId: string = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
-  constructor(opts: {
-    output: Output;
-    isDebug?: boolean;
-    config: GlobalConfig['telemetry'];
-  }) {
-    this.isDebug = opts.isDebug || false;
-    this.output = opts.output;
+  constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
+    this.isDebug = opts?.isDebug || false;
     this.sessionId = randomUUID();
     this.events = [];
-    this.config = opts.config;
+    this.config = opts?.config;
   }
 
   add(event: Event) {
@@ -213,11 +204,11 @@ export class TelemetryEventStore {
 
   save() {
     if (this.isDebug) {
-      // Intentionally not using `this.output.debug` as it will
+      // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
-      this.output.log(`${LogLabel} Flushing Events`);
+      output.log(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
-        this.output.log(JSON.stringify(event));
+        output.log(JSON.stringify(event));
       });
 
       return;

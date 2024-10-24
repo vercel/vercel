@@ -10,6 +10,8 @@ import { promoteCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
+import output from '../../output-manager';
+
 /**
  * `vc promote` command
  * @param {Client} client
@@ -28,11 +30,8 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  const { output } = client;
-
   const telemetry = new PromoteTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -48,7 +47,7 @@ export default async (client: Client): Promise<number> => {
   // validate the timeout
   let timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+    output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
@@ -91,7 +90,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    client.output.prettyError(err);
+    output.prettyError(err);
     return 1;
   }
 };

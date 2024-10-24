@@ -21,9 +21,10 @@ import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
 import { help } from '../help';
 import { inspectCommand } from './command';
+import output from '../../output-manager';
 
 export default async function inspect(client: Client) {
-  const { print, error, warn } = client.output;
+  const { print, error, warn } = output;
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(inspectCommand.options);
@@ -93,7 +94,7 @@ export default async function inspect(client: Client) {
   try {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
-  client.output.spinner(
+  output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
@@ -165,7 +166,7 @@ async function printDetails({
   client: Client;
   startTimestamp: number;
 }): Promise<void> {
-  client.output.log(
+  output.log(
     `Fetched deployment "${chalk.bold(deployment.url)}" in ${chalk.bold(
       contextName
     )} ${elapsed(Date.now() - startTimestamp)}`
@@ -181,7 +182,7 @@ async function printDetails({
     alias: aliases,
   } = deployment;
 
-  const { print, link } = client.output;
+  const { print, link } = output;
 
   const { builds } =
     deployment.version === 2

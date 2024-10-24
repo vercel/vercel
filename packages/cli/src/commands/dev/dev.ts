@@ -11,6 +11,7 @@ import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
+import output from '../../output-manager';
 
 type Options = {
   '--listen': string;
@@ -22,7 +23,6 @@ export default async function dev(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
@@ -46,7 +46,7 @@ export default async function dev(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      client.output.error(
+      output.error(
         `Command ${getCommandName(
           'dev'
         )} requires confirmation. Use option ${param('--yes')} to confirm.`
@@ -74,13 +74,11 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    envValues = (
-      await pullEnvRecords(output, client, project.id, 'vercel-cli:dev')
-    ).env;
+    envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
+      .env;
   }
 
   const devServer = new DevServer(cwd, {
-    output,
     projectSettings,
     envValues,
     repoRoot,

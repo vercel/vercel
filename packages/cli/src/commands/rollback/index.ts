@@ -10,6 +10,7 @@ import { help } from '../help';
 import { rollbackCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
+import output from '../../output-manager';
 
 /**
  * `vc rollback` command
@@ -22,7 +23,6 @@ export default async (client: Client): Promise<number> => {
   const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
   const telemetry = new RollbackTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -38,8 +38,6 @@ export default async (client: Client): Promise<number> => {
   telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(rollbackCommand, { columns: client.stderr.columns }));
     return 2;
@@ -48,7 +46,7 @@ export default async (client: Client): Promise<number> => {
   // validate the timeout
   let timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+    output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
@@ -88,7 +86,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    client.output.prettyError(err);
+    output.prettyError(err);
     return 1;
   }
 };

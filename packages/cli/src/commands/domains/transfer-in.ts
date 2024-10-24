@@ -12,8 +12,8 @@ import checkTransfer from '../../util/domains/check-transfer';
 import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
-
 import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
+import output from '../../output-manager';
 
 type Options = {
   '--code': string;
@@ -24,12 +24,11 @@ export default async function transferIn(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
   const telemetry = new DomainsTransferInTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
   telemetry.trackCliOptionCode(opts['--code']);

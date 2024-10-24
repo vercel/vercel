@@ -76,6 +76,7 @@ import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import parseTarget from '../../util/parse-target';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
+import output from '../../output-manager';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -119,12 +120,10 @@ export interface BuildsManifest {
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
   let { cwd } = client;
-  const { output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -167,7 +166,6 @@ export default async function main(client: Client): Promise<number> {
   // Build `target` influences which environment variables will be used
   const target =
     parseTarget({
-      output,
       flagName: 'target',
       flags: parsedArgs.flags,
     }) || 'preview';
@@ -198,7 +196,7 @@ export default async function main(client: Client): Promise<number> {
     let confirmed = yes;
     if (!confirmed) {
       if (!isTTY) {
-        client.output.print(
+        output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
           )} to retrieve them.`
@@ -215,7 +213,7 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      client.output.print(`Canceled. No Project Settings retrieved.\n`);
+      output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
@@ -264,7 +262,7 @@ export default async function main(client: Client): Promise<number> {
     // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
     const dotenvResult = dotenv.config({
       path: envPath,
-      debug: client.output.isDebugEnabled(),
+      debug: output.isDebugEnabled(),
     });
     if (dotenvResult.error) {
       output.debug(
@@ -325,7 +323,7 @@ async function doBuild(
   cwd: string,
   outputDir: string
 ): Promise<void> {
-  const { localConfigPath, output } = client;
+  const { localConfigPath } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
@@ -365,11 +363,11 @@ async function doBuild(
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
-    await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+    await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
   // Get a list of source files
-  const files = (await getFiles(workPath, client)).map(f =>
+  const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
   );
 
@@ -440,7 +438,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -494,7 +492,7 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath }, output);
+  const corepackShimDir = await initCorepack({ repoRootPath });
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
@@ -735,7 +733,7 @@ async function doBuild(
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
-  await writeFlagsJSON(client, buildResults.values(), outputDir);
+  await writeFlagsJSON(buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -874,7 +872,6 @@ function mergeWildcard(
  * file. It'll skip flags that already exist.
  */
 async function writeFlagsJSON(
-  { output }: Client,
   buildResults: Iterable<BuildResult | BuildOutputConfig>,
   outputDir: string
 ): Promise<void> {

@@ -5,6 +5,7 @@ import { listen } from 'async-listen';
 import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
 import { createProxy } from './proxy';
 import type Client from '../client';
+import output from '../../output-manager';
 
 /**
  * Attempts to execute a Vercel CLI Extension.
@@ -21,7 +22,7 @@ export async function execExtension(
   args: string[],
   cwd: string
 ): Promise<number> {
-  const { debug, log } = client.output;
+  const { debug, log } = output;
   const extensionCommand = `vercel-${name}`;
 
   const { packageJsonPath, lockfilePath } = await scanParentDirs(cwd);

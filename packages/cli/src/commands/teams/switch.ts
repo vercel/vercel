@@ -9,24 +9,20 @@ import getTeams from '../../util/teams/get-teams';
 import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
-import type { Output } from '../../util/output';
+import output from '../../output-manager';
 
-const updateCurrentTeam = (
-  output: Output,
-  config: GlobalConfig,
-  team?: Team
-) => {
+const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
     config.currentTeam = team.id;
   } else {
     delete config.currentTeam;
   }
 
-  writeToConfigFile(output, config);
+  writeToConfigFile(config);
 };
 
 export default async function main(client: Client, desiredSlug?: string) {
-  const { config, output } = client;
+  const { config } = client;
   const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');
@@ -127,7 +123,7 @@ export default async function main(client: Client, desiredSlug?: string) {
       });
     }
 
-    updateCurrentTeam(output, config);
+    updateCurrentTeam(config);
 
     output.success(
       `Your account (${chalk.bold(user.username)}) is now active!`
@@ -159,7 +155,7 @@ export default async function main(client: Client, desiredSlug?: string) {
     });
   }
 
-  updateCurrentTeam(output, config, newTeam);
+  updateCurrentTeam(config, newTeam);
 
   output.success(
     `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`

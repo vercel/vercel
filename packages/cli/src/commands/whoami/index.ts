@@ -6,10 +6,9 @@ import { parseArguments } from '../../util/get-args';
 import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
 
 export default async function whoami(client: Client): Promise<number> {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(whoamiCommand.options);

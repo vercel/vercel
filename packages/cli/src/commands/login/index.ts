@@ -22,10 +22,9 @@ import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
 
 export default async function login(client: Client): Promise<number> {
-  const { output } = client;
-
   // user is not currently authenticated on this machine
   const isInitialLogin = !client.authConfig.token;
 
@@ -89,15 +88,11 @@ export default async function login(client: Client): Promise<number> {
 
   // If we have a brand new login, update `currentTeam`
   if (isInitialLogin) {
-    await updateCurrentTeamAfterLogin(
-      client,
-      output,
-      client.config.currentTeam
-    );
+    await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
   }
 
-  writeToAuthConfigFile(output, client.authConfig);
-  writeToConfigFile(output, client.config);
+  writeToAuthConfigFile(client.authConfig);
+  writeToConfigFile(client.config);
 
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 

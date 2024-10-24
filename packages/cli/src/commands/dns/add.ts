@@ -12,6 +12,7 @@ import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {};
 
@@ -20,7 +21,6 @@ export default async function add(
   opts: Options,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   const parsedParams = parseAddDNSRecordArgs(args);

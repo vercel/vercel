@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
@@ -14,6 +13,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import output from '../../output-manager';
 
 type Options = {};
 
@@ -22,7 +22,6 @@ export default async function inspect(
   opts: Options,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
 
   const [domainName] = args;
@@ -51,7 +50,6 @@ export default async function inspect(
   );
 
   const information = await fetchInformation({
-    output,
     client,
     contextName,
     domainName,
@@ -177,12 +175,10 @@ export default async function inspect(
 }
 
 async function fetchInformation({
-  output,
   client,
   contextName,
   domainName,
 }: {
-  output: Output;
   client: Client;
   contextName: string;
   domainName: string;

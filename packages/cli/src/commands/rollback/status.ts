@@ -16,6 +16,7 @@ import ms from 'ms';
 import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
 import sleep from '../../util/sleep';
+import output from '../../output-manager';
 
 interface RollbackAlias {
   alias: {
@@ -56,7 +57,6 @@ export default async function rollbackStatus({
   project: Project;
   timeout?: string;
 }): Promise<number> {
-  const { output } = client;
   const recentThreshold = Date.now() - ms('3m');
   const rollbackTimeout = Date.now() + ms(timeout);
   let counter = 0;
@@ -179,8 +179,6 @@ async function renderJobFailed({
   project: Project;
   toDeploymentId: string;
 }) {
-  const { output } = client;
-
   try {
     const name = (
       deployment || (await getDeployment(client, contextName, toDeploymentId))
@@ -239,8 +237,6 @@ async function renderJobSucceeded({
   requestedAt: number;
   toDeploymentId: string;
 }) {
-  const { output } = client;
-
   // attempt to get the new deployment url
   let deploymentInfo = '';
   try {

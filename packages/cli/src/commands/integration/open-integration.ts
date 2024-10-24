@@ -5,24 +5,25 @@ import getScope from '../../util/get-scope';
 import type { Configuration } from './types';
 import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import output from '../../output-manager';
 
 export async function openIntegration(client: Client, args: string[]) {
   if (args.length > 1) {
-    client.output.error('Cannot open more than one dashboard at a time');
+    output.error('Cannot open more than one dashboard at a time');
     return 1;
   }
 
   const integrationSlug = args[0];
 
   if (!integrationSlug) {
-    client.output.error('You must pass an integration slug');
+    output.error('You must pass an integration slug');
     return 1;
   }
 
   const { team } = await getScope(client);
 
   if (!team) {
-    client.output.error('Team not found');
+    output.error('Team not found');
     return 1;
   }
 
@@ -31,22 +32,20 @@ export async function openIntegration(client: Client, args: string[]) {
   try {
     configuration = await getFirstConfiguration(client, integrationSlug);
   } catch (error) {
-    client.output.error(
+    output.error(
       `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
     return 1;
   }
 
   if (!configuration) {
-    client.output.error(
+    output.error(
       `No configuration found for ${chalk.bold(`"${integrationSlug}"`)}.`
     );
     return 1;
   }
 
-  client.output.print(
-    `Opening the ${chalk.bold(integrationSlug)} dashboard...`
-  );
+  output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
 
   open(buildSSOLink(team, configuration.id));
 
