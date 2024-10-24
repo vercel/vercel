@@ -98,10 +98,15 @@ export interface Resource {
     slug?: string;
     integrationConfigurationId?: string;
   };
-  projectsMetadata?: {
-    id: string;
-    projectId: string;
-    name: string;
-    environments: string[];
-  }[];
+  projectsMetadata?: ResourceConnection[];
 }
+
+export interface ResourceConnection {
+  id: string;
+  projectId: string;
+  name: string;
+  environments: string[];
+}
+
+export class CancelledError extends Error {}
+export class FailedError extends Error {}
