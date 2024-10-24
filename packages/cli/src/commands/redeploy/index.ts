@@ -17,6 +17,7 @@ import { help } from '../help';
 import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
 
 /**
  * `vc redeploy` command
@@ -36,6 +37,12 @@ export default async function redeploy(client: Client): Promise<number> {
     return 1;
   }
 
+  const telemetry = new RedeployTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
@@ -50,6 +57,9 @@ export default async function redeploy(client: Client): Promise<number> {
     );
     return 1;
   }
+
+  telemetry.trackCliArgumentDeploymentIdOrName(deployIdOrUrl);
+  telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
