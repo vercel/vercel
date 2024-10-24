@@ -1,6 +1,6 @@
 {
   "name": "@vercel/sdk",
-  "version": "14.0.0-canary.3",
+  "version": "14.0.0-canary.4",
   "author": "Speakeasy",
   "tshy": {
     "exports": {

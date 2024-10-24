@@ -57,10 +57,8 @@ export async function projectsGetAll(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetProjectsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -171,7 +169,7 @@ export async function projectsGetAll(
       projectsGetAll(
         client,
         {
-          ...input,
+          ...request,
           from: nextCursor,
         },
         options,

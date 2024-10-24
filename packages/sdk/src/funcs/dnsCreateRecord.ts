@@ -48,10 +48,8 @@ export async function dnsCreateRecord(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateRecordRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

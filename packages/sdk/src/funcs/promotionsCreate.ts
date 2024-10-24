@@ -47,10 +47,8 @@ export async function promotionsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RequestPromoteRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

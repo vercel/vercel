@@ -48,10 +48,8 @@ export async function accessGroupsListMembers(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListAccessGroupMembersRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

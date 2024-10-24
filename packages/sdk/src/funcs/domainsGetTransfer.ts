@@ -48,10 +48,8 @@ export async function domainsGetTransfer(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetDomainTransferRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

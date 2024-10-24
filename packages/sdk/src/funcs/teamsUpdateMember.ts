@@ -48,10 +48,8 @@ export async function teamsUpdateMember(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => UpdateTeamMemberRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

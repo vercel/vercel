@@ -48,10 +48,8 @@ export async function eventsList(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => ListUserEventsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

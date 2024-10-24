@@ -48,10 +48,8 @@ export async function envsCreate(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => CreateProjectEnvRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

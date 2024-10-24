@@ -48,10 +48,8 @@ export async function userRequestDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RequestDeleteRequestBody$outboundSchema.optional().parse(value),
     "Input validation failed",
   );

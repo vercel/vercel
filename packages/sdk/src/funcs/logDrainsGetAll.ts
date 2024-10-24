@@ -49,10 +49,8 @@ export async function logDrainsGetAll(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetAllLogDrainsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

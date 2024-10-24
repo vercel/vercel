@@ -47,10 +47,8 @@ export async function edgeConfigsDeleteSchema(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteEdgeConfigSchemaRequest$outboundSchema.parse(value),
     "Input validation failed",
   );

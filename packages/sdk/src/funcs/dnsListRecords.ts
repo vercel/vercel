@@ -57,10 +57,8 @@ export async function dnsListRecords(
     >
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetRecordsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -170,7 +168,7 @@ export async function dnsListRecords(
       dnsListRecords(
         client,
         {
-          ...input,
+          ...request,
           since: nextCursor,
         },
         options,
