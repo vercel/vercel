@@ -14,6 +14,7 @@ import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
+import { WriteStream } from 'tty';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -23,20 +24,16 @@ chalk.level = 0;
 
 export type Scenario = Router;
 
-class MockStream extends PassThrough {
+class MockStream extends WriteStream {
   isTTY: boolean;
   #_fullOutput: string = '';
   #_chunks: Array<string> = [];
   #_rawChunks: Array<string> = [];
 
   constructor() {
-    super();
+    super(0);
     this.isTTY = true;
   }
-
-  // These are for the `ora` module
-  clearLine() {}
-  cursorTo() {}
 
   override _write(
     chunk: any,
@@ -97,7 +94,9 @@ export class MockClient extends Client {
       config: {},
       localConfig: {},
       stdin: new PassThrough(),
+      // @ts-expect-error
       stdout: new PassThrough(),
+      // @ts-expect-error
       stderr: new PassThrough(),
       output: new Output(new PassThrough()),
     });
