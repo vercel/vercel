@@ -3,7 +3,7 @@
     "vercel-build": "next build"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "15.0.1",
     "react": "latest",
     "react-dom": "latest"
   },

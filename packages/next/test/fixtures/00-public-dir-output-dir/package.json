@@ -3,7 +3,7 @@
     "build": "next build web"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "15.0.1",
     "react": "latest",
     "react-dom": "latest"
   },
