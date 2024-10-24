@@ -1,17 +1,13 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../../util/client';
-import type {
-  Project,
-  ProjectEnvTarget,
-  ProjectLinked,
-} from '@vercel-internals/types';
+import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
 import { writeProjectSettings } from '../../util/projects/project-settings';
-import envPull from '../env/pull';
+import { pullCommandLogic } from '../env/pull';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -29,20 +25,24 @@ async function pullAllEnvFiles(
   environment: string,
   client: Client,
   link: ProjectLinked,
-  project: Project,
   flags: PullCommandFlags,
   cwd: string
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
-  return envPull(
+
+  await pullCommandLogic(
     client,
-    link,
+    client.output,
+    join('.vercel', environmentFile),
+    !!flags['--yes'],
     environment,
-    flags,
-    [join('.vercel', environmentFile)],
+    link,
+    flags['--git-branch'],
     cwd,
     'vercel-cli:pull'
   );
+
+  return 0;
 }
 
 export function parseEnvironment(
@@ -102,7 +102,6 @@ export default async function main(client: Client) {
     environment,
     client,
     link,
-    project,
     parsedArgs.flags,
     cwd
   );
