@@ -20,14 +20,286 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
-  describe.todo('[app]');
-  describe.todo('--meta');
-  describe.todo('--policy');
-  describe.todo('--environment');
-  describe.todo('--next');
-  describe.todo('--prod');
-  describe.todo('--yes');
-  describe.todo('--confirm');
+  describe('[app]', () => {
+    it('should get the deployments for a specified project', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!);
+      await list(client);
+
+      const lines = createLineIterator(client.stderr);
+
+      let line = await lines.next();
+      expect(line.value).toEqual(`Fetching deployments in ${user.username}`);
+
+      line = await lines.next();
+      const { org } = pluckIdentifiersFromDeploymentList(line.value!);
+      expect(org).toEqual(user.username);
+
+      line = await lines.next();
+      expect(line.value).toEqual('');
+
+      line = await lines.next();
+      const header = parseSpacedTableRow(line.value!);
+      expect(header).toEqual([
+        'Age',
+        'Deployment',
+        'Status',
+        'Environment',
+        'Duration',
+        'Username',
+      ]);
+
+      line = await lines.next();
+      const data = parseSpacedTableRow(line.value!);
+      data.shift();
+      expect(data).toEqual([
+        `https://${deployment.url}`,
+        stateString(deployment.readyState || ''),
+        deployment.target === 'production' ? 'Production' : 'Preview',
+        getDeploymentDuration(deployment),
+        user.username,
+      ]);
+    });
+
+    it('should track use of `app` positional argument', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!);
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:app',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--meta', () => {
+    it('should track use of `--meta` option', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--meta', 'key=value');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:meta',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--policy', () => {
+    it('should track use of `--policy` option', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--policy', 'key=value');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:policy',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--environment', () => {
+    it('should track use of `--environment` option with "production" environment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--environment', 'production');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: 'production',
+        },
+      ]);
+    });
+
+    it('should track use of `--environment` option with "preview" environment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--environment', 'preview');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: 'preview',
+        },
+      ]);
+    });
+
+    it('should track use of redacted `--environment` option with custom environment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--environment', 'custom-environment');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--next', () => {
+    it('should track use of `--next` option', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--next', '123456');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:next',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
+  describe('--prod', () => {
+    it('should track use of `--prod` flag', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user, target: 'production' });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--prod');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:prod',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--yes', () => {
+    it('should track use of `--yes` flag', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--yes');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:yes',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
+
+  describe('--confirm', () => {
+    it('should track use of deprecated `--confirm` flag', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--confirm');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:confirm',
+          value: 'TRUE',
+        },
+      ]);
+    });
+  });
 
   it('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
@@ -41,59 +313,6 @@ describe('list', () => {
     const deployment = useDeployment({ creator: user });
 
     client.cwd = fixture('with-team');
-    await list(client);
-
-    const lines = createLineIterator(client.stderr);
-
-    let line = await lines.next();
-    expect(line.value).toEqual('Retrieving project…');
-
-    line = await lines.next();
-    expect(line.value).toEqual(`Fetching deployments in ${teams[0].slug}`);
-
-    line = await lines.next();
-    const { org } = pluckIdentifiersFromDeploymentList(line.value!);
-    expect(org).toEqual(teams[0].slug);
-
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
-    line = await lines.next();
-    const header = parseSpacedTableRow(line.value!);
-    expect(header).toEqual([
-      'Age',
-      'Deployment',
-      'Status',
-      'Environment',
-      'Duration',
-      'Username',
-    ]);
-
-    line = await lines.next();
-    const data = parseSpacedTableRow(line.value!);
-    data.shift();
-    expect(data).toEqual([
-      `https://${deployment.url}`,
-      stateString(deployment.readyState || ''),
-      deployment.target === 'production' ? 'Production' : 'Preview',
-      getDeploymentDuration(deployment),
-      user.username,
-    ]);
-  });
-
-  it('should get the deployments for a specified project', async () => {
-    const user = useUser();
-    const teams = useTeams('team_dummy');
-    assert(Array.isArray(teams));
-    useProject({
-      ...defaultProject,
-      id: 'with-team',
-      name: 'with-team',
-    });
-    const deployment = useDeployment({ creator: user });
-
-    client.cwd = fixture('with-team');
-    client.setArgv(deployment.name);
     await list(client);
 
     const lines = createLineIterator(client.stderr);
@@ -164,13 +383,13 @@ describe('list', () => {
     await prom;
 
     // run again with preview deployments only
-    client.setArgv('--environment', 'preview');
+    client.setArgv('list', '--environment', 'preview');
     prom = list(client);
     await expect(client.stdout).toOutput(`https://${previewDeployment.url}`);
     await prom;
 
     // run again with production deployments only
-    client.setArgv('--environment', 'production');
+    client.setArgv('list', '--environment', 'production');
     prom = list(client);
     await expect(client.stdout).toOutput(`https://${prodDeployment.url}`);
     await prom;
