@@ -18,8 +18,8 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 src",
-    "build": "tshy",
-    "prepublishOnly": "npm run build"
+    "build-package": "tshy",
+    "prepublishOnly": "npm run build-package"
   },
   "peerDependencies": {
     "zod": ">= 3"
@@ -35,6 +35,6 @@
     "zod": "^3.23.4"
   },
   "dependencies": {
-    
+
   }
 }
