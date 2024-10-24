@@ -376,6 +376,9 @@ describe('build', () => {
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
+      // from `vc env pull`
+      { key: 'argument:filename', value: '[REDACTED]' },
+      { key: 'option:environment', value: '[REDACTED]' },
     ]);
   });
 
@@ -415,6 +418,9 @@ describe('build', () => {
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:prod', value: 'TRUE' },
       { key: 'flag:yes', value: 'TRUE' },
+      // from `vc env pull`
+      { key: 'argument:filename', value: '[REDACTED]' },
+      { key: 'option:environment', value: '[REDACTED]' },
     ]);
   });
 
