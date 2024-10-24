@@ -358,7 +358,7 @@ export function useProject(
   client.scenario.get(`/v9/projects`, (req, res) => {
     res.json({
       projects: [project],
-      pagination: null,
+      pagination: {},
     });
   });
   client.scenario.post(`/v1/projects`, (req, res) => {
