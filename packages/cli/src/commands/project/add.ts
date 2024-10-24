@@ -4,12 +4,20 @@ import Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import createProject from '../../util/projects/create-project';
+import { ProjectAddTelemetryClient } from '../../util/telemetry/commands/project/add';
 
 export default async function add(
   client: Client,
   args: string[],
   contextName: string
 ) {
+  const telemetryClient = new ProjectAddTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   const { output } = client;
   if (args.length !== 1) {
     output.error(
@@ -33,6 +41,7 @@ export default async function add(
   const start = Date.now();
 
   const [name] = args;
+  telemetryClient.trackCliArgumentName(name);
 
   try {
     await createProject(client, { name });
