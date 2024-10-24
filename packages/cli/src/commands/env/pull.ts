@@ -21,6 +21,7 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { PullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -76,10 +77,22 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env.local'] = args;
+  const [rawFilename] = args;
+  const filename = rawFilename || '.env.local';
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
+
+  let telemetryClient = new PullTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliOptionGitBranch(gitBranch);
+  telemetryClient.trackCliArgumentFilename(rawFilename);
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';

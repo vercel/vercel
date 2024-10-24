@@ -35,6 +35,17 @@ describe('env pull', () => {
     // check for development env value
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: `subcommand:pull`,
+        value: 'pull',
+      },
+      {
+        key: `flag:yes`,
+        value: 'TRUE',
+      },
+    ]);
   });
 
   it('should handle pulling from Preview env vars', async () => {
@@ -110,6 +121,21 @@ describe('env pull', () => {
     expect(keys[0]).toEqual('ANOTHER');
     expect(keys[1]).toEqual('BRANCH_ENV_VAR');
     expect(keys[2]).toEqual('REDIS_CONNECTION_STRING');
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: `subcommand:pull`,
+        value: 'pull',
+      },
+      {
+        key: `flag:yes`,
+        value: 'TRUE',
+      },
+      {
+        key: `option:git-branch`,
+        value: '[REDACTED]',
+      },
+    ]);
   });
 
   it('should handle alternate filename', async () => {
@@ -136,6 +162,21 @@ describe('env pull', () => {
     // check for development env value
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: `subcommand:pull`,
+        value: 'pull',
+      },
+      {
+        key: `flag:yes`,
+        value: 'TRUE',
+      },
+      {
+        key: `argument:filename`,
+        value: '[REDACTED]',
+      },
+    ]);
   });
 
   it('should use given environment', async () => {
@@ -480,8 +521,4 @@ describe('env pull', () => {
 
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
   });
-
-  describe.todo('[filename]');
-  describe.todo('--yes');
-  describe.todo('--git-branch');
 });
