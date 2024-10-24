@@ -29,6 +29,7 @@ export class TelemetryClient {
   store: TelemetryEventStore;
 
   protected redactedValue = '[REDACTED]';
+  protected noValueToTriggerPrompt = '[TRIGGER_PROMPT]';
   protected redactedArgumentsLength = (args: string[]) => {
     if (args && args.length === 1) {
       return 'ONE';

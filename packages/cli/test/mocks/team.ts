@@ -76,12 +76,14 @@ export function useTeams(
   return options.apiVersion === 2 ? { teams } : teams;
 }
 
-export function createTeam(teamId?: string) {
+export function createTeam(teamId?: string, slug?: string, name?: string) {
   const id = teamId || chance().guid();
+  const teamSlug = slug || chance().string({ length: 5, casing: 'lower' });
+  const teamName = name || chance().company();
   const newTeam = {
     id,
-    slug: chance().string({ length: 5, casing: 'lower' }),
-    name: chance().company(),
+    slug: teamSlug,
+    name: teamName,
     creatorId: chance().guid(),
     created: '2017-04-29T17:21:54.514Z',
     avatar: null,

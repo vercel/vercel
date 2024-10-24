@@ -55,16 +55,19 @@ export default async (client: Client) => {
   switch (subcommand) {
     case 'list':
     case 'ls': {
+      telemetryClient.trackCliSubcommandList('list');
       exitCode = await list(client);
       break;
     }
     case 'switch':
     case 'change': {
+      telemetryClient.trackCliSubcommandSwitch(parsedArgs.args[0]);
       exitCode = await change(client, parsedArgs.args[0]);
       break;
     }
     case 'add':
     case 'create': {
+      telemetryClient.trackCliSubcommandAdd('add');
       exitCode = await add(client);
       break;
     }
