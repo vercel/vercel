@@ -1332,8 +1332,8 @@ importers:
         specifier: 2.6.9
         version: 2.6.9
       path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
+        specifier: 6.3.0
+        version: 6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1533,8 +1533,8 @@ importers:
   packages/routing-utils:
     dependencies:
       path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
+        specifier: git@github.com:pillarjs/path-to-regexp.git#762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3
+        version: github.com/pillarjs/path-to-regexp/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3
     optionalDependencies:
       ajv:
         specifier: ^6.0.0
@@ -15399,12 +15399,13 @@ packages:
     resolution: {integrity: sha512-gu9bD6Ta5bwGrrU8muHzVOBFFREpp2iRkVfhBJahwJ6p6Xw20SjT0MxLnwkjOibQmGSYhiUnf2FLe7k+jcFmGQ==}
     dev: true
 
-  /path-to-regexp@6.1.0:
-    resolution: {integrity: sha512-h9DqehX3zZZDCEm+xbfU0ZmwCGFCAAraPJWMXJ4+v32NjZJilVg3k1TcKsRgIb8IQ/izZSaydDc1OhJCZvs2Dw==}
-    dev: false
-
   /path-to-regexp@6.2.1:
     resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
+    dev: true
+
+  /path-to-regexp@6.3.0:
+    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
+    dev: false
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
@@ -18924,3 +18925,11 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
+
+  github.com/pillarjs/path-to-regexp/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3:
+    resolution: {tarball: https://codeload.github.com/pillarjs/path-to-regexp/tar.gz/762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3}
+    name: path-to-regexp
+    version: 6.2.0
+    prepare: true
+    requiresBuild: true
+    dev: false

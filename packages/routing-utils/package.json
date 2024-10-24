@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "path-to-regexp": "6.1.0"
+    "path-to-regexp": "git@github.com:pillarjs/path-to-regexp.git#762bc6b0d637874e4dba04e9d21e4ce9c4c1bcf3"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
