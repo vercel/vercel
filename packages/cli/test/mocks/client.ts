@@ -9,7 +9,7 @@ import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
-import Client from '../../src/util/client';
+import Client, { FetchOptions } from '../../src/util/client';
 import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
@@ -243,6 +243,19 @@ export class MockClient extends Client {
 
   useScenario(scenario: Scenario) {
     this.scenario = scenario;
+  }
+
+  /**
+   * Client's fetch automatically retries, but for mocked
+   * requests we don't want to retry by default.
+   */
+  fetch(url: string, opts: FetchOptions = {}): Promise<any> {
+    if (!opts.retry) {
+      opts.retry = {
+        retries: 0,
+      };
+    }
+    return super.fetch(url, opts);
   }
 }
 
