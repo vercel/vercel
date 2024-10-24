@@ -240,9 +240,6 @@ importers:
       '@types/js-yaml':
         specifier: 3.12.1
         version: 3.12.1
-      '@types/minimatch':
-        specifier: ^5.1.2
-        version: 5.1.2
       '@types/ms':
         specifier: 0.7.31
         version: 0.7.31
@@ -304,8 +301,8 @@ importers:
         specifier: 2.2.3
         version: 2.2.3
       minimatch:
-        specifier: 3.1.2
-        version: 3.1.2
+        specifier: 9.0.5
+        version: 9.0.5
       multistream:
         specifier: 2.1.1
         version: 2.1.1
@@ -445,9 +442,6 @@ importers:
       '@types/mime-types':
         specifier: 2.1.0
         version: 2.1.0
-      '@types/minimatch':
-        specifier: 3.0.3
-        version: 3.0.3
       '@types/ms':
         specifier: 0.7.30
         version: 0.7.30
@@ -650,8 +644,8 @@ importers:
         specifier: 2.1.24
         version: 2.1.24
       minimatch:
-        specifier: 3.1.2
-        version: 3.1.2
+        specifier: 9.0.5
+        version: 9.0.5
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -770,8 +764,8 @@ importers:
         specifier: 4.0.6
         version: 4.0.6
       minimatch:
-        specifier: 5.0.1
-        version: 5.0.1
+        specifier: 9.0.5
+        version: 9.0.5
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -797,9 +791,6 @@ importers:
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
-      '@types/minimatch':
-        specifier: 3.0.5
-        version: 3.0.5
       '@types/ms':
         specifier: 0.7.30
         version: 0.7.30
@@ -955,8 +946,8 @@ importers:
         specifier: 2.2.2
         version: 2.2.2
       minimatch:
-        specifier: 3.1.2
-        version: 3.1.2
+        specifier: 9.0.5
+        version: 9.0.5
       semver:
         specifier: 6.3.1
         version: 6.3.1
@@ -970,9 +961,6 @@ importers:
       '@types/js-yaml':
         specifier: 4.0.5
         version: 4.0.5
-      '@types/minimatch':
-        specifier: 3.0.5
-        version: 3.0.5
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
@@ -6087,10 +6075,6 @@ packages:
 
   /@types/minimatch@3.0.3:
     resolution: {integrity: sha512-tHq6qdbT9U1IRSGf14CL0pUlULksvY9OZ+5eEgl1N7t+OA3tGvNpxJCzuKQlsNgCVwbAs670L1vcVQi8j9HjnA==}
-    dev: true
-
-  /@types/minimatch@3.0.5:
-    resolution: {integrity: sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==}
     dev: true
 
   /@types/minimatch@5.1.2:
@@ -11712,7 +11696,7 @@ packages:
     dependencies:
       foreground-child: 3.1.1
       jackspeak: 2.2.0
-      minimatch: 9.0.0
+      minimatch: 9.0.5
       minipass: 5.0.0
       path-scurry: 1.8.0
     dev: true
@@ -11724,7 +11708,7 @@ packages:
     dependencies:
       foreground-child: 3.1.1
       jackspeak: 3.1.2
-      minimatch: 9.0.4
+      minimatch: 9.0.5
       minipass: 7.0.4
       path-scurry: 1.11.1
     dev: true
@@ -14447,39 +14431,17 @@ packages:
     dependencies:
       brace-expansion: 1.1.11
 
-  /minimatch@5.0.1:
-    resolution: {integrity: sha512-nLDxIFRyhDblz3qMuq+SoRZED4+miJ/G+tdDrjkkkRnjAsBexeGpgjLEQ0blJy7rHhR2b93rhQY4SvyWu9v03g==}
-    engines: {node: '>=10'}
-    dependencies:
-      brace-expansion: 2.0.1
-    dev: false
-
   /minimatch@5.1.2:
     resolution: {integrity: sha512-bNH9mmM9qsJ2X4r2Nat1B//1dJVcn3+iBLa3IgqJ7EbGaDNepL9QSHOxN4ng33s52VMMhhIfgCYDk3C4ZmlDAg==}
     engines: {node: '>=10'}
     dependencies:
       brace-expansion: 2.0.1
 
-  /minimatch@9.0.0:
-    resolution: {integrity: sha512-0jJj8AvgKqWN05mrwuqi8QYKx1WmYSUoKSxu5Qhs9prezTz10sxAHGNZe9J9cqIJzta8DWsleh2KaVaLl6Ru2w==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    dependencies:
-      brace-expansion: 2.0.1
-    dev: true
-
-  /minimatch@9.0.4:
-    resolution: {integrity: sha512-KqWh+VchfxcMNRAJjj2tnsSJdNbHsVgnkBhTNrW7AjVo6OvLtxw8zfT9oLw1JSohlFzJ8jCoTgaoXvJ+kHt6fw==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    dependencies:
-      brace-expansion: 2.0.1
-    dev: true
-
   /minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
       brace-expansion: 2.0.1
-    dev: true
 
   /minimist@1.2.7:
     resolution: {integrity: sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g==}

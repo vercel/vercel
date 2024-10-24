@@ -27,14 +27,13 @@
     "glob": "8.0.3",
     "js-yaml": "4.1.0",
     "json5": "2.2.2",
-    "minimatch": "3.1.2",
+    "minimatch": "9.0.5",
     "semver": "6.3.1"
   },
   "devDependencies": {
     "@types/glob": "7.2.0",
     "@types/jest": "27.5.1",
     "@types/js-yaml": "4.0.5",
-    "@types/minimatch": "3.0.5",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.10",
     "@vercel/build-utils": "8.4.11",
