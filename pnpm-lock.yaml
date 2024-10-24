@@ -1166,8 +1166,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.27.3
-        version: 0.27.3
+        specifier: 0.27.4
+        version: 0.27.4
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1305,8 +1305,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.27.3
-        version: 0.27.3
+        specifier: 0.27.4
+        version: 0.27.4
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1447,8 +1447,8 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.27.3
-        version: 0.27.3
+        specifier: 0.27.4
+        version: 0.27.4
       '@vercel/routing-utils':
         specifier: 3.1.0
         version: link:../routing-utils
@@ -1490,8 +1490,8 @@ importers:
         specifier: 2.0.2
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.27.3
-        version: 0.27.3
+        specifier: 0.27.4
+        version: 0.27.4
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -7155,8 +7155,8 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/nft@0.27.3:
-    resolution: {integrity: sha512-oySTdDSzUAFDXpsSLk9Q943o+/Yu/+TCFxnehpFQEf/3khi2stMpTHPVNwFdvZq/Z4Ky93lE+MGHpXCRpMkSCA==}
+  /@vercel/nft@0.27.4:
+    resolution: {integrity: sha512-Rioz3LJkEKicKCi9BSyc1RXZ5R6GmXosFMeBSThh6msWSOiArKhb7c75MiWwZEgPL7x0/l3TAfH/l0cxKNuUFA==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
