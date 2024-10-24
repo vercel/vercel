@@ -7,6 +7,7 @@ import { isError } from '@vercel/error-utils';
 import { help } from '../help';
 import { initCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 const COMMAND_CONFIG = {
   init: ['init'],
@@ -29,6 +30,13 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  const telemetry = new InitTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
     output.print(help(initCommand, { columns: client.stderr.columns }));
     return 2;
@@ -41,8 +49,13 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  // Note: the "example" argument is tracked in the `init` function, so that we only
+  // track the literal value for known examples (after the API call fetching the list).
+  telemetry.trackCliArgumentDir(parsedArgs.args[2]);
+  telemetry.trackCliFlagForce(parsedArgs.flags['--force']);
+
   try {
-    return await init(client, parsedArgs.flags, args);
+    return await init(client, parsedArgs.flags, args, telemetry);
   } catch (err: unknown) {
     output.prettyError(err);
     if (isError(err) && typeof err.stack === 'string') {
