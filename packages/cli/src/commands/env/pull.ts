@@ -21,6 +21,7 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -28,6 +29,7 @@ type Options = {
   '--debug': boolean;
   '--yes': boolean;
   '--git-branch': string;
+  '--environment': string;
 };
 
 function readHeadSync(path: string, length: number) {
@@ -68,6 +70,13 @@ export default async function pull(
 ) {
   const { output } = client;
 
+  const telemetryClient = new EnvPullTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
@@ -80,6 +89,11 @@ export default async function pull(
   const fullPath = resolve(cwd, filename);
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
+
+  telemetryClient.trackCliArgumentFilename(args[0]);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliOptionGitBranch(gitBranch);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
 
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
