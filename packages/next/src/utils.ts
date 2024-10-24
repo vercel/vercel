@@ -2507,35 +2507,7 @@ export const onPrerenderRoute =
 
       let chain: Chain | undefined;
       let experimentalStreamingLambdaPath: string | undefined;
-      if (
-        renderingMode === RenderingMode.PARTIALLY_STATIC &&
-        experimentalStreamingLambdaPaths
-      ) {
-        // Try to get the experimental streaming lambda path for the specific
-        // static route first, then try the srcRoute if it doesn't exist. If we
-        // can't find it at all, this constitutes an error.
-        let paths = experimentalStreamingLambdaPaths.get(
-          pathnameToOutputName(entryDirectory, routeKey)
-        );
-        if (!paths && srcRoute) {
-          paths = experimentalStreamingLambdaPaths.get(
-            pathnameToOutputName(entryDirectory, srcRoute)
-          );
-        }
-        if (!paths) {
-          throw new Error(
-            `Invariant: experimentalStreamingLambdaPath is undefined for routeKey=${routeKey} and srcRoute=${
-              srcRoute ?? 'null'
-            }`
-          );
-        }
-
-        // The experimentalStreamingLambdaPath must always be the one found from
-        // this array, and not the one below attached to the chain. If Vercel is
-        // using this for routing, it won't be using the below chain to route,
-        // and this should be the pathname that will work for those cases.
-        experimentalStreamingLambdaPath = paths.output;
-
+      if (renderingMode === RenderingMode.PARTIALLY_STATIC) {
         if (routesManifest?.ppr?.chain?.headers) {
           // When the chain is present in the routes manifest, we use the
           // output path as the target for the chain and assign all the provided
@@ -2544,7 +2516,32 @@ export const onPrerenderRoute =
             outputPath: pathnameToOutputName(entryDirectory, routeKey),
             headers: routesManifest.ppr.chain.headers,
           };
-        } else {
+        } else if (experimentalStreamingLambdaPaths) {
+          // Try to get the experimental streaming lambda path for the specific
+          // static route first, then try the srcRoute if it doesn't exist. If we
+          // can't find it at all, this constitutes an error.
+          let paths = experimentalStreamingLambdaPaths.get(
+            pathnameToOutputName(entryDirectory, routeKey)
+          );
+          if (!paths && srcRoute) {
+            paths = experimentalStreamingLambdaPaths.get(
+              pathnameToOutputName(entryDirectory, srcRoute)
+            );
+          }
+          if (!paths) {
+            throw new Error(
+              `Invariant: experimentalStreamingLambdaPath is undefined for routeKey=${routeKey} and srcRoute=${
+                srcRoute ?? 'null'
+              }`
+            );
+          }
+
+          // The experimentalStreamingLambdaPath must always be the one found from
+          // this array, and not the one below attached to the chain. If Vercel is
+          // using this for routing, it won't be using the below chain to route,
+          // and this should be the pathname that will work for those cases.
+          experimentalStreamingLambdaPath = paths.output;
+
           // When the chain is not present in the routes manifest, we use the
           // experimental streaming lambda path as the target for the chain and
           // assign the pathname as the matched path to the headers. This allows
