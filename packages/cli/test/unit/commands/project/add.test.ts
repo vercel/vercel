@@ -25,5 +25,31 @@ describe('add', () => {
         `Success! Project test-project added (${user.username})`
       );
     });
+
+    it('tracks argument', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'test-project',
+        name: 'test-project',
+      });
+
+      client.setArgv('project', 'add', 'test-project');
+      await projects(client);
+
+      const project: Project = await client.fetch(`/v8/projects/test-project`);
+      expect(project).toBeDefined();
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `subcommand:add`,
+          value: 'add',
+        },
+        {
+          key: `argument:name`,
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 });
