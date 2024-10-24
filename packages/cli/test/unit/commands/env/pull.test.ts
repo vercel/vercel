@@ -481,7 +481,71 @@ describe('env pull', () => {
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
   });
 
-  describe.todo('[filename]');
-  describe.todo('--yes');
-  describe.todo('--git-branch');
+  describe('[filename]', () => {
+    it('tracks filename argument', async () => {
+      const project = 'vercel-env-pull';
+      useUser();
+      useTeams('team_dummy');
+      useProject({ ...defaultProject, id: project, name: project });
+      client.setArgv('env', 'pull', 'testName');
+      const cwd = setupUnitFixture(project);
+      client.cwd = cwd;
+      await env(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:pull', value: 'pull' },
+        { key: 'argument:filename', value: '[REDACTED]' },
+      ]);
+    });
+  });
+
+  describe('--environment', () => {
+    it('tracks environment option', async () => {
+      const project = 'vercel-env-pull';
+      useUser();
+      useTeams('team_dummy');
+      useProject({ ...defaultProject, id: project, name: project });
+      client.setArgv('env', 'pull', '--environment', 'production');
+      const cwd = setupUnitFixture(project);
+      client.cwd = cwd;
+      await env(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:pull', value: 'pull' },
+        { key: 'option:environment', value: '[REDACTED]' },
+      ]);
+    });
+  });
+
+  describe('--yes', () => {
+    it('tracks yes flag', async () => {
+      const project = 'vercel-env-pull';
+      useUser();
+      useTeams('team_dummy');
+      useProject({ ...defaultProject, id: project, name: project });
+      client.setArgv('env', 'pull', '--yes');
+      const cwd = setupUnitFixture(project);
+      client.cwd = cwd;
+      await env(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:pull', value: 'pull' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+  });
+
+  describe('--git-branch', () => {
+    it('tracks git-branch option', async () => {
+      const project = 'vercel-env-pull';
+      useUser();
+      useTeams('team_dummy');
+      useProject({ ...defaultProject, id: project, name: project });
+      client.setArgv('env', 'pull', '--git-branch', 'feat/awesome-thing');
+      const cwd = setupUnitFixture(project);
+      client.cwd = cwd;
+      await env(client);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:pull', value: 'pull' },
+        { key: 'option:git-branch', value: '[REDACTED]' },
+      ]);
+    });
+  });
 });
