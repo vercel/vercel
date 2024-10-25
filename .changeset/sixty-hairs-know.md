@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add telemtry for `vc env ls`
+Add telemetry for `vercel env ls`
