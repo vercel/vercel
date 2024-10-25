@@ -22,7 +22,6 @@ import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
-import { Output } from '../../util/output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -83,7 +82,6 @@ export default async function pull(
 
   await pullCommandLogic(
     client,
-    output,
     filename,
     !!skipConfirmation,
     environment,
@@ -98,7 +96,6 @@ export default async function pull(
 
 export async function pullCommandLogic(
   client: Client,
-  output: Output,
   filename: string,
   skipConfirmation: boolean,
   environment: string,
