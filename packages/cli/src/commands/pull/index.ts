@@ -33,7 +33,6 @@ async function pullAllEnvFiles(
 
   await pullCommandLogic(
     client,
-    client.output,
     join('.vercel', environmentFile),
     !!flags['--yes'],
     environment,

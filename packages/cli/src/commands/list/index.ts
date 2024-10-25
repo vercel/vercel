@@ -56,7 +56,6 @@ export default async function list(client: Client) {
 
   const telemetry = new ListTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
