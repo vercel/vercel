@@ -1,7 +1,5 @@
-import { getSubdomain } from 'tldts';
 import chalk from 'chalk';
-
-import { Output } from '../../util/output';
+import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
@@ -15,6 +13,7 @@ import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsCommandFlags } from './command';
+import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
 
 export default async function issue(
   client: Client,
@@ -22,7 +21,7 @@ export default async function issue(
   args: string[]
 ) {
   let cert;
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
   const addStamp = stamp();
   const {
     '--challenge-only': challengeOnly,
@@ -32,7 +31,17 @@ export default async function issue(
     '--ca': caPath,
   } = opts;
 
-  const { contextName } = await getScope(client);
+  const telemetry = new CertsIssueTelemetryClient({
+    opts: {
+      output,
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagChallengeOnly(challengeOnly);
+  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliOptionCrt(crtPath);
+  telemetry.trackCliOptionKey(keyPath);
+  telemetry.trackCliOptionCa(caPath);
 
   if (overwite) {
     output.error('Overwrite option is deprecated');
@@ -83,10 +92,12 @@ export default async function issue(
 
   const cns = getCnsFromArgs(args);
 
+  const { contextName } = await getScope(client);
+
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.
   if (challengeOnly) {
-    return runStartOrder(output, client, cns, contextName, addStamp);
+    return runStartOrder(client, cns, contextName, addStamp);
   }
 
   // If the user does not specify anything, we try to fullfill a pending order that may exist
@@ -99,7 +110,7 @@ export default async function issue(
   if (cert instanceof ERRORS.CertError) {
     if (cert.meta.code === 'wildcard_not_allowed') {
       // Fallback to start cert order when receiving a wildcard_not_allowed error
-      return runStartOrder(output, client, cns, contextName, addStamp, {
+      return runStartOrder(client, cns, contextName, addStamp, {
         fallingBack: true,
       });
     }
@@ -128,13 +139,13 @@ export default async function issue(
 }
 
 async function runStartOrder(
-  output: Output,
   client: Client,
   cns: string[],
   contextName: string,
   stamp: () => string,
   { fallingBack = false } = {}
 ) {
+  const { output } = client;
   const { challengesToResolve } = await startCertOrder(
     client,
     cns,
