@@ -376,7 +376,6 @@ describe('build', () => {
     }
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
-      // from `vc env pull`
     ]);
   });
 
