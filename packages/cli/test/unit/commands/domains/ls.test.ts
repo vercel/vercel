@@ -11,8 +11,8 @@ describe('domains ls', () => {
     useDomains();
     client.setArgv('domains', 'ls');
     let exitCodePromise = domains(client);
-    await expect(client.stderr).toOutput('example-19.com');
     await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('example-19.com');
   });
 
   describe('--limit', () => {
@@ -21,8 +21,8 @@ describe('domains ls', () => {
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
       const exitCodePromise = domains(client);
-      await expect(client.stderr).toOutput('example-1.com');
       await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('example-1.com');
     });
   });
   describe.todo('--next');
