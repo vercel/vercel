@@ -82,7 +82,7 @@ export default async function pull(
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
-  await pullCommandLogic(
+  await envPullCommandLogic(
     client,
     output,
     filename,
@@ -97,7 +97,7 @@ export default async function pull(
   return 0;
 }
 
-export async function pullCommandLogic(
+export async function envPullCommandLogic(
   client: Client,
   output: Output,
   filename: string,
