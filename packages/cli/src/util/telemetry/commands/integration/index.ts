@@ -15,13 +15,6 @@ export class IntegrationTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliSubcommandMove(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'move',
-      value: actual,
-    });
-  }
-
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
