@@ -6,6 +6,6 @@ describe('env', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('env');
     const exitCodePromise = env(client);
-    expect(exitCodePromise).resolves.toBe(1);
+    await expect(exitCodePromise).resolves.toBe(1);
   });
 });
