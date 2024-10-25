@@ -4,7 +4,6 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { help } from '../help';
 import list from './list';
 import { targetCommand } from './command';
-import { ensureLink } from '../../util/link/ensure-link';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
@@ -14,8 +13,6 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let subcommand: string | string[];
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(targetCommand.options);
@@ -42,20 +39,14 @@ export default async function main(client: Client) {
   }
 
   parsedArgs.args = parsedArgs.args.slice(1);
-  subcommand = parsedArgs.args[0] || 'list';
+  const subcommand = parsedArgs.args[0];
   const args = parsedArgs.args.slice(1);
-  const { cwd } = client;
-
-  const linkedProject = await ensureLink(targetCommand.name, client, cwd);
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
-  }
 
   switch (subcommand) {
     case 'ls':
     case 'list':
       telemetry.trackCliSubcommandList(subcommand);
-      return await list(client, parsedArgs.flags, args, linkedProject);
+      return await list(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       client.output.print(
