@@ -13,8 +13,8 @@ describe('env rm', () => {
     useProject(
       {
         ...defaultProject,
-        id: 'vercel-env-pull',
-        name: 'vercel-env-pull',
+        id: 'vercel-env-rm',
+        name: 'vercel-env-rm',
       },
       [
         {
@@ -30,7 +30,7 @@ describe('env rm', () => {
         },
       ]
     );
-    const cwd = setupUnitFixture('vercel-env-pull');
+    const cwd = setupUnitFixture('vercel-env-rm');
     client.cwd = cwd;
   });
 
