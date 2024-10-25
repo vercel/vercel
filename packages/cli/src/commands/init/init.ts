@@ -13,6 +13,7 @@ import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 type Options = {
   '--debug': boolean;
@@ -31,7 +32,8 @@ const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 export default async function init(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: InitTelemetryClient
 ) {
   const [name, dir] = args;
   const force = opts['--force'];
@@ -64,13 +66,17 @@ export default async function init(
   }
 
   if (exampleList.includes(name)) {
+    telemetry.trackCliArgumentExample(name, true);
     return extractExample(client, name, dir, force);
   }
 
   const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
+    telemetry.trackCliArgumentExample(name, true);
     return extractExample(client, name, dir, force, 'v1');
   }
+
+  telemetry.trackCliArgumentExample(name, false);
 
   const found = await guess(client, exampleList, name);
 

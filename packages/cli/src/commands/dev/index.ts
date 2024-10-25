@@ -19,6 +19,7 @@ import { help } from '../help';
 import { devCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -43,6 +44,13 @@ export default async function main(client: Client) {
 
   let args;
 
+  const { telemetryEventStore } = client;
+  const telemetry = new DevTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(devCommand.options);
@@ -54,6 +62,12 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
+
+  telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliFlagHelp(parsedArgs.flags['--help']);
+  telemetry.trackCliOptionPort(parsedArgs.flags['--port']);
+  telemetry.trackCliOptionListen(parsedArgs.flags['--listen']);
 
   if (parsedArgs.flags['--help']) {
     output.print(help(devCommand, { columns: client.stderr.columns }));
@@ -72,7 +86,10 @@ export default async function main(client: Client) {
     parsedArgs.flags['--listen'] = parsedArgs.flags['--port'];
   }
 
-  const [dir = '.'] = args;
+  const [passedDir] = args;
+  telemetry.trackCliArgumentDir(passedDir);
+
+  const dir = passedDir || '.';
 
   const vercelConfig = await readConfig(dir);
 

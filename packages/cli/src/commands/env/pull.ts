@@ -22,6 +22,7 @@ import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { Output } from '../../util/output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -75,11 +76,38 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env.local'] = args;
-  const fullPath = resolve(cwd, filename);
+  const [rawFilename] = args;
+  const filename = rawFilename || '.env.local';
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
+  await pullCommandLogic(
+    client,
+    output,
+    filename,
+    !!skipConfirmation,
+    environment,
+    link,
+    gitBranch,
+    cwd,
+    source
+  );
+
+  return 0;
+}
+
+export async function pullCommandLogic(
+  client: Client,
+  output: Output,
+  filename: string,
+  skipConfirmation: boolean,
+  environment: string,
+  link: ProjectLinked,
+  gitBranch: string | undefined,
+  cwd: string,
+  source: EnvRecordsSource
+) {
+  const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
@@ -95,7 +123,7 @@ export default async function pull(
     ))
   ) {
     output.log('Canceled');
-    return 0;
+    return;
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
@@ -166,8 +194,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  return 0;
 }
 
 function escapeValue(value: string | undefined) {
