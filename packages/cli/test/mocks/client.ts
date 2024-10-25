@@ -79,13 +79,13 @@ class MockTelemetryEventStore extends TelemetryEventStore {
   }
 }
 
-function setupMockServer(scenario: express.Router): Express {
+function setupMockServer(mockClient: MockClient): Express {
   const app = express();
   app.use(express.json());
 
   // play scenario
   app.use((req, res, next) => {
-    scenario(req, res, next);
+    mockClient.scenario(req, res, next);
   });
 
   // catch requests that were not intercepted
@@ -144,7 +144,7 @@ export class MockClient extends Client {
     });
 
     this.scenario = Router();
-    this.app = setupMockServer(this.scenario);
+    this.app = setupMockServer(this);
 
     this.reset();
   }
