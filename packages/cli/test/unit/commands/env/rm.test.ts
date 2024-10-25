@@ -30,7 +30,7 @@ describe('env rm', () => {
         },
       ]
     );
-    const cwd = setupUnitFixture('vercel-env-rm');
+    const cwd = setupUnitFixture('commands/env/vercel-env-rm');
     client.cwd = cwd;
   });
 
