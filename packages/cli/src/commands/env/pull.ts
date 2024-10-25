@@ -21,6 +21,8 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { Output } from '../../util/output';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -28,6 +30,7 @@ type Options = {
   '--debug': boolean;
   '--yes': boolean;
   '--git-branch': string;
+  '--environment': string;
 };
 
 function readHeadSync(path: string, length: number) {
@@ -68,6 +71,13 @@ export default async function pull(
 ) {
   const { output } = client;
 
+  const telemetryClient = new EnvPullTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
@@ -76,11 +86,42 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env.local'] = args;
-  const fullPath = resolve(cwd, filename);
+  const [rawFilename] = args;
+  const filename = rawFilename || '.env.local';
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
+  telemetryClient.trackCliArgumentFilename(args[0]);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliOptionGitBranch(gitBranch);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  await envPullCommandLogic(
+    client,
+    output,
+    filename,
+    !!skipConfirmation,
+    environment,
+    link,
+    gitBranch,
+    cwd,
+    source
+  );
+
+  return 0;
+}
+
+export async function envPullCommandLogic(
+  client: Client,
+  output: Output,
+  filename: string,
+  skipConfirmation: boolean,
+  environment: string,
+  link: ProjectLinked,
+  gitBranch: string | undefined,
+  cwd: string,
+  source: EnvRecordsSource
+) {
+  const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
@@ -96,7 +137,7 @@ export default async function pull(
     ))
   ) {
     output.log('Canceled');
-    return 0;
+    return;
   }
 
   const projectSlugLink = formatProject(
@@ -171,8 +212,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  return 0;
 }
 
 function escapeValue(value: string | undefined) {
