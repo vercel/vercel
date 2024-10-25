@@ -6,7 +6,26 @@ import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 
-import './test/mocks/matchers';
+import './test/mocks/matchers/index';
+
+import fetch from 'node-fetch';
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
+
+vi.mock(import('node-fetch'), async importOriginal => {
+  const mod = await importOriginal(); // type is inferred
+  const mock = vi.fn(() => {
+    return {
+      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
+    };
+  });
+  return {
+    ...mod,
+    default: mock,
+  };
+});
 
 import fetch from 'node-fetch';
 

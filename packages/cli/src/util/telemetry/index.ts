@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Output } from '../output';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
+import fetch from 'node-fetch';
 
 const LogLabel = `['telemetry']:`;
 
@@ -18,6 +19,7 @@ interface Options {
 interface Event {
   teamId?: string;
   sessionId?: string;
+  eventTime: number;
   id: string;
   key: string;
   value: string;
@@ -51,6 +53,7 @@ export class TelemetryClient {
 
     const event: Event = {
       id: randomUUID(),
+      eventTime: Date.now(),
       ...eventData,
     };
 
@@ -174,7 +177,7 @@ export class TelemetryEventStore {
   constructor(opts: {
     output: Output;
     isDebug?: boolean;
-    config: GlobalConfig['telemetry'];
+    config?: GlobalConfig['telemetry'];
   }) {
     this.isDebug = opts.isDebug || false;
     this.output = opts.output;
