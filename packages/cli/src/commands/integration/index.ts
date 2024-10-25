@@ -8,6 +8,7 @@ import { add } from './add';
 import { integrationCommand } from './command';
 import { list } from './list';
 import { openIntegration } from './open-integration';
+import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -16,15 +17,22 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
+  const telemetry = new IntegrationTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   const { args, flags } = parseArguments(
     client.argv.slice(2),
     getFlagsSpecification(integrationCommand.options),
     { permissive: true }
   );
-  const { subcommand, args: subArgs } = getSubcommand(
-    args.slice(1),
-    COMMAND_CONFIG
-  );
+  const {
+    subcommand,
+    subcommandOriginal,
+    args: subArgs,
+  } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   if (flags['--help']) {
     client.output.print(
@@ -35,12 +43,15 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, subArgs);
     }
     case 'list': {
+      telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
     }
     case 'open': {
+      telemetry.trackCliSubcommandOpen(subcommandOriginal);
       return openIntegration(client, subArgs);
     }
     default: {
