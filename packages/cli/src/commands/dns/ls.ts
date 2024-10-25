@@ -35,9 +35,9 @@ export default async function ls(
   const [domainName] = args;
   const lsStamp = stamp();
 
-  telemetry.trackArgumentDomainName(domainName);
-  telemetry.trackOptionLimit(opts['--limit']);
-  telemetry.trackOptionNext(opts['--next']);
+  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   if (args.length > 1) {
     output.error(
