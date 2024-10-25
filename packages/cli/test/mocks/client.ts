@@ -121,7 +121,7 @@ export class MockClient extends Client {
       console.warn(message);
       res.status(500).json({
         error: {
-          code: 'not_found',
+          code: 'mock_unimplemented',
           message,
         },
       });
