@@ -25,7 +25,7 @@ export const logsCommand = {
       name: 'follow',
       shorthand: 'f',
       description: 'Wait for additional data [off]',
-      type: String,
+      type: Boolean,
       deprecated: true,
     },
     {
@@ -33,7 +33,7 @@ export const logsCommand = {
       shorthand: 'n',
       description: 'Number of log entries [100]',
       argument: 'NUMBER',
-      type: String,
+      type: Number,
       deprecated: true,
     },
     {
