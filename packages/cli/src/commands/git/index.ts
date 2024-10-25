@@ -9,6 +9,7 @@ import { help } from '../help';
 import { gitCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
+import { GitTelemetryClient } from '../../util/telemetry/commands/git';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],
@@ -29,6 +30,11 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
+  const telemetry = new GitTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   if (parsedArgs.flags['--help']) {
     output.print(help(gitCommand, { columns: client.stderr.columns }));
@@ -56,8 +62,10 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'connect':
+      telemetry.trackCliSubcommandConnect('connect');
       return await connect(client, parsedArgs.flags, args, project, org);
     case 'disconnect':
+      telemetry.trackCliSubcommandDisconnect('disconnect');
       return await disconnect(client, args, project, org);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

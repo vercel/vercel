@@ -56,14 +56,19 @@ export default async function main(client: Client) {
   );
   switch (subcommand) {
     case 'add':
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, parsedArgs.flags, args);
     case 'inspect':
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, parsedArgs.flags, args);
     case 'move':
+      telemetry.trackCliSubcommandMove(subcommandOriginal);
       return move(client, parsedArgs.flags, args);
     case 'buy':
+      telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, parsedArgs.flags, args);
     case 'rm':
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArgs.flags, args);
     case 'transferIn':
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);

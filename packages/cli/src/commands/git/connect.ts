@@ -17,6 +17,7 @@ import {
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
+import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -57,6 +58,15 @@ export default async function connect(
   org: Org | undefined
 ) {
   const { cwd } = client;
+  const telemetry = new GitConnectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliFlagYes(argv['--yes']);
+  telemetry.trackCliFlagConfirm(argv['--confirm']);
+
   const confirm = Boolean(argv['--yes']);
   const repoArg = args[0];
 
@@ -93,6 +103,7 @@ export default async function connect(
       );
       return 1;
     }
+    telemetry.trackCliArgumentGitUrl(repoArg);
     if (gitConfig) {
       return await connectArgWithLocalGit({
         client,
