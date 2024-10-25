@@ -49,11 +49,11 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionOutput(n?: string, valid?: boolean) {
+  trackCliOptionOutput(n?: string, known?: boolean) {
     if (n) {
       this.trackCliOption({
         option: 'output',
-        value: valid ? n : this.redactedValue,
+        value: known ? n : this.redactedValue,
       });
     }
   }
