@@ -41,7 +41,7 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
-import pull from '../pull';
+import { pullCommandLogic } from '../pull';
 import { staticFiles as getFiles } from '../../util/get-files';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -226,7 +226,13 @@ export default async function main(client: Client): Promise<number> {
       `--environment`,
       target,
     ];
-    const result = await pull(client);
+    const result = await pullCommandLogic(
+      client,
+      client.cwd,
+      Boolean(parsedArgs.flags['--yes']),
+      target,
+      parsedArgs.flags
+    );
     if (result !== 0) {
       return result;
     }

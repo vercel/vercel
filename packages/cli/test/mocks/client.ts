@@ -9,7 +9,7 @@ import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
-import Client from '../../src/util/client';
+import Client, { FetchOptions } from '../../src/util/client';
 import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
@@ -79,6 +79,42 @@ class MockTelemetryEventStore extends TelemetryEventStore {
   }
 }
 
+function setupMockServer(mockClient: MockClient): Express {
+  const app = express();
+  app.use(express.json());
+
+  // play scenario
+  app.use((req, res, next) => {
+    mockClient.scenario(req, res, next);
+  });
+
+  // catch requests that were not intercepted
+  app.use((req, res) => {
+    const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
+    // eslint-disable-next-line no-console
+    console.warn(message);
+    res.status(500).json({
+      error: {
+        code: 'not_found',
+        message,
+      },
+    });
+  });
+
+  // global error handling must be last
+  // @ts-ignore - this signature is actually valid
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((error, _req, res, _next) => {
+    res.status(500).json({
+      error: {
+        message: error.message,
+      },
+    });
+  });
+
+  return app;
+}
+
 export class MockClient extends Client {
   stdin!: MockStream;
   stdout!: MockStream;
@@ -104,30 +140,11 @@ export class MockClient extends Client {
 
     this.telemetryEventStore = new MockTelemetryEventStore({
       output: this.output,
-    });
-
-    this.app = express();
-    this.app.use(express.json());
-
-    // play scenario
-    this.app.use((req, res, next) => {
-      this.scenario(req, res, next);
-    });
-
-    // catch requests that were not intercepted
-    this.app.use((req, res) => {
-      const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-      // eslint-disable-next-line no-console
-      console.warn(message);
-      res.status(500).json({
-        error: {
-          code: 'not_found',
-          message,
-        },
-      });
+      config: undefined,
     });
 
     this.scenario = Router();
+    this.app = setupMockServer(this);
 
     this.reset();
   }
@@ -243,6 +260,19 @@ export class MockClient extends Client {
 
   useScenario(scenario: Scenario) {
     this.scenario = scenario;
+  }
+
+  /**
+   * Client's fetch automatically retries, but for mocked
+   * requests we don't want to retry by default.
+   */
+  fetch(url: string, opts: FetchOptions = {}): Promise<any> {
+    if (!opts.retry) {
+      opts.retry = {
+        retries: 0,
+      };
+    }
+    return super.fetch(url, opts);
   }
 }
 

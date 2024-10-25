@@ -1,17 +1,13 @@
 import chalk from 'chalk';
 import { join } from 'path';
 import Client from '../../util/client';
-import type {
-  Project,
-  ProjectEnvTarget,
-  ProjectLinked,
-} from '@vercel-internals/types';
+import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
 import { VERCEL_DIR, VERCEL_DIR_PROJECT } from '../../util/projects/link';
 import { writeProjectSettings } from '../../util/projects/project-settings';
-import envPull from '../env/pull';
+import { envPullCommandLogic } from '../env/pull';
 import {
   isValidEnvTarget,
   getEnvTargetPlaceholder,
@@ -20,29 +16,35 @@ import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
-import { pullCommand, type PullCommandFlags } from './command';
+import { pullCommand } from './command';
+import { type EnvCommandFlags } from '../env/command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 
 async function pullAllEnvFiles(
   environment: string,
   client: Client,
   link: ProjectLinked,
-  project: Project,
-  flags: PullCommandFlags,
+  flags: EnvCommandFlags,
   cwd: string
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
-  return envPull(
+
+  await envPullCommandLogic(
     client,
-    link,
+    client.output,
+    join('.vercel', environmentFile),
+    !!flags['--yes'],
     environment,
-    flags,
-    [join('.vercel', environmentFile)],
+    link,
+    flags['--git-branch'],
     cwd,
     'vercel-cli:pull'
   );
+
+  return 0;
 }
 
 export function parseEnvironment(
@@ -78,6 +80,7 @@ export default async function main(client: Client) {
 
   let cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const isProduction = Boolean(parsedArgs.flags['--prod']);
   const environment =
     parseTarget({
       output: client.output,
@@ -85,6 +88,35 @@ export default async function main(client: Client) {
       flags: parsedArgs.flags,
     }) || 'development';
 
+  const telemetryClient = new PullTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetryClient.trackCliFlagYes(autoConfirm);
+  telemetryClient.trackCliFlagProd(isProduction);
+  telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
+  telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+
+  const returnCode = await pullCommandLogic(
+    client,
+    cwd,
+    autoConfirm,
+    environment,
+    parsedArgs.flags
+  );
+  return returnCode;
+}
+
+export async function pullCommandLogic(
+  client: Client,
+  cwd: string,
+  autoConfirm: boolean,
+  environment: string,
+  flags: EnvCommandFlags
+): Promise<number> {
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
     return link;
@@ -102,8 +134,7 @@ export default async function main(client: Client) {
     environment,
     client,
     link,
-    project,
-    parsedArgs.flags,
+    flags,
     cwd
   );
   if (pullResultCode !== 0) {

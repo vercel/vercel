@@ -15,6 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
 
 type Options = {
   '--debug': boolean;
@@ -32,6 +33,18 @@ export default async function add(
   const { project } = link;
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
+
+  const telemetryClient = new EnvAddTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTargetArg);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagForce(opts['--force']);
 
   if (args.length > 3) {
     output.error(
