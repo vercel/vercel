@@ -10,12 +10,6 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
-  describe('[project-path]', () => {
-    describe.todo('--environment');
-    describe.todo('--git-branch');
-    describe.todo('--yes');
-  });
-
   it('should handle pulling', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();
@@ -159,6 +153,13 @@ describe('pull', () => {
       .toString()
       .includes('REDIS_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'option:environment',
+        value: 'preview',
+      },
+    ]);
   });
 
   it('should handle --environment=production flag', async () => {
@@ -196,6 +197,13 @@ describe('pull', () => {
       .toString()
       .includes('SQL_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv2).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'option:environment',
+        value: 'production',
+      },
+    ]);
   });
 
   it('should work with repo link', async () => {
@@ -223,5 +231,109 @@ describe('pull', () => {
       `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
     );
     await expect(exitCodePromise).resolves.toEqual(0);
+  });
+
+  it('should track --yes', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+    ]);
+  });
+
+  it('should track --environment', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--environment=preview', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'option:environment',
+        value: 'preview',
+      },
+    ]);
+  });
+
+  it('should track custom --prod', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--prod', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'flag:prod',
+        value: 'TRUE',
+      },
+    ]);
+  });
+
+  it('should track --git-branch', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--git-branch=custom', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'option:git-branch',
+        value: '[REDACTED]',
+      },
+    ]);
   });
 });
