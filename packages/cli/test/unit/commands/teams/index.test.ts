@@ -6,6 +6,6 @@ describe('teams', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('teams');
     const exitCodePromise = teams(client);
-    expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 });
