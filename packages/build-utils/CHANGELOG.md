@@ -1,5 +1,19 @@
 # @vercel/build-utils
 
+## 8.4.11
+
+### Patch Changes
+
+- Improve parsing of `turbo.json` ([#12266](https://github.com/vercel/vercel/pull/12266))
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 8.4.10
+
+### Patch Changes
+
+- Parse `turbo.json` as json5 ([#12259](https://github.com/vercel/vercel/pull/12259))
+
 ## 8.4.9
 
 ### Patch Changes

@@ -1,7 +1,8 @@
-import {
+import type {
   Configuration,
   Integration,
   MetadataSchema,
+  Resource,
 } from '../../src/commands/integration/types';
 import { client } from './client';
 
@@ -143,6 +144,40 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataUnsupported: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Primary Region',
+      default: 'us-east-1',
+      description: 'Primary region where your database will be hosted',
+      'ui:placeholder': 'Choose your region',
+      type: 'string',
+      'ui:options': [
+        {
+          value: 'us-west-1',
+          label: 'West US (North California)',
+        },
+        {
+          value: 'us-east-1',
+          label: 'East US (North Virginia)',
+        },
+      ],
+    },
+    storage: {
+      type: 'number',
+      'ui:control': 'input',
+      'ui:hidden': { expr: "Region == 'us-east-1" },
+      'ui:label': 'Storage',
+      description: 'Disk space in GiB',
+      minimum: 1,
+      maximum: 256,
+    },
+  },
+  required: ['region'],
+};
+
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
@@ -192,6 +227,21 @@ const integrations: Record<string, Integration> = {
     name: 'Acme Integration No Products',
     slug: 'acme-no-products',
     products: [],
+  },
+  'acme-unsupported': {
+    id: 'acme',
+    name: 'Acme Integration',
+    slug: 'acme',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataUnsupported,
+      },
+    ],
   },
 };
 
@@ -311,6 +361,97 @@ const integrationPlans: Record<string, unknown> = {
   },
 };
 
+const resources: { stores: Resource[] } = {
+  stores: [
+    {
+      id: 'store_not_marketplace',
+      type: 'postgres',
+      name: 'foobar',
+      status: 'available',
+      product: {},
+    },
+    {
+      id: 'store_1',
+      type: 'integration',
+      name: 'store-acme-connected-project',
+      status: null,
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_1',
+          projectId: 'prj_connected',
+          name: 'connected-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_2',
+      type: 'integration',
+      name: 'store-acme-other-project',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_2',
+          projectId: 'prj_otherProject',
+          name: 'other-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_3',
+      type: 'integration',
+      name: 'store-foo-bar-both-projects',
+      status: 'initializing',
+      product: { name: 'Foo Bar', slug: 'foo-bar' },
+      projectsMetadata: [
+        {
+          id: 'spc_3',
+          projectId: 'prj_connected',
+          name: 'connected-project',
+          environments: ['production', 'preview', 'development'],
+        },
+        {
+          id: 'spc_4',
+          projectId: 'prj_otherProject',
+          name: 'other-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_4',
+      type: 'integration',
+      name: 'store-acme-no-projects',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [],
+    },
+  ],
+};
+
+export function useResources(returnError?: number) {
+  client.scenario.get('/:version/storage/stores', (req, res) => {
+    if (returnError) {
+      res.status(returnError);
+      res.end();
+      return;
+    }
+
+    const { teamId } = req.query;
+
+    if (!teamId) {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    res.json(resources);
+  });
+}
+
 export function useConfiguration() {
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
     const { integrationIdOrSlug } = req.query;
@@ -333,7 +474,7 @@ export function useIntegration({
 }: {
   withInstallation: boolean;
 }) {
-  let storeId = 'store_123';
+  const storeId = 'store_123';
 
   client.scenario.get(
     '/:version/integrations/integration/:slug',
@@ -352,7 +493,7 @@ export function useIntegration({
   );
 
   client.scenario.get(
-    `/:version/integrations/integration/:integrationId/installed`,
+    '/:version/integrations/integration/:integrationId/installed',
     (req, res) => {
       const { integrationId } = req.params;
       const { teamId, source } = req.query;

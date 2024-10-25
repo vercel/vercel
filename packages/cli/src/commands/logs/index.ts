@@ -15,6 +15,7 @@ import { displayRuntimeLogs } from '../../util/logs';
 import type { Output } from '../../util/output';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
@@ -58,6 +59,13 @@ export default async function logs(client: Client) {
     return 2;
   }
 
+  const telemetry = new LogsTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArguments.args[0] === logsCommand.name) {
     parsedArguments.args.shift();
   }
@@ -73,6 +81,20 @@ export default async function logs(client: Client) {
     print(help(logsCommand, { columns: client.stderr.columns }));
     return 1;
   }
+
+  telemetry.trackCliArgumentUrl(deploymentIdOrHost);
+  telemetry.trackCliFlagJson(asJson);
+  telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
+  telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
+  telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
+  telemetry.trackCliOptionUntil(parsedArguments.flags['--until']);
+
+  // Note: only send literal values to telemetry for known values
+  const outputMode = parsedArguments.flags['--output'];
+  telemetry.trackCliOptionOutput(
+    outputMode,
+    outputMode === 'raw' || outputMode === 'short'
+  );
 
   let contextName: string | null = null;
 

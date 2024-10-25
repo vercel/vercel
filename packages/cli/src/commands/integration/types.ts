@@ -5,8 +5,8 @@ export interface MetadataSchemaProperty {
   minimum?: number;
   maximum?: number;
   'ui:control': 'input' | 'select' | 'vercel-region' | string;
-  'ui:disabled'?: boolean;
-  'ui:hidden'?: 'create' | boolean | string;
+  'ui:disabled'?: 'create' | Expression | boolean | string;
+  'ui:hidden'?: 'create' | Expression | boolean | string;
   'ui:label'?: string;
   'ui:placeholder'?: string;
   'ui:options'?:
@@ -16,7 +16,11 @@ export interface MetadataSchemaProperty {
         value: string;
         hidden?: boolean;
       }[];
-  'ui:read-only'?: boolean;
+  'ui:read-only'?: 'create' | Expression | boolean | string;
+}
+
+export interface Expression {
+  expr: string;
 }
 
 export type Metadata = Record<string, string | number | undefined>;
@@ -82,4 +86,22 @@ export interface BillingPlan {
     value?: string;
   }[];
   disabled?: boolean;
+}
+
+export interface Resource {
+  id: string;
+  type: string;
+  name: string;
+  status?: string | null;
+  product?: {
+    name?: string;
+    slug?: string;
+    integrationConfigurationId?: string;
+  };
+  projectsMetadata?: {
+    id: string;
+    projectId: string;
+    name: string;
+    environments: string[];
+  }[];
 }

@@ -5,10 +5,18 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
+import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/rm';
 
 const e = encodeURIComponent;
 
 export default async function rm(client: Client, args: string[]) {
+  const telemetryClient = new ProjectRmTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length !== 1) {
     client.output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -19,6 +27,7 @@ export default async function rm(client: Client, args: string[]) {
   }
 
   const name = args[0];
+  telemetryClient.trackCliArgumentName(name);
 
   const start = Date.now();
 

@@ -952,6 +952,7 @@ export type NextPrerenderedRoutes = {
       fallback: string;
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
+      fallbackRevalidate?: number | false;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1190,6 +1191,7 @@ export async function getPrerenderManifest(
             fallback: string | false;
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
+            fallbackRevalidate: number | false | undefined;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1327,6 +1329,7 @@ export async function getPrerenderManifest(
         let fallbackStatus: undefined | number;
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
+        let fallbackRevalidate: number | false | undefined;
 
         if (manifest.version === 4) {
           experimentalBypassFor =
@@ -1344,6 +1347,8 @@ export async function getPrerenderManifest(
             (manifest.dynamicRoutes[lazyRoute].experimentalPPR
               ? RenderingMode.PARTIALLY_STATIC
               : RenderingMode.STATIC);
+          fallbackRevalidate =
+            manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
         }
 
         if (typeof fallback === 'string') {
@@ -1357,6 +1362,7 @@ export async function getPrerenderManifest(
             dataRouteRegex,
             prefetchDataRoute,
             prefetchDataRouteRegex,
+            fallbackRevalidate,
             renderingMode,
           };
         } else if (fallback === null) {
@@ -2161,7 +2167,7 @@ export const onPrerenderRoute =
       // When the route has PPR enabled and has a fallback defined, we should
       // read the value from the manifest and use it as the value for the route.
       if (isFallback) {
-        const { fallbackStatus, fallbackHeaders } =
+        const { fallbackStatus, fallbackHeaders, fallbackRevalidate } =
           prerenderManifest.fallbackRoutes[routeKey];
 
         if (fallbackStatus) {
@@ -2170,6 +2176,15 @@ export const onPrerenderRoute =
 
         if (fallbackHeaders) {
           initialHeaders = fallbackHeaders;
+        }
+
+        // If we're rendering with PPR and as this is a fallback, we should use
+        // the revalidation time to also apply to the fallback shell.
+        if (
+          renderingMode === RenderingMode.PARTIALLY_STATIC &&
+          typeof fallbackRevalidate !== 'undefined'
+        ) {
+          initialRevalidate = fallbackRevalidate;
         }
       }
     }
@@ -2444,14 +2459,13 @@ export const onPrerenderRoute =
         (r): r is RoutesManifestRoute =>
           r.page === pageKey && !('isMiddleware' in r)
       ) as RoutesManifestRoute | undefined;
+      const isDynamic = isDynamicRoute(routeKey);
       const routeKeys = route?.routeKeys;
       // by default allowQuery should be undefined and only set when
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
 
       if (isEmptyAllowQueryForPrendered) {
-        const isDynamic = isDynamicRoute(routeKey);
-
         if (!isDynamic) {
           // for non-dynamic routes we use an empty array since
           // no query values bust the cache for non-dynamic prerenders
@@ -2543,10 +2557,18 @@ export const onPrerenderRoute =
         }
       }
 
+      // If this is a fallback page with PPR enabled, we should not have the
+      // cache key vary based on the route parameters to ensure that we always
+      // have a HIT for the fallback page.
+      let htmlAllowQuery = allowQuery;
+      if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
+        htmlAllowQuery = [];
+      }
+
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
         lambda,
-        allowQuery,
+        allowQuery: htmlAllowQuery,
         fallback: htmlFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
@@ -2586,6 +2608,14 @@ export const onPrerenderRoute =
       };
 
       if (outputPathData || outputPathPrefetchData) {
+        // If the allowQuery is different than the original allowQuery, then we
+        // shouldn't use the same prerender group as the HTML prerender because
+        // they should not be revalidated together (one needs to be revalidated
+        // when the allowQuery changes, one does not).
+        if (htmlAllowQuery !== allowQuery) {
+          prerenderGroup++;
+        }
+
         const prerender = new Prerender({
           expiration: initialRevalidate,
           lambda,

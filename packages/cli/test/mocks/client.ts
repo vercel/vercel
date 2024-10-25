@@ -9,7 +9,7 @@ import { PassThrough } from 'stream';
 import { createServer, Server } from 'http';
 import express, { Express, Router } from 'express';
 import { listen } from 'async-listen';
-import Client from '../../src/util/client';
+import Client, { FetchOptions } from '../../src/util/client';
 import { Output } from '../../src/util/output';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
@@ -119,7 +119,7 @@ export class MockClient extends Client {
       const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
       // eslint-disable-next-line no-console
       console.warn(message);
-      res.status(404).json({
+      res.status(500).json({
         error: {
           code: 'not_found',
           message,
@@ -195,6 +195,7 @@ export class MockClient extends Client {
     const lastScreen = stderr.getLastChunk({ raw });
     return raw ? lastScreen : stripAnsi(lastScreen).trim();
   }
+
   getFullOutput(): string {
     const stderr = client.stderr;
     return stderr.getFullOutput();
@@ -243,6 +244,19 @@ export class MockClient extends Client {
   useScenario(scenario: Scenario) {
     this.scenario = scenario;
   }
+
+  /**
+   * Client's fetch automatically retries, but for mocked
+   * requests we don't want to retry by default.
+   */
+  fetch(url: string, opts: FetchOptions = {}): Promise<any> {
+    if (!opts.retry) {
+      opts.retry = {
+        retries: 0,
+      };
+    }
+    return super.fetch(url, opts);
+  }
 }
 
 export const client = new MockClient();
@@ -251,8 +265,24 @@ beforeAll(async () => {
   await client.startMockServer();
 });
 
-afterEach(() => {
+afterEach(async context => {
+  let extraError;
+
+  if (context.task.result?.state === 'fail') {
+    const stderr = client.stderr.getFullOutput() || '(none)';
+    const stdout = client.stdout.getFullOutput() || '(none)';
+
+    // we have to capture this data before calling `client.reset()`
+    extraError = `(retrieving command output because of test failure)\n\n[STDERR]\n${stderr}\n\n[STDOUT]\n${stdout}`;
+  }
+
   client.reset();
+
+  if (extraError) {
+    // we want to throw this after calling `client.reset()`
+    // so the next test has a clear state
+    throw new Error(extraError);
+  }
 });
 
 afterAll(async () => {

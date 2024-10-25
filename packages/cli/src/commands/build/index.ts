@@ -41,7 +41,7 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 import type { VercelConfig } from '@vercel/client';
 
-import pull from '../pull';
+import { pullCommandLogic } from '../pull';
 import { staticFiles as getFiles } from '../../util/get-files';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -75,6 +75,7 @@ import { buildCommand } from './command';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import parseTarget from '../../util/parse-target';
+import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -116,6 +117,12 @@ export interface BuildsManifest {
 }
 
 export default async function main(client: Client): Promise<number> {
+  const telemetryClient = new BuildTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
   let { cwd } = client;
   const { output } = client;
 
@@ -143,6 +150,10 @@ export default async function main(client: Client): Promise<number> {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliOptionOutput(parsedArgs.flags['--output']);
+    telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
+    telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
+    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
     handleError(error);
     return 1;
@@ -215,7 +226,13 @@ export default async function main(client: Client): Promise<number> {
       `--environment`,
       target,
     ];
-    const result = await pull(client);
+    const result = await pullCommandLogic(
+      client,
+      client.cwd,
+      Boolean(parsedArgs.flags['--yes']),
+      target,
+      parsedArgs.flags
+    );
     if (result !== 0) {
       return result;
     }

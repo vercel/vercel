@@ -1,6 +1,60 @@
 import { TelemetryClient } from '.';
 
 export class RootTelemetryClient extends TelemetryClient {
+  trackCliExtension(extension?: string) {
+    if (extension) {
+      this.trackExtension(extension);
+    }
+  }
+
+  trackCliDefaultDeploy(defaultDeploy: boolean) {
+    if (defaultDeploy) {
+      this.trackDefaultDeploy();
+    }
+  }
+
+  trackCliCommandAlias(actual: string) {
+    this.trackCliCommand({
+      command: 'alias',
+      value: actual,
+    });
+  }
+
+  trackCliCommandBisect(actual: string) {
+    this.trackCliCommand({
+      command: 'bisect',
+      value: actual,
+    });
+  }
+
+  trackCliCommandBuild(actual: string) {
+    this.trackCliCommand({
+      command: 'build',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCerts(actual: string) {
+    this.trackCliCommand({
+      command: 'certs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDeploy(actual: string) {
+    this.trackCliCommand({
+      command: 'deploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandDev(actual: string) {
+    this.trackCliCommand({
+      command: 'dev',
+      value: actual,
+    });
+  }
+
   trackCliCommandDomains(actual: string) {
     this.trackCliCommand({
       command: 'domains',
@@ -8,9 +62,156 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandAlias(actual: string) {
+  trackCliCommandDns(actual: string) {
     this.trackCliCommand({
-      command: 'alias',
+      command: 'dns',
+      value: actual,
+    });
+  }
+
+  trackCliCommandEnv(actual: string) {
+    this.trackCliCommand({
+      command: 'env',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGit(actual: string) {
+    this.trackCliCommand({
+      command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInit(actual: string) {
+    this.trackCliCommand({
+      command: 'init',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInspect(actual: string) {
+    this.trackCliCommand({
+      command: 'inspect',
+      value: actual,
+    });
+  }
+
+  trackCliCommandInstall(actual: string) {
+    this.trackCliCommand({
+      command: 'install',
+      value: actual,
+    });
+  }
+
+  trackCliCommandIntegration(actual: string) {
+    this.trackCliCommand({
+      command: 'integration',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLink(actual: string) {
+    this.trackCliCommand({
+      command: 'link',
+      value: actual,
+    });
+  }
+
+  trackCliCommandList(actual: string) {
+    this.trackCliCommand({
+      command: 'list',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogin(actual: string) {
+    this.trackCliCommand({
+      command: 'login',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogout(actual: string) {
+    this.trackCliCommand({
+      command: 'logout',
+      value: actual,
+    });
+  }
+
+  trackCliCommandLogs(actual: string) {
+    this.trackCliCommand({
+      command: 'logs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandProject(actual: string) {
+    this.trackCliCommand({
+      command: 'project',
+      value: actual,
+    });
+  }
+
+  trackCliCommandPromote(actual: string) {
+    this.trackCliCommand({
+      command: 'promote',
+      value: actual,
+    });
+  }
+
+  trackCliCommandPull(actual: string) {
+    this.trackCliCommand({
+      command: 'pull',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRollback(actual: string) {
+    this.trackCliCommand({
+      command: 'rollback',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRedeploy(actual: string) {
+    this.trackCliCommand({
+      command: 'redeploy',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRemove(actual: string) {
+    this.trackCliCommand({
+      command: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTarget(actual: string) {
+    this.trackCliCommand({
+      command: 'target',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTeams(actual: string) {
+    this.trackCliCommand({
+      command: 'teams',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTelemetry(actual: string) {
+    this.trackCliCommand({
+      command: 'telemetry',
+      value: actual,
+    });
+  }
+
+  trackCliCommandWhoami(actual: string) {
+    this.trackCliCommand({
+      command: 'whoami',
       value: actual,
     });
   }
@@ -33,6 +234,78 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackVersion(version?: string) {
     super.trackVersion(version);
+  }
+
+  trackCliOptionCwd(cwd?: string) {
+    if (cwd) {
+      this.trackCliOption({ option: 'cwd', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionLocalConfig(localConfig?: string) {
+    if (localConfig) {
+      this.trackCliOption({
+        option: 'local-config',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionGlobalConfig(globalConfig?: string) {
+    if (globalConfig) {
+      this.trackCliOption({
+        option: 'global-config',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionScope(scope?: string) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionToken(token?: string) {
+    if (token) {
+      this.trackCliOption({
+        option: 'token',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTeam(team?: string) {
+    if (team) {
+      this.trackCliOption({
+        option: 'team',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionApi(api?: string) {
+    if (api) {
+      this.trackCliOption({
+        option: 'api',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagDebug(debug?: boolean) {
+    if (debug) {
+      this.trackCliFlag('debug');
+    }
+  }
+
+  trackCliFlagNoColor(noColor?: boolean) {
+    if (noColor) {
+      this.trackCliFlag('no-color');
+    }
   }
 }
 
