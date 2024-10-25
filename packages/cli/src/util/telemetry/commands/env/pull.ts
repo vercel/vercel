@@ -12,9 +12,12 @@ export class EnvPullTelemetryClient extends TelemetryClient {
 
   trackCliOptionEnvironment(environment?: string) {
     if (environment) {
+      const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliOption({
         option: 'environment',
-        value: this.redactedValue,
+        value: standardEnvironments.includes(environment)
+          ? environment
+          : this.redactedValue,
       });
     }
   }
