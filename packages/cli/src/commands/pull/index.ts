@@ -96,7 +96,7 @@ export default async function main(client: Client) {
   return returnCode;
 }
 
-async function pullCommandLogic(
+export async function pullCommandLogic(
   client: Client,
   cwd: string,
   autoConfirm: boolean,
