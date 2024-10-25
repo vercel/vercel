@@ -1,6 +1,4 @@
-// @ts-ignore
 import { handleError } from '../../util/error';
-
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 
@@ -13,6 +11,7 @@ import { help } from '../help';
 import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
+
 const COMMAND_CONFIG = {
   add: ['add'],
   issue: ['issue'],
