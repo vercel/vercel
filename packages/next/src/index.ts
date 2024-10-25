@@ -2459,8 +2459,8 @@ export const build: BuildV2 = async buildOptions => {
 
             // Auto-prefix non-locale path with default locale
             // note for prerendered pages this will cause
-            // x-now-route-matches to contain the path minus the locale
-            // e.g. for /de/posts/[slug] x-now-route-matches would have
+            // route-matches to contain the path minus the locale
+            // e.g. for /de/posts/[slug] route-matches would have
             // 1=posts%2Fpost-1
             {
               src: `^${path.join(
