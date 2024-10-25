@@ -154,7 +154,7 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
-test.only('should show prompts to set up project during first deploy', async () => {
+test('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
   const projectName = `project-link-deploy-${
     Math.random().toString(36).split('.')[1]
