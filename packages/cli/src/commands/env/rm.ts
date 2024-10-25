@@ -13,6 +13,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
 
 type Options = {
   '--debug': boolean;
@@ -28,6 +29,13 @@ export default async function rm(
   const { output } = client;
   const { project } = link;
 
+  const telemetryClient = new EnvRmTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
@@ -38,6 +46,10 @@ export default async function rm(
   }
 
   let [envName, envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   if (!envName) {
     envName = await client.input.text({
