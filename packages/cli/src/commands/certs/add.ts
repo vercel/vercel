@@ -5,6 +5,7 @@ import stamp from '../../util/output/stamp';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
+import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add';
 import type { Cert } from '@vercel-internals/types';
 
 interface Options {
@@ -31,7 +32,16 @@ async function add(
     '--ca': caPath,
   } = opts;
 
-  const { contextName } = await getScope(client);
+  const telemetry = new CertsAddTelemetryClient({
+    opts: {
+      output,
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliOptionCrt(crtPath);
+  telemetry.trackCliOptionKey(keyPath);
+  telemetry.trackCliOptionCa(caPath);
 
   if (overwite) {
     output.error('Overwrite option is deprecated');
@@ -83,6 +93,7 @@ async function add(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
+    const { contextName } = await getScope(client);
     cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();
   }

@@ -33,6 +33,12 @@ export const pullCommand = {
       deprecated: false,
     },
     {
+      name: 'prod',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip questions when setting up new project using default scope and settings',
