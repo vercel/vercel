@@ -64,7 +64,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -103,7 +103,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -164,7 +164,7 @@ describe('env add', () => {
             },
             {
               key: `argument:environment`,
-              value: '[REDACTED]',
+              value: 'preview',
             },
             {
               key: `argument:git-branch`,
