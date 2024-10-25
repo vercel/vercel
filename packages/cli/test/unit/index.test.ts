@@ -8,6 +8,25 @@ import { RootTelemetryClient } from '../../src/util/telemetry/root';
 
 import './test/mocks/matchers';
 
+import fetch from 'node-fetch';
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
+
+vi.mock(import('node-fetch'), async importOriginal => {
+  const mod = await importOriginal(); // type is inferred
+  const mock = vi.fn(() => {
+    return {
+      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
+    };
+  });
+  return {
+    ...mod,
+    default: mock,
+  };
+});
+
 describe('main', () => {
   describe('telemetry', () => {
     it('tracks number of cpus', () => {
@@ -161,6 +180,53 @@ describe('main', () => {
         });
 
         expect(telemetryEventStore.enabled).toBe(false);
+      });
+    });
+
+    describe('save', () => {
+      it('sends events to the server', async () => {
+        const output = new Output(process.stderr, {
+          debug: true,
+          noColor: false,
+        });
+
+        const telemetryEventStore = new TelemetryEventStore({
+          isDebug: false,
+          output,
+        });
+
+        const telemetry = new RootTelemetryClient({
+          opts: {
+            store: telemetryEventStore,
+            output,
+          },
+        });
+        telemetry.trackPlatform();
+        telemetry.trackArch();
+
+        await telemetryEventStore.save();
+
+        expect(fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/vercel-cli/v1/events'),
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              'x-vercel-cli-topic-id': 'generic',
+              'x-vercel-cli-session-id': expect.any(String),
+            }),
+            body: expect.toHaveFetchBody(
+              expect.arrayContaining([
+                expect.objectContaining({
+                  event_time: expect.any(Number),
+                  id: expect.any(String),
+                  key: expect.any(String),
+                  value: expect.any(String),
+                  team_id: expect.any(String),
+                }),
+              ])
+            ),
+          })
+        );
       });
     });
 
