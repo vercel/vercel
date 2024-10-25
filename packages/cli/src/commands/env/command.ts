@@ -1,6 +1,8 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { forceOption, yesOption } from '../../util/arg-common';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -178,3 +180,11 @@ export const envCommand = {
     },
   ],
 } as const;
+
+export type EnvCommandSpec = ReturnType<
+  typeof getFlagsSpecification<(typeof envCommand)['options']>
+>;
+
+export type EnvCommandFlags = ReturnType<
+  typeof parseArguments<EnvCommandSpec>
+>['flags'];
