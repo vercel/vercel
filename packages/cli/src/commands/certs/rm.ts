@@ -4,22 +4,31 @@ import plural from 'pluralize';
 import table from '../../util/output/table';
 import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
-import { Output } from '../../util/output';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import { CertsRemoveTelemetryClient } from '../../util/telemetry/commands/certs/remove';
+import type Client from '../../util/client';
 
 type Options = {};
 
-async function rm(client: Client, opts: Options, args: string[]) {
+async function rm(client: Client, _opts: Options, args: string[]) {
   const rmStamp = stamp();
-  const { output } = client;
-  const { contextName } = await getScope(client);
+  const { output, telemetryEventStore } = client;
+
+  const telemetry = new CertsRemoveTelemetryClient({
+    opts: {
+      output,
+      store: telemetryEventStore,
+    },
+  });
+
+  const id = args[0];
+  telemetry.trackCliArgumentId(id);
 
   if (args.length !== 1) {
     output.error(
@@ -30,8 +39,8 @@ async function rm(client: Client, opts: Options, args: string[]) {
     return 1;
   }
 
-  const id = args[0];
-  const certs = await getCertsToDelete(output, client, contextName, id);
+  const { contextName } = await getScope(client);
+  const certs = await getCertsToDelete(client, contextName, id);
   if (certs instanceof ERRORS.CertsPermissionDenied) {
     output.error(
       `You don't have access to ${param(id)}'s certs under ${contextName}.`
@@ -55,7 +64,7 @@ async function rm(client: Client, opts: Options, args: string[]) {
   }
 
   const yes = await readConfirmation(
-    output,
+    client,
     'The following certificates will be removed permanently',
     certs
   );
@@ -76,7 +85,6 @@ async function rm(client: Client, opts: Options, args: string[]) {
 }
 
 async function getCertsToDelete(
-  output: Output,
   client: Client,
   contextName: string,
   id: string
@@ -92,8 +100,9 @@ async function getCertsToDelete(
   return [cert];
 }
 
-function readConfirmation(output: Output, msg: string, certs: Cert[]) {
+function readConfirmation(client: Client, msg: string, certs: Cert[]) {
   return new Promise(resolve => {
+    const { output } = client;
     output.log(msg);
     output.print(
       `${table(certs.map(formatCertRow), {
@@ -104,7 +113,7 @@ function readConfirmation(output: Output, msg: string, certs: Cert[]) {
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
-    process.stdin
+    client.stdin
       .on('data', d => {
         process.stdin.pause();
         resolve(d.toString().trim().toLowerCase() === 'y');
