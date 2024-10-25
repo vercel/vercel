@@ -8,13 +8,50 @@ describe('certs ls', () => {
   it('should list up to 20 certs by default', async () => {
     useUser();
     useCert();
+
     client.setArgv('certs', 'ls');
     const exitCodePromise = certs(client);
     await expect(client.stdout).toOutput('dummy-19.cert');
     await expect(exitCodePromise).resolves.toEqual(0);
   });
 
-  describe.todo('--next');
+  it('tracks subcommand invocation', async () => {
+    useUser();
+    useCert();
+
+    client.setArgv('certs', 'ls');
+    const exitCodePromise = certs(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:list',
+        value: 'ls',
+      },
+    ]);
+  });
+
+  describe.todo('--next', () => {
+    it('tracks usage', async () => {
+      useUser();
+      useCert();
+
+      client.setArgv('certs', 'ls', '--next');
+      const exitCodePromise = certs(client);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:next',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 
   describe('--limit', () => {
     it('should list up to 2 certs if limit set to 2', async () => {
@@ -25,11 +62,29 @@ describe('certs ls', () => {
       await expect(client.stdout).toOutput('dummy-1.cert');
       await expect(exitCodePromise).resolves.toEqual(0);
     });
+
+    it('tracks usage', async () => {
+      useUser();
+      useCert();
+      client.setArgv('certs', 'ls', '--limit', '2');
+      const exitCodePromise = certs(client);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:limit',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
   });
 
   it('should show permission error if user does not have permission', async () => {
     useUser();
-
     client.scenario.get('/v4/now/certs', (_req, res) => {
       res.status(403).json({
         error: {
