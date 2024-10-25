@@ -79,6 +79,42 @@ class MockTelemetryEventStore extends TelemetryEventStore {
   }
 }
 
+function setupMockServer(mockClient: MockClient): Express {
+  const app = express();
+  app.use(express.json());
+
+  // play scenario
+  app.use((req, res, next) => {
+    mockClient.scenario(req, res, next);
+  });
+
+  // catch requests that were not intercepted
+  app.use((req, res) => {
+    const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
+    // eslint-disable-next-line no-console
+    console.warn(message);
+    res.status(500).json({
+      error: {
+        code: 'not_found',
+        message,
+      },
+    });
+  });
+
+  // global error handling must be last
+  // @ts-ignore - this signature is actually valid
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((error, _req, res, _next) => {
+    res.status(500).json({
+      error: {
+        message: error.message,
+      },
+    });
+  });
+
+  return app;
+}
+
 export class MockClient extends Client {
   stdin!: MockStream;
   stdout!: MockStream;
@@ -104,30 +140,11 @@ export class MockClient extends Client {
 
     this.telemetryEventStore = new MockTelemetryEventStore({
       output: this.output,
-    });
-
-    this.app = express();
-    this.app.use(express.json());
-
-    // play scenario
-    this.app.use((req, res, next) => {
-      this.scenario(req, res, next);
-    });
-
-    // catch requests that were not intercepted
-    this.app.use((req, res) => {
-      const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-      // eslint-disable-next-line no-console
-      console.warn(message);
-      res.status(500).json({
-        error: {
-          code: 'not_found',
-          message,
-        },
-      });
+      config: undefined,
     });
 
     this.scenario = Router();
+    this.app = setupMockServer(this);
 
     this.reset();
   }

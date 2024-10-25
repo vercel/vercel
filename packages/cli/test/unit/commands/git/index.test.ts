@@ -7,6 +7,6 @@ describe.todo('git', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('git');
     const exitCodePromise = git(client);
-    expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 });
