@@ -78,7 +78,7 @@ describe('dns ls', () => {
   });
 
   describe('[domain]', () => {
-    it('tracks the use of domain arguemnt', async () => {
+    it('tracks the use of domain argument', async () => {
       client.scenario.get('/v4/domains/:domain?/records', (req, res) => {
         res.json({
           records: [],
