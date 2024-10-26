@@ -13,7 +13,7 @@ import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
-import { addToGitIgnore } from './add-to-gitignore';
+import { addToGitIgnore } from '../add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';

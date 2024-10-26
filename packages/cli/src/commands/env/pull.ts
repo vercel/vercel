@@ -17,7 +17,7 @@ import {
   createEnvObject,
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
-import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { addToGitIgnore } from '../../util/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
