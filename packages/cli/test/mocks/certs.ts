@@ -13,11 +13,11 @@ function create(cert: string) {
 }
 
 export function useCert() {
-  client.scenario.get('/v4/now/certs', (_req, res) => {
-    const limit = parseInt(_req.query.limit);
+  client.scenario.get('/v4/certs', (req, res) => {
+    const limit = parseInt(req.query.limit, 10);
     const certs = Array.from({ length: limit }, (v, i) => create(`${i}`));
     res.json({
-      certs: certs,
+      certs,
       pagination: { count: limit, total: limit, page: 1, pages: 1 },
     });
   });
