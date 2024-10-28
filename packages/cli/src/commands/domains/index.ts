@@ -74,6 +74,7 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, parsedArgs.flags, args);
     default:
+      telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, parsedArgs.flags, args);
   }
 }
