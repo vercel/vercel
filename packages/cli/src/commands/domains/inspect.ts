@@ -14,7 +14,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
-
+import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
 type Options = {};
 
 export default async function inspect(
@@ -22,7 +22,13 @@ export default async function inspect(
   opts: Options,
   args: string[]
 ) {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
+  const telemetry = new DomainsInspectTelemetryClient({
+    opts: {
+      output,
+      store: telemetryEventStore,
+    },
+  });
   const { contextName } = await getScope(client);
 
   const [domainName] = args;
@@ -34,6 +40,8 @@ export default async function inspect(
     );
     return 1;
   }
+
+  telemetry.trackCliArgumentDomainName(domainName);
 
   if (args.length !== 1) {
     output.error(
