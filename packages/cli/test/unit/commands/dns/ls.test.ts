@@ -58,7 +58,7 @@ describe('dns ls', () => {
     });
 
     describe('--next', () => {
-      it('should list up to 2 dns if limit set to 2', async () => {
+      it('tracks the use of next option', async () => {
         client.setArgv('dns', 'ls', '--next', '1729878610745');
         let exitCodePromise = dns(client);
 
