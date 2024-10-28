@@ -16,17 +16,28 @@ import {
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
 
 export default async function ls(
   client: Client,
   opts: PaginationOptions,
   args: string[]
 ) {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
   const { contextName } = await getScope(client);
+  const telemetry = new DnsLsTelemetryClient({
+    opts: {
+      output,
+      store: telemetryEventStore,
+    },
+  });
 
   const [domainName] = args;
   const lsStamp = stamp();
+
+  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   if (args.length > 1) {
     output.error(
