@@ -26,7 +26,7 @@ async function add(
   let cert: Cert | Error;
 
   const {
-    '--overwrite': overwite,
+    '--overwrite': overwrite,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
@@ -38,12 +38,12 @@ async function add(
       store: telemetryEventStore,
     },
   });
-  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliFlagOverwrite(overwrite);
   telemetry.trackCliOptionCrt(crtPath);
   telemetry.trackCliOptionKey(keyPath);
   telemetry.trackCliOptionCa(caPath);
 
-  if (overwite) {
+  if (overwrite) {
     output.error('Overwrite option is deprecated');
     return 1;
   }
