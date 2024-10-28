@@ -338,8 +338,25 @@ describe('integration', () => {
           ]);
         });
 
-        it('should track usage with --integration flag', async () => {
+        it('should track usage with --integration flag for known value', async () => {
           client.setArgv('integration', 'list', '--integration', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: 'subcommand:list',
+              value: 'list',
+            },
+            {
+              key: 'option:integration',
+              value: 'acme',
+            },
+          ]);
+        });
+
+        it('should track redacted usage with --integration flag for unknown value', async () => {
+          client.setArgv('integration', 'list', '--integration', 'other');
           const exitCodePromise = integrationCommand(client);
           await expect(exitCodePromise).resolves.toEqual(0);
 

@@ -34,8 +34,9 @@ export async function list(client: Client) {
   });
 
   telemetry.trackCliArgumentProject(parsedArguments.args[1]);
-  telemetry.trackCliOptionIntegration(parsedArguments.flags['--integration']);
   telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
+  // Note: the `--integration` flag is tracked later, after validating
+  // whether the value is a known integration name or not.
 
   if (parsedArguments.args.length > 2) {
     client.output.error(
@@ -98,8 +99,13 @@ export async function list(client: Client) {
     return resource.type === 'integration';
   }
 
+  let knownIntegration = false;
+
   function filterOnIntegration(resource: Resource): boolean {
-    return !filterIntegration || filterIntegration === resource.product?.slug;
+    if (!filterIntegration) return true;
+    const match = filterIntegration === resource.product?.slug;
+    if (match) knownIntegration = true;
+    return match;
   }
 
   function filterOnProject(resource: Resource): boolean {
@@ -132,6 +138,11 @@ export async function list(client: Client) {
           .join(', '),
       };
     });
+
+  telemetry.trackCliOptionIntegration(
+    parsedArguments.flags['--integration'],
+    knownIntegration
+  );
 
   if (results.length === 0) {
     client.output.log('No resources found.');

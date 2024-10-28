@@ -10,11 +10,11 @@ export class IntegrationListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionIntegration(v?: string) {
+  trackCliOptionIntegration(v?: string, known?: boolean) {
     if (v) {
       this.trackCliOption({
         option: 'integration',
-        value: this.redactedValue,
+        value: known ? v : this.redactedValue,
       });
     }
   }
