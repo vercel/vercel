@@ -1,10 +1,17 @@
+import open from 'open';
 import { join } from 'path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import bisect from '../../../../src/commands/bisect';
 import { useDeployment } from '../../../mocks/deployment';
 import { isWindows } from '../../../helpers/is-windows';
+
+vi.mock('open', () => {
+  return {
+    default: vi.fn(),
+  };
+});
 
 function setupBisectState() {
   const user = useUser();
@@ -218,6 +225,44 @@ describe('bisect', () => {
   });
 
   describe('--open', () => {
+    const openMock = vi.mocked(open);
+
+    beforeEach(() => {
+      openMock.mockClear();
+    });
+
+    it('open the web browser with the "open" npm package', async () => {
+      const { deployment1, deployment2, deployment3 } = setupBisectState();
+
+      client.setArgv('bisect', '--open');
+      const bisectPromise = bisect(client);
+
+      await expect(client.stderr).toOutput(
+        'Specify a URL where the bug occurs:'
+      );
+      client.stdin.write(`https://${deployment3.url}\n`);
+
+      await expect(client.stderr).toOutput(
+        'Specify a URL where the bug does not occur:'
+      );
+      client.stdin.write(`https://${deployment1.url}\n`);
+
+      await expect(client.stderr).toOutput(
+        'Specify the URL subpath where the bug occurs:'
+      );
+      client.stdin.write('/docs\n');
+
+      await expect(client.stderr).toOutput(
+        `Deployment URL: https://${deployment2.url}`
+      );
+
+      expect(openMock).toHaveBeenCalledWith(`https://${deployment2.url}/docs`);
+
+      client.stdin.write('b\n');
+
+      await expect(bisectPromise).resolves.toEqual(0);
+    });
+
     it('should track use of `--open` flag', async () => {
       const { deployment1, deployment2, deployment3 } = setupBisectState();
 
