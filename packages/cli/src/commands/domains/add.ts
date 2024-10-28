@@ -14,6 +14,7 @@ import { addDomainToProject } from '../../util/projects/add-domain-to-project';
 import { removeDomainFromProject } from '../../util/projects/remove-domain-from-project';
 import code from '../../util/output/code';
 import output from '../../output-manager';
+import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains/add';
 
 type Options = {
   '--debug': boolean;
@@ -25,6 +26,14 @@ export default async function add(
   opts: Partial<Options>,
   args: string[]
 ) {
+  const { telemetryEventStore } = client;
+  const telemetry = new DomainsAddTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliFlagForce(opts['--force']);
   const force = opts['--force'];
   const { contextName } = await getScope(client);
 
@@ -52,6 +61,8 @@ export default async function add(
 
   const domainName = String(args[0]);
   const projectName = project ? project.name : String(args[1]);
+  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliArgumentProjectName(args[1]);
 
   const addStamp = stamp();
 
