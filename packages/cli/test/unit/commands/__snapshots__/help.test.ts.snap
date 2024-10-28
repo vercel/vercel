@@ -2,11 +2,11 @@
 
 exports[`help command > alias help output snapshots > alias help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1malias[22m [command] [options]
+  ▲ vercel alias [command] [options]
 
   Interact with deployment aliases.     
 
-  [2mCommands[22m:
+  Commands:
 
   ls                     Show   
                          all    
@@ -22,7 +22,7 @@ exports[`help command > alias help output snapshots > alias help column width 40
                          hostna…
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to
                          return per page     
@@ -36,7 +36,7 @@ exports[`help command > alias help output snapshots > alias help column width 40
                          alias               
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -74,44 +74,44 @@ exports[`help command > alias help output snapshots > alias help column width 40
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+  - Add a new alias to \`my-api.vercel.app\`
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app
 
-  [90m-[39m Custom domains work as alias targets
+  - Custom domains work as alias targets
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.com
 
-  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+  - The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
 
-    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias api-ownv3nc9f8.vercel.app my-api.com
 
 "
 `;
 
 exports[`help command > alias help output snapshots > alias help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1malias[22m [command] [options]
+  ▲ vercel alias [command] [options]
 
   Interact with deployment aliases.                                             
 
-  [2mCommands[22m:
+  Commands:
 
   ls                     Show all aliases.                              
   set  deployment alias  Create a new alias                             
   rm   alias             Remove an alias using its hostname.            
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
   -N,  --next <MS>       Show next page of results                                   
   -y,  --yes             Skip the confirmation prompt when removing an alias         
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -125,44 +125,44 @@ exports[`help command > alias help output snapshots > alias help column width 80
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+  - Add a new alias to \`my-api.vercel.app\`
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app
 
-  [90m-[39m Custom domains work as alias targets
+  - Custom domains work as alias targets
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.com
 
-  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+  - The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
 
-    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias api-ownv3nc9f8.vercel.app my-api.com
 
 "
 `;
 
 exports[`help command > alias help output snapshots > alias help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1malias[22m [command] [options]
+  ▲ vercel alias [command] [options]
 
   Interact with deployment aliases.                                                                                     
 
-  [2mCommands[22m:
+  Commands:
 
   ls                     Show all aliases.                                                                      
   set  deployment alias  Create a new alias                                                                     
   rm   alias             Remove an alias using its hostname.                                                    
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
   -N,  --next <MS>       Show next page of results                                                                           
   -y,  --yes             Skip the confirmation prompt when removing an alias                                                 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -175,31 +175,31 @@ exports[`help command > alias help output snapshots > alias help column width 12
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new alias to \`my-api.vercel.app\`
+  - Add a new alias to \`my-api.vercel.app\`
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.vercel.app
 
-  [90m-[39m Custom domains work as alias targets
+  - Custom domains work as alias targets
 
-    [36m$ vercel alias set api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias set api-ownv3nc9f8.vercel.app my-api.com
 
-  [90m-[39m The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
+  - The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
 
-    [36m$ vercel alias api-ownv3nc9f8.vercel.app my-api.com[39m
+    $ vercel alias api-ownv3nc9f8.vercel.app my-api.com
 
 "
 `;
 
 exports[`help command > bisect help output snapshots > bisect help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mbisect[22m [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project            
   interactively.                        
 
-  [2mOptions[22m:
+  Options:
 
   -b,  --bad <URL>   Known bad URL      
   -g,  --good <URL>  Known good URL     
@@ -213,7 +213,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
                      for each deployment
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -251,30 +251,30 @@ exports[`help command > bisect help output snapshots > bisect help column width 
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Bisect the current project interactively
+  - Bisect the current project interactively
 
-    [36m$ vercel bisect[39m
+    $ vercel bisect
 
-  [90m-[39m Bisect with a known bad deployment
+  - Bisect with a known bad deployment
 
-    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+    $ vercel bisect --bad example-310pce9i0.vercel.app
 
-  [90m-[39m Automated bisect with a run script
+  - Automated bisect with a run script
 
-    [36m$ vercel bisect --run ./test.sh[39m
+    $ vercel bisect --run ./test.sh
 
 "
 `;
 
 exports[`help command > bisect help output snapshots > bisect help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mbisect[22m [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project interactively.                                     
 
-  [2mOptions[22m:
+  Options:
 
   -b,  --bad <URL>   Known bad URL                                              
   -g,  --good <URL>  Known good URL                                             
@@ -283,7 +283,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   -r,  --run <URL>   Test script to run for each deployment                     
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -297,30 +297,30 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Bisect the current project interactively
+  - Bisect the current project interactively
 
-    [36m$ vercel bisect[39m
+    $ vercel bisect
 
-  [90m-[39m Bisect with a known bad deployment
+  - Bisect with a known bad deployment
 
-    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+    $ vercel bisect --bad example-310pce9i0.vercel.app
 
-  [90m-[39m Automated bisect with a run script
+  - Automated bisect with a run script
 
-    [36m$ vercel bisect --run ./test.sh[39m
+    $ vercel bisect --run ./test.sh
 
 "
 `;
 
 exports[`help command > bisect help output snapshots > bisect help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mbisect[22m [options]
+  ▲ vercel bisect [options]
 
   Bisect the current project interactively.                                                                             
 
-  [2mOptions[22m:
+  Options:
 
   -b,  --bad <URL>   Known bad URL                                                                                      
   -g,  --good <URL>  Known good URL                                                                                     
@@ -329,7 +329,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   -r,  --run <URL>   Test script to run for each deployment                                                             
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -342,33 +342,33 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Bisect the current project interactively
+  - Bisect the current project interactively
 
-    [36m$ vercel bisect[39m
+    $ vercel bisect
 
-  [90m-[39m Bisect with a known bad deployment
+  - Bisect with a known bad deployment
 
-    [36m$ vercel bisect --bad example-310pce9i0.vercel.app[39m
+    $ vercel bisect --bad example-310pce9i0.vercel.app
 
-  [90m-[39m Automated bisect with a run script
+  - Automated bisect with a run script
 
-    [36m$ vercel bisect --run ./test.sh[39m
+    $ vercel bisect --run ./test.sh
 
 "
 `;
 
 exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+  ▲ vercel certs [command] [options]
 
   Interact with SSL certificates. This  
   command is intended for advanced use  
   only. By default, Vercel manages your 
   certificates automatically.           
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all available 
              certificates       
@@ -379,7 +379,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
              certificate by id  
 
 
-  [2mOptions[22m:
+  Options:
 
        --ca <FILE>       CA certificate chain
                          file                
@@ -396,7 +396,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
                          results             
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -434,38 +434,38 @@ exports[`help command > certs help output snapshots > certs help column width 40
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+  - Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
 
-    [36m$ vercel certs issue acme.com www.acme.com[39m
+    $ vercel certs issue acme.com www.acme.com
 
-  [90m-[39m Remove a certificate
+  - Remove a certificate
 
-    [36m$ vercel certs rm id[39m
+    $ vercel certs rm id
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel certs ls --next 1584722256178[39m
+    $ vercel certs ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > certs help output snapshots > certs help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+  ▲ vercel certs [command] [options]
 
   Interact with SSL certificates. This command is intended for advanced use     
   only. By default, Vercel manages your certificates automatically.             
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all available certificates                            
   issue  cn   Issue a new certificate for a domain                      
   rm     id  Remove a certificate by id                                 
 
 
-  [2mOptions[22m:
+  Options:
 
        --ca <FILE>       CA certificate chain file                                   
        --challenge-only  Only show challenges needed to issue a cert                 
@@ -475,7 +475,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
   -N,  --next            Show next page of results                                   
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -489,38 +489,38 @@ exports[`help command > certs help output snapshots > certs help column width 80
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+  - Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
 
-    [36m$ vercel certs issue acme.com www.acme.com[39m
+    $ vercel certs issue acme.com www.acme.com
 
-  [90m-[39m Remove a certificate
+  - Remove a certificate
 
-    [36m$ vercel certs rm id[39m
+    $ vercel certs rm id
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel certs ls --next 1584722256178[39m
+    $ vercel certs ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > certs help output snapshots > certs help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mcerts[22m [command] [options]
+  ▲ vercel certs [command] [options]
 
   Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your       
   certificates automatically.                                                                                           
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all available certificates                                                                    
   issue  cn   Issue a new certificate for a domain                                                              
   rm     id  Remove a certificate by id                                                                         
 
 
-  [2mOptions[22m:
+  Options:
 
        --ca <FILE>       CA certificate chain file                                                                           
        --challenge-only  Only show challenges needed to issue a cert                                                         
@@ -530,7 +530,7 @@ exports[`help command > certs help output snapshots > certs help column width 12
   -N,  --next            Show next page of results                                                                           
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -543,26 +543,26 @@ exports[`help command > certs help output snapshots > certs help column width 12
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+  - Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
 
-    [36m$ vercel certs issue acme.com www.acme.com[39m
+    $ vercel certs issue acme.com www.acme.com
 
-  [90m-[39m Remove a certificate
+  - Remove a certificate
 
-    [36m$ vercel certs rm id[39m
+    $ vercel certs rm id
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel certs ls --next 1584722256178[39m
+    $ vercel certs ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The    
   \`deploy\` command is the default       
@@ -570,7 +570,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   be omitted (\`vc deploy my-app\` equals 
   \`vc my-app\`).                         
 
-  [2mOptions[22m:
+  Options:
 
        --archive                Compress
                                 the     
@@ -694,7 +694,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 prompts 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -732,41 +732,41 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Deploy the current directory
+  - Deploy the current directory
 
-    [36m$ vercel[39m
+    $ vercel
 
-  [90m-[39m Deploy a custom path
+  - Deploy a custom path
 
-    [36m$ vercel /usr/src/project[39m
+    $ vercel /usr/src/project
 
-  [90m-[39m Deploy with run-time Environment Variables
+  - Deploy with run-time Environment Variables
 
-    [36m$ vercel -e NODE_ENV=production[39m
+    $ vercel -e NODE_ENV=production
 
-  [90m-[39m Deploy with prebuilt outputs
+  - Deploy with prebuilt outputs
 
-    [36m$ vercel build[39m
-    [36m$ vercel deploy --prebuilt[39m
+    $ vercel build
+    $ vercel deploy --prebuilt
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel > deployment-url.txt[39m
+    $ vercel > deployment-url.txt
 
 "
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command    
   for the Vercel CLI, and can be omitted (\`vc deploy my-app\` equals \`vc         
   my-app\`).                                                                     
 
-  [2mOptions[22m:
+  Options:
 
        --archive                Compress the deployment code into a file before 
                                 uploading it                                    
@@ -795,7 +795,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -y,  --yes                    Use default options to skip all prompts         
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -809,40 +809,40 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Deploy the current directory
+  - Deploy the current directory
 
-    [36m$ vercel[39m
+    $ vercel
 
-  [90m-[39m Deploy a custom path
+  - Deploy a custom path
 
-    [36m$ vercel /usr/src/project[39m
+    $ vercel /usr/src/project
 
-  [90m-[39m Deploy with run-time Environment Variables
+  - Deploy with run-time Environment Variables
 
-    [36m$ vercel -e NODE_ENV=production[39m
+    $ vercel -e NODE_ENV=production
 
-  [90m-[39m Deploy with prebuilt outputs
+  - Deploy with prebuilt outputs
 
-    [36m$ vercel build[39m
-    [36m$ vercel deploy --prebuilt[39m
+    $ vercel build
+    $ vercel deploy --prebuilt
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel > deployment-url.txt[39m
+    $ vercel > deployment-url.txt
 
 "
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mdeploy[22m [project-path] [options]
+  ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
   (\`vc deploy my-app\` equals \`vc my-app\`).                                                                              
 
-  [2mOptions[22m:
+  Options:
 
        --archive                Compress the deployment code into a file before uploading it                            
   -b,  --build-env <key=value>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
@@ -862,7 +862,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -875,40 +875,40 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Deploy the current directory
+  - Deploy the current directory
 
-    [36m$ vercel[39m
+    $ vercel
 
-  [90m-[39m Deploy a custom path
+  - Deploy a custom path
 
-    [36m$ vercel /usr/src/project[39m
+    $ vercel /usr/src/project
 
-  [90m-[39m Deploy with run-time Environment Variables
+  - Deploy with run-time Environment Variables
 
-    [36m$ vercel -e NODE_ENV=production[39m
+    $ vercel -e NODE_ENV=production
 
-  [90m-[39m Deploy with prebuilt outputs
+  - Deploy with prebuilt outputs
 
-    [36m$ vercel build[39m
-    [36m$ vercel deploy --prebuilt[39m
+    $ vercel build
+    $ vercel deploy --prebuilt
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel > deployment-url.txt[39m
+    $ vercel > deployment-url.txt
 
 "
 `;
 
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mdns[22m command [options]
+  ▲ vercel dns command [options]
 
   Interact with DNS entries for a       
   project.                              
 
-  [2mCommands[22m:
+  Commands:
 
   import  domain zonefile  Impo…
                            a DNS
@@ -940,7 +940,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            ID   
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to
                          return per page     
@@ -950,7 +950,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                          results             
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -988,48 +988,48 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add an A record for a subdomain
+  - Add an A record for a subdomain
 
-    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
-    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add zeit.rocks api A 198.51.100.100
 
-  [90m-[39m Add an MX record (@ as a name refers to the domain)
+  - Add an MX record (@ as a name refers to the domain)
 
-    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
-    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+    $ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>
+    $ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10
 
-  [90m-[39m Add an SRV record
+  - Add an SRV record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
-    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+    $ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>
+    $ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party
 
-  [90m-[39m Add a CAA record
+  - Add a CAA record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
-    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+    $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
+    $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
 
-  [90m-[39m Import a Zone file
+  - Import a Zone file
 
-    [36m$ vercel dns import <DOMAIN> <FILE>[39m
-    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+    $ vercel dns import <DOMAIN> <FILE>
+    $ vercel dns import zeit.rocks ./zonefile.txt
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel dns ls --next 1584722256178[39m
-    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+    $ vercel dns ls --next 1584722256178
+    $ vercel dns ls zeit.rocks --next 1584722256178
 
 "
 `;
 
 exports[`help command > dns help output snapshots > dns help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mdns[22m command [options]
+  ▲ vercel dns command [options]
 
   Interact with DNS entries for a project.                                      
 
-  [2mCommands[22m:
+  Commands:
 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
@@ -1038,13 +1038,13 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   rm      id               Remove a DNS entry using its ID              
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
   -N,  --next <MS>       Show next page of results                                   
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -1058,48 +1058,48 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add an A record for a subdomain
+  - Add an A record for a subdomain
 
-    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
-    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add zeit.rocks api A 198.51.100.100
 
-  [90m-[39m Add an MX record (@ as a name refers to the domain)
+  - Add an MX record (@ as a name refers to the domain)
 
-    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
-    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+    $ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>
+    $ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10
 
-  [90m-[39m Add an SRV record
+  - Add an SRV record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
-    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+    $ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>
+    $ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party
 
-  [90m-[39m Add a CAA record
+  - Add a CAA record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
-    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+    $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
+    $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
 
-  [90m-[39m Import a Zone file
+  - Import a Zone file
 
-    [36m$ vercel dns import <DOMAIN> <FILE>[39m
-    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+    $ vercel dns import <DOMAIN> <FILE>
+    $ vercel dns import zeit.rocks ./zonefile.txt
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel dns ls --next 1584722256178[39m
-    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+    $ vercel dns ls --next 1584722256178
+    $ vercel dns ls zeit.rocks --next 1584722256178
 
 "
 `;
 
 exports[`help command > dns help output snapshots > dns help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mdns[22m command [options]
+  ▲ vercel dns command [options]
 
   Interact with DNS entries for a project.                                                                              
 
-  [2mCommands[22m:
+  Commands:
 
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
   ls      domain           List all DNS entries for a domain                                                    
@@ -1107,13 +1107,13 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
   rm      id               Remove a DNS entry using its ID                                                      
 
 
-  [2mOptions[22m:
+  Options:
 
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
   -N,  --next <MS>       Show next page of results                                                                           
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -1126,48 +1126,48 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add an A record for a subdomain
+  - Add an A record for a subdomain
 
-    [36m$ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>[39m
-    [36m$ vercel dns add zeit.rocks api A 198.51.100.100[39m
+    $ vercel dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>
+    $ vercel dns add zeit.rocks api A 198.51.100.100
 
-  [90m-[39m Add an MX record (@ as a name refers to the domain)
+  - Add an MX record (@ as a name refers to the domain)
 
-    [36m$ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>[39m
-    [36m$ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10[39m
+    $ vercel dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>
+    $ vercel dns add zeit.rocks '@' MX mail.zeit.rocks 10
 
-  [90m-[39m Add an SRV record
+  - Add an SRV record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>[39m
-    [36m$ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party[39m
+    $ vercel dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>
+    $ vercel dns add zeit.rocks '@' SRV 10 0 389 zeit.party
 
-  [90m-[39m Add a CAA record
+  - Add a CAA record
 
-    [36m$ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'[39m
-    [36m$ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'[39m
+    $ vercel dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'
+    $ vercel dns add zeit.rocks '@' CAA '0 issue "example.com"'
 
-  [90m-[39m Import a Zone file
+  - Import a Zone file
 
-    [36m$ vercel dns import <DOMAIN> <FILE>[39m
-    [36m$ vercel dns import zeit.rocks ./zonefile.txt[39m
+    $ vercel dns import <DOMAIN> <FILE>
+    $ vercel dns import zeit.rocks ./zonefile.txt
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel dns ls --next 1584722256178[39m
-    [36m$ vercel dns ls zeit.rocks --next 1584722256178[39m
+    $ vercel dns ls --next 1584722256178
+    $ vercel dns ls zeit.rocks --next 1584722256178
 
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mdomains[22m command [options]
+  ▲ vercel domains command [options]
 
   Manage domains                        
 
-  [2mCommands[22m:
+  Commands:
 
   ls                             Show  
                                  all   
@@ -1208,7 +1208,7 @@ exports[`help command > domains help output snapshots > domains help column widt
                                  Vercel
 
 
-  [2mOptions[22m:
+  Options:
 
        --force           Force a domain on a 
                          project and remove  
@@ -1226,7 +1226,7 @@ exports[`help command > domains help output snapshots > domains help column widt
                          domain              
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -1264,28 +1264,28 @@ exports[`help command > domains help output snapshots > domains help column widt
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a domain that you already own
+  - Add a domain that you already own
 
-    [36m$ vercel domains add domain-name.com[39m
-    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
-    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+    $ vercel domains add domain-name.com
+    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
+    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel domains ls--next 1584722256178[39m
+    $ vercel domains ls--next 1584722256178
 
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mdomains[22m command [options]
+  ▲ vercel domains command [options]
 
   Manage domains                                                                
 
-  [2mCommands[22m:
+  Commands:
 
   ls                             Show all domains in a list                    
   inspect      name              Displays information related to a domain      
@@ -1296,7 +1296,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  name              Transfer in a domain to Vercel                
 
 
-  [2mOptions[22m:
+  Options:
 
        --force           Force a domain on a project and remove it from an existing  
                          one                                                         
@@ -1305,7 +1305,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   -y,  --yes             Skip the confirmation prompt when removing a domain         
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -1319,28 +1319,28 @@ exports[`help command > domains help output snapshots > domains help column widt
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a domain that you already own
+  - Add a domain that you already own
 
-    [36m$ vercel domains add domain-name.com[39m
-    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
-    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+    $ vercel domains add domain-name.com
+    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
+    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel domains ls--next 1584722256178[39m
+    $ vercel domains ls--next 1584722256178
 
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mdomains[22m command [options]
+  ▲ vercel domains command [options]
 
   Manage domains                                                                                                        
 
-  [2mCommands[22m:
+  Commands:
 
   ls                             Show all domains in a list                                                            
   inspect      name              Displays information related to a domain                                              
@@ -1351,7 +1351,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   transfer-in  name              Transfer in a domain to Vercel                                                        
 
 
-  [2mOptions[22m:
+  Options:
 
        --force           Force a domain on a project and remove it from an existing one                                      
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
@@ -1359,7 +1359,7 @@ exports[`help command > domains help output snapshots > domains help column widt
   -y,  --yes             Skip the confirmation prompt when removing a domain                                                 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -1372,28 +1372,28 @@ exports[`help command > domains help output snapshots > domains help column widt
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a domain that you already own
+  - Add a domain that you already own
 
-    [36m$ vercel domains add domain-name.com[39m
-    [36m$ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network[39m
-    [36m$ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')[39m
+    $ vercel domains add domain-name.com
+    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
+    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel domains ls--next 1584722256178[39m
+    $ vercel domains ls--next 1584722256178
 
 "
 `;
 
 exports[`help command > env help output snapshots > env help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1menv[22m [command] [options]
+  ▲ vercel env [command] [options]
 
   Interact with environment variables.  
 
-  [2mCommands[22m:
+  Commands:
 
   ls    [environment]       List 
                             all  
@@ -1431,7 +1431,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                             [.en…
 
 
-  [2mOptions[22m:
+  Options:
 
        --environment  Set the Environment    
                       (development, preview, 
@@ -1447,7 +1447,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                       alias                  
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -1485,67 +1485,67 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull all Development Environment Variables down from the cloud
+  - Pull all Development Environment Variables down from the cloud
 
-    [36m$ vercel env pull <file>[39m
-    [36m$ vercel env pull .env.development.local[39m
+    $ vercel env pull <file>
+    $ vercel env pull .env.development.local
 
-  [90m-[39m Add a new variable to multiple Environments
+  - Add a new variable to multiple Environments
 
-    [36m$ vercel env add <name>[39m
-    [36m$ vercel env add API_TOKEN[39m
+    $ vercel env add <name>
+    $ vercel env add API_TOKEN
 
-  [90m-[39m Add a new variable for a specific Environment
+  - Add a new variable for a specific Environment
 
-    [36m$ vercel env add <name> <production | preview | development>[39m
-    [36m$ vercel env add DB_PASS production[39m
+    $ vercel env add <name> <production | preview | development>
+    $ vercel env add DB_PASS production
 
-  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+  - Override an existing Environment Variable of same target (production, preview, deployment)
 
-    [36m$ vercel env add API_TOKEN --force[39m
+    $ vercel env add API_TOKEN --force
 
-  [90m-[39m Add a sensitive Environment Variable
+  - Add a sensitive Environment Variable
 
-    [36m$ vercel env add API_TOKEN --sensitive[39m
+    $ vercel env add API_TOKEN --sensitive
 
-  [90m-[39m Add a new variable for a specific Environment and Git Branch
+  - Add a new variable for a specific Environment and Git Branch
 
-    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env add DB_PASS preview feat1[39m
+    $ vercel env add <name> <production | preview | development> <gitbranch>
+    $ vercel env add DB_PASS preview feat1
 
-  [90m-[39m Add a new Environment Variable from stdin
+  - Add a new Environment Variable from stdin
 
-    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
-    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
-    [36m$ vercel env add API_URL production < url.txt[39m
+    $ cat <file> | vercel env add <name> <production | preview | development>
+    $ cat ~/.npmrc | vercel env add NPM_RC preview
+    $ vercel env add API_URL production < url.txt
 
-  [90m-[39m Remove a variable from multiple Environments
+  - Remove a variable from multiple Environments
 
-    [36m$ vercel env rm <name>[39m
-    [36m$ vercel env rm API_TOKEN[39m
+    $ vercel env rm <name>
+    $ vercel env rm API_TOKEN
 
-  [90m-[39m Remove a variable from a specific Environment
+  - Remove a variable from a specific Environment
 
-    [36m$ vercel env rm <name> <production | preview | development>[39m
-    [36m$ vercel env rm NPM_RC preview[39m
+    $ vercel env rm <name> <production | preview | development>
+    $ vercel env rm NPM_RC preview
 
-  [90m-[39m Remove a variable from a specific Environment and Git Branch
+  - Remove a variable from a specific Environment and Git Branch
 
-    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env rm NPM_RC preview feat1[39m
+    $ vercel env rm <name> <production | preview | development> <gitbranch>
+    $ vercel env rm NPM_RC preview feat1
 
 "
 `;
 
 exports[`help command > env help output snapshots > env help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1menv[22m [command] [options]
+  ▲ vercel env [command] [options]
 
   Interact with environment variables.                                          
 
-  [2mCommands[22m:
+  Commands:
 
   ls    [environment]       List all variables for the specified         
                             Environment                                  
@@ -1558,7 +1558,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
                             [.env.local]                                 
 
 
-  [2mOptions[22m:
+  Options:
 
        --environment  Set the Environment (development, preview, production) when    
                       pulling Environment Variables                                  
@@ -1567,7 +1567,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -y,  --yes          Skip the confirmation prompt when removing an alias            
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -1581,67 +1581,67 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull all Development Environment Variables down from the cloud
+  - Pull all Development Environment Variables down from the cloud
 
-    [36m$ vercel env pull <file>[39m
-    [36m$ vercel env pull .env.development.local[39m
+    $ vercel env pull <file>
+    $ vercel env pull .env.development.local
 
-  [90m-[39m Add a new variable to multiple Environments
+  - Add a new variable to multiple Environments
 
-    [36m$ vercel env add <name>[39m
-    [36m$ vercel env add API_TOKEN[39m
+    $ vercel env add <name>
+    $ vercel env add API_TOKEN
 
-  [90m-[39m Add a new variable for a specific Environment
+  - Add a new variable for a specific Environment
 
-    [36m$ vercel env add <name> <production | preview | development>[39m
-    [36m$ vercel env add DB_PASS production[39m
+    $ vercel env add <name> <production | preview | development>
+    $ vercel env add DB_PASS production
 
-  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+  - Override an existing Environment Variable of same target (production, preview, deployment)
 
-    [36m$ vercel env add API_TOKEN --force[39m
+    $ vercel env add API_TOKEN --force
 
-  [90m-[39m Add a sensitive Environment Variable
+  - Add a sensitive Environment Variable
 
-    [36m$ vercel env add API_TOKEN --sensitive[39m
+    $ vercel env add API_TOKEN --sensitive
 
-  [90m-[39m Add a new variable for a specific Environment and Git Branch
+  - Add a new variable for a specific Environment and Git Branch
 
-    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env add DB_PASS preview feat1[39m
+    $ vercel env add <name> <production | preview | development> <gitbranch>
+    $ vercel env add DB_PASS preview feat1
 
-  [90m-[39m Add a new Environment Variable from stdin
+  - Add a new Environment Variable from stdin
 
-    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
-    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
-    [36m$ vercel env add API_URL production < url.txt[39m
+    $ cat <file> | vercel env add <name> <production | preview | development>
+    $ cat ~/.npmrc | vercel env add NPM_RC preview
+    $ vercel env add API_URL production < url.txt
 
-  [90m-[39m Remove a variable from multiple Environments
+  - Remove a variable from multiple Environments
 
-    [36m$ vercel env rm <name>[39m
-    [36m$ vercel env rm API_TOKEN[39m
+    $ vercel env rm <name>
+    $ vercel env rm API_TOKEN
 
-  [90m-[39m Remove a variable from a specific Environment
+  - Remove a variable from a specific Environment
 
-    [36m$ vercel env rm <name> <production | preview | development>[39m
-    [36m$ vercel env rm NPM_RC preview[39m
+    $ vercel env rm <name> <production | preview | development>
+    $ vercel env rm NPM_RC preview
 
-  [90m-[39m Remove a variable from a specific Environment and Git Branch
+  - Remove a variable from a specific Environment and Git Branch
 
-    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env rm NPM_RC preview feat1[39m
+    $ vercel env rm <name> <production | preview | development> <gitbranch>
+    $ vercel env rm NPM_RC preview feat1
 
 "
 `;
 
 exports[`help command > env help output snapshots > env help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1menv[22m [command] [options]
+  ▲ vercel env [command] [options]
 
   Interact with environment variables.                                                                                  
 
-  [2mCommands[22m:
+  Commands:
 
   ls    [environment]       List all variables for the specified Environment                                     
   add   name [environment]  Add an Environment Variable (see examples below)                                     
@@ -1650,14 +1650,14 @@ exports[`help command > env help output snapshots > env help column width 120 1`
                             [.env.local]                                                                         
 
 
-  [2mOptions[22m:
+  Options:
 
        --environment  Set the Environment (development, preview, production) when pulling Environment Variables              
        --git-branch   Specify the Git branch to pull specific Environment Variables for                                      
   -y,  --yes          Skip the confirmation prompt when removing an alias                                                    
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -1670,67 +1670,67 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull all Development Environment Variables down from the cloud
+  - Pull all Development Environment Variables down from the cloud
 
-    [36m$ vercel env pull <file>[39m
-    [36m$ vercel env pull .env.development.local[39m
+    $ vercel env pull <file>
+    $ vercel env pull .env.development.local
 
-  [90m-[39m Add a new variable to multiple Environments
+  - Add a new variable to multiple Environments
 
-    [36m$ vercel env add <name>[39m
-    [36m$ vercel env add API_TOKEN[39m
+    $ vercel env add <name>
+    $ vercel env add API_TOKEN
 
-  [90m-[39m Add a new variable for a specific Environment
+  - Add a new variable for a specific Environment
 
-    [36m$ vercel env add <name> <production | preview | development>[39m
-    [36m$ vercel env add DB_PASS production[39m
+    $ vercel env add <name> <production | preview | development>
+    $ vercel env add DB_PASS production
 
-  [90m-[39m Override an existing Environment Variable of same target (production, preview, deployment)
+  - Override an existing Environment Variable of same target (production, preview, deployment)
 
-    [36m$ vercel env add API_TOKEN --force[39m
+    $ vercel env add API_TOKEN --force
 
-  [90m-[39m Add a sensitive Environment Variable
+  - Add a sensitive Environment Variable
 
-    [36m$ vercel env add API_TOKEN --sensitive[39m
+    $ vercel env add API_TOKEN --sensitive
 
-  [90m-[39m Add a new variable for a specific Environment and Git Branch
+  - Add a new variable for a specific Environment and Git Branch
 
-    [36m$ vercel env add <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env add DB_PASS preview feat1[39m
+    $ vercel env add <name> <production | preview | development> <gitbranch>
+    $ vercel env add DB_PASS preview feat1
 
-  [90m-[39m Add a new Environment Variable from stdin
+  - Add a new Environment Variable from stdin
 
-    [36m$ cat <file> | vercel env add <name> <production | preview | development>[39m
-    [36m$ cat ~/.npmrc | vercel env add NPM_RC preview[39m
-    [36m$ vercel env add API_URL production < url.txt[39m
+    $ cat <file> | vercel env add <name> <production | preview | development>
+    $ cat ~/.npmrc | vercel env add NPM_RC preview
+    $ vercel env add API_URL production < url.txt
 
-  [90m-[39m Remove a variable from multiple Environments
+  - Remove a variable from multiple Environments
 
-    [36m$ vercel env rm <name>[39m
-    [36m$ vercel env rm API_TOKEN[39m
+    $ vercel env rm <name>
+    $ vercel env rm API_TOKEN
 
-  [90m-[39m Remove a variable from a specific Environment
+  - Remove a variable from a specific Environment
 
-    [36m$ vercel env rm <name> <production | preview | development>[39m
-    [36m$ vercel env rm NPM_RC preview[39m
+    $ vercel env rm <name> <production | preview | development>
+    $ vercel env rm NPM_RC preview
 
-  [90m-[39m Remove a variable from a specific Environment and Git Branch
+  - Remove a variable from a specific Environment and Git Branch
 
-    [36m$ vercel env rm <name> <production | preview | development> <gitbranch>[39m
-    [36m$ vercel env rm NPM_RC preview feat1[39m
+    $ vercel env rm <name> <production | preview | development> <gitbranch>
+    $ vercel env rm NPM_RC preview feat1
 
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command [options]
+  ▲ vercel git command [options]
 
   Manage your Git provider connections. 
 
-  [2mCommands[22m:
+  Commands:
 
   connect     [git url]  Connect   
                          your      
@@ -1751,12 +1751,12 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          project   
 
 
-  [2mOptions[22m:
+  Options:
 
 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -1794,30 +1794,30 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+  - Connect your Vercel Project to your Git repository defined in your local .git config
 
-    [36m$ vercel git connect[39m
+    $ vercel git connect
 
-  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+  - Connect your Vercel Project to a Git repository using the remote URL
 
-    [36m$ vercel git connect https://github.com/user/repo.git[39m
+    $ vercel git connect https://github.com/user/repo.git
 
-  [90m-[39m Disconnect the Git provider repository
+  - Disconnect the Git provider repository
 
-    [36m$ vercel git disconnect[39m
+    $ vercel git disconnect
 
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command [options]
+  ▲ vercel git command [options]
 
   Manage your Git provider connections.                                         
 
-  [2mCommands[22m:
+  Commands:
 
   connect     [git url]  Connect your Vercel Project to your Git repository
                          or provide the remote URL to your Git repository  
@@ -1825,12 +1825,12 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
                          project                                           
 
 
-  [2mOptions[22m:
+  Options:
 
 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -1844,42 +1844,42 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+  - Connect your Vercel Project to your Git repository defined in your local .git config
 
-    [36m$ vercel git connect[39m
+    $ vercel git connect
 
-  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+  - Connect your Vercel Project to a Git repository using the remote URL
 
-    [36m$ vercel git connect https://github.com/user/repo.git[39m
+    $ vercel git connect https://github.com/user/repo.git
 
-  [90m-[39m Disconnect the Git provider repository
+  - Disconnect the Git provider repository
 
-    [36m$ vercel git disconnect[39m
+    $ vercel git disconnect
 
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mgit[22m command [options]
+  ▲ vercel git command [options]
 
   Manage your Git provider connections.                                                                                 
 
-  [2mCommands[22m:
+  Commands:
 
   connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
   disconnect             Disconnect the Git provider repository from your project                                  
 
 
-  [2mOptions[22m:
+  Options:
 
 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -1892,37 +1892,37 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Connect your Vercel Project to your Git repository defined in your local .git config
+  - Connect your Vercel Project to your Git repository defined in your local .git config
 
-    [36m$ vercel git connect[39m
+    $ vercel git connect
 
-  [90m-[39m Connect your Vercel Project to a Git repository using the remote URL
+  - Connect your Vercel Project to a Git repository using the remote URL
 
-    [36m$ vercel git connect https://github.com/user/repo.git[39m
+    $ vercel git connect https://github.com/user/repo.git
 
-  [90m-[39m Disconnect the Git provider repository
+  - Disconnect the Git provider repository
 
-    [36m$ vercel git disconnect[39m
+    $ vercel git disconnect
 
 "
 `;
 
 exports[`help command > init help output snapshots > init help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects    
 
-  [2mOptions[22m:
+  Options:
 
   -f,  --force  Overwrite destination   
                 directory if exists     
                 [off]                   
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -1960,39 +1960,39 @@ exports[`help command > init help output snapshots > init help column width 40 1
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Choose from all available examples
+  - Choose from all available examples
 
-    [36m$ vercel init[39m
+    $ vercel init
 
-  [90m-[39m Initialize example project into a new directory
+  - Initialize example project into a new directory
 
-    [36m$ vercel init <example>[39m
+    $ vercel init <example>
 
-  [90m-[39m Initialize example project into specified directory
+  - Initialize example project into specified directory
 
-    [36m$ vercel <example> <dir>[39m
+    $ vercel <example> <dir>
 
-  [90m-[39m Initialize example project without checking
+  - Initialize example project without checking
 
-    [36m$ vercel init <example> --force[39m
+    $ vercel init <example> --force
 
 "
 `;
 
 exports[`help command > init help output snapshots > init help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects                                            
 
-  [2mOptions[22m:
+  Options:
 
   -f,  --force  Overwrite destination directory if exists [off]                 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2006,39 +2006,39 @@ exports[`help command > init help output snapshots > init help column width 80 1
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Choose from all available examples
+  - Choose from all available examples
 
-    [36m$ vercel init[39m
+    $ vercel init
 
-  [90m-[39m Initialize example project into a new directory
+  - Initialize example project into a new directory
 
-    [36m$ vercel init <example>[39m
+    $ vercel init <example>
 
-  [90m-[39m Initialize example project into specified directory
+  - Initialize example project into specified directory
 
-    [36m$ vercel <example> <dir>[39m
+    $ vercel <example> <dir>
 
-  [90m-[39m Initialize example project without checking
+  - Initialize example project without checking
 
-    [36m$ vercel init <example> --force[39m
+    $ vercel init <example> --force
 
 "
 `;
 
 exports[`help command > init help output snapshots > init help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1minit[22m [example] [dir] [options]
+  ▲ vercel init [example] [dir] [options]
 
   Initialize example Vercel Projects                                                                                    
 
-  [2mOptions[22m:
+  Options:
 
   -f,  --force  Overwrite destination directory if exists [off]                                                         
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2051,34 +2051,34 @@ exports[`help command > init help output snapshots > init help column width 120 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Choose from all available examples
+  - Choose from all available examples
 
-    [36m$ vercel init[39m
+    $ vercel init
 
-  [90m-[39m Initialize example project into a new directory
+  - Initialize example project into a new directory
 
-    [36m$ vercel init <example>[39m
+    $ vercel init <example>
 
-  [90m-[39m Initialize example project into specified directory
+  - Initialize example project into specified directory
 
-    [36m$ vercel <example> <dir>[39m
+    $ vercel <example> <dir>
 
-  [90m-[39m Initialize example project without checking
+  - Initialize example project without checking
 
-    [36m$ vercel init <example> --force[39m
+    $ vercel init <example> --force
 
 "
 `;
 
 exports[`help command > inspect help output snapshots > inspect help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1minspect[22m url [options]
+  ▲ vercel inspect url [options]
 
   Show information about a deployment.  
 
-  [2mOptions[22m:
+  Options:
 
   -l,  --logs            Prints the build    
                          logs instead of the 
@@ -2090,7 +2090,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
                          deployment completes
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -2128,45 +2128,45 @@ exports[`help command > inspect help output snapshots > inspect help column widt
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Get information about a deployment by its unique URL
+  - Get information about a deployment by its unique URL
 
-    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+    $ vercel inspect my-deployment-ji2fjij2.vercel.app
 
-  [90m-[39m Get information about the deployment an alias points to
+  - Get information about the deployment an alias points to
 
-    [36m$ vercel inspect my-deployment.vercel.app[39m
+    $ vercel inspect my-deployment.vercel.app
 
-  [90m-[39m Get information about a deployment by piping in the URL
+  - Get information about a deployment by piping in the URL
 
-    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+    $ echo my-deployment.vercel.app | vercel inspect
 
-  [90m-[39m Wait up to 90 seconds for deployment to complete
+  - Wait up to 90 seconds for deployment to complete
 
-    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+    $ vercel inspect my-deployment.vercel.app --wait --timeout 90s
 
-  [90m-[39m Get deployment build logs
+  - Get deployment build logs
 
-    [36m$ vercel inspect my-deployment.vercel.app --logs[39m
+    $ vercel inspect my-deployment.vercel.app --logs
 
 "
 `;
 
 exports[`help command > inspect help output snapshots > inspect help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1minspect[22m url [options]
+  ▲ vercel inspect url [options]
 
   Show information about a deployment.                                          
 
-  [2mOptions[22m:
+  Options:
 
   -l,  --logs            Prints the build logs instead of the deployment summary     
        --timeout <TIME>  Time to wait for deployment completion [3m]                 
        --wait            Blocks until deployment completes                           
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2180,45 +2180,45 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Get information about a deployment by its unique URL
+  - Get information about a deployment by its unique URL
 
-    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+    $ vercel inspect my-deployment-ji2fjij2.vercel.app
 
-  [90m-[39m Get information about the deployment an alias points to
+  - Get information about the deployment an alias points to
 
-    [36m$ vercel inspect my-deployment.vercel.app[39m
+    $ vercel inspect my-deployment.vercel.app
 
-  [90m-[39m Get information about a deployment by piping in the URL
+  - Get information about a deployment by piping in the URL
 
-    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+    $ echo my-deployment.vercel.app | vercel inspect
 
-  [90m-[39m Wait up to 90 seconds for deployment to complete
+  - Wait up to 90 seconds for deployment to complete
 
-    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+    $ vercel inspect my-deployment.vercel.app --wait --timeout 90s
 
-  [90m-[39m Get deployment build logs
+  - Get deployment build logs
 
-    [36m$ vercel inspect my-deployment.vercel.app --logs[39m
+    $ vercel inspect my-deployment.vercel.app --logs
 
 "
 `;
 
 exports[`help command > inspect help output snapshots > inspect help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1minspect[22m url [options]
+  ▲ vercel inspect url [options]
 
   Show information about a deployment.                                                                                  
 
-  [2mOptions[22m:
+  Options:
 
   -l,  --logs            Prints the build logs instead of the deployment summary                                             
        --timeout <TIME>  Time to wait for deployment completion [3m]                                                         
        --wait            Blocks until deployment completes                                                                   
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2231,39 +2231,39 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Get information about a deployment by its unique URL
+  - Get information about a deployment by its unique URL
 
-    [36m$ vercel inspect my-deployment-ji2fjij2.vercel.app[39m
+    $ vercel inspect my-deployment-ji2fjij2.vercel.app
 
-  [90m-[39m Get information about the deployment an alias points to
+  - Get information about the deployment an alias points to
 
-    [36m$ vercel inspect my-deployment.vercel.app[39m
+    $ vercel inspect my-deployment.vercel.app
 
-  [90m-[39m Get information about a deployment by piping in the URL
+  - Get information about a deployment by piping in the URL
 
-    [36m$ echo my-deployment.vercel.app | vercel inspect[39m
+    $ echo my-deployment.vercel.app | vercel inspect
 
-  [90m-[39m Wait up to 90 seconds for deployment to complete
+  - Wait up to 90 seconds for deployment to complete
 
-    [36m$ vercel inspect my-deployment.vercel.app --wait --timeout 90s[39m
+    $ vercel inspect my-deployment.vercel.app --wait --timeout 90s
 
-  [90m-[39m Get deployment build logs
+  - Get deployment build logs
 
-    [36m$ vercel inspect my-deployment.vercel.app --logs[39m
+    $ vercel inspect my-deployment.vercel.app --logs
 
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mlink[22m [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel    
   Project.                              
 
-  [2mOptions[22m:
+  Options:
 
   -p,  --project <NAME>  Specify a      
                          project name   
@@ -2280,7 +2280,7 @@ exports[`help command > link help output snapshots > link help column width 40 1
                          settings       
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -2318,34 +2318,34 @@ exports[`help command > link help output snapshots > link help column width 40 1
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Link current directory to a Vercel Project
+  - Link current directory to a Vercel Project
 
-    [36m$ vercel link[39m
+    $ vercel link
 
-  [90m-[39m Link current directory with default options and skip questions
+  - Link current directory with default options and skip questions
 
-    [36m$ vercel link --yes[39m
+    $ vercel link --yes
 
-  [90m-[39m Link a specific directory to a Vercel Project
+  - Link a specific directory to a Vercel Project
 
-    [36m$ vercel link --cwd /path/to/project[39m
+    $ vercel link --cwd /path/to/project
 
-  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
 
-    [36m$ vercel link --repo[39m
+    $ vercel link --repo
 
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mlink[22m [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel Project.                                   
 
-  [2mOptions[22m:
+  Options:
 
   -p,  --project <NAME>  Specify a project name                                 
   -r,  --repo            Link multiple projects based on Git repository (alpha) 
@@ -2353,7 +2353,7 @@ exports[`help command > link help output snapshots > link help column width 80 1
                          default scope and settings                             
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2367,41 +2367,41 @@ exports[`help command > link help output snapshots > link help column width 80 1
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Link current directory to a Vercel Project
+  - Link current directory to a Vercel Project
 
-    [36m$ vercel link[39m
+    $ vercel link
 
-  [90m-[39m Link current directory with default options and skip questions
+  - Link current directory with default options and skip questions
 
-    [36m$ vercel link --yes[39m
+    $ vercel link --yes
 
-  [90m-[39m Link a specific directory to a Vercel Project
+  - Link a specific directory to a Vercel Project
 
-    [36m$ vercel link --cwd /path/to/project[39m
+    $ vercel link --cwd /path/to/project
 
-  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
 
-    [36m$ vercel link --repo[39m
+    $ vercel link --repo
 
 "
 `;
 
 exports[`help command > link help output snapshots > link help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mlink[22m [options]
+  ▲ vercel link [options]
 
   Link a local directory to a Vercel Project.                                                                           
 
-  [2mOptions[22m:
+  Options:
 
   -p,  --project <NAME>  Specify a project name                                                                         
   -r,  --repo            Link multiple projects based on Git repository (alpha)                                         
   -y,  --yes             Skip questions when setting up new project using default scope and settings                    
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2414,34 +2414,34 @@ exports[`help command > link help output snapshots > link help column width 120 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Link current directory to a Vercel Project
+  - Link current directory to a Vercel Project
 
-    [36m$ vercel link[39m
+    $ vercel link
 
-  [90m-[39m Link current directory with default options and skip questions
+  - Link current directory with default options and skip questions
 
-    [36m$ vercel link --yes[39m
+    $ vercel link --yes
 
-  [90m-[39m Link a specific directory to a Vercel Project
+  - Link a specific directory to a Vercel Project
 
-    [36m$ vercel link --cwd /path/to/project[39m
+    $ vercel link --cwd /path/to/project
 
-  [90m-[39m Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
 
-    [36m$ vercel link --repo[39m
+    $ vercel link --repo
 
 "
 `;
 
 exports[`help command > list help output snapshots > list help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.      
 
-  [2mOptions[22m:
+  Options:
 
        --environment <production|preview>    
   -m,  --meta <KEY=value>                  F…
@@ -2476,7 +2476,7 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                            t…
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -2514,34 +2514,34 @@ exports[`help command > list help output snapshots > list help column width 40 1
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m List all deployments for the currently linked project
+  - List all deployments for the currently linked project
 
-    [36m$ vercel list[39m
+    $ vercel list
 
-  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments for the project \`my-app\` in the team of the currently linked project
 
-    [36m$ vercel list my-app[39m
+    $ vercel list my-app
 
-  [90m-[39m Filter deployments by metadata
+  - Filter deployments by metadata
 
-    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+    $ vercel list -m key1=value1 -m key2=value2
 
-  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel list my-app --next 1584722256178[39m
+    $ vercel list my-app --next 1584722256178
 
 "
 `;
 
 exports[`help command > list help output snapshots > list help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.                                              
 
-  [2mOptions[22m:
+  Options:
 
        --environment <production|preview>                                            
   -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
@@ -2552,7 +2552,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
                                            Can appear many times.                    
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2566,34 +2566,34 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m List all deployments for the currently linked project
+  - List all deployments for the currently linked project
 
-    [36m$ vercel list[39m
+    $ vercel list
 
-  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments for the project \`my-app\` in the team of the currently linked project
 
-    [36m$ vercel list my-app[39m
+    $ vercel list my-app
 
-  [90m-[39m Filter deployments by metadata
+  - Filter deployments by metadata
 
-    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+    $ vercel list -m key1=value1 -m key2=value2
 
-  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel list my-app --next 1584722256178[39m
+    $ vercel list my-app --next 1584722256178
 
 "
 `;
 
 exports[`help command > list help output snapshots > list help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mlist[22m [app] [options]
+  ▲ vercel list [app] [options]
 
   List app deployments for an app.                                                                                      
 
-  [2mOptions[22m:
+  Options:
 
        --environment <production|preview>                                                                                    
   -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
@@ -2602,7 +2602,7 @@ exports[`help command > list help output snapshots > list help column width 120 
                                            KEY=value\`). Can appear many times.                                               
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2615,42 +2615,42 @@ exports[`help command > list help output snapshots > list help column width 120 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m List all deployments for the currently linked project
+  - List all deployments for the currently linked project
 
-    [36m$ vercel list[39m
+    $ vercel list
 
-  [90m-[39m List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments for the project \`my-app\` in the team of the currently linked project
 
-    [36m$ vercel list my-app[39m
+    $ vercel list my-app
 
-  [90m-[39m Filter deployments by metadata
+  - Filter deployments by metadata
 
-    [36m$ vercel list -m key1=value1 -m key2=value2[39m
+    $ vercel list -m key1=value1 -m key2=value2
 
-  [90m-[39m Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel list my-app --next 1584722256178[39m
+    $ vercel list my-app --next 1584722256178
 
 "
 `;
 
 exports[`help command > login help output snapshots > login help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Authenticate using your email or team 
   id.                                   
 
-  [2mOptions[22m:
+  Options:
 
    --github  Log in with GitHub          
    --oob     Log in with "out of band"   
              authentication              
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -2688,40 +2688,40 @@ exports[`help command > login help output snapshots > login help column width 40
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Log into the Vercel platform
+  - Log into the Vercel platform
 
-    [36m$ vercel login[39m
+    $ vercel login
 
-  [90m-[39m Log in using a specific email address
+  - Log in using a specific email address
 
-    [36m$ vercel login username@example.com[39m
+    $ vercel login username@example.com
 
-  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+  - Log in using a specific team "slug" for SAML Single Sign-On
 
-    [36m$ vercel login acme[39m
+    $ vercel login acme
 
-  [90m-[39m Log in using GitHub in "out-of-band" mode
+  - Log in using GitHub in "out-of-band" mode
 
-    [36m$ vercel login --github --oob[39m
+    $ vercel login --github --oob
 
 "
 `;
 
 exports[`help command > login help output snapshots > login help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Authenticate using your email or team id.                                     
 
-  [2mOptions[22m:
+  Options:
 
    --github  Log in with GitHub                                                  
    --oob     Log in with "out of band" authentication                            
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2735,40 +2735,40 @@ exports[`help command > login help output snapshots > login help column width 80
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Log into the Vercel platform
+  - Log into the Vercel platform
 
-    [36m$ vercel login[39m
+    $ vercel login
 
-  [90m-[39m Log in using a specific email address
+  - Log in using a specific email address
 
-    [36m$ vercel login username@example.com[39m
+    $ vercel login username@example.com
 
-  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+  - Log in using a specific team "slug" for SAML Single Sign-On
 
-    [36m$ vercel login acme[39m
+    $ vercel login acme
 
-  [90m-[39m Log in using GitHub in "out-of-band" mode
+  - Log in using GitHub in "out-of-band" mode
 
-    [36m$ vercel login --github --oob[39m
+    $ vercel login --github --oob
 
 "
 `;
 
 exports[`help command > login help output snapshots > login help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mlogin[22m [email or team id] [options]
+  ▲ vercel login [email or team id] [options]
 
   Authenticate using your email or team id.                                                                             
 
-  [2mOptions[22m:
+  Options:
 
    --github  Log in with GitHub                                                                                          
    --oob     Log in with "out of band" authentication                                                                    
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2781,34 +2781,34 @@ exports[`help command > login help output snapshots > login help column width 12
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Log into the Vercel platform
+  - Log into the Vercel platform
 
-    [36m$ vercel login[39m
+    $ vercel login
 
-  [90m-[39m Log in using a specific email address
+  - Log in using a specific email address
 
-    [36m$ vercel login username@example.com[39m
+    $ vercel login username@example.com
 
-  [90m-[39m Log in using a specific team "slug" for SAML Single Sign-On
+  - Log in using a specific team "slug" for SAML Single Sign-On
 
-    [36m$ vercel login acme[39m
+    $ vercel login acme
 
-  [90m-[39m Log in using GitHub in "out-of-band" mode
+  - Log in using GitHub in "out-of-band" mode
 
-    [36m$ vercel login --github --oob[39m
+    $ vercel login --github --oob
 
 "
 `;
 
 exports[`help command > project help output snapshots > project help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mproject[22m command [options]
+  ▲ vercel project command [options]
 
   Manage your Vercel Projects.          
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all projects  
              in the selected    
@@ -2817,13 +2817,13 @@ exports[`help command > project help output snapshots > project help column widt
   rm   name  Remove a project   
 
 
-  [2mOptions[22m:
+  Options:
 
   -N,  --next <MS>  Show next page of   
                     results             
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -2861,38 +2861,38 @@ exports[`help command > project help output snapshots > project help column widt
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new project
+  - Add a new project
 
-    [36m$ vercel project add my-project[39m
+    $ vercel project add my-project
 
-  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel project ls --next 1584722256178[39m
+    $ vercel project ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > project help output snapshots > project help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mproject[22m command [options]
+  ▲ vercel project command [options]
 
   Manage your Vercel Projects.                                                  
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all projects in the selected scope                    
   add  name  Add a new project                                          
   rm   name  Remove a project                                           
 
 
-  [2mOptions[22m:
+  Options:
 
   -N,  --next <MS>  Show next page of results                                   
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -2906,38 +2906,38 @@ exports[`help command > project help output snapshots > project help column widt
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new project
+  - Add a new project
 
-    [36m$ vercel project add my-project[39m
+    $ vercel project add my-project
 
-  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel project ls --next 1584722256178[39m
+    $ vercel project ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > project help output snapshots > project help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mproject[22m command [options]
+  ▲ vercel project command [options]
 
   Manage your Vercel Projects.                                                                                          
 
-  [2mCommands[22m:
+  Commands:
 
   ls         Show all projects in the selected scope                                                            
   add  name  Add a new project                                                                                  
   rm   name  Remove a project                                                                                   
 
 
-  [2mOptions[22m:
+  Options:
 
   -N,  --next <MS>  Show next page of results                                                                           
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -2950,27 +2950,27 @@ exports[`help command > project help output snapshots > project help column widt
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Add a new project
+  - Add a new project
 
-    [36m$ vercel project add my-project[39m
+    $ vercel project add my-project
 
-  [90m-[39m Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    [36m$ vercel project ls --next 1584722256178[39m
+    $ vercel project ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > promote help output snapshots > promote help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+  ▲ vercel promote deployment id/url [options]
 
   Promote an existing deployment to     
   current.                              
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the   
                      status of  
@@ -2979,14 +2979,14 @@ exports[`help command > promote help output snapshots > promote help column widt
                      promotions 
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for 
                         promotion        
                         completion [3m]  
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3024,39 +3024,39 @@ exports[`help command > promote help output snapshots > promote help column widt
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending promotions
+  - Show the status of any current pending promotions
 
-    [36m$ vercel promote[39m
-    [36m$ vercel promote status[39m
-    [36m$ vercel promote status <project>[39m
-    [36m$ vercel promote status --timeout 30s[39m
+    $ vercel promote
+    $ vercel promote status
+    $ vercel promote status <project>
+    $ vercel promote status --timeout 30s
 
-  [90m-[39m Promote a deployment using id or url
+  - Promote a deployment using id or url
 
-    [36m$ vercel promote <deployment id/url>[39m
+    $ vercel promote <deployment id/url>
 
 "
 `;
 
 exports[`help command > promote help output snapshots > promote help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+  ▲ vercel promote deployment id/url [options]
 
   Promote an existing deployment to current.                                    
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the status of any current pending promotions  
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for promotion completion [3m]               
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3070,39 +3070,39 @@ exports[`help command > promote help output snapshots > promote help column widt
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending promotions
+  - Show the status of any current pending promotions
 
-    [36m$ vercel promote[39m
-    [36m$ vercel promote status[39m
-    [36m$ vercel promote status <project>[39m
-    [36m$ vercel promote status --timeout 30s[39m
+    $ vercel promote
+    $ vercel promote status
+    $ vercel promote status <project>
+    $ vercel promote status --timeout 30s
 
-  [90m-[39m Promote a deployment using id or url
+  - Promote a deployment using id or url
 
-    [36m$ vercel promote <deployment id/url>[39m
+    $ vercel promote <deployment id/url>
 
 "
 `;
 
 exports[`help command > promote help output snapshots > promote help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mpromote[22m deployment id/url [options]
+  ▲ vercel promote deployment id/url [options]
 
   Promote an existing deployment to current.                                                                            
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the status of any current pending promotions                                          
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for promotion completion [3m]                                                       
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3115,30 +3115,30 @@ exports[`help command > promote help output snapshots > promote help column widt
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending promotions
+  - Show the status of any current pending promotions
 
-    [36m$ vercel promote[39m
-    [36m$ vercel promote status[39m
-    [36m$ vercel promote status <project>[39m
-    [36m$ vercel promote status --timeout 30s[39m
+    $ vercel promote
+    $ vercel promote status
+    $ vercel promote status <project>
+    $ vercel promote status --timeout 30s
 
-  [90m-[39m Promote a deployment using id or url
+  - Promote a deployment using id or url
 
-    [36m$ vercel promote <deployment id/url>[39m
+    $ vercel promote <deployment id/url>
 
 "
 `;
 
 exports[`help command > pull help output snapshots > pull help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and 
   project settings from Vercel.         
 
-  [2mOptions[22m:
+  Options:
 
        --environment <environment>  Deployme…
                                     environm…
@@ -3163,7 +3163,7 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                                     settings 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3201,38 +3201,38 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+  - Pull the latest Environment Variables and Project Settings from the cloud
 
-    [36m$ vercel pull[39m
+    $ vercel pull
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+  - Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
 
-    [36m$ vercel pull ./path-to-project[39m
+    $ vercel pull ./path-to-project
 
-  [90m-[39m Pull for a specific environment
+  - Pull for a specific environment
 
-    [36m$ vercel pull --environment=<production | preview | development>[39m
+    $ vercel pull --environment=<production | preview | development>
 
-  [90m-[39m Pull for a preview feature branch
+  - Pull for a preview feature branch
 
-    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+    $ vercel pull --environment=preview --git-branch=feature-branch
 
-  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+  - If you want to download environment variables to a specific file, use \`vercel env pull\` instead
 
-    [36m$ vercel env pull[39m
+    $ vercel env pull
 
 "
 `;
 
 exports[`help command > pull help output snapshots > pull help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and project settings from Vercel.           
 
-  [2mOptions[22m:
+  Options:
 
        --environment <environment>  Deployment environment [development]             
        --git-branch <branch>        Specify the Git branch to pull specific          
@@ -3241,7 +3241,7 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
                                     default scope and settings                       
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3255,45 +3255,45 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+  - Pull the latest Environment Variables and Project Settings from the cloud
 
-    [36m$ vercel pull[39m
+    $ vercel pull
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+  - Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
 
-    [36m$ vercel pull ./path-to-project[39m
+    $ vercel pull ./path-to-project
 
-  [90m-[39m Pull for a specific environment
+  - Pull for a specific environment
 
-    [36m$ vercel pull --environment=<production | preview | development>[39m
+    $ vercel pull --environment=<production | preview | development>
 
-  [90m-[39m Pull for a preview feature branch
+  - Pull for a preview feature branch
 
-    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+    $ vercel pull --environment=preview --git-branch=feature-branch
 
-  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+  - If you want to download environment variables to a specific file, use \`vercel env pull\` instead
 
-    [36m$ vercel env pull[39m
+    $ vercel env pull
 
 "
 `;
 
 exports[`help command > pull help output snapshots > pull help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mpull[22m [project-path] [options]
+  ▲ vercel pull [project-path] [options]
 
   Pull latest environment variables and project settings from Vercel.                                                   
 
-  [2mOptions[22m:
+  Options:
 
        --environment <environment>  Deployment environment [development]                                                     
        --git-branch <branch>        Specify the Git branch to pull specific Environment Variables for                        
   -y,  --yes                        Skip questions when setting up new project using default scope and settings              
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3306,45 +3306,45 @@ exports[`help command > pull help output snapshots > pull help column width 120 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud
+  - Pull the latest Environment Variables and Project Settings from the cloud
 
-    [36m$ vercel pull[39m
+    $ vercel pull
 
-  [90m-[39m Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
+  - Pull the latest Environment Variables and Project Settings from the cloud targeting a directory
 
-    [36m$ vercel pull ./path-to-project[39m
+    $ vercel pull ./path-to-project
 
-  [90m-[39m Pull for a specific environment
+  - Pull for a specific environment
 
-    [36m$ vercel pull --environment=<production | preview | development>[39m
+    $ vercel pull --environment=<production | preview | development>
 
-  [90m-[39m Pull for a preview feature branch
+  - Pull for a preview feature branch
 
-    [36m$ vercel pull --environment=preview --git-branch=feature-branch[39m
+    $ vercel pull --environment=preview --git-branch=feature-branch
 
-  [90m-[39m If you want to download environment variables to a specific file, use \`vercel env pull\` instead
+  - If you want to download environment variables to a specific file, use \`vercel env pull\` instead
 
-    [36m$ vercel env pull[39m
+    $ vercel env pull
 
 "
 `;
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [deploymentId|deploymentName] [options]
 
   Rebuild and deploy a previous         
   deployment.                           
 
-  [2mOptions[22m:
+  Options:
 
    --no-wait  Don't wait for the redeploy
               to finish                  
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3382,31 +3382,31 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Rebuild and deploy an existing deployment using id or url
+  - Rebuild and deploy an existing deployment using id or url
 
-    [36m$ vercel redeploy my-deployment.vercel.app[39m
+    $ vercel redeploy my-deployment.vercel.app
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+    $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
 "
 `;
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [deploymentId|deploymentName] [options]
 
   Rebuild and deploy a previous deployment.                                     
 
-  [2mOptions[22m:
+  Options:
 
    --no-wait  Don't wait for the redeploy to finish                              
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3420,31 +3420,31 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Rebuild and deploy an existing deployment using id or url
+  - Rebuild and deploy an existing deployment using id or url
 
-    [36m$ vercel redeploy my-deployment.vercel.app[39m
+    $ vercel redeploy my-deployment.vercel.app
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+    $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
 "
 `;
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mredeploy[22m [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [deploymentId|deploymentName] [options]
 
   Rebuild and deploy a previous deployment.                                                                             
 
-  [2mOptions[22m:
+  Options:
 
    --no-wait  Don't wait for the redeploy to finish                                                                      
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3457,33 +3457,33 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Rebuild and deploy an existing deployment using id or url
+  - Rebuild and deploy an existing deployment using id or url
 
-    [36m$ vercel redeploy my-deployment.vercel.app[39m
+    $ vercel redeploy my-deployment.vercel.app
 
-  [90m-[39m Write Deployment URL to a file
+  - Write Deployment URL to a file
 
-    [36m$ vercel redeploy my-deployment.vercel.app > deployment-url.txt[39m
+    $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
 "
 `;
 
 exports[`help command > remove help output snapshots > remove help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+  ▲ vercel remove ...deploymentId|deploymentName [options]
 
   Remove a deployment by name or id.    
 
-  [2mOptions[22m:
+  Options:
 
   -s,  --safe  Skip deployments with an 
                active alias             
   -y,  --yes   Skip confirmation        
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3521,36 +3521,36 @@ exports[`help command > remove help output snapshots > remove help column width 
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by \`deploymentId\`
 
-    [36m$ vercel remove my-app[39m
+    $ vercel remove my-app
 
-  [90m-[39m Remove all deployments with name \`my-app\`
+  - Remove all deployments with name \`my-app\`
 
-    [36m$ vercel remove deploymentId[39m
+    $ vercel remove deploymentId
 
-  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
 
-    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > remove help output snapshots > remove help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+  ▲ vercel remove ...deploymentId|deploymentName [options]
 
   Remove a deployment by name or id.                                            
 
-  [2mOptions[22m:
+  Options:
 
   -s,  --safe  Skip deployments with an active alias                            
   -y,  --yes   Skip confirmation                                                
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3564,36 +3564,36 @@ exports[`help command > remove help output snapshots > remove help column width 
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by \`deploymentId\`
 
-    [36m$ vercel remove my-app[39m
+    $ vercel remove my-app
 
-  [90m-[39m Remove all deployments with name \`my-app\`
+  - Remove all deployments with name \`my-app\`
 
-    [36m$ vercel remove deploymentId[39m
+    $ vercel remove deploymentId
 
-  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
 
-    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > remove help output snapshots > remove help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mremove[22m ...deploymentId|deploymentName [options]
+  ▲ vercel remove ...deploymentId|deploymentName [options]
 
   Remove a deployment by name or id.                                                                                    
 
-  [2mOptions[22m:
+  Options:
 
   -s,  --safe  Skip deployments with an active alias                                                                    
   -y,  --yes   Skip confirmation                                                                                        
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3606,31 +3606,31 @@ exports[`help command > remove help output snapshots > remove help column width 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by \`deploymentId\`
 
-    [36m$ vercel remove my-app[39m
+    $ vercel remove my-app
 
-  [90m-[39m Remove all deployments with name \`my-app\`
+  - Remove all deployments with name \`my-app\`
 
-    [36m$ vercel remove deploymentId[39m
+    $ vercel remove deploymentId
 
-  [90m-[39m Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
+  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
 
-    [36m$ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o[39m
+    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > rollback help output snapshots > rollback help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+  ▲ vercel rollback deployment id/url [options]
 
   Quickly revert back to a previous     
   deployment.                           
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the   
                      status of  
@@ -3639,14 +3639,14 @@ exports[`help command > rollback help output snapshots > rollback help column wi
                      rollbacks  
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for 
                         rollback         
                         completion [3m]  
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3684,39 +3684,39 @@ exports[`help command > rollback help output snapshots > rollback help column wi
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending rollbacks
+  - Show the status of any current pending rollbacks
 
-    [36m$ vercel rollback[39m
-    [36m$ vercel rollback status[39m
-    [36m$ vercel rollback status <project>[39m
-    [36m$ vercel rollback status --timeout 30s[39m
+    $ vercel rollback
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
-  [90m-[39m Rollback a deployment using id or url
+  - Rollback a deployment using id or url
 
-    [36m$ vercel rollback <deployment id/url>[39m
+    $ vercel rollback <deployment id/url>
 
 "
 `;
 
 exports[`help command > rollback help output snapshots > rollback help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+  ▲ vercel rollback deployment id/url [options]
 
   Quickly revert back to a previous deployment.                                 
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the status of any current pending rollbacks   
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for rollback completion [3m]                
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3730,39 +3730,39 @@ exports[`help command > rollback help output snapshots > rollback help column wi
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending rollbacks
+  - Show the status of any current pending rollbacks
 
-    [36m$ vercel rollback[39m
-    [36m$ vercel rollback status[39m
-    [36m$ vercel rollback status <project>[39m
-    [36m$ vercel rollback status --timeout 30s[39m
+    $ vercel rollback
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
-  [90m-[39m Rollback a deployment using id or url
+  - Rollback a deployment using id or url
 
-    [36m$ vercel rollback <deployment id/url>[39m
+    $ vercel rollback <deployment id/url>
 
 "
 `;
 
 exports[`help command > rollback help output snapshots > rollback help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mrollback[22m deployment id/url [options]
+  ▲ vercel rollback deployment id/url [options]
 
   Quickly revert back to a previous deployment.                                                                         
 
-  [2mCommands[22m:
+  Commands:
 
   status  [project]  Show the status of any current pending rollbacks                                           
 
 
-  [2mOptions[22m:
+  Options:
 
    --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3775,30 +3775,30 @@ exports[`help command > rollback help output snapshots > rollback help column wi
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Show the status of any current pending rollbacks
+  - Show the status of any current pending rollbacks
 
-    [36m$ vercel rollback[39m
-    [36m$ vercel rollback status[39m
-    [36m$ vercel rollback status <project>[39m
-    [36m$ vercel rollback status --timeout 30s[39m
+    $ vercel rollback
+    $ vercel rollback status
+    $ vercel rollback status <project>
+    $ vercel rollback status --timeout 30s
 
-  [90m-[39m Rollback a deployment using id or url
+  - Rollback a deployment using id or url
 
-    [36m$ vercel rollback <deployment id/url>[39m
+    $ vercel rollback <deployment id/url>
 
 "
 `;
 
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ vercel teams
 
   Manage teams under your Vercel        
   account                               
 
-  [2mCommands[22m:
+  Commands:
 
   add             Create a new  
                   team          
@@ -3812,7 +3812,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
                   team          
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -3850,34 +3850,34 @@ exports[`help command > teams help output snapshots > teams help column width 40
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
 
-    [36m$ vercel teams switch <slug>[39m
+    $ vercel teams switch <slug>
 
-  [90m-[39m Invite new members (interactively)
+  - Invite new members (interactively)
 
-    [36m$ vercel teams invite[39m
+    $ vercel teams invite
 
-  [90m-[39m Invite multiple members simultaneously
+  - Invite multiple members simultaneously
 
-    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+    $ vercel teams invite abc@vercel.com xyz@vercel.com
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel teams ls --next 1584722256178[39m
+    $ vercel teams ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ vercel teams
 
   Manage teams under your Vercel account                                        
 
-  [2mCommands[22m:
+  Commands:
 
   add             Create a new team                                     
   ls              Show all teams you're a part of                       
@@ -3885,7 +3885,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
   invite  emails  Invite a new member to a team                         
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -3899,34 +3899,34 @@ exports[`help command > teams help output snapshots > teams help column width 80
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
 
-    [36m$ vercel teams switch <slug>[39m
+    $ vercel teams switch <slug>
 
-  [90m-[39m Invite new members (interactively)
+  - Invite new members (interactively)
 
-    [36m$ vercel teams invite[39m
+    $ vercel teams invite
 
-  [90m-[39m Invite multiple members simultaneously
+  - Invite multiple members simultaneously
 
-    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+    $ vercel teams invite abc@vercel.com xyz@vercel.com
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel teams ls --next 1584722256178[39m
+    $ vercel teams ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mteams[22m
+  ▲ vercel teams
 
   Manage teams under your Vercel account                                                                                
 
-  [2mCommands[22m:
+  Commands:
 
   add             Create a new team                                                                             
   ls              Show all teams you're a part of                                                               
@@ -3934,7 +3934,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   invite  emails  Invite a new member to a team                                                                 
 
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -3947,35 +3947,35 @@ exports[`help command > teams help output snapshots > teams help column width 12
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
 
-    [36m$ vercel teams switch <slug>[39m
+    $ vercel teams switch <slug>
 
-  [90m-[39m Invite new members (interactively)
+  - Invite new members (interactively)
 
-    [36m$ vercel teams invite[39m
+    $ vercel teams invite
 
-  [90m-[39m Invite multiple members simultaneously
+  - Invite multiple members simultaneously
 
-    [36m$ vercel teams invite abc@vercel.com xyz@vercel.com[39m
+    $ vercel teams invite abc@vercel.com xyz@vercel.com
 
-  [90m-[39m Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
-    [36m$ vercel teams ls --next 1584722256178[39m
+    $ vercel teams ls --next 1584722256178
 
 "
 `;
 
 exports[`help command > whoami help output snapshots > whoami help column width 40 1`] = `
 "
-  ▲ [1mvercel[22m [1mwhoami[22m
+  ▲ vercel whoami
 
   Shows the username of the currently   
   logged in user.                       
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the  
                               current   
@@ -4013,22 +4013,22 @@ exports[`help command > whoami help output snapshots > whoami help column width 
                               number    
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Shows the username of the currently logged in user
+  - Shows the username of the currently logged in user
 
-    [36m$ vercel whoami[39m
+    $ vercel whoami
 
 "
 `;
 
 exports[`help command > whoami help output snapshots > whoami help column width 80 1`] = `
 "
-  ▲ [1mvercel[22m [1mwhoami[22m
+  ▲ vercel whoami
 
   Shows the username of the currently logged in user.                           
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
                               run of a command                                  
@@ -4042,22 +4042,22 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   -v,  --version              Output the version number                         
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Shows the username of the currently logged in user
+  - Shows the username of the currently logged in user
 
-    [36m$ vercel whoami[39m
+    $ vercel whoami
 
 "
 `;
 
 exports[`help command > whoami help output snapshots > whoami help column width 120 1`] = `
 "
-  ▲ [1mvercel[22m [1mwhoami[22m
+  ▲ vercel whoami
 
   Shows the username of the currently logged in user.                                                                   
 
-  [2mGlobal Options[22m:
+  Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
   -d,  --debug                Debug mode (default off)                                                                  
@@ -4070,11 +4070,11 @@ exports[`help command > whoami help output snapshots > whoami help column width 
   -v,  --version              Output the version number                                                                 
 
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m-[39m Shows the username of the currently logged in user
+  - Shows the username of the currently logged in user
 
-    [36m$ vercel whoami[39m
+    $ vercel whoami
 
 "
 `;
