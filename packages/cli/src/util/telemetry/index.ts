@@ -249,7 +249,15 @@ export class TelemetryEventStore {
   }
 
   // This is separated so that we can easily mock it for testing purposes
-  sendToSubprocess(scriptPath: string, payload: object) {
-    spawn(process.execPath, [scriptPath, JSON.stringify(payload)]);
+  async sendToSubprocess(scriptPath: string, payload: object) {
+    const child = spawn(
+      process.execPath,
+      [scriptPath, JSON.stringify(payload)],
+      {
+        stdio: 'ignore',
+        detached: true,
+      }
+    );
+    child.unref();
   }
 }

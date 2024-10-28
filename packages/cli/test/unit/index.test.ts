@@ -163,7 +163,9 @@ describe('main', () => {
         });
         const spy = vi
           .spyOn(telemetryEventStore, 'sendToSubprocess')
-          .mockImplementation(() => {});
+          .mockImplementation(async () => {
+            //
+          });
 
         const telemetry = new RootTelemetryClient({
           opts: {
