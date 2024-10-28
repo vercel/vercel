@@ -2,4 +2,4 @@
 "vercel": minor
 ---
 
-[cli] add telemetry for `vercel domains ls`
+[cli] add telemetry for `vercel domains inspect`
