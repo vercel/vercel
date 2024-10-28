@@ -35,25 +35,6 @@ vi.mock(import('node-fetch'), async importOriginal => {
   };
 });
 
-import fetch from 'node-fetch';
-
-beforeEach(() => {
-  vi.unstubAllEnvs();
-});
-
-vi.mock(import('node-fetch'), async importOriginal => {
-  const mod = await importOriginal(); // type is inferred
-  const mock = vi.fn(() => {
-    return {
-      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
-    };
-  });
-  return {
-    ...mod,
-    default: mock,
-  };
-});
-
 describe('main', () => {
   describe('telemetry', () => {
     beforeAll(() => {
@@ -192,20 +173,13 @@ describe('main', () => {
 
     describe('save', () => {
       it('sends events to the server', async () => {
-        const output = new Output(process.stderr, {
-          debug: true,
-          noColor: false,
-        });
-
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: false,
-          output,
         });
 
         const telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
-            output,
           },
         });
         telemetry.trackPlatform();
