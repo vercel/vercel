@@ -20,7 +20,7 @@ async function add(
   opts: Options,
   args: string[]
 ): Promise<number> {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
   const addStamp = stamp();
 
   let cert: Cert | Error;
@@ -35,7 +35,7 @@ async function add(
   const telemetry = new CertsAddTelemetryClient({
     opts: {
       output,
-      store: client.telemetryEventStore,
+      store: telemetryEventStore,
     },
   });
   telemetry.trackCliFlagOverwrite(overwite);
