@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
@@ -19,6 +18,7 @@ import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
 import type { VercelConfig } from '@vercel/client';
 import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
+import output from '../../output-manager';
 
 type Options = {
   '--debug': boolean;
@@ -31,10 +31,9 @@ export default async function set(
   args: string[]
 ) {
   const setStamp = stamp();
-  const { output, localConfig } = client;
+  const { localConfig } = client;
   const telemetryClient = new AliasSetTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -78,10 +77,8 @@ export default async function set(
     const [aliasTarget] = args;
     telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
     const deployment = handleCertError(
-      output,
       await getDeploymentForAlias(
         client,
-        output,
         args,
         opts['--local-config'],
         user,
@@ -117,17 +114,10 @@ export default async function set(
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-      const record = await assignAlias(
-        output,
-        client,
-        deployment,
-        target,
-        contextName
-      );
+      const record = await assignAlias(client, deployment, target, contextName);
 
       const handleResult = handleSetupDomainError(
-        output,
-        handleCreateAliasError(output, record)
+        handleCreateAliasError(record)
       );
 
       if (handleResult === 1) {
@@ -148,7 +138,6 @@ export default async function set(
   telemetryClient.trackCliArgumentDeploymentUrl(deploymentIdOrHost);
   telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
   const deployment = handleCertError(
-    output,
     await getDeployment(client, contextName, deploymentIdOrHost)
   );
 
@@ -167,16 +156,12 @@ export default async function set(
 
   const isWildcard = isWildcardAlias(aliasTarget);
   const record = await assignAlias(
-    output,
     client,
     deployment,
     aliasTarget,
     contextName
   );
-  const handleResult = handleSetupDomainError(
-    output,
-    handleCreateAliasError(output, record)
-  );
+  const handleResult = handleSetupDomainError(handleCreateAliasError(record));
   if (handleResult === 1) {
     return 1;
   }
@@ -196,10 +181,7 @@ type ThenArg<T> = T extends Promise<infer U> ? U : T;
 type SetupDomainResolve = ThenArg<ReturnType<typeof setupDomain>>;
 type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
-function handleSetupDomainError<T>(
-  output: Output,
-  error: SetupDomainError | T
-): T | 1 {
+function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -296,10 +278,9 @@ type RemainingAssignAliasErrors = SetDifference<
 >;
 
 function handleCreateAliasError<T>(
-  output: Output,
   errorOrResult: RemainingAssignAliasErrors | T
 ): 1 | T {
-  const error = handleCertError(output, errorOrResult);
+  const error = handleCertError(errorOrResult);
   if (error === 1) {
     return error;
   }

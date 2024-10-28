@@ -32,7 +32,11 @@ export function execCli(
   };
   // @ts-ignore - allow overwriting readonly property "env"
   combinedOptions.env = combinedOptions.env ?? {};
-  combinedOptions.env['NO_COLOR'] = combinedOptions.env['NO_COLOR'] ?? '1';
+
+  // Force color to be off. We can test color in unit tests.
+  combinedOptions.env['NO_COLOR'] = '1';
+  delete combinedOptions.env['FORCE_COLOR'];
+  delete process.env['FORCE_COLOR']; // this is inherited by execa
 
   return execa(file, args, combinedOptions);
 }

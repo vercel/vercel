@@ -7,6 +7,7 @@ import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add';
 import type { Cert } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 interface Options {
   '--overwrite'?: boolean;
@@ -20,7 +21,7 @@ async function add(
   opts: Options,
   args: string[]
 ): Promise<number> {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const addStamp = stamp();
 
   let cert: Cert | Error;
@@ -34,7 +35,6 @@ async function add(
 
   const telemetry = new CertsAddTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });

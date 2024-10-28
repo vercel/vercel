@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -13,6 +14,7 @@ import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsCommandFlags } from './command';
+import output from '../../output-manager';
 import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
 
 export default async function issue(
@@ -21,7 +23,7 @@ export default async function issue(
   args: string[]
 ) {
   let cert;
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const addStamp = stamp();
   const {
     '--challenge-only': challengeOnly,
@@ -33,7 +35,6 @@ export default async function issue(
 
   const telemetry = new CertsIssueTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
@@ -116,7 +117,7 @@ export default async function issue(
     }
   }
 
-  const handledResult = handleCertError(output, cert);
+  const handledResult = handleCertError(cert);
   if (handledResult === 1) {
     return handledResult;
   }
@@ -145,7 +146,6 @@ async function runStartOrder(
   stamp: () => string,
   { fallingBack = false } = {}
 ) {
-  const { output } = client;
   const { challengesToResolve } = await startCertOrder(
     client,
     cns,
