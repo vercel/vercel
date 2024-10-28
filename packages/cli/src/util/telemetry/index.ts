@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
-import fetch from 'node-fetch';
 import output from '../../output-manager';
+import { resolve } from 'path';
+import { spawn } from 'child_process';
 
 const LogLabel = `['telemetry']:`;
 
@@ -231,35 +232,24 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-id': 'vercel-cli',
-            'x-vercel-cli-topic-id': 'generic',
-            'x-vercel-cli-session-id': sessionId,
-          },
-          body: JSON.stringify(events),
-        });
-        const wasRecorded =
-          response.headers.get('x-vercel-cli-tracked') === '1';
-        if (response.status !== 204) {
-          output.debug(
-            `Unexpected response from telemetry server: ${response.status}`
-          );
-        } else {
-          if (wasRecorded) {
-            output.debug(`Telemetry event tracked`);
-          } else {
-            output.debug(`Telemetry event ignored due to progressive rollout`);
-          }
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          output.debug(`Error while sending telemetry data: ${error.message}`);
-        }
-      }
+      const script = resolve('dist', 'send-telemetry.js');
+      const payload = {
+        url,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Client-id': 'vercel-cli',
+          'x-vercel-cli-topic-id': 'generic',
+          'x-vercel-cli-session-id': sessionId,
+        },
+        body: JSON.stringify(events),
+      };
+      this.sendToSubprocess(script, payload);
     }
+  }
+
+  // This is separated so that we can easily mock it for testing purposes
+  sendToSubprocess(scriptPath: string, payload: object) {
+    spawn(process.execPath, [scriptPath, JSON.stringify(payload)]);
   }
 }

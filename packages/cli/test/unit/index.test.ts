@@ -16,23 +16,8 @@ import output from '../../src/output-manager';
 
 import './test/mocks/matchers/index';
 
-import fetch from 'node-fetch';
-
 beforeEach(() => {
   vi.unstubAllEnvs();
-});
-
-vi.mock(import('node-fetch'), async importOriginal => {
-  const mod = await importOriginal(); // type is inferred
-  const mock = vi.fn(() => {
-    return {
-      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
-    };
-  });
-  return {
-    ...mod,
-    default: mock,
-  };
 });
 
 describe('main', () => {
@@ -176,6 +161,9 @@ describe('main', () => {
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: false,
         });
+        const spy = vi
+          .spyOn(telemetryEventStore, 'sendToSubprocess')
+          .mockImplementation(() => {});
 
         const telemetry = new RootTelemetryClient({
           opts: {
@@ -187,9 +175,10 @@ describe('main', () => {
 
         await telemetryEventStore.save();
 
-        expect(fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/vercel-cli/v1/events'),
+        expect(spy).toHaveBeenCalledWith(
+          expect.stringContaining('send-telemetry.js'),
           expect.objectContaining({
+            url: expect.stringContaining('/api/vercel-cli/v1/events'),
             method: 'POST',
             headers: expect.objectContaining({
               'x-vercel-cli-topic-id': 'generic',
