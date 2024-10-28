@@ -14,6 +14,7 @@ import confirm from '../../util/input/confirm';
 import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domains/move';
 
 type Options = {
   '--yes': boolean;
@@ -24,6 +25,18 @@ export default async function move(
   opts: Partial<Options>,
   args: string[]
 ) {
+  const { telemetryEventStore } = client;
+
+  const telemetry = new DomainsMoveTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliFlagYes(opts['--yes']);
+  telemetry.trackCliArgumentDomainName(args[0]);
+  telemetry.trackCliArgumentDestination(args[1]);
+
   const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {
