@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
-import certs from '../../../../src/commands/certs';
 import { useUser } from '../../../mocks/user';
 import { useCert } from '../../../mocks/certs';
+import certs from '../../../../src/commands/certs';
 
 describe('certs ls', () => {
   it('should list up to 20 certs by default', async () => {
@@ -31,12 +31,12 @@ describe('certs ls', () => {
     ]);
   });
 
-  describe.todo('--next', () => {
+  describe('--next', () => {
     it('tracks usage', async () => {
       useUser();
       useCert();
 
-      client.setArgv('certs', 'ls', '--next');
+      client.setArgv('certs', 'ls', '--next', '123456');
       const exitCodePromise = certs(client);
 
       await expect(exitCodePromise).resolves.toEqual(0);
@@ -85,7 +85,7 @@ describe('certs ls', () => {
 
   it('should show permission error if user does not have permission', async () => {
     useUser();
-    client.scenario.get('/v4/now/certs', (_req, res) => {
+    client.scenario.get('/v4/certs', (_req, res) => {
       res.status(403).json({
         error: {
           code: 'forbidden',

@@ -21,6 +21,7 @@ import { type EnvCommandFlags } from '../env/command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -79,12 +80,25 @@ export default async function main(client: Client) {
 
   let cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const isProduction = Boolean(parsedArgs.flags['--prod']);
   const environment =
     parseTarget({
       output: client.output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
+
+  const telemetryClient = new PullTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetryClient.trackCliFlagYes(autoConfirm);
+  telemetryClient.trackCliFlagProd(isProduction);
+  telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
+  telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
 
   const returnCode = await pullCommandLogic(
     client,
