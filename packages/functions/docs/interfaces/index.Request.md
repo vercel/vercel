@@ -25,4 +25,4 @@ the global `Request`, `node-fetch` and other types.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:40](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L40)
+[packages/functions/src/headers.ts:40](https://github.com/vercel/vercel-cli-private/blob/main/packages/functions/src/headers.ts#L40)

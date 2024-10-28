@@ -4,6 +4,7 @@ import Client from '../client';
 import type { Cert } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import { isAPIError } from '../errors-ts';
+import output from '../../output-manager';
 
 export default async function createCertFromFile(
   client: Client,
@@ -11,7 +12,7 @@ export default async function createCertFromFile(
   certPath: string,
   caPath: string
 ) {
-  client.output.spinner('Adding your custom certificate');
+  output.spinner('Adding your custom certificate');
 
   try {
     const cert = readFileSync(resolve(certPath), 'utf8');

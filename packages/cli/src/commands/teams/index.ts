@@ -9,11 +9,11 @@ import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
+import output from '../../output-manager';
 
 export default async (client: Client) => {
   const telemetryClient = new TeamsTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -34,8 +34,6 @@ export default async (client: Client) => {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(teamsCommand, { columns: client.stderr.columns }));
     return 2;
@@ -55,16 +53,19 @@ export default async (client: Client) => {
   switch (subcommand) {
     case 'list':
     case 'ls': {
+      telemetryClient.trackCliSubcommandList('list');
       exitCode = await list(client);
       break;
     }
     case 'switch':
     case 'change': {
+      telemetryClient.trackCliSubcommandSwitch(parsedArgs.args[0]);
       exitCode = await change(client, parsedArgs.args[0]);
       break;
     }
     case 'add':
     case 'create': {
+      telemetryClient.trackCliSubcommandAdd('add');
       exitCode = await add(client);
       break;
     }
@@ -81,9 +82,7 @@ export default async (client: Client) => {
         );
       }
       exitCode = 2;
-      client.output.print(
-        help(teamsCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(teamsCommand, { columns: client.stderr.columns }));
     }
   }
   return exitCode;
