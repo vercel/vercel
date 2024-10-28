@@ -4,6 +4,7 @@ import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 import ms from 'ms';
 import rollbackStatus from './status';
+import output from '../../output-manager';
 
 /**
  * Requests a rollback and waits for it complete.
@@ -21,12 +22,9 @@ export default async function requestRollback({
   deployId: string;
   timeout?: string;
 }): Promise<number> {
-  const { output } = client;
-
   const { contextName, deployment, project } = await getProjectByDeployment({
     client,
     deployId,
-    output: client.output,
   });
 
   // create the rollback

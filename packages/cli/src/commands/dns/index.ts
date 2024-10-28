@@ -10,6 +10,7 @@ import rm from './rm';
 import { dnsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
 
 const COMMAND_CONFIG = {
@@ -20,7 +21,7 @@ const COMMAND_CONFIG = {
 };
 
 export default async function dns(client: Client) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
 
   let parsedArgs = null;
 
@@ -36,7 +37,6 @@ export default async function dns(client: Client) {
   const telemetry = new DnsTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
 

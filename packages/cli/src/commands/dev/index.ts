@@ -18,6 +18,7 @@ import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { devCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 import { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 
 const COMMAND_CONFIG = {
@@ -26,14 +27,14 @@ const COMMAND_CONFIG = {
 
 export default async function main(client: Client) {
   if (process.env.__VERCEL_DEV_RUNNING) {
-    client.output.error(
+    output.error(
       `${cmd(
         `${packageName} dev`
       )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
         'dev'
       )} script in ${cmd('package.json')}`
     );
-    client.output.error(
+    output.error(
       `Learn More: https://vercel.link/recursive-invocation-of-commands`
     );
     return 1;
@@ -42,11 +43,10 @@ export default async function main(client: Client) {
   }
 
   let args;
-  const { output, telemetryEventStore } = client;
 
+  const { telemetryEventStore } = client;
   const telemetry = new DevTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
@@ -103,19 +103,19 @@ export default async function main(client: Client) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
     if (pkg instanceof CantParseJSONFile) {
-      client.output.error(pkg.message);
+      output.error(pkg.message);
       return 1;
     }
 
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
-      client.output.error(
+      output.error(
         `${cmd(
           `${packageName} dev`
         )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
           'dev'
         )} script in ${cmd('package.json')}`
       );
-      client.output.error(
+      output.error(
         `Learn More: https://vercel.link/recursive-invocation-of-commands`
       );
       return 1;

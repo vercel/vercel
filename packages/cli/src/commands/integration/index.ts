@@ -8,6 +8,7 @@ import { add } from './add';
 import { integrationCommand } from './command';
 import { list } from './list';
 import { openIntegration } from './open-integration';
+import output from '../../output-manager';
 import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 
 const COMMAND_CONFIG = {
@@ -19,7 +20,6 @@ const COMMAND_CONFIG = {
 export default async function main(client: Client) {
   const telemetry = new IntegrationTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -35,9 +35,7 @@ export default async function main(client: Client) {
   } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   if (flags['--help']) {
-    client.output.print(
-      help(integrationCommand, { columns: client.stderr.columns })
-    );
+    output.print(help(integrationCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -55,7 +53,7 @@ export default async function main(client: Client) {
       return openIntegration(client, subArgs);
     }
     default: {
-      client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       return 2;
     }
   }
