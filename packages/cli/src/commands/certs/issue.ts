@@ -1,6 +1,6 @@
-import { getSubdomain } from 'tldts';
 import chalk from 'chalk';
 
+import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
@@ -15,6 +15,7 @@ import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsCommandFlags } from './command';
 import output from '../../output-manager';
+import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
 
 export default async function issue(
   client: Client,
@@ -22,7 +23,7 @@ export default async function issue(
   args: string[]
 ) {
   let cert;
-
+  const { telemetryEventStore } = client;
   const addStamp = stamp();
   const {
     '--challenge-only': challengeOnly,
@@ -32,7 +33,16 @@ export default async function issue(
     '--ca': caPath,
   } = opts;
 
-  const { contextName } = await getScope(client);
+  const telemetry = new CertsIssueTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagChallengeOnly(challengeOnly);
+  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliOptionCrt(crtPath);
+  telemetry.trackCliOptionKey(keyPath);
+  telemetry.trackCliOptionCa(caPath);
 
   if (overwite) {
     output.error('Overwrite option is deprecated');
@@ -82,6 +92,8 @@ export default async function issue(
   }
 
   const cns = getCnsFromArgs(args);
+
+  const { contextName } = await getScope(client);
 
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.
