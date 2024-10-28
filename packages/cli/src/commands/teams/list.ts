@@ -11,9 +11,10 @@ import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
+import output from '../../output-manager';
 
 export default async function list(client: Client): Promise<number> {
-  const { config, output } = client;
+  const { config } = client;
 
   let parsedArgs = null;
 

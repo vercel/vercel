@@ -7,6 +7,7 @@ import { isError } from '@vercel/error-utils';
 import { help } from '../help';
 import { initCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 import { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 const COMMAND_CONFIG = {
@@ -14,8 +15,6 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  const { output } = client;
-
   let args;
 
   let parsedArgs = null;
@@ -32,7 +31,6 @@ export default async function main(client: Client) {
 
   const telemetry = new InitTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

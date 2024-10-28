@@ -10,7 +10,6 @@ import { VercelConfig } from '@vercel/client';
 import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
 import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
 import ua from './ua';
-import { Output } from './output/create-output';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
@@ -31,6 +30,7 @@ import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
+import output from '../output-manager';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -48,7 +48,6 @@ export interface ClientOptions extends Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
-  output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
@@ -67,7 +66,6 @@ export default class Client extends EventEmitter implements Stdio {
   stdin: ReadableTTY;
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
-  output: Output;
   config: GlobalConfig;
   agent?: Agent;
   localConfig?: VercelConfig;
@@ -85,7 +83,6 @@ export default class Client extends EventEmitter implements Stdio {
     this.stdin = opts.stdin;
     this.stdout = opts.stdout;
     this.stderr = opts.stderr;
-    this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
@@ -154,7 +151,7 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     const requestId = this.requestIdCounter++;
-    return this.output.time(
+    return output.time(
       res => {
         if (res) {
           return `#${requestId} ← ${res.status} ${
@@ -174,7 +171,7 @@ export default class Client extends EventEmitter implements Stdio {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
-      printIndications(this, res);
+      printIndications(res);
 
       if (!res.ok) {
         const error = await responseError(res);
@@ -245,9 +242,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     if (typeof result === 'number') {
       if (error instanceof APIError) {
-        this.output.prettyError(error);
+        output.prettyError(error);
       } else {
-        this.output.error(
+        output.error(
           `Failed to re-authenticate for ${bold(error.scope)} scope`
         );
       }
@@ -255,11 +252,11 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     this.authConfig.token = result.token;
-    writeToAuthConfigFile(this.output, this.authConfig);
+    writeToAuthConfigFile(this.authConfig);
   });
 
   _onRetry = (error: Error) => {
-    this.output.debug(`Retrying: ${error}\n${error.stack}`);
+    output.debug(`Retrying: ${error}\n${error.stack}`);
   };
 
   get cwd(): string {

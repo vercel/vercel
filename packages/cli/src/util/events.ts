@@ -11,6 +11,8 @@ import getDeployment from './get-deployment';
 import getScope from './get-scope';
 
 import type { BuildLog } from './logs';
+import output from '../output-manager';
+
 export interface FindOpts {
   direction: 'forward' | 'backward';
   limit?: number;
@@ -32,7 +34,7 @@ async function printEvents(
   { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
   abortController?: AbortController
 ) {
-  const { log, debug } = client.output;
+  const { log, debug } = output;
   const { contextName } = await getScope(client);
 
   // we keep track of how much we log in case we
