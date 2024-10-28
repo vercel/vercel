@@ -35,6 +35,14 @@ await esbuild({
   external: externals,
 });
 
+// We call send-telemetry as a subprocess, so it needs to be bundled separately
+await esbuild({
+  entryPoints: [
+    new URL('src/util/telemetry/send-telemetry.ts', repoRoot).pathname,
+  ],
+  bundle: true,
+});
+
 // Copy a few static files into `dist`
 const distRoot = new URL('dist/', repoRoot);
 copyFileSync(
