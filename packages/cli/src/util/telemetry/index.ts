@@ -227,7 +227,7 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'https://telemetry.vercel.com/api/vercel-cli/v0/events';
+      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
@@ -236,8 +236,8 @@ export class TelemetryEventStore {
       }
       const events = this.events.map(event => {
         delete event.sessionId;
-        const { eventTime, ...rest } = event;
-        return { event_time: eventTime, ...rest };
+        const { eventTime, teamId, ...rest } = event;
+        return { event_time: eventTime, team_id: teamId, ...rest };
       });
       try {
         const response = await fetch(url, {

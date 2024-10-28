@@ -27,6 +27,25 @@ vi.mock(import('node-fetch'), async importOriginal => {
   };
 });
 
+import fetch from 'node-fetch';
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
+
+vi.mock(import('node-fetch'), async importOriginal => {
+  const mod = await importOriginal(); // type is inferred
+  const mock = vi.fn(() => {
+    return {
+      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
+    };
+  });
+  return {
+    ...mod,
+    default: mock,
+  };
+});
+
 describe('main', () => {
   describe('telemetry', () => {
     it('tracks number of cpus', () => {
@@ -207,7 +226,7 @@ describe('main', () => {
         await telemetryEventStore.save();
 
         expect(fetch).toHaveBeenCalledWith(
-          expect.stringContaining('http'),
+          expect.stringContaining('/api/vercel-cli/v1/events'),
           expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({
@@ -221,6 +240,7 @@ describe('main', () => {
                   id: expect.any(String),
                   key: expect.any(String),
                   value: expect.any(String),
+                  team_id: expect.any(String),
                 }),
               ])
             ),
