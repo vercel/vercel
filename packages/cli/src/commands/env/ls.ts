@@ -15,6 +15,7 @@ import ellipsis from '../../util/output/ellipsis';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import formatEnvironments from '../../util/env/format-environments';
 import { formatProject } from '../../util/projects/format-project';
+import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
 
 type Options = {};
 
@@ -25,6 +26,12 @@ export default async function ls(
   args: string[]
 ) {
   const { output } = client;
+  const telemetryClient = new EnvLsTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
 
   if (args.length > 2) {
     output.error(
@@ -36,6 +43,8 @@ export default async function ls(
   }
 
   const [envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   const { project, org } = link;
 
   const lsStamp = stamp();
