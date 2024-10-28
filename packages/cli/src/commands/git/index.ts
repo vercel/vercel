@@ -8,6 +8,7 @@ import disconnect from './disconnect';
 import { help } from '../help';
 import { gitCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 import { GitTelemetryClient } from '../../util/telemetry/commands/git';
 
 const COMMAND_CONFIG = {
@@ -29,10 +30,8 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
-  const { output } = client;
   const telemetry = new GitTelemetryClient({
     opts: {
-      output,
       store: client.telemetryEventStore,
     },
   });

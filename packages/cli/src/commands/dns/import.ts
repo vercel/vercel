@@ -5,6 +5,7 @@ import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/import';
 
 type Options = {};
@@ -14,11 +15,10 @@ export default async function add(
   opts: Options,
   args: string[]
 ) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
   const telemetry = new DnsImportTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });

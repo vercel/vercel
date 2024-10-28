@@ -21,6 +21,8 @@ import { type EnvCommandFlags } from '../env/command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
+import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -33,7 +35,6 @@ async function pullAllEnvFiles(
 
   await envPullCommandLogic(
     client,
-    client.output,
     join('.vercel', environmentFile),
     !!flags['--yes'],
     environment,
@@ -70,8 +71,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(pullCommand, { columns: client.stderr.columns }));
     return 2;
@@ -79,12 +78,23 @@ export default async function main(client: Client) {
 
   let cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const isProduction = Boolean(parsedArgs.flags['--prod']);
   const environment =
     parseTarget({
-      output: client.output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
+
+  const telemetryClient = new PullTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetryClient.trackCliFlagYes(autoConfirm);
+  telemetryClient.trackCliFlagProd(isProduction);
+  telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
+  telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
 
   const returnCode = await pullCommandLogic(
     client,
@@ -127,13 +137,13 @@ export async function pullCommandLogic(
     return pullResultCode;
   }
 
-  client.output.print('\n');
-  client.output.log('Downloading project settings');
+  output.print('\n');
+  output.log('Downloading project settings');
   const isRepoLinked = typeof repoRoot === 'string';
   await writeProjectSettings(cwd, project, org, isRepoLinked);
 
   const settingsStamp = stamp();
-  client.output.print(
+  output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(
         humanizePath(join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT))

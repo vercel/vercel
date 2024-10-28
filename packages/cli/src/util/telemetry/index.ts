@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { Output } from '../output';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
 import fetch from 'node-fetch';
+import output from '../../output-manager';
 
 const LogLabel = `['telemetry']:`;
 
@@ -11,7 +11,6 @@ interface Args {
 }
 
 interface Options {
-  output: Output;
   store: TelemetryEventStore;
   isDebug?: boolean;
 }
@@ -26,11 +25,11 @@ interface Event {
 }
 
 export class TelemetryClient {
-  private output: Output;
   private isDebug: boolean;
   store: TelemetryEventStore;
 
   protected redactedValue = '[REDACTED]';
+  protected noValueToTriggerPrompt = '[TRIGGER_PROMPT]';
   protected redactedArgumentsLength = (args: string[]) => {
     if (args && args.length === 1) {
       return 'ONE';
@@ -41,14 +40,13 @@ export class TelemetryClient {
   };
 
   constructor({ opts }: Args) {
-    this.output = opts.output;
     this.isDebug = opts.isDebug || false;
     this.store = opts.store;
   }
 
   private track(eventData: { key: string; value: string }) {
     if (this.isDebug) {
-      this.output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
+      output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
     }
 
     const event: Event = {
@@ -157,7 +155,7 @@ export class TelemetryClient {
   }
 
   trackCommandError(error: string): Event | undefined {
-    this.output.error(error);
+    output.error(error);
     return;
   }
 
@@ -168,22 +166,16 @@ export class TelemetryClient {
 
 export class TelemetryEventStore {
   private events: Event[];
-  private output: Output;
   private isDebug: boolean;
   private sessionId: string;
   private teamId: string = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
-  constructor(opts: {
-    output: Output;
-    isDebug?: boolean;
-    config?: GlobalConfig['telemetry'];
-  }) {
+  constructor(opts: { isDebug?: boolean; config?: GlobalConfig['telemetry'] }) {
     this.isDebug = opts.isDebug || false;
-    this.output = opts.output;
     this.sessionId = randomUUID();
     this.events = [];
-    this.config = opts.config;
+    this.config = opts?.config;
   }
 
   add(event: Event) {
@@ -216,11 +208,11 @@ export class TelemetryEventStore {
 
   async save() {
     if (this.isDebug) {
-      // Intentionally not using `this.output.debug` as it will
+      // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
-      this.output.log(`${LogLabel} Flushing Events`);
+      output.log(`${LogLabel} Flushing Events`);
       this.events.forEach(event => {
-        this.output.log(JSON.stringify(event));
+        output.log(JSON.stringify(event));
       });
 
       return;
@@ -231,7 +223,7 @@ export class TelemetryEventStore {
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
-        this.output.debug('Unable to send metrics: no session ID');
+        output.debug('Unable to send metrics: no session ID');
         return;
       }
       const events = this.events.map(event => {
@@ -253,23 +245,19 @@ export class TelemetryEventStore {
         const wasRecorded =
           response.headers.get('x-vercel-cli-tracked') === '1';
         if (response.status !== 204) {
-          this.output.debug(
+          output.debug(
             `Unexpected response from telemetry server: ${response.status}`
           );
         } else {
           if (wasRecorded) {
-            this.output.debug(`Telemetry event tracked`);
+            output.debug(`Telemetry event tracked`);
           } else {
-            this.output.debug(
-              `Telemetry event ignored due to progressive rollout`
-            );
+            output.debug(`Telemetry event ignored due to progressive rollout`);
           }
         }
       } catch (error) {
         if (error instanceof Error) {
-          this.output.debug(
-            `Error while sending telemetry data: ${error.message}`
-          );
+          output.debug(`Error while sending telemetry data: ${error.message}`);
         }
       }
     }

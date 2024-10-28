@@ -57,7 +57,6 @@ import editProjectSettings from '../../util/input/edit-project-settings';
 import inputProject from '../../util/input/input-project';
 import { inputRootDirectory } from '../../util/input/input-root-directory';
 import selectOrg from '../../util/input/select-org';
-import { Output } from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
@@ -77,15 +76,14 @@ import { help } from '../help';
 import { deployCommand } from './command';
 import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
+import output from '../../output-manager';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
-  const { output } = client;
 
   let parsedArguments = null;
 
@@ -157,7 +155,7 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   // #region Config loading
-  let localConfig = client.localConfig || readLocalConfig(output, paths[0]);
+  let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   if (localConfig) {
     const { version } = localConfig;
@@ -219,7 +217,6 @@ export default async (client: Client): Promise<number> => {
   // #endregion
 
   const target = parseTarget({
-    output: output,
     flagName: 'target',
     flags: parsedArguments.flags,
   });
@@ -405,7 +402,6 @@ export default async (client: Client): Promise<number> => {
   if (
     rootDirectory &&
     (await validateRootDirectory(
-      output,
       cwd,
       sourcePath,
       project
@@ -419,10 +415,7 @@ export default async (client: Client): Promise<number> => {
   // If Root Directory is used we'll try to read the config
   // from there instead and use it if it exists.
   if (rootDirectory) {
-    const rootDirectoryConfig = readLocalConfig(
-      output,
-      join(cwd, rootDirectory)
-    );
+    const rootDirectoryConfig = readLocalConfig(join(cwd, rootDirectory));
 
     if (rootDirectoryConfig) {
       debug(`Read local config from root directory (${rootDirectory})`);
@@ -498,7 +491,7 @@ export default async (client: Client): Promise<number> => {
     parseMeta(parsedArguments.flags['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(cwd, output, project);
+  const gitMetadata = await createGitMeta(cwd, project);
   // #endregion
 
   // #region Env vars validation
@@ -735,7 +728,6 @@ export default async (client: Client): Promise<number> => {
       );
 
       const purchase = await purchaseDomainIfAvailable(
-        output,
         client,
         err.meta.domain,
         contextName
@@ -750,11 +742,11 @@ export default async (client: Client): Promise<number> => {
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment, localConfig);
+        handleCreateDeployError(deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase, localConfig);
+      handleCreateDeployError(purchase, localConfig);
       return 1;
     }
 
@@ -774,7 +766,7 @@ export default async (client: Client): Promise<number> => {
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err, localConfig);
+      handleCreateDeployError(err, localConfig);
       return 1;
     }
 
@@ -800,14 +792,10 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(client, deployment, deployStamp, noWait);
+  return printDeploymentStatus(deployment, deployStamp, noWait);
 };
 
-function handleCreateDeployError(
-  output: Output,
-  error: Error,
-  localConfig: VercelConfig
-) {
+function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import certs from '../../../../src/commands/certs';
 import { client } from '../../../mocks/client';
+import certs from '../../../../src/commands/certs';
 
 describe('certs', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('certs');
     const exitCodePromise = certs(client);
-    expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 });
