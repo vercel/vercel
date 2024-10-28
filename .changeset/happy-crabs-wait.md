@@ -2,4 +2,4 @@
 'vercel': minor
 ---
 
-Add telemetry to `vercel domain rm`
+Add telemetry to `vercel domains rm`
