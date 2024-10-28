@@ -5,9 +5,16 @@ import getScope from '../../util/get-scope';
 import type { Configuration } from './types';
 import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';
 import output from '../../output-manager';
 
 export async function openIntegration(client: Client, args: string[]) {
+  const telemetry = new IntegrationOpenTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     output.error('Cannot open more than one dashboard at a time');
     return 1;
@@ -28,14 +35,18 @@ export async function openIntegration(client: Client, args: string[]) {
   }
 
   let configuration: Configuration | undefined;
+  let knownIntegrationSlug = false;
 
   try {
     configuration = await getFirstConfiguration(client, integrationSlug);
+    knownIntegrationSlug = !!configuration;
   } catch (error) {
     output.error(
       `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
     return 1;
+  } finally {
+    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
 
   if (!configuration) {
