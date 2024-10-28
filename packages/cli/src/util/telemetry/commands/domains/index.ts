@@ -42,4 +42,11 @@ export class DomainsTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list',
+      value: actual,
+    });
+  }
 }
