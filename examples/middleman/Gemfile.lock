@@ -87,7 +87,7 @@ GEM
     rb-fsevent (0.11.2)
     rb-inotify (0.10.1)
       ffi (~> 1.0)
-    rexml (3.3.8)
+    rexml (3.3.9)
     sassc (2.4.0)
       ffi (~> 1.9)
     servolux (0.13.0)
