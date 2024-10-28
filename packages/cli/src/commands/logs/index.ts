@@ -61,7 +61,6 @@ export default async function logs(client: Client) {
 
   const telemetry = new LogsTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });

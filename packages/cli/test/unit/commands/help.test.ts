@@ -1,4 +1,4 @@
-import { describe, expect, test, it } from 'vitest';
+import { describe, expect, test, it, beforeAll, afterAll } from 'vitest';
 import {
   help,
   lineToString,
@@ -25,8 +25,22 @@ import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
+import output from '../../../src/output-manager';
 
 describe('help command', () => {
+  beforeAll(() => {
+    // these tests rely on color, but that doesn't seem necessary
+    output.initialize({
+      noColor: false,
+    });
+  });
+
+  afterAll(() => {
+    output.initialize({
+      noColor: true,
+    });
+  });
+
   describe('lineToString', () => {
     test.each([
       {

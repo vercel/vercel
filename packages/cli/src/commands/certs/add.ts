@@ -34,7 +34,6 @@ async function add(
 
   const telemetry = new CertsAddTelemetryClient({
     opts: {
-      output,
       store: client.telemetryEventStore,
     },
   });
