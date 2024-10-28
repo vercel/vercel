@@ -17,13 +17,24 @@ import {
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
 
 export default async function ls(
   client: Client,
   opts: Partial<PaginationOptions>,
   args: string[]
 ) {
-  const { output } = client;
+  const { output, telemetryEventStore } = client;
+
+  const telemetry = new DomainsLsTelemetryClient({
+    opts: {
+      output,
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   let paginationOptions;
 
