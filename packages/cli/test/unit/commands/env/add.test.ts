@@ -64,7 +64,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -103,7 +103,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -118,6 +118,31 @@ describe('env add', () => {
     });
 
     describe('[environment]', () => {
+      it('should redact custom [environment] values', async () => {
+        client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          "What's the value of environment-variable?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: `subcommand:add`,
+            value: 'add',
+          },
+          {
+            key: `argument:name`,
+            value: '[REDACTED]',
+          },
+          {
+            key: `argument:environment`,
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+
       describe('[gitBranch]', () => {
         it('should allow `gitBranch` to be passed', async () => {
           client.setArgv(
@@ -164,7 +189,7 @@ describe('env add', () => {
             },
             {
               key: `argument:environment`,
-              value: '[REDACTED]',
+              value: 'preview',
             },
             {
               key: `argument:git-branch`,
