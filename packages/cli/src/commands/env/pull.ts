@@ -21,7 +21,7 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
-import { Output } from '../../util/output';
+import output from '../../output-manager';
 import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
@@ -69,11 +69,8 @@ export default async function pull(
   cwd: string,
   source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
-  const { output } = client;
-
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -97,7 +94,6 @@ export default async function pull(
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   await envPullCommandLogic(
     client,
-    output,
     filename,
     !!skipConfirmation,
     environment,
@@ -112,7 +108,6 @@ export default async function pull(
 
 export async function envPullCommandLogic(
   client: Client,
-  output: Output,
   filename: string,
   skipConfirmation: boolean,
   environment: string,
@@ -140,11 +135,7 @@ export async function envPullCommandLogic(
     return;
   }
 
-  const projectSlugLink = formatProject(
-    client,
-    link.org.slug,
-    link.project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.log(
     `Downloading \`${chalk.cyan(
@@ -156,7 +147,7 @@ export async function envPullCommandLogic(
   output.spinner('Downloading');
 
   const records = (
-    await pullEnvRecords(output, client, link.project.id, source, {
+    await pullEnvRecords(client, link.project.id, source, {
       target: environment || 'development',
       gitBranch,
     })
@@ -165,7 +156,7 @@ export async function envPullCommandLogic(
   let deltaString = '';
   let oldEnv;
   if (exists) {
-    oldEnv = await createEnvObject(fullPath, output);
+    oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
       // Removes any double quotes from `records`, if they exist
       // We need this because double quotes are stripped from the local .env file,

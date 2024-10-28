@@ -23,7 +23,6 @@ describe('getProjectByDeployment', () => {
     const { deployment, project } = await getProjectByDeployment({
       client,
       deployId: d.id,
-      output: client.output,
     });
 
     expect(project.id).toBe(p.id);
@@ -55,7 +54,6 @@ describe('getProjectByDeployment', () => {
     const { deployment, project } = await getProjectByDeployment({
       client,
       deployId: d.id,
-      output: client.output,
     });
 
     expect(project.id).toBe(p.id);
@@ -87,7 +85,6 @@ describe('getProjectByDeployment', () => {
       getProjectByDeployment({
         client,
         deployId: d.id,
-        output: client.output,
       })
     ).rejects.toThrowError("Deployment doesn't belong to current team");
 
@@ -98,7 +95,6 @@ describe('getProjectByDeployment', () => {
       getProjectByDeployment({
         client,
         deployId: d.id,
-        output: client.output,
       })
     ).rejects.toThrowError('Deployment belongs to a different team');
   });

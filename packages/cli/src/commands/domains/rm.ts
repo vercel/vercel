@@ -3,7 +3,6 @@ import plural from 'pluralize';
 
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
@@ -17,6 +16,7 @@ import confirm from '../../util/input/confirm';
 import setCustomSuffix from '../../util/domains/set-custom-suffix';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 
 type Options = {
   '--yes': boolean;
@@ -27,7 +27,6 @@ export default async function rm(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const [domainName] = args;
   const { contextName } = await getScope(client);
 
@@ -91,11 +90,10 @@ export default async function rm(
     return 0;
   }
 
-  return removeDomain(output, client, contextName, skipConfirmation, domain);
+  return removeDomain(client, contextName, skipConfirmation, domain);
 }
 
 async function removeDomain(
-  output: Output,
   client: Client,
   contextName: string,
   skipConfirmation: boolean,
@@ -123,7 +121,7 @@ async function removeDomain(
   for (const id of certIds) {
     output.debug(`Removing cert ${id}`);
     try {
-      await deleteCertById(output, client, id);
+      await deleteCertById(client, id);
     } catch (err: unknown) {
       // Ignore if the cert does not exist anymore
       if (!ERRORS.isAPIError(err) || err.status !== 404) {
@@ -234,7 +232,6 @@ async function removeDomain(
     }
 
     return removeDomain(
-      output,
       client,
       contextName,
       skipConfirmation,
