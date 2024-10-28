@@ -13,6 +13,7 @@ import title from 'title';
 import type { Output } from '../../util/output';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 
 export async function list(client: Client) {
   let parsedArguments = null;
@@ -25,13 +26,16 @@ export async function list(client: Client) {
     return 1;
   }
 
-  const { contextName, team } = await getScope(client);
-  let project: { id?: string; name?: string } | undefined;
+  const telemetry = new IntegrationListTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
 
-  if (!team) {
-    client.output.error('Team not found.');
-    return 1;
-  }
+  telemetry.trackCliArgumentProject(parsedArguments.args[1]);
+  telemetry.trackCliOptionIntegration(parsedArguments.flags['--integration']);
+  telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
 
   if (parsedArguments.args.length > 2) {
     client.output.error(
@@ -39,6 +43,8 @@ export async function list(client: Client) {
     );
     return 1;
   }
+
+  let project: { id?: string; name?: string } | undefined;
 
   if (parsedArguments.args.length === 2) {
     if (parsedArguments.flags['--all']) {
@@ -51,7 +57,14 @@ export async function list(client: Client) {
     project = { name: parsedArguments.args[1] };
   }
 
-  if (!parsedArguments.flags['--all']) {
+  const { contextName, team } = await getScope(client);
+
+  if (!team) {
+    client.output.error('Team not found.');
+    return 1;
+  }
+
+  if (!project && !parsedArguments.flags['--all']) {
     project = await getLinkedProject(client).then(result => {
       if (result.status === 'linked') {
         return result.project;
