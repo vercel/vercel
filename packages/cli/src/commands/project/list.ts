@@ -7,6 +7,7 @@ import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import { NODE_VERSIONS } from '@vercel/build-utils';
 import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
+import output from '../../output-manager';
 
 export default async function list(
   client: Client,
@@ -16,12 +17,10 @@ export default async function list(
 ) {
   const telemetryClient = new ProjectListTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
 
-  const { output } = client;
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(

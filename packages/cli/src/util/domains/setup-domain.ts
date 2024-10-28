@@ -1,16 +1,15 @@
 import { parse } from 'tldts';
 import { NowError } from '../now-error';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import addDomain from './add-domain';
 import Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import extractDomain from '../alias/extract-domain';
+import output from '../../output-manager';
 
 export default async function setupDomain(
-  output: Output,
   client: Client,
   alias: string,
   contextName: string
@@ -32,7 +31,6 @@ export default async function setupDomain(
     `The domain ${aliasDomain} was not found, trying to purchase it`
   );
   const purchased = await purchaseDomainIfAvailable(
-    output,
     client,
     aliasDomain,
     contextName

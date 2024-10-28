@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import { Output } from '../../util/output';
 import Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
@@ -15,6 +14,8 @@ import { getDomainConfig } from '../../util/domains/get-domain-config';
 import code from '../../util/output/code';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
+import output from '../../output-manager';
+
 type Options = {};
 
 export default async function inspect(
@@ -22,10 +23,9 @@ export default async function inspect(
   opts: Options,
   args: string[]
 ) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const telemetry = new DomainsInspectTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
@@ -59,7 +59,6 @@ export default async function inspect(
   );
 
   const information = await fetchInformation({
-    output,
     client,
     contextName,
     domainName,
@@ -185,12 +184,10 @@ export default async function inspect(
 }
 
 async function fetchInformation({
-  output,
   client,
   contextName,
   domainName,
 }: {
-  output: Output;
   client: Client;
   contextName: string;
   domainName: string;

@@ -93,7 +93,7 @@ describe('telemetry', () => {
       client.setArgv('telemetry', ...args);
       const exitCode = await telemetry(client);
       expect(client.config?.telemetry?.enabled).toBe(true);
-      expect(setSpy).toHaveBeenCalledWith(client.output, {
+      expect(setSpy).toHaveBeenCalledWith({
         telemetry: { enabled: true },
       });
       expect(exitCode).toBe(0);
@@ -113,7 +113,7 @@ describe('telemetry', () => {
       client.setArgv('telemetry', ...args);
       const exitCode = await telemetry(client);
       expect(client.config?.telemetry?.enabled).toBe(false);
-      expect(setSpy).toHaveBeenCalledWith(client.output, {
+      expect(setSpy).toHaveBeenCalledWith({
         telemetry: { enabled: false },
       });
       expect(exitCode).toBe(0);
