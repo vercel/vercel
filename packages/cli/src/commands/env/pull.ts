@@ -22,6 +22,7 @@ import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -29,6 +30,7 @@ type Options = {
   '--debug': boolean;
   '--yes': boolean;
   '--git-branch': string;
+  '--environment': string;
 };
 
 function readHeadSync(path: string, length: number) {
@@ -67,6 +69,12 @@ export default async function pull(
   cwd: string,
   source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
 ) {
+  const telemetryClient = new EnvPullTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
@@ -80,7 +88,11 @@ export default async function pull(
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
-  await pullCommandLogic(
+  telemetryClient.trackCliArgumentFilename(args[0]);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliOptionGitBranch(gitBranch);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  await envPullCommandLogic(
     client,
     filename,
     !!skipConfirmation,
@@ -94,7 +106,7 @@ export default async function pull(
   return 0;
 }
 
-export async function pullCommandLogic(
+export async function envPullCommandLogic(
   client: Client,
   filename: string,
   skipConfirmation: boolean,

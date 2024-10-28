@@ -12,6 +12,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
+
 const COMMAND_CONFIG = {
   add: ['add'],
   issue: ['issue'],

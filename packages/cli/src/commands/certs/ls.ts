@@ -13,13 +13,23 @@ import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
 
 async function ls(
   client: Client,
   opts: PaginationOptions,
   args: string[]
 ): Promise<number> {
+  const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
+  const telemetry = new CertsLsTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   let paginationOptions;
 

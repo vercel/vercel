@@ -6,6 +6,6 @@ describe('integration', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('integration');
     const exitCodePromise = integration(client);
-    expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 });

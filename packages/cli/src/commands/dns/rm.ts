@@ -9,6 +9,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 
 type Options = {};
 
@@ -17,6 +18,12 @@ export default async function rm(
   _opts: Options,
   args: string[]
 ) {
+  const { telemetryEventStore } = client;
+  const telemetry = new DnsRmTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
   await getScope(client);
 
   const [recordId] = args;
@@ -29,6 +36,8 @@ export default async function rm(
     return 1;
   }
 
+  telemetry.trackCliArgumentRecordId(recordId);
+
   const record = await getDNSRecordById(client, recordId);
 
   if (!record) {
@@ -38,6 +47,7 @@ export default async function rm(
 
   const { domain: domainName } = record;
   const yes = await readConfirmation(
+    client,
     'The following record will be removed permanently',
     domainName,
     record
@@ -56,7 +66,12 @@ export default async function rm(
   return 0;
 }
 
-function readConfirmation(msg: string, domainName: string, record: DNSRecord) {
+function readConfirmation(
+  client: Client,
+  msg: string,
+  domainName: string,
+  record: DNSRecord
+) {
   return new Promise(resolve => {
     output.log(msg);
     output.print(
@@ -68,7 +83,7 @@ function readConfirmation(msg: string, domainName: string, record: DNSRecord) {
     output.print(
       `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
-    process.stdin
+    client.stdin
       .on('data', d => {
         process.stdin.pause();
         resolve(d.toString().trim().toLowerCase() === 'y');
