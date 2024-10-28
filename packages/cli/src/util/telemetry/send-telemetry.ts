@@ -1,3 +1,9 @@
+/**
+ * This file is bundled separately from the CLI so that it can
+ * be invoked as a subprocess. This is done to avoid the overhead
+ * of making a fetch request while the process is otherwise
+ * ready to exit.
+ */
 import fetch from 'node-fetch';
 
 const payloadString = process.argv.slice(2);
