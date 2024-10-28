@@ -28,7 +28,6 @@ export async function list(client: Client) {
 
   const telemetry = new IntegrationListTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -37,11 +36,6 @@ export async function list(client: Client) {
   telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
   // Note: the `--integration` flag is tracked later, after validating
   // whether the value is a known integration name or not.
-
-  if (!team) {
-    output.error('Team not found.');
-    return 1;
-  }
 
   if (parsedArguments.args.length > 2) {
     output.error(
@@ -64,7 +58,7 @@ export async function list(client: Client) {
   const { contextName, team } = await getScope(client);
 
   if (!team) {
-    client.output.error('Team not found.');
+    output.error('Team not found.');
     return 1;
   }
 
