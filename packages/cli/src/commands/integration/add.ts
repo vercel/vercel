@@ -21,8 +21,16 @@ import { connectResourceToProject } from '../../util/integration/connect-resourc
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
+import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 
 export async function add(client: Client, args: string[]) {
+  const telemetry = new IntegrationAddTelemetryClient({
+    opts: {
+      output: client.output,
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     client.output.error('Cannot install more than one integration at a time');
     return 1;
@@ -43,13 +51,17 @@ export async function add(client: Client, args: string[]) {
   }
 
   let integration: Integration | undefined;
+  let knownIntegrationSlug = false;
   try {
     integration = await fetchIntegration(client, integrationSlug);
+    knownIntegrationSlug = true;
   } catch (error) {
     client.output.error(
       `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
     );
     return 1;
+  } finally {
+    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
 
   if (!integration.products) {
