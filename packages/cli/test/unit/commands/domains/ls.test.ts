@@ -11,8 +11,23 @@ describe('domains ls', () => {
     useDomains();
     client.setArgv('domains', 'ls');
     let exitCodePromise = domains(client);
-    await expect(client.stderr).toOutput('example-19.com');
     await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('example-19.com');
+  });
+
+  it('tracks subcommand invocation', async () => {
+    useUser();
+    useDomains();
+    client.setArgv('domains', 'ls');
+    let exitCodePromise = domains(client);
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:list',
+        value: 'ls',
+      },
+    ]);
   });
 
   describe('--limit', () => {
@@ -21,9 +36,48 @@ describe('domains ls', () => {
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
       const exitCodePromise = domains(client);
-      await expect(client.stderr).toOutput('example-1.com');
       await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('example-1.com');
+    });
+
+    it('tracks telemetry data, async', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--limit', '2');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:limit',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
-  describe.todo('--next');
+
+  describe('--next', () => {
+    it('tracks telemetry data, async', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--next', '1730124407638');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:next',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 });
