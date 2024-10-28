@@ -6,6 +6,7 @@ import list from './list';
 import { targetCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
 
 const COMMAND_CONFIG = {
@@ -25,10 +26,9 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const telemetry = new TargetTelemetryClient({
     opts: {
-      output: output,
       store: telemetryEventStore,
     },
   });
@@ -49,9 +49,7 @@ export default async function main(client: Client) {
       return await list(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      client.output.print(
-        help(targetCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(targetCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

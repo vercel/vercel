@@ -12,13 +12,13 @@ import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
-import type { Output } from '../../util/output';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
+import output from '../../output-manager';
 
 const deprecatedFlags = [
   '--follow',
@@ -31,7 +31,7 @@ const deprecatedFlags = [
 export default async function logs(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(logsCommand.options);
-  const { print, error, spinner, stopSpinner } = client.output;
+  const { print, error, spinner, stopSpinner } = output;
 
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
@@ -61,7 +61,6 @@ export default async function logs(client: Client) {
 
   const telemetry = new LogsTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -139,7 +138,7 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  printDisclaimer(deployment, client.output);
+  printDisclaimer(deployment);
   const abortController = new AbortController();
   return await displayRuntimeLogs(
     client,
@@ -154,12 +153,12 @@ export default async function logs(client: Client) {
 
 const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
 
-function printDisclaimer(deployment: Deployment, { print, warn }: Output) {
+function printDisclaimer(deployment: Deployment) {
   // Could be temporary until users get used to this change
-  warn(
+  output.warn(
     `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
   );
-  print(
+  output.print(
     `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
       deployment.id
     )}) starting from ${chalk.bold(format(Date.now(), dateTimeFormat))}\n\n`

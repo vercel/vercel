@@ -10,9 +10,9 @@ import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import table from '../../util/output/table';
 import title from 'title';
-import type { Output } from '../../util/output';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import output from '../../output-manager';
 
 export async function list(client: Client) {
   let parsedArguments = null;
@@ -29,12 +29,12 @@ export async function list(client: Client) {
   let project: { id?: string; name?: string } | undefined;
 
   if (!team) {
-    client.output.error('Team not found.');
+    output.error('Team not found.');
     return 1;
   }
 
   if (parsedArguments.args.length > 2) {
-    client.output.error(
+    output.error(
       'Cannot specify more than one project at a time. Use `--all` to show all resources.'
     );
     return 1;
@@ -42,9 +42,7 @@ export async function list(client: Client) {
 
   if (parsedArguments.args.length === 2) {
     if (parsedArguments.flags['--all']) {
-      client.output.error(
-        'Cannot specify a project when using the `--all` flag.'
-      );
+      output.error('Cannot specify a project when using the `--all` flag.');
       return 1;
     }
 
@@ -59,7 +57,7 @@ export async function list(client: Client) {
       return;
     });
     if (!project) {
-      client.output.error(
+      output.error(
         'No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
       );
       return 1;
@@ -69,12 +67,10 @@ export async function list(client: Client) {
   let resources: Resource[] | undefined;
 
   try {
-    client.output.spinner('Retrieving resources…', 500);
+    output.spinner('Retrieving resources…', 500);
     resources = await getResources(client, team.id);
   } catch (error) {
-    client.output.error(
-      `Failed to fetch resources: ${(error as Error).message}`
-    );
+    output.error(`Failed to fetch resources: ${(error as Error).message}`);
     return 1;
   }
 
@@ -121,21 +117,21 @@ export async function list(client: Client) {
     });
 
   if (results.length === 0) {
-    client.output.log('No resources found.');
+    output.log('No resources found.');
     return 0;
   }
 
-  client.output.log(
+  output.log(
     `Integrations in ${chalk.bold(contextName)}:\n${table(
       [
         ['Name', 'Status', 'Product', 'Integration', 'Projects'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
         ...results.map(result => [
-          resourceLink(client.output, contextName, result) ?? chalk.gray('–'),
+          resourceLink(contextName, result) ?? chalk.gray('–'),
           resourceStatus(result.status ?? '–'),
           result.product ?? chalk.gray('–'),
-          integrationLink(client.output, result, team) ?? chalk.gray('–'),
+          integrationLink(result, team) ?? chalk.gray('–'),
           chalk.grey(result.projects ? result.projects : '–'),
         ]),
       ],
@@ -167,7 +163,6 @@ function resourceStatus(status: string) {
 
 // Builds a deep link to the vercel dashboard resource page
 function resourceLink(
-  output: Output,
   orgSlug: string,
   resource: { id: string; name?: string }
 ): string | undefined {
@@ -185,7 +180,6 @@ function resourceLink(
 
 // Builds a deep link to the integration dashboard
 function integrationLink(
-  output: Output,
   integration: { integration?: string; configurationId?: string },
   team: Team
 ): string | undefined {

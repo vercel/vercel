@@ -11,6 +11,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 import { CertsRemoveTelemetryClient } from '../../util/telemetry/commands/certs/remove';
 import type Client from '../../util/client';
 
@@ -18,11 +19,11 @@ type Options = {};
 
 async function rm(client: Client, _opts: Options, args: string[]) {
   const rmStamp = stamp();
-  const { output, telemetryEventStore } = client;
+
+  const { telemetryEventStore } = client;
 
   const telemetry = new CertsRemoveTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
@@ -73,9 +74,7 @@ async function rm(client: Client, _opts: Options, args: string[]) {
     return 0;
   }
 
-  await Promise.all(
-    certs.map(cert => deleteCertById(output, client, cert.uid))
-  );
+  await Promise.all(certs.map(cert => deleteCertById(client, cert.uid)));
   output.success(
     `${chalk.bold(
       plural('Certificate', certs.length, true)
@@ -102,7 +101,6 @@ async function getCertsToDelete(
 
 function readConfirmation(client: Client, msg: string, certs: Cert[]) {
   return new Promise(resolve => {
-    const { output } = client;
     output.log(msg);
     output.print(
       `${table(certs.map(formatCertRow), {

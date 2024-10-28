@@ -17,6 +17,7 @@ import {
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import output from '../../output-manager';
 import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
 
 export default async function ls(
@@ -24,11 +25,10 @@ export default async function ls(
   opts: Partial<PaginationOptions>,
   args: string[]
 ) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
 
   const telemetry = new DomainsLsTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
