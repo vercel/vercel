@@ -92,12 +92,12 @@ describe('git connect', () => {
         expect(exitCode).toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'subcommand:connect',
-            value: 'connect',
-          },
-          {
             key: 'flag:yes',
             value: 'TRUE',
+          },
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
           },
         ]);
       });
@@ -126,10 +126,6 @@ describe('git connect', () => {
           {
             key: 'subcommand:connect',
             value: 'connect',
-          },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
           },
         ]);
       });

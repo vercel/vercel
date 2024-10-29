@@ -20,4 +20,10 @@ export class GitTelemetryClient extends TelemetryClient {
       this.trackCliFlag('confirm');
     }
   }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

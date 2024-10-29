@@ -41,8 +41,10 @@ export default async function main(client: Client) {
     return 2;
   }
 
+  telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+
   if ('--confirm' in parsedArgs.flags) {
-    telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }

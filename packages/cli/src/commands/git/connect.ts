@@ -64,8 +64,6 @@ export default async function connect(
     },
   });
 
-  telemetry.trackCliFlagYes(argv['--yes']);
-
   const confirm = Boolean(argv['--yes']);
   const repoArg = args[0];
 
