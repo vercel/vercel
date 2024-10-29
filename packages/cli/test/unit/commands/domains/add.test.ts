@@ -9,7 +9,7 @@ describe('domains add', () => {
   describe('[name]', () => {
     describe('[project]', () => {
       describe('--force', () => {
-        it('tracks telemetry data, async', async () => {
+        it('tracks telemetry data', async () => {
           useUser();
           const domain = useDomain();
           const { project } = useProject();
