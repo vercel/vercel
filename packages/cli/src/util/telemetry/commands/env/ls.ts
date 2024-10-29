@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class EnvLsTelemetryClient extends TelemetryClient {
-  trackCliArgumentEnvironment(environment?: string) {
+  trackCliArgumentEnvironment(environment: string | undefined) {
     if (environment) {
       const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliArgument({
@@ -13,7 +13,7 @@ export class EnvLsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentGitBranch(gitBranch?: string) {
+  trackCliArgumentGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
       this.trackCliArgument({
         arg: 'git-branch',

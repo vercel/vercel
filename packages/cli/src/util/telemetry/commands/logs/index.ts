@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class LogsTelemetryClient extends TelemetryClient {
-  trackCliArgumentUrl(path?: string) {
+  trackCliArgumentUrl(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
         arg: 'url',
@@ -10,19 +10,19 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagJson(v?: boolean) {
+  trackCliFlagJson(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('json');
     }
   }
 
-  trackCliFlagFollow(v?: boolean) {
+  trackCliFlagFollow(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('follow');
     }
   }
 
-  trackCliOptionLimit(n?: number) {
+  trackCliOptionLimit(n: number | undefined) {
     if (typeof n === 'number') {
       this.trackCliOption({
         option: 'limit',
@@ -31,7 +31,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionSince(n?: string) {
+  trackCliOptionSince(n: string | undefined) {
     if (n) {
       this.trackCliOption({
         option: 'since',
@@ -40,7 +40,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionUntil(n?: string) {
+  trackCliOptionUntil(n: string | undefined) {
     if (n) {
       this.trackCliOption({
         option: 'until',
@@ -49,7 +49,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionOutput(n?: string, known?: boolean) {
+  trackCliOptionOutput(n: string | undefined, known: boolean | undefined) {
     if (n) {
       this.trackCliOption({
         option: 'output',

@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class DomainsAddTelemetryClient extends TelemetryClient {
-  trackCliFlagForce(force?: boolean) {
+  trackCliFlagForce(force: boolean | undefined) {
     if (force) {
       this.trackCliFlag('force');
     }
@@ -16,7 +16,7 @@ export class DomainsAddTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentProjectName(projectName?: string) {
+  trackCliArgumentProjectName(projectName: string | undefined) {
     if (projectName) {
       this.trackCliArgument({
         arg: 'project',

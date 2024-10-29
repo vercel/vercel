@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class DnsLsTelemetryClient extends TelemetryClient {
-  trackCliArgumentDomainName(domainName?: string) {
+  trackCliArgumentDomainName(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({
         arg: 'domainName',
@@ -10,7 +10,7 @@ export class DnsLsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionLimit(limit?: number) {
+  trackCliOptionLimit(limit: number | undefined) {
     if (limit) {
       this.trackCliOption({
         option: 'limit',
@@ -19,7 +19,7 @@ export class DnsLsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionNext(next?: number) {
+  trackCliOptionNext(next: number | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',

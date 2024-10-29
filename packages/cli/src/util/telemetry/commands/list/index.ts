@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class ListTelemetryClient extends TelemetryClient {
-  trackCliOptionMeta(meta?: string[]) {
+  trackCliOptionMeta(meta: string[] | undefined) {
     if (meta && meta.length > 0) {
       this.trackCliOption({
         option: 'meta',
@@ -10,7 +10,7 @@ export class ListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionPolicy(policy?: string[]) {
+  trackCliOptionPolicy(policy: string[] | undefined) {
     if (policy && policy.length > 0) {
       this.trackCliOption({
         option: 'policy',
@@ -19,7 +19,7 @@ export class ListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionEnvironment(environment?: string) {
+  trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
       if (environment !== 'production' && environment !== 'preview') {
         environment = this.redactedValue;
@@ -31,7 +31,7 @@ export class ListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionNext(next?: number) {
+  trackCliOptionNext(next: number | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',
@@ -40,25 +40,25 @@ export class ListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagProd(flag?: boolean) {
+  trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
     }
   }
 
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }
   }
 
-  trackCliFlagConfirm(flag?: boolean) {
+  trackCliFlagConfirm(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('confirm');
     }
   }
 
-  trackCliArgumentApp(app?: string) {
+  trackCliArgumentApp(app: string | undefined) {
     if (app) {
       this.trackCliArgument({
         arg: 'app',

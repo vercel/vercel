@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class RedeployTelemetryClient extends TelemetryClient {
-  trackCliArgumentDeploymentIdOrName(idOrName?: string) {
+  trackCliArgumentDeploymentIdOrName(idOrName: string | undefined) {
     if (idOrName) {
       this.trackCliArgument({
         arg: 'idOrName',

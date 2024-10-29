@@ -1,13 +1,13 @@
 import { TelemetryClient } from '../..';
 
 export class DomainsMoveTelemetryClient extends TelemetryClient {
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }
   }
 
-  trackCliArgumentDomainName(domainName?: string) {
+  trackCliArgumentDomainName(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({
         arg: 'domain',
@@ -16,7 +16,7 @@ export class DomainsMoveTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentDestination(destination?: string) {
+  trackCliArgumentDestination(destination: string | undefined) {
     if (destination) {
       this.trackCliArgument({
         arg: 'destination',
