@@ -7,9 +7,6 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
-// 500 error responses take more than 5 seconds to return, even when mocked, so this extra time is for the 500 error test.
-vi.setConfig({ testTimeout: 20000 });
-
 vi.mock('open', () => {
   return {
     default: vi.fn(),
