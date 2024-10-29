@@ -220,8 +220,7 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'http://localhost:3000/api/vercel-cli/v1/events';
-      // const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
+      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
