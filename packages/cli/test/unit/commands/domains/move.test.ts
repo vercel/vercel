@@ -10,7 +10,7 @@ describe('domains mv', () => {
   describe('[name]', () => {
     describe('[destination]', () => {
       describe('--yes', () => {
-        it('tracks telemetry data, async', async () => {
+        it('tracks telemetry data', async () => {
           useUser();
           useTeams('team2');
           client.setArgv('domains', 'move', 'example.com', 'team2', '--yes');
