@@ -31,7 +31,8 @@ export class TelemetryClient {
   protected redactedArgumentsLength = (args: string[]) => {
     if (args && args.length === 1) {
       return 'ONE';
-    } else if (args.length > 1) {
+    }
+    if (args.length > 1) {
       return 'MANY';
     }
     return 'NONE';
