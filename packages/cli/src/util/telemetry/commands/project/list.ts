@@ -7,7 +7,7 @@ export class ProjectListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionNext(next?: number) {
+  trackCliOptionNext(next: number | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',

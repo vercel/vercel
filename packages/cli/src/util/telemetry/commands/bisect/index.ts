@@ -6,7 +6,7 @@ export class BisectTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof bisectCommand>
 {
-  trackCliOptionGood(good?: string) {
+  trackCliOptionGood(good: string | undefined) {
     if (good) {
       this.trackCliOption({
         option: 'good',
@@ -15,7 +15,7 @@ export class BisectTelemetryClient
     }
   }
 
-  trackCliOptionBad(bad?: string) {
+  trackCliOptionBad(bad: string | undefined) {
     if (bad) {
       this.trackCliOption({
         option: 'bad',
@@ -24,7 +24,7 @@ export class BisectTelemetryClient
     }
   }
 
-  trackCliOptionPath(path?: string) {
+  trackCliOptionPath(path: string | undefined) {
     if (path) {
       this.trackCliOption({
         option: 'path',
@@ -33,7 +33,7 @@ export class BisectTelemetryClient
     }
   }
 
-  trackCliOptionRun(run?: string) {
+  trackCliOptionRun(run: string | undefined) {
     if (run) {
       this.trackCliOption({
         option: 'run',
@@ -42,7 +42,7 @@ export class BisectTelemetryClient
     }
   }
 
-  trackCliFlagOpen(open?: boolean) {
+  trackCliFlagOpen(open: boolean | undefined) {
     if (open) {
       this.trackCliFlag('open');
     }

@@ -15,7 +15,7 @@ export class DevTelemetryClient
     }
   }
 
-  trackCliOptionListen(uri?: string) {
+  trackCliOptionListen(uri: string | undefined) {
     if (uri) {
       this.trackCliOption({
         option: 'listen',
@@ -24,7 +24,7 @@ export class DevTelemetryClient
     }
   }
 
-  trackCliOptionPort(port?: string) {
+  trackCliOptionPort(port: string | undefined) {
     if (port) {
       this.trackCliOption({
         option: 'port',
@@ -33,21 +33,21 @@ export class DevTelemetryClient
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }
   }
 
-  trackCliFlagConfirm(confirm?: boolean) {
+  trackCliFlagConfirm(confirm: boolean | undefined) {
     if (confirm) {
       this.trackCliFlag('confirm');
     }
   }
 
-  trackCliFlagHelp(help?: boolean) {
+  trackCliFlagHelp(help: boolean | undefined) {
     if (help) {
-      this.trackCliFlagHelp();
+      this.trackCliFlag('help');
     }
   }
 }

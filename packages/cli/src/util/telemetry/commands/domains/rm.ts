@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class DomainsRmTelemetryClient extends TelemetryClient {
-  trackCliArgumentDomain(v?: string) {
+  trackCliArgumentDomain(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'domain',
@@ -10,7 +10,7 @@ export class DomainsRmTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(v?: boolean) {
+  trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
     }

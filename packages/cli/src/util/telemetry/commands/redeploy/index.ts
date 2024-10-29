@@ -6,7 +6,7 @@ export class RedeployTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof redeployCommand>
 {
-  trackCliArgumentDeploymentIdOrName(idOrName?: string) {
+  trackCliArgumentDeploymentIdOrName(idOrName: string | undefined) {
     if (idOrName) {
       this.trackCliArgument({
         arg: 'idOrName',

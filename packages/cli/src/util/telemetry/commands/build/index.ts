@@ -6,7 +6,7 @@ export class BuildTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof buildCommand>
 {
-  trackCliOptionOutput(path?: string) {
+  trackCliOptionOutput(path: string | undefined) {
     if (path) {
       this.trackCliOption({
         option: 'output',
@@ -15,7 +15,7 @@ export class BuildTelemetryClient
     }
   }
 
-  trackCliOptionTarget(option?: string) {
+  trackCliOptionTarget(option: string | undefined) {
     if (option) {
       this.trackCliOption({
         option: 'target',
@@ -24,13 +24,13 @@ export class BuildTelemetryClient
     }
   }
 
-  trackCliFlagProd(flag?: boolean) {
+  trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
     }
   }
 
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }

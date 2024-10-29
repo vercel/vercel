@@ -6,19 +6,19 @@ export class RemoveTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof removeCommand>
 {
-  trackCliFlagHard(flag?: boolean) {
+  trackCliFlagHard(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('hard');
     }
   }
 
-  trackCliFlagSafe(flag?: boolean) {
+  trackCliFlagSafe(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('safe');
     }
   }
 
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }
