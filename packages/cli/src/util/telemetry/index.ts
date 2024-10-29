@@ -209,9 +209,9 @@ export class TelemetryEventStore {
       // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
       output.log(`${LogLabel} Flushing Events`);
-      this.events.forEach(event => {
+      for (const event of this.events) {
         output.log(JSON.stringify(event));
-      });
+      }
 
       return;
     }
