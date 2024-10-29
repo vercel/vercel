@@ -9,7 +9,7 @@ export class LogsTelemetryClient
   trackCliArgumentUrlOrDeploymentId(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
-        arg: 'url',
+        arg: 'urlOrDeploymentId',
         value: this.redactedValue,
       });
     }
