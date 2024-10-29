@@ -117,17 +117,18 @@ describe('git connect', () => {
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
+
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:confirm',
+            value: 'TRUE',
+          },
           {
             key: 'subcommand:connect',
             value: 'connect',
           },
           {
             key: 'flag:yes',
-            value: 'TRUE',
-          },
-          {
-            key: 'flag:confirm',
             value: 'TRUE',
           },
         ]);
