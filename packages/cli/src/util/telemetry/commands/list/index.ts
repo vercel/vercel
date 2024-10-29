@@ -21,12 +21,15 @@ export class ListTelemetryClient extends TelemetryClient {
 
   trackCliOptionEnvironment(environment?: string) {
     if (environment) {
-      if (environment !== 'production' && environment !== 'preview') {
-        environment = this.redactedValue;
-      }
+      const redactUnknownEnvironment = (environment: string) => {
+        if (environment !== 'production' && environment !== 'preview') {
+          return this.redactedValue;
+        }
+        return environment;
+      };
       this.trackCliOption({
         option: 'environment',
-        value: environment,
+        value: redactUnknownEnvironment(environment),
       });
     }
   }
