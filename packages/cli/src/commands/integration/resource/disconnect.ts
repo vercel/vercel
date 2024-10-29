@@ -19,8 +19,15 @@ import {
   type ResourceConnection,
 } from '../types';
 import { disconnectSubcommand } from './command';
+import { IntegrationResourceDisconnectTelemetryClient } from '../../../util/telemetry/commands/integration/resource/disconnect';
 
 export async function disconnect(client: Client) {
+  const telemetry = new IntegrationResourceDisconnectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArguments = null;
   const flagsSpecification = getFlagsSpecification(
     disconnectSubcommand.options
@@ -63,6 +70,16 @@ export async function disconnect(client: Client) {
   }
 
   const resourceName = parsedArguments.args[1];
+  let specifiedProject: string | undefined;
+
+  if (isProjectSpecified) {
+    specifiedProject = parsedArguments.args[2];
+  }
+
+  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliArgumentProject(specifiedProject);
+  telemetry.trackCliFlagYes(skipConfirmation);
+  telemetry.trackCliFlagAll(shouldDisconnectAll);
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client, team.id);
@@ -95,12 +112,6 @@ export async function disconnect(client: Client) {
       }
       throw error;
     }
-  }
-
-  let specifiedProject: string | undefined;
-
-  if (isProjectSpecified) {
-    specifiedProject = parsedArguments.args[2];
   }
 
   if (!specifiedProject) {

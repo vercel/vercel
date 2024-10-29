@@ -2,7 +2,7 @@ import { yesOption } from '../../../util/arg-common';
 import { packageName } from '../../../util/pkg-name';
 
 export const removeSubcommand = {
-  name: 'delete',
+  name: 'remove',
   description: 'Delete an integration resource',
   arguments: [
     {
@@ -13,7 +13,8 @@ export const removeSubcommand = {
   options: [
     {
       name: 'disconnect-all',
-      description: 'disconnects all projects from the specified resource',
+      description:
+        'disconnects all projects from the specified resource before deletion',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
@@ -27,16 +28,16 @@ export const removeSubcommand = {
     {
       name: 'Delete a resource',
       value: [
-        `${packageName} integration-resource delete <resource>`,
-        `${packageName} integration-resource delete my-acme-resource`,
+        `${packageName} integration-resource remove <resource>`,
+        `${packageName} integration-resource remove my-acme-resource`,
       ],
     },
     {
       name: 'Disconnect all projects from a resource, then delete it',
       value: [
-        `${packageName} integration-resource delete <resource> --disconnect-all`,
-        `${packageName} integration-resource delete my-acme-resource --disconnect-all`,
-        `${packageName} integration-resource delete my-acme-resource -a`,
+        `${packageName} integration-resource remove <resource> --disconnect-all`,
+        `${packageName} integration-resource remove my-acme-resource --disconnect-all`,
+        `${packageName} integration-resource remove my-acme-resource -a`,
       ],
     },
   ],

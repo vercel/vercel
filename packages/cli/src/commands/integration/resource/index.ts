@@ -12,6 +12,7 @@ import {
 import { remove } from './remove-resource';
 import { disconnect } from './disconnect';
 import output from '../../../output-manager';
+import { IntegrationResourceTelemetryClient } from '../../../util/telemetry/commands/integration/resource';
 
 const COMMAND_CONFIG = {
   remove: ['remove', 'rm'],
@@ -19,12 +20,20 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
+  const telemetry = new IntegrationResourceTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
   const { args, flags } = parseArguments(
     client.argv.slice(2),
     getFlagsSpecification(integrationResourceCommand.options),
     { permissive: true }
   );
-  const { subcommand } = getSubcommand(args.slice(1), COMMAND_CONFIG);
+  const { subcommand, subcommandOriginal } = getSubcommand(
+    args.slice(1),
+    COMMAND_CONFIG
+  );
 
   const needHelp = flags['--help'];
 
@@ -45,6 +54,7 @@ export default async function main(client: Client) {
         printHelp(removeSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
     }
     case 'disconnect': {
@@ -52,6 +62,7 @@ export default async function main(client: Client) {
         printHelp(disconnectSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
       return disconnect(client);
     }
     default: {

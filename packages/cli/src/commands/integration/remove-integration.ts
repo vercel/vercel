@@ -10,8 +10,15 @@ import confirm from '../../util/input/confirm';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { removeIntegration } from '../../util/integration/remove-integration';
 import { removeSubcommand } from './command';
+import { IntegrationRemoveTelemetryClient } from '../../util/telemetry/commands/integration/remove';
 
 export async function remove(client: Client) {
+  const telemetry = new IntegrationRemoveTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArguments = null;
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
@@ -41,6 +48,8 @@ export async function remove(client: Client) {
   }
 
   const integrationName = parsedArguments.args[1];
+  const skipConfirmation = !!parsedArguments.flags['--yes'];
+  telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving integration…', 500);
   const integrationConfiguration = await getFirstConfiguration(
@@ -51,11 +60,13 @@ export async function remove(client: Client) {
 
   if (!integrationConfiguration) {
     output.error(`No integration ${chalk.bold(integrationName)} found.`);
+    telemetry.trackCliArgumentIntegration(integrationName, false);
     return 0;
   }
+  telemetry.trackCliArgumentIntegration(integrationName, true);
 
   const userDidNotConfirm =
-    !parsedArguments.flags['--yes'] &&
+    !skipConfirmation &&
     !(await confirmIntegrationRemoval(
       client,
       integrationConfiguration.slug,

@@ -12,8 +12,15 @@ import confirm from '../../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../../util/integration/delete-resource';
 import { handleDisconnectAllProjects } from './disconnect';
 import output from '../../../output-manager';
+import { IntegrationResourceRemoveTelemetryClient } from '../../../util/telemetry/commands/integration/resource/remove';
 
 export async function remove(client: Client) {
+  const telemetry = new IntegrationResourceRemoveTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArguments = null;
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
@@ -42,7 +49,13 @@ export async function remove(client: Client) {
     return 1;
   }
 
+  const skipConfirmation = !!parsedArguments.flags['--yes'];
+  const disconnectAll = !!parsedArguments.flags['--disconnect-all'];
   const resourceName = parsedArguments.args[1];
+
+  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliFlagDisconnectAll(disconnectAll);
+  telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client, team.id);
@@ -55,9 +68,6 @@ export async function remove(client: Client) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
     return 0;
   }
-
-  const skipConfirmation = !!parsedArguments.flags['--yes'];
-  const disconnectAll = !!parsedArguments.flags['--disconnect-all'];
 
   if (disconnectAll) {
     try {
