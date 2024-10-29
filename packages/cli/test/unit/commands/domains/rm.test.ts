@@ -22,7 +22,10 @@ describe('domains rm', () => {
   describe('[domain]', () => {
     it('should track the redacted [domain] positional argument', async () => {
       useUser();
-      useDomain('one');
+      const domain = useDomain('one');
+      client.scenario.delete(`/v3/domains/${domain.name}`, (_req, res) => {
+        res.json({});
+      });
       useProject({
         ...defaultProject,
         id: 'vercel-domains-rm',
@@ -34,7 +37,7 @@ describe('domains rm', () => {
         'Are you sure you want to remove "example-one.com"?'
       );
       client.stdin.write('y\n');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -51,7 +54,10 @@ describe('domains rm', () => {
     describe('--yes', () => {
       it('should track usage of the `--yes` flag', async () => {
         useUser();
-        useDomain('one');
+        const domain = useDomain('one');
+        client.scenario.delete(`/v3/domains/${domain.name}`, (_req, res) => {
+          res.json({});
+        });
         useProject({
           ...defaultProject,
           id: 'vercel-domains-rm',
@@ -59,7 +65,7 @@ describe('domains rm', () => {
         });
         client.setArgv('domains', 'rm', 'example-one.com', '--yes');
         const exitCodePromise = domains(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(exitCodePromise).resolves.toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
