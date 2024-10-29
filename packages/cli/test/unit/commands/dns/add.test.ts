@@ -67,7 +67,7 @@ describe('dns add', () => {
       },
       {
         key: 'argument:type',
-        value: '[REDACTED]',
+        value: 'SRV',
       },
       {
         key: 'argument:values',

@@ -21,7 +21,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
     if (type) {
       this.trackCliArgument({
         arg: 'type',
-        value: this.redactedValue,
+        value: type,
       });
     }
   }
