@@ -1,20 +1,20 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { CancelledError, FailedError, type Resource } from './types';
-import { getResources } from '../../util/integration/get-resources';
-import { deleteSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import handleError from '../../util/handle-error';
+import type Client from '../../../util/client';
+import getScope from '../../../util/get-scope';
+import { CancelledError, FailedError, type Resource } from '../types';
+import { getResources } from '../../../util/integration/get-resources';
+import { removeSubcommand } from './command';
+import { getFlagsSpecification } from '../../../util/get-flags-specification';
+import { parseArguments } from '../../../util/get-args';
+import handleError from '../../../util/handle-error';
 import type { Team } from '@vercel-internals/types';
-import confirm from '../../util/input/confirm';
-import { deleteResource as _deleteResource } from '../../util/integration/delete-resource';
+import confirm from '../../../util/input/confirm';
+import { deleteResource as _deleteResource } from '../../../util/integration/delete-resource';
 import { handleDisconnectAllProjects } from './disconnect';
 
-export async function deleteResource(client: Client) {
+export async function remove(client: Client) {
   let parsedArguments = null;
-  const flagsSpecification = getFlagsSpecification(deleteSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);

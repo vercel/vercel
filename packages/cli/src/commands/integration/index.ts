@@ -7,26 +7,20 @@ import { type Command, help } from '../help';
 import { add } from './add';
 import {
   addSubcommand,
-  deleteSubcommand,
-  disconnectSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
-  uninstallSubcommand,
+  removeSubcommand,
 } from './command';
-import { deleteResource } from './delete-resource';
-import { disconnect } from './disconnect';
 import { list } from './list';
 import { openIntegration } from './open-integration';
-import { uninstall } from './uninstall';
+import { remove } from './remove-integration';
 
 const COMMAND_CONFIG = {
   add: ['add'],
   open: ['open'],
   list: ['list', 'ls'],
-  delete: ['delete', 'rm'],
-  uninstall: ['uninstall'],
-  disconnect: ['disconnect'],
+  remove: ['remove'],
 };
 
 export default async function main(client: Client) {
@@ -75,26 +69,12 @@ export default async function main(client: Client) {
       }
       return openIntegration(client, subArgs);
     }
-    case 'uninstall': {
+    case 'remove': {
       if (needHelp) {
-        printHelp(uninstallSubcommand);
+        printHelp(removeSubcommand);
         return 2;
       }
-      return uninstall(client);
-    }
-    case 'delete': {
-      if (needHelp) {
-        printHelp(deleteSubcommand);
-        return 2;
-      }
-      return deleteResource(client);
-    }
-    case 'disconnect': {
-      if (needHelp) {
-        printHelp(disconnectSubcommand);
-        return 2;
-      }
-      return disconnect(client);
+      return remove(client);
     }
     default: {
       client.output.error(getInvalidSubcommand(COMMAND_CONFIG));

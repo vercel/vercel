@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import integrationCommand from '../../../../src/commands/integration';
+import integrationResourceCommand from '../../../../src/commands/integration/resource';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
 import { type Team, useTeams } from '../../../mocks/team';
@@ -7,7 +7,7 @@ import { useUser } from '../../../mocks/user';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
 
-describe('integration', () => {
+describe('integration-resource', () => {
   describe('disconnect', () => {
     beforeEach(() => {
       useUser();
@@ -28,8 +28,8 @@ describe('integration', () => {
         const project = 'connected-project';
         mockDisconnectResourceFromProject();
 
-        client.setArgv('integration', 'disconnect', resource, project);
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, project);
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -52,8 +52,14 @@ describe('integration', () => {
         const project = 'connected-project';
         mockDisconnectResourceFromProject();
 
-        client.setArgv('integration', 'disconnect', resource, project, '--yes');
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource,
+          project,
+          '--yes'
+        );
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput('Disconnecting resource…');
@@ -70,8 +76,8 @@ describe('integration', () => {
         const project = 'connected-project';
         mockDisconnectResourceFromProject();
 
-        client.setArgv('integration', 'disconnect', resource, project);
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, project);
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
 
@@ -90,8 +96,8 @@ describe('integration', () => {
         const resource = 'store-acme-no-projects';
         const project = 'connected-project';
 
-        client.setArgv('integration', 'disconnect', resource, project);
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, project);
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -116,8 +122,8 @@ describe('integration', () => {
         const resource = 'store-acme-connected-project';
         mockDisconnectResourceFromProject();
 
-        client.setArgv('integration', 'disconnect', resource);
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource);
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -139,8 +145,8 @@ describe('integration', () => {
         const resource = 'store-foo-bar-both-projects';
         mockDisconnectResourceFromAllProjects();
 
-        client.setArgv('integration', 'disconnect', resource, '--all');
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, '--all');
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -163,8 +169,8 @@ describe('integration', () => {
         useResources();
         const resource = 'store-acme-no-projects';
 
-        client.setArgv('integration', 'disconnect', resource, '--all');
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, '--all');
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -179,8 +185,8 @@ describe('integration', () => {
         const resource = 'store-foo-bar-both-projects';
         mockDisconnectResourceFromAllProjects();
 
-        client.setArgv('integration', 'disconnect', resource, '--all');
-        const exitCodePromise = integrationCommand(client);
+        client.setArgv('integration-resource', 'disconnect', resource, '--all');
+        const exitCodePromise = integrationResourceCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
@@ -197,8 +203,8 @@ describe('integration', () => {
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
-          client.setArgv('integration', 'disconnect', 'acme');
-          const exitCodePromise = integrationCommand(client);
+          client.setArgv('integration-resource', 'disconnect', 'acme');
+          const exitCodePromise = integrationResourceCommand(client);
           await expect(exitCodePromise).resolves.toEqual(1);
           await expect(client.stderr).toOutput('Error: Team not found.');
         });
@@ -214,8 +220,8 @@ describe('integration', () => {
         });
 
         it('should error when no arguments passed', async () => {
-          client.setArgv('integration', 'disconnect');
-          const exitCodePromise = integrationCommand(client);
+          client.setArgv('integration-resource', 'disconnect');
+          const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
             'You must specify a resource. See `--help` for details.'
           );
@@ -223,8 +229,8 @@ describe('integration', () => {
         });
 
         it('should error when more arguments than a resource and project are passed', async () => {
-          client.setArgv('integration', 'disconnect', 'a', 'b', 'c');
-          const exitCodePromise = integrationCommand(client);
+          client.setArgv('integration-resource', 'disconnect', 'a', 'b', 'c');
+          const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
             'Error: Cannot specify more than one project at a time. Use `--all` to disconnect the specified resource from all projects.'
           );
@@ -232,8 +238,14 @@ describe('integration', () => {
         });
 
         it('should error when passing both a specified project and the `--all` flag', async () => {
-          client.setArgv('integration', 'disconnect', 'a', 'b', '--all');
-          const exitCodePromise = integrationCommand(client);
+          client.setArgv(
+            'integration-resource',
+            'disconnect',
+            'a',
+            'b',
+            '--all'
+          );
+          const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
             'Error: Cannot specify a project while using the `--all` flag.'
           );

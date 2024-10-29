@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { uninstallSubcommand } from './command';
+import { removeSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
@@ -10,9 +10,9 @@ import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-
 import confirm from '../../util/input/confirm';
 import { removeIntegration } from '../../util/integration/remove-integration';
 
-export async function uninstall(client: Client) {
+export async function remove(client: Client) {
   let parsedArguments = null;
-  const flagsSpecification = getFlagsSpecification(uninstallSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);

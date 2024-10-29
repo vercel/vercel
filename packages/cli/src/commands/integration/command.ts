@@ -77,23 +77,23 @@ export const listSubcommand = {
     {
       name: 'Filter the resources to a single integration',
       value: [
-        `${packageName} integrations list --integration <integration>`,
-        `${packageName} integrations list --integration acme`,
-        `${packageName} integrations list -i acme`,
+        `${packageName} integration list --integration <integration>`,
+        `${packageName} integration list --integration acme`,
+        `${packageName} integration list -i acme`,
       ],
     },
     {
       name: 'List all marketplace resources for the current team',
       value: [
-        `${packageName} integrations list --all`,
-        `${packageName} integrations list -a`,
+        `${packageName} integration list --all`,
+        `${packageName} integration list -a`,
       ],
     },
   ],
 } as const;
 
-export const uninstallSubcommand = {
-  name: 'uninstall',
+export const removeSubcommand = {
+  name: 'remove',
   description: 'Uninstalls a marketplace integration',
   arguments: [
     {
@@ -112,101 +112,8 @@ export const uninstallSubcommand = {
     {
       name: 'Uninstall an integration',
       value: [
-        `${packageName} integrations uninstall <inegration>`,
-        `${packageName} integrations uninstall acme`,
-      ],
-    },
-  ],
-} as const;
-
-export const deleteSubcommand = {
-  name: 'delete',
-  description: 'Delete an integration resource',
-  arguments: [
-    {
-      name: 'resource',
-      required: true,
-    },
-  ],
-  options: [
-    {
-      name: 'disconnect-all',
-      description: 'disconnects all projects from the specified resource',
-      shorthand: 'a',
-      type: Boolean,
-      deprecated: false,
-    },
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when deleting a resource',
-    },
-  ],
-  examples: [
-    {
-      name: 'Delete a resource',
-      value: [
-        `${packageName} integrations delete <resource>`,
-        `${packageName} integrations delete my-acme-resource`,
-      ],
-    },
-    {
-      name: 'Disconnect all projects from a resource, then delete it',
-      value: [
-        `${packageName} integrations delete <resource> --disconnect-all`,
-        `${packageName} integrations delete my-acme-resource --disconnect-all`,
-        `${packageName} integrations delete my-acme-resource -a`,
-      ],
-    },
-  ],
-} as const;
-
-export const disconnectSubcommand = {
-  name: 'disconnect',
-  description: 'Disconnect a resource from a project, or the current project',
-  arguments: [
-    {
-      name: 'resource',
-      required: true,
-    },
-    {
-      name: 'project',
-      required: false,
-    },
-  ],
-  options: [
-    {
-      name: 'all',
-      description: 'disconnects all projects from the specified resource',
-      shorthand: 'a',
-      type: Boolean,
-      deprecated: false,
-    },
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when disconnecting a resource',
-    },
-  ],
-  examples: [
-    {
-      name: 'Disconnect a resource from the current projecct',
-      value: [
-        `${packageName} integrations disconnect <resource>`,
-        `${packageName} integrations disconnect my-acme-resource`,
-      ],
-    },
-    {
-      name: 'Disconnect all projects from a resource',
-      value: [
-        `${packageName} integrations disconnect <resource> --unlink-all`,
-        `${packageName} integrations disconnect my-acme-resource --all`,
-        `${packageName} integrations disconnect my-acme-resource -a`,
-      ],
-    },
-    {
-      name: 'Disconnect a resource from a specified project',
-      value: [
-        `${packageName} integrations disconnect <resource> <project>`,
-        `${packageName} integrations disconnect my-acme-resource my-project`,
+        `${packageName} integration remove <inegration>`,
+        `${packageName} integration remove acme`,
       ],
     },
   ],
@@ -226,9 +133,7 @@ export const integrationCommand = {
     addSubcommand,
     listSubcommand,
     openSubcommand,
-    disconnectSubcommand,
-    deleteSubcommand,
-    uninstallSubcommand,
+    removeSubcommand,
   ],
   examples: [],
 } as const;

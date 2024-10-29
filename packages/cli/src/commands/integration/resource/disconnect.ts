@@ -1,23 +1,23 @@
 import chalk from 'chalk';
-import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import type Client from '../../../util/client';
+import getScope from '../../../util/get-scope';
 import {
   CancelledError,
   FailedError,
   type Resource,
   type ResourceConnection,
-} from './types';
-import { getResources } from '../../util/integration/get-resources';
-import { disconnectSubcommand } from './command';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
-import handleError from '../../util/handle-error';
-import confirm from '../../util/input/confirm';
+} from '../types';
+import { getResources } from '../../../util/integration/get-resources';
+import { getFlagsSpecification } from '../../../util/get-flags-specification';
+import { parseArguments } from '../../../util/get-args';
+import handleError from '../../../util/handle-error';
+import confirm from '../../../util/input/confirm';
 import {
   disconnectResourceFromAllProjects,
   disconnectResourceFromProject,
-} from '../../util/integration/disconnect-resource-from-project';
-import { getLinkedProject } from '../../util/projects/link';
+} from '../../../util/integration/disconnect-resource-from-project';
+import { getLinkedProject } from '../../../util/projects/link';
+import { disconnectSubcommand } from './command';
 
 export async function disconnect(client: Client) {
   let parsedArguments = null;
