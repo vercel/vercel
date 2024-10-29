@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
