@@ -30,18 +30,19 @@ await compileDevTemplates();
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const externals = Object.keys(pkg.dependencies || {});
-await esbuild({
-  bundle: true,
-  external: externals,
-});
-
-// We call send-telemetry as a subprocess, so it needs to be bundled separately
-await esbuild({
-  entryPoints: [
-    new URL('src/util/telemetry/send-telemetry.ts', repoRoot).pathname,
-  ],
-  bundle: true,
-});
+await Promise.all([
+  esbuild({
+    bundle: true,
+    external: externals,
+  }),
+  // We call send-telemetry as a subprocess, so it needs to be bundled separately
+  esbuild({
+    entryPoints: [
+      new URL('src/util/telemetry/send-telemetry.ts', repoRoot).pathname,
+    ],
+    bundle: true,
+  }),
+]);
 
 // Copy a few static files into `dist`
 const distRoot = new URL('dist/', repoRoot);

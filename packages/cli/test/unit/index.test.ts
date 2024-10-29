@@ -177,7 +177,7 @@ describe('main', () => {
             const spy = vi
               .spyOn(telemetryEventStore, 'sendToSubprocess')
               .mockImplementation(async () => {
-                //
+                // Prevent the actual call to the subprocess from happening
               });
 
             const telemetry = new RootTelemetryClient({

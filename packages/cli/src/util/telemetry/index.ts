@@ -220,8 +220,7 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'http://localhost:3000/api/vercel-cli/v1/events';
-      // const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
+      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
@@ -233,7 +232,7 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      const script = resolvePath('dist', 'send-telemetry.js');
+      const scriptPath = resolvePath('dist', 'send-telemetry.js');
       const payload = {
         url,
         method: 'POST',
@@ -246,17 +245,16 @@ export class TelemetryEventStore {
         body: JSON.stringify(events),
       };
       await this.sendToSubprocess(
-        script,
+        scriptPath,
         payload,
         output.debugEnabled,
+        // Only called when debugging is enabled
         ({ status, wasRecorded }) => {
           if (status === 204) {
             if (wasRecorded) {
-              output.debug(`Telemetry event tracked`);
+              output.debug('Telemetry event tracked');
             } else {
-              output.debug(
-                `Telemetry event ignored due to progressive rollout`
-              );
+              output.debug('Telemetry event ignored');
             }
           } else {
             output.debug(
@@ -273,7 +271,7 @@ export class TelemetryEventStore {
     scriptPath: string,
     payload: object,
     outputDebugEnabled: boolean,
-    callback: (responsePayload: {
+    debuCallback: (responsePayload: {
       status: number;
       wasRecorded: boolean;
     }) => void
@@ -285,12 +283,12 @@ export class TelemetryEventStore {
           process.execPath,
           [scriptPath, JSON.stringify(payload)],
           {
-            stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+            stdio: ['ignore', 'pipe', 'pipe'],
           }
         );
-        childProcess.stdout?.on('data', data => {
+        childProcess.stdout.on('data', data => {
           const responsePayload = JSON.parse(data);
-          callback({
+          debuCallback({
             status: Number(responsePayload.status),
             wasRecorded: responsePayload.cliTracked === '1',
           });
@@ -305,6 +303,7 @@ export class TelemetryEventStore {
         [scriptPath, JSON.stringify(payload)],
         {
           stdio: 'ignore',
+          windowsHide: true,
           detached: true,
         }
       );
