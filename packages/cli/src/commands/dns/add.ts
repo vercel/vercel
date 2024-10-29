@@ -15,7 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
 
-type Options = Record<string, string>;
+type Options = Record<string, number | boolean | string | undefined>;
 
 export default async function add(
   client: Client,
