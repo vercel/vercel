@@ -6,42 +6,53 @@ import type {
   PrimitiveConstructor,
 } from '../../commands/help';
 
+// ToTelemetryOptionNameByType<'foo', BooleanConstructor> → 'trackCliFlagFoo'
+// ToTelemetryOptionNameByType<'foo', StringConstructor> → 'trackCliOptionFoo'
+// ToTelemetryOptionNameByType<'foo', NumberConstructor> → 'trackCliOptionFoo'
+type ToTelemetryOptionNameByType<
+  Name extends string,
+  Type extends PrimitiveConstructor,
+> = Type extends BooleanConstructor
+  ? `trackCliFlag${ToTitleCase<Name>}`
+  : `trackCliOption${ToTitleCase<Name>}`;
+
 // ToTelemetryOptionName<{ name: 'foo', type: BooleanConstructor }> → 'trackCliFlagFoo'
 // ToTelemetryOptionName<{ name: 'foo', type: StringConstructor }> → 'trackCliOptionFoo'
+// ToTelemetryOptionName<{ name: 'foo', type: NumberConstructor }> → 'trackCliOptionFoo'
 // ToTelemetryOptionName<{ name: 'foo', type: [StringConstructor] }> → 'trackCliOptionFoo'
-type ToTelemetryOptionName<T extends CommandOption> =
-  T['type'] extends BooleanConstructor
-    ? `trackCliFlag${ToTitleCase<T['name']>}`
-    : T['type'] extends StringConstructor
-      ? `trackCliOption${ToTitleCase<T['name']>}`
-      : T['type'] extends ReadonlyArray<StringConstructor>
-        ? `trackCliOption${ToTitleCase<T['name']>}`
-        : never;
+// ToTelemetryOptionName<{ name: 'foo', type: [NumberConstructor] }> → 'trackCliOptionFoo'
+type ToTelemetryOptionName<Opt extends CommandOption> =
+  Opt['type'] extends readonly any[]
+    ? ToTelemetryOptionNameByType<Opt['name'], Opt['type'][0]>
+    : Opt['type'] extends PrimitiveConstructor
+      ? ToTelemetryOptionNameByType<Opt['name'], Opt['type']>
+      : never;
 
 // ToArgType<BooleanConstructor> → boolean
 // ToArgType<StringConstructor> → string
 // ToArgType<[StringConstructor]> → [string]
-type ToArgType<T extends CommandOption['type']> = T extends readonly any[]
-  ? [ToArgType<T[0]>]
-  : T extends PrimitiveConstructor
-    ? ReturnType<T>
-    : never;
+type ToArgType<OptType extends CommandOption['type']> =
+  OptType extends readonly any[]
+    ? [ToArgType<OptType[0]>]
+    : OptType extends PrimitiveConstructor
+      ? ReturnType<OptType>
+      : never;
 
 // TelemetryOptionMethods<{ name: 'foo', type: BooleanConstructor }> → { trackCliOptionFoo: (v: boolean | undefined) => void; }
-type TelemetryOptionMethods<A extends readonly CommandOption[]> = {
-  [K in A[number] as ToTelemetryOptionName<K>]: (
-    v: ToArgType<K['type']> | undefined
+type TelemetryOptionMethods<Opts extends readonly CommandOption[]> = {
+  [Opt in Opts[number] as ToTelemetryOptionName<Opt>]: (
+    value: ToArgType<Opt['type']> | undefined
   ) => void;
 };
 
 // TelemetryArgumentMethods<{ name: 'foo' }> → { trackCliArgumentFoo: (v: string | undefined) => void; }
-type TelemetryArgumentMethods<A extends readonly CommandArgument[]> = {
-  [K in A[number] as `trackCliArgument${ToTitleCase<K['name']>}`]: (
-    v: string | undefined
+type TelemetryArgumentMethods<Args extends readonly CommandArgument[]> = {
+  [Arg in Args[number] as `trackCliArgument${ToTitleCase<Arg['name']>}`]: (
+    value: string | undefined
   ) => void;
 };
 
-export type TelemetryMethods<T extends Command> = Prettify<
-  TelemetryArgumentMethods<T['arguments']> &
-    TelemetryOptionMethods<T['options']>
+export type TelemetryMethods<Cmd extends Command> = Prettify<
+  TelemetryArgumentMethods<Cmd['arguments']> &
+    TelemetryOptionMethods<Cmd['options']>
 >;

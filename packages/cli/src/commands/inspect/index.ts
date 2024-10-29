@@ -71,7 +71,7 @@ export default async function inspect(client: Client) {
     return 1;
   }
 
-  telemetry.trackCliArgumentDeploymentIdOrHost(deploymentIdOrHost);
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
   telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
   telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
   telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
