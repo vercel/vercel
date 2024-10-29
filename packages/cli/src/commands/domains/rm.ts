@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
-
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import type { Domain } from '@vercel-internals/types';
 import Client from '../../util/client';
@@ -17,6 +16,7 @@ import setCustomSuffix from '../../util/domains/set-custom-suffix';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
 
 type Options = {
   '--yes': boolean;
@@ -28,7 +28,14 @@ export default async function rm(
   args: string[]
 ) {
   const [domainName] = args;
-  const { contextName } = await getScope(client);
+
+  const telemetry = new DomainsRmTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetry.trackCliArgumentDomain(domainName);
+  telemetry.trackCliFlagYes(opts['--yes']);
 
   if (!domainName) {
     output.error(
@@ -36,6 +43,8 @@ export default async function rm(
     );
     return 1;
   }
+
+  const { contextName } = await getScope(client);
 
   if (args.length !== 1) {
     output.error(
