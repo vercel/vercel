@@ -5,7 +5,7 @@ sources:
         inputs:
             - location: https://openapi.vercel.sh/
         overlays:
-            - location: ../../overlay.yaml
+            - location: overlay.yaml
         ruleset: vercelRestAPIRuleset
         registry:
             location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
