@@ -6,7 +6,7 @@ import {
   DNSInvalidType,
 } from '../../util/errors-ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import stamp from '../../util/output/stamp';
@@ -15,7 +15,7 @@ import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
 
-type Options = {};
+type Options = Record<string, number | boolean | string | undefined>;
 
 export default async function add(
   client: Client,
@@ -38,7 +38,7 @@ export default async function add(
   const { domain, data: argData } = parsedParams;
   const valueArgs = args.slice(3); // domain, name, type, ...valueArgs
 
-  let telemetryClient = new DnsAddTelemetryClient({
+  const telemetryClient = new DnsAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
