@@ -166,7 +166,7 @@ export class TelemetryEventStore {
   private events: Event[];
   private isDebug: boolean;
   private sessionId: string;
-  private teamId: string = 'NO_TEAM_ID';
+  private teamId = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
   constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
