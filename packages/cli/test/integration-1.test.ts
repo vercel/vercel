@@ -472,7 +472,7 @@ test('deploy from a nested directory', async () => {
     cwd: root,
   });
 
-  await waitForPrompt(vc, /Set up and deploy [^?]+\?/);
+  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
   vc.stdin?.write('yes\n');
 
   await waitForPrompt(vc, 'Which scope do you want to deploy to?');

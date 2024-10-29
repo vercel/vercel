@@ -24,6 +24,7 @@ import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
 import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
+import output from '../../output-manager';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -206,7 +207,6 @@ export async function getLinkedProject(
   client: Client,
   path = client.cwd
 ): Promise<ProjectLinkResult> {
-  const { output } = client;
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -326,7 +326,7 @@ export async function linkFolderToProject(
   // update .gitignore
   const isGitIgnoreUpdated = await addToGitIgnore(path);
 
-  client.output.print(
+  output.print(
     prependEmoji(
       `Linked to ${chalk.bold(
         `${orgSlug}/${projectName}`

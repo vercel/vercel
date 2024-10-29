@@ -13,6 +13,7 @@ import { domainsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -37,11 +38,10 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const telemetry = new DomainsTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
 

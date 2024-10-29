@@ -30,7 +30,7 @@ export function useDeployment({
     | 'READY'
     | 'CANCELED';
   createdAt?: number;
-  project: any; // FIX ME: Use `Project` once PR #9956 is merged
+  project?: any; // FIX ME: Use `Project` once PR #9956 is merged
   target?: Deployment['target'];
 }) {
   setupDeploymentEndpoints();

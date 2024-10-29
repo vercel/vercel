@@ -11,10 +11,13 @@ export class EnvAddTelemetryClient extends TelemetryClient {
   }
 
   trackCliArgumentEnvironment(environment?: string) {
+    const standardEnvironments = ['production', 'preview', 'development'];
     if (environment) {
       this.trackCliArgument({
         arg: 'environment',
-        value: this.redactedValue,
+        value: standardEnvironments.includes(environment)
+          ? environment
+          : this.redactedValue,
       });
     }
   }

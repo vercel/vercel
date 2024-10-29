@@ -8,6 +8,7 @@ import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
 import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 
 type Options = {};
@@ -17,10 +18,9 @@ export default async function rm(
   _opts: Options,
   args: string[]
 ) {
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const telemetry = new DnsRmTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
@@ -73,7 +73,6 @@ function readConfirmation(
   record: DNSRecord
 ) {
   return new Promise(resolve => {
-    const output = client.output;
     output.log(msg);
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {

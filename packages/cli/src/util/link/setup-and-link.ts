@@ -27,6 +27,7 @@ import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
+import output from '../../output-manager';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -49,7 +50,7 @@ export default async function setupAndLink(
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const { localConfig, output, config } = client;
+  const { localConfig, config } = client;
 
   const isFile = !isDirectory(path);
   if (isFile) {
@@ -151,10 +152,7 @@ export default async function setupAndLink(
       ? join(path, rootDirectory)
       : path;
 
-  if (
-    rootDirectory &&
-    !(await validateRootDirectory(output, path, sourcePath, ''))
-  ) {
+  if (rootDirectory && !(await validateRootDirectory(path, sourcePath, ''))) {
     return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
   }
 

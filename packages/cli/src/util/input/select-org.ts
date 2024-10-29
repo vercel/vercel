@@ -2,6 +2,7 @@ import Client from '../client';
 import getUser from '../get-user';
 import getTeams from '../teams/get-teams';
 import { User, Team, Org } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 type Choice = { name: string; value: Org };
 
@@ -11,7 +12,6 @@ export default async function selectOrg(
   autoConfirm?: boolean
 ): Promise<Org> {
   const {
-    output,
     config: { currentTeam },
   } = client;
 
