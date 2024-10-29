@@ -1,9 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 
 describe('domains buy', () => {
+  let origCI: string | undefined;
+
+  // Force the `CI` env var to not be set, because that
+  // alters the behavior of this command (skips prompts)
+  beforeAll(() => {
+    origCI = process.env.CI;
+    delete process.env.CI;
+  });
+
+  afterAll(() => {
+    process.env.CI = origCI;
+  });
+
   it('should track subcommand usage', async () => {
     client.setArgv('domains', 'buy');
     const exitCodePromise = domains(client);
