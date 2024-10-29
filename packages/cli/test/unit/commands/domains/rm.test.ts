@@ -1,7 +1,81 @@
-import { describe } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import domains from '../../../../src/commands/domains';
+import { client } from '../../../mocks/client';
+import { useUser } from '../../../mocks/user';
+import { useDomain } from '../../../mocks/domains';
+import { defaultProject, useProject } from '../../../mocks/project';
 
-describe.todo('domains rm', () => {
-  describe.todo('[name]', () => {
-    describe.todo('--yes');
+describe('domains rm', () => {
+  it('should track subcommand usage', async () => {
+    client.setArgv('domains', 'rm');
+    const exitCodePromise = domains(client);
+    await expect(exitCodePromise).resolves.toEqual(1);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:remove',
+        value: 'rm',
+      },
+    ]);
+  });
+
+  describe('[domain]', () => {
+    it('should track the redacted [domain] positional argument', async () => {
+      useUser();
+      useDomain('one');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-domains-rm',
+        name: 'vercel-domains-rm',
+      });
+      client.setArgv('domains', 'rm', 'example-one.com');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(
+        'Are you sure you want to remove "example-one.com"?'
+      );
+      client.stdin.write('y\n');
+      await expect(exitCodePromise).resolves.toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:remove',
+          value: 'rm',
+        },
+        {
+          key: 'argument:domain',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    describe('--yes', () => {
+      it('should track usage of the `--yes` flag', async () => {
+        useUser();
+        useDomain('one');
+        useProject({
+          ...defaultProject,
+          id: 'vercel-domains-rm',
+          name: 'vercel-domains-rm',
+        });
+        client.setArgv('domains', 'rm', 'example-one.com', '--yes');
+        const exitCodePromise = domains(client);
+        await expect(exitCodePromise).resolves.toEqual(1);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:remove',
+            value: 'rm',
+          },
+          {
+            key: 'argument:domain',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
   });
 });
