@@ -50,7 +50,8 @@ export default async function add(
       `${getCommandName('domains add <domain>')} expects one argument.`
     );
     return 1;
-  } else if (!project && args.length !== 2) {
+  }
+  if (!project && args.length !== 2) {
     output.error(
       `${getCommandName(
         'domains add <domain> <project>'
