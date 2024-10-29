@@ -9,16 +9,4 @@ export class GitConnectTelemetryClient extends TelemetryClient {
       });
     }
   }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
-    }
-  }
-
-  trackCliFlagConfirm(confirm: boolean | undefined) {
-    if (confirm) {
-      this.trackCliFlag('confirm');
-    }
-  }
 }
