@@ -9,5 +9,6 @@ beforeAll(() => {
 });
 
 if (process.debugPort) {
+  // when debugging in an IDE, set a high timeout
   vi.setConfig({ testTimeout: 10 * 60 * 1000 });
 }
