@@ -42,7 +42,7 @@ export class DevTelemetryClient extends TelemetryClient {
 
   trackCliFlagHelp(help: boolean | undefined) {
     if (help) {
-      this.trackCliFlagHelp();
+      this.trackCliFlag('help');
     }
   }
 }
