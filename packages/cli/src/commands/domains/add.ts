@@ -132,8 +132,7 @@ export default async function add(
         `${chalk.grey('[recommended]')}\n`
     );
     output.print(
-      `  ${chalk.grey('b)')} ` +
-        `Change your Domains's nameservers to the intended set`
+      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(
