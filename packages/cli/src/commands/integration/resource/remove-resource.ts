@@ -11,6 +11,7 @@ import type { Team } from '@vercel-internals/types';
 import confirm from '../../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../../util/integration/delete-resource';
 import { handleDisconnectAllProjects } from './disconnect';
+import output from '../../../output-manager';
 
 export async function remove(client: Client) {
   let parsedArguments = null;
@@ -25,35 +26,33 @@ export async function remove(client: Client) {
 
   const { team } = await getScope(client);
   if (!team) {
-    client.output.error('Team not found.');
+    output.error('Team not found.');
     return 1;
   }
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
-    client.output.error(
-      'You must specify a resource. See `--help` for details.'
-    );
+    output.error('You must specify a resource. See `--help` for details.');
     return 1;
   }
 
   const hasTooManyArguments = parsedArguments.args.length > 2;
   if (hasTooManyArguments) {
-    client.output.error('Cannot specify more than one resource at a time.');
+    output.error('Cannot specify more than one resource at a time.');
     return 1;
   }
 
   const resourceName = parsedArguments.args[1];
 
-  client.output.spinner('Retrieving resource…', 500);
+  output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client, team.id);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
-  client.output.stopSpinner();
+  output.stopSpinner();
 
   if (!targetedResource) {
-    client.output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceName)} found.`);
     return 0;
   }
 
@@ -69,11 +68,11 @@ export async function remove(client: Client) {
       );
     } catch (error) {
       if (error instanceof CancelledError) {
-        client.output.log(error.message);
+        output.log(error.message);
         return 0;
       }
       if (error instanceof FailedError) {
-        client.output.error(error.message);
+        output.error(error.message);
         return 1;
       }
       throw error;
@@ -98,7 +97,7 @@ async function handleDeleteResource(
   const hasProjects =
     resource.projectsMetadata && resource.projectsMetadata?.length > 0;
   if (!options?.skipProjectCheck && hasProjects) {
-    client.output.error(
+    output.error(
       `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
     );
     return 1;
@@ -108,16 +107,16 @@ async function handleDeleteResource(
     !options?.skipConfirmation &&
     !(await confirmDeleteResource(client, resource))
   ) {
-    client.output.log('Canceled');
+    output.log('Canceled');
     return 0;
   }
 
   try {
-    client.output.spinner('Deleting resource…', 500);
+    output.spinner('Deleting resource…', 500);
     await _deleteResource(client, resource, team);
-    client.output.success(`${chalk.bold(resource.name)} successfully deleted.`);
+    output.success(`${chalk.bold(resource.name)} successfully deleted.`);
   } catch (error) {
-    client.output.error(
+    output.error(
       `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`
     );
     return 1;
@@ -130,8 +129,6 @@ async function confirmDeleteResource(
   client: Client,
   resource: Resource
 ): Promise<boolean> {
-  client.output.log(
-    `${chalk.bold(resource.name)} will be deleted permanently.`
-  );
+  output.log(`${chalk.bold(resource.name)} will be deleted permanently.`);
   return confirm(client, `${chalk.red('Are you sure?')}`, false);
 }

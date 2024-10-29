@@ -1,8 +1,10 @@
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
+import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 import { type Command, help } from '../help';
 import { add } from './add';
 import {
@@ -24,27 +26,31 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
+  const telemetry = new IntegrationTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
   const { args, flags } = parseArguments(
     client.argv.slice(2),
     getFlagsSpecification(integrationCommand.options),
     { permissive: true }
   );
-  const { subcommand, args: subArgs } = getSubcommand(
-    args.slice(1),
-    COMMAND_CONFIG
-  );
+  const {
+    subcommand,
+    subcommandOriginal,
+    args: subArgs,
+  } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   const needHelp = flags['--help'];
 
   if (!subcommand && needHelp) {
-    client.output.print(
-      help(integrationCommand, { columns: client.stderr.columns })
-    );
+    output.print(help(integrationCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   function printHelp(command: Command) {
-    client.output.print(help(command, { columns: client.stderr.columns }));
+    output.print(help(command, { columns: client.stderr.columns }));
   }
 
   switch (subcommand) {
@@ -53,6 +59,7 @@ export default async function main(client: Client) {
         printHelp(addSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, subArgs);
     }
     case 'list': {
@@ -60,6 +67,7 @@ export default async function main(client: Client) {
         printHelp(listSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
     }
     case 'open': {
@@ -67,6 +75,7 @@ export default async function main(client: Client) {
         printHelp(openSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandOpen(subcommandOriginal);
       return openIntegration(client, subArgs);
     }
     case 'remove': {
@@ -74,10 +83,11 @@ export default async function main(client: Client) {
         printHelp(removeSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
     }
     default: {
-      client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       return 2;
     }
   }

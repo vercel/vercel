@@ -11,6 +11,7 @@ import {
 } from './command';
 import { remove } from './remove-resource';
 import { disconnect } from './disconnect';
+import output from '../../../output-manager';
 
 const COMMAND_CONFIG = {
   remove: ['remove', 'rm'],
@@ -28,14 +29,14 @@ export default async function main(client: Client) {
   const needHelp = flags['--help'];
 
   if (!subcommand && needHelp) {
-    client.output.print(
+    output.print(
       help(integrationResourceCommand, { columns: client.stderr.columns })
     );
     return 2;
   }
 
   function printHelp(command: Command) {
-    client.output.print(help(command, { columns: client.stderr.columns }));
+    output.print(help(command, { columns: client.stderr.columns }));
   }
 
   switch (subcommand) {
@@ -54,7 +55,7 @@ export default async function main(client: Client) {
       return disconnect(client);
     }
     default: {
-      client.output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
       return 2;
     }
   }

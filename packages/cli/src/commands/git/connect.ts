@@ -16,6 +16,8 @@ import {
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
+import output from '../../output-manager';
+import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -55,7 +57,16 @@ export default async function connect(
   project: Project | undefined,
   org: Org | undefined
 ) {
-  const { cwd, output } = client;
+  const { cwd } = client;
+  const telemetry = new GitConnectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliFlagYes(argv['--yes']);
+  telemetry.trackCliFlagConfirm(argv['--confirm']);
+
   const confirm = Boolean(argv['--yes']);
   const repoArg = args[0];
 
@@ -81,7 +92,7 @@ export default async function connect(
 
   // get project from .git
   const gitConfigPath = join(cwd, '.git/config');
-  const gitConfig = await parseGitConfig(gitConfigPath, output);
+  const gitConfig = await parseGitConfig(gitConfigPath);
 
   if (repoArg) {
     // parse repo arg
@@ -92,6 +103,7 @@ export default async function connect(
       );
       return 1;
     }
+    telemetry.trackCliArgumentGitUrl(repoArg);
     if (gitConfig) {
       return await connectArgWithLocalGit({
         client,
@@ -189,10 +201,10 @@ async function connectArg({
   repoInfo,
 }: ConnectArgParams) {
   const { url: repoUrl } = repoInfo;
-  client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
+  output.log(`Connecting Git remote: ${link(repoUrl)}`);
   const parsedRepoArg = parseRepoUrl(repoUrl);
   if (!parsedRepoArg) {
-    client.output.error(
+    output.error(
       `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
     );
     return 1;
@@ -213,7 +225,7 @@ async function connectArg({
   if (typeof connect === 'number') {
     return connect;
   }
-  client.output.log(
+  output.log(
     `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
   );
   return 0;
@@ -241,7 +253,7 @@ async function connectArgWithLocalGit({
     if (shouldConnect) {
       const { provider, org: gitOrg, repo, url: repoUrl } = repoInfo;
       const repoPath = `${gitOrg}/${repo}`;
-      client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
+      output.log(`Connecting Git remote: ${link(repoUrl)}`);
       const connect = await checkExistsAndConnect({
         client,
         confirm,
@@ -256,7 +268,7 @@ async function connectArgWithLocalGit({
       if (typeof connect === 'number') {
         return connect;
       }
-      client.output.log(
+      output.log(
         `Connected ${formatProvider(provider)} repository ${chalk.cyan(
           repoPath
         )}!`
@@ -274,15 +286,13 @@ async function promptConnectArg({
   remoteUrls,
 }: PromptConnectArgParams) {
   if (Object.keys(remoteUrls).length > 1) {
-    client.output.log(
-      'Found multiple Git repositories in your local Git config:'
-    );
-    printRemoteUrls(client.output, remoteUrls);
+    output.log('Found multiple Git repositories in your local Git config:');
+    printRemoteUrls(remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
     const repoInfoFromGitConfig = parseRepoUrl(url);
     if (!repoInfoFromGitConfig) {
-      client.output.error(
+      output.error(
         `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
       return false;
@@ -293,7 +303,7 @@ async function promptConnectArg({
       return true;
     }
 
-    client.output.log(
+    output.log(
       `Found a repository in your local Git Config: ${chalk.cyan(
         Object.values(remoteUrls)[0]
       )}`
@@ -309,7 +319,7 @@ async function promptConnectArg({
       false
     );
     if (!shouldConnect) {
-      client.output.log('Canceled. Repo not connected.');
+      output.log('Canceled. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -348,7 +358,7 @@ async function checkExistsAndConnect({
       connectedOrg === gitOrg &&
       connectedRepo === repo;
     if (isSameRepo) {
-      client.output.log(
+      output.log(
         `${chalk.cyan(connectedRepoPath)} is already connected to your project.`
       );
       return 1;
@@ -396,7 +406,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      client.output.log('Canceled. Repo not connected.');
+      output.log('Canceled. Repo not connected.');
     }
   }
   return shouldReplaceProject;

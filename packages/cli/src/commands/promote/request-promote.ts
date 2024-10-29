@@ -5,6 +5,7 @@ import getProjectByDeployment from '../../util/projects/get-project-by-deploymen
 import ms from 'ms';
 import promoteStatus from './status';
 import confirm from '../../util/input/confirm';
+import output from '../../output-manager';
 
 interface DeploymentCreateResponsePartial {
   inspectorUrl: string;
@@ -28,12 +29,9 @@ export default async function requestPromote({
   timeout?: string;
   yes: boolean;
 }): Promise<number> {
-  const { output } = client;
-
   const { contextName, deployment, project } = await getProjectByDeployment({
     client,
     deployId,
-    output: client.output,
   });
 
   let promoteByCreation = false;

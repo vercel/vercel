@@ -1,22 +1,23 @@
 import chalk from 'chalk';
+import output from '../../../output-manager';
 import type Client from '../../../util/client';
-import getScope from '../../../util/get-scope';
-import {
-  CancelledError,
-  FailedError,
-  type Resource,
-  type ResourceConnection,
-} from '../types';
-import { getResources } from '../../../util/integration/get-resources';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import { parseArguments } from '../../../util/get-args';
+import { getFlagsSpecification } from '../../../util/get-flags-specification';
+import getScope from '../../../util/get-scope';
 import handleError from '../../../util/handle-error';
 import confirm from '../../../util/input/confirm';
 import {
   disconnectResourceFromAllProjects,
   disconnectResourceFromProject,
 } from '../../../util/integration/disconnect-resource-from-project';
+import { getResources } from '../../../util/integration/get-resources';
 import { getLinkedProject } from '../../../util/projects/link';
+import {
+  CancelledError,
+  FailedError,
+  type Resource,
+  type ResourceConnection,
+} from '../types';
 import { disconnectSubcommand } from './command';
 
 export async function disconnect(client: Client) {
@@ -34,21 +35,19 @@ export async function disconnect(client: Client) {
 
   const { team } = await getScope(client);
   if (!team) {
-    client.output.error('Team not found.');
+    output.error('Team not found.');
     return 1;
   }
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
-    client.output.error(
-      'You must specify a resource. See `--help` for details.'
-    );
+    output.error('You must specify a resource. See `--help` for details.');
     return 1;
   }
 
   const hasTooManyArguments = parsedArguments.args.length > 3;
   if (hasTooManyArguments) {
-    client.output.error(
+    output.error(
       'Cannot specify more than one project at a time. Use `--all` to disconnect the specified resource from all projects.'
     );
     return 1;
@@ -59,23 +58,21 @@ export async function disconnect(client: Client) {
   const isProjectSpecified = parsedArguments.args.length === 3;
 
   if (isProjectSpecified && shouldDisconnectAll) {
-    client.output.error(
-      'Cannot specify a project while using the `--all` flag.'
-    );
+    output.error('Cannot specify a project while using the `--all` flag.');
     return 1;
   }
 
   const resourceName = parsedArguments.args[1];
 
-  client.output.spinner('Retrieving resource…', 500);
+  output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client, team.id);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
-  client.output.stopSpinner();
+  output.stopSpinner();
 
   if (!targetedResource) {
-    client.output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceName)} found.`);
     return 0;
   }
 
@@ -89,11 +86,11 @@ export async function disconnect(client: Client) {
       return 0;
     } catch (error) {
       if (error instanceof CancelledError) {
-        client.output.log(error.message);
+        output.log(error.message);
         return 0;
       }
       if (error instanceof FailedError) {
-        client.output.error(error.message);
+        output.error(error.message);
         return 1;
       }
       throw error;
@@ -114,7 +111,7 @@ export async function disconnect(client: Client) {
       return;
     });
     if (!specifiedProject) {
-      client.output.error(
+      output.error(
         'No project linked. Either use `vc link` to link a project, or specify the project name.'
       );
       return 1;
@@ -139,7 +136,7 @@ async function handleDisconnectProject(
     project => projectName === project.name
   );
   if (!project) {
-    client.output.log(
+    output.log(
       `Could not find project ${chalk.bold(projectName)} connected to resource ${chalk.bold(resource.name)}.`
     );
     return 0;
@@ -149,18 +146,18 @@ async function handleDisconnectProject(
     !skipConfirmation &&
     !(await confirmDisconnectProject(client, resource, project))
   ) {
-    client.output.log('Canceled');
+    output.log('Canceled');
     return 0;
   }
 
   try {
-    client.output.spinner('Disconnecting resource…', 500);
+    output.spinner('Disconnecting resource…', 500);
     await disconnectResourceFromProject(client, resource, project);
-    client.output.success(
+    output.success(
       `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
     );
   } catch (error) {
-    client.output.error(
+    output.error(
       `A problem occurred while disconnecting: ${(error as Error).message}`
     );
     return 1;
@@ -175,9 +172,7 @@ export async function handleDisconnectAllProjects(
   skipConfirmation: boolean
 ): Promise<void> {
   if (resource.projectsMetadata?.length === 0) {
-    client.output.log(
-      `${chalk.bold(resource.name)} has no projects to disconnect.`
-    );
+    output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
     return;
   }
 
@@ -189,9 +184,9 @@ export async function handleDisconnectAllProjects(
   }
 
   try {
-    client.output.spinner('Disconnecting projects from resource…', 500);
+    output.spinner('Disconnecting projects from resource…', 500);
     await disconnectResourceFromAllProjects(client, resource);
-    client.output.success(
+    output.success(
       `Disconnected all projects from ${chalk.bold(resource.name)}`
     );
   } catch (error) {
@@ -208,7 +203,7 @@ async function confirmDisconnectProject(
   resource: Resource,
   project: ResourceConnection
 ) {
-  client.output.log(
+  output.log(
     `The resource ${chalk.bold(resource.name)} will be disconnected from project ${chalk.bold(project.name)}.`
   );
   return confirm(client, `${chalk.red('Are you sure?')}`, false);
@@ -218,12 +213,12 @@ async function confirmDisconnectAllProjects(
   client: Client,
   resource: Resource
 ): Promise<boolean> {
-  client.output.log('The following projects will be disconnected:');
+  output.log('The following projects will be disconnected:');
   if (!resource.projectsMetadata) {
     return false;
   }
   for (const project of resource.projectsMetadata) {
-    client.output.print(`  ${project.name}\n`);
+    output.print(`  ${project.name}\n`);
   }
   return confirm(client, chalk.red('Are you sure?'), false);
 }
