@@ -1,6 +1,6 @@
 import { TelemetryClient } from '../..';
 
-export class EnvAddTelemetryClient extends TelemetryClient {
+export class EnvRmTelemetryClient extends TelemetryClient {
   trackCliArgumentName(name?: string) {
     if (name) {
       this.trackCliArgument({
@@ -31,15 +31,9 @@ export class EnvAddTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagSensitive(sensitive?: boolean) {
-    if (sensitive) {
-      this.trackCliFlag('sensitive');
-    }
-  }
-
-  trackCliFlagForce(force?: boolean) {
-    if (force) {
-      this.trackCliFlag('force');
+  trackCliFlagYes(yes?: boolean) {
+    if (yes) {
+      this.trackCliFlag('yes');
     }
   }
 }

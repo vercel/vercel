@@ -12,6 +12,7 @@ import table from '../../util/output/table';
 import title from 'title';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 import output from '../../output-manager';
 
 export async function list(client: Client) {
@@ -25,13 +26,16 @@ export async function list(client: Client) {
     return 1;
   }
 
-  const { contextName, team } = await getScope(client);
-  let project: { id?: string; name?: string } | undefined;
+  const telemetry = new IntegrationListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-  if (!team) {
-    output.error('Team not found.');
-    return 1;
-  }
+  telemetry.trackCliArgumentProject(parsedArguments.args[1]);
+  telemetry.trackCliFlagAll(parsedArguments.flags['--all']);
+  // Note: the `--integration` flag is tracked later, after validating
+  // whether the value is a known integration name or not.
 
   if (parsedArguments.args.length > 2) {
     output.error(
@@ -39,6 +43,8 @@ export async function list(client: Client) {
     );
     return 1;
   }
+
+  let project: { id?: string; name?: string } | undefined;
 
   if (parsedArguments.args.length === 2) {
     if (parsedArguments.flags['--all']) {
@@ -49,7 +55,14 @@ export async function list(client: Client) {
     project = { name: parsedArguments.args[1] };
   }
 
-  if (!parsedArguments.flags['--all']) {
+  const { contextName, team } = await getScope(client);
+
+  if (!team) {
+    output.error('Team not found.');
+    return 1;
+  }
+
+  if (!project && !parsedArguments.flags['--all']) {
     project = await getLinkedProject(client).then(result => {
       if (result.status === 'linked') {
         return result.project;
@@ -81,8 +94,13 @@ export async function list(client: Client) {
     return resource.type === 'integration';
   }
 
+  let knownIntegration = false;
+
   function filterOnIntegration(resource: Resource): boolean {
-    return !filterIntegration || filterIntegration === resource.product?.slug;
+    if (!filterIntegration) return true;
+    const match = filterIntegration === resource.product?.slug;
+    if (match) knownIntegration = true;
+    return match;
   }
 
   function filterOnProject(resource: Resource): boolean {
@@ -115,6 +133,11 @@ export async function list(client: Client) {
           .join(', '),
       };
     });
+
+  telemetry.trackCliOptionIntegration(
+    parsedArguments.flags['--integration'],
+    knownIntegration
+  );
 
   if (results.length === 0) {
     output.log('No resources found.');
