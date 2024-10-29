@@ -5,8 +5,8 @@ export function createDomain(k?: string) {
   return {
     suffix: chance().bool(),
     verified: chance().bool(),
-    nameservers: chance().string(),
-    intendedNameservers: chance().string(),
+    nameservers: [chance().string()],
+    intendedNameservers: [chance().string()],
     customNameservers: chance().string(),
     creator: {
       username: chance().string(),
