@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { devCommand } from '../../../../commands/dev/command';
 
-export class DevTelemetryClient extends TelemetryClient {
+export class DevTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof devCommand>
+{
   trackCliArgumentDir(dir: string | undefined) {
     if (dir) {
       this.trackCliArgument({

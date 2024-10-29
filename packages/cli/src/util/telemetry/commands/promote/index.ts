@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { promoteCommand } from '../../../../commands/promote/command';
 
-export class PromoteTelemetryClient extends TelemetryClient {
+export class PromoteTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof promoteCommand>
+{
   trackCliSubcommandStatus() {
     this.trackCliSubcommand({
       subcommand: 'status',

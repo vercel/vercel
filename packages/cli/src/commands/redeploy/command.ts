@@ -5,7 +5,7 @@ export const redeployCommand = {
   description: 'Rebuild and deploy a previous deployment.',
   arguments: [
     {
-      name: 'deploymentId|deploymentName',
+      name: 'deploymentId|name',
       required: false,
     },
   ],

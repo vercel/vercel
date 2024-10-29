@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { rollbackCommand } from '../../../../commands/rollback/command';
 
-export class RollbackTelemetryClient extends TelemetryClient {
+export class RollbackTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof rollbackCommand>
+{
   trackCliSubcommandStatus() {
     this.trackCliSubcommand({
       subcommand: 'status',
