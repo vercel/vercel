@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class DnsAddTelemetryClient extends TelemetryClient {
-  trackCliArgumentDomain(domain?: string) {
+  trackCliArgumentDomain(domain: string | undefined) {
     if (domain) {
       this.trackCliArgument({
         arg: 'domain',
@@ -9,7 +9,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliArgumentName(name?: string) {
+  trackCliArgumentName(name: string | undefined) {
     if (name) {
       this.trackCliArgument({
         arg: 'name',
@@ -17,7 +17,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliArgumentType(type?: string) {
+  trackCliArgumentType(type: string | undefined) {
     if (type) {
       this.trackCliArgument({
         arg: 'type',
@@ -25,7 +25,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliArgumentValues(values?: string[]) {
+  trackCliArgumentValues(values: string[] | undefined) {
     if (values?.length) {
       this.trackCliArgument({
         arg: 'values',

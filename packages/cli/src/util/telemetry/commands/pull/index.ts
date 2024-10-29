@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class PullTelemetryClient extends TelemetryClient {
-  trackCliOptionEnvironment(environment?: string) {
+  trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
       const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliOption({
@@ -13,7 +13,7 @@ export class PullTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionGitBranch(gitBranch?: string) {
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
       this.trackCliOption({
         option: 'git-branch',
@@ -22,13 +22,13 @@ export class PullTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagProd(isProduction?: boolean) {
+  trackCliFlagProd(isProduction: boolean | undefined) {
     if (isProduction) {
       this.trackCliFlag('prod');
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }

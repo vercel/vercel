@@ -1,13 +1,13 @@
 import { TelemetryClient } from '../..';
 
 export class AliasSetTelemetryClient extends TelemetryClient {
-  trackCliFlagDebug(flag?: boolean) {
+  trackCliFlagDebug(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('debug');
     }
   }
 
-  trackCliOptionLocalConfig(localConfig?: string) {
+  trackCliOptionLocalConfig(localConfig: string | undefined) {
     if (localConfig) {
       this.trackCliOption({
         option: 'local-config',
@@ -16,7 +16,7 @@ export class AliasSetTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentDeploymentUrl(deploymentUrl?: string) {
+  trackCliArgumentDeploymentUrl(deploymentUrl: string | undefined) {
     if (deploymentUrl) {
       this.trackCliArgument({
         arg: 'deployment-url',
@@ -25,7 +25,7 @@ export class AliasSetTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentCustomDomain(customDomain?: string) {
+  trackCliArgumentCustomDomain(customDomain: string | undefined) {
     if (customDomain) {
       this.trackCliArgument({
         arg: 'custom-domain',

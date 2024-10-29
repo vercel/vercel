@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class BuildTelemetryClient extends TelemetryClient {
-  trackCliOptionOutput(path?: string) {
+  trackCliOptionOutput(path: string | undefined) {
     if (path) {
       this.trackCliOption({
         option: 'output',
@@ -10,7 +10,7 @@ export class BuildTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionTarget(option?: string) {
+  trackCliOptionTarget(option: string | undefined) {
     if (option) {
       this.trackCliOption({
         option: 'target',
@@ -19,13 +19,13 @@ export class BuildTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagProd(flag?: boolean) {
+  trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
     }
   }
 
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }
