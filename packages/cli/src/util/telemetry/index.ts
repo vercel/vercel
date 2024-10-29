@@ -201,7 +201,7 @@ export class TelemetryEventStore {
       return false;
     }
 
-    return this.config?.enabled === false ? false : true;
+    return this.config?.enabled ?? true;
   }
 
   save() {
