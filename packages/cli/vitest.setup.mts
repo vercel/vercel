@@ -1,4 +1,4 @@
-import { beforeAll } from 'vitest';
+import { beforeAll, vi } from 'vitest';
 import output from './src/output-manager';
 
 beforeAll(() => {
@@ -7,3 +7,8 @@ beforeAll(() => {
     noColor: true,
   });
 });
+
+if (process.debugPort) {
+  // when debugging in an IDE, set a high timeout
+  vi.setConfig({ testTimeout: 10 * 60 * 1000 });
+}
