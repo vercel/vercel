@@ -1,4 +1,0 @@
----
----
-
-log mock endpoint failures
