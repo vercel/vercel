@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
-import { GlobalConfig } from '@vercel-internals/types';
+import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
 
 const LogLabel = `['telemetry']:`;
