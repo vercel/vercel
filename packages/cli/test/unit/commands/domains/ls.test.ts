@@ -40,7 +40,7 @@ describe('domains ls', () => {
       await expect(client.stderr).toOutput('example-1.com');
     });
 
-    it('tracks telemetry data, async', async () => {
+    it('tracks telemetry data', async () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
@@ -61,7 +61,7 @@ describe('domains ls', () => {
   });
 
   describe('--next', () => {
-    it('tracks telemetry data, async', async () => {
+    it('tracks telemetry data', async () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--next', '1730124407638');
