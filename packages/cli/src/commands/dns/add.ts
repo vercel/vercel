@@ -13,12 +13,13 @@ import stamp from '../../util/output/stamp';
 import getDNSData from '../../util/dns/get-dns-data';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
 
 type Options = {};
 
 export default async function add(
   client: Client,
-  opts: Options,
+  _opts: Options,
   args: string[]
 ) {
   const { contextName } = await getScope(client);
@@ -35,6 +36,19 @@ export default async function add(
 
   const addStamp = stamp();
   const { domain, data: argData } = parsedParams;
+  const valueArgs = args.slice(3); // domain, name, type, ...valueArgs
+
+  let telemetryClient = new DnsAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetryClient.trackCliArgumentDomain(domain);
+  telemetryClient.trackCliArgumentName(parsedParams.data?.name);
+  telemetryClient.trackCliArgumentType(parsedParams.data?.type);
+  telemetryClient.trackCliArgumentValues(valueArgs);
+
   const data = await getDNSData(client, argData);
   if (!data) {
     output.log(`Canceled`);
