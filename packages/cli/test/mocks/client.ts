@@ -141,6 +141,27 @@ export class MockClient extends Client {
       config: undefined,
     });
 
+    this.app = express();
+    this.app.use(express.json());
+
+    // play scenario
+    this.app.use((req, res, next) => {
+      this.scenario(req, res, next);
+    });
+
+    // catch requests that were not intercepted
+    this.app.use((req, res) => {
+      const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
+      // eslint-disable-next-line no-console
+      console.warn(message);
+      res.status(500).json({
+        error: {
+          code: 'mock_unimplemented',
+          message,
+        },
+      });
+    });
+
     this.scenario = Router();
     this.app = setupMockServer(this);
 
