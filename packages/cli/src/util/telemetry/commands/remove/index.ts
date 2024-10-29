@@ -6,6 +6,15 @@ export class RemoveTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof removeCommand>
 {
+  trackCliArgumentUrlOrDeploymentId(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'urlOrDeploymentId',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagHard(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('hard');

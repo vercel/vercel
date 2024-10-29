@@ -54,7 +54,7 @@ export class LogsTelemetryClient
     }
   }
 
-  trackCliOptionOutput(n: string | undefined, known: boolean | undefined) {
+  trackCliOptionOutput(n: string | undefined, known?: boolean) {
     if (n) {
       this.trackCliOption({
         option: 'output',

@@ -6,7 +6,7 @@ export const removeCommand = {
   description: 'Remove a deployment by name or id.',
   arguments: [
     {
-      name: '...deploymentId|deploymentName',
+      name: 'url|deploymentId',
       required: true,
     },
   ],

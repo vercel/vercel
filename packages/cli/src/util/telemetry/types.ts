@@ -38,14 +38,14 @@ type ToArgType<OptType extends CommandOption['type']> =
       ? ReturnType<OptType>
       : never;
 
-// TelemetryOptionMethods<{ name: 'foo', type: BooleanConstructor }> → { trackCliOptionFoo: (v: boolean | undefined) => void; }
+// TelemetryOptionMethods<[{ name: 'foo', type: BooleanConstructor }]> → { trackCliFlagFoo: (v: boolean | undefined) => void; }
 type TelemetryOptionMethods<Opts extends readonly CommandOption[]> = {
   [Opt in Opts[number] as ToTelemetryOptionName<Opt>]: (
     value: ToArgType<Opt['type']> | undefined
   ) => void;
 };
 
-// TelemetryArgumentMethods<{ name: 'foo' }> → { trackCliArgumentFoo: (v: string | undefined) => void; }
+// TelemetryArgumentMethods<[{ name: 'foo' }]> → { trackCliArgumentFoo: (v: string | undefined) => void; }
 type TelemetryArgumentMethods<Args extends readonly CommandArgument[]> = {
   [Arg in Args[number] as `trackCliArgument${ToTitleCase<Arg['name']>}`]: (
     value: string | undefined

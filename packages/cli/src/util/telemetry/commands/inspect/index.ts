@@ -6,7 +6,7 @@ export class InspectTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof inspectCommand>
 {
-  trackCliArgumentDeploymentIdOrHost(idOrHost: string | undefined) {
+  trackCliArgumentUrlOrDeploymentId(idOrHost: string | undefined) {
     if (idOrHost) {
       this.trackCliArgument({
         arg: 'deploymentIdOrHost',

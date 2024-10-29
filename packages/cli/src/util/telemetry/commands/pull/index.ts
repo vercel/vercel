@@ -6,7 +6,14 @@ export class PullTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof pullCommand>
 {
-  trackCliArgumentProjectPath: (v: string | undefined) => void;
+  trackCliArgumentProjectPath(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'projectPath',
+        value: this.redactedValue,
+      });
+    }
+  }
 
   trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {

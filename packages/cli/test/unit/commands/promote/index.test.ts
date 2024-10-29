@@ -18,9 +18,6 @@ const projectName = 'vercel-promote';
 
 describe('promote', () => {
   describe('[deployment id/url]', () => {
-    describe.todo('--timeout');
-    describe.todo('--yes');
-
     describe('telemetry', () => {
       it('tracks usage', async () => {
         const { cwd, previousDeployment } = initPromoteTest();
@@ -43,6 +40,10 @@ describe('promote', () => {
           {
             key: 'option:timeout',
             value: '[TIME]',
+          },
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
           },
         ]);
       });
