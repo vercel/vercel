@@ -1,19 +1,19 @@
 import { TelemetryClient } from '../..';
 
 export class RemoveTelemetryClient extends TelemetryClient {
-  trackCliFlagHard(flag?: boolean) {
+  trackCliFlagHard(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('hard');
     }
   }
 
-  trackCliFlagSafe(flag?: boolean) {
+  trackCliFlagSafe(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('safe');
     }
   }
 
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }

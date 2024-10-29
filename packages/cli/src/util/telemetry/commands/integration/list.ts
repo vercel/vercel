@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class IntegrationListTelemetryClient extends TelemetryClient {
-  trackCliArgumentProject(v?: string) {
+  trackCliArgumentProject(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'project',
@@ -10,7 +10,7 @@ export class IntegrationListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionIntegration(v?: string, known?: boolean) {
+  trackCliOptionIntegration(v: string | undefined, known: boolean | undefined) {
     if (v) {
       this.trackCliOption({
         option: 'integration',
@@ -19,7 +19,7 @@ export class IntegrationListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagAll(v?: boolean) {
+  trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');
     }

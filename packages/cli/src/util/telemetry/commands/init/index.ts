@@ -10,7 +10,7 @@ export class InitTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentDir(v?: string) {
+  trackCliArgumentDir(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'dir',
@@ -19,7 +19,7 @@ export class InitTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagForce(v?: boolean) {
+  trackCliFlagForce(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('force');
     }

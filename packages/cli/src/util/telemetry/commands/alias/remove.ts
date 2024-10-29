@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class AliasRmTelemetryClient extends TelemetryClient {
-  trackCliArgumentAlias(alias?: string) {
+  trackCliArgumentAlias(alias: string | undefined) {
     if (alias) {
       this.trackCliArgument({
         arg: 'alias',
@@ -10,7 +10,7 @@ export class AliasRmTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }
