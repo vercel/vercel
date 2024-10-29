@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
-import { resolve } from 'path';
+import { resolve as resolvePath } from 'path';
 import { spawn } from 'child_process';
 
 const LogLabel = `['telemetry']:`;
@@ -220,7 +220,8 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
+      const url = 'http://localhost:3000/api/vercel-cli/v1/events';
+      // const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
 
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
@@ -232,7 +233,7 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      const script = resolve('dist', 'send-telemetry.js');
+      const script = resolvePath('dist', 'send-telemetry.js');
       const payload = {
         url,
         method: 'POST',
@@ -244,20 +245,70 @@ export class TelemetryEventStore {
         },
         body: JSON.stringify(events),
       };
-      this.sendToSubprocess(script, payload);
+      await this.sendToSubprocess(
+        script,
+        payload,
+        output.debugEnabled,
+        ({ status, wasRecorded }) => {
+          if (status === 204) {
+            if (wasRecorded) {
+              output.debug(`Telemetry event tracked`);
+            } else {
+              output.debug(
+                `Telemetry event ignored due to progressive rollout`
+              );
+            }
+          } else {
+            output.debug(
+              `Failed to send telemetry events. Unexpected response from telemetry server: ${status}`
+            );
+          }
+        }
+      );
     }
   }
 
   // This is separated so that we can easily mock it for testing purposes
-  async sendToSubprocess(scriptPath: string, payload: object) {
-    const child = spawn(
-      process.execPath,
-      [scriptPath, JSON.stringify(payload)],
-      {
-        stdio: 'ignore',
-        detached: true,
-      }
-    );
-    child.unref();
+  async sendToSubprocess(
+    scriptPath: string,
+    payload: object,
+    outputDebugEnabled: boolean,
+    callback: (responsePayload: {
+      status: number;
+      wasRecorded: boolean;
+    }) => void
+  ) {
+    // When debugging, we want to know about the response from the server, so we can't exit early
+    if (outputDebugEnabled) {
+      return new Promise<void>((resolve, reject) => {
+        const childProcess = spawn(
+          process.execPath,
+          [scriptPath, JSON.stringify(payload)],
+          {
+            stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+          }
+        );
+        childProcess.stdout?.on('data', data => {
+          const responsePayload = JSON.parse(data);
+          callback({
+            status: Number(responsePayload.status),
+            wasRecorded: responsePayload.cliTracked === '1',
+          });
+        });
+        childProcess.on('exit', code => {
+          return code === 0 ? resolve() : reject();
+        });
+      });
+    } else {
+      const childProcess = spawn(
+        process.execPath,
+        [scriptPath, JSON.stringify(payload)],
+        {
+          stdio: 'ignore',
+          detached: true,
+        }
+      );
+      childProcess.unref();
+    }
   }
 }
