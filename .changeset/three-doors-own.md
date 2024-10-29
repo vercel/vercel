@@ -2,6 +2,6 @@
 "vercel": minor
 ---
 
-Adds `vercel integration disconnect` to disconnect Marketplace integraion resources from projects
-Adds `vercel integration delete` to delete Marketplace integration resources
-Adds `vercel integration uninstall` to uninstall Marketplace integrations from teams
+Adds `vercel integration remove` to uninstall Marketplace integrations from the current team
+Adds `vercel integration-resource disconnect` to disconnect Marketplace integration resources from projects
+Adds `vercel integration-resource remove` to delete Marketplace integration resources
