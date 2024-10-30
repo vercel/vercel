@@ -4,11 +4,11 @@ import { help } from '../help';
 import { add } from '../integration/add';
 import { installCommand } from './command';
 import output from '../../output-manager';
-import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
+import { InstallTelemetryClient } from '../../util/telemetry/commands/install';
 
 export default async function install(client: Client) {
   const { args, flags } = parseArguments(client.argv.slice(2));
-  const telemetry = new InspectTelemetryClient({
+  const telemetry = new InstallTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
