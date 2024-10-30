@@ -40,8 +40,8 @@ export default async function main(client: Client) {
   }
 
   parsedArgs.args = parsedArgs.args.slice(1);
-  const args = parsedArgs.args.slice(1);
   subcommand = parsedArgs.args[0] || 'list';
+  const args = parsedArgs.args.slice(1);
 
   if (parsedArgs.flags['--help']) {
     telemetryClient.trackCliFlagHelp('project', parsedArgs.args[0]);
