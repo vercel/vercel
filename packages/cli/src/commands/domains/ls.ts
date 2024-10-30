@@ -2,7 +2,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
