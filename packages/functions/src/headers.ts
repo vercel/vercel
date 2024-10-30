@@ -33,20 +33,20 @@ export const REQUEST_ID_HEADER_NAME = 'x-vercel-id';
  */
 export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
 /**
- * We define a new type so this function can be reused with
- * the global `Request`, `node-fetch` and other types.
- */
-export interface Request {
-  headers: Headers;
-}
-/**
- * We define a new type so this function can be reused with
- * the global `Request`, `node-fetch` and other types.
+ * Represents the headers of a request.
  */
 export interface Headers {
   get(name: string): string | null;
 }
-
+/**
+ * We define a new type so this function can be reused with the global `Request`, `node-fetch` and other types.
+ */
+export interface Request {
+  /**
+   * Represents the headers of a request.
+   */
+  headers: Headers;
+}
 /**
  * The location information of a given request.
  */
@@ -106,7 +106,7 @@ function getFlag(countryCode: string | undefined): string | undefined {
 /**
  * Returns the IP address of the request from the headers.
  *
- * @param request The incoming request object which provides the IP
+ * @param {(Request|Headers)} input The incoming request object or headers.
  * @returns The IP address of the request.
  *
  * @example
@@ -115,8 +115,8 @@ function getFlag(countryCode: string | undefined): string | undefined {
  * import { ipAddress } from '@vercel/functions';
  *
  * export function GET(request) {
- *   const ip = ipAddress(request)
- *   return new Response('Your ip is' ${ip});
+ *   const ip = ipAddress(request);
+ *   return new Response(`Your IP is ${ip}`);
  * }
  * ```
  *

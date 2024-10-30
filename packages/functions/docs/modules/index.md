@@ -125,16 +125,16 @@ Returns the IP address of the request from the headers.
 import { ipAddress } from '@vercel/functions';
 
 export function GET(request) {
-  const ip = ipAddress(request)
-  return new Response('Your ip is' ${ip});
+  const ip = ipAddress(request);
+  return new Response(`Your IP is ${ip}`);
 }
 ```
 
 #### Parameters
 
-| Name    | Type                                                     |
-| :------ | :------------------------------------------------------- |
-| `input` | [`Request`](../interfaces/index.Request.md) \| `Headers` |
+| Name    | Type                                                     | Description                             |
+| :------ | :------------------------------------------------------- | :-------------------------------------- |
+| `input` | `Headers` \| [`Request`](../interfaces/index.Request.md) | The incoming request object or headers. |
 
 #### Returns
 
