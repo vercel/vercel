@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { buildCommand } from '../../../../commands/build/command';
 
-export class BuildTelemetryClient extends TelemetryClient {
+export class BuildTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof buildCommand>
+{
   trackCliOptionOutput(path: string | undefined) {
     if (path) {
       this.trackCliOption({

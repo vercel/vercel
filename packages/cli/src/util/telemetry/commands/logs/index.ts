@@ -1,10 +1,15 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { logsCommand } from '../../../../commands/logs/command';
 
-export class LogsTelemetryClient extends TelemetryClient {
-  trackCliArgumentUrl(path: string | undefined) {
+export class LogsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof logsCommand>
+{
+  trackCliArgumentUrlOrDeploymentId(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
-        arg: 'url',
+        arg: 'urlOrDeploymentId',
         value: this.redactedValue,
       });
     }
@@ -49,7 +54,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionOutput(n: string | undefined, known: boolean | undefined) {
+  trackCliOptionOutput(n: string | undefined, known?: boolean) {
     if (n) {
       this.trackCliOption({
         option: 'output',

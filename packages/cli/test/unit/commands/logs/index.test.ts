@@ -225,7 +225,7 @@ describe('logs', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:url',
+          key: 'argument:urlOrDeploymentId',
           value: '[REDACTED]',
         },
       ]);
@@ -491,7 +491,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -519,7 +519,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -547,7 +547,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -580,7 +580,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -613,7 +613,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -641,7 +641,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -667,7 +667,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {

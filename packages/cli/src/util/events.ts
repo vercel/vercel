@@ -30,7 +30,7 @@ export interface PrintEventsOptions {
 
 async function printEvents(
   client: Client,
-  deploymentIdOrURL: string,
+  urlOrDeploymentId: string,
   { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
   abortController?: AbortController
 ) {
@@ -56,7 +56,7 @@ async function printEvents(
       if (findOpts.since) query.set('since', String(findOpts.since));
       if (findOpts.until) query.set('until', String(findOpts.until));
 
-      const eventsUrl = `/v3/now/deployments/${deploymentIdOrURL}/events?${query}`;
+      const eventsUrl = `/v3/now/deployments/${urlOrDeploymentId}/events?${query}`;
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
@@ -81,7 +81,7 @@ async function printEvents(
                     const json = await getDeployment(
                       client,
                       contextName,
-                      deploymentIdOrURL
+                      urlOrDeploymentId
                     );
                     if (json.readyState === 'READY') {
                       stream.end();
@@ -152,7 +152,7 @@ async function printEvents(
               setTimeout(() => {
                 if (abortController?.signal.aborted) return;
                 // retry without maximum amount nor clear past logs etc
-                printEvents(client, deploymentIdOrURL, {
+                printEvents(client, urlOrDeploymentId, {
                   mode,
                   onEvent,
                   quiet,

@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { bisectCommand } from '../../../../commands/bisect/command';
 
-export class BisectTelemetryClient extends TelemetryClient {
+export class BisectTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof bisectCommand>
+{
   trackCliOptionGood(good: string | undefined) {
     if (good) {
       this.trackCliOption({
