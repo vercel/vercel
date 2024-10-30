@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { GlobalConfig } from '@vercel-internals/types';
-import fetch from 'node-fetch';
 import output from '../../output-manager';
+import { resolve as resolvePath } from 'path';
+import { spawn } from 'child_process';
 
 const LogLabel = `['telemetry']:`;
 
@@ -231,35 +232,82 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-id': 'vercel-cli',
-            'x-vercel-cli-topic-id': 'generic',
-            'x-vercel-cli-session-id': sessionId,
-          },
-          body: JSON.stringify(events),
-        });
-        const wasRecorded =
-          response.headers.get('x-vercel-cli-tracked') === '1';
-        if (response.status !== 204) {
-          output.debug(
-            `Unexpected response from telemetry server: ${response.status}`
-          );
-        } else {
-          if (wasRecorded) {
-            output.debug(`Telemetry event tracked`);
+      const scriptPath = resolvePath('dist', 'send-telemetry.js');
+      const payload = {
+        url,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Client-id': 'vercel-cli',
+          'x-vercel-cli-topic-id': 'generic',
+          'x-vercel-cli-session-id': sessionId,
+        },
+        body: JSON.stringify(events),
+      };
+      await this.sendToSubprocess(
+        scriptPath,
+        payload,
+        output.debugEnabled,
+        // Only called when debugging is enabled
+        ({ status, wasRecorded }) => {
+          if (status === 204) {
+            if (wasRecorded) {
+              output.debug('Telemetry event tracked');
+            } else {
+              output.debug('Telemetry event ignored');
+            }
           } else {
-            output.debug(`Telemetry event ignored due to progressive rollout`);
+            output.debug(
+              `Failed to send telemetry events. Unexpected response from telemetry server: ${status}`
+            );
           }
         }
-      } catch (error) {
-        if (error instanceof Error) {
-          output.debug(`Error while sending telemetry data: ${error.message}`);
+      );
+    }
+  }
+
+  // This is separated so that we can easily mock it for testing purposes
+  async sendToSubprocess(
+    scriptPath: string,
+    payload: object,
+    outputDebugEnabled: boolean,
+    debugCallback: (responsePayload: {
+      status: number;
+      wasRecorded: boolean;
+    }) => void
+  ) {
+    // When debugging, we want to know about the response from the server, so we can't exit early
+    if (outputDebugEnabled) {
+      return new Promise<void>((resolve, reject) => {
+        const childProcess = spawn(
+          process.execPath,
+          [scriptPath, JSON.stringify(payload)],
+          {
+            stdio: ['ignore', 'pipe', 'pipe'],
+          }
+        );
+        childProcess.stdout.on('data', data => {
+          const responsePayload = JSON.parse(data);
+          debugCallback({
+            status: Number(responsePayload.status),
+            wasRecorded: responsePayload.cliTracked === '1',
+          });
+        });
+        childProcess.on('exit', code => {
+          return code === 0 ? resolve() : reject();
+        });
+      });
+    } else {
+      const childProcess = spawn(
+        process.execPath,
+        [scriptPath, JSON.stringify(payload)],
+        {
+          stdio: 'ignore',
+          windowsHide: true,
+          detached: true,
         }
-      }
+      );
+      childProcess.unref();
     }
   }
 }

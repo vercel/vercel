@@ -13,26 +13,12 @@ import './test/mocks/matchers';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
+import { client } from '../mocks/client';
 
 import './test/mocks/matchers/index';
 
-import fetch from 'node-fetch';
-
 beforeEach(() => {
   vi.unstubAllEnvs();
-});
-
-vi.mock(import('node-fetch'), async importOriginal => {
-  const mod = await importOriginal(); // type is inferred
-  const mock = vi.fn(() => {
-    return {
-      headers: new mod.Headers({ 'x-vercel-cli-tracked': '1' }),
-    };
-  });
-  return {
-    ...mod,
-    default: mock,
-  };
 });
 
 describe('main', () => {
@@ -172,42 +158,100 @@ describe('main', () => {
     });
 
     describe('save', () => {
-      it('sends events to the server', async () => {
-        const telemetryEventStore = new TelemetryEventStore({
-          isDebug: false,
-        });
+      describe('when VERCEL_TELEMETRY_DEBUG is disabled', () => {
+        describe('when output debug is disabled', () => {
+          beforeEach(() => {
+            output.initialize({
+              debug: false,
+            });
+          });
+          afterEach(() => {
+            output.initialize({
+              debug: true,
+            });
+          });
+          it('exits before the detached child process completes', async () => {
+            const telemetryEventStore = new TelemetryEventStore({
+              isDebug: false,
+            });
+            const spy = vi
+              .spyOn(telemetryEventStore, 'sendToSubprocess')
+              .mockImplementation(async () => {
+                // Prevent the actual call to the subprocess from happening
+              });
 
-        const telemetry = new RootTelemetryClient({
-          opts: {
-            store: telemetryEventStore,
-          },
-        });
-        telemetry.trackPlatform();
-        telemetry.trackArch();
+            const telemetry = new RootTelemetryClient({
+              opts: {
+                store: telemetryEventStore,
+              },
+            });
+            telemetry.trackPlatform();
+            telemetry.trackArch();
 
-        await telemetryEventStore.save();
+            await telemetryEventStore.save();
 
-        expect(fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/vercel-cli/v1/events'),
-          expect.objectContaining({
-            method: 'POST',
-            headers: expect.objectContaining({
-              'x-vercel-cli-topic-id': 'generic',
-              'x-vercel-cli-session-id': expect.any(String),
-            }),
-            body: expect.toHaveFetchBody(
-              expect.arrayContaining([
-                expect.objectContaining({
-                  event_time: expect.any(Number),
-                  id: expect.any(String),
-                  key: expect.any(String),
-                  value: expect.any(String),
-                  team_id: expect.any(String),
+            expect(spy).toHaveBeenCalledWith(
+              expect.stringContaining('send-telemetry.js'),
+              expect.objectContaining({
+                url: expect.stringContaining('/api/vercel-cli/v1/events'),
+                method: 'POST',
+                headers: expect.objectContaining({
+                  'x-vercel-cli-topic-id': 'generic',
+                  'x-vercel-cli-session-id': expect.any(String),
                 }),
-              ])
-            ),
-          })
-        );
+                body: expect.toHaveFetchBody(
+                  expect.arrayContaining([
+                    expect.objectContaining({
+                      event_time: expect.any(Number),
+                      id: expect.any(String),
+                      key: expect.any(String),
+                      value: expect.any(String),
+                      team_id: expect.any(String),
+                    }),
+                  ])
+                ),
+              }),
+              expect.any(Boolean),
+              expect.any(Function)
+            );
+          });
+        });
+        describe('when output debug is enabled', () => {
+          it('waits for the child process to exit and logs the response', async () => {
+            const telemetryEventStore = new TelemetryEventStore({
+              isDebug: false,
+            });
+            vi.spyOn(
+              telemetryEventStore,
+              'sendToSubprocess'
+            ).mockImplementation(
+              async (
+                ...args: Parameters<
+                  (typeof telemetryEventStore)['sendToSubprocess']
+                >
+              ) => {
+                const debugEnabled = args[2];
+                const callback = args[3];
+
+                if (debugEnabled) {
+                  callback({ status: 204, wasRecorded: true });
+                }
+              }
+            );
+
+            const telemetry = new RootTelemetryClient({
+              opts: {
+                store: telemetryEventStore,
+              },
+            });
+            telemetry.trackPlatform();
+            telemetry.trackArch();
+
+            await telemetryEventStore.save();
+
+            expect(client.stderr).toOutput('Telemetry event tracked');
+          });
+        });
       });
     });
 
