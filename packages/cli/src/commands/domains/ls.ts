@@ -36,7 +36,7 @@ export default async function ls(
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
 
-  let paginationOptions;
+  let paginationOptions: (number | undefined)[];
 
   try {
     paginationOptions = getPaginationOpts(opts);
