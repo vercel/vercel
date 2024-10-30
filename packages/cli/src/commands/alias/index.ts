@@ -42,7 +42,7 @@ export default async function alias(client: Client) {
   );
 
   if (parsedArguments.flags['--help']) {
-    telemetryClient.trackCliFlagHelp('alias', subcommandOriginal);
+    telemetryClient.trackCliFlagHelp('alias', subcommand);
     output.print(help(aliasCommand, { columns: client.stderr.columns }));
     return 2;
   }
