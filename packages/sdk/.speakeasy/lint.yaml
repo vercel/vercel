@@ -1,0 +1,8 @@
+lintVersion: 1.0.0
+defaultRuleset: vercelRestAPIRuleset
+rulesets:
+  vercelRestAPIRuleset:
+    rulesets:
+      - speakeasy-generation
+    rules:
+      path-params: { severity: warn }
