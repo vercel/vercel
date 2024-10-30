@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.18
+
+### Patch Changes
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
 ## 4.3.17
 
 ### Patch Changes
