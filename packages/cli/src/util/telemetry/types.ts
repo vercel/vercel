@@ -38,21 +38,32 @@ type ToArgType<OptType extends CommandOption['type']> =
       ? ReturnType<OptType>
       : never;
 
-// TelemetryOptionMethods<[{ name: 'foo', type: BooleanConstructor }]> → { trackCliFlagFoo: (v: boolean | undefined) => void; }
+// TelemetryOptionMethods<[{ name: 'foo', type: BooleanConstructor }]> → { trackCliFlagFoo: (value: boolean | undefined) => void; }
 type TelemetryOptionMethods<Opts extends readonly CommandOption[]> = {
   [Opt in Opts[number] as ToTelemetryOptionName<Opt>]: (
     value: ToArgType<Opt['type']> | undefined
   ) => void;
 };
 
-// TelemetryArgumentMethods<[{ name: 'foo' }]> → { trackCliArgumentFoo: (v: string | undefined) => void; }
+// TelemetryArgumentMethods<[{ name: 'foo' }]> → { trackCliArgumentFoo: (value: string | undefined) => void; }
 type TelemetryArgumentMethods<Args extends readonly CommandArgument[]> = {
   [Arg in Args[number] as `trackCliArgument${ToTitleCase<Arg['name']>}`]: (
     value: string | undefined
   ) => void;
 };
 
+// TelemetrySubcommandMethods<[{ name: 'foo' }]> → { trackCliSubcommandFoo: (actual: string) => void; }
+type TelemetrySubcommandMethodsNonNull<Args extends readonly Command[]> = {
+  [Arg in Args[number] as `trackCliSubcommand${ToTitleCase<Arg['name']>}`]: (
+    actual: string
+  ) => void;
+};
+type TelemetrySubcommandMethods<Args> = Args extends readonly Command[]
+  ? TelemetrySubcommandMethodsNonNull<Args>
+  : {};
+
 export type TelemetryMethods<Cmd extends Command> = Prettify<
-  TelemetryArgumentMethods<Cmd['arguments']> &
+  TelemetrySubcommandMethods<Cmd['subcommands']> &
+    TelemetryArgumentMethods<Cmd['arguments']> &
     TelemetryOptionMethods<Cmd['options']>
 >;

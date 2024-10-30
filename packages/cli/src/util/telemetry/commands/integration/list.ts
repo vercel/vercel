@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listSubcommand } from '../../../../commands/integration/command';
 
-export class IntegrationListTelemetryClient extends TelemetryClient {
+export class IntegrationListTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listSubcommand>
+{
   trackCliArgumentProject(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
@@ -10,7 +15,7 @@ export class IntegrationListTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionIntegration(v: string | undefined, known: boolean | undefined) {
+  trackCliOptionIntegration(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliOption({
         option: 'integration',
