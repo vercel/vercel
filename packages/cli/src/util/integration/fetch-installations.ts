@@ -1,8 +1,5 @@
 import type Client from '../client';
-import type {
-  Integration,
-  IntegrationInstallation,
-} from '../../commands/integration/types';
+import type { Integration, IntegrationInstallation } from './types';
 
 export async function fetchInstallations(
   client: Client,
