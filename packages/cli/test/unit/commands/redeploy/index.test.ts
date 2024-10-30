@@ -9,7 +9,7 @@ import { useUser } from '../../../mocks/user';
 import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
-  describe('[deploymentId|deploymentName]', () => {
+  describe('[url|deploymentId]', () => {
     it('tracks redacted deploymentId|deploymentName', async () => {
       const { fromDeployment, toDeployment } = initRedeployTest();
       toDeployment.readyState = 'QUEUED';
@@ -21,7 +21,7 @@ describe('redeploy', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:idOrName',
+          key: 'argument:urlOrDeploymentId',
           value: '[REDACTED]',
         },
       ]);
@@ -38,7 +38,7 @@ describe('redeploy', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:idOrName',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {

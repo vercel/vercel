@@ -73,6 +73,7 @@ export default async (client: Client): Promise<number> => {
       });
     }
 
+    telemetry.trackCliArgumentUrlOrDeploymentId(actionOrDeployId);
     return await requestPromote({
       client,
       deployId: actionOrDeployId,

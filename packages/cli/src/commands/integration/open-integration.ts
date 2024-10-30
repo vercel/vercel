@@ -2,8 +2,8 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import type { Configuration } from './types';
-import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
+import type { Configuration } from '../../util/integration/types';
+import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';
 import output from '../../output-manager';
@@ -61,12 +61,4 @@ export async function openIntegration(client: Client, args: string[]) {
   open(buildSSOLink(team, configuration.id));
 
   return 0;
-}
-
-async function getFirstConfiguration(client: Client, integrationSlug: string) {
-  const configurations = await fetchMarketplaceIntegrations(
-    client,
-    integrationSlug
-  );
-  return configurations.length > 0 ? configurations[0] : undefined;
 }

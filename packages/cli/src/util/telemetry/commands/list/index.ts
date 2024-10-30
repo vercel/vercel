@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listCommand } from '../../../../commands/list/command';
 
-export class ListTelemetryClient extends TelemetryClient {
+export class ListTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listCommand>
+{
   trackCliOptionMeta(meta: string[] | undefined) {
     if (meta && meta.length > 0) {
       this.trackCliOption({

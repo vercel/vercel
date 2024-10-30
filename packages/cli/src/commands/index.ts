@@ -19,6 +19,8 @@ export default new Map([
   ['inspect', 'inspect'],
   ['install', 'install'],
   ['integration', 'integration'],
+  ['integration-resource', 'integration-resource'],
+  ['ir', 'integration-resource'],
   ['link', 'link'],
   ['list', 'list'],
   ['ln', 'alias'],

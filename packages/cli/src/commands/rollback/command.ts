@@ -6,7 +6,7 @@ export const rollbackCommand = {
   description: 'Quickly revert back to a previous deployment.',
   arguments: [
     {
-      name: 'deployment id/url',
+      name: 'url|deploymentId',
       required: true,
     },
   ],
