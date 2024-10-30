@@ -15,13 +15,7 @@ the global `Request`, `node-fetch` and other types.
 
 ### headers
 
-• **headers**: `Object`
-
-#### Type declaration
-
-| Name  | Type                                     |
-| :---- | :--------------------------------------- |
-| `get` | (`name`: `string`) => `null` \| `string` |
+• **headers**: `Headers`
 
 #### Defined in
 

@@ -37,9 +37,14 @@ export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
  * the global `Request`, `node-fetch` and other types.
  */
 export interface Request {
-  headers: {
-    get(name: string): string | null;
-  };
+  headers: Headers;
+}
+/**
+ * We define a new type so this function can be reused with
+ * the global `Request`, `node-fetch` and other types.
+ */
+export interface Headers {
+  get(name: string): string | null;
 }
 
 /**
@@ -70,15 +75,15 @@ export interface Geo {
   longitude?: string;
 }
 
-function getHeader(request: Request, key: string): string | undefined {
-  return request.headers.get(key) ?? undefined;
+function getHeader(headers: Headers, key: string): string | undefined {
+  return headers.get(key) ?? undefined;
 }
 
 function getHeaderWithDecode(
   request: Request,
   key: string
 ): string | undefined {
-  const header = getHeader(request, key);
+  const header = getHeader(request.headers, key);
   return header ? decodeURIComponent(header) : undefined;
 }
 
@@ -116,8 +121,9 @@ function getFlag(countryCode: string | undefined): string | undefined {
  * ```
  *
  */
-export function ipAddress(request: Request): string | undefined {
-  return getHeader(request, IP_HEADER_NAME);
+export function ipAddress(input: Request | Headers): string | undefined {
+  const headers = 'headers' in input ? input.headers : input;
+  return getHeader(headers, IP_HEADER_NAME);
 }
 
 /**
@@ -167,11 +173,13 @@ export function geolocation(request: Request): Geo {
   return {
     // city name may be encoded to support multi-byte characters
     city: getHeaderWithDecode(request, CITY_HEADER_NAME),
-    country: getHeader(request, COUNTRY_HEADER_NAME),
-    flag: getFlag(getHeader(request, COUNTRY_HEADER_NAME)),
-    countryRegion: getHeader(request, REGION_HEADER_NAME),
-    region: getRegionFromRequestId(getHeader(request, REQUEST_ID_HEADER_NAME)),
-    latitude: getHeader(request, LATITUDE_HEADER_NAME),
-    longitude: getHeader(request, LONGITUDE_HEADER_NAME),
+    country: getHeader(request.headers, COUNTRY_HEADER_NAME),
+    flag: getFlag(getHeader(request.headers, COUNTRY_HEADER_NAME)),
+    countryRegion: getHeader(request.headers, REGION_HEADER_NAME),
+    region: getRegionFromRequestId(
+      getHeader(request.headers, REQUEST_ID_HEADER_NAME)
+    ),
+    latitude: getHeader(request.headers, LATITUDE_HEADER_NAME),
+    longitude: getHeader(request.headers, LONGITUDE_HEADER_NAME),
   };
 }

@@ -59,7 +59,7 @@ The location information of the request, in this way:
 
 #### Defined in
 
-[packages/functions/src/headers.ts:166](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L166)
+[packages/functions/src/headers.ts:172](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L172)
 
 ---
 
@@ -115,7 +115,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 ### ipAddress
 
-▸ **ipAddress**(`request`): `string` \| `undefined`
+▸ **ipAddress**(`input`): `string` \| `undefined`
 
 Returns the IP address of the request from the headers.
 
@@ -132,9 +132,9 @@ export function GET(request) {
 
 #### Parameters
 
-| Name      | Type                                        | Description                                       |
-| :-------- | :------------------------------------------ | :------------------------------------------------ |
-| `request` | [`Request`](../interfaces/index.Request.md) | The incoming request object which provides the IP |
+| Name    | Type                                                     |
+| :------ | :------------------------------------------------------- |
+| `input` | [`Request`](../interfaces/index.Request.md) \| `Headers` |
 
 #### Returns
 
@@ -144,7 +144,7 @@ The IP address of the request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:119](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L119)
+[packages/functions/src/headers.ts:124](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L124)
 
 ---
 
