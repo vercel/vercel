@@ -5,11 +5,6 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 
 describe('teams ls', () => {
-  describe.todo('--since');
-  describe.todo('--until');
-  describe.todo('--count');
-  describe.todo('--next');
-
   describe('non-northstar', () => {
     it('should display your personal account', async () => {
       const user = useUser();
