@@ -10,123 +10,121 @@ import { useDeployment } from '../../../mocks/deployment';
 import { useUser } from '../../../mocks/user';
 
 describe('remove', () => {
-  describe('[name|deploymentId]', () => {
-    describe('fails', () => {
-      it('should error if missing deployment url', async () => {
-        client.setArgv('remove');
-        const exitCodePromise = remove(client);
+  describe('fails', () => {
+    it('should error if missing deployment url', async () => {
+      client.setArgv('remove');
+      const exitCodePromise = remove(client);
 
-        await expect(client.stderr).toOutput(
-          'Error: `vercel rm` expects at least one argument'
-        );
-        await expect(exitCodePromise).resolves.toEqual(1);
-      });
-
-      it('should error without calling API for invalid names', async () => {
-        const badDeployName = '/#';
-        client.setArgv('remove', badDeployName);
-        const exitCodePromise = remove(client);
-
-        await expect(client.stderr).toOutput(
-          `Error: The provided argument "${badDeployName}" is not a valid deployment or project`
-        );
-        await expect(exitCodePromise).resolves.toEqual(1);
-      });
+      await expect(client.stderr).toOutput(
+        'Error: `vercel rm` expects at least one argument'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
     });
 
-    describe('succeeds', () => {
-      it('when using --hard', async () => {
-        const user = useUser();
+    it('should error without calling API for invalid names', async () => {
+      const badDeployName = '/#';
+      client.setArgv('remove', badDeployName);
+      const exitCodePromise = remove(client);
 
-        const project = useProject({
-          ...defaultProject,
-          id: '123',
-        });
+      await expect(client.stderr).toOutput(
+        `Error: The provided argument "${badDeployName}" is not a valid deployment or project`
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+  });
 
-        useUnknownProject();
+  describe('succeeds', () => {
+    it('when using --hard', async () => {
+      const user = useUser();
 
-        const deployment = useDeployment({
-          creator: user,
-          project,
-        });
-
-        client.scenario.delete('/now/deployments/:id', (req, res) => {
-          res.json({});
-        });
-
-        client.setArgv('remove', deployment.url, '--hard', '--yes');
-        await remove(client);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
-          { key: 'flag:hard', value: 'TRUE' },
-          { key: 'flag:yes', value: 'TRUE' },
-        ]);
+      const project = useProject({
+        ...defaultProject,
+        id: '123',
       });
 
-      it('when using --safe', async () => {
-        const user = useUser();
+      useUnknownProject();
 
-        const project = useProject({
-          ...defaultProject,
-          id: '123',
-        });
-
-        useUnknownProject();
-
-        const deployment = useDeployment({
-          creator: user,
-          project,
-        });
-
-        client.scenario.delete('/now/deployments/:id', (req, res) => {
-          res.json({});
-        });
-
-        client.scenario.get('/v6/deployments', (req, res) => {
-          res.json({});
-        });
-
-        client.setArgv('remove', deployment.url, '--safe', '--yes');
-        await remove(client);
-
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
-          { key: 'flag:safe', value: 'TRUE' },
-          { key: 'flag:yes', value: 'TRUE' },
-        ]);
+      const deployment = useDeployment({
+        creator: user,
+        project,
       });
 
-      it('when using --yes', async () => {
-        let deleteAPIWasCalled = false;
-        const user = useUser();
-
-        const project = useProject({
-          ...defaultProject,
-          id: '123',
-        });
-
-        useUnknownProject();
-
-        const deployment = useDeployment({
-          creator: user,
-          project,
-        });
-
-        client.scenario.delete('/now/deployments/:id', (req, res) => {
-          deleteAPIWasCalled = true;
-          res.json({});
-        });
-
-        client.setArgv('remove', deployment.url, '--yes');
-        await remove(client);
-
-        expect(deleteAPIWasCalled);
-        expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
-          { key: 'flag:yes', value: 'TRUE' },
-        ]);
+      client.scenario.delete('/now/deployments/:id', (req, res) => {
+        res.json({});
       });
+
+      client.setArgv('remove', deployment.url, '--hard', '--yes');
+      await remove(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'flag:hard', value: 'TRUE' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
+    it('when using --safe', async () => {
+      const user = useUser();
+
+      const project = useProject({
+        ...defaultProject,
+        id: '123',
+      });
+
+      useUnknownProject();
+
+      const deployment = useDeployment({
+        creator: user,
+        project,
+      });
+
+      client.scenario.delete('/now/deployments/:id', (req, res) => {
+        res.json({});
+      });
+
+      client.scenario.get('/v6/deployments', (req, res) => {
+        res.json({});
+      });
+
+      client.setArgv('remove', deployment.url, '--safe', '--yes');
+      await remove(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'flag:safe', value: 'TRUE' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
+    it('when using --yes', async () => {
+      let deleteAPIWasCalled = false;
+      const user = useUser();
+
+      const project = useProject({
+        ...defaultProject,
+        id: '123',
+      });
+
+      useUnknownProject();
+
+      const deployment = useDeployment({
+        creator: user,
+        project,
+      });
+
+      client.scenario.delete('/now/deployments/:id', (req, res) => {
+        deleteAPIWasCalled = true;
+        res.json({});
+      });
+
+      client.setArgv('remove', deployment.url, '--yes');
+      await remove(client);
+
+      expect(deleteAPIWasCalled);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
     });
   });
 });
