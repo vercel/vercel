@@ -1,5 +1,5 @@
 ---
-"@vercel/functions": feat
+"@vercel/functions": minor
 ---
 
-[functions] ipAddress: accept headers as input
+ipAddress: accept headers as input
