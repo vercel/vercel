@@ -271,7 +271,7 @@ export class TelemetryEventStore {
     scriptPath: string,
     payload: object,
     outputDebugEnabled: boolean,
-    debuCallback: (responsePayload: {
+    debugCallback: (responsePayload: {
       status: number;
       wasRecorded: boolean;
     }) => void
@@ -288,7 +288,7 @@ export class TelemetryEventStore {
         );
         childProcess.stdout.on('data', data => {
           const responsePayload = JSON.parse(data);
-          debuCallback({
+          debugCallback({
             status: Number(responsePayload.status),
             wasRecorded: responsePayload.cliTracked === '1',
           });
