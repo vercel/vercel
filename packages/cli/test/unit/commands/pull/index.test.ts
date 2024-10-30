@@ -173,6 +173,10 @@ describe('pull', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
         key: 'option:environment',
         value: 'preview',
       },
@@ -216,6 +220,10 @@ describe('pull', () => {
     expect(previewFileHasPreviewEnv2).toBeTruthy();
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
       {
         key: 'option:environment',
         value: 'production',
@@ -267,6 +275,10 @@ describe('pull', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
         key: 'flag:yes',
         value: 'TRUE',
       },
@@ -289,6 +301,10 @@ describe('pull', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
       {
         key: 'flag:yes',
         value: 'TRUE',
@@ -317,6 +333,10 @@ describe('pull', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
         key: 'flag:yes',
         value: 'TRUE',
       },
@@ -343,6 +363,10 @@ describe('pull', () => {
     await expect(exitCodePromise).resolves.toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
       {
         key: 'flag:yes',
         value: 'TRUE',

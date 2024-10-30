@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { linkCommand } from '../../../../commands/link/command';
 
-export class LinkTelemetryClient extends TelemetryClient {
+export class LinkTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof linkCommand>
+{
   trackCliArgumentCwd() {
     this.trackCliArgument({
       arg: 'cwd',

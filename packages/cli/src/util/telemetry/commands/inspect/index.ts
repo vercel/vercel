@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { inspectCommand } from '../../../../commands/inspect/command';
 
-export class InspectTelemetryClient extends TelemetryClient {
-  trackCliArgumentDeploymentIdOrHost(idOrHost: string | undefined) {
+export class InspectTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof inspectCommand>
+{
+  trackCliArgumentUrlOrDeploymentId(idOrHost: string | undefined) {
     if (idOrHost) {
       this.trackCliArgument({
         arg: 'deploymentIdOrHost',

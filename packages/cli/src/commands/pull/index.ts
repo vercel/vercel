@@ -92,6 +92,7 @@ export default async function main(client: Client) {
       flags: parsedArgs.flags,
     }) || 'development';
 
+  telemetryClient.trackCliArgumentProjectPath(parsedArgs.args[1]);
   telemetryClient.trackCliFlagYes(autoConfirm);
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);

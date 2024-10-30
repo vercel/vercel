@@ -27,12 +27,6 @@ describe('remove', () => {
     });
   });
 
-  describe('[deploymentId|deploymentName]', () => {
-    describe.todo('--yes');
-    describe.todo('--safe');
-    describe.todo('--hard');
-  });
-
   describe('fails', () => {
     it('should error if missing deployment url', async () => {
       client.setArgv('remove');
@@ -56,7 +50,7 @@ describe('remove', () => {
     });
   });
 
-  describe('suceeds', () => {
+  describe('succeeds', () => {
     it('when using --hard', async () => {
       const user = useUser();
 
@@ -80,6 +74,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
         { key: 'flag:hard', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -112,6 +107,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
         { key: 'flag:safe', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -143,6 +139,7 @@ describe('remove', () => {
 
       expect(deleteAPIWasCalled);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
     });
