@@ -1,6 +1,7 @@
+import { yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const addSubCommand = {
+export const addSubcommand = {
   name: 'add',
   description: 'Installs a marketplace integration',
   arguments: [
@@ -21,7 +22,7 @@ export const addSubCommand = {
   ],
 } as const;
 
-export const openSubCommand = {
+export const openSubcommand = {
   name: 'open',
   description: "Opens a marketplace integration's dashboard",
   arguments: [
@@ -76,16 +77,43 @@ export const listSubcommand = {
     {
       name: 'Filter the resources to a single integration',
       value: [
-        `${packageName} integrations list --integration <integration>`,
-        `${packageName} integrations list --integration acme`,
-        `${packageName} integrations list -i acme`,
+        `${packageName} integration list --integration <integration>`,
+        `${packageName} integration list --integration acme`,
+        `${packageName} integration list -i acme`,
       ],
     },
     {
       name: 'List all marketplace resources for the current team',
       value: [
-        `${packageName} integrations list --all`,
-        `${packageName} integrations list -a`,
+        `${packageName} integration list --all`,
+        `${packageName} integration list -a`,
+      ],
+    },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  description: 'Uninstalls a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when uninstalling an integration',
+    },
+  ],
+  examples: [
+    {
+      name: 'Uninstall an integration',
+      value: [
+        `${packageName} integration remove <inegration>`,
+        `${packageName} integration remove acme`,
       ],
     },
   ],
@@ -101,6 +129,11 @@ export const integrationCommand = {
       required: true,
     },
   ],
-  subcommands: [addSubCommand, openSubCommand, listSubcommand],
+  subcommands: [
+    addSubcommand,
+    listSubcommand,
+    openSubcommand,
+    removeSubcommand,
+  ],
   examples: [],
 } as const;

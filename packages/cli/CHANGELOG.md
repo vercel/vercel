@@ -1,5 +1,106 @@
 # vercel
 
+## 37.13.0
+
+### Minor Changes
+
+- Add telemetry for `vercel logs` ([#12386](https://github.com/vercel/vercel/pull/12386))
+
+- Add telemetry for `vercel env pull` ([#12368](https://github.com/vercel/vercel/pull/12368))
+
+- add telemetry for `vercel env rm` ([#12384](https://github.com/vercel/vercel/pull/12384))
+
+- [cli] add subcommand tracking for `dns` group ([#12375](https://github.com/vercel/vercel/pull/12375))
+
+- [cli] add telemetry for `vercel certs ls` ([#12383](https://github.com/vercel/vercel/pull/12383))
+
+- [cli] add telemetry tracking to vercel inspect ([#12367](https://github.com/vercel/vercel/pull/12367))
+
+- Add telemetry for `vercel certs remove` ([#12394](https://github.com/vercel/vercel/pull/12394))
+
+- Add telemetry for `vercel integration list` ([#12404](https://github.com/vercel/vercel/pull/12404))
+
+- add telemetry tracking to `env add` ([#12357](https://github.com/vercel/vercel/pull/12357))
+
+- track standard environments in `vc env add` ([#12385](https://github.com/vercel/vercel/pull/12385))
+
+- [cli] add telemetry for `vercel target ls` ([#12352](https://github.com/vercel/vercel/pull/12352))
+
+- [cli] add telemetry tracking for `vercel domains ls` ([#12400](https://github.com/vercel/vercel/pull/12400))
+
+- [cli] add `VERCEL_ENV` and `VERCEL` to process to simulate runtime ([#12358](https://github.com/vercel/vercel/pull/12358))
+
+- Add telemetry for `vercel domains move` ([#12411](https://github.com/vercel/vercel/pull/12411))
+
+- [cli] add telemetry tracking to `git connect` and `git disconnect` ([#12373](https://github.com/vercel/vercel/pull/12373))
+
+- Add telemetry to `vercel domains buy` ([#12413](https://github.com/vercel/vercel/pull/12413))
+
+- [cli] add telemetry tracking to `project list` ([#12339](https://github.com/vercel/vercel/pull/12339))
+
+- Add telemetry for `vercel domains add` ([#12409](https://github.com/vercel/vercel/pull/12409))
+
+- Add telemetry to `vercel domains rm` ([#12410](https://github.com/vercel/vercel/pull/12410))
+
+- Add telemetry for `vercel list` ([#12364](https://github.com/vercel/vercel/pull/12364))
+
+- [cli] add subcommand tracking for `integration` group ([#12377](https://github.com/vercel/vercel/pull/12377))
+
+- Add telemetry for `vercel certs add` ([#12391](https://github.com/vercel/vercel/pull/12391))
+
+- [cli] add subcommand tracking for `domains` group ([#12374](https://github.com/vercel/vercel/pull/12374))
+
+- [cli] add telemetry tracking to `project add` ([#12340](https://github.com/vercel/vercel/pull/12340))
+
+- Add telemetry for `vercel integration open` ([#12408](https://github.com/vercel/vercel/pull/12408))
+
+- Add telemetry for `vercel init` ([#12371](https://github.com/vercel/vercel/pull/12371))
+
+- [cli] add subcommand tracking for `integration` group ([#12377](https://github.com/vercel/vercel/pull/12377))
+
+- [cli] add telemetry tracking for `vercel dns import` ([#12379](https://github.com/vercel/vercel/pull/12379))
+
+- [cli] add telemetry for `vercel dns ls` ([#12380](https://github.com/vercel/vercel/pull/12380))
+
+- Add telemetry for `vercel env ls` ([#12392](https://github.com/vercel/vercel/pull/12392))
+
+- Add telemetry for `vercel bisect` ([#12362](https://github.com/vercel/vercel/pull/12362))
+
+- [cli] add telemetry for `vercel dns remove` ([#12381](https://github.com/vercel/vercel/pull/12381))
+
+- Add telemetry for `vercel integration add` ([#12406](https://github.com/vercel/vercel/pull/12406))
+
+- [cli] add telemetry tracking for vercel dev invocations ([#12349](https://github.com/vercel/vercel/pull/12349))
+
+- [cli] add subcommand tracking for `certs` group ([#12376](https://github.com/vercel/vercel/pull/12376))
+
+- [cli] add telemetry for `vercel redeploy` ([#12353](https://github.com/vercel/vercel/pull/12353))
+
+- [cli] add telemetry for `vercel domains inspect` ([#12407](https://github.com/vercel/vercel/pull/12407))
+
+- Add telemetry for `vercel certs issue` ([#12401](https://github.com/vercel/vercel/pull/12401))
+
+- Add telemetry for `vercel link` ([#12360](https://github.com/vercel/vercel/pull/12360))
+
+### Patch Changes
+
+- Remove stray file ([#12363](https://github.com/vercel/vercel/pull/12363))
+
+- add metrics to dns add ([#12414](https://github.com/vercel/vercel/pull/12414))
+
+- Add telemetry to the `teams` subcommands. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12346](https://github.com/vercel/vercel/pull/12346))
+
+- add telemetry to `vc pull` ([#12387](https://github.com/vercel/vercel/pull/12387))
+
+- [cli] refactor Output usage ([#12305](https://github.com/vercel/vercel/pull/12305))
+
+- extract pull invocation from build ([#12372](https://github.com/vercel/vercel/pull/12372))
+
+- extract vc pull logic from entrypoint ([#12378](https://github.com/vercel/vercel/pull/12378))
+
+- Updated dependencies [[`13bb443f2b0791c7bd402447fcb540cffd0b6eae`](https://github.com/vercel/vercel/commit/13bb443f2b0791c7bd402447fcb540cffd0b6eae)]:
+  - @vercel/remix-builder@2.2.13
+
 ## 37.12.1
 
 ### Patch Changes

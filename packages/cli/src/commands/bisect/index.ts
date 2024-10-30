@@ -18,12 +18,13 @@ import { help } from '../help';
 import { bisectCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
+import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 
 interface Deployments {
   deployments: Deployment[];
 }
 export default async function bisect(client: Client): Promise<number> {
-  const { output } = client;
   const scope = await getScope(client);
   const { contextName } = scope;
 
@@ -38,10 +39,22 @@ export default async function bisect(client: Client): Promise<number> {
     return 1;
   }
 
+  const telemetry = new BisectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
     output.print(help(bisectCommand, { columns: client.stderr.columns }));
     return 2;
   }
+
+  telemetry.trackCliOptionGood(parsedArgs.flags['--good']);
+  telemetry.trackCliOptionBad(parsedArgs.flags['--bad']);
+  telemetry.trackCliOptionPath(parsedArgs.flags['--path']);
+  telemetry.trackCliOptionRun(parsedArgs.flags['--run']);
+  telemetry.trackCliFlagOpen(parsedArgs.flags['--open']);
 
   let bad =
     parsedArgs.flags['--bad'] ||

@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Integration } from '../../commands/integration/types';
+import type { Integration } from './types';
 
 export async function fetchIntegration(client: Client, slug: string) {
   return client.fetch<Integration>(

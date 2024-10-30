@@ -12,6 +12,51 @@ describe('git disconnect', () => {
   const fixture = (name: string) =>
     join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
 
+  it('tracks subcommand invocation', async () => {
+    const cwd = fixture('new-connection');
+    client.cwd = cwd;
+    try {
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+      useUser();
+      useTeams('team_dummy');
+      const project = useProject({
+        ...defaultProject,
+        id: 'new-connection',
+        name: 'new-connection',
+      });
+      project.project.link = {
+        type: 'github',
+        repo: 'repo',
+        org: 'user',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      };
+      client.setArgv('git', 'disconnect');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Are you sure you want to disconnect user/repo from your project?`
+      );
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput('Disconnected user/repo.');
+
+      const exitCode = await gitPromise;
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:disconnect',
+          value: 'disconnect',
+        },
+      ]);
+    } finally {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    }
+  });
+
   it('should disconnect a repository', async () => {
     const cwd = fixture('new-connection');
     client.cwd = cwd;

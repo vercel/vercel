@@ -13,6 +13,8 @@ import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
+import output from '../../output-manager';
 
 type Options = {
   '--debug': boolean;
@@ -25,8 +27,13 @@ export default async function rm(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const { project } = link;
+
+  const telemetryClient = new EnvRmTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   if (args.length > 3) {
     output.error(
@@ -38,6 +45,10 @@ export default async function rm(
   }
 
   let [envName, envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   if (!envName) {
     envName = await client.input.text({
@@ -66,7 +77,7 @@ export default async function rm(
       message: `Remove ${envName} from which Environments?`,
       choices: envs.map(env => ({
         value: env.id,
-        name: formatEnvironments(client, link, env, customEnvironments),
+        name: formatEnvironments(link, env, customEnvironments),
       })),
     });
 
@@ -83,7 +94,6 @@ export default async function rm(
     !(await confirm(
       client,
       `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
-        client,
         link,
         env,
         customEnvironments
@@ -99,7 +109,7 @@ export default async function rm(
 
   try {
     output.spinner('Removing');
-    await removeEnvRecord(output, client, project.id, env);
+    await removeEnvRecord(client, project.id, env);
   } catch (err: unknown) {
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);

@@ -1,15 +1,20 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { deployCommand } from '../../../../commands/deploy/command';
 
-export class DeployTelemetryClient extends TelemetryClient {
-  trackCliArgumentProjectPath(projectPaths?: string[]) {
-    if (projectPaths && projectPaths.length > 0) {
+export class DeployTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof deployCommand>
+{
+  trackCliArgumentProjectPath(projectPaths: string | undefined) {
+    if (projectPaths) {
       this.trackCliArgument({
         arg: 'project-path',
         value: this.redactedValue,
       });
     }
   }
-  trackCliOptionArchive(format?: string) {
+  trackCliOptionArchive(format: string | undefined) {
     if (format) {
       this.trackCliOption({
         option: 'archive',
@@ -17,7 +22,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionBuildEnv(buildEnv?: string[]) {
+  trackCliOptionBuildEnv(buildEnv: string[] | undefined) {
     if (buildEnv && buildEnv.length > 0) {
       this.trackCliOption({
         option: 'build-env',
@@ -25,7 +30,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionEnv(env?: string[]) {
+  trackCliOptionEnv(env: string[] | undefined) {
     if (env && env.length > 0) {
       this.trackCliOption({
         option: 'env',
@@ -33,7 +38,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionMeta(meta?: string[]) {
+  trackCliOptionMeta(meta: string[] | undefined) {
     if (meta && meta.length > 0) {
       this.trackCliOption({
         option: 'meta',
@@ -41,7 +46,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionName(name?: string) {
+  trackCliOptionName(name: string | undefined) {
     if (name) {
       this.trackCliOption({
         option: 'name',
@@ -49,7 +54,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionRegions(regions?: string) {
+  trackCliOptionRegions(regions: string | undefined) {
     if (regions) {
       this.trackCliOption({
         option: 'regions',
@@ -57,7 +62,7 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliOptionTarget(target?: string) {
+  trackCliOptionTarget(target: string | undefined) {
     if (target) {
       const value = ['production', 'preview'].includes(target)
         ? target
@@ -68,57 +73,57 @@ export class DeployTelemetryClient extends TelemetryClient {
       });
     }
   }
-  trackCliFlagConfirm(flag?: boolean) {
+  trackCliFlagConfirm(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('confirm');
     }
   }
-  trackCliFlagForce(flag?: boolean) {
+  trackCliFlagForce(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('force');
     }
   }
-  trackCliFlagLogs(flag?: boolean) {
+  trackCliFlagLogs(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('logs');
     }
   }
-  trackCliFlagNoClipboard(flag?: boolean) {
+  trackCliFlagNoClipboard(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('no-clipboard');
     }
   }
-  trackCliFlagNoWait(flag?: boolean) {
+  trackCliFlagNoWait(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('no-wait');
     }
   }
-  trackCliFlagPrebuilt(flag?: boolean) {
+  trackCliFlagPrebuilt(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prebuilt');
     }
   }
-  trackCliFlagProd(flag?: boolean) {
+  trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
     }
   }
-  trackCliFlagPublic(flag?: boolean) {
+  trackCliFlagPublic(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('public');
     }
   }
-  trackCliFlagSkipDomain(flag?: boolean) {
+  trackCliFlagSkipDomain(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('skip-domain');
     }
   }
-  trackCliFlagWithCache(flag?: boolean) {
+  trackCliFlagWithCache(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('with-cache');
     }
   }
-  trackCliFlagYes(flag?: boolean) {
+  trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
     }

@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
+import output from '../../output-manager';
 
 export default async function inputProject(
   client: Client,
@@ -12,7 +13,6 @@ export default async function inputProject(
   detectedProjectName: string,
   autoConfirm = false
 ): Promise<Project | string> {
-  const { output } = client;
   const slugifiedName = slugify(detectedProjectName);
 
   // attempt to auto-detect a project to link

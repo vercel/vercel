@@ -11,9 +11,10 @@ import { errorToString } from '@vercel/error-utils';
 import { help } from '../help';
 import { logoutCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
 
 export default async function main(client: Client): Promise<number> {
-  const { authConfig, config, output } = client;
+  const { authConfig, config } = client;
 
   let parsedArgs = null;
 
@@ -69,8 +70,8 @@ export default async function main(client: Client): Promise<number> {
   delete authConfig.token;
 
   try {
-    writeToConfigFile(output, config);
-    writeToAuthConfigFile(output, authConfig);
+    writeToConfigFile(config);
+    writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));
