@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatNSTable from '../../util/format-ns-table';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -50,7 +50,8 @@ export default async function add(
       `${getCommandName('domains add <domain>')} expects one argument.`
     );
     return 1;
-  } else if (!project && args.length !== 2) {
+  }
+  if (!project && args.length !== 2) {
     output.error(
       `${getCommandName(
         'domains add <domain> <project>'
@@ -106,7 +107,7 @@ export default async function add(
 
   if (isPublicSuffix(domainName)) {
     output.log(
-      `The domain will automatically get assigned to your latest production deployment.`
+      'The domain will automatically get assigned to your latest production deployment.'
     );
     return 0;
   }
@@ -122,17 +123,16 @@ export default async function add(
 
   if (domainConfig.misconfigured) {
     output.warn(
-      `This domain is not configured properly. To configure it you should either:`
+      'This domain is not configured properly. To configure it you should either:'
     );
     output.print(
       `  ${chalk.grey('a)')} ` +
-        `Set the following record on your DNS provider to continue: ` +
+        'Set the following record on your DNS provider to continue: ' +
         `${code(`A ${domainName} 76.76.21.21`)} ` +
         `${chalk.grey('[recommended]')}\n`
     );
     output.print(
-      `  ${chalk.grey('b)')} ` +
-        `Change your Domains's nameservers to the intended set`
+      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(
@@ -142,12 +142,12 @@ export default async function add(
       )}\n\n`
     );
     output.print(
-      `  We will run a verification for you and you will receive an email upon completion.\n`
+      '  We will run a verification for you and you will receive an email upon completion.\n'
     );
     output.print('  Read more: https://vercel.link/domain-configuration\n\n');
   } else {
     output.log(
-      `The domain will automatically get assigned to your latest production deployment.`
+      'The domain will automatically get assigned to your latest production deployment.'
     );
   }
 
