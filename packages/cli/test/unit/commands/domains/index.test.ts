@@ -14,7 +14,7 @@ describe('domains', () => {
     const args: string[] = [];
     const opts = {};
 
-    client.setArgv('dns', ...args);
+    client.setArgv('domains', ...args);
     await domains(client);
     expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
   });
