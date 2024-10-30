@@ -26,7 +26,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:50](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L50)
+[packages/functions/src/headers.ts:55](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L55)
 
 ---
 
@@ -38,7 +38,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:53](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L53)
+[packages/functions/src/headers.ts:58](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L58)
 
 ---
 
@@ -51,7 +51,7 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[packages/functions/src/headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L64)
+[packages/functions/src/headers.ts:69](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L69)
 
 ---
 
@@ -63,7 +63,7 @@ The flag emoji for the country the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:56](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L56)
+[packages/functions/src/headers.ts:61](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L61)
 
 ---
 
@@ -75,7 +75,7 @@ The latitude of the client.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:67](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L67)
+[packages/functions/src/headers.ts:72](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L72)
 
 ---
 
@@ -87,7 +87,7 @@ The longitude of the client.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:70](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L70)
+[packages/functions/src/headers.ts:75](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L75)
 
 ---
 
@@ -99,4 +99,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[packages/functions/src/headers.ts:59](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L59)
+[packages/functions/src/headers.ts:64](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L64)
