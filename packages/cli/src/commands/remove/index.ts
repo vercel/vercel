@@ -42,6 +42,7 @@ export default async function remove(client: Client) {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliArgumentNameOrDeploymentId(parsedArgs.args[0]);
     telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
     telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
@@ -63,7 +64,7 @@ export default async function remove(client: Client) {
   const hard = parsedArgs.flags['--hard'];
   const skipConfirmation = parsedArgs.flags['--yes'];
   const safe = parsedArgs.flags['--safe'];
-  const ids: string[] = parsedArgs.args;
+  const ids = parsedArgs.args;
   const { success, error, log } = output;
 
   if (ids.length < 1) {

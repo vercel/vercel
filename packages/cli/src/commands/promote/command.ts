@@ -6,7 +6,7 @@ export const promoteCommand = {
   description: 'Promote an existing deployment to current.',
   arguments: [
     {
-      name: 'deployment id/url',
+      name: 'url|deploymentId',
       required: true,
     },
   ],

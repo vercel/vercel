@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class EnvAddTelemetryClient extends TelemetryClient {
-  trackCliArgumentName(name?: string) {
+  trackCliArgumentName(name: string | undefined) {
     if (name) {
       this.trackCliArgument({
         arg: 'name',
@@ -10,7 +10,7 @@ export class EnvAddTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentEnvironment(environment?: string) {
+  trackCliArgumentEnvironment(environment: string | undefined) {
     const standardEnvironments = ['production', 'preview', 'development'];
     if (environment) {
       this.trackCliArgument({
@@ -22,7 +22,7 @@ export class EnvAddTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentGitBranch(gitBranch?: string) {
+  trackCliArgumentGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
       this.trackCliArgument({
         arg: 'git-branch',
@@ -31,13 +31,13 @@ export class EnvAddTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagSensitive(sensitive?: boolean) {
+  trackCliFlagSensitive(sensitive: boolean | undefined) {
     if (sensitive) {
       this.trackCliFlag('sensitive');
     }
   }
 
-  trackCliFlagForce(force?: boolean) {
+  trackCliFlagForce(force: boolean | undefined) {
     if (force) {
       this.trackCliFlag('force');
     }

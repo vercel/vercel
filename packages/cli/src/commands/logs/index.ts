@@ -81,7 +81,7 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  telemetry.trackCliArgumentUrl(deploymentIdOrHost);
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
   telemetry.trackCliFlagJson(asJson);
   telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
   telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);

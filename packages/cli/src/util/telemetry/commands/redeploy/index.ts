@@ -1,10 +1,15 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { redeployCommand } from '../../../../commands/redeploy/command';
 
-export class RedeployTelemetryClient extends TelemetryClient {
-  trackCliArgumentDeploymentIdOrName(idOrName?: string) {
-    if (idOrName) {
+export class RedeployTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof redeployCommand>
+{
+  trackCliArgumentUrlOrDeploymentId(value: string | undefined) {
+    if (value) {
       this.trackCliArgument({
-        arg: 'idOrName',
+        arg: 'urlOrDeploymentId',
         value: this.redactedValue,
       });
     }
