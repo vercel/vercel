@@ -3,9 +3,12 @@ speakeasyVersion: latest
 sources:
     vercel-OAS:
         inputs:
-            - location: ../../open-api.yaml
+            - location: https://openapi.vercel.sh/
+        overlays:
+            - location: overlay.yaml
+        ruleset: vercelRestAPIRuleset
         registry:
-            location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
+            location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas
 targets:
     vercel:
         target: typescript
@@ -13,3 +16,7 @@ targets:
         publish:
             npm:
                 token: $npm_token
+        codeSamples:
+            registry:
+                location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas-code-samples
+            blocking: false
