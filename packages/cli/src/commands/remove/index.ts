@@ -42,7 +42,7 @@ export default async function remove(client: Client) {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-    telemetryClient.trackCliArgumentUrlOrDeploymentId(parsedArgs.args[0]);
+    telemetryClient.trackCliArgumentNameOrDeploymentId(parsedArgs.args[0]);
     telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
     telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
