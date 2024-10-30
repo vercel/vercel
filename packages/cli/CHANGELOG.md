@@ -1,5 +1,29 @@
 # vercel
 
+## 37.14.0
+
+### Minor Changes
+
+- Strongly type `TelemetryClient` subclasses against command specification ([#12426](https://github.com/vercel/vercel/pull/12426))
+
+- Adds `vercel integration remove` to uninstall Marketplace integrations from the current team ([#12291](https://github.com/vercel/vercel/pull/12291))
+  Adds `vercel integration-resource disconnect` to disconnect Marketplace integration resources from projects
+  Adds `vercel integration-resource remove` to delete Marketplace integration resources
+
+### Patch Changes
+
+- [cli] Make all metrics tracking methods on the store require arguments ([#12422](https://github.com/vercel/vercel/pull/12422))
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
+- [cli] don't track unreachable condition ([#12419](https://github.com/vercel/vercel/pull/12419))
+
+- Updated dependencies [[`5a6605bbd99c3b4c3f06fc315dd3978fe7801d00`](https://github.com/vercel/vercel/commit/5a6605bbd99c3b4c3f06fc315dd3978fe7801d00)]:
+  - @vercel/build-utils@8.4.12
+  - @vercel/next@4.3.18
+  - @vercel/node@3.2.24
+  - @vercel/static-build@2.5.34
+
 ## 37.13.0
 
 ### Minor Changes
