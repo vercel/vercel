@@ -12,7 +12,6 @@ import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
-  default: ['set'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
   set: ['set'],

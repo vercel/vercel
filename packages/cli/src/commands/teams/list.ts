@@ -12,9 +12,15 @@ import handleError from '../../util/handle-error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import output from '../../output-manager';
+import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 
 export default async function list(client: Client): Promise<number> {
-  const { config } = client;
+  const { config, telemetryEventStore } = client;
+  const telemetry = new TeamsListTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
 
   let parsedArgs = null;
 
@@ -29,15 +35,13 @@ export default async function list(client: Client): Promise<number> {
   }
 
   const next = parsedArgs.flags['--next'];
-  const count = parsedArgs.flags['--count'];
+  telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
+  telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
+  telemetry.trackCliOptionSince(parsedArgs.flags['--since']);
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
     output.error('Please provide a number for flag `--next`');
-    return 1;
-  }
-
-  if (typeof count !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--count`');
     return 1;
   }
 
