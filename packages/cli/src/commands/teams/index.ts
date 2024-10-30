@@ -34,8 +34,8 @@ export default async (client: Client) => {
     return 1;
   }
 
-  parsedArgs.args = parsedArgs.args.slice(1);
   const isSwitch = parsedArgs.args[0] === 'switch';
+  parsedArgs.args = parsedArgs.args.slice(1);
   if (isSwitch) {
     subcommand = 'switch';
   } else {
