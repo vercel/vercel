@@ -636,6 +636,10 @@ const main = async () => {
           telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
           func = require('./commands/integration').default;
           break;
+        case 'integration-resource':
+          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
+          func = require('./commands/integration-resource').default;
+          break;
         case 'link':
           telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = require('./commands/link').default;

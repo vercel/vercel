@@ -21,4 +21,11 @@ export class IntegrationTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
+      value: actual,
+    });
+  }
 }
