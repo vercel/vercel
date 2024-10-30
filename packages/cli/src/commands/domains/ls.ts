@@ -11,7 +11,7 @@ import { formatDateWithoutTime } from '../../util/format-date';
 import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import {
-  PaginationOptions,
+  type PaginationOptions,
   getPaginationOpts,
 } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
