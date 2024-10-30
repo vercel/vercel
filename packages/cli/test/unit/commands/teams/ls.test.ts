@@ -16,7 +16,8 @@ describe('teams ls', () => {
       useTeams(undefined, { apiVersion: 2 });
       const exitCodePromise = teamsList(client);
       await expect(client.stderr).toOutput(user.username);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "teamsList"').toEqual(0);
     });
   });
 
@@ -28,7 +29,8 @@ describe('teams ls', () => {
       useTeams(undefined, { apiVersion: 2 });
       const exitCodePromise = teamsList(client);
       await expect(client.stdout).not.toOutput(user.username);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "teamsList"').toEqual(0);
     });
   });
 });

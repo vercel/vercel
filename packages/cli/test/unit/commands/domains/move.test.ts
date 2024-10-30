@@ -22,7 +22,8 @@ describe('domains mv', () => {
             `Fetching domain example-northstar.com under ${username}
 Error: You may not move your domain to your user account.`
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "domains"').toEqual(1);
         });
       });
     });

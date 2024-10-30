@@ -28,7 +28,8 @@ describe('env pull', () => {
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
@@ -55,7 +56,8 @@ describe('env pull', () => {
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
@@ -93,7 +95,8 @@ describe('env pull', () => {
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     // check for Preview env vars
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
@@ -129,7 +132,8 @@ describe('env pull', () => {
     );
     await expect(client.stderr).toOutput('Created other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 
@@ -156,7 +160,8 @@ describe('env pull', () => {
     await expect(client.stderr).toOutput(
       'Created .env.local file and added it to .gitignore'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
@@ -192,7 +197,8 @@ describe('env pull', () => {
     );
     await expect(client.stderr).toOutput('Created other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, 'other.env'));
 
@@ -220,7 +226,8 @@ describe('env pull', () => {
     );
     await expect(client.stderr).toOutput('Created other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const devEnv = (await fs.readFile(path.join(cwd, 'other.env'))).toString();
 
@@ -425,7 +432,8 @@ describe('env pull', () => {
     );
     await expect(client.stderr).toOutput('Created .env.local file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
@@ -474,7 +482,8 @@ describe('env pull', () => {
       'Downloading `development` Environment Variables for'
     );
     await expect(client.stderr).toOutput('Created .env.local file');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 

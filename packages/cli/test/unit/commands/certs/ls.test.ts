@@ -11,7 +11,8 @@ describe('certs ls', () => {
     client.setArgv('certs', 'ls');
     const exitCodePromise = certs(client);
     await expect(client.stdout).toOutput('dummy-19.cert');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "certs"').toEqual(0);
   });
 
   describe.todo('--next');
@@ -23,7 +24,8 @@ describe('certs ls', () => {
       client.setArgv('certs', 'ls', '--limit', '2');
       const exitCodePromise = certs(client);
       await expect(client.stdout).toOutput('dummy-1.cert');
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "certs"').toEqual(0);
     });
   });
 

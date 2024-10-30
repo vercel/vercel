@@ -21,7 +21,8 @@ describe('redeploy', () => {
     await expect(client.stderr).toOutput(
       'Missing required deployment id or url:'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(1);
   });
 
   it('should error if deployment not found', async () => {
@@ -33,7 +34,8 @@ describe('redeploy', () => {
     await expect(client.stderr).toOutput(
       'Error: Can\'t find the deployment "foo" under the context'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(1);
   });
 
   it('should error if deployment belongs to another team', async () => {
@@ -53,7 +55,8 @@ describe('redeploy', () => {
       'Error: Deployment belongs to a different team'
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(1);
   });
 
   it('should redeploy an existing deployment', async () => {
@@ -66,7 +69,8 @@ describe('redeploy', () => {
     );
     await expect(client.stderr).toOutput('Production');
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
   });
 
   it('should redeploy and not wait for completion', async () => {
@@ -82,7 +86,8 @@ describe('redeploy', () => {
       'Note: Deployment is still processing'
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
   });
 
   it('should redeploy to preview', async () => {
@@ -93,7 +98,8 @@ describe('redeploy', () => {
       `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
     );
     await expect(client.stderr).toOutput('Preview');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
   });
 });
 

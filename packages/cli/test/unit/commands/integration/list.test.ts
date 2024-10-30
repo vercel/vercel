@@ -34,7 +34,8 @@ describe('integration', () => {
       it('returns only marketplace resources for the linked project', async () => {
         client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
@@ -81,7 +82,8 @@ describe('integration', () => {
       it('returns all projects with the --all flag', async () => {
         client.setArgv('integration', 'list', '--all');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
@@ -145,7 +147,8 @@ describe('integration', () => {
       it('returns only the selected integration when filtering', async () => {
         client.setArgv('integration', 'list', '--integration', 'acme');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
@@ -181,7 +184,8 @@ describe('integration', () => {
       it('handles --integration and --all flags simultaneously', async () => {
         client.setArgv('integration', 'list', '--all', '--integration', 'acme');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
@@ -236,7 +240,8 @@ describe('integration', () => {
       it('should error when there is no team', async () => {
         client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput('Error: Team not found.');
       });
 
@@ -250,7 +255,8 @@ describe('integration', () => {
 
         client.setArgv('integration', 'list');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
         );
@@ -270,7 +276,8 @@ describe('integration', () => {
           'other-project'
         );
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify more than one project at a time. Use `--all` to show all resources.'
         );
@@ -285,7 +292,8 @@ describe('integration', () => {
 
         client.setArgv('integration', 'list', 'other-project', '--all');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify a project when using the `--all` flag.'
         );

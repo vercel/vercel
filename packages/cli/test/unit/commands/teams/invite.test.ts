@@ -28,7 +28,8 @@ describe('teams invite', () => {
       it('tracks telemetry events', async () => {
         client.setArgv('teams', 'invite', 'me@example.com');
         const exitCodePromise = teams(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "teams"').toEqual(0);
 
         await expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -47,7 +48,8 @@ describe('teams invite', () => {
       it('tracks telemetry events', async () => {
         client.setArgv('teams', 'invite', 'me@example.com', 'you@example.com');
         const exitCodePromise = teams(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "teams"').toEqual(0);
 
         await expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {

@@ -47,7 +47,8 @@ describe('link', () => {
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
@@ -73,7 +74,8 @@ describe('link', () => {
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);

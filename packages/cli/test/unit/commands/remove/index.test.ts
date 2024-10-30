@@ -23,7 +23,8 @@ describe('remove', () => {
     await expect(client.stderr).toOutput(
       'Error: `vercel rm` expects at least one argument'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "remove"').toEqual(1);
   });
 
   it('should error without calling API for invalid names', async () => {
@@ -34,7 +35,8 @@ describe('remove', () => {
     await expect(client.stderr).toOutput(
       `Error: The provided argument "${badDeployName}" is not a valid deployment or project`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "remove"').toEqual(1);
   });
 
   it('calls API to delete a project ', async () => {

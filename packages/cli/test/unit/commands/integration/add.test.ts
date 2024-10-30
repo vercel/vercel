@@ -58,7 +58,8 @@ describe('integration', () => {
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&projectId=vercel-integration-add&cmd=add'
           );
@@ -85,7 +86,8 @@ describe('integration', () => {
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
           );
@@ -101,7 +103,8 @@ describe('integration', () => {
             'Terms have not been accepted. Open Vercel Dashboard? (Y/n)'
           );
           client.stdin.write('y\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
           );
@@ -158,7 +161,8 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'test-resource successfully connected to vercel-integration-add'
           );
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
         });
 
@@ -202,7 +206,8 @@ describe('integration', () => {
             'Do you want to link this resource to the current project? (Y/n)'
           );
           client.stdin.write('n\n');
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
         });
 
@@ -235,7 +240,8 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
         });
       });
@@ -244,7 +250,8 @@ describe('integration', () => {
         it('should error when no integration arugment was passed', async () => {
           client.setArgv('integration', 'add');
           const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: You must pass an integration slug'
           );
@@ -253,7 +260,8 @@ describe('integration', () => {
         it('should error when more than one integration arugment was passed', async () => {
           client.setArgv('integration', 'add', 'acme', 'acme-two');
           const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Cannot install more than one integration at a time'
           );
@@ -263,7 +271,8 @@ describe('integration', () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'does-not-exist');
           const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: Failed to get integration "does-not-exist": Response Error (404)'
           );
@@ -273,7 +282,8 @@ describe('integration', () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'acme-external');
           const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: Integration "acme-external" is not a Marketplace integration'
           );
@@ -283,7 +293,8 @@ describe('integration', () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'acme-no-products');
           const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput('Error: Product not found');
         });
       });
