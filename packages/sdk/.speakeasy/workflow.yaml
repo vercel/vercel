@@ -8,7 +8,7 @@ sources:
             - location: overlay.yaml
         ruleset: vercelRestAPIRuleset
         registry:
-            location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas
+            location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
 targets:
     vercel:
         target: typescript
@@ -18,5 +18,5 @@ targets:
                 token: $npm_token
         codeSamples:
             registry:
-                location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas-code-samples
+                location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas-code-samples
             blocking: false
