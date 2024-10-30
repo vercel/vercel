@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Resource } from '../../commands/integration/types';
+import type { Resource } from './types';
 
 export async function getResources(
   client: Client,

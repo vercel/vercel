@@ -14,10 +14,10 @@ import type {
   IntegrationInstallation,
   IntegrationProduct,
   Metadata,
-} from './types';
+} from '../../util/integration/types';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
-import { connectResourceToProject } from '../../util/integration/connect-resource-to-project';
+import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
