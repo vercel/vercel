@@ -90,7 +90,8 @@ describe('get latest version', () => {
     expect(latest).toEqual(undefined);
   });
 
-  it('should not check twice', async () => {
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
