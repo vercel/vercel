@@ -96,8 +96,8 @@ export const disconnectSubcommand = {
 } as const;
 
 export const integrationResourceCommand = {
-  name: 'integration',
-  description: 'Manage marketplace integrations',
+  name: 'integration-resource',
+  description: 'Manage marketplace integration resources',
   options: [],
   arguments: [
     {
