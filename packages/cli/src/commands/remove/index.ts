@@ -51,6 +51,7 @@ export default async function remove(client: Client) {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('remove');
     output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 2;
   }

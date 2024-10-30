@@ -10,6 +10,24 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('env pull', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'pull';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   it('should handle pulling', async () => {
     useUser();
     useTeams('team_dummy');

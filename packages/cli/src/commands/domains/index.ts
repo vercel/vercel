@@ -45,15 +45,17 @@ export default async function main(client: Client) {
     },
   });
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(domainsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('domains', subcommand);
+    output.print(help(domainsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
   switch (subcommand) {
     case 'add':
       telemetry.trackCliSubcommandAdd(subcommandOriginal);

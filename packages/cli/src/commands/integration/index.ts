@@ -35,6 +35,7 @@ export default async function main(client: Client) {
   } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   if (flags['--help']) {
+    telemetry.trackCliFlagHelp('integration', subcommand);
     output.print(help(integrationCommand, { columns: client.stderr.columns }));
     return 2;
   }

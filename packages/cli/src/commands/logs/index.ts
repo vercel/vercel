@@ -54,16 +54,17 @@ export default async function logs(client: Client) {
     }
   }
 
-  if (parsedArguments.flags['--help']) {
-    print(help(logsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const telemetry = new LogsTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  if (parsedArguments.flags['--help']) {
+    telemetry.trackCliFlagHelp('logs');
+    print(help(logsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
 
   if (parsedArguments.args[0] === logsCommand.name) {
     parsedArguments.args.shift();

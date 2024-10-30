@@ -39,14 +39,15 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  parsedArgs.args = parsedArgs.args.slice(1);
+  const args = parsedArgs.args.slice(1);
+  subcommand = parsedArgs.args[0] || 'list';
+
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('project', subcommand);
     output.print(help(projectCommand, { columns: client.stderr.columns }));
     return 2;
   }
-
-  parsedArgs.args = parsedArgs.args.slice(1);
-  subcommand = parsedArgs.args[0] || 'list';
-  const args = parsedArgs.args.slice(1);
 
   const { contextName } = await getScope(client);
 

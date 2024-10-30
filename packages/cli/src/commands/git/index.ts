@@ -36,7 +36,11 @@ export default async function main(client: Client) {
     },
   });
 
+  parsedArgs.args = parsedArgs.args.slice(1);
+  subcommand = parsedArgs.args[0];
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('git', subcommand);
     output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -49,8 +53,6 @@ export default async function main(client: Client) {
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  parsedArgs.args = parsedArgs.args.slice(1);
-  subcommand = parsedArgs.args[0];
   const args = parsedArgs.args.slice(1);
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const { cwd } = client;

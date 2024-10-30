@@ -65,11 +65,11 @@ export default async function main(client: Client) {
 
   telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
-  telemetry.trackCliFlagHelp(parsedArgs.flags['--help']);
   telemetry.trackCliOptionPort(parsedArgs.flags['--port']);
   telemetry.trackCliOptionListen(parsedArgs.flags['--listen']);
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('dev');
     output.print(help(devCommand, { columns: client.stderr.columns }));
     return 2;
   }

@@ -39,10 +39,4 @@ export class DevTelemetryClient extends TelemetryClient {
       this.trackCliFlag('confirm');
     }
   }
-
-  trackCliFlagHelp(help: boolean | undefined) {
-    if (help) {
-      this.trackCliFlag('help');
-    }
-  }
 }

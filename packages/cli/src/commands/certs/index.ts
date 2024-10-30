@@ -40,15 +40,17 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(certsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const { subcommand, subcommandOriginal, args } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('certs', subcommand);
+    output.print(help(certsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
   switch (subcommand) {
     case 'issue':
       telemetry.trackCliSubcommandIssue(subcommandOriginal);

@@ -92,7 +92,7 @@ export class TelemetryClient {
     });
   }
 
-  protected trackCliFlag(flag: string) {
+  trackCliFlag(flag: string) {
     this.track({
       key: `flag:${flag}`,
       value: 'TRUE',
@@ -157,8 +157,16 @@ export class TelemetryClient {
     return;
   }
 
-  trackFlagHelp() {
-    this.trackCliFlag('help');
+  trackCliFlagHelp(command: string, subcommands?: string | string[]) {
+    let subcommand;
+    if (subcommands) {
+      subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
+    }
+
+    this.track({
+      key: 'flag:help',
+      value: subcommand ? `${command}:${subcommand}` : command,
+    });
   }
 }
 

@@ -16,6 +16,24 @@ describe('domains transfer-in', () => {
     });
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+      const subcommand = 'transfer-in';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:transferIn`,
+        },
+      ]);
+    });
+  });
+
   describe('[DOMAIN] missing', () => {
     it('errors', async () => {
       client.setArgv('domains', 'transfer-in');

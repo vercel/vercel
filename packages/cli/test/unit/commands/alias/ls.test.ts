@@ -9,6 +9,21 @@ describe('alias ls', () => {
     useUser();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      client.setArgv('alias', 'ls', '--help');
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `flag:help`,
+          value: 'alias:ls',
+        },
+      ]);
+    });
+  });
+
   it('should list up to 20 aliases by default', async () => {
     useAlias();
     client.setArgv('alias', 'ls');

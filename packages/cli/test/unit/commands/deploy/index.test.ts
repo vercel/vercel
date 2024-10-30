@@ -16,6 +16,23 @@ import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 
 describe('deploy', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'deploy';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = deploy(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should reject deploying a single file', async () => {
     client.setArgv('deploy', __filename);
     const exitCodePromise = deploy(client);

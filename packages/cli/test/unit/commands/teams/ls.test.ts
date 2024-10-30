@@ -10,6 +10,24 @@ describe('teams ls', () => {
   describe.todo('--count');
   describe.todo('--next');
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'teams';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = teams(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('non-northstar', () => {
     it('should display your personal account', async () => {
       const user = useUser();

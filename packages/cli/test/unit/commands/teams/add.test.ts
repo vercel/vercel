@@ -11,22 +11,39 @@ describe('teams add', () => {
   beforeEach(() => {
     useUser();
     useTeams(team.id);
-  });
 
-  beforeEach(() => {
     client.config = {
       currentTeam: currentTeamId,
     };
   });
 
-  client.scenario.post(`/teams`, (req, res) => {
-    return res.json(team);
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'teams';
+      const subcommand = 'add';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = teams(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
   });
 
-  client.scenario.patch(`/teams/${team.id}`, (req, res) => {
-    return res.json(team);
-  });
   it('tracks telemetry events', async () => {
+    client.scenario.post(`/teams`, (req, res) => {
+      return res.json(team);
+    });
+
+    client.scenario.patch(`/teams/${team.id}`, (req, res) => {
+      return res.json(team);
+    });
+
     client.setArgv('teams', 'add');
     const exitCodePromise = teams(client);
 
