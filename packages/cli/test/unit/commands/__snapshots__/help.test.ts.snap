@@ -2074,7 +2074,7 @@ exports[`help command > init help output snapshots > init help column width 120 
 
 exports[`help command > inspect help output snapshots > inspect help column width 40 1`] = `
 "
-  ▲ vercel inspect url [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.  
 
@@ -2155,7 +2155,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > inspect help output snapshots > inspect help column width 80 1`] = `
 "
-  ▲ vercel inspect url [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.                                          
 
@@ -2207,7 +2207,7 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > inspect help output snapshots > inspect help column width 120 1`] = `
 "
-  ▲ vercel inspect url [options]
+  ▲ vercel inspect url|deploymentId [options]
 
   Show information about a deployment.                                                                                  
 
@@ -2965,7 +2965,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > promote help output snapshots > promote help column width 40 1`] = `
 "
-  ▲ vercel promote deployment id/url [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing deployment to     
   current.                              
@@ -3042,7 +3042,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 
 exports[`help command > promote help output snapshots > promote help column width 80 1`] = `
 "
-  ▲ vercel promote deployment id/url [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing deployment to current.                                    
 
@@ -3088,7 +3088,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 
 exports[`help command > promote help output snapshots > promote help column width 120 1`] = `
 "
-  ▲ vercel promote deployment id/url [options]
+  ▲ vercel promote url|deploymentId [options]
 
   Promote an existing deployment to current.                                                                            
 
@@ -3333,7 +3333,7 @@ exports[`help command > pull help output snapshots > pull help column width 120 
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 40 1`] = `
 "
-  ▲ vercel redeploy [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous         
   deployment.                           
@@ -3397,7 +3397,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 80 1`] = `
 "
-  ▲ vercel redeploy [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous deployment.                                     
 
@@ -3435,7 +3435,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > redeploy help output snapshots > redeploy help column width 120 1`] = `
 "
-  ▲ vercel redeploy [deploymentId|deploymentName] [options]
+  ▲ vercel redeploy [url|deploymentId] [options]
 
   Rebuild and deploy a previous deployment.                                                                             
 
@@ -3472,9 +3472,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > remove help output snapshots > remove help column width 40 1`] = `
 "
-  ▲ vercel remove ...deploymentId|deploymentName [options]
+  ▲ vercel remove name|deploymentId [options]
 
-  Remove a deployment by name or id.    
+  Remove deployment(s) by project name  
+  or deployment ID.                     
 
   Options:
 
@@ -3523,26 +3524,26 @@ exports[`help command > remove help output snapshots > remove help column width 
 
   Examples:
 
-  - Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by Deployment ID
+
+    $ vercel remove dpl_abcdef123456890
+
+  - Remove all deployments with Project name \`my-app\`
 
     $ vercel remove my-app
 
-  - Remove all deployments with name \`my-app\`
+  - Remove two deployments with Deployment IDs
 
-    $ vercel remove deploymentId
-
-  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
-
-    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
+    $ vercel remove dpl_eyWt6zuSdeus dpl_uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > remove help output snapshots > remove help column width 80 1`] = `
 "
-  ▲ vercel remove ...deploymentId|deploymentName [options]
+  ▲ vercel remove name|deploymentId [options]
 
-  Remove a deployment by name or id.                                            
+  Remove deployment(s) by project name or deployment ID.                        
 
   Options:
 
@@ -3566,26 +3567,26 @@ exports[`help command > remove help output snapshots > remove help column width 
 
   Examples:
 
-  - Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by Deployment ID
+
+    $ vercel remove dpl_abcdef123456890
+
+  - Remove all deployments with Project name \`my-app\`
 
     $ vercel remove my-app
 
-  - Remove all deployments with name \`my-app\`
+  - Remove two deployments with Deployment IDs
 
-    $ vercel remove deploymentId
-
-  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
-
-    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
+    $ vercel remove dpl_eyWt6zuSdeus dpl_uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > remove help output snapshots > remove help column width 120 1`] = `
 "
-  ▲ vercel remove ...deploymentId|deploymentName [options]
+  ▲ vercel remove name|deploymentId [options]
 
-  Remove a deployment by name or id.                                                                                    
+  Remove deployment(s) by project name or deployment ID.                                                                
 
   Options:
 
@@ -3608,24 +3609,24 @@ exports[`help command > remove help output snapshots > remove help column width 
 
   Examples:
 
-  - Remove a deployment identified by \`deploymentId\`
+  - Remove a deployment identified by Deployment ID
+
+    $ vercel remove dpl_abcdef123456890
+
+  - Remove all deployments with Project name \`my-app\`
 
     $ vercel remove my-app
 
-  - Remove all deployments with name \`my-app\`
+  - Remove two deployments with Deployment IDs
 
-    $ vercel remove deploymentId
-
-  - Remove two deployments with IDs \`eyWt6zuSdeus\` and \`uWHoA9RQ1d1o\`
-
-    $ vercel remove eyWt6zuSdeus uWHoA9RQ1d1o
+    $ vercel remove dpl_eyWt6zuSdeus dpl_uWHoA9RQ1d1o
 
 "
 `;
 
 exports[`help command > rollback help output snapshots > rollback help column width 40 1`] = `
 "
-  ▲ vercel rollback deployment id/url [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous     
   deployment.                           
@@ -3702,7 +3703,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback help column width 80 1`] = `
 "
-  ▲ vercel rollback deployment id/url [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous deployment.                                 
 
@@ -3748,7 +3749,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > rollback help output snapshots > rollback help column width 120 1`] = `
 "
-  ▲ vercel rollback deployment id/url [options]
+  ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous deployment.                                                                         
 

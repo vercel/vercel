@@ -1,8 +1,13 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { deployCommand } from '../../../../commands/deploy/command';
 
-export class DeployTelemetryClient extends TelemetryClient {
-  trackCliArgumentProjectPath(projectPaths: string[] | undefined) {
-    if (projectPaths && projectPaths.length > 0) {
+export class DeployTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof deployCommand>
+{
+  trackCliArgumentProjectPath(projectPaths: string | undefined) {
+    if (projectPaths) {
       this.trackCliArgument({
         arg: 'project-path',
         value: this.redactedValue,

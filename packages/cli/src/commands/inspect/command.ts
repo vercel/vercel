@@ -5,7 +5,7 @@ export const inspectCommand = {
   description: 'Show information about a deployment.',
   arguments: [
     {
-      name: 'url',
+      name: 'url|deploymentId',
       required: true,
     },
   ],

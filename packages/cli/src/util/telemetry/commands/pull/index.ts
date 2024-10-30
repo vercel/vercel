@@ -1,6 +1,20 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { pullCommand } from '../../../../commands/pull/command';
 
-export class PullTelemetryClient extends TelemetryClient {
+export class PullTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof pullCommand>
+{
+  trackCliArgumentProjectPath(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'projectPath',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
       const standardEnvironments = ['production', 'preview', 'development'];
