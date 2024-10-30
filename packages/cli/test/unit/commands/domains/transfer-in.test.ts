@@ -28,7 +28,7 @@ describe('domains transfer-in', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:transferIn`,
+          value: `${command}:transfer-in`,
         },
       ]);
     });
