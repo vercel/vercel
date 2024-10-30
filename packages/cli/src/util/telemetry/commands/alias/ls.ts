@@ -1,7 +1,7 @@
 import { TelemetryClient } from '../..';
 
 export class AliasLsTelemetryClient extends TelemetryClient {
-  trackCliOptionLimit(limit?: number) {
+  trackCliOptionLimit(limit: number | undefined) {
     if (limit) {
       this.trackCliOption({
         option: 'limit',
@@ -10,7 +10,7 @@ export class AliasLsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionNext(next?: number) {
+  trackCliOptionNext(next: number | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',

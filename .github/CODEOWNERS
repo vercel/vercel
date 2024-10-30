@@ -21,6 +21,7 @@
 /open-api.yaml                           @leerob @molebox
 /.github/workflows/sdk_generation.yaml   @leerob @molebox
 /.github/workflows/sdk_publish.yaml      @leerob @molebox
+/overlay.yaml                            @leerob @molebox
 
 # Unrestricted Paths
 .changeset/

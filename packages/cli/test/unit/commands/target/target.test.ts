@@ -3,16 +3,15 @@ import { client } from '../../../mocks/client';
 import target from '../../../../src/commands/target';
 
 describe('target', () => {
-  // this requires mocking a linked project
-  it.todo('errors when invoked without subcommand', () => {
+  it('errors when invoked without subcommand', async () => {
     client.setArgv('target');
     const exitCodePromise = target(client);
-    expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 
   it('should reject invalid arguments', async () => {
-    client.setArgv('--invalid');
-    const result = await target(client);
-    expect(result).toBe(1);
+    client.setArgv('target', '--invalid');
+    const exitCodePromise = target(client);
+    await expect(exitCodePromise).resolves.toBe(1);
   });
 });

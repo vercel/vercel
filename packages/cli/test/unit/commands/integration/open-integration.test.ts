@@ -7,9 +7,6 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
-// 500 error responses take more than 5 seconds to return, even when mocked, so this extra time is for the 500 error test.
-vi.setConfig({ testTimeout: 20000 });
-
 vi.mock('open', () => {
   return {
     default: vi.fn(),
@@ -24,6 +21,19 @@ beforeEach(() => {
 
 describe('integration', () => {
   describe('open', () => {
+    it('should track subcommand usage', async () => {
+      client.setArgv('integration', 'open');
+      const exitCodePromise = integrationCommand(client);
+      await expect(exitCodePromise).resolves.toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:open',
+          value: 'open',
+        },
+      ]);
+    });
+
     describe('[name]', () => {
       beforeEach(() => {
         useUser();
@@ -73,6 +83,28 @@ describe('integration', () => {
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-first'
           );
         });
+
+        it('should track the [name] positional argument with known integration slug', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-open',
+            name: 'vercel-integration-open',
+          });
+          client.setArgv('integration', 'open', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: 'subcommand:open',
+              value: 'open',
+            },
+            {
+              key: 'argument:name',
+              value: 'acme',
+            },
+          ]);
+        });
       });
 
       describe('errors', () => {
@@ -117,6 +149,28 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Error: No configuration found for "acme-no-results".'
           );
+        });
+
+        it('should track the [name] positional argument with unknown integration slug', async () => {
+          const teams = useTeams('team_dummy');
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
+          useConfiguration();
+
+          client.setArgv('integration', 'open', 'acme-no-results');
+          const exitCodePromise = integrationCommand(client);
+          await expect(exitCodePromise).resolves.toEqual(1);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: 'subcommand:open',
+              value: 'open',
+            },
+            {
+              key: 'argument:name',
+              value: '[REDACTED]',
+            },
+          ]);
         });
 
         it('should error when the configurations API responds erroneously', async () => {

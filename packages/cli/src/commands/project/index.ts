@@ -9,6 +9,8 @@ import list from './list';
 import rm from './rm';
 import { projectCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -17,6 +19,12 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
+  const telemetryClient = new ProjectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let subcommand: string | string[];
 
   let parsedArgs = null;
@@ -30,8 +38,6 @@ export default async function main(client: Client) {
     handleError(error);
     return 1;
   }
-
-  const { output } = client;
 
   if (parsedArgs.flags['--help']) {
     output.print(help(projectCommand, { columns: client.stderr.columns }));
@@ -47,17 +53,18 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'ls':
     case 'list':
+      telemetryClient.trackCliSubcommandList(subcommand);
       return await list(client, parsedArgs.flags, args, contextName);
     case 'add':
+      telemetryClient.trackCliSubcommandAdd(subcommand);
       return await add(client, args, contextName);
     case 'rm':
     case 'remove':
+      telemetryClient.trackCliSubcommandRm(subcommand);
       return await rm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      client.output.print(
-        help(projectCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(projectCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

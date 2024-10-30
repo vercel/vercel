@@ -18,9 +18,6 @@ const projectName = 'vercel-promote';
 
 describe('promote', () => {
   describe('[deployment id/url]', () => {
-    describe.todo('--timeout');
-    describe.todo('--yes');
-
     describe('telemetry', () => {
       it('tracks usage', async () => {
         const { cwd, previousDeployment } = initPromoteTest();
@@ -44,6 +41,10 @@ describe('promote', () => {
           {
             key: 'option:timeout',
             value: '[TIME]',
+          },
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
           },
         ]);
       });
@@ -105,6 +106,7 @@ describe('promote', () => {
       expect(exitCode, 'exit code for "promote"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:yes', value: 'TRUE' },
         {
           key: 'subcommand:status',
           value: 'status',
@@ -311,8 +313,7 @@ describe('promote', () => {
         `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
       );
 
-      // we need to wait a super long time because fetch will return on 500
-      await expect(client.stderr).toOutput('Response Error (500)', 20000);
+      await expect(client.stderr).toOutput('Response Error (500)');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "promote"').toEqual(1);

@@ -98,6 +98,7 @@ describe('rollback', () => {
     expect(exitCode, 'exit code for "rollback"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
       {
         key: 'subcommand:status',
         value: 'status',
@@ -188,8 +189,7 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    // we need to wait a super long time because fetch will return on 500
-    await expect(client.stderr).toOutput('Response Error (500)', 20000);
+    await expect(client.stderr).toOutput('Response Error (500)');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "rollback"').toEqual(1);

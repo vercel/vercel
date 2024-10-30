@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { User, Team } from '@vercel-internals/types';
+import type { User, Team } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
@@ -13,6 +13,8 @@ import getDomainByName from '../../util/domains/get-domain-by-name';
 import confirm from '../../util/input/confirm';
 import getTeams from '../../util/teams/get-teams';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domains/move';
 
 type Options = {
   '--yes': boolean;
@@ -23,7 +25,18 @@ export default async function move(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
+  const { telemetryEventStore } = client;
+
+  const telemetry = new DomainsMoveTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliFlagYes(opts['--yes']);
+  telemetry.trackCliArgumentDomainName(args[0]);
+  telemetry.trackCliArgumentDestination(args[1]);
+
   const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {

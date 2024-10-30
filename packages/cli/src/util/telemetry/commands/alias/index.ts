@@ -14,4 +14,11 @@ export class AliasTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rm',
+      value: actual,
+    });
+  }
 }

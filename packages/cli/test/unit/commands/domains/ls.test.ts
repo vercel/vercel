@@ -14,6 +14,22 @@ describe('domains ls', () => {
     await expect(client.stderr).toOutput('example-19.com');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "domains"').toEqual(0);
+    await expect(client.stderr).toOutput('example-19.com');
+  });
+
+  it('tracks subcommand invocation', async () => {
+    useUser();
+    useDomains();
+    client.setArgv('domains', 'ls');
+    let exitCode = await domains(client);
+    expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:list',
+        value: 'ls',
+      },
+    ]);
   });
 
   describe('--limit', () => {
@@ -21,11 +37,50 @@ describe('domains ls', () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
-      const exitCodePromise = domains(client);
-      await expect(client.stderr).toOutput('example-1.com');
-      const exitCode = await exitCodePromise;
+      const exitCode = await domains(client);
       expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+      await expect(client.stderr).toOutput('example-1.com');
+    });
+
+    it('tracks telemetry data', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--limit', '2');
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:limit',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
-  describe.todo('--next');
+
+  describe('--next', () => {
+    it('tracks telemetry data', async () => {
+      useUser();
+      useDomains();
+      client.setArgv('domains', 'ls', '--next', '1730124407638');
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'option:next',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 });

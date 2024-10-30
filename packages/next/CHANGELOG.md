@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.3.18
+
+### Patch Changes
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
+## 4.3.17
+
+### Patch Changes
+
+- Fix caching issue with prerenders while Partial Prerendering is enabled ([#12325](https://github.com/vercel/vercel/pull/12325))
+
+- Revert disabling generation of route shells ([#12323](https://github.com/vercel/vercel/pull/12323))
+
 ## 4.3.16
 
 ### Patch Changes

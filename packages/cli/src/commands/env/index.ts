@@ -14,6 +14,8 @@ import rm from './rm';
 import { envCommand } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
 
 const COMMAND_CONFIG = {
   ls: ['ls', 'list'],
@@ -23,6 +25,12 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
+  const telemetryClient = new EnvTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(envCommand.options);
@@ -35,8 +43,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output } = client;
-
   if (parsedArgs.flags['--help']) {
     output.print(help(envCommand, { columns: client.stderr.columns }));
     return 2;
@@ -48,7 +54,6 @@ export default async function main(client: Client) {
 
   const target =
     parseTarget({
-      output,
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
@@ -67,12 +72,16 @@ export default async function main(client: Client) {
     config.currentTeam = link.org.type === 'team' ? link.org.id : undefined;
     switch (subcommand) {
       case 'ls':
+        telemetryClient.trackCliSubcommandLs(subcommand);
         return ls(client, link, parsedArgs.flags, args);
       case 'add':
+        telemetryClient.trackCliSubcommandAdd(subcommand);
         return add(client, link, parsedArgs.flags, args);
       case 'rm':
+        telemetryClient.trackCliSubcommandRm(subcommand);
         return rm(client, link, parsedArgs.flags, args);
       case 'pull':
+        telemetryClient.trackCliSubcommandPull(subcommand);
         return pull(
           client,
           link,
@@ -84,9 +93,7 @@ export default async function main(client: Client) {
         );
       default:
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        client.output.print(
-          help(envCommand, { columns: client.stderr.columns })
-        );
+        output.print(help(envCommand, { columns: client.stderr.columns }));
         return 2;
     }
   }

@@ -16,6 +16,7 @@ import { GitMetadata, Org } from '@vercel-internals/types';
 import { VercelConfig } from './dev/types';
 import Client, { FetchOptions, isJSONObject } from './client';
 import { ArchiveFormat, Dictionary } from '@vercel/client';
+import output from '../output-manager';
 
 export interface NowOptions {
   client: Client;
@@ -180,7 +181,7 @@ export default class Now {
 
     if (deployment && deployment.warnings) {
       let sizeExceeded = 0;
-      const { log, warn } = this._client.output;
+      const { log, warn } = output;
 
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
@@ -338,7 +339,7 @@ export default class Now {
   }
 
   _onRetry(err: Error) {
-    this._client.output.debug(`Retrying: ${err}\n${err.stack}`);
+    output.debug(`Retrying: ${err}\n${err.stack}`);
   }
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
@@ -366,11 +367,11 @@ export default class Now {
       body = opts.body;
     }
 
-    const res = await this._client.output.time(
+    const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(this._client, res);
+    printIndications(res);
     return res;
   }
 

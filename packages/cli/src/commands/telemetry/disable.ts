@@ -11,7 +11,7 @@ export default async function disable(client: Client) {
     },
   };
 
-  writeToConfigFile(client.output, client.config);
+  writeToConfigFile(client.config);
   await status(client);
   return 0;
 }

@@ -2,18 +2,16 @@ import ms from 'ms';
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import Client from '../../util/client';
+import { targetCommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
+import { ensureLink } from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
-import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
+import type { CustomEnvironment } from '@vercel-internals/types';
+import output from '../../output-manager';
 
-export default async function list(
-  client: Client,
-  argv: any,
-  args: string[],
-  link: ProjectLinked
-) {
-  const { output } = client;
+export default async function list(client: Client, args: string[]) {
+  const { cwd } = client;
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -23,12 +21,13 @@ export default async function list(
     return 2;
   }
 
+  const link = await ensureLink(targetCommand.name, client, cwd);
+  if (typeof link === 'number') {
+    return link;
+  }
+
   const start = Date.now();
-  const projectSlugLink = formatProject(
-    client,
-    link.org.slug,
-    link.project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
@@ -70,12 +69,7 @@ export default async function list(
                 : 'Preview';
           return [
             [
-              formatEnvironment(
-                client,
-                link.org.slug,
-                link.project.name,
-                target
-              ),
+              formatEnvironment(link.org.slug, link.project.name, target),
               target.slug,
               target.id,
               type,

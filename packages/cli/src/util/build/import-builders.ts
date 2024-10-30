@@ -10,13 +10,13 @@ import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
 import execa from 'execa';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
-import { Output } from '../output';
 import readJSONFile from '../read-json-file';
 import { CantParseJSONFile } from '../errors-ts';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import cmd from '../output/cmd';
 import code from '../output/code';
 import type { Writable } from 'stream';
+import output from '../../output-manager';
 
 export interface BuilderWithPkg {
   path: string;
@@ -38,24 +38,21 @@ const require_ = createRequire(__filename);
  */
 export async function importBuilders(
   builderSpecs: Set<string>,
-  cwd: string,
-  output: Output
+  cwd: string
 ): Promise<Map<string, BuilderWithPkg>> {
   const buildersDir = join(cwd, VERCEL_DIR, 'builders');
 
-  let importResult = await resolveBuilders(buildersDir, builderSpecs, output);
+  let importResult = await resolveBuilders(buildersDir, builderSpecs);
 
   if ('buildersToAdd' in importResult) {
     const installResult = await installBuilders(
       buildersDir,
-      importResult.buildersToAdd,
-      output
+      importResult.buildersToAdd
     );
 
     importResult = await resolveBuilders(
       buildersDir,
       builderSpecs,
-      output,
       installResult.resolvedSpecs
     );
 
@@ -70,7 +67,6 @@ export async function importBuilders(
 export async function resolveBuilders(
   buildersDir: string,
   builderSpecs: Set<string>,
-  output: Output,
   resolvedSpecs?: Map<string, string>
 ): Promise<ResolveBuildersResult> {
   const builders = new Map<string, BuilderWithPkg>();
@@ -195,8 +191,7 @@ export async function resolveBuilders(
 
 async function installBuilders(
   buildersDir: string,
-  buildersToAdd: Set<string>,
-  output: Output
+  buildersToAdd: Set<string>
 ) {
   const resolvedSpecs = new Map<string, string>();
   const buildersPkgPath = join(buildersDir, 'package.json');

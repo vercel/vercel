@@ -9,9 +9,45 @@ import { useUser } from '../../../mocks/user';
 import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
-  describe('[deploymentId|deploymentName]', () => {
-    describe.todo('--yes');
-    describe.todo('--no-wait');
+  describe('[url|deploymentId]', () => {
+    it('tracks redacted deploymentId|deploymentName', async () => {
+      const { fromDeployment, toDeployment } = initRedeployTest();
+      toDeployment.readyState = 'QUEUED';
+      client.setArgv('rollback', fromDeployment.id);
+
+      const exitCodePromise = redeploy(client);
+
+      toDeployment.readyState = 'READY';
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:urlOrDeploymentId',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    describe('--no-wait', () => {
+      it('tracks use of --no-wait', async () => {
+        const { fromDeployment, toDeployment } = initRedeployTest();
+        toDeployment.readyState = 'QUEUED';
+        client.setArgv('rollback', fromDeployment.id, '--no-wait');
+
+        const exitCodePromise = redeploy(client);
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:no-wait',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
   });
 
   it('should error if missing deployment url', async () => {

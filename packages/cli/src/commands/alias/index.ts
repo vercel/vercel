@@ -1,5 +1,5 @@
 import { handleError } from '../../util/error';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
@@ -9,6 +9,7 @@ import set from './set';
 import { aliasCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   default: ['set'],
@@ -18,9 +19,8 @@ const COMMAND_CONFIG = {
 };
 
 export default async function alias(client: Client) {
-  let telemetryClient = new AliasTelemetryClient({
+  const telemetryClient = new AliasTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -37,7 +37,7 @@ export default async function alias(client: Client) {
   }
 
   if (parsedArguments.flags['--help']) {
-    client.output.print(help(aliasCommand, { columns: client.stderr.columns }));
+    output.print(help(aliasCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
@@ -51,6 +51,7 @@ export default async function alias(client: Client) {
       telemetryClient.trackCliSubcommandLs(subcommandOriginal);
       return ls(client, parsedArguments.flags, args);
     case 'rm':
+      telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArguments.flags, args);
     default:
       telemetryClient.trackCliSubcommandSet(subcommandOriginal);

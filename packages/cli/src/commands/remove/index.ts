@@ -16,18 +16,25 @@ import { getCommandName } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import type Client from '../../util/client';
-import { Output } from '../../util/output';
 import { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RemoveTelemetryClient } from '../../util/telemetry/commands/remove';
+import output from '../../output-manager';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
 };
 
 export default async function remove(client: Client) {
+  const telemetryClient = new RemoveTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(removeCommand.options);
@@ -35,12 +42,14 @@ export default async function remove(client: Client) {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliArgumentNameOrDeploymentId(parsedArgs.args[0]);
+    telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
+    telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
+    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
     handleError(error);
     return 1;
   }
-
-  const { output } = client;
 
   if (parsedArgs.flags['--help']) {
     output.print(help(removeCommand, { columns: client.stderr.columns }));
@@ -55,7 +64,7 @@ export default async function remove(client: Client) {
   const hard = parsedArgs.flags['--hard'];
   const skipConfirmation = parsedArgs.flags['--yes'];
   const safe = parsedArgs.flags['--safe'];
-  const ids: string[] = parsedArgs.args;
+  const ids = parsedArgs.args;
   const { success, error, log } = output;
 
   if (ids.length < 1) {
@@ -187,7 +196,7 @@ export default async function remove(client: Client) {
 
   if (!skipConfirmation) {
     const confirmation = (
-      await readConfirmation(deployments, projects, output)
+      await readConfirmation(deployments, projects)
     ).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
@@ -227,8 +236,7 @@ export default async function remove(client: Client) {
 
 function readConfirmation(
   deployments: DeploymentWithAliases[],
-  projects: Project[],
-  output: Output
+  projects: Project[]
 ): Promise<string> {
   return new Promise(resolve => {
     if (deployments.length > 0) {

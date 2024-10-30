@@ -11,6 +11,8 @@ import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
+import { AliasRmTelemetryClient } from '../../util/telemetry/commands/alias/remove';
+import output from '../../output-manager';
 
 type Options = {
   '--yes': boolean;
@@ -21,10 +23,16 @@ export default async function rm(
   opts: Partial<Options>,
   args: string[]
 ) {
-  const { output } = client;
   const { contextName } = await getScope(client);
+  const telemetryClient = new AliasRmTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   const [aliasOrId] = args;
+  telemetryClient.trackCliArgumentAlias(aliasOrId);
 
   if (args.length !== 1) {
     output.error(
@@ -46,7 +54,7 @@ export default async function rm(
     return 1;
   }
 
-  const alias = await findAliasByAliasOrId(output, client, aliasOrId);
+  const alias = await findAliasByAliasOrId(client, aliasOrId);
 
   if (!alias) {
     output.error(
@@ -82,7 +90,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
     { hsep: 4 }
   );
 
-  client.output.log(`The following alias will be removed permanently`);
-  client.output.print(`  ${tbl}\n`);
+  output.log(`The following alias will be removed permanently`);
+  output.print(`  ${tbl}\n`);
   return confirm(client, chalk.red('Are you sure?'), false);
 }
