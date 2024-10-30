@@ -11,7 +11,6 @@ describe('domains ls', () => {
     useDomains();
     client.setArgv('domains', 'ls');
     let exitCodePromise = domains(client);
-    await expect(client.stderr).toOutput('example-19.com');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "domains"').toEqual(0);
     await expect(client.stderr).toOutput('example-19.com');
