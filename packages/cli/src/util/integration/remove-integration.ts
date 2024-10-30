@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Configuration } from '../../commands/integration/types';
+import type { Configuration } from './types';
 import type { Team } from '@vercel-internals/types';
 
 export async function removeIntegration(

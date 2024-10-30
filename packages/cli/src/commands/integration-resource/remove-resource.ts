@@ -1,18 +1,22 @@
-import chalk from 'chalk';
-import type Client from '../../../util/client';
-import getScope from '../../../util/get-scope';
-import { CancelledError, FailedError, type Resource } from '../types';
-import { getResources } from '../../../util/integration/get-resources';
-import { removeSubcommand } from './command';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { parseArguments } from '../../../util/get-args';
-import handleError from '../../../util/handle-error';
 import type { Team } from '@vercel-internals/types';
-import confirm from '../../../util/input/confirm';
-import { deleteResource as _deleteResource } from '../../../util/integration/delete-resource';
+import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import handleError from '../../util/handle-error';
+import confirm from '../../util/input/confirm';
+import { deleteResource as _deleteResource } from '../../util/integration-resource/delete-resource';
+import { getResources } from '../../util/integration-resource/get-resources';
+import {
+  CancelledError,
+  FailedError,
+  type Resource,
+} from '../../util/integration-resource/types';
+import { IntegrationResourceRemoveTelemetryClient } from '../../util/telemetry/commands/integration-resource/remove';
+import { removeSubcommand } from './command';
 import { handleDisconnectAllProjects } from './disconnect';
-import output from '../../../output-manager';
-import { IntegrationResourceRemoveTelemetryClient } from '../../../util/telemetry/commands/integration/resource/remove';
 
 export async function remove(client: Client) {
   const telemetry = new IntegrationResourceRemoveTelemetryClient({

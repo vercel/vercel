@@ -6,7 +6,7 @@ import type {
   MetadataEntry,
   MetadataSchema,
   MetadataSchemaProperty,
-} from './types';
+} from '../../util/integration/types';
 
 // This is a set of all the UI controls that the metadata wizard supports.
 // For all options see https://vercel.com/docs/integrations/marketplace-product#metadata-schema

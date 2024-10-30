@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import type { Configuration } from './types';
+import type { Configuration } from '../../util/integration/types';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';

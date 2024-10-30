@@ -1,18 +1,18 @@
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import getInvalidSubcommand from '../../../util/get-invalid-subcommand';
-import getSubcommand from '../../../util/get-subcommand';
-import { type Command, help } from '../../help';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
+import { IntegrationResourceTelemetryClient } from '../../util/telemetry/commands/integration-resource';
+import { type Command, help } from '../help';
 import {
-  removeSubcommand,
   disconnectSubcommand,
   integrationResourceCommand,
+  removeSubcommand,
 } from './command';
-import { remove } from './remove-resource';
 import { disconnect } from './disconnect';
-import output from '../../../output-manager';
-import { IntegrationResourceTelemetryClient } from '../../../util/telemetry/commands/integration/resource';
+import { remove } from './remove-resource';
 
 const COMMAND_CONFIG = {
   remove: ['remove', 'rm'],

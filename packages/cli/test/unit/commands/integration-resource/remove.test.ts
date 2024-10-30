@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import integrationResourceCommand from '../../../../src/commands/integration/resource';
+import integrationResourceCommand from '../../../../src/commands/integration-resource';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
 import { type Team, useTeams } from '../../../mocks/team';

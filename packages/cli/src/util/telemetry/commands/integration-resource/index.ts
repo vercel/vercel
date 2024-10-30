@@ -1,4 +1,4 @@
-import { TelemetryClient } from '../../..';
+import { TelemetryClient } from '../..';
 
 export class IntegrationResourceTelemetryClient extends TelemetryClient {
   trackCliSubcommandRemove(actual: string) {

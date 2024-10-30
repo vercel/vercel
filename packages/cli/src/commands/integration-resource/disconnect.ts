@@ -1,25 +1,25 @@
 import chalk from 'chalk';
-import output from '../../../output-manager';
-import type Client from '../../../util/client';
-import { parseArguments } from '../../../util/get-args';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import getScope from '../../../util/get-scope';
-import handleError from '../../../util/handle-error';
-import confirm from '../../../util/input/confirm';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import handleError from '../../util/handle-error';
+import confirm from '../../util/input/confirm';
 import {
   disconnectResourceFromAllProjects,
   disconnectResourceFromProject,
-} from '../../../util/integration/disconnect-resource-from-project';
-import { getResources } from '../../../util/integration/get-resources';
-import { getLinkedProject } from '../../../util/projects/link';
+} from '../../util/integration-resource/disconnect-resource-from-project';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { getLinkedProject } from '../../util/projects/link';
+import { IntegrationResourceDisconnectTelemetryClient } from '../../util/telemetry/commands/integration-resource/disconnect';
 import {
   CancelledError,
   FailedError,
   type Resource,
   type ResourceConnection,
-} from '../types';
+} from '../../util/integration-resource/types';
 import { disconnectSubcommand } from './command';
-import { IntegrationResourceDisconnectTelemetryClient } from '../../../util/telemetry/commands/integration/resource/disconnect';
 
 export async function disconnect(client: Client) {
   const telemetry = new IntegrationResourceDisconnectTelemetryClient({

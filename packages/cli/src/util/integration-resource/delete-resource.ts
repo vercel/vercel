@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Resource } from '../../commands/integration/types';
+import type { Resource } from '../integration-resource/types';
 import type { Team } from '@vercel-internals/types';
 
 export async function deleteResource(

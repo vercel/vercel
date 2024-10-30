@@ -1,8 +1,5 @@
 import type Client from '../client';
-import type {
-  Resource,
-  ResourceConnection,
-} from '../../commands/integration/types';
+import type { Resource, ResourceConnection } from './types';
 
 export async function disconnectResourceFromProject(
   client: Client,

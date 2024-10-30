@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import integrationResourceCommand from '../../../../src/commands/integration/resource';
+import integrationResourceCommand from '../../../../src/commands/integration-resource';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('integration-resource', () => {
   describe('disconnect', () => {
