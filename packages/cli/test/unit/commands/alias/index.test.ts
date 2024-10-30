@@ -21,7 +21,7 @@ describe('alias', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:default`,
+          value: command,
         },
       ]);
     });

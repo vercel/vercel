@@ -44,7 +44,7 @@ export default async function main(client: Client) {
   subcommand = parsedArgs.args[0] || 'list';
 
   if (parsedArgs.flags['--help']) {
-    telemetryClient.trackCliFlagHelp('project', subcommand);
+    telemetryClient.trackCliFlagHelp('project', parsedArgs.args[0]);
     output.print(help(projectCommand, { columns: client.stderr.columns }));
     return 2;
   }

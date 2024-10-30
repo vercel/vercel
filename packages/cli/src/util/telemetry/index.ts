@@ -92,7 +92,7 @@ export class TelemetryClient {
     });
   }
 
-  trackCliFlag(flag: string) {
+  protected trackCliFlag(flag: string) {
     this.track({
       key: `flag:${flag}`,
       value: 'TRUE',

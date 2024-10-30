@@ -11,14 +11,17 @@ describe('alias ls', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('alias', 'ls', '--help');
+      const command = 'alias';
+      const subcommand = 'rm';
+
+      client.setArgv(command, subcommand, '--help');
       const exitCodePromise = alias(client);
       await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: `flag:help`,
-          value: 'alias:ls',
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
         },
       ]);
     });
