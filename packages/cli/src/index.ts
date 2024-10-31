@@ -358,6 +358,7 @@ const main = async () => {
   }
 
   if (subcommand === 'help') {
+    telemetry.trackCliCommandHelp('help');
     subcommand = subSubCommand || 'deploy';
     client.argv.push('-h');
   }

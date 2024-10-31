@@ -35,6 +35,24 @@ describe('env add', () => {
     client.cwd = cwd;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'add';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     describe('--sensitive', () => {
       it('tracks flag', async () => {
@@ -160,7 +178,8 @@ describe('env add', () => {
           await expect(client.stderr).toOutput(
             'Added Environment Variable REDIS_CONNECTION_STRING to Project vercel-env-pull'
           );
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "env"').toEqual(0);
         });
 
         it('tracks telemetry events', async () => {

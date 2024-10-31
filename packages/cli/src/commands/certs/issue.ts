@@ -27,7 +27,7 @@ export default async function issue(
   const addStamp = stamp();
   const {
     '--challenge-only': challengeOnly,
-    '--overwrite': overwite,
+    '--overwrite': overwrite,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
@@ -39,12 +39,12 @@ export default async function issue(
     },
   });
   telemetry.trackCliFlagChallengeOnly(challengeOnly);
-  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliFlagOverwrite(overwrite);
   telemetry.trackCliOptionCrt(crtPath);
   telemetry.trackCliOptionKey(keyPath);
   telemetry.trackCliOptionCa(caPath);
 
-  if (overwite) {
+  if (overwrite) {
     output.error('Overwrite option is deprecated');
     return 1;
   }

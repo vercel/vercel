@@ -61,6 +61,7 @@ export default async function list(client: Client) {
   });
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('list');
     print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
   }

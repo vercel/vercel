@@ -5,6 +5,24 @@ import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('rm', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'project';
+      const subcommand = 'rm';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = projects(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     it('should remove a project', async () => {
       useUser();

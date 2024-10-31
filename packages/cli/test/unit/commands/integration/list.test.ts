@@ -15,6 +15,24 @@ describe('integration', () => {
       useUser();
     });
 
+    describe('--help', () => {
+      it('tracks telemetry', async () => {
+        const command = 'integration';
+        const subcommand = 'list';
+
+        client.setArgv(command, subcommand, '--help');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(2);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:help',
+            value: `${command}:${subcommand}`,
+          },
+        ]);
+      });
+    });
+
     describe('table responses', () => {
       let team: Team;
       beforeEach(() => {
@@ -33,8 +51,8 @@ describe('integration', () => {
 
       it('returns only marketplace resources for the linked project', async () => {
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
         let line = await lines.next();
@@ -80,8 +98,8 @@ describe('integration', () => {
 
       it('should track subcommand usage', async () => {
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -99,8 +117,8 @@ describe('integration', () => {
 
         it('returns only marketplace resources for project specified in positional argument', async () => {
           client.setArgv('integration', 'list', 'connected-project');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           const lines = createLineIterator(client.stderr);
 
           let line = await lines.next();
@@ -143,8 +161,8 @@ describe('integration', () => {
 
         it('should track redacted project name positional argument', async () => {
           client.setArgv('integration', 'list', 'connected-project');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -162,8 +180,8 @@ describe('integration', () => {
       describe('--all', () => {
         it('returns all projects with the --all flag', async () => {
           client.setArgv('integration', 'list', '--all');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           const lines = createLineIterator(client.stderr);
 
           let line = await lines.next();
@@ -226,8 +244,8 @@ describe('integration', () => {
 
         it('should track usage with --all flag', async () => {
           client.setArgv('integration', 'list', '--all');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -245,8 +263,8 @@ describe('integration', () => {
       describe('--integration', () => {
         it('returns only the selected integration when filtering', async () => {
           client.setArgv('integration', 'list', '--integration', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           const lines = createLineIterator(client.stderr);
 
           let line = await lines.next();
@@ -287,8 +305,8 @@ describe('integration', () => {
             '--integration',
             'acme'
           );
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           const lines = createLineIterator(client.stderr);
 
           let line = await lines.next();
@@ -340,8 +358,8 @@ describe('integration', () => {
 
         it('should track usage with --integration flag for known value', async () => {
           client.setArgv('integration', 'list', '--integration', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -357,8 +375,8 @@ describe('integration', () => {
 
         it('should track redacted usage with --integration flag for unknown value', async () => {
           client.setArgv('integration', 'list', '--integration', 'other');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -377,8 +395,8 @@ describe('integration', () => {
     describe('errors', () => {
       it('should error when there is no team', async () => {
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput('Error: Team not found.');
       });
 
@@ -394,8 +412,8 @@ describe('integration', () => {
         client.cwd = cwd;
 
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
         );
@@ -414,8 +432,8 @@ describe('integration', () => {
           'current-project',
           'other-project'
         );
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify more than one project at a time. Use `--all` to show all resources.'
         );
@@ -429,8 +447,8 @@ describe('integration', () => {
         client.cwd = cwd;
 
         client.setArgv('integration', 'list', 'other-project', '--all');
-        const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify a project when using the `--all` flag.'
         );

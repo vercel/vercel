@@ -13,6 +13,23 @@ import {
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 describe('link', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'link';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = link(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();
@@ -63,7 +80,8 @@ describe('link', () => {
         `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
 
       const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
       expect(repoJson).toMatchObject({
@@ -101,8 +119,8 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--repo', '--yes');
-      const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -137,7 +155,8 @@ describe('link', () => {
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
@@ -157,8 +176,8 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--project', project.name!, '--yes');
-      const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -193,7 +212,9 @@ describe('link', () => {
       await expect(client.stderr).toOutput(
         `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
       );
-      await expect(exitCodePromise).resolves.toEqual(0);
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
@@ -213,8 +234,8 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--yes');
-      const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -239,8 +260,8 @@ describe('link', () => {
 
       client.cwd = cwd;
       client.setArgv('--confirm');
-      const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await link(client);
+      expect(exitCode, 'exit code for "link"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -280,7 +301,8 @@ describe('link', () => {
       `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
@@ -305,14 +327,16 @@ describe('link', () => {
 
     client.cwd = cwd;
     client.setArgv('--project', proj1.name!, '--yes');
-    await expect(link(client)).resolves.toEqual(0);
+    const exitCodeLink1 = await link(client);
+    expect(exitCodeLink1, 'exit code for "link"').toEqual(0);
 
     let projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(proj1.id);
 
     client.setArgv('--project', proj2.name!, '--yes');
-    await expect(link(client)).resolves.toEqual(0);
+    const exitCodeLink2 = await link(client);
+    expect(exitCodeLink2, 'exit code for "link"').toEqual(0);
 
     projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
@@ -335,7 +359,9 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       `The \`vc link <directory>\` syntax is deprecated, please use \`vc link --cwd ${cwd}\` instead`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {

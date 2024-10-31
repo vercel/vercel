@@ -22,7 +22,7 @@ type ToTelemetryOptionNameByType<
 // ToTelemetryOptionName<{ name: 'foo', type: [StringConstructor] }> → 'trackCliOptionFoo'
 // ToTelemetryOptionName<{ name: 'foo', type: [NumberConstructor] }> → 'trackCliOptionFoo'
 type ToTelemetryOptionName<Opt extends CommandOption> =
-  Opt['type'] extends readonly any[]
+  Opt['type'] extends readonly PrimitiveConstructor[]
     ? ToTelemetryOptionNameByType<Opt['name'], Opt['type'][0]>
     : Opt['type'] extends PrimitiveConstructor
       ? ToTelemetryOptionNameByType<Opt['name'], Opt['type']>
@@ -32,7 +32,7 @@ type ToTelemetryOptionName<Opt extends CommandOption> =
 // ToArgType<StringConstructor> → string
 // ToArgType<[StringConstructor]> → [string]
 type ToArgType<OptType extends CommandOption['type']> =
-  OptType extends readonly any[]
+  OptType extends readonly PrimitiveConstructor[]
     ? [ToArgType<OptType[0]>]
     : OptType extends PrimitiveConstructor
       ? ReturnType<OptType>

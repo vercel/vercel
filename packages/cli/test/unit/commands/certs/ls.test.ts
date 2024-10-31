@@ -5,6 +5,24 @@ import { useCert } from '../../../mocks/certs';
 import certs from '../../../../src/commands/certs';
 
 describe('certs ls', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'certs';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = certs(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   it('should list up to 20 certs by default', async () => {
     useUser();
     useCert();
@@ -12,7 +30,8 @@ describe('certs ls', () => {
     client.setArgv('certs', 'ls');
     const exitCodePromise = certs(client);
     await expect(client.stdout).toOutput('dummy-19.cert');
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "certs"').toEqual(0);
   });
 
   it('tracks subcommand invocation', async () => {
@@ -60,7 +79,8 @@ describe('certs ls', () => {
       client.setArgv('certs', 'ls', '--limit', '2');
       const exitCodePromise = certs(client);
       await expect(client.stdout).toOutput('dummy-1.cert');
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "certs"').toEqual(0);
     });
 
     it('tracks usage', async () => {

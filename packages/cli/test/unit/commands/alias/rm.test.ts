@@ -4,6 +4,24 @@ import alias from '../../../../src/commands/alias';
 import { useUser } from '../../../mocks/user';
 
 describe('alias rm', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'alias';
+      const subcommand = 'rm';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('no argument', () => {
     it.todo('errors');
   });
@@ -19,8 +37,8 @@ describe('alias rm', () => {
         response.json({});
       });
       client.setArgv('alias', 'rm', 'custom', '--yes');
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await alias(client);
+      expect(exitCode, 'exit code for "alias"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -58,8 +76,8 @@ describe('alias rm', () => {
           response.json({});
         });
         client.setArgv('alias', 'rm', 'custom', '--yes');
-        const exitCodePromise = alias(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await alias(client);
+        expect(exitCode, 'exit code for "alias"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {

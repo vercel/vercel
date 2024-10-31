@@ -33,14 +33,15 @@ export default async function main(client: Client) {
     },
   });
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(targetCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   parsedArgs.args = parsedArgs.args.slice(1);
   const subcommand = parsedArgs.args[0];
   const args = parsedArgs.args.slice(1);
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('target');
+    output.print(help(targetCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
 
   switch (subcommand) {
     case 'ls':

@@ -44,10 +44,4 @@ export class DevTelemetryClient
       this.trackCliFlag('confirm');
     }
   }
-
-  trackCliFlagHelp(help: boolean | undefined) {
-    if (help) {
-      this.trackCliFlag('help');
-    }
-  }
 }
