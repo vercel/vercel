@@ -3,11 +3,13 @@ import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const aliasCommand = {
   name: 'alias',
+  aliases: ['aliases', 'ln'],
   description: 'Interact with deployment aliases.',
   arguments: [],
   subcommands: [
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'Show all aliases.',
       arguments: [],
       options: [],
@@ -15,6 +17,7 @@ export const aliasCommand = {
     },
     {
       name: 'set',
+      aliases: [],
       description: 'Create a new alias',
       default: true,
       arguments: [
@@ -32,6 +35,7 @@ export const aliasCommand = {
     },
     {
       name: 'rm',
+      aliases: ['remove'],
       description: 'Remove an alias using its hostname.',
       arguments: [
         {
