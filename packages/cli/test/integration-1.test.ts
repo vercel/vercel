@@ -523,6 +523,8 @@ test('deploy using --local-config flag above target', async () => {
 
 test('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
+  // Randomness is required so that tests can run in
+  // parallel on the same project
   const promptEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
   const stdinEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
   const previewEnvVar = `VAR_${randomBytes(8).toString('hex')}`;
