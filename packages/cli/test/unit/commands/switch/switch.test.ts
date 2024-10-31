@@ -21,7 +21,7 @@ describe('switch', () => {
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
-      const exitCode = await exitCodePromise;
+      let exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Success! The team ${team.name} (${team.slug}) is now active!`
@@ -38,7 +38,7 @@ describe('switch', () => {
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[A'); // Up arrow
       client.stdin.write('\r'); // Return key
-      const exitCode = await exitCodePromise;
+      exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Your account (${user.username}) is now active!`
