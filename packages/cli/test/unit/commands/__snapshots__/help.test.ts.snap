@@ -901,6 +901,44 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 "
 `;
 
+exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
+"
+  ▲ vercel dev [dir] [options]
+
+  Starts the \`vercel dev\` server.                                               
+
+  Options:
+
+  -l,  --listen <uri>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Start the \`vercel dev\` server on port 8080
+
+    $ vercel dev --listen 8080
+
+  - Make the \`vercel dev\` server bind to localhost on port 5000
+
+    $ vercel dev --listen 127.0.0.1:5000 
+
+"
+`;
+
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
   ▲ vercel dns command [options]
