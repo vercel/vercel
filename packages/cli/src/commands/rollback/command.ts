@@ -3,6 +3,7 @@ import { yesOption } from '../../util/arg-common';
 
 export const rollbackCommand = {
   name: 'rollback',
+  aliases: [],
   description: 'Quickly revert back to a previous deployment.',
   arguments: [
     {
