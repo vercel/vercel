@@ -10,6 +10,23 @@ describe('dns', () => {
     lsSpy.mockClear();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('routes to ls subcommand', async () => {
     const args = ['example.com'];
     const opts = {};

@@ -45,6 +45,7 @@ export default async function main(client: Client) {
   const needHelp = flags['--help'];
 
   if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('integration');
     output.print(help(integrationCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -56,6 +57,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'add': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', 'add');
         printHelp(addSubcommand);
         return 2;
       }
@@ -64,6 +66,7 @@ export default async function main(client: Client) {
     }
     case 'list': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', 'list');
         printHelp(listSubcommand);
         return 2;
       }
@@ -72,6 +75,7 @@ export default async function main(client: Client) {
     }
     case 'open': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', 'open');
         printHelp(openSubcommand);
         return 2;
       }
@@ -80,6 +84,7 @@ export default async function main(client: Client) {
     }
     case 'remove': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', 'remove');
         printHelp(removeSubcommand);
         return 2;
       }

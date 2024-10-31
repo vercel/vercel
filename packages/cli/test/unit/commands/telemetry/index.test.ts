@@ -10,6 +10,23 @@ describe('telemetry', () => {
     setSpy.mockClear();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'telemetry';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = telemetry(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should show an error with the telemetry help menu when no subcommands are passed', async () => {
     const args: string[] = [];
 

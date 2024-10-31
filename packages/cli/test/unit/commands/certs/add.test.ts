@@ -3,6 +3,24 @@ import { client } from '../../../mocks/client';
 import certs from '../../../../src/commands/certs';
 
 describe('certs add', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'certs';
+      const subcommand = 'add';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = certs(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   it('exit code 1 for missing options', async () => {
     client.setArgv('certs', 'add');
     const exitCodePromise = certs(client);

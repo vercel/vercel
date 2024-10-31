@@ -6,6 +6,24 @@ import { useDomain } from '../../../mocks/domains';
 import { useProject } from '../../../mocks/project';
 
 describe('domains inspect', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+      const subcommand = 'inspect';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     it('tracks use of argument', async () => {
       const domain = useDomain('9');

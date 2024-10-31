@@ -49,4 +49,15 @@ export class DomainsTelemetryClient extends TelemetryClient {
       value: actual,
     });
   }
+
+  trackCliFlagHelp(command: string, subcommand?: string | string[]) {
+    let passedSubcommand;
+    if (subcommand === 'transferIn') {
+      passedSubcommand = 'transfer-in';
+    } else {
+      passedSubcommand = subcommand;
+    }
+
+    super.trackCliFlagHelp(command, passedSubcommand);
+  }
 }

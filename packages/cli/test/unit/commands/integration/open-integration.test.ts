@@ -21,6 +21,24 @@ beforeEach(() => {
 
 describe('integration', () => {
   describe('open', () => {
+    describe('--help', () => {
+      it('tracks telemetry', async () => {
+        const command = 'integration';
+        const subcommand = 'open';
+
+        client.setArgv(command, subcommand, '--help');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(2);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:help',
+            value: `${command}:${subcommand}`,
+          },
+        ]);
+      });
+    });
+
     it('should track subcommand usage', async () => {
       client.setArgv('integration', 'open');
       const exitCodePromise = integrationCommand(client);

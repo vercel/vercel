@@ -40,15 +40,17 @@ export default async function dns(client: Client) {
     },
   });
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(dnsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const { subcommand, subcommandOriginal, args } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('dns', subcommand);
+    output.print(help(dnsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
   switch (subcommand) {
     case 'add':
       telemetry.trackCliSubcommandAdd(subcommandOriginal);

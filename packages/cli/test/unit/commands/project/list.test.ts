@@ -9,6 +9,24 @@ import { client } from '../../../mocks/client';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('list', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'project';
+      const subcommand = 'list';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = projects(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('--update-required', () => {
     it('should track flag', async () => {
       useUser();

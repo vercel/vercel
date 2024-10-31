@@ -10,6 +10,23 @@ import { useDeployment } from '../../../mocks/deployment';
 import { useUser } from '../../../mocks/user';
 
 describe('remove', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'remove';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = remove(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('fails', () => {
     it('should error if missing deployment url', async () => {
       client.setArgv('remove');
