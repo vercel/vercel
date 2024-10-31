@@ -39,8 +39,8 @@ describe('git', () => {
         name: 'new-connection',
       });
       client.setArgv('git');
-      const exitCodePromise = git(client);
-      await expect(exitCodePromise).resolves.toBe(2);
+      const exitCode = await git(client);
+      await expect(exitCode, 'exit code for git').toBe(2);
     } finally {
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     }
