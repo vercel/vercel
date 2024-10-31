@@ -33,7 +33,8 @@ describe('dns ls', () => {
       client.setArgv('dns', 'ls');
       let exitCodePromise = dns(client);
       await expect(client.stderr).toOutput('example-19.com');
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "dns"').toEqual(0);
     });
 
     it('track subcommand invocation', async () => {
@@ -54,7 +55,8 @@ describe('dns ls', () => {
         client.setArgv('dns', 'ls', '--limit', '2');
         let exitCodePromise = dns(client);
         await expect(client.stderr).toOutput('example-2.com');
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "dns"').toEqual(0);
       });
 
       it('track subcommand invocation', async () => {

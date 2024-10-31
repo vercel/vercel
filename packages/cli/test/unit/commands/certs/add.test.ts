@@ -32,8 +32,8 @@ describe('certs add', () => {
 
   it('should track subcommand usage', async () => {
     client.setArgv('certs', 'add');
-    const exitCodePromise = certs(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await certs(client);
+    expect(exitCode, 'exit code for "certs"').toEqual(1);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:add',
@@ -52,8 +52,8 @@ describe('certs add', () => {
 
     it('should track usage of deprecated `--overwrite` flag', async () => {
       client.setArgv('certs', 'add', '--overwrite');
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await certs(client);
+      expect(exitCode, 'exit code for "certs"').toEqual(1);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:add',
@@ -70,8 +70,8 @@ describe('certs add', () => {
   describe('--crt', () => {
     it('should track usage of `--crt` flag', async () => {
       client.setArgv('certs', 'add', '--crt', 'path/to/crt');
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await certs(client);
+      expect(exitCode, 'exit code for "certs"').toEqual(1);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:add',
@@ -88,8 +88,8 @@ describe('certs add', () => {
   describe('--key', () => {
     it('should track usage of `--key` flag', async () => {
       client.setArgv('certs', 'add', '--key', 'path/to/key');
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await certs(client);
+      expect(exitCode, 'exit code for "certs"').toEqual(1);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:add',
@@ -106,8 +106,8 @@ describe('certs add', () => {
   describe('--ca', () => {
     it('should track usage of `--ca` flag', async () => {
       client.setArgv('certs', 'add', '--ca', 'path/to/ca');
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await certs(client);
+      expect(exitCode, 'exit code for "certs"').toEqual(1);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:add',

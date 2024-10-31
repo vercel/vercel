@@ -48,7 +48,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.development.local')
@@ -69,7 +70,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       'Command `vercel pull` requires confirmation. Use option "--yes" to confirm.'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(1);
   });
 
   it('should fail without message to pull without a link and with --env', async () => {
@@ -88,7 +90,8 @@ describe('pull', () => {
     await expect(client.stderr).not.toOutput(
       'Command `vercel pull` requires confirmation. Use option "--yes" to confirm.'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(1);
   });
 
   it('should handle pulling with env vars (headless mode)', async () => {
@@ -122,7 +125,8 @@ describe('pull', () => {
       await expect(client.stderr).toOutput(
         `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
       );
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "pull"').toEqual(0);
 
       const config = await fs.readJSON(path.join(cwd, '.vercel/project.json'));
       expect(config).toMatchInlineSnapshot(`
@@ -161,7 +165,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawPreviewEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.preview.local')
@@ -205,7 +210,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawProdEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.production.local')
@@ -255,7 +261,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
   });
 
   it('should track --yes', async () => {
