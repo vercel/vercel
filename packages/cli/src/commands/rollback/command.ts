@@ -14,6 +14,7 @@ export const rollbackCommand = {
   subcommands: [
     {
       name: 'status',
+      aliases: [],
       description: 'Show the status of any current pending rollbacks',
       arguments: [
         {

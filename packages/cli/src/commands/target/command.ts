@@ -8,6 +8,7 @@ export const targetCommand = {
   subcommands: [
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'Show all targets in the current project',
       arguments: [],
       options: [],
