@@ -7,9 +7,9 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
-    { name: 'since', shorthand: null, type: String, deprecated: false },
-    { name: 'until', shorthand: null, type: String, deprecated: false },
-    { name: 'count', shorthand: 'C', type: Number, deprecated: false },
+    { name: 'since', shorthand: null, type: String, deprecated: true },
+    { name: 'until', shorthand: null, type: String, deprecated: true },
+    { name: 'count', shorthand: 'C', type: Number, deprecated: true },
   ],
   examples: [],
 } as const;

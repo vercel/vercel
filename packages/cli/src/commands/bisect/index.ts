@@ -25,9 +25,6 @@ interface Deployments {
   deployments: Deployment[];
 }
 export default async function bisect(client: Client): Promise<number> {
-  const scope = await getScope(client);
-  const { contextName } = scope;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(bisectCommand.options);
@@ -55,6 +52,9 @@ export default async function bisect(client: Client): Promise<number> {
   telemetry.trackCliOptionPath(parsedArgs.flags['--path']);
   telemetry.trackCliOptionRun(parsedArgs.flags['--run']);
   telemetry.trackCliFlagOpen(parsedArgs.flags['--open']);
+
+  const scope = await getScope(client);
+  const { contextName } = scope;
 
   let bad =
     parsedArgs.flags['--bad'] ||
