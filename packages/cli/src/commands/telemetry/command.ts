@@ -1,12 +1,7 @@
 export const telemetryCommand = {
   name: 'telemetry',
   description: 'Allows you to enable or disable telemetry collection.',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'status',

@@ -54,7 +54,7 @@ describe('alias ls', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: `subcommand:ls`,
+          key: `subcommand:list`,
           value: 'ls',
         },
         {
@@ -82,7 +82,7 @@ describe('alias ls', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: `subcommand:ls`,
+          key: `subcommand:list`,
           value: 'ls',
         },
         {

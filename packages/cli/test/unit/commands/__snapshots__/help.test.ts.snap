@@ -2,38 +2,24 @@
 
 exports[`help command > alias help output snapshots > alias help column width 40 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.     
+  Interact with deployment aliases      
 
   Commands:
 
-  ls                     Show   
-                         all    
-                         aliase…
-  set  deployment alias  Create 
-                         a new  
-                         alias  
-  rm   alias             Remove 
-                         an     
-                         alias  
-                         using  
-                         its    
-                         hostna…
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to
-                         return per page     
-                         (default: 20, max:  
-                         100)                
-  -N,  --next <MS>       Show next page of   
-                         results             
-  -y,  --yes             Skip the            
-                         confirmation prompt 
-                         when removing an    
-                         alias               
+  list                      Show   
+                            all    
+                            aliases
+  remove  alias             Remove 
+                            an     
+                            alias  
+                            using  
+                            its    
+                            hostna…
+  set     deployment alias  Create 
+                            a new  
+                            alias  
 
 
   Global Options:
@@ -93,22 +79,15 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
 exports[`help command > alias help output snapshots > alias help column width 80 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.                                             
+  Interact with deployment aliases                                              
 
   Commands:
 
-  ls                     Show all aliases.                              
-  set  deployment alias  Create a new alias                             
-  rm   alias             Remove an alias using its hostname.            
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results                                   
-  -y,  --yes             Skip the confirmation prompt when removing an alias         
+  list                      Show all aliases                               
+  remove  alias             Remove an alias using its hostname             
+  set     deployment alias  Create a new alias                             
 
 
   Global Options:
@@ -144,22 +123,15 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
 exports[`help command > alias help output snapshots > alias help column width 120 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.                                                                                     
+  Interact with deployment aliases                                                                                      
 
   Commands:
 
-  ls                     Show all aliases.                                                                      
-  set  deployment alias  Create a new alias                                                                     
-  rm   alias             Remove an alias using its hostname.                                                    
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next <MS>       Show next page of results                                                                           
-  -y,  --yes             Skip the confirmation prompt when removing an alias                                                 
+  list                      Show all aliases                                                                       
+  remove  alias             Remove an alias using its hostname                                                     
+  set     deployment alias  Create a new alias                                                                     
 
 
   Global Options:

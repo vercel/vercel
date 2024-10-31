@@ -29,7 +29,9 @@ export default async function alias(client: Client) {
   const flagsSpecification = getFlagsSpecification(aliasCommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (err) {
     handleError(err);
     return 1;
@@ -48,13 +50,13 @@ export default async function alias(client: Client) {
 
   switch (subcommand) {
     case 'ls':
-      telemetryClient.trackCliSubcommandLs(subcommandOriginal);
-      return ls(client, parsedArguments.flags, args);
+      telemetryClient.trackCliSubcommandList(subcommandOriginal);
+      return ls(client, args);
     case 'rm':
       telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, parsedArguments.flags, args);
+      return rm(client, args);
     default:
       telemetryClient.trackCliSubcommandSet(subcommandOriginal);
-      return set(client, parsedArguments.flags, args);
+      return set(client, args);
   }
 }
