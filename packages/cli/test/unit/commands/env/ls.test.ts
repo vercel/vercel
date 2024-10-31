@@ -23,6 +23,16 @@ describe('env ls', () => {
     client.cwd = cwd;
   });
 
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      client.setArgv('target', 'ls', 'preview', 'branch-name', 'balderdash');
+      const exitCode = await env(client);
+
+      await expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
   it('tracks `ls` subcommand', async () => {
     client.setArgv('env', 'ls');
     await env(client);

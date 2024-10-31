@@ -9,6 +9,17 @@ import { client } from '../../../mocks/client';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('list', () => {
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      useUser();
+      client.setArgv('project', 'list', 'balderdash');
+      const exitCode = await projects(client);
+
+      await expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'project';
