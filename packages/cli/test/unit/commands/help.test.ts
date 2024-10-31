@@ -25,6 +25,9 @@ import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
+import dev from '../../../src/commands/dev';
+
+import { client } from '../../mocks/client';
 
 describe('help command', () => {
   describe('lineToString', () => {
@@ -58,6 +61,18 @@ describe('help command', () => {
       expect(outputArrayToString(['line 1', 'line 2', 'line 3'])).toBe(
         'line 1\nline 2\nline 3'
       );
+    });
+  });
+
+  describe('dev help output snapshots', () => {
+    describe.todo('help dev');
+    describe('dev --help', async () => {
+      it('outputs help', async () => {
+        client.setArgv('dev', '--help');
+        const exitCode = await dev(client);
+        await expect(exitCode).toEqual(2);
+        expect(client.stderr.read()).toMatchSnapshot();
+      });
     });
   });
 
