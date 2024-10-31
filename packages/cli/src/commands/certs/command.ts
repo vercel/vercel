@@ -5,12 +5,14 @@ import { parseArguments } from '../../util/get-args';
 
 export const certsCommand = {
   name: 'certs',
+  aliases: ['cert'],
   description:
     'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
   arguments: [],
   subcommands: [
     {
       name: 'add',
+      aliases: [],
       description: '',
       arguments: [],
       options: [],
@@ -18,6 +20,7 @@ export const certsCommand = {
     },
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'Show all available certificates',
       arguments: [],
       options: [],
@@ -25,6 +28,7 @@ export const certsCommand = {
     },
     {
       name: 'issue',
+      aliases: [],
       description: ' Issue a new certificate for a domain',
       arguments: [
         {
@@ -37,6 +41,7 @@ export const certsCommand = {
     },
     {
       name: 'rm',
+      aliases: ['remove'],
       description: 'Remove a certificate by id',
       arguments: [
         {
