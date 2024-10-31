@@ -30,6 +30,7 @@ export default async function link(client: Client) {
   });
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('link');
     output.print(help(linkCommand, { columns: client.stderr.columns }));
     return 2;
   }

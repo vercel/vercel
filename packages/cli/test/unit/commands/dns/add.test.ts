@@ -10,6 +10,24 @@ describe('dns add', () => {
     useDns();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+      const subcommand = 'add';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   it('tracks arguments', async () => {
     const recordId = '1';
     client.scenario.get(`/v5/domains/records/${recordId}`, (_req, res) => {

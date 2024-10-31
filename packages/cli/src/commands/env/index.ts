@@ -43,13 +43,15 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  const subArgs = parsedArgs.args.slice(1);
+  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
+
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('env', subcommand);
     output.print(help(envCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const subArgs = parsedArgs.args.slice(1);
-  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
   const { cwd, config } = client;
 
   const target =

@@ -30,6 +30,24 @@ describe('domains buy', () => {
     ]);
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+      const subcommand = 'buy';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     it('should track redacted domain name positional argument', async () => {
       useUser();

@@ -9,6 +9,23 @@ import { useUser } from '../../../mocks/user';
 import { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'redeploy';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = redeploy(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[url|deploymentId]', () => {
     it('tracks redacted deploymentId|deploymentName', async () => {
       const { fromDeployment, toDeployment } = initRedeployTest();

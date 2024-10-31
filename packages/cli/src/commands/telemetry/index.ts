@@ -35,14 +35,15 @@ export default async function telemetry(client: Client) {
     return 1;
   }
 
-  if (parsedArguments.flags['--help']) {
-    output.print(help(telemetryCommand, { columns: client.stderr.columns }));
-  }
-
   const { subcommand } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArguments.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('telemetry', subcommand);
+    output.print(help(telemetryCommand, { columns: client.stderr.columns }));
+  }
 
   switch (subcommand) {
     case 'status':

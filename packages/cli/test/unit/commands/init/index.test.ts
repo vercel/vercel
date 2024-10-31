@@ -41,6 +41,23 @@ beforeEach(() => {
 });
 
 describe('init', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'init';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = init(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should allow selecting a framework to download the source into the expected folder', async () => {
     const cwd = setupTmpDir();
     client.cwd = cwd;

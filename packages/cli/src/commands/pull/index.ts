@@ -71,7 +71,14 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  const telemetryClient = new PullTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('pull');
     output.print(help(pullCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -84,12 +91,6 @@ export default async function main(client: Client) {
       flagName: 'environment',
       flags: parsedArgs.flags,
     }) || 'development';
-
-  const telemetryClient = new PullTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
 
   telemetryClient.trackCliArgumentProjectPath(parsedArgs.args[1]);
   telemetryClient.trackCliFlagYes(autoConfirm);

@@ -12,6 +12,24 @@ describe('teams invite', () => {
     useTeams(currentTeamId);
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'teams';
+      const subcommand = 'invite';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = teams(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[email]', () => {
     beforeEach(() => {
       client.config = {

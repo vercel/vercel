@@ -10,6 +10,24 @@ describe('dns ls', () => {
     useDns();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[domain] missing', () => {
     it('should list up to 20 dns by default', async () => {
       client.setArgv('dns', 'ls');

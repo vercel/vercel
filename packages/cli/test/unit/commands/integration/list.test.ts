@@ -15,6 +15,24 @@ describe('integration', () => {
       useUser();
     });
 
+    describe('--help', () => {
+      it('tracks telemetry', async () => {
+        const command = 'integration';
+        const subcommand = 'list';
+
+        client.setArgv(command, subcommand, '--help');
+        const exitCodePromise = integrationCommand(client);
+        await expect(exitCodePromise).resolves.toEqual(2);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:help',
+            value: `${command}:${subcommand}`,
+          },
+        ]);
+      });
+    });
+
     describe('table responses', () => {
       let team: Team;
       beforeEach(() => {

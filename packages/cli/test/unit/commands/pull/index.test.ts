@@ -10,6 +10,23 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'pull';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = pull(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should handle pulling', async () => {
     const cwd = setupUnitFixture('vercel-pull-next');
     useUser();

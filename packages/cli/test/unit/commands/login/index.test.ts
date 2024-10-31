@@ -14,6 +14,23 @@ describe('login', () => {
   describe.todo('--gitlab');
   describe.todo('--bitbucket');
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'login';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = login(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client);

@@ -6,6 +6,24 @@ import { useUser } from '../../../mocks/user';
 import { useDomains } from '../../../mocks/domains';
 
 describe('domains ls', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   it('should list up to 20 domains by default', async () => {
     useUser();
     useDomains();

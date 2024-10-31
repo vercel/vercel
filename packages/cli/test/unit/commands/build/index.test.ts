@@ -21,6 +21,23 @@ describe('build', () => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'build';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = build(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should build with `@vercel/static`', async () => {
     const cwd = fixture('static');
     const output = join(cwd, '.vercel/output');
