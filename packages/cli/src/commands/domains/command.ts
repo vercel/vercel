@@ -9,16 +9,12 @@ import {
 export const domainsCommand = {
   name: 'domains',
   description: 'Manage domains',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',
       description: 'Show all domains in a list',
+      default: true,
       arguments: [],
       options: [],
       examples: [],

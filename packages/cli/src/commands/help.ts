@@ -31,6 +31,7 @@ export interface CommandExample {
 export interface Command {
   readonly name: string;
   readonly description: string;
+  readonly default?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
@@ -107,8 +108,22 @@ export function buildCommandSynopsisLine(command: Command) {
     chalk.bold(NAME),
     chalk.bold(command.name),
   ];
-  if (command.arguments.length > 0) {
-    for (const argument of command.arguments) {
+  const args = command.arguments.slice(0);
+
+  // If there are only subcommands, then there is an implicit "command" argument
+  if (
+    args.length === 0 &&
+    command.subcommands &&
+    command.subcommands.length > 0
+  ) {
+    args.push({
+      name: 'command',
+      required: !command.subcommands.some(subcommand => subcommand.default),
+    });
+  }
+
+  if (args.length > 0) {
+    for (const argument of args) {
       line.push(argument.required ? argument.name : `[${argument.name}]`);
     }
   }

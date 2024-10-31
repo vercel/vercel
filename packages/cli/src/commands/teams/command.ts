@@ -2,7 +2,7 @@ import { packageName } from '../../util/pkg-name';
 import { nextOption } from '../../util/arg-common';
 
 export const listSubcommand = {
-  name: 'ls',
+  name: 'list',
   description: "Show all teams you're a part of",
   arguments: [],
   options: [

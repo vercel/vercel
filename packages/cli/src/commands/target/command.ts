@@ -3,12 +3,7 @@ import { packageName } from '../../util/pkg-name';
 export const targetCommand = {
   name: 'target',
   description: 'Manage your Vercel Project\'s "targets" (custom environments).',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',

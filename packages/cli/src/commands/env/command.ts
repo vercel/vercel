@@ -9,12 +9,7 @@ const targetPlaceholder = getEnvTargetPlaceholder();
 export const envCommand = {
   name: 'env',
   description: 'Interact with environment variables.',
-  arguments: [
-    {
-      name: 'command',
-      required: false,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',

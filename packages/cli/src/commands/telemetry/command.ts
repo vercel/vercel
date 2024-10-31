@@ -4,7 +4,7 @@ export const telemetryCommand = {
   arguments: [
     {
       name: 'command',
-      required: false,
+      required: true,
     },
   ],
   subcommands: [

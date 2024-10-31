@@ -123,12 +123,7 @@ export const integrationCommand = {
   name: 'integration',
   description: 'Manage marketplace integrations',
   options: [],
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     addSubcommand,
     listSubcommand,

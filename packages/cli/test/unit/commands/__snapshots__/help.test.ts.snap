@@ -361,7 +361,7 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 
 exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
 "
-  ▲ vercel certs [command] [options]
+  ▲ vercel certs command [options]
 
   Interact with SSL certificates. This  
   command is intended for advanced use  
@@ -453,7 +453,7 @@ exports[`help command > certs help output snapshots > certs help column width 40
 
 exports[`help command > certs help output snapshots > certs help column width 80 1`] = `
 "
-  ▲ vercel certs [command] [options]
+  ▲ vercel certs command [options]
 
   Interact with SSL certificates. This command is intended for advanced use     
   only. By default, Vercel manages your certificates automatically.             
@@ -508,7 +508,7 @@ exports[`help command > certs help output snapshots > certs help column width 80
 
 exports[`help command > certs help output snapshots > certs help column width 120 1`] = `
 "
-  ▲ vercel certs [command] [options]
+  ▲ vercel certs command [options]
 
   Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your       
   certificates automatically.                                                                                           
@@ -903,7 +903,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
-  ▲ vercel dns command [options]
+  ▲ vercel dns [command] [options]
 
   Interact with DNS entries for a       
   project.                              
@@ -1025,7 +1025,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 80 1`] = `
 "
-  ▲ vercel dns command [options]
+  ▲ vercel dns [command] [options]
 
   Interact with DNS entries for a project.                                      
 
@@ -1095,7 +1095,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 120 1`] = `
 "
-  ▲ vercel dns command [options]
+  ▲ vercel dns [command] [options]
 
   Interact with DNS entries for a project.                                                                              
 
@@ -1163,7 +1163,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
-  ▲ vercel domains command [options]
+  ▲ vercel domains [command] [options]
 
   Manage domains                        
 
@@ -1281,7 +1281,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
 "
-  ▲ vercel domains command [options]
+  ▲ vercel domains [command] [options]
 
   Manage domains                                                                
 
@@ -1336,7 +1336,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
 "
-  ▲ vercel domains command [options]
+  ▲ vercel domains [command] [options]
 
   Manage domains                                                                                                        
 
@@ -1389,7 +1389,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
 exports[`help command > env help output snapshots > env help column width 40 1`] = `
 "
-  ▲ vercel env [command] [options]
+  ▲ vercel env command [options]
 
   Interact with environment variables.  
 
@@ -1541,7 +1541,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
 exports[`help command > env help output snapshots > env help column width 80 1`] = `
 "
-  ▲ vercel env [command] [options]
+  ▲ vercel env command [options]
 
   Interact with environment variables.                                          
 
@@ -1637,7 +1637,7 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
 exports[`help command > env help output snapshots > env help column width 120 1`] = `
 "
-  ▲ vercel env [command] [options]
+  ▲ vercel env command [options]
 
   Interact with environment variables.                                                                                  
 
@@ -2804,7 +2804,7 @@ exports[`help command > login help output snapshots > login help column width 12
 
 exports[`help command > project help output snapshots > project help column width 40 1`] = `
 "
-  ▲ vercel project command [options]
+  ▲ vercel project [command] [options]
 
   Manage your Vercel Projects.          
 
@@ -2876,7 +2876,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > project help output snapshots > project help column width 80 1`] = `
 "
-  ▲ vercel project command [options]
+  ▲ vercel project [command] [options]
 
   Manage your Vercel Projects.                                                  
 
@@ -2921,7 +2921,7 @@ exports[`help command > project help output snapshots > project help column widt
 
 exports[`help command > project help output snapshots > project help column width 120 1`] = `
 "
-  ▲ vercel project command [options]
+  ▲ vercel project [command] [options]
 
   Manage your Vercel Projects.                                                                                          
 
@@ -3794,7 +3794,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
-  ▲ vercel teams
+  ▲ vercel teams command
 
   Manage teams under your Vercel        
   account                               
@@ -3803,7 +3803,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   add             Create a new  
                   team          
-  ls              Show all teams
+  list            Show all teams
                   you're a part 
                   of            
   switch  [name]  Switch to a   
@@ -3874,14 +3874,14 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
 exports[`help command > teams help output snapshots > teams help column width 80 1`] = `
 "
-  ▲ vercel teams
+  ▲ vercel teams command
 
   Manage teams under your Vercel account                                        
 
   Commands:
 
   add             Create a new team                                     
-  ls              Show all teams you're a part of                       
+  list            Show all teams you're a part of                       
   switch  [name]  Switch to a different team                            
   invite  emails  Invite a new member to a team                         
 
@@ -3923,14 +3923,14 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
 exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
 "
-  ▲ vercel teams
+  ▲ vercel teams command
 
   Manage teams under your Vercel account                                                                                
 
   Commands:
 
   add             Create a new team                                                                             
-  ls              Show all teams you're a part of                                                               
+  list            Show all teams you're a part of                                                               
   switch  [name]  Switch to a different team                                                                    
   invite  emails  Invite a new member to a team                                                                 
 

@@ -99,12 +99,7 @@ export const integrationResourceCommand = {
   name: 'integration-resource',
   description: 'Manage marketplace integration resources',
   options: [],
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [disconnectSubcommand, removeSubcommand],
   examples: [],
 } as const;

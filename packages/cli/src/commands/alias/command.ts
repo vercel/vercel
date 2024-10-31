@@ -4,12 +4,7 @@ import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 export const aliasCommand = {
   name: 'alias',
   description: 'Interact with deployment aliases.',
-  arguments: [
-    {
-      name: 'command',
-      required: false,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',
@@ -21,6 +16,7 @@ export const aliasCommand = {
     {
       name: 'set',
       description: 'Create a new alias',
+      default: true,
       arguments: [
         {
           name: 'deployment',
