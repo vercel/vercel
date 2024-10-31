@@ -6,6 +6,23 @@ import inspect from '../../../../src/commands/inspect';
 import sleep from '../../../../src/util/sleep';
 
 describe('inspect', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'inspect';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = inspect(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[url]', () => {
     describe('--timeout', async () => {
       it('tracks --timeout', async () => {

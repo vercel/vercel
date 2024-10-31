@@ -31,6 +31,23 @@ describe('list', () => {
     });
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'list';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = list(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[app]', () => {
     it('should get the deployments for a specified project', async () => {
       const user = useUser();

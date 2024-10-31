@@ -11,6 +11,23 @@ describe('project', () => {
     lsSpy.mockClear();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'project';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = project(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('routes to ls subcommand', async () => {
     const user = useUser();
     const args: string[] = [];

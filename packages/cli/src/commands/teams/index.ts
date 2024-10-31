@@ -34,19 +34,18 @@ export default async (client: Client) => {
     return 1;
   }
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(teamsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const isSwitch = parsedArgs.args[0] === 'switch';
-
   parsedArgs.args = parsedArgs.args.slice(1);
-
   if (isSwitch) {
     subcommand = 'switch';
   } else {
     subcommand = parsedArgs.args.shift();
+  }
+
+  if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('teams', subcommand);
+    output.print(help(teamsCommand, { columns: client.stderr.columns }));
+    return 2;
   }
 
   let exitCode = 0;

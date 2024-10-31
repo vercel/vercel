@@ -44,6 +44,7 @@ export default async function redeploy(client: Client): Promise<number> {
   });
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('redeploy');
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }

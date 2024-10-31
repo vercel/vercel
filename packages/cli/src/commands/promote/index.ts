@@ -37,6 +37,7 @@ export default async (client: Client): Promise<number> => {
   });
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('promote');
     output.print(help(promoteCommand, { columns: client.stderr.columns }));
     return 2;
   }

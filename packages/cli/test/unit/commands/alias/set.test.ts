@@ -7,6 +7,24 @@ import { useDeployment } from '../../../mocks/deployment';
 vi.setConfig({ testTimeout: 600000 });
 
 describe('alias set', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'alias';
+      const subcommand = 'set';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('missing args', () => {
     it.todo('errors');
   });

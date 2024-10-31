@@ -13,6 +13,23 @@ import {
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 describe('link', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'link';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = link(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();

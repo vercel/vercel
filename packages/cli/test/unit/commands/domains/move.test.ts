@@ -7,6 +7,24 @@ import { useTeams } from '../../../mocks/team';
 import { useDomain } from '../../../mocks/domains';
 
 describe('domains mv', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+      const subcommand = 'move';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     describe('[destination]', () => {
       describe('--yes', () => {

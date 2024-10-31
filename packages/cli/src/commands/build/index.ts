@@ -159,6 +159,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('build');
     output.print(help(buildCommand, { columns: client.stderr.columns }));
     return 2;
   }

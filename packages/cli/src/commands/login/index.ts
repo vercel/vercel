@@ -23,6 +23,7 @@ import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-tea
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import output from '../../output-manager';
+import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
 export default async function login(client: Client): Promise<number> {
   // user is not currently authenticated on this machine
@@ -31,6 +32,12 @@ export default async function login(client: Client): Promise<number> {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
+
+  const telemetry = new LoginTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   // Parse CLI args
   try {
@@ -41,6 +48,7 @@ export default async function login(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 2;
   }
