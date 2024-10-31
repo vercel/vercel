@@ -64,7 +64,7 @@ describe('env', () => {
 
       client.setArgv('env', ...args);
       const exitCode = await env(client);
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
     });
   });
 });

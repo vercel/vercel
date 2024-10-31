@@ -70,7 +70,7 @@ describe('help command', () => {
       it('outputs help', async () => {
         client.setArgv('dev', '--help');
         const exitCode = await dev(client);
-        await expect(exitCode).toEqual(2);
+        expect(exitCode).toEqual(2);
         expect(client.stderr.read()).toMatchSnapshot();
       });
     });
