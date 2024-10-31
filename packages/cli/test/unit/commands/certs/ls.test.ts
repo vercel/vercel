@@ -5,6 +5,17 @@ import { useCert } from '../../../mocks/certs';
 import certs from '../../../../src/commands/certs';
 
 describe('certs ls', () => {
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      useUser();
+      client.setArgv('certs', 'ls', 'balderdash');
+      const exitCode = await certs(client);
+
+      await expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'certs';

@@ -9,6 +9,16 @@ describe('alias ls', () => {
     useUser();
   });
 
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      client.setArgv('alias', 'ls', 'balderdash');
+      const exitCode = await alias(client);
+
+      await expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'alias';
