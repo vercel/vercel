@@ -10,6 +10,13 @@ export const certsCommand = {
   arguments: [],
   subcommands: [
     {
+      name: 'add',
+      description: '',
+      arguments: [],
+      options: [],
+      examples: [],
+    },
+    {
       name: 'ls',
       description: 'Show all available certificates',
       arguments: [],
