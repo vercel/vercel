@@ -15,8 +15,8 @@ describe('git', () => {
       const command = 'git';
 
       client.setArgv(command, '--help');
-      const exitCodePromise = git(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await git(client);
+      await expect(exitCode, 'exit code for git').toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
