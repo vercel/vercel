@@ -30,6 +30,7 @@ export interface CommandExample {
 }
 export interface Command {
   readonly name: string;
+  readonly aliases: ReadonlyArray<string>;
   readonly description: string;
   readonly default?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
