@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { integrationCommand } from '../../../../commands/integration/command';
 
-export class IntegrationTelemetryClient extends TelemetryClient {
+export class IntegrationTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof integrationCommand>
+{
   trackCliSubcommandAdd(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'add',
@@ -27,5 +32,10 @@ export class IntegrationTelemetryClient extends TelemetryClient {
       subcommand: 'remove',
       value: actual,
     });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  trackCliArgumentCommand(value: string | undefined) {
+    // no-op?
   }
 }
