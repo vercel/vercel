@@ -15,7 +15,7 @@ describe('list', () => {
       client.setArgv('project', 'list', 'balderdash');
       const exitCode = await projects(client);
 
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid number of arguments');
     });
   });

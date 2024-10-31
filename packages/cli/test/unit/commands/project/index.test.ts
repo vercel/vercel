@@ -45,7 +45,7 @@ describe('project', () => {
 
       client.setArgv('project', ...args);
       const exitCode = await project(client);
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
     });
   });
 });

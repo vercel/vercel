@@ -32,7 +32,7 @@ describe('certs', () => {
 
       client.setArgv('certs', ...args);
       const exitCode = await certs(client);
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
     });
   });
 });
