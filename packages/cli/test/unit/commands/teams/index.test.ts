@@ -25,4 +25,14 @@ describe('teams', () => {
     const exitCodePromise = teams(client);
     await expect(exitCodePromise).resolves.toBe(2);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('teams', ...args);
+      const exitCodePromise = teams(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+    });
+  });
 });

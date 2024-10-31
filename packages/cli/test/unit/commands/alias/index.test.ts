@@ -35,4 +35,14 @@ describe('alias', () => {
     await alias(client);
     expect(setSpy).toHaveBeenCalledWith(client, opts, args);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('errors', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('alias', ...args);
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+  });
 });

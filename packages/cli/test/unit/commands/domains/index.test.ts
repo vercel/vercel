@@ -35,4 +35,15 @@ describe('domains', () => {
     await domains(client);
     expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      const args: string[] = ['not-a-command'];
+      const opts = {};
+
+      client.setArgv('domains', ...args);
+      await domains(client);
+      expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+    });
+  });
 });
