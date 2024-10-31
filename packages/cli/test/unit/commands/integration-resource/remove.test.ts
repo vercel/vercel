@@ -271,8 +271,11 @@ describe('integration-resource', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
           client.setArgv('integration-resource', 'remove', 'acme');
-          const exitCodePromise = integrationResourceCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationResourceCommand(client);
+          expect(
+            exitCode,
+            'exit code for "integrationResourceCommand"'
+          ).toEqual(1);
           await expect(client.stderr).toOutput('Error: Team not found.');
         });
       });

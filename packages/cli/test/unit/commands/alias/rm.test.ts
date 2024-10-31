@@ -37,8 +37,8 @@ describe('alias rm', () => {
         response.json({});
       });
       client.setArgv('alias', 'rm', 'custom', '--yes');
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await alias(client);
+      expect(exitCode, 'exit code for "alias"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -76,8 +76,8 @@ describe('alias rm', () => {
           response.json({});
         });
         client.setArgv('alias', 'rm', 'custom', '--yes');
-        const exitCodePromise = alias(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await alias(client);
+        expect(exitCode, 'exit code for "alias"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
