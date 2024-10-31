@@ -19,8 +19,8 @@ describe('domains buy', () => {
 
   it('should track subcommand usage', async () => {
     client.setArgv('domains', 'buy');
-    const exitCodePromise = domains(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await domains(client);
+    expect(exitCode, 'exit code for "domains"').toEqual(1);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {

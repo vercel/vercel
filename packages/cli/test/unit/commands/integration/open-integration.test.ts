@@ -41,8 +41,8 @@ describe('integration', () => {
 
     it('should track subcommand usage', async () => {
       client.setArgv('integration', 'open');
-      const exitCodePromise = integrationCommand(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -75,8 +75,8 @@ describe('integration', () => {
             name: 'vercel-integration-open',
           });
           client.setArgv('integration', 'open', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           await expect(client.stderr).toOutput('Opening the acme dashboard...');
           expect(openMock).toHaveBeenCalledWith(
             'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1'
@@ -90,8 +90,8 @@ describe('integration', () => {
             name: 'vercel-integration-open',
           });
           client.setArgv('integration', 'open', 'acme-two-configurations');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
           await expect(client.stderr).toOutput(
             'Opening the acme-two-configurations dashboard...'
           );
@@ -107,8 +107,8 @@ describe('integration', () => {
             name: 'vercel-integration-open',
           });
           client.setArgv('integration', 'open', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -126,8 +126,8 @@ describe('integration', () => {
       describe('errors', () => {
         it('should error when no integration arugment is passed', async () => {
           client.setArgv('integration', 'open');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: You must pass an integration slug'
           );
@@ -135,8 +135,8 @@ describe('integration', () => {
 
         it('should error when more than one integration arugment is passed', async () => {
           client.setArgv('integration', 'open', 'acme', 'foobar');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: Cannot open more than one dashboard at a time'
           );
@@ -144,8 +144,8 @@ describe('integration', () => {
 
         it('should error when no team is present', async () => {
           client.setArgv('integration', 'open', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput('Error: Team not found');
         });
 
@@ -156,8 +156,8 @@ describe('integration', () => {
           useConfiguration();
 
           client.setArgv('integration', 'open', 'acme-no-results');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: No configuration found for "acme-no-results".'
           );
@@ -170,8 +170,8 @@ describe('integration', () => {
           useConfiguration();
 
           client.setArgv('integration', 'open', 'acme-no-results');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -197,7 +197,8 @@ describe('integration', () => {
             'Error: Failed to fetch configuration for "error": Response Error (500)',
             20000
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
         });
       });
     });
