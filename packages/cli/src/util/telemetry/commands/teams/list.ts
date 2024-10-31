@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listSubcommand } from '../../../../commands/teams/command';
 
-export class TeamsListTelemetryClient extends TelemetryClient {
+export class TeamsListTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listSubcommand>
+{
   trackCliOptionNext(value: number | undefined) {
     if (value && value > 0) {
       this.trackCliOption({

@@ -4,12 +4,7 @@ import { confirmOption, yesOption } from '../../util/arg-common';
 export const gitCommand = {
   name: 'git',
   description: 'Manage your Git provider connections.',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'connect',

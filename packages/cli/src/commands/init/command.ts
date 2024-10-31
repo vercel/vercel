@@ -14,7 +14,6 @@ export const initCommand = {
       required: false,
     },
   ],
-  subcommands: undefined,
   options: [
     {
       ...forceOption,

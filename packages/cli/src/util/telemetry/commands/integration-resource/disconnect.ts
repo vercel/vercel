@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { disconnectSubcommand } from '../../../../commands/integration-resource/command';
 
-export class IntegrationResourceDisconnectTelemetryClient extends TelemetryClient {
-  trackCliArgumentResource(v?: string) {
+export class IntegrationResourceDisconnectTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof disconnectSubcommand>
+{
+  trackCliArgumentResource(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'resource',
@@ -10,7 +15,7 @@ export class IntegrationResourceDisconnectTelemetryClient extends TelemetryClien
     }
   }
 
-  trackCliArgumentProject(v?: string) {
+  trackCliArgumentProject(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'project',
@@ -19,13 +24,13 @@ export class IntegrationResourceDisconnectTelemetryClient extends TelemetryClien
     }
   }
 
-  trackCliFlagAll(v?: boolean) {
+  trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');
     }
   }
 
-  trackCliFlagYes(v?: boolean) {
+  trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
     }

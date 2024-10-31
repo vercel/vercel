@@ -7,12 +7,7 @@ export const certsCommand = {
   name: 'certs',
   description:
     'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
-  arguments: [
-    {
-      name: 'command',
-      required: false,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',

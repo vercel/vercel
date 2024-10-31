@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { teamsCommand } from '../../../../commands/teams/command';
 
-export class TeamsTelemetryClient extends TelemetryClient {
+export class TeamsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof teamsCommand>
+{
   trackCliSubcommandInvite(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'invite',

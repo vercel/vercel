@@ -4,12 +4,7 @@ import { limitOption, nextOption } from '../../util/arg-common';
 export const dnsCommand = {
   name: 'dns',
   description: 'Interact with DNS entries for a project.',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'import',
@@ -30,6 +25,7 @@ export const dnsCommand = {
     {
       name: 'ls',
       description: 'List all DNS entries for a domain',
+      default: true,
       arguments: [
         {
           name: 'domain',

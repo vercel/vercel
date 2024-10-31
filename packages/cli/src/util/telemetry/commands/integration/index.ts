@@ -33,9 +33,4 @@ export class IntegrationTelemetryClient
       value: actual,
     });
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  trackCliArgumentCommand(value: string | undefined) {
-    // no-op?
-  }
 }

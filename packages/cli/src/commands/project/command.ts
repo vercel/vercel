@@ -4,16 +4,12 @@ import { nextOption } from '../../util/arg-common';
 export const projectCommand = {
   name: 'project',
   description: 'Manage your Vercel Projects.',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',
       description: 'Show all projects in the selected scope',
+      default: true,
       arguments: [],
       options: [
         {
