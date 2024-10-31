@@ -3,11 +3,13 @@ import { nextOption } from '../../util/arg-common';
 
 export const projectCommand = {
   name: 'project',
+  aliases: ['projects'],
   description: 'Manage your Vercel Projects.',
   arguments: [],
   subcommands: [
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'Show all projects in the selected scope',
       default: true,
       arguments: [],
@@ -25,6 +27,7 @@ export const projectCommand = {
     },
     {
       name: 'add',
+      aliases: [],
       description: 'Add a new project',
       arguments: [
         {
@@ -37,6 +40,7 @@ export const projectCommand = {
     },
     {
       name: 'rm',
+      aliases: ['remove'],
       description: 'Remove a project',
       arguments: [
         {
