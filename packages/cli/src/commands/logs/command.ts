@@ -6,6 +6,7 @@ export const CommandTimeout = '5 minutes';
 
 export const logsCommand = {
   name: 'logs',
+  aliases: ['log'],
   description: `Display runtime logs for a deployment in ready state, from now and for ${CommandTimeout} at most.`,
   arguments: [
     {
