@@ -32,7 +32,7 @@ describe('teams', () => {
 
       client.setArgv('teams', ...args);
       const exitCode = await teams(client);
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
     });
   });
 });
