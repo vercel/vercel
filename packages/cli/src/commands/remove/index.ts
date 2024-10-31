@@ -42,19 +42,21 @@ export default async function remove(client: Client) {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-    telemetryClient.trackCliArgumentNameOrDeploymentId(parsedArgs.args[0]);
-    telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
-    telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
-    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
     handleError(error);
     return 1;
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('remove');
     output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 2;
   }
+
+  telemetryClient.trackCliArgumentNameOrDeploymentId(parsedArgs.args[0]);
+  telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
+  telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
+  telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   parsedArgs.args = parsedArgs.args.slice(1);
 

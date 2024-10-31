@@ -10,6 +10,24 @@ describe('dns rm', () => {
     useDns();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+      const subcommand = 'rm';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[id]', () => {
     it('tracks the use of the argument', async () => {
       const recordId = '1';

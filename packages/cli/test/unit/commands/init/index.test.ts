@@ -41,6 +41,23 @@ beforeEach(() => {
 });
 
 describe('init', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'init';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = init(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should allow selecting a framework to download the source into the expected folder', async () => {
     const cwd = setupTmpDir();
     client.cwd = cwd;
@@ -72,7 +89,8 @@ describe('init', () => {
       const exitCodePromise = init(client);
 
       await expect(client.stderr).toOutput(`No framework provided`);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(0);
     });
     it("should exit 1 with a helpful message when the framework isn't found", async () => {
       const cwd = setupTmpDir();
@@ -83,7 +101,8 @@ describe('init', () => {
       const exitCodePromise = init(client);
 
       await expect(client.stderr).toOutput(`No example found`);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(1);
     });
   });
   describe('providing the [example] argument', () => {
@@ -183,7 +202,8 @@ describe('init', () => {
         `Destination path "astro" already exists and is not a directory.`
       );
       expect(mock).toHaveBeenCalled();
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(1);
     });
     it('should fail when a non-empty folder matching the framework already exists in the target location', async () => {
       const cwd = setupTmpDir();
@@ -202,7 +222,8 @@ describe('init', () => {
         `Destination path "astro" already exists and is not an empty directory`
       );
       expect(mock).toHaveBeenCalled();
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(1);
     });
     it('should succeed when an empty folder matching the framework already exists in the target location', async () => {
       const cwd = setupTmpDir();
@@ -233,7 +254,8 @@ describe('init', () => {
         `No example found for ${frameworkName}, run \`vercel init\` to see the list of available examples.`
       );
       expect(mock).toHaveBeenCalled();
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(1);
     });
     describe('--force', () => {
       it('should fail when a file matching the framework already exists in the target location', async () => {
@@ -253,7 +275,8 @@ describe('init', () => {
           `Destination path "astro" already exists and is not a directory.`
         );
         expect(mock).toHaveBeenCalled();
-        await expect(exitCodePromise).resolves.toEqual(1);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "init"').toEqual(1);
       });
       it('should succeed when a non-empty folder matching the framework already exists in the target location', async () => {
         const cwd = setupTmpDir();
@@ -336,7 +359,8 @@ describe('init', () => {
       await expect(client.stderr).toOutput(`> No changes made`);
       expect(mock).toHaveBeenCalled();
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "init"').toEqual(0);
     });
     it('should track when accepting the suggestion with redacted value', async () => {
       const cwd = setupTmpDir();

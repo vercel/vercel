@@ -57,6 +57,23 @@ describe('dev', () => {
     vol.fromJSON(json, projectPath);
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dev';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = dev(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[dir]', () => {
     it('tracks the dir if supplied', async () => {
       client.setArgv('dev', projectPath);

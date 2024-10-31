@@ -34,6 +34,24 @@ describe('env rm', () => {
     client.cwd = cwd;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'rm';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     describe('--yes', () => {
       it('tracks [name] and `--yes`', async () => {

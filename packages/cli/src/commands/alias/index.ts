@@ -12,7 +12,6 @@ import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
-  default: ['set'],
   ls: ['ls', 'list'],
   rm: ['rm', 'remove'],
   set: ['set'],
@@ -36,15 +35,16 @@ export default async function alias(client: Client) {
     return 1;
   }
 
-  if (parsedArguments.flags['--help']) {
-    output.print(help(aliasCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArguments.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('alias', subcommand);
+    output.print(help(aliasCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
 
   switch (subcommand) {
     case 'ls':

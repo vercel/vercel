@@ -35,10 +35,14 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
+  const actionOrDeployId = parsedArgs.args[1] || 'status';
+
   telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   if (parsedArgs.flags['--help']) {
+    const subcommand = actionOrDeployId === 'status' ? 'status' : undefined;
+    telemetry.trackCliFlagHelp('rollback', subcommand);
     output.print(help(rollbackCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -49,8 +53,6 @@ export default async (client: Client): Promise<number> => {
     output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
-
-  const actionOrDeployId = parsedArgs.args[1] || 'status';
 
   try {
     if (actionOrDeployId === 'status') {
