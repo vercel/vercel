@@ -31,8 +31,8 @@ describe('integration', () => {
       const args: string[] = ['not-a-command'];
 
       client.setArgv('integration', ...args);
-      const exitCodePromise = integration(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await integration(client);
+      await expect(exitCode).toEqual(2);
     });
   });
 });

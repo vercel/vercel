@@ -31,8 +31,8 @@ describe('certs', () => {
       const args: string[] = ['not-a-command'];
 
       client.setArgv('certs', ...args);
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await certs(client);
+      await expect(exitCode).toEqual(2);
     });
   });
 });

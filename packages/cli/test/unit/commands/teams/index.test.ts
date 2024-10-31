@@ -31,8 +31,8 @@ describe('teams', () => {
       const args: string[] = ['not-a-command'];
 
       client.setArgv('teams', ...args);
-      const exitCodePromise = teams(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await teams(client);
+      await expect(exitCode).toEqual(2);
     });
   });
 });

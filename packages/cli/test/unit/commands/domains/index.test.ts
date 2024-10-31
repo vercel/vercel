@@ -37,7 +37,7 @@ describe('domains', () => {
   });
 
   describe('unrecognized subcommand', () => {
-    it('shows help', async () => {
+    it('routes to ls', async () => {
       const args: string[] = ['not-a-command'];
       const opts = {};
 

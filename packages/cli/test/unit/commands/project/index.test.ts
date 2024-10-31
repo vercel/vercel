@@ -44,8 +44,8 @@ describe('project', () => {
       const args: string[] = ['not-a-command'];
 
       client.setArgv('project', ...args);
-      const exitCodePromise = project(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await project(client);
+      await expect(exitCode).toEqual(2);
     });
   });
 });

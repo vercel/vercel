@@ -37,12 +37,13 @@ describe('alias', () => {
   });
 
   describe('unrecognized subcommand', () => {
-    it('errors', async () => {
+    it('routes to set', async () => {
       const args: string[] = ['not-a-command'];
+      const opts = {};
 
       client.setArgv('alias', ...args);
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await alias(client);
+      expect(setSpy).toHaveBeenCalledWith(client, opts, args);
     });
   });
 });
