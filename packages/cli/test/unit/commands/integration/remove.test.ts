@@ -100,8 +100,8 @@ describe('integration', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
           client.setArgv('integration', 'remove', 'acme');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
           await expect(client.stderr).toOutput('Error: Team not found.');
         });
       });

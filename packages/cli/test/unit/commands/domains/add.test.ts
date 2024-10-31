@@ -56,8 +56,8 @@ describe('domains add', () => {
               res.json({});
             }
           );
-          const exitCodePromise = domains(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await domains(client);
+          expect(exitCode, 'exit code for "domains"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {

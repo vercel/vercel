@@ -34,8 +34,8 @@ describe('certs rm', () => {
 
   it('should track subcommand invocation', async () => {
     client.setArgv('certs', 'rm');
-    const exitCodePromise = certs(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await certs(client);
+    expect(exitCode, 'exit code for "certs"').toEqual(1);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:remove',

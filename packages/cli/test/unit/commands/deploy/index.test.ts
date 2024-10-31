@@ -39,7 +39,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       `Error: Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'argument:project-path',
@@ -54,7 +55,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       `Error: Can't deploy more than one path.\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that does not exist', async () => {
@@ -66,7 +68,8 @@ describe('deploy', () => {
         join(client.cwd, 'does-not-exist')
       )}”\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
@@ -85,7 +88,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed (top-level)\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
@@ -104,7 +108,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed within a Builder\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
@@ -122,7 +127,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
@@ -144,7 +150,8 @@ describe('deploy', () => {
         ' Please run `vercel --prebuilt`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
@@ -166,7 +173,8 @@ describe('deploy', () => {
         ' Please run `vercel --prebuilt --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying "version: 1"', async () => {
@@ -179,7 +187,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The value of the `version` property within vercel.json can only be `2`.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying "version: {}"', async () => {
@@ -193,7 +202,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The `version` property inside your vercel.json file must be a number.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should send a tgz file when `--archive=tgz`', async () => {
@@ -643,7 +653,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(0);
     expect(body).toMatchObject({
       source: 'cli',
       version: 2,

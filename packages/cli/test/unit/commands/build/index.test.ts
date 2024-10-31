@@ -1234,7 +1234,8 @@ describe('build', () => {
     client.setArgv('build');
     const exitCodePromise = build(client);
     await expect(client.stderr).toOutput('Error: Detected unsupported');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "build"').toEqual(1);
   });
 
   it('should ignore `.env` for static site', async () => {

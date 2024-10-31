@@ -41,7 +41,8 @@ describe('domains transfer-in', () => {
       await expect(client.stderr).toOutput(
         'Error: Missing domain name. Run `vercel domains --help'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "domains"').toEqual(1);
     });
   });
 
@@ -93,7 +94,8 @@ describe('domains transfer-in', () => {
       );
       client.stdin.write('y\n');
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
       expect(client.telemetryEventStore.readonlyEvents).toMatchObject([
         expect.objectContaining({
           key: `subcommand:transfer-in`,
@@ -125,7 +127,8 @@ describe('domains transfer-in', () => {
 
         client.stdin.write('y\n');
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
             key: `subcommand:transfer-in`,

@@ -28,8 +28,8 @@ describe('domains ls', () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls');
-    let exitCodePromise = domains(client);
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await domains(client);
+    expect(exitCode, 'exit code for "domains"').toEqual(0);
     await expect(client.stderr).toOutput('example-19.com');
   });
 
@@ -37,8 +37,8 @@ describe('domains ls', () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls');
-    let exitCodePromise = domains(client);
-    await expect(exitCodePromise).resolves.toEqual(0);
+    let exitCode = await domains(client);
+    expect(exitCode, 'exit code for "domains"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -53,8 +53,9 @@ describe('domains ls', () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
-      const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
+
       await expect(client.stderr).toOutput('example-1.com');
     });
 
@@ -62,8 +63,8 @@ describe('domains ls', () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--limit', '2');
-      const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -83,8 +84,8 @@ describe('domains ls', () => {
       useUser();
       useDomains();
       client.setArgv('domains', 'ls', '--next', '1730124407638');
-      const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await domains(client);
+      expect(exitCode, 'exit code for "domains"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
