@@ -20,8 +20,8 @@ describe('domains mv', () => {
           client.scenario.patch('/v4/domains/example.com', (req, res) => {
             res.json({ domain: { name: 'example.com' } });
           });
-          const exitCodePromise = domains(client);
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await domains(client);
+          expect(exitCode, 'exit code for "domains"').toEqual(0);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {

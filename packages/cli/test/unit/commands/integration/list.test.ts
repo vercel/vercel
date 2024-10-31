@@ -33,8 +33,7 @@ describe('integration', () => {
 
       it('returns only marketplace resources for the linked project', async () => {
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(0);
         const lines = createLineIterator(client.stderr);
 
@@ -378,8 +377,7 @@ describe('integration', () => {
     describe('errors', () => {
       it('should error when there is no team', async () => {
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput('Error: Team not found.');
       });
@@ -396,8 +394,7 @@ describe('integration', () => {
         client.cwd = cwd;
 
         client.setArgv('integration', 'list');
-        const exitCodePromise = integrationCommand(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
@@ -417,8 +414,7 @@ describe('integration', () => {
           'current-project',
           'other-project'
         );
-        const exitCodePromise = integrationCommand(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify more than one project at a time. Use `--all` to show all resources.'
@@ -433,8 +429,7 @@ describe('integration', () => {
         client.cwd = cwd;
 
         client.setArgv('integration', 'list', 'other-project', '--all');
-        const exitCodePromise = integrationCommand(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify a project when using the `--all` flag.'

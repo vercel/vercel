@@ -338,8 +338,7 @@ describe('integration', () => {
       describe('errors', () => {
         it('should error when no integration arugment was passed', async () => {
           client.setArgv('integration', 'add');
-          const exitCodePromise = integrationCommand(client);
-          const exitCode = await exitCodePromise;
+          const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: You must pass an integration slug'
@@ -348,8 +347,7 @@ describe('integration', () => {
 
         it('should error when more than one integration arugment was passed', async () => {
           client.setArgv('integration', 'add', 'acme', 'acme-two');
-          const exitCodePromise = integrationCommand(client);
-          const exitCode = await exitCodePromise;
+          const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Cannot install more than one integration at a time'
@@ -359,8 +357,7 @@ describe('integration', () => {
         it('should error when integration was not found', async () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'does-not-exist');
-          const exitCodePromise = integrationCommand(client);
-          const exitCode = await exitCodePromise;
+          const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: Failed to get integration "does-not-exist": Response Error (404)'
@@ -370,8 +367,8 @@ describe('integration', () => {
         it('should track redacted [name] positional argument when integration is not found', async () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'does-not-exist');
-          const exitCodePromise = integrationCommand(client);
-          await expect(exitCodePromise).resolves.toEqual(1);
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
 
           expect(client.telemetryEventStore).toHaveTelemetryEvents([
             {
@@ -388,8 +385,7 @@ describe('integration', () => {
         it('should error when integration is an external integration', async () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'acme-external');
-          const exitCodePromise = integrationCommand(client);
-          const exitCode = await exitCodePromise;
+          const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
             'Error: Integration "acme-external" is not a Marketplace integration'
@@ -399,8 +395,7 @@ describe('integration', () => {
         it('should error when integration has no products', async () => {
           useIntegration({ withInstallation: true });
           client.setArgv('integration', 'add', 'acme-no-products');
-          const exitCodePromise = integrationCommand(client);
-          const exitCode = await exitCodePromise;
+          const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput('Error: Product not found');
         });

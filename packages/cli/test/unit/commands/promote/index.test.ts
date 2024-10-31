@@ -29,8 +29,7 @@ describe('promote', () => {
           '0',
           '--yes'
         );
-        const exitCodePromise = promote(client);
-        const exitCode = await exitCodePromise;
+        const exitCode = await promote(client);
         expect(exitCode, 'exit code for "promote"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([

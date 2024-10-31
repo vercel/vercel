@@ -12,8 +12,8 @@ describe('alias ls', () => {
   it('should list up to 20 aliases by default', async () => {
     useAlias();
     client.setArgv('alias', 'ls');
-    const exitCodePromise = alias(client);
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await alias(client);
+    expect(exitCode, 'exit code for "alias"').toEqual(0);
     await expect(client.stdout).toOutput('dummy-19.app');
   });
 

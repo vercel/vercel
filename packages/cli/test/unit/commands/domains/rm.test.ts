@@ -8,8 +8,8 @@ import { defaultProject, useProject } from '../../../mocks/project';
 describe('domains rm', () => {
   it('should track subcommand usage', async () => {
     client.setArgv('domains', 'rm');
-    const exitCodePromise = domains(client);
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await domains(client);
+    expect(exitCode, 'exit code for "domains"').toEqual(1);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -64,8 +64,8 @@ describe('domains rm', () => {
           name: 'vercel-domains-rm',
         });
         client.setArgv('domains', 'rm', 'example-one.com', '--yes');
-        const exitCodePromise = domains(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await domains(client);
+        expect(exitCode, 'exit code for "domains"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
