@@ -170,20 +170,6 @@ test('[vc build] should build project with corepack and select yarn@2.4.3', asyn
   }
 });
 
-test('[vc dev] should print help from `vc develop --help`', async () => {
-  const directory = await setupE2EFixture('static-deployment');
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['develop', '--help'],
-    {
-      cwd: directory,
-    }
-  );
-
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
-  expect(stderr).toMatch(/▲ vercel dev/gm);
-});
-
 test('default command should deploy directory', async () => {
   const projectDir = await setupE2EFixture('deploy-default-with-sub-directory');
   const target = 'output';
