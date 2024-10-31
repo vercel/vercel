@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { removeSubcommand } from '../../../../commands/integration/command';
 
-export class IntegrationRemoveTelemetryClient extends TelemetryClient {
-  trackCliArgumentIntegration(v?: string, known?: boolean) {
+export class IntegrationRemoveTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof removeSubcommand>
+{
+  trackCliArgumentIntegration(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliArgument({
         arg: 'integration',
@@ -10,7 +15,7 @@ export class IntegrationRemoveTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(v?: boolean) {
+  trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
     }
