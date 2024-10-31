@@ -58,13 +58,19 @@ describe('dev', () => {
   });
 
   describe('--help', () => {
-    it('tracks telemetry', async () => {
-      const command = 'dev';
+    const command = 'dev';
 
+    beforeEach(async () => {
       client.setArgv(command, '--help');
-      const exitCodePromise = dev(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await dev(client);
+      await expect(exitCode).toEqual(2);
+    });
 
+    it('outputs help', async () => {
+      expect(client.stderr.read()).toMatchSnapshot();
+    });
+
+    it('tracks telemetry', async () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
