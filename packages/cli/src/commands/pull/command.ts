@@ -6,6 +6,7 @@ import { parseArguments } from '../../util/get-args';
 
 export const pullCommand = {
   name: 'pull',
+  aliases: [],
   description:
     'Pull latest environment variables and project settings from Vercel. ',
   arguments: [
