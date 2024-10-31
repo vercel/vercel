@@ -96,6 +96,8 @@ import {
   RenderingMode,
 } from './utils';
 
+// bump
+
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
 const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
