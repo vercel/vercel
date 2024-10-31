@@ -12,7 +12,7 @@ describe('alias ls', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'alias';
-      const subcommand = 'rm';
+      const subcommand = 'ls';
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = alias(client);
