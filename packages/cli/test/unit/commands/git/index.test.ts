@@ -45,4 +45,27 @@ describe('git', () => {
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     }
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      const cwd = fixture('new-connection');
+      client.cwd = cwd;
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'new-connection',
+        name: 'new-connection',
+      });
+      const args: string[] = ['not-a-command'];
+      client.setArgv('git', ...args);
+
+      try {
+        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+        const exitCode = await git(client);
+        await expect(exitCode).toEqual(2);
+      } finally {
+        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+      }
+    });
+  });
 });

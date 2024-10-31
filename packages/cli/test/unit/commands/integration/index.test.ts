@@ -25,4 +25,14 @@ describe('integration', () => {
     const exitCodePromise = integration(client);
     await expect(exitCodePromise).resolves.toBe(2);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('integration', ...args);
+      const exitCode = await integration(client);
+      await expect(exitCode).toEqual(2);
+    });
+  });
 });

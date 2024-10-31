@@ -25,4 +25,14 @@ describe('certs', () => {
     const exitCodePromise = certs(client);
     await expect(exitCodePromise).resolves.toBe(2);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help on unrecognized subcommand', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('certs', ...args);
+      const exitCode = await certs(client);
+      await expect(exitCode).toEqual(2);
+    });
+  });
 });

@@ -37,4 +37,15 @@ describe('project', () => {
     await project(client);
     expect(lsSpy).toHaveBeenCalledWith(client, opts, args, user.username);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      useUser();
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('project', ...args);
+      const exitCode = await project(client);
+      await expect(exitCode).toEqual(2);
+    });
+  });
 });

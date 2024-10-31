@@ -35,4 +35,15 @@ describe('alias', () => {
     await alias(client);
     expect(setSpy).toHaveBeenCalledWith(client, opts, args);
   });
+
+  describe('unrecognized subcommand', () => {
+    it('routes to set', async () => {
+      const args: string[] = ['not-a-command'];
+      const opts = {};
+
+      client.setArgv('alias', ...args);
+      await alias(client);
+      expect(setSpy).toHaveBeenCalledWith(client, opts, args);
+    });
+  });
 });
