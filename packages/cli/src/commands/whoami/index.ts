@@ -3,7 +3,7 @@ import { whoamiCommand } from './command';
 
 import getScope from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import output from '../../output-manager';
