@@ -8,7 +8,6 @@ import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
-
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -80,51 +79,3 @@ export function getCommandAliasMap() {
   }
   return aliasMap;
 }
-
-export default new Map([
-  ['alias', 'alias'],
-  ['aliases', 'alias'],
-  ['bisect', 'bisect'],
-  ['build', 'build'],
-  ['cert', 'certs'],
-  ['certs', 'certs'],
-  ['deploy', 'deploy'],
-  ['dev', 'dev'],
-  ['develop', 'dev'],
-  ['dns', 'dns'],
-  ['domain', 'domains'],
-  ['domains', 'domains'],
-  ['env', 'env'],
-  ['git', 'git'],
-  ['help', 'help'],
-  ['i', 'install'],
-  ['init', 'init'],
-  ['inspect', 'inspect'],
-  ['install', 'install'],
-  ['integration', 'integration'],
-  ['integration-resource', 'integration-resource'],
-  ['ir', 'integration-resource'],
-  ['link', 'link'],
-  ['list', 'list'],
-  ['ln', 'alias'],
-  ['log', 'logs'],
-  ['login', 'login'],
-  ['logout', 'logout'],
-  ['logs', 'logs'],
-  ['ls', 'list'],
-  ['project', 'project'],
-  ['projects', 'project'],
-  ['promote', 'promote'],
-  ['pull', 'pull'],
-  ['redeploy', 'redeploy'],
-  ['remove', 'remove'],
-  ['rm', 'remove'],
-  ['rollback', 'rollback'],
-  ['switch', 'teams'],
-  ['target', 'target'],
-  ['targets', 'target'],
-  ['team', 'teams'],
-  ['teams', 'teams'],
-  ['telemetry', 'telemetry'],
-  ['whoami', 'whoami'],
-]);
