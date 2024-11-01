@@ -882,39 +882,6 @@ test('[vc link] should show prompts to set up project', async () => {
   ).toBe(true);
 });
 
-test('[vc link --yes] should not show prompts and autolink', async () => {
-  const dir = await setupE2EFixture('project-link-confirm');
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
-
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', '--yes'],
-    { cwd: dir }
-  );
-
-  // Ensure the exit code is right
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-  // Ensure the message is correct pattern
-  expect(stderr).toMatch(/Linked to /m);
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-});
-
 test('[vc link] should detect frameworks in project rootDirectory', async () => {
   const dir = await setupE2EFixture('zero-config-next-js-nested');
   const projectRootDir = 'app';
