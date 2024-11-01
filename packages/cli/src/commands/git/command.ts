@@ -3,11 +3,13 @@ import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const gitCommand = {
   name: 'git',
+  aliases: [],
   description: 'Manage your Git provider connections.',
   arguments: [],
   subcommands: [
     {
       name: 'connect',
+      aliases: [],
       description:
         'Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository',
       arguments: [
@@ -21,6 +23,7 @@ export const gitCommand = {
     },
     {
       name: 'disconnect',
+      aliases: [],
       description: 'Disconnect the Git provider repository from your project',
       arguments: [],
       options: [],
