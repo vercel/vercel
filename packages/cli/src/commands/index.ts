@@ -30,7 +30,7 @@ import { telemetryCommand } from './telemetry/command';
 import { whoamiCommand } from './whoami/command';
 import type { Command } from './help';
 
-const commands = [
+const commandsStructs = [
   aliasCommand,
   bisectCommand,
   buildCommand,
@@ -69,13 +69,10 @@ export function getAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);
 }
 
-export function getCommandAliasMap() {
-  const aliasMap = new Map();
-  for (const command of commands) {
-    const aliases = getAliases(command);
-    for (const alias of aliases) {
-      aliasMap.set(alias, command.name);
-    }
+export const commands = new Map();
+for (const command of commandsStructs) {
+  const aliases = getAliases(command);
+  for (const alias of aliases) {
+    commands.set(alias, command.name);
   }
-  return aliasMap;
 }

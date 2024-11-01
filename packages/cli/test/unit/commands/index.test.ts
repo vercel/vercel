@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getCommandAliasMap } from '../../../src/commands';
+import { commands } from '../../../src/commands';
 describe('index', () => {
   it('outputs a map of what aliases our commands use', () => {
-    expect(getCommandAliasMap()).toEqual(
+    expect(commands).toEqual(
       new Map([
         ['alias', 'alias'],
         ['aliases', 'alias'],
