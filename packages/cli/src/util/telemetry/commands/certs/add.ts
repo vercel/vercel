@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { addSubcommand } from '../../../../commands/certs/command';
 
-export class CertsAddTelemetryClient extends TelemetryClient {
+export class CertsAddTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof addSubcommand>
+{
   trackCliFlagOverwrite(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('overwrite');
@@ -15,6 +20,7 @@ export class CertsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
+
   trackCliOptionKey(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -23,6 +29,7 @@ export class CertsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
+
   trackCliOptionCa(v: string | undefined) {
     if (v) {
       this.trackCliOption({

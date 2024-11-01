@@ -10,7 +10,6 @@ import { help } from '../help';
 import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
 
 const COMMAND_CONFIG = {
@@ -28,15 +27,17 @@ export default async function main(client: Client) {
     },
   });
 
-  let parsedArgs = null;
+  let parsedArgs;
 
   const flagsSpecification = getFlagsSpecification(certsCommand.options);
 
   // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (error) {
-    handleError(error);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
+  } catch (err) {
+    handleError(err);
     return 1;
   }
 
@@ -54,16 +55,16 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'issue':
       telemetry.trackCliSubcommandIssue(subcommandOriginal);
-      return issue(client, parsedArgs.flags, args);
+      return issue(client, args);
     case 'ls':
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, parsedArgs.flags, args);
+      return ls(client, args);
     case 'rm':
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, parsedArgs.flags, args);
+      return rm(client, args);
     case 'add':
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, parsedArgs.flags, args);
+      return add(client, args);
     default:
       output.error('Please specify a valid subcommand: ls | issue | rm');
       output.print(help(certsCommand, { columns: client.stderr.columns }));

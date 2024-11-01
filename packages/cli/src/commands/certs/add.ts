@@ -2,27 +2,30 @@ import chalk from 'chalk';
 import Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import output from '../../output-manager';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
 import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add';
+import { addSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { handleError } from '../../util/error';
 import type { Cert } from '@vercel-internals/types';
-import output from '../../output-manager';
 
-interface Options {
-  '--overwrite'?: boolean;
-  '--crt'?: string;
-  '--key'?: string;
-  '--ca'?: string;
-}
-
-async function add(
-  client: Client,
-  opts: Options,
-  args: string[]
-): Promise<number> {
+async function add(client: Client, argv: string[]): Promise<number> {
   const { telemetryEventStore } = client;
   const addStamp = stamp();
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   let cert: Cert | Error;
 
