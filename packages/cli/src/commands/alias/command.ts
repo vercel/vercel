@@ -3,6 +3,7 @@ import { limitOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const setSubcommand = {
   name: 'set',
+  aliases: [],
   description: 'Create a new alias',
   default: true,
   arguments: [
@@ -21,6 +22,7 @@ export const setSubcommand = {
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
   options: [
@@ -41,6 +43,7 @@ export const listSubcommand = {
 
 export const removeSubcommand = {
   name: 'remove',
+  aliases: ['rm'],
   description: 'Remove an alias using its hostname',
   arguments: [
     {
@@ -59,6 +62,7 @@ export const removeSubcommand = {
 
 export const aliasCommand = {
   name: 'alias',
+  aliases: ['aliases', 'ln'],
   description: 'Interact with deployment aliases',
   arguments: [],
   subcommands: [listSubcommand, removeSubcommand, setSubcommand],

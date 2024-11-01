@@ -11,7 +11,7 @@ describe('certs ls', () => {
       client.setArgv('certs', 'ls', 'balderdash');
       const exitCode = await certs(client);
 
-      await expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput('Invalid number of arguments');
     });
   });

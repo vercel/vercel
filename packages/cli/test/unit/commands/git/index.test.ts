@@ -62,7 +62,7 @@ describe('git', () => {
       try {
         await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
         const exitCode = await git(client);
-        await expect(exitCode).toEqual(2);
+        expect(exitCode).toEqual(2);
       } finally {
         await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
       }

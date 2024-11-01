@@ -32,7 +32,7 @@ describe('integration', () => {
 
       client.setArgv('integration', ...args);
       const exitCode = await integration(client);
-      await expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(2);
     });
   });
 });

@@ -3,6 +3,7 @@ import { nextOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['ls'],
   description: "Show all teams you're a part of",
   arguments: [],
   options: [
@@ -16,11 +17,13 @@ export const listSubcommand = {
 
 export const teamsCommand = {
   name: 'teams',
+  aliases: ['switch', 'team'],
   description: 'Manage teams under your Vercel account',
   arguments: [],
   subcommands: [
     {
       name: 'add',
+      aliases: ['create'],
       description: 'Create a new team',
       arguments: [],
       options: [],
@@ -29,6 +32,7 @@ export const teamsCommand = {
     listSubcommand,
     {
       name: 'switch',
+      aliases: ['change'],
       description: 'Switch to a different team',
       arguments: [
         {
@@ -41,6 +45,7 @@ export const teamsCommand = {
     },
     {
       name: 'invite',
+      aliases: [],
       description: 'Invite a new member to a team',
       arguments: [
         {

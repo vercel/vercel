@@ -3,6 +3,7 @@ import { yesOption } from '../../util/arg-common';
 
 export const buildCommand = {
   name: 'build',
+  aliases: [],
   description: 'Build the project.',
   arguments: [],
   options: [
