@@ -115,7 +115,7 @@ describe('dns ls', () => {
           value: 'ls',
         },
         {
-          key: 'argument:domainName',
+          key: 'argument:domain',
           value: '[REDACTED]',
         },
       ]);

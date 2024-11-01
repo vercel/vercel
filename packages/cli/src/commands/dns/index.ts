@@ -1,8 +1,6 @@
-import Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
-
 import add from './add';
 import importZone from './import';
 import ls from './ls';
@@ -12,6 +10,7 @@ import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
+import type Client from '../../util/client';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -23,14 +22,14 @@ const COMMAND_CONFIG = {
 export default async function dns(client: Client) {
   const { telemetryEventStore } = client;
 
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(dnsCommand.options);
-
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (error) {
-    handleError(error);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
+  } catch (err) {
+    handleError(err);
     return 1;
   }
 
@@ -54,15 +53,15 @@ export default async function dns(client: Client) {
   switch (subcommand) {
     case 'add':
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, parsedArgs.flags, args);
+      return add(client, args);
     case 'import':
       telemetry.trackCliSubcommandImport(subcommandOriginal);
-      return importZone(client, parsedArgs.flags, args);
+      return importZone(client, args);
     case 'rm':
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, parsedArgs.flags, args);
+      return rm(client, args);
     default:
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, parsedArgs.flags, args);
+      return ls(client, args);
   }
 }

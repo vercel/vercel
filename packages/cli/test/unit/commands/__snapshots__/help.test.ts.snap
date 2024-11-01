@@ -941,13 +941,21 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
-  ▲ vercel dns [command] [options]
+  ▲ vercel dns [command]
 
   Interact with DNS entries for a       
-  project.                              
+  project                               
 
   Commands:
 
+  add     domain details   Add a
+                           new  
+                           DNS  
+                           entry
+                           (see 
+                           below
+                           for  
+                           exam…
   import  domain zonefile  Impo…
                            a DNS
                            zone 
@@ -956,36 +964,18 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            below
                            for  
                            exam…
-  ls      domain           List 
+  list    domain           List 
                            all  
                            DNS  
                            entr…
                            for a
                            doma…
-  add     details alias    Add a
-                           new  
-                           DNS  
-                           entry
-                           (see 
-                           below
-                           for  
-                           exam…
-  rm      id               Remo…
+  remove  id               Remo…
                            a DNS
                            entry
                            using
                            its  
                            ID   
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to
-                         return per page     
-                         (default: 20, max:  
-                         100)                
-  -N,  --next <MS>       Show next page of   
-                         results             
 
 
   Global Options:
@@ -1053,7 +1043,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
     $ vercel dns import <DOMAIN> <FILE>
     $ vercel dns import zeit.rocks ./zonefile.txt
 
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel dns ls --next 1584722256178
     $ vercel dns ls zeit.rocks --next 1584722256178
@@ -1063,23 +1053,17 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 80 1`] = `
 "
-  ▲ vercel dns [command] [options]
+  ▲ vercel dns [command]
 
-  Interact with DNS entries for a project.                                      
+  Interact with DNS entries for a project                                       
 
   Commands:
 
+  add     domain details   Add a new DNS entry (see below for examples) 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
-  ls      domain           List all DNS entries for a domain            
-  add     details alias    Add a new DNS entry (see below for examples) 
-  rm      id               Remove a DNS entry using its ID              
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results                                   
+  list    domain           List all DNS entries for a domain            
+  remove  id               Remove a DNS entry using its ID              
 
 
   Global Options:
@@ -1123,7 +1107,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
     $ vercel dns import <DOMAIN> <FILE>
     $ vercel dns import zeit.rocks ./zonefile.txt
 
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel dns ls --next 1584722256178
     $ vercel dns ls zeit.rocks --next 1584722256178
@@ -1133,22 +1117,16 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
 
 exports[`help command > dns help output snapshots > dns help column width 120 1`] = `
 "
-  ▲ vercel dns [command] [options]
+  ▲ vercel dns [command]
 
-  Interact with DNS entries for a project.                                                                              
+  Interact with DNS entries for a project                                                                               
 
   Commands:
 
+  add     domain details   Add a new DNS entry (see below for examples)                                         
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  ls      domain           List all DNS entries for a domain                                                    
-  add     details alias    Add a new DNS entry (see below for examples)                                         
-  rm      id               Remove a DNS entry using its ID                                                      
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next <MS>       Show next page of results                                                                           
+  list    domain           List all DNS entries for a domain                                                    
+  remove  id               Remove a DNS entry using its ID                                                      
 
 
   Global Options:
@@ -1191,7 +1169,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
     $ vercel dns import <DOMAIN> <FILE>
     $ vercel dns import zeit.rocks ./zonefile.txt
 
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel dns ls --next 1584722256178
     $ vercel dns ls zeit.rocks --next 1584722256178
