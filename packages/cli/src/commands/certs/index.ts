@@ -5,8 +5,14 @@ import add from './add';
 import issue from './issue';
 import ls from './ls';
 import rm from './rm';
-import { certsCommand } from './command';
-import { help } from '../help';
+import {
+  addSubcommand,
+  certsCommand,
+  issueSubcommand,
+  listSubcommand,
+  removeSubcommand,
+} from './command';
+import { Command, help } from '../help';
 import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -46,23 +52,51 @@ export default async function main(client: Client) {
     COMMAND_CONFIG
   );
 
-  if (parsedArgs.flags['--help']) {
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('certs', subcommand);
     output.print(help(certsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: certsCommand, columns: client.stderr.columns })
+    );
+  }
+
   switch (subcommand) {
     case 'issue':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('certs', 'issue');
+        printHelp(issueSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandIssue(subcommandOriginal);
       return issue(client, args);
     case 'ls':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('certs', 'list');
+        printHelp(listSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
     case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('certs', 'remove');
+        printHelp(removeSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
     case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('certs', 'add');
+        printHelp(addSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     default:

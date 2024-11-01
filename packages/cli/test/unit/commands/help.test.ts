@@ -7,7 +7,7 @@ import {
 import { deployCommand } from '../../../src/commands/deploy/command';
 import { aliasCommand } from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
-import { certsCommand } from '../../../src/commands/certs/command';
+import * as certs from '../../../src/commands/certs/command';
 import { dnsCommand } from '../../../src/commands/dns/command';
 import { domainsCommand } from '../../../src/commands/domains/command';
 import { envCommand } from '../../../src/commands/env/command';
@@ -117,13 +117,57 @@ describe('help command', () => {
 
   describe('certs help output snapshots', () => {
     it('certs help column width 40', () => {
-      expect(help(certsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(certs.certsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('certs help column width 80', () => {
-      expect(help(certsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(certs.certsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('certs help column width 120', () => {
-      expect(help(certsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(certs.certsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+
+    describe('certs add subcommand', () => {
+      it('certs add subcommand help column width 120', () => {
+        expect(
+          help(certs.addSubcommand, {
+            columns: 120,
+            parent: certs.certsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+
+    describe('certs issue subcommand', () => {
+      it('certs issue subcommand help column width 120', () => {
+        expect(
+          help(certs.issueSubcommand, {
+            columns: 120,
+            parent: certs.certsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+
+    describe('certs list subcommand', () => {
+      it('certs list subcommand help column width 120', () => {
+        expect(
+          help(certs.listSubcommand, {
+            columns: 120,
+            parent: certs.certsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+
+    describe('certs remove subcommand', () => {
+      it('certs remove subcommand help column width 120', () => {
+        expect(
+          help(certs.removeSubcommand, {
+            columns: 120,
+            parent: certs.certsCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

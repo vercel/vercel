@@ -84,6 +84,7 @@ export const listSubcommand = {
 
 export const addSubcommand = {
   name: 'add',
+  aliases: [],
   description: 'Add a new certificate',
   arguments: [],
   options: [
