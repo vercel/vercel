@@ -642,6 +642,10 @@ exports[`help command > certs help output snapshots > certs issue help output sn
 
   Examples:
 
+  - Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+
+    $ vercel certs issue acme.com www.acme.com
+
 "
 `;
 
@@ -672,6 +676,10 @@ exports[`help command > certs help output snapshots > certs list help output sna
 
   Examples:
 
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    $ vercel certs ls --next 1584722256178
+
 "
 `;
 
@@ -695,6 +703,10 @@ exports[`help command > certs help output snapshots > certs remove help output s
 
 
   Examples:
+
+  - Remove a certificate
+
+    $ vercel certs rm id
 
 "
 `;

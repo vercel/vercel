@@ -12,7 +12,12 @@ export const removeSubcommand = {
     },
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Remove a certificate',
+      value: `${packageName} certs rm id`,
+    },
+  ],
 } as const;
 
 export const issueSubcommand = {
@@ -59,7 +64,12 @@ export const issueSubcommand = {
     },
     { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'Generate a certificate with the cnames "acme.com" and "www.acme.com"`',
+      value: `${packageName} certs issue acme.com www.acme.com`,
+    },
+  ],
 } as const;
 
 export const listSubcommand = {
@@ -79,7 +89,12 @@ export const listSubcommand = {
       description: 'Show next page of results',
     },
   ],
-  examples: [],
+  examples: [
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
+      value: `${packageName} certs ls --next 1584722256178`,
+    },
+  ],
 } as const;
 
 export const addSubcommand = {
@@ -137,17 +152,8 @@ export const certsCommand = {
   ],
   options: [],
   examples: [
-    {
-      name: 'Generate a certificate with the cnames "acme.com" and "www.acme.com"`',
-      value: `${packageName} certs issue acme.com www.acme.com`,
-    },
-    {
-      name: 'Remove a certificate',
-      value: `${packageName} certs rm id`,
-    },
-    {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
-      value: `${packageName} certs ls --next 1584722256178`,
-    },
+    ...issueSubcommand.examples,
+    ...removeSubcommand.examples,
+    ...listSubcommand.examples,
   ],
 } as const;
