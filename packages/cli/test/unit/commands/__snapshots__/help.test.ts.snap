@@ -939,6 +939,30 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 "
 `;
 
+exports[`help command > dns help output snapshots > dns add help output snapshots > dns add help column width 120 1`] = `
+"
+  ▲ vercel dns add domain details
+
+  Add a new DNS entry (see below for examples)                                                                          
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
   ▲ vercel dns [command]
@@ -1173,6 +1197,84 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
     $ vercel dns ls --next 1584722256178
     $ vercel dns ls zeit.rocks --next 1584722256178
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns import help output snapshots > dns import help column width 120 1`] = `
+"
+  ▲ vercel dns import domain zonefile
+
+  Import a DNS zone file (see below for examples)                                                                       
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
+"
+  ▲ vercel dns list domain [options]
+
+  List all DNS entries for a domain                                                                                     
+
+  Options:
+
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns remove help output snapshots > dns remove help column width 120 1`] = `
+"
+  ▲ vercel dns remove id
+
+  Remove a DNS entry using its ID                                                                                       
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
 "
 `;
@@ -2268,6 +2370,311 @@ exports[`help command > inspect help output snapshots > inspect help column widt
   - Get deployment build logs
 
     $ vercel inspect my-deployment.vercel.app --logs
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration help column width 40 1`] = `
+"
+  ▲ vercel integration command
+
+  Manage marketplace integrations       
+
+  Commands:
+
+  add     name         Installs 
+                       a        
+                       marketpl…
+                       integrat…
+  list    [project]    Lists all
+                       resources
+                       from     
+                       marketpl…
+                       integrat…
+  open    name         Opens a  
+                       marketpl…
+                       integrat…
+                       dashboard
+  remove  integration  Uninstal…
+                       a        
+                       marketpl…
+                       integrat…
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration help column width 80 1`] = `
+"
+  ▲ vercel integration command
+
+  Manage marketplace integrations                                               
+
+  Commands:
+
+  add     name         Installs a marketplace integration               
+  list    [project]    Lists all resources from marketplace integrations
+  open    name         Opens a marketplace integration's dashboard      
+  remove  integration  Uninstalls a marketplace integration             
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration help column width 120 1`] = `
+"
+  ▲ vercel integration command
+
+  Manage marketplace integrations                                                                                       
+
+  Commands:
+
+  add     name         Installs a marketplace integration                                                       
+  list    [project]    Lists all resources from marketplace integrations                                        
+  open    name         Opens a marketplace integration's dashboard                                              
+  remove  integration  Uninstalls a marketplace integration                                                     
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 40 1`] = `
+"
+  ▲ vercel integration list [project] [options]
+
+  Lists all resources from marketplace  
+  integrations                          
+
+  Options:
+
+  -a,  --all                 lists all  
+                             resources  
+                             regardless 
+                             of project 
+  -i,  --integration <NAME>  limits the 
+                             resources  
+                             listed to a
+                             designated 
+                             integration
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+  Examples:
+
+  - List all resources
+
+    $ vercel integrations list
+
+  - Filter the resources to a single integration
+
+    $ vercel integration list --integration <integration>
+    $ vercel integration list --integration acme
+    $ vercel integration list -i acme
+
+  - List all marketplace resources for the current team
+
+    $ vercel integration list --all
+    $ vercel integration list -a
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 80 1`] = `
+"
+  ▲ vercel integration list [project] [options]
+
+  Lists all resources from marketplace integrations                             
+
+  Options:
+
+  -a,  --all                 lists all resources regardless of project          
+  -i,  --integration <NAME>  limits the resources listed to a designated        
+                             integration                                        
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - List all resources
+
+    $ vercel integrations list
+
+  - Filter the resources to a single integration
+
+    $ vercel integration list --integration <integration>
+    $ vercel integration list --integration acme
+    $ vercel integration list -i acme
+
+  - List all marketplace resources for the current team
+
+    $ vercel integration list --all
+    $ vercel integration list -a
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration list [project] [options]
+
+  Lists all resources from marketplace integrations                                                                     
+
+  Options:
+
+  -a,  --all                 lists all resources regardless of project                                                  
+  -i,  --integration <NAME>  limits the resources listed to a designated integration                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all resources
+
+    $ vercel integrations list
+
+  - Filter the resources to a single integration
+
+    $ vercel integration list --integration <integration>
+    $ vercel integration list --integration acme
+    $ vercel integration list -i acme
+
+  - List all marketplace resources for the current team
+
+    $ vercel integration list --all
+    $ vercel integration list -a
 
 "
 `;

@@ -3,6 +3,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
   name: 'remove',
+  aliases: ['rm'],
   description: 'Delete an integration resource',
   arguments: [
     {
@@ -45,6 +46,7 @@ export const removeSubcommand = {
 
 export const disconnectSubcommand = {
   name: 'disconnect',
+  aliases: [],
   description: 'Disconnect a resource from a project, or the current project',
   arguments: [
     {
@@ -97,6 +99,7 @@ export const disconnectSubcommand = {
 
 export const integrationResourceCommand = {
   name: 'integration-resource',
+  aliases: ['ir'],
   description: 'Manage marketplace integration resources',
   options: [],
   arguments: [],

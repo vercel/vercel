@@ -1,5 +1,4 @@
 import { handleError } from '../../util/error';
-import Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { help } from '../help';
@@ -11,6 +10,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../../util/client';
 
 const COMMAND_CONFIG = {
   status: ['status'],
@@ -43,6 +43,7 @@ export default async function telemetry(client: Client) {
   if (parsedArguments.flags['--help']) {
     telemetryClient.trackCliFlagHelp('telemetry', subcommand);
     output.print(help(telemetryCommand, { columns: client.stderr.columns }));
+    return 2;
   }
 
   switch (subcommand) {

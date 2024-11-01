@@ -8,7 +8,7 @@ import { deployCommand } from '../../../src/commands/deploy/command';
 import { aliasCommand } from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
 import { certsCommand } from '../../../src/commands/certs/command';
-import { dnsCommand } from '../../../src/commands/dns/command';
+import * as dns from '../../../src/commands/dns/command';
 import { domainsCommand } from '../../../src/commands/domains/command';
 import { envCommand } from '../../../src/commands/env/command';
 import { gitCommand } from '../../../src/commands/git/command';
@@ -25,8 +25,11 @@ import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
+import {
+  integrationCommand,
+  listSubcommand as integrationListSubcommand,
+} from '../../../src/commands/integration/command';
 import dev from '../../../src/commands/dev';
-
 import { client } from '../../mocks/client';
 
 describe('help command', () => {
@@ -126,13 +129,41 @@ describe('help command', () => {
 
   describe('dns help output snapshots', () => {
     it('dns help column width 40', () => {
-      expect(help(dnsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('dns help column width 80', () => {
-      expect(help(dnsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('dns help column width 120', () => {
-      expect(help(dnsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('dns add help output snapshots', () => {
+      it('dns add help column width 120', () => {
+        expect(
+          help(dns.addSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns import help output snapshots', () => {
+      it('dns import help column width 120', () => {
+        expect(
+          help(dns.importSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns list help output snapshots', () => {
+      it('dns list help column width 120', () => {
+        expect(
+          help(dns.listSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns remove help output snapshots', () => {
+      it('dns remove help column width 120', () => {
+        expect(
+          help(dns.removeSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -193,6 +224,45 @@ describe('help command', () => {
     });
     it('inspect help column width 120', () => {
       expect(help(inspectCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('integration help output snapshots', () => {
+    it('integration help column width 40', () => {
+      expect(help(integrationCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('integration help column width 80', () => {
+      expect(help(integrationCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('integration help column width 120', () => {
+      expect(help(integrationCommand, { columns: 120 })).toMatchSnapshot();
+    });
+
+    describe('integration list subcommand', () => {
+      it('integration list subcommand help column width 40', () => {
+        expect(
+          help(integrationListSubcommand, {
+            columns: 40,
+            parent: integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('integration list subcommand help column width 80', () => {
+        expect(
+          help(integrationListSubcommand, {
+            columns: 80,
+            parent: integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+      it('integration list subcommand help column width 120', () => {
+        expect(
+          help(integrationListSubcommand, {
+            columns: 120,
+            parent: integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

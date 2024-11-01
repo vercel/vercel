@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const redeployCommand = {
   name: 'redeploy',
+  aliases: [],
   description: 'Rebuild and deploy a previous deployment.',
   arguments: [
     {

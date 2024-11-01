@@ -3,6 +3,7 @@ import { limitOption, nextOption } from '../../util/arg-common';
 
 export const importSubcommand = {
   name: 'import',
+  aliases: [],
   description: 'Import a DNS zone file (see below for examples)',
   arguments: [
     {
@@ -20,6 +21,7 @@ export const importSubcommand = {
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'List all DNS entries for a domain',
   default: true,
   arguments: [
@@ -46,6 +48,7 @@ export const listSubcommand = {
 
 export const addSubcommand = {
   name: 'add',
+  aliases: [],
   description: 'Add a new DNS entry (see below for examples)',
   arguments: [
     {
@@ -63,6 +66,7 @@ export const addSubcommand = {
 
 export const removeSubcommand = {
   name: 'remove',
+  aliases: ['rm'],
   description: 'Remove a DNS entry using its ID',
   arguments: [
     {
@@ -76,6 +80,7 @@ export const removeSubcommand = {
 
 export const dnsCommand = {
   name: 'dns',
+  aliases: [],
   description: 'Interact with DNS entries for a project',
   arguments: [],
   subcommands: [

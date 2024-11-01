@@ -3,6 +3,7 @@ import { yesOption } from '../../util/arg-common';
 
 export const promoteCommand = {
   name: 'promote',
+  aliases: [],
   description: 'Promote an existing deployment to current.',
   arguments: [
     {
@@ -13,6 +14,7 @@ export const promoteCommand = {
   subcommands: [
     {
       name: 'status',
+      aliases: [],
       description: 'Show the status of any current pending promotions',
       arguments: [
         {

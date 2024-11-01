@@ -22,7 +22,7 @@ describe('dns rm', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:${subcommand}`,
+          value: `${command}:remove`,
         },
       ]);
     });
