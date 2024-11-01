@@ -414,6 +414,37 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 "
 `;
 
+exports[`help command > certs help output snapshots > certs add help output snapshots > certs add help column width 120 1`] = `
+"
+  ▲ vercel certs add [options]
+
+  Add a new certificate                                                                                                 
+
+  Options:
+
+   --ca <FILE>   CA certificate chain file                                                                               
+   --crt <FILE>  Certificate file                                                                                        
+   --key <FILE>  Certificate key file                                                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
 exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
 "
   ▲ vercel certs command
@@ -578,6 +609,92 @@ exports[`help command > certs help output snapshots > certs help column width 12
   - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
     $ vercel certs ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs issue help output snapshots > certs issue help column width 120 1`] = `
+"
+  ▲ vercel certs issue cn [options]
+
+  Issue a new certificate for a domain                                                                                  
+
+  Options:
+
+   --ca <FILE>       CA certificate chain file                                                                           
+   --challenge-only  Only show challenges needed to issue a certificate                                                  
+   --crt <FILE>      Certificate file                                                                                    
+   --key <FILE>      Certificate key file                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs list help output snapshots > certs list help column width 120 1`] = `
+"
+  ▲ vercel certs list [options]
+
+  Show all available certificates                                                                                       
+
+  Options:
+
+       --limit <VALUE>  Number of results to return per page (default: 20, max: 100)                                         
+  -N,  --next           Show next page of results                                                                            
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs remove help output snapshots > certs remove help column width 120 1`] = `
+"
+  ▲ vercel certs remove id
+
+  Remove a certificate by id                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
 "
 `;
@@ -961,6 +1078,30 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 "
 `;
 
+exports[`help command > dns help output snapshots > dns add help output snapshots > dns add help column width 120 1`] = `
+"
+  ▲ vercel dns add domain details
+
+  Add a new DNS entry (see below for examples)                                                                          
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
 exports[`help command > dns help output snapshots > dns help column width 40 1`] = `
 "
   ▲ vercel dns [command]
@@ -1195,6 +1336,84 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
     $ vercel dns ls --next 1584722256178
     $ vercel dns ls zeit.rocks --next 1584722256178
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns import help output snapshots > dns import help column width 120 1`] = `
+"
+  ▲ vercel dns import domain zonefile
+
+  Import a DNS zone file (see below for examples)                                                                       
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns list help output snapshots > dns list help column width 120 1`] = `
+"
+  ▲ vercel dns list domain [options]
+
+  List all DNS entries for a domain                                                                                     
+
+  Options:
+
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > dns help output snapshots > dns remove help output snapshots > dns remove help column width 120 1`] = `
+"
+  ▲ vercel dns remove id
+
+  Remove a DNS entry using its ID                                                                                       
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
 "
 `;
