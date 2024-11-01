@@ -7,24 +7,32 @@ import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-
-import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
-import { AliasRmTelemetryClient } from '../../util/telemetry/commands/alias/remove';
+import { AliasRemoveTelemetryClient } from '../../util/telemetry/commands/alias/remove';
 import output from '../../output-manager';
+import type { Alias } from '@vercel-internals/types';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { handleError } from '../../util/error';
+import { removeSubcommand } from './command';
 
-type Options = {
-  '--yes': boolean;
-};
+export default async function rm(client: Client, argv: string[]) {
+  let parsedArguments;
 
-export default async function rm(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArguments;
+
   const { contextName } = await getScope(client);
-  const telemetryClient = new AliasRmTelemetryClient({
+  const telemetryClient = new AliasRemoveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },

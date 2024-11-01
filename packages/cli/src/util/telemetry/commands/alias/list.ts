@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listSubcommand } from '../../../../commands/alias/command';
 
-export class AliasLsTelemetryClient extends TelemetryClient {
+export class AliasListTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listSubcommand>
+{
   trackCliOptionLimit(limit: number | undefined) {
     if (limit) {
       this.trackCliOption({

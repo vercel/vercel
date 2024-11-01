@@ -29,21 +29,19 @@ describe('alias', () => {
 
   it('routes to set subcommand', async () => {
     const args = ['dpl_123', 'example.com'];
-    const opts = {};
 
     client.setArgv('alias', ...args);
     await alias(client);
-    expect(setSpy).toHaveBeenCalledWith(client, opts, args);
+    expect(setSpy).toHaveBeenCalledWith(client, args);
   });
 
   describe('unrecognized subcommand', () => {
     it('routes to set', async () => {
       const args: string[] = ['not-a-command'];
-      const opts = {};
 
       client.setArgv('alias', ...args);
       await alias(client);
-      expect(setSpy).toHaveBeenCalledWith(client, opts, args);
+      expect(setSpy).toHaveBeenCalledWith(client, args);
     });
   });
 });
