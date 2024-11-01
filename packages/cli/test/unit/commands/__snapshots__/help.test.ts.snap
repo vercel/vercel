@@ -4396,8 +4396,6 @@ exports[`help command > target help output snapshots > target help column width 
                               number    
 
 
-  Examples:
-
 "
 `;
 
@@ -4426,8 +4424,6 @@ exports[`help command > target help output snapshots > target help column width 
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
 "
 `;
 
@@ -4454,8 +4450,6 @@ exports[`help command > target help output snapshots > target help column width 
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;
