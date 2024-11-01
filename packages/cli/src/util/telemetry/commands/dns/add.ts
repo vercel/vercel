@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { addSubcommand } from '../../../../commands/dns/command';
 
-export class DnsAddTelemetryClient extends TelemetryClient {
+export class DnsAddTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof addSubcommand>
+{
   trackCliArgumentDomain(domain: string | undefined) {
     if (domain) {
       this.trackCliArgument({
@@ -9,6 +14,11 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
+
+  // This function is intentionally not implemented because the functions
+  // defined below are used instead, depending on the type of DNS record.
+  trackCliArgumentDetails!: (value: string | undefined) => void;
+
   trackCliArgumentName(name: string | undefined) {
     if (name) {
       this.trackCliArgument({
@@ -17,6 +27,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
+
   trackCliArgumentType(type: string | undefined) {
     if (type) {
       this.trackCliArgument({
@@ -25,6 +36,7 @@ export class DnsAddTelemetryClient extends TelemetryClient {
       });
     }
   }
+
   trackCliArgumentValues(values: string[] | undefined) {
     if (values?.length) {
       this.trackCliArgument({

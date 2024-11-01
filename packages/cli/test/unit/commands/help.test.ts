@@ -8,7 +8,7 @@ import { deployCommand } from '../../../src/commands/deploy/command';
 import * as alias from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
 import { certsCommand } from '../../../src/commands/certs/command';
-import { dnsCommand } from '../../../src/commands/dns/command';
+import * as dns from '../../../src/commands/dns/command';
 import { domainsCommand } from '../../../src/commands/domains/command';
 import { envCommand } from '../../../src/commands/env/command';
 import { gitCommand } from '../../../src/commands/git/command';
@@ -162,13 +162,41 @@ describe('help command', () => {
 
   describe('dns help output snapshots', () => {
     it('dns help column width 40', () => {
-      expect(help(dnsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('dns help column width 80', () => {
-      expect(help(dnsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('dns help column width 120', () => {
-      expect(help(dnsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(dns.dnsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('dns add help output snapshots', () => {
+      it('dns add help column width 120', () => {
+        expect(
+          help(dns.addSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns import help output snapshots', () => {
+      it('dns import help column width 120', () => {
+        expect(
+          help(dns.importSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns list help output snapshots', () => {
+      it('dns list help column width 120', () => {
+        expect(
+          help(dns.listSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('dns remove help output snapshots', () => {
+      it('dns remove help column width 120', () => {
+        expect(
+          help(dns.removeSubcommand, { columns: 120, parent: dns.dnsCommand })
+        ).toMatchSnapshot();
+      });
     });
   });
 

@@ -9,21 +9,27 @@ import getDNSRecords, {
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-export default async function ls(
-  client: Client,
-  opts: PaginationOptions,
-  args: string[]
-) {
+export default async function ls(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
   const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
   const telemetry = new DnsLsTelemetryClient({
@@ -35,7 +41,7 @@ export default async function ls(
   const [domainName] = args;
   const lsStamp = stamp();
 
-  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliArgumentDomain(domainName);
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
 
