@@ -2,38 +2,24 @@
 
 exports[`help command > alias help output snapshots > alias help column width 40 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.     
+  Interact with deployment aliases      
 
   Commands:
 
-  ls                     Show   
-                         all    
-                         aliase…
-  set  deployment alias  Create 
-                         a new  
-                         alias  
-  rm   alias             Remove 
-                         an     
-                         alias  
-                         using  
-                         its    
-                         hostna…
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to
-                         return per page     
-                         (default: 20, max:  
-                         100)                
-  -N,  --next <MS>       Show next page of   
-                         results             
-  -y,  --yes             Skip the            
-                         confirmation prompt 
-                         when removing an    
-                         alias               
+  list                      Show   
+                            all    
+                            aliases
+  remove  alias             Remove 
+                            an     
+                            alias  
+                            using  
+                            its    
+                            hostna…
+  set     deployment alias  Create 
+                            a new  
+                            alias  
 
 
   Global Options:
@@ -93,22 +79,15 @@ exports[`help command > alias help output snapshots > alias help column width 40
 
 exports[`help command > alias help output snapshots > alias help column width 80 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.                                             
+  Interact with deployment aliases                                              
 
   Commands:
 
-  ls                     Show all aliases.                              
-  set  deployment alias  Create a new alias                             
-  rm   alias             Remove an alias using its hostname.            
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results                                   
-  -y,  --yes             Skip the confirmation prompt when removing an alias         
+  list                      Show all aliases                               
+  remove  alias             Remove an alias using its hostname             
+  set     deployment alias  Create a new alias                             
 
 
   Global Options:
@@ -144,22 +123,15 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
 exports[`help command > alias help output snapshots > alias help column width 120 1`] = `
 "
-  ▲ vercel alias [command] [options]
+  ▲ vercel alias [command]
 
-  Interact with deployment aliases.                                                                                     
+  Interact with deployment aliases                                                                                      
 
   Commands:
 
-  ls                     Show all aliases.                                                                      
-  set  deployment alias  Create a new alias                                                                     
-  rm   alias             Remove an alias using its hostname.                                                    
-
-
-  Options:
-
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next <MS>       Show next page of results                                                                           
-  -y,  --yes             Skip the confirmation prompt when removing an alias                                                 
+  list                      Show all aliases                                                                       
+  remove  alias             Remove an alias using its hostname                                                     
+  set     deployment alias  Create a new alias                                                                     
 
 
   Global Options:
@@ -188,6 +160,89 @@ exports[`help command > alias help output snapshots > alias help column width 12
   - The subcommand \`set\` is the default and can be skipped. Protocols in the URLs are unneeded and ignored
 
     $ vercel alias api-ownv3nc9f8.vercel.app my-api.com
+
+"
+`;
+
+exports[`help command > alias help output snapshots > alias list subcommand > alias list subcommand help column width 120 1`] = `
+"
+  ▲ vercel alias list [options]
+
+  Show all aliases                                                                                                      
+
+  Options:
+
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > alias help output snapshots > alias remove subcommand > alias remove subcommand help column width 120 1`] = `
+"
+  ▲ vercel alias remove alias [options]
+
+  Remove an alias using its hostname                                                                                    
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when removing an alias                                                       
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
+exports[`help command > alias help output snapshots > alias set subcommand > alias set subcommand help column width 120 1`] = `
+"
+  ▲ vercel alias set deployment alias
+
+  Create a new alias                                                                                                    
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
 "
 `;

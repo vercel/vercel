@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { setSubcommand } from '../../../../commands/alias/command';
 
-export class AliasSetTelemetryClient extends TelemetryClient {
+export class AliasSetTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof setSubcommand>
+{
   trackCliFlagDebug(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('debug');
@@ -16,7 +21,7 @@ export class AliasSetTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentDeploymentUrl(deploymentUrl: string | undefined) {
+  trackCliArgumentDeployment(deploymentUrl: string | undefined) {
     if (deploymentUrl) {
       this.trackCliArgument({
         arg: 'deployment-url',
@@ -25,7 +30,7 @@ export class AliasSetTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliArgumentCustomDomain(customDomain: string | undefined) {
+  trackCliArgumentAlias(customDomain: string | undefined) {
     if (customDomain) {
       this.trackCliArgument({
         arg: 'custom-domain',
