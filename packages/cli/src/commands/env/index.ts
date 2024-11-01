@@ -93,16 +93,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandPull(subcommand);
-      return pull(
-        client,
-        args
-        //link,
-        //target,
-        //parsedArgs.flags,
-        //args,
-        //cwd,
-        //'vercel-cli:env:pull'
-      );
+      return pull(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(envCommand, { columns: client.stderr.columns }));
