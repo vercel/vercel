@@ -41,7 +41,7 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import commands from './commands';
+import { commands } from './commands';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';

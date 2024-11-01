@@ -29,21 +29,19 @@ describe('dns', () => {
 
   it('routes to ls subcommand', async () => {
     const args = ['example.com'];
-    const opts = {};
 
     client.setArgv('dns', ...args);
     await dns(client);
-    expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
   });
 
   describe('unrecognized subcommand', () => {
     it('routes to ls', async () => {
       const args: string[] = ['not-a-command', 'example.com'];
-      const opts = {};
 
       client.setArgv('dns', ...args);
       await dns(client);
-      expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+      expect(lsSpy).toHaveBeenCalledWith(client, args);
     });
   });
 });

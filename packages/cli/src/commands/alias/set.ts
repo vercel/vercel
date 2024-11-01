@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
-import type { Domain } from '@vercel-internals/types';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
@@ -16,20 +15,29 @@ import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
-import type { VercelConfig } from '@vercel/client';
 import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
 import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { handleError } from '../../util/error';
+import { listSubcommand } from './command';
+import type { Domain } from '@vercel-internals/types';
+import type { VercelConfig } from '@vercel/client';
 
-type Options = {
-  '--debug': boolean;
-  '--local-config': string;
-};
+export default async function set(client: Client, argv: string[]) {
+  let parsedArguments;
 
-export default async function set(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArguments;
+
   const setStamp = stamp();
   const { localConfig } = client;
   const telemetryClient = new AliasSetTelemetryClient({
@@ -75,7 +83,7 @@ export default async function set(
   // For `vercel alias set <argument>`
   if (args.length === 1) {
     const [aliasTarget] = args;
-    telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
+    telemetryClient.trackCliArgumentAlias(aliasTarget);
     const deployment = handleCertError(
       await getDeploymentForAlias(
         client,
@@ -135,8 +143,8 @@ export default async function set(
   }
 
   const [deploymentIdOrHost, aliasTarget] = args;
-  telemetryClient.trackCliArgumentDeploymentUrl(deploymentIdOrHost);
-  telemetryClient.trackCliArgumentCustomDomain(aliasTarget);
+  telemetryClient.trackCliArgumentDeployment(deploymentIdOrHost);
+  telemetryClient.trackCliArgumentAlias(aliasTarget);
   const deployment = handleCertError(
     await getDeployment(client, contextName, deploymentIdOrHost)
   );
