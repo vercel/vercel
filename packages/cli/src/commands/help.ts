@@ -102,13 +102,12 @@ export function outputArrayToString(outputArray: (string | null)[]) {
  * @param command
  * @returns
  */
-export function buildCommandSynopsisLine(command: Command) {
-  const line: string[] = [
-    INDENT,
-    LOGO,
-    chalk.bold(NAME),
-    chalk.bold(command.name),
-  ];
+export function buildCommandSynopsisLine(command: Command, parent?: Command) {
+  const line: string[] = [INDENT, LOGO, chalk.bold(NAME)];
+  if (parent) {
+    line.push(chalk.bold(parent.name));
+  }
+  line.push(chalk.bold(command.name));
   const args = command.arguments.slice(0);
 
   // If there are only subcommands, then there is an implicit "command" argument
@@ -307,6 +306,7 @@ function buildDescriptionLine(
 
 interface BuildHelpOutputOptions {
   columns: number;
+  parent?: Command;
 }
 
 export function buildHelpOutput(
@@ -315,7 +315,7 @@ export function buildHelpOutput(
 ) {
   const outputArray: (string | null)[] = [
     '',
-    buildCommandSynopsisLine(command),
+    buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
     buildCommandOptionLines(command.options, options, 'Options'),
@@ -329,10 +329,12 @@ export function buildHelpOutput(
 
 export interface HelpOptions {
   columns?: number;
+  parent?: Command;
 }
 
 export function help(command: Command, options: HelpOptions) {
   return buildHelpOutput(command, {
+    ...options,
     columns: options.columns ?? 80,
   });
 }
