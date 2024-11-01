@@ -1,36 +1,37 @@
 import { packageName } from '../../util/pkg-name';
 import { confirmOption, yesOption } from '../../util/arg-common';
 
-export const gitCommand = {
-  name: 'git',
-  description: 'Manage your Git provider connections.',
-  arguments: [],
-  subcommands: [
+export const connectSubcommand = {
+  name: 'connect',
+  description:
+    'Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository',
+  arguments: [
     {
-      name: 'connect',
-      description:
-        'Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository',
-      arguments: [
-        {
-          name: 'git url',
-          required: false,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'disconnect',
-      description: 'Disconnect the Git provider repository from your project',
-      arguments: [],
-      options: [],
-      examples: [],
+      name: 'git-url',
+      required: false,
     },
   ],
-  options: [yesOption, { ...confirmOption, deprecated: true }],
+  options: [yesOption, confirmOption],
+  examples: [],
+} as const;
+
+export const disconnectSubcommand = {
+  name: 'disconnect',
+  description: 'Disconnect the Git provider repository from your project',
+  arguments: [],
+  options: [yesOption, confirmOption],
+  examples: [],
+} as const;
+
+export const gitCommand = {
+  name: 'git',
+  description: 'Manage your Git provider connections',
+  arguments: [],
+  subcommands: [connectSubcommand, disconnectSubcommand],
+  options: [],
   examples: [
     {
-      name: 'Connect your Vercel Project to your Git repository defined in your local .git config',
+      name: 'Connect your Vercel Project to your Git repository defined in your local `.git` config',
       value: `${packageName} git connect`,
     },
     {

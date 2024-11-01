@@ -16,7 +16,7 @@ describe('git', () => {
 
       client.setArgv(command, '--help');
       const exitCode = await git(client);
-      await expect(exitCode, 'exit code for git').toEqual(2);
+      expect(exitCode, 'exit code for git').toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -28,22 +28,9 @@ describe('git', () => {
   });
 
   it('displays help when invoked without subcommand', async () => {
-    const cwd = fixture('new-connection');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'new-connection',
-        name: 'new-connection',
-      });
-      client.setArgv('git');
-      const exitCode = await git(client);
-      await expect(exitCode, 'exit code for git').toBe(2);
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
+    client.setArgv('git');
+    const exitCode = await git(client);
+    expect(exitCode, 'exit code for git').toBe(2);
   });
 
   describe('unrecognized subcommand', () => {
@@ -56,7 +43,7 @@ describe('git', () => {
         id: 'new-connection',
         name: 'new-connection',
       });
-      const args: string[] = ['not-a-command'];
+      const args = ['not-a-command'];
       client.setArgv('git', ...args);
 
       try {
