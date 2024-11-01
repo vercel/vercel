@@ -1,6 +1,8 @@
+import { EOL } from 'node:os';
 import { describe, it, expect } from 'vitest';
 import { basename, join } from 'path';
-import { readJSON, mkdirp, writeFile } from 'fs-extra';
+import { readFile } from 'fs-extra';
+import { readJSON, mkdirp, writeFile, pathExists } from 'fs-extra';
 import link from '../../../../src/commands/link';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -216,9 +218,15 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
+      expect(client.stderr).toOutput('Linked to ');
+
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
+
+      const gitignore = await readFile(join(cwd, '.gitignore'), 'utf8');
+      expect(gitignore).toBe(`.vercel${EOL}`);
+      expect(await pathExists(join(cwd, '.vercel/README.txt'))).toBe(true);
     });
 
     it('should track use of `--yes` flag', async () => {

@@ -158,7 +158,7 @@ export class TelemetryClient {
   }
 
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {
-    let subcommand;
+    let subcommand: string | undefined;
     if (subcommands) {
       subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
     }
