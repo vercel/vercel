@@ -17,7 +17,7 @@ describe('teams ls', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:${subcommand}`,
+          value: `${command}:list`,
         },
       ]);
     });
@@ -35,7 +35,7 @@ describe('teams ls', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:list',
-          value: 'list',
+          value: 'ls',
         },
       ]);
     });
