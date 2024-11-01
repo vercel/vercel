@@ -189,8 +189,6 @@ exports[`help command > alias help output snapshots > alias list subcommand > al
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -218,8 +216,6 @@ exports[`help command > alias help output snapshots > alias remove subcommand > 
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -241,8 +237,6 @@ exports[`help command > alias help output snapshots > alias set subcommand > ali
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;
@@ -439,8 +433,6 @@ exports[`help command > certs help output snapshots > certs add help output snap
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;
@@ -1109,8 +1101,6 @@ exports[`help command > dns help output snapshots > dns add help output snapshot
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -1371,8 +1361,6 @@ exports[`help command > dns help output snapshots > dns import help output snaps
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -1401,8 +1389,6 @@ exports[`help command > dns help output snapshots > dns list help output snapsho
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -1424,8 +1410,6 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;
@@ -2590,8 +2574,6 @@ exports[`help command > integration help output snapshots > integration help col
                               number    
 
 
-  Examples:
-
 "
 `;
 
@@ -2623,8 +2605,6 @@ exports[`help command > integration help output snapshots > integration help col
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
 "
 `;
 
@@ -2654,8 +2634,6 @@ exports[`help command > integration help output snapshots > integration help col
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;

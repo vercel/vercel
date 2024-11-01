@@ -270,6 +270,9 @@ export function buildSubcommandLines(
 }
 
 export function buildCommandExampleLines(command: Command) {
+  if (!command.examples?.length) {
+    return null;
+  }
   const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
