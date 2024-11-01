@@ -58,8 +58,8 @@ export default async function telemetry(client: Client) {
     default: {
       const errorMessage =
         parsedArguments.args.length !== 2
-          ? `Invalid number of arguments`
-          : `Invalid subcommand`;
+          ? 'Invalid number of arguments'
+          : 'Invalid subcommand';
       output.print(
         `${chalk.red('Error')}: ${errorMessage}. See help instructions for usage:\n`
       );
