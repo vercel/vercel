@@ -414,9 +414,40 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 "
 `;
 
+exports[`help command > certs help output snapshots > certs add help output snapshots > certs add help column width 120 1`] = `
+"
+  ▲ vercel certs add [options]
+
+  Add a new certificate                                                                                                 
+
+  Options:
+
+   --ca <FILE>   CA certificate chain file                                                                               
+   --crt <FILE>  Certificate file                                                                                        
+   --key <FILE>  Certificate key file                                                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+"
+`;
+
 exports[`help command > certs help output snapshots > certs help column width 40 1`] = `
 "
-  ▲ vercel certs command [options]
+  ▲ vercel certs command
 
   Interact with SSL certificates. This  
   command is intended for advanced use  
@@ -425,30 +456,15 @@ exports[`help command > certs help output snapshots > certs help column width 40
 
   Commands:
 
-  ls         Show all available 
-             certificates       
-  issue  cn   Issue a new       
-             certificate for a  
-             domain             
-  rm     id  Remove a           
-             certificate by id  
-
-
-  Options:
-
-       --ca <FILE>       CA certificate chain
-                         file                
-       --challenge-only  Only show challenges
-                         needed to issue a   
-                         cert                
-       --crt <FILE>      Certificate file    
-       --key <FILE>      Certificate key file
-       --limit <VALUE>   Number of results to
-                         return per page     
-                         (default: 20, max:  
-                         100)                
-  -N,  --next            Show next page of   
-                         results             
+  add         Add a new         
+              certificate       
+  issue   cn  Issue a new       
+              certificate for a 
+              domain            
+  list        Show all available
+              certificates      
+  remove  id  Remove a          
+              certificate by id 
 
 
   Global Options:
@@ -508,26 +524,17 @@ exports[`help command > certs help output snapshots > certs help column width 40
 
 exports[`help command > certs help output snapshots > certs help column width 80 1`] = `
 "
-  ▲ vercel certs command [options]
+  ▲ vercel certs command
 
   Interact with SSL certificates. This command is intended for advanced use     
   only. By default, Vercel manages your certificates automatically.             
 
   Commands:
 
-  ls         Show all available certificates                            
-  issue  cn   Issue a new certificate for a domain                      
-  rm     id  Remove a certificate by id                                 
-
-
-  Options:
-
-       --ca <FILE>       CA certificate chain file                                   
-       --challenge-only  Only show challenges needed to issue a cert                 
-       --crt <FILE>      Certificate file                                            
-       --key <FILE>      Certificate key file                                        
-       --limit <VALUE>   Number of results to return per page (default: 20, max: 100)
-  -N,  --next            Show next page of results                                   
+  add         Add a new certificate                                     
+  issue   cn  Issue a new certificate for a domain                      
+  list        Show all available certificates                           
+  remove  id  Remove a certificate by id                                
 
 
   Global Options:
@@ -563,26 +570,17 @@ exports[`help command > certs help output snapshots > certs help column width 80
 
 exports[`help command > certs help output snapshots > certs help column width 120 1`] = `
 "
-  ▲ vercel certs command [options]
+  ▲ vercel certs command
 
   Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your       
   certificates automatically.                                                                                           
 
   Commands:
 
-  ls         Show all available certificates                                                                    
-  issue  cn   Issue a new certificate for a domain                                                              
-  rm     id  Remove a certificate by id                                                                         
-
-
-  Options:
-
-       --ca <FILE>       CA certificate chain file                                                                           
-       --challenge-only  Only show challenges needed to issue a cert                                                         
-       --crt <FILE>      Certificate file                                                                                    
-       --key <FILE>      Certificate key file                                                                                
-       --limit <VALUE>   Number of results to return per page (default: 20, max: 100)                                        
-  -N,  --next            Show next page of results                                                                           
+  add         Add a new certificate                                                                             
+  issue   cn  Issue a new certificate for a domain                                                              
+  list        Show all available certificates                                                                   
+  remove  id  Remove a certificate by id                                                                        
 
 
   Global Options:
@@ -611,6 +609,104 @@ exports[`help command > certs help output snapshots > certs help column width 12
   - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
 
     $ vercel certs ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs issue help output snapshots > certs issue help column width 120 1`] = `
+"
+  ▲ vercel certs issue cn [options]
+
+  Issue a new certificate for a domain                                                                                  
+
+  Options:
+
+   --ca <FILE>       CA certificate chain file                                                                           
+   --challenge-only  Only show challenges needed to issue a certificate                                                  
+   --crt <FILE>      Certificate file                                                                                    
+   --key <FILE>      Certificate key file                                                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Generate a certificate with the cnames "acme.com" and "www.acme.com"\`
+
+    $ vercel certs issue acme.com www.acme.com
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs list help output snapshots > certs list help column width 120 1`] = `
+"
+  ▲ vercel certs list [options]
+
+  Show all available certificates                                                                                       
+
+  Options:
+
+       --limit <VALUE>  Number of results to return per page (default: 20, max: 100)                                         
+  -N,  --next           Show next page of results                                                                            
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+
+    $ vercel certs ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > certs help output snapshots > certs remove help output snapshots > certs remove help column width 120 1`] = `
+"
+  ▲ vercel certs remove id
+
+  Remove a certificate by id                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Remove a certificate
+
+    $ vercel certs rm id
 
 "
 `;
