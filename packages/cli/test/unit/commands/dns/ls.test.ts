@@ -22,7 +22,7 @@ describe('dns ls', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:${subcommand}`,
+          value: `${command}:list`,
         },
       ]);
     });
@@ -115,7 +115,7 @@ describe('dns ls', () => {
           value: 'ls',
         },
         {
-          key: 'argument:domainName',
+          key: 'argument:domain',
           value: '[REDACTED]',
         },
       ]);

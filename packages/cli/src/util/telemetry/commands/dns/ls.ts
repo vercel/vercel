@@ -1,10 +1,15 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listSubcommand } from '../../../../commands/dns/command';
 
-export class DnsLsTelemetryClient extends TelemetryClient {
-  trackCliArgumentDomainName(domainName: string | undefined) {
+export class DnsLsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listSubcommand>
+{
+  trackCliArgumentDomain(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({
-        arg: 'domainName',
+        arg: 'domain',
         value: this.redactedValue,
       });
     }

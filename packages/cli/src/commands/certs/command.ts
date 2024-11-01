@@ -1,54 +1,39 @@
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption } from '../../util/arg-common';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
 
-export const certsCommand = {
-  name: 'certs',
-  aliases: ['cert'],
-  description:
-    'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
-  arguments: [],
-  subcommands: [
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a certificate by id',
+  arguments: [
     {
-      name: 'ls',
-      aliases: ['list'],
-      description: 'Show all available certificates',
-      arguments: [],
-      options: [],
-      examples: [],
+      name: 'id',
+      required: true,
     },
+  ],
+  options: [],
+  examples: [
     {
-      name: 'issue',
-      aliases: [],
-      description: ' Issue a new certificate for a domain',
-      arguments: [
-        {
-          name: 'cn',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
+      name: 'Remove a certificate',
+      value: `${packageName} certs rm id`,
     },
+  ],
+} as const;
+
+export const issueSubcommand = {
+  name: 'issue',
+  aliases: [],
+  description: 'Issue a new certificate for a domain',
+  arguments: [
     {
-      name: 'rm',
-      aliases: ['remove'],
-      description: 'Remove a certificate by id',
-      arguments: [
-        {
-          name: 'id',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
+      name: 'cn',
+      required: true,
     },
   ],
   options: [
     {
       name: 'challenge-only',
-      description: 'Only show challenges needed to issue a cert',
+      description: 'Only show challenges needed to issue a certificate',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -77,6 +62,22 @@ export const certsCommand = {
       type: String,
       deprecated: false,
     },
+    { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
+  ],
+  examples: [
+    {
+      name: 'Generate a certificate with the cnames "acme.com" and "www.acme.com"`',
+      value: `${packageName} certs issue acme.com www.acme.com`,
+    },
+  ],
+} as const;
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['list'],
+  description: 'Show all available certificates',
+  arguments: [],
+  options: [
     {
       ...limitOption,
       description:
@@ -87,17 +88,8 @@ export const certsCommand = {
       ...nextOption,
       description: 'Show next page of results',
     },
-    { name: 'overwrite', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
-    {
-      name: 'Generate a certificate with the cnames "acme.com" and "www.acme.com"`',
-      value: `${packageName} certs issue acme.com www.acme.com`,
-    },
-    {
-      name: 'Remove a certificate',
-      value: `${packageName} certs rm id`,
-    },
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
       value: `${packageName} certs ls --next 1584722256178`,
@@ -105,9 +97,63 @@ export const certsCommand = {
   ],
 } as const;
 
-export type CertsCommandSpec = ReturnType<
-  typeof getFlagsSpecification<(typeof certsCommand)['options']>
->;
-export type CertsCommandFlags = ReturnType<
-  typeof parseArguments<CertsCommandSpec>
->['flags'];
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a new certificate',
+  arguments: [],
+  options: [
+    {
+      name: 'crt',
+      description: 'Certificate file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'key',
+      description: 'Certificate key file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'ca',
+      description: 'CA certificate chain file',
+      argument: 'FILE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'overwrite',
+      description: '',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+    },
+  ],
+  examples: [],
+} as const;
+
+export const certsCommand = {
+  name: 'certs',
+  aliases: ['cert'],
+  description:
+    'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
+  arguments: [],
+  subcommands: [
+    addSubcommand,
+    issueSubcommand,
+    listSubcommand,
+    removeSubcommand,
+  ],
+  options: [],
+  examples: [
+    ...issueSubcommand.examples,
+    ...removeSubcommand.examples,
+    ...listSubcommand.examples,
+  ],
+} as const;

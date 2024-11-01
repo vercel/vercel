@@ -13,11 +13,13 @@ import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { CertsRemoveTelemetryClient } from '../../util/telemetry/commands/certs/remove';
+import { removeSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { handleError } from '../../util/error';
 import type Client from '../../util/client';
 
-type Options = {};
-
-async function rm(client: Client, _opts: Options, args: string[]) {
+async function rm(client: Client, argv: string[]): Promise<number> {
   const rmStamp = stamp();
 
   const { telemetryEventStore } = client;
@@ -28,6 +30,15 @@ async function rm(client: Client, _opts: Options, args: string[]) {
     },
   });
 
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
   const id = args[0];
   telemetry.trackCliArgumentId(id);
 
