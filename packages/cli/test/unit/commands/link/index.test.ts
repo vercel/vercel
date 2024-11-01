@@ -1,3 +1,4 @@
+import { EOL } from 'node:os';
 import { describe, it, expect } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
@@ -224,7 +225,7 @@ describe('link', () => {
       expect(projectJson.projectId).toEqual(project.id);
 
       const gitignore = await readFile(join(cwd, '.gitignore'), 'utf8');
-      expect(gitignore).toBe('.vercel\n');
+      expect(gitignore).toBe(`.vercel${EOL}`);
       expect(await pathExists(join(cwd, '.vercel/README.txt'))).toBe(true);
     });
 
