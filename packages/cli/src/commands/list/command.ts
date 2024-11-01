@@ -3,6 +3,7 @@ import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const listCommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'List app deployments for an app.',
   arguments: [
     {

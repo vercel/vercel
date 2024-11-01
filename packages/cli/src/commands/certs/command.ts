@@ -3,6 +3,7 @@ import { limitOption, nextOption } from '../../util/arg-common';
 
 export const removeSubcommand = {
   name: 'remove',
+  aliases: ['rm'],
   description: 'Remove a certificate by id',
   arguments: [
     {
@@ -16,7 +17,8 @@ export const removeSubcommand = {
 
 export const issueSubcommand = {
   name: 'issue',
-  description: ' Issue a new certificate for a domain',
+  aliases: [],
+  description: 'Issue a new certificate for a domain',
   arguments: [
     {
       name: 'cn',
@@ -62,6 +64,7 @@ export const issueSubcommand = {
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['list'],
   description: 'Show all available certificates',
   arguments: [],
   options: [
@@ -121,6 +124,7 @@ export const addSubcommand = {
 
 export const certsCommand = {
   name: 'certs',
+  aliases: ['cert'],
   description:
     'Interact with SSL certificates. This command is intended for advanced use only. By default, Vercel manages your certificates automatically.',
   arguments: [],
