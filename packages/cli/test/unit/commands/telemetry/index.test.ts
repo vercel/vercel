@@ -59,9 +59,10 @@ describe('telemetry', () => {
       const exitCode = await telemetry(client);
       expect(client.getFullOutput()).toMatchInlineSnapshot(`
         "
-        Telemetry status: Enabled
+        > Telemetry status: Enabled
 
-        You have opted in to Vercel CLI telemetry"
+        > You have opted in to Vercel CLI telemetry.
+        "
       `);
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -79,9 +80,10 @@ describe('telemetry', () => {
       const exitCode = await telemetry(client);
       expect(client.getFullOutput()).toMatchInlineSnapshot(`
         "
-        Telemetry status: Enabled
+        > Telemetry status: Enabled
 
-        You have opted in to Vercel CLI telemetry"
+        > You have opted in to Vercel CLI telemetry.
+        "
       `);
       expect(exitCode).toBe(0);
     });
@@ -94,10 +96,11 @@ describe('telemetry', () => {
       const exitCode = await telemetry(client);
       expect(client.getFullOutput()).toMatchInlineSnapshot(`
         "
-        Telemetry status: Disabled
+        > Telemetry status: Disabled
 
-        You have opted out of Vercel CLI telemetry
-        No data will be collected from your machine"
+        > You have opted out of Vercel CLI telemetry.
+        > No data will be collected from your machine.
+        "
       `);
       expect(exitCode).toBe(0);
     });
