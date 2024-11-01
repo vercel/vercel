@@ -44,14 +44,19 @@ export default async function main(client: Client) {
 
   const needHelp = flags['--help'];
 
-  if (!subcommand && needHelp) {
-    telemetry.trackCliFlagHelp('integration');
-    output.print(help(integrationCommand, { columns: client.stderr.columns }));
-    return 2;
+  function printHelp(command: Command, parent = integrationCommand) {
+    output.print(help(command, { columns: client.stderr.columns, parent }));
   }
 
-  function printHelp(command: Command) {
-    output.print(help(command, { columns: client.stderr.columns }));
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('integration');
+    output.print(
+      help(integrationCommand, {
+        columns: client.stderr.columns,
+        parent: undefined,
+      })
+    );
+    return 2;
   }
 
   switch (subcommand) {
