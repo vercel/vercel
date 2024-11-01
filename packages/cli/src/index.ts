@@ -41,7 +41,7 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import commands from './commands';
+import { getCommandAliasMap } from './commands';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -328,7 +328,7 @@ const main = async () => {
     const targetPathExists = existsSync(targetPath);
     const subcommandExists =
       GLOBAL_COMMANDS.has(targetOrSubcommand) ||
-      commands.has(targetOrSubcommand);
+      getCommandAliasMap().has(targetOrSubcommand);
 
     if (
       targetPathExists &&
@@ -462,7 +462,9 @@ const main = async () => {
   }
 
   let targetCommand =
-    typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
+    typeof subcommand === 'string'
+      ? getCommandAliasMap().get(subcommand)
+      : undefined;
   const scope =
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||
