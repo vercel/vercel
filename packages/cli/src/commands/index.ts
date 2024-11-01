@@ -8,7 +8,7 @@ import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
-import { Command } from './help';
+
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -22,7 +22,6 @@ import { logsCommand } from './logs/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
-
 import { redeployCommand } from './redeploy/command';
 import { removeCommand } from './remove/command';
 import { rollbackCommand } from './rollback/command';
@@ -30,6 +29,7 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { whoamiCommand } from './whoami/command';
+import type { Command } from './help';
 
 const commands = [
   aliasCommand,
