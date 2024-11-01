@@ -24,7 +24,7 @@ const pkg = {
 const versionRE = /^\d+\.\d+\.\d+$/;
 
 describe('get latest version', () => {
-  afterEach(() => fs.remove(cacheDir));
+  afterEach(() => fs.removeSync(cacheDir));
 
   it('should find newer version async', async () => {
     // 1. first call, no cache file
@@ -91,7 +91,7 @@ describe('get latest version', () => {
   });
 
   // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should not check twice', async () => {
+  it('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
