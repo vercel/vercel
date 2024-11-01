@@ -6,7 +6,12 @@ import { type Command, help } from '../help';
 import ls from './ls';
 import rm from './rm';
 import set from './set';
-import { aliasCommand, listSubcommand } from './command';
+import {
+  aliasCommand,
+  listSubcommand,
+  removeSubcommand,
+  setSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
 import output from '../../output-manager';
@@ -66,9 +71,19 @@ export default async function alias(client: Client) {
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
     case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', 'remove');
+        printHelp(removeSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
     default:
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', 'set');
+        printHelp(setSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
   }
