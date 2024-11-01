@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const bisectCommand = {
   name: 'bisect',
+  aliases: [],
   description: 'Bisect the current project interactively.',
   arguments: [],
   options: [

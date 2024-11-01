@@ -8,11 +8,13 @@ const targetPlaceholder = getEnvTargetPlaceholder();
 
 export const envCommand = {
   name: 'env',
+  aliases: [],
   description: 'Interact with environment variables.',
   arguments: [],
   subcommands: [
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'List all variables for the specified Environment',
       arguments: [
         {
@@ -25,6 +27,7 @@ export const envCommand = {
     },
     {
       name: 'add',
+      aliases: [],
       description: 'Add an Environment Variable (see examples below)',
       arguments: [
         {
@@ -54,6 +57,7 @@ export const envCommand = {
     },
     {
       name: 'rm',
+      aliases: ['remove'],
       description: 'Remove an Environment Variable (see examples below)',
       arguments: [
         {
@@ -70,6 +74,7 @@ export const envCommand = {
     },
     {
       name: 'pull',
+      aliases: [],
       description:
         'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
       arguments: [
