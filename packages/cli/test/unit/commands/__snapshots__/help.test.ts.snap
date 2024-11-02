@@ -649,8 +649,8 @@ exports[`help command > certs help output snapshots > certs list help output sna
 
   Options:
 
-       --limit <VALUE>  Number of results to return per page (default: 20, max: 100)                                         
-  -N,  --next           Show next page of results                                                                            
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next            Show next page of results                                                                           
 
 
   Global Options:

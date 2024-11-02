@@ -117,12 +117,7 @@ export const domainsCommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
     },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
+    limitOption,
     {
       ...forceOption,
       shorthand: null,
