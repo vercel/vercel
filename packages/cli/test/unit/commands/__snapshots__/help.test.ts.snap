@@ -246,20 +246,22 @@ exports[`help command > bisect help output snapshots > bisect help column width 
   ▲ vercel bisect [options]
 
   Bisect the current project            
-  interactively.                        
+  interactively or via an automated     
+  test script.                          
 
   Options:
 
-  -b,  --bad <URL>   Known bad URL      
-  -g,  --good <URL>  Known good URL     
-  -o,  --open <URL>  Automatically open 
-                     each URL in the    
-                     browser            
-  -p,  --path <URL>  Subpath of the     
-                     deployment URL to  
-                     test               
-  -r,  --run <URL>   Test script to run 
-                     for each deployment
+  -b,  --bad <URL>     Known bad URL    
+  -g,  --good <URL>    Known good URL   
+  -o,  --open <URL>    Automatically    
+                       open each URL in 
+                       the browser      
+  -p,  --path <PATH>   Subpath of the   
+                       deployment URL to
+                       test             
+  -r,  --run <SCRIPT>  Test script to   
+                       run for each     
+                       deployment       
 
 
   Global Options:
@@ -321,15 +323,15 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 "
   ▲ vercel bisect [options]
 
-  Bisect the current project interactively.                                     
+  Bisect the current project interactively or via an automated test script.     
 
   Options:
 
-  -b,  --bad <URL>   Known bad URL                                              
-  -g,  --good <URL>  Known good URL                                             
-  -o,  --open <URL>  Automatically open each URL in the browser                 
-  -p,  --path <URL>  Subpath of the deployment URL to test                      
-  -r,  --run <URL>   Test script to run for each deployment                     
+  -b,  --bad <URL>     Known bad URL                                            
+  -g,  --good <URL>    Known good URL                                           
+  -o,  --open <URL>    Automatically open each URL in the browser               
+  -p,  --path <PATH>   Subpath of the deployment URL to test                    
+  -r,  --run <SCRIPT>  Test script to run for each deployment                   
 
 
   Global Options:
@@ -367,15 +369,15 @@ exports[`help command > bisect help output snapshots > bisect help column width 
 "
   ▲ vercel bisect [options]
 
-  Bisect the current project interactively.                                                                             
+  Bisect the current project interactively or via an automated test script.                                             
 
   Options:
 
-  -b,  --bad <URL>   Known bad URL                                                                                      
-  -g,  --good <URL>  Known good URL                                                                                     
-  -o,  --open <URL>  Automatically open each URL in the browser                                                         
-  -p,  --path <URL>  Subpath of the deployment URL to test                                                              
-  -r,  --run <URL>   Test script to run for each deployment                                                             
+  -b,  --bad <URL>     Known bad URL                                                                                    
+  -g,  --good <URL>    Known good URL                                                                                   
+  -o,  --open <URL>    Automatically open each URL in the browser                                                       
+  -p,  --path <PATH>   Subpath of the deployment URL to test                                                            
+  -r,  --run <SCRIPT>  Test script to run for each deployment                                                           
 
 
   Global Options:
