@@ -14,11 +14,8 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(targetCommand.options);
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
