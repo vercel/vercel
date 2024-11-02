@@ -2004,11 +2004,6 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          project   
 
 
-  Options:
-
-
-
-
   Global Options:
 
        --cwd <DIR>            Sets the  
@@ -2078,11 +2073,6 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
                          project                                           
 
 
-  Options:
-
-
-
-
   Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single   
@@ -2125,11 +2115,6 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
   disconnect             Disconnect the Git provider repository from your project                                  
-
-
-  Options:
-
-
 
 
   Global Options:
