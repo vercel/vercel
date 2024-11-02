@@ -32,11 +32,7 @@ export const listSubcommand = {
         'Number of results to return per page (default: 20, max: 100)',
       argument: 'NUMBER',
     },
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
+    nextOption,
   ],
   examples: [],
 } as const;
