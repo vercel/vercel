@@ -1783,8 +1783,6 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               number    
 
 
-  Examples:
-
 "
 `;
 
@@ -1821,8 +1819,6 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
 "
 `;
 
@@ -1854,8 +1850,6 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   -v,  --version              Output the version number                                                                 
 
 
-  Examples:
-
 "
 `;
 
@@ -1877,8 +1871,6 @@ exports[`help command > env help output snapshots > env list help output snapsho
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
 
 "
 `;
