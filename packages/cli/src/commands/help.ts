@@ -140,14 +140,14 @@ export function buildCommandOptionLines(
   options: BuildHelpOutputOptions,
   sectionTitle: String
 ) {
-  if (commandOptions.length === 0) {
-    return null;
-  }
-
   // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
+
+  if (filteredCommandOptions.length === 0) {
+    return null;
+  }
 
   // Sort command options alphabetically
   filteredCommandOptions.sort((a, b) =>
