@@ -746,9 +746,27 @@ async function writeGoWork(
 ) {
   const workspaces = new Set(['.']);
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
+  let goVersion = '1.18'; // default version
+
+  // if `go.mod` exists, read the Go version from it
+  if (modulePath) {
+    const { goModPath } = await findGoModPath(modulePath || workPath, workPath);
+    if (await pathExists(goModPath)) {
+      const goModContents = await readFile(goModPath, 'utf-8');
+      const versionMatch = goModContents.match(/^go\s+(\d+\.\d+)/m);
+      if (versionMatch) {
+        goVersion = versionMatch[1];
+      }
+    }
+  }
 
   if (goWorkPath) {
     const contents = await readFile(goWorkPath, 'utf-8');
+    const workVersionMatch = contents.match(/^go\s+(\d+\.\d+)/m);
+    if (workVersionMatch) {
+      goVersion = workVersionMatch[1];
+    }
+
     const addPath = (path: string) => {
       if (path) {
         if (path.startsWith('.')) {
@@ -782,10 +800,10 @@ async function writeGoWork(
     workspaces.add(relative(destDir, modulePath));
   }
 
-  const contents = `use (\n${Array.from(workspaces)
+  const contents = `go ${goVersion}\n\nuse (\n${Array.from(workspaces)
     .map(w => `  ${w}\n`)
     .join('')})\n`;
-  // console.log(contents);
+
   await writeFile(join(destDir, 'go.work'), contents, 'utf-8');
 }
 
