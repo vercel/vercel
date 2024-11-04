@@ -53,11 +53,7 @@ export const projectCommand = {
     },
   ],
   options: [
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
+    nextOption,
     {
       name: 'update-required',
       shorthand: null,
