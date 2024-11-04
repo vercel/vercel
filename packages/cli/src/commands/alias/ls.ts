@@ -16,13 +16,13 @@ import { parseArguments } from '../../util/get-args';
 import { handleError } from '../../util/error';
 import type { Alias } from '@vercel-internals/types';
 
-export default async function ls(client: Client, argv: string[]) {
+export default async function ls(client: Client) {
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(argv, flagsSpecification);
+    parsedArguments = parseArguments(client.argv, flagsSpecification);
   } catch (err) {
     handleError(err);
     return 1;

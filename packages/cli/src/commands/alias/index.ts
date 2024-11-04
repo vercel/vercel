@@ -62,6 +62,8 @@ export default async function alias(client: Client) {
     );
   }
 
+  client.argv = args;
+
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
@@ -70,7 +72,7 @@ export default async function alias(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, args);
+      return ls(client);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', 'remove');
@@ -78,7 +80,7 @@ export default async function alias(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, args);
+      return rm(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', 'set');
@@ -86,6 +88,6 @@ export default async function alias(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
-      return set(client, args);
+      return set(client);
   }
 }

@@ -24,13 +24,13 @@ import { listSubcommand } from './command';
 import type { Domain } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 
-export default async function set(client: Client, argv: string[]) {
+export default async function set(client: Client) {
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(argv, flagsSpecification);
+    parsedArguments = parseArguments(client.argv, flagsSpecification);
   } catch (err) {
     handleError(err);
     return 1;

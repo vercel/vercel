@@ -17,13 +17,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { handleError } from '../../util/error';
 import { removeSubcommand } from './command';
 
-export default async function rm(client: Client, argv: string[]) {
+export default async function rm(client: Client) {
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(argv, flagsSpecification);
+    parsedArguments = parseArguments(client.argv, flagsSpecification);
   } catch (err) {
     handleError(err);
     return 1;
