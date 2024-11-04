@@ -135,11 +135,7 @@ export const deployCommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
-    {
-      ...confirmOption,
-      deprecated: true,
-      description: 'Use default options to skip all prompts',
-    },
+    confirmOption,
   ],
   examples: [
     {

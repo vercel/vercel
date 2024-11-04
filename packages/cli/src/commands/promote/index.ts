@@ -1,16 +1,16 @@
-import type Client from '../../util/client';
+import ms from 'ms';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import handleError from '../../util/handle-error';
 import { isErrnoException } from '@vercel/error-utils';
-import ms from 'ms';
 import requestPromote from './request-promote';
 import promoteStatus from './status';
-import { promoteCommand } from './command';
+import { promoteCommand, statusSubcommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
 import output from '../../output-manager';
+import type Client from '../../util/client';
 
 /**
  * `vc promote` command
@@ -18,15 +18,12 @@ import output from '../../output-manager';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async (client: Client): Promise<number> => {
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(promoteCommand.options);
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (error) {
-    handleError(error);
+  } catch (err) {
+    handleError(err);
     return 1;
   }
 
@@ -36,7 +33,9 @@ export default async (client: Client): Promise<number> => {
     },
   });
 
-  if (parsedArgs.flags['--help']) {
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!parsedArgs.args[1] && needHelp) {
     telemetry.trackCliFlagHelp('promote');
     output.print(help(promoteCommand, { columns: client.stderr.columns }));
     return 2;
@@ -58,6 +57,16 @@ export default async (client: Client): Promise<number> => {
 
   try {
     if (actionOrDeployId === 'status') {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('promote', 'status');
+        output.print(
+          help(statusSubcommand, {
+            columns: client.stderr.columns,
+            parent: promoteCommand,
+          })
+        );
+        return 2;
+      }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
         autoConfirm: Boolean(parsedArgs.flags['--yes']),
