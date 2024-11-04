@@ -74,7 +74,7 @@ export const issueSubcommand = {
 
 export const listSubcommand = {
   name: 'list',
-  aliases: ['list'],
+  aliases: ['ls'],
   description: 'Show all available certificates',
   arguments: [],
   options: [limitOption, nextOption],
