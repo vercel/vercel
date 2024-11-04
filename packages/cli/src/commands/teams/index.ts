@@ -3,7 +3,6 @@ import add from './add';
 import change from './switch';
 import invite from './invite';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
 import { teamsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -11,6 +10,7 @@ import handleError from '../../util/handle-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
 import getSubcommand from '../../util/get-subcommand';
+import type Client from '../../util/client';
 
 const COMMAND_CONFIG = {
   list: ['ls', 'list'],
@@ -26,11 +26,8 @@ export default async (client: Client) => {
     },
   });
 
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(teamsCommand.options);
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
       permissive: true,
