@@ -76,7 +76,12 @@ export const teamsCommand = {
   aliases: ['switch', 'team'],
   description: 'Manage Teams under your Vercel account',
   arguments: [],
-  subcommands: [addSubcommand, listSubcommand, switchSubcommand],
+  subcommands: [
+    addSubcommand,
+    inviteSubcommand,
+    listSubcommand,
+    switchSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
