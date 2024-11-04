@@ -14,8 +14,6 @@ import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import output from '../../src/output-manager';
-import { Direction } from 'tty';
-import { AddressInfo, SocketReadyState } from 'net';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -35,135 +33,6 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
     super();
     this.isTTY = true;
   }
-
-  // BEGIN: Implement the `WriteStream` interface to avoid TypeScript errors
-  // These are for the `ora` module
-  clearLine(dir: Direction, callback?: () => void): boolean {
-    dir;
-    callback;
-    return false;
-  }
-  cursorTo(x: unknown, y?: unknown, callback?: unknown): boolean {
-    x;
-    y;
-    callback;
-    return false;
-  }
-
-  getColorDepth(): number {
-    return 1;
-  }
-
-  hasColors(depth?: number): boolean {
-    depth;
-    return false;
-  }
-
-  getWindowSize(): [number, number] {
-    return [80, 24];
-  }
-
-  moveCursor(dx: number, dy: number, callback?: () => void): boolean {
-    dx;
-    dy;
-    callback;
-    return false;
-  }
-  get columns(): number {
-    return 80;
-  }
-
-  get rows(): number {
-    return 24;
-  }
-  addListener(event: unknown, listener: unknown): this {
-    event;
-    listener;
-    return this;
-  }
-  on(event: unknown, listener: unknown): this {
-    return super.on(
-      event as string | symbol,
-      listener as (...args: any[]) => void
-    );
-  }
-  once(event: unknown, listener: unknown): this {
-    return super.once(
-      event as string | symbol,
-      listener as (...args: any[]) => void
-    );
-  }
-  prependListener(event: unknown, listener: unknown): this {
-    event;
-    listener;
-    return this;
-  }
-  prependOnceListener(event: unknown, listener: unknown): this {
-    event;
-    listener;
-    return this;
-  }
-  write(chunk: unknown, encoding?: unknown, cb?: unknown): boolean {
-    return super.write(
-      chunk,
-      encoding as BufferEncoding | undefined,
-      cb as ((error: Error | null | undefined) => void) | undefined
-    );
-  }
-
-  get isRaw(): boolean {
-    return false;
-  }
-
-  setRawMode(mode: boolean): this {
-    mode;
-    return this;
-  }
-
-  clearScreenDown(callback?: () => void): boolean {
-    callback;
-    return false;
-  }
-
-  connect(port: unknown, host?: unknown, connectionListener?: unknown): this {
-    port;
-    host;
-    connectionListener;
-    return this;
-  }
-  setTimeout(timeout: number, callback?: () => void): this {
-    timeout;
-    callback;
-    return this;
-  }
-  setNoDelay(noDelay?: boolean): this {
-    noDelay;
-    return this;
-  }
-  setKeepAlive(enable?: boolean, initialDelay?: number): this {
-    enable;
-    initialDelay;
-    return this;
-  }
-  address(): AddressInfo | {} {
-    return {};
-  }
-  unref(): this {
-    return this;
-  }
-  ref(): this {
-    return this;
-  }
-  bufferSize: number = 0;
-  bytesRead: number = 0;
-  bytesWritten: number = 0;
-  connecting: boolean = false;
-
-  localAddress: string = '';
-  localPort: number = 0;
-  allowHalfOpen: boolean = false;
-  readyState: SocketReadyState = 'readOnly';
-  // END: Implement the `WriteStream` interface to avoid TypeScript errors
 
   override _write(
     chunk: any,
@@ -198,6 +67,73 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
   getFullOutput(): string {
     return this.#_fullOutput;
   }
+
+  // BEGIN: Stub the `WriteStream` interface to avoid TypeScript errors
+  bufferSize = 0;
+  bytesRead = 0;
+  bytesWritten = 0;
+  connecting = false;
+  localAddress = '';
+  localPort = 0;
+  allowHalfOpen = false;
+  readyState = 'readOnly' as const;
+  // These are for the `ora` module
+  clearLine() {
+    return true;
+  }
+  cursorTo() {
+    return true;
+  }
+  getColorDepth() {
+    return 1;
+  }
+  hasColors() {
+    return false;
+  }
+  getWindowSize(): [number, number] {
+    return [80, 24];
+  }
+  moveCursor() {
+    return false;
+  }
+  get columns() {
+    return 80;
+  }
+  get rows() {
+    return 24;
+  }
+  write(chunk: unknown, encoding?: unknown, cb?: unknown): boolean {
+    return super.write(
+      chunk,
+      encoding as BufferEncoding | undefined,
+      cb as ((error: Error | null | undefined) => void) | undefined
+    );
+  }
+  clearScreenDown() {
+    return true;
+  }
+  connect() {
+    return this;
+  }
+  setTimeout() {
+    return this;
+  }
+  setNoDelay() {
+    return this;
+  }
+  setKeepAlive() {
+    return this;
+  }
+  address() {
+    return {};
+  }
+  unref() {
+    return this;
+  }
+  ref() {
+    return this;
+  }
+  // END: Stub `WriteStream` interface to avoid TypeScript errors
 }
 
 class MockTelemetryEventStore extends TelemetryEventStore {
