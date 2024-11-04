@@ -25,6 +25,7 @@ import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
 import * as target from '../../../src/commands/target/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
+import * as telemetry from '../../../src/commands/telemetry/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
 import {
   integrationCommand,
@@ -517,6 +518,54 @@ describe('help command', () => {
     });
     it('teams help column width 120', () => {
       expect(help(teamsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('telemetry help output snapshots', () => {
+    it('telemetry help column width 40', () => {
+      expect(
+        help(telemetry.telemetryCommand, { columns: 40 })
+      ).toMatchSnapshot();
+    });
+    it('telemetry help column width 80', () => {
+      expect(
+        help(telemetry.telemetryCommand, { columns: 80 })
+      ).toMatchSnapshot();
+    });
+    it('telemetry help column width 120', () => {
+      expect(
+        help(telemetry.telemetryCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('telemetry status help output snapshots', () => {
+      it('telemetry status help column width 120', () => {
+        expect(
+          help(telemetry.statusSubcommand, {
+            columns: 120,
+            parent: telemetry.telemetryCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('telemetry enable help output snapshots', () => {
+      it('telemetry enable help column width 120', () => {
+        expect(
+          help(telemetry.enableSubcommand, {
+            columns: 120,
+            parent: telemetry.telemetryCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('telemetry disable help output snapshots', () => {
+      it('telemetry disable help column width 120', () => {
+        expect(
+          help(telemetry.disableSubcommand, {
+            columns: 120,
+            parent: telemetry.telemetryCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
