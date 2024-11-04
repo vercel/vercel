@@ -14,6 +14,8 @@ import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import output from '../../src/output-manager';
+import { Direction } from 'tty';
+import { AddressInfo, SocketReadyState } from 'net';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -23,7 +25,7 @@ chalk.level = 0;
 
 export type Scenario = Router;
 
-class MockStream extends PassThrough {
+class MockStream extends PassThrough implements NodeJS.WriteStream {
   isTTY: boolean;
   #_fullOutput: string = '';
   #_chunks: Array<string> = [];
@@ -35,8 +37,133 @@ class MockStream extends PassThrough {
   }
 
   // These are for the `ora` module
-  clearLine() {}
-  cursorTo() {}
+  clearLine(dir: Direction, callback?: () => void): boolean {
+    dir;
+    callback;
+    return false;
+  }
+  cursorTo(x: unknown, y?: unknown, callback?: unknown): boolean {
+    x;
+    y;
+    callback;
+    return false;
+  }
+
+  getColorDepth(): number {
+    return 1;
+  }
+
+  hasColors(depth?: number): boolean {
+    depth;
+    return false;
+  }
+
+  getWindowSize(): [number, number] {
+    return [80, 24];
+  }
+
+  moveCursor(dx: number, dy: number, callback?: () => void): boolean {
+    dx;
+    dy;
+    callback;
+    return false;
+  }
+  get columns(): number {
+    return 80;
+  }
+
+  get rows(): number {
+    return 24;
+  }
+
+  addListener(event: unknown, listener: unknown): this {
+    event;
+    listener;
+    return this;
+  }
+  on(event: unknown, listener: unknown): this {
+    event;
+    listener;
+    return this;
+  }
+  once(event: unknown, listener: unknown): this {
+    event;
+    listener;
+    return this;
+  }
+  prependListener(event: unknown, listener: unknown): this {
+    event;
+    listener;
+    return this;
+  }
+  prependOnceListener(event: unknown, listener: unknown): this {
+    event;
+    listener;
+    return this;
+  }
+  write(chunk: unknown, encoding?: unknown, cb?: unknown): boolean {
+    chunk;
+    encoding;
+    cb;
+    return false;
+  }
+
+  // get isTTY(): boolean {
+  //   return true;
+  // }
+
+  get isRaw(): boolean {
+    return false;
+  }
+
+  setRawMode(mode: boolean): this {
+    mode;
+    return this;
+  }
+
+  clearScreenDown(callback?: () => void): boolean {
+    callback;
+    return false;
+  }
+
+  connect(port: unknown, host?: unknown, connectionListener?: unknown): this {
+    port;
+    host;
+    connectionListener;
+    return this;
+  }
+  setTimeout(timeout: number, callback?: () => void): this {
+    timeout;
+    callback;
+    return this;
+  }
+  setNoDelay(noDelay?: boolean): this {
+    noDelay;
+    return this;
+  }
+  setKeepAlive(enable?: boolean, initialDelay?: number): this {
+    enable;
+    initialDelay;
+    return this;
+  }
+  address(): AddressInfo | {} {
+    return {};
+  }
+  unref(): this {
+    return this;
+  }
+  ref(): this {
+    return this;
+  }
+  bufferSize: number = 0;
+  bytesRead: number = 0;
+  bytesWritten: number = 0;
+  connecting: boolean = false;
+
+  localAddress: string = '';
+  localPort: number = 0;
+  allowHalfOpen: boolean = false;
+  readyState: SocketReadyState = 'readOnly';
 
   override _write(
     chunk: any,
@@ -132,9 +259,12 @@ export class MockClient extends Client {
       authConfig: {},
       config: {},
       localConfig: {},
-      stdin: new PassThrough(),
-      stdout: new PassThrough(),
-      stderr: new PassThrough(),
+      stdin: new MockStream(),
+      stdout: new MockStream(),
+      stderr: new MockStream(),
+      telemetryEventStore: new MockTelemetryEventStore({
+        config: undefined,
+      }),
     });
 
     this.telemetryEventStore = new MockTelemetryEventStore({
