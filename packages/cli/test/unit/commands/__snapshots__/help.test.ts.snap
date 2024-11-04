@@ -3504,8 +3504,8 @@ exports[`help command > promote help output snapshots > promote help column widt
 "
   ▲ vercel promote url|deploymentId [options]
 
-  Promote an existing deployment to     
-  current.                              
+  Promote an existing Deployment to     
+  current                               
 
   Commands:
 
@@ -3518,9 +3518,13 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-   --timeout <timeout>  Time to wait for 
-                        promotion        
-                        completion [3m]  
+       --timeout <timeout>  Time to wait for 
+                            promotion        
+                            completion [3m]  
+  -y,  --yes                Skip the         
+                            confirmation     
+                            prompt when      
+                            linking a Project
 
 
   Global Options:
@@ -3563,16 +3567,9 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Examples:
 
-  - Show the status of any current pending promotions
+  - Promote a Deployment using ID or URL
 
-    $ vercel promote
-    $ vercel promote status
-    $ vercel promote status <project>
-    $ vercel promote status --timeout 30s
-
-  - Promote a deployment using id or url
-
-    $ vercel promote <deployment id/url>
+    $ vercel promote <deployment id|url>
 
 "
 `;
@@ -3581,7 +3578,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 "
   ▲ vercel promote url|deploymentId [options]
 
-  Promote an existing deployment to current.                                    
+  Promote an existing Deployment to current                                     
 
   Commands:
 
@@ -3590,7 +3587,8 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-   --timeout <timeout>  Time to wait for promotion completion [3m]               
+       --timeout <timeout>  Time to wait for promotion completion [3m]               
+  -y,  --yes                Skip the confirmation prompt when linking a Project      
 
 
   Global Options:
@@ -3609,16 +3607,9 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Examples:
 
-  - Show the status of any current pending promotions
+  - Promote a Deployment using ID or URL
 
-    $ vercel promote
-    $ vercel promote status
-    $ vercel promote status <project>
-    $ vercel promote status --timeout 30s
-
-  - Promote a deployment using id or url
-
-    $ vercel promote <deployment id/url>
+    $ vercel promote <deployment id|url>
 
 "
 `;
@@ -3627,7 +3618,7 @@ exports[`help command > promote help output snapshots > promote help column widt
 "
   ▲ vercel promote url|deploymentId [options]
 
-  Promote an existing deployment to current.                                                                            
+  Promote an existing Deployment to current                                                                             
 
   Commands:
 
@@ -3636,7 +3627,41 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-   --timeout <timeout>  Time to wait for promotion completion [3m]                                                       
+       --timeout <timeout>  Time to wait for promotion completion [3m]                                                       
+  -y,  --yes                Skip the confirmation prompt when linking a Project                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Promote a Deployment using ID or URL
+
+    $ vercel promote <deployment id|url>
+
+"
+`;
+
+exports[`help command > promote help output snapshots > promote status help output snapshots > promote status help column width 120 1`] = `
+"
+  ▲ vercel promote status [project] [options]
+
+  Show the status of any current pending promotions                                                                     
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when linking a Project                                                       
 
 
   Global Options:
@@ -3656,14 +3681,9 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   - Show the status of any current pending promotions
 
-    $ vercel promote
     $ vercel promote status
     $ vercel promote status <project>
     $ vercel promote status --timeout 30s
-
-  - Promote a deployment using id or url
-
-    $ vercel promote <deployment id/url>
 
 "
 `;

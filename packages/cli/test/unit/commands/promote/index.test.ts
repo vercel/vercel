@@ -1,16 +1,14 @@
-import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
+import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Request, Response } from 'express';
 import promote from '../../../../src/commands/promote';
-import { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../../mocks/deployment';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import sleep from '../../../../src/util/sleep';
-import { vi } from 'vitest';
+import type { Deployment, LastAliasRequest } from '@vercel-internals/types';
 
 vi.setConfig({ testTimeout: 60000 });
 
@@ -155,7 +153,7 @@ describe('promote', () => {
 
     it('should fail to promote a preview deployment when user says no', async () => {
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url);
@@ -183,28 +181,25 @@ describe('promote', () => {
       const inspectorUrl = `https://vercel.com/user/${projectName}/abcdefghijlmo`;
 
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
       let createWasCalled = false;
 
-      client.scenario.post(
-        '/v13/deployments',
-        (req: Request, res: Response) => {
-          createWasCalled = true;
-          expect(req.body).toMatchObject({
-            deploymentId: previousDeployment.id,
-            name: projectName,
-            target: 'production',
-            meta: {
-              action: 'promote',
-            },
-          });
-          res.json({
-            id: 'some-id',
-            inspectorUrl,
-          });
-        }
-      );
+      client.scenario.post('/v13/deployments', (req, res) => {
+        createWasCalled = true;
+        expect(req.body).toMatchObject({
+          deploymentId: previousDeployment.id,
+          name: projectName,
+          target: 'production',
+          meta: {
+            action: 'promote',
+          },
+        });
+        res.json({
+          id: 'some-id',
+          inspectorUrl,
+        });
+      });
 
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url);
@@ -235,27 +230,24 @@ describe('promote', () => {
 
       let createWasCalled = false;
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
 
-      client.scenario.post(
-        '/v13/deployments',
-        (req: Request, res: Response) => {
-          createWasCalled = true;
-          expect(req.body).toMatchObject({
-            deploymentId: previousDeployment.id,
-            name: projectName,
-            target: 'production',
-            meta: {
-              action: 'promote',
-            },
-          });
-          res.json({
-            id: 'some-id',
-            inspectorUrl,
-          });
-        }
-      );
+      client.scenario.post('/v13/deployments', (req, res) => {
+        createWasCalled = true;
+        expect(req.body).toMatchObject({
+          deploymentId: previousDeployment.id,
+          name: projectName,
+          target: 'production',
+          meta: {
+            action: 'promote',
+          },
+        });
+        res.json({
+          id: 'some-id',
+          inspectorUrl,
+        });
+      });
 
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url, '--yes');
@@ -494,7 +486,7 @@ function initPromoteTest({
 
   client.scenario.post(
     '/:version/projects/:project/promote/:id',
-    (req: Request, res: Response) => {
+    (req, res) => {
       if (promoteStatusCode === 500) {
         res.statusCode = 500;
         res.end('Server error');
