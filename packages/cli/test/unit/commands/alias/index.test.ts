@@ -32,7 +32,7 @@ describe('alias', () => {
 
     client.setArgv('alias', ...args);
     await alias(client);
-    expect(setSpy).toHaveBeenCalledWith(client, args);
+    expect(setSpy).toHaveBeenCalledWith(client);
   });
 
   describe('unrecognized subcommand', () => {
@@ -41,7 +41,7 @@ describe('alias', () => {
 
       client.setArgv('alias', ...args);
       await alias(client);
-      expect(setSpy).toHaveBeenCalledWith(client, args);
+      expect(setSpy).toHaveBeenCalledWith(client);
     });
   });
 });
