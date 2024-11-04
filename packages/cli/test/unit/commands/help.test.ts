@@ -10,7 +10,7 @@ import { bisectCommand } from '../../../src/commands/bisect/command';
 import * as certs from '../../../src/commands/certs/command';
 import * as dns from '../../../src/commands/dns/command';
 import { domainsCommand } from '../../../src/commands/domains/command';
-import { envCommand } from '../../../src/commands/env/command';
+import * as env from '../../../src/commands/env/command';
 import { gitCommand } from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
@@ -255,13 +255,41 @@ describe('help command', () => {
 
   describe('env help output snapshots', () => {
     it('env help column width 40', () => {
-      expect(help(envCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(env.envCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('env help column width 80', () => {
-      expect(help(envCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(env.envCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('env help column width 120', () => {
-      expect(help(envCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(env.envCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('env add help output snapshots', () => {
+      it('env add help column width 120', () => {
+        expect(
+          help(env.addSubcommand, { columns: 120, parent: env.envCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('env list help output snapshots', () => {
+      it('env list help column width 120', () => {
+        expect(
+          help(env.listSubcommand, { columns: 120, parent: env.envCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('env pull help output snapshots', () => {
+      it('env pull help column width 120', () => {
+        expect(
+          help(env.pullSubcommand, { columns: 120, parent: env.envCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('env remove help output snapshots', () => {
+      it('env remove help column width 120', () => {
+        expect(
+          help(env.removeSubcommand, { columns: 120, parent: env.envCommand })
+        ).toMatchSnapshot();
+      });
     });
   });
 

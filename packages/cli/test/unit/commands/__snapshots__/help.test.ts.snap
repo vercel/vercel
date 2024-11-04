@@ -1640,64 +1640,109 @@ exports[`help command > domains help output snapshots > domains help column widt
 "
 `;
 
-exports[`help command > env help output snapshots > env help column width 40 1`] = `
+exports[`help command > env help output snapshots > env add help output snapshots > env add help column width 120 1`] = `
 "
-  ▲ vercel env command [options]
+  ▲ vercel env add name [environment] [options]
 
-  Interact with environment variables.  
-
-  Commands:
-
-  ls    [environment]       List 
-                            all  
-                            vari…
-                            for  
-                            the  
-                            spec…
-                            Envi…
-  add   name [environment]  Add  
-                            an   
-                            Envi…
-                            Vari…
-                            (see 
-                            exam…
-                            belo…
-  rm    name [environment]  Remo…
-                            an   
-                            Envi…
-                            Vari…
-                            (see 
-                            exam…
-                            belo…
-  pull  [filename]          Pull 
-                            all  
-                            Deve…
-                            Envi…
-                            Vari…
-                            from 
-                            the  
-                            cloud
-                            and  
-                            write
-                            to a 
-                            file 
-                            [.en…
-
+  Add an Environment Variable (see examples below)                                                                      
 
   Options:
 
-       --environment  Set the Environment    
-                      (development, preview, 
-                      production) when       
-                      pulling Environment    
-                      Variables              
-       --git-branch   Specify the Git branch 
-                      to pull specific       
-                      Environment Variables  
-                      for                    
-  -y,  --yes          Skip the confirmation  
-                      prompt when removing an
-                      alias                  
+   --force      Force overwrites when a command would normally fail                                                      
+   --sensitive  Add a sensitive Environment Variable                                                                     
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Add a new variable to all Environments
+
+    $ vercel env add <name>
+    $ vercel env add API_TOKEN
+
+  - Add a new Environment Variable to a specific Environment
+
+    $ vercel env add <name> <production | preview | development>
+    $ vercel env add DB_PASS production
+
+  - Override an existing Environment Variable of same target (production, preview, deployment)
+
+    $ vercel env add API_TOKEN --force
+
+  - Add a sensitive Environment Variable
+
+    $ vercel env add API_TOKEN --sensitive
+
+  - Add a new Environment Variable for a specific Environment and Git Branch
+
+    $ vercel env add <name> <production | preview | development> <git-branch>
+    $ vercel env add DB_PASS preview feat1
+
+  - Add a new Environment Variable from stdin
+
+    $ cat <file> | vercel env add <name> <production | preview | development>
+    $ cat ~/.npmrc | vercel env add NPM_RC preview
+    $ vercel env add API_URL production < url.txt
+
+"
+`;
+
+exports[`help command > env help output snapshots > env help column width 40 1`] = `
+"
+  ▲ vercel env command
+
+  Interact with Environment Variables   
+  for a Project                         
+
+  Commands:
+
+  add     name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+  list    [environment] [git-branch]  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+  pull    [filename]                  …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      a
+                                      …
+                                      …
+  remove  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
 
 
   Global Options:
@@ -1738,86 +1783,26 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                               number    
 
 
-  Examples:
-
-  - Pull all Development Environment Variables down from the cloud
-
-    $ vercel env pull <file>
-    $ vercel env pull .env.development.local
-
-  - Add a new variable to multiple Environments
-
-    $ vercel env add <name>
-    $ vercel env add API_TOKEN
-
-  - Add a new variable for a specific Environment
-
-    $ vercel env add <name> <production | preview | development>
-    $ vercel env add DB_PASS production
-
-  - Override an existing Environment Variable of same target (production, preview, deployment)
-
-    $ vercel env add API_TOKEN --force
-
-  - Add a sensitive Environment Variable
-
-    $ vercel env add API_TOKEN --sensitive
-
-  - Add a new variable for a specific Environment and Git Branch
-
-    $ vercel env add <name> <production | preview | development> <gitbranch>
-    $ vercel env add DB_PASS preview feat1
-
-  - Add a new Environment Variable from stdin
-
-    $ cat <file> | vercel env add <name> <production | preview | development>
-    $ cat ~/.npmrc | vercel env add NPM_RC preview
-    $ vercel env add API_URL production < url.txt
-
-  - Remove a variable from multiple Environments
-
-    $ vercel env rm <name>
-    $ vercel env rm API_TOKEN
-
-  - Remove a variable from a specific Environment
-
-    $ vercel env rm <name> <production | preview | development>
-    $ vercel env rm NPM_RC preview
-
-  - Remove a variable from a specific Environment and Git Branch
-
-    $ vercel env rm <name> <production | preview | development> <gitbranch>
-    $ vercel env rm NPM_RC preview feat1
-
 "
 `;
 
 exports[`help command > env help output snapshots > env help column width 80 1`] = `
 "
-  ▲ vercel env command [options]
+  ▲ vercel env command
 
-  Interact with environment variables.                                          
+  Interact with Environment Variables for a Project                             
 
   Commands:
 
-  ls    [environment]       List all variables for the specified         
-                            Environment                                  
-  add   name [environment]  Add an Environment Variable (see examples    
-                            below)                                       
-  rm    name [environment]  Remove an Environment Variable (see examples 
-                            below)                                       
-  pull  [filename]          Pull all Development Environment Variables   
-                            from the cloud and write to a file           
-                            [.env.local]                                 
-
-
-  Options:
-
-       --environment  Set the Environment (development, preview, production) when    
-                      pulling Environment Variables                                  
-       --git-branch   Specify the Git branch to pull specific Environment Variables  
-                      for                                                            
-  -y,  --yes          Skip the confirmation prompt when removing an alias            
+  add     name [environment]          Add an Environment Variable (see    
+                                      examples below)                     
+  list    [environment] [git-branch]  List all Environment Variables for a
+                                      Project                             
+  pull    [filename]                  Pull all Development Environment    
+                                      Variables from the cloud and write  
+                                      to a file [.env.local]              
+  remove  name [environment]          Remove an Environment Variable (see 
+                                      examples below)                     
 
 
   Global Options:
@@ -1834,80 +1819,73 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
-  - Pull all Development Environment Variables down from the cloud
-
-    $ vercel env pull <file>
-    $ vercel env pull .env.development.local
-
-  - Add a new variable to multiple Environments
-
-    $ vercel env add <name>
-    $ vercel env add API_TOKEN
-
-  - Add a new variable for a specific Environment
-
-    $ vercel env add <name> <production | preview | development>
-    $ vercel env add DB_PASS production
-
-  - Override an existing Environment Variable of same target (production, preview, deployment)
-
-    $ vercel env add API_TOKEN --force
-
-  - Add a sensitive Environment Variable
-
-    $ vercel env add API_TOKEN --sensitive
-
-  - Add a new variable for a specific Environment and Git Branch
-
-    $ vercel env add <name> <production | preview | development> <gitbranch>
-    $ vercel env add DB_PASS preview feat1
-
-  - Add a new Environment Variable from stdin
-
-    $ cat <file> | vercel env add <name> <production | preview | development>
-    $ cat ~/.npmrc | vercel env add NPM_RC preview
-    $ vercel env add API_URL production < url.txt
-
-  - Remove a variable from multiple Environments
-
-    $ vercel env rm <name>
-    $ vercel env rm API_TOKEN
-
-  - Remove a variable from a specific Environment
-
-    $ vercel env rm <name> <production | preview | development>
-    $ vercel env rm NPM_RC preview
-
-  - Remove a variable from a specific Environment and Git Branch
-
-    $ vercel env rm <name> <production | preview | development> <gitbranch>
-    $ vercel env rm NPM_RC preview feat1
-
 "
 `;
 
 exports[`help command > env help output snapshots > env help column width 120 1`] = `
 "
-  ▲ vercel env command [options]
+  ▲ vercel env command
 
-  Interact with environment variables.                                                                                  
+  Interact with Environment Variables for a Project                                                                     
 
   Commands:
 
-  ls    [environment]       List all variables for the specified Environment                                     
-  add   name [environment]  Add an Environment Variable (see examples below)                                     
-  rm    name [environment]  Remove an Environment Variable (see examples below)                                  
-  pull  [filename]          Pull all Development Environment Variables from the cloud and write to a file        
-                            [.env.local]                                                                         
+  add     name [environment]          Add an Environment Variable (see examples below)                            
+  list    [environment] [git-branch]  List all Environment Variables for a Project                                
+  pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
+                                      file [.env.local]                                                           
+  remove  name [environment]          Remove an Environment Variable (see examples below)                         
 
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > env help output snapshots > env list help output snapshots > env list help column width 120 1`] = `
+"
+  ▲ vercel env list [environment] [git-branch]
+
+  List all Environment Variables for a Project                                                                          
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > env help output snapshots > env pull help output snapshots > env pull help column width 120 1`] = `
+"
+  ▲ vercel env pull [filename] [options]
+
+  Pull all Development Environment Variables from the cloud and write to a file [.env.local]                            
 
   Options:
 
        --environment  Set the Environment (development, preview, production) when pulling Environment Variables              
        --git-branch   Specify the Git branch to pull specific Environment Variables for                                      
-  -y,  --yes          Skip the confirmation prompt when removing an alias                                                    
+  -y,  --yes          Skip the confirmation prompt when removing an environment variable                                     
 
 
   Global Options:
@@ -1930,34 +1908,34 @@ exports[`help command > env help output snapshots > env help column width 120 1`
     $ vercel env pull <file>
     $ vercel env pull .env.development.local
 
-  - Add a new variable to multiple Environments
+"
+`;
 
-    $ vercel env add <name>
-    $ vercel env add API_TOKEN
+exports[`help command > env help output snapshots > env remove help output snapshots > env remove help column width 120 1`] = `
+"
+  ▲ vercel env remove name [environment] [options]
 
-  - Add a new variable for a specific Environment
+  Remove an Environment Variable (see examples below)                                                                   
 
-    $ vercel env add <name> <production | preview | development>
-    $ vercel env add DB_PASS production
+  Options:
 
-  - Override an existing Environment Variable of same target (production, preview, deployment)
+  -y,  --yes  Skip the confirmation prompt when removing an Environment Variable                                        
 
-    $ vercel env add API_TOKEN --force
 
-  - Add a sensitive Environment Variable
+  Global Options:
 
-    $ vercel env add API_TOKEN --sensitive
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
 
-  - Add a new variable for a specific Environment and Git Branch
 
-    $ vercel env add <name> <production | preview | development> <gitbranch>
-    $ vercel env add DB_PASS preview feat1
-
-  - Add a new Environment Variable from stdin
-
-    $ cat <file> | vercel env add <name> <production | preview | development>
-    $ cat ~/.npmrc | vercel env add NPM_RC preview
-    $ vercel env add API_URL production < url.txt
+  Examples:
 
   - Remove a variable from multiple Environments
 
