@@ -89,6 +89,8 @@ export const nextOption = {
   shorthand: 'N',
   type: Number,
   deprecated: false,
+  description: 'Show next page of results',
+  argument: 'MS',
 } as const;
 
 export const confirmOption = {

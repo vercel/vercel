@@ -110,14 +110,11 @@ export const domainsCommand = {
   ],
   options: [
     {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-    {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
     },
     limitOption,
+    nextOption,
     {
       ...forceOption,
       shorthand: null,

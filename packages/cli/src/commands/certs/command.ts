@@ -77,13 +77,7 @@ export const listSubcommand = {
   aliases: ['list'],
   description: 'Show all available certificates',
   arguments: [],
-  options: [
-    limitOption,
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-  ],
+  options: [limitOption, nextOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
