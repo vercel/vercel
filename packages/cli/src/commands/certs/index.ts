@@ -17,12 +17,13 @@ import Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
+import { getAliases } from '..';
 
 const COMMAND_CONFIG = {
-  add: ['add'],
-  issue: ['issue'],
-  ls: ['ls', 'list'],
-  rm: ['rm', 'remove'],
+  add: getAliases(addSubcommand),
+  issue: getAliases(issueSubcommand),
+  ls: getAliases(listSubcommand),
+  rm: getAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
