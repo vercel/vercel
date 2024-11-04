@@ -12,28 +12,30 @@ import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import type { ProjectLinked } from '@vercel-internals/types';
 import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
 import output from '../../output-manager';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {
-  '--debug': boolean;
-  '--yes': boolean;
-};
-
-export default async function rm(
-  client: Client,
-  link: ProjectLinked,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { project } = link;
-
+export default async function rm(client: Client, argv: string[]) {
   const telemetryClient = new EnvRmTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   if (args.length > 3) {
     output.error(
@@ -49,6 +51,21 @@ export default async function rm(
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+  const { project } = link;
 
   if (!envName) {
     envName = await client.input.text({

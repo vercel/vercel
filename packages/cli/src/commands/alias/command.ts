@@ -25,14 +25,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
-  options: [
-    limitOption,
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
-  ],
+  options: [limitOption, nextOption],
   examples: [],
 } as const;
 

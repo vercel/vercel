@@ -23,15 +23,14 @@ import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
+import { pullSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import parseTarget from '../../util/parse-target';
+import { getLinkedProject } from '../../util/projects/link';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
-
-type Options = {
-  '--debug': boolean;
-  '--yes': boolean;
-  '--git-branch': string;
-  '--environment': string;
-};
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
@@ -60,20 +59,23 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(
-  client: Client,
-  link: ProjectLinked,
-  environment: string,
-  opts: Partial<Options>,
-  args: string[],
-  cwd: string,
-  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
-) {
+export default async function pull(client: Client, argv: string[]) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArgs;
 
   if (args.length > 1) {
     output.error(
@@ -92,6 +94,27 @@ export default async function pull(
   telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
+  const environment =
+    parseTarget({
+      flagName: 'environment',
+      flags: opts,
+    }) || 'development';
+
   await envPullCommandLogic(
     client,
     filename,
@@ -99,8 +122,8 @@ export default async function pull(
     environment,
     link,
     gitBranch,
-    cwd,
-    source
+    client.cwd,
+    'vercel-cli:env:pull'
   );
 
   return 0;

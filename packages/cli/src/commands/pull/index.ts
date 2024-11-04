@@ -16,8 +16,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
-import { pullCommand } from './command';
-import { type EnvCommandFlags } from '../env/command';
+import { pullCommand, type PullCommandFlags } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
@@ -28,7 +27,7 @@ async function pullAllEnvFiles(
   environment: string,
   client: Client,
   link: ProjectLinked,
-  flags: EnvCommandFlags,
+  flags: PullCommandFlags,
   cwd: string
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
@@ -113,7 +112,7 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: EnvCommandFlags
+  flags: PullCommandFlags
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
