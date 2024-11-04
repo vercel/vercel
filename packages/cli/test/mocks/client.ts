@@ -88,9 +88,10 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
     );
   }
   once(event: unknown, listener: unknown): this {
-    event;
-    listener;
-    return this;
+    return super.once(
+      event as string | symbol,
+      listener as (...args: any[]) => void
+    );
   }
   prependListener(event: unknown, listener: unknown): this {
     event;
@@ -264,10 +265,6 @@ export class MockClient extends Client {
       telemetryEventStore: new MockTelemetryEventStore({
         config: undefined,
       }),
-    });
-
-    this.telemetryEventStore = new MockTelemetryEventStore({
-      config: undefined,
     });
 
     this.scenario = Router();
