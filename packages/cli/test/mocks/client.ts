@@ -36,6 +36,7 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
     this.isTTY = true;
   }
 
+  // BEGIN: Implement the `WriteStream` interface to avoid TypeScript errors
   // These are for the `ora` module
   clearLine(dir: Direction, callback?: () => void): boolean {
     dir;
@@ -75,16 +76,16 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
   get rows(): number {
     return 24;
   }
-
   addListener(event: unknown, listener: unknown): this {
     event;
     listener;
     return this;
   }
   on(event: unknown, listener: unknown): this {
-    event;
-    listener;
-    return this;
+    return super.on(
+      event as string | symbol,
+      listener as (...args: any[]) => void
+    );
   }
   once(event: unknown, listener: unknown): this {
     event;
@@ -102,15 +103,12 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
     return this;
   }
   write(chunk: unknown, encoding?: unknown, cb?: unknown): boolean {
-    chunk;
-    encoding;
-    cb;
-    return false;
+    return super.write(
+      chunk,
+      encoding as BufferEncoding | undefined,
+      cb as ((error: Error | null | undefined) => void) | undefined
+    );
   }
-
-  // get isTTY(): boolean {
-  //   return true;
-  // }
 
   get isRaw(): boolean {
     return false;
@@ -164,6 +162,7 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
   localPort: number = 0;
   allowHalfOpen: boolean = false;
   readyState: SocketReadyState = 'readOnly';
+  // END: Implement the `WriteStream` interface to avoid TypeScript errors
 
   override _write(
     chunk: any,
