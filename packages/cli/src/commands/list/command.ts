@@ -42,7 +42,7 @@ export const listCommand = {
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

@@ -18,11 +18,12 @@ import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
 import { projectCommand } from '../../../src/commands/project/command';
-import { promoteCommand } from '../../../src/commands/promote/command';
+import * as promote from '../../../src/commands/promote/command';
 import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
 import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
+import * as target from '../../../src/commands/target/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
 import {
@@ -389,13 +390,23 @@ describe('help command', () => {
 
   describe('promote help output snapshots', () => {
     it('promote help column width 40', () => {
-      expect(help(promoteCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(promote.promoteCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('promote help column width 80', () => {
-      expect(help(promoteCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(promote.promoteCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('promote help column width 120', () => {
-      expect(help(promoteCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(promote.promoteCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('promote status help output snapshots', () => {
+      it('promote status help column width 120', () => {
+        expect(
+          help(promote.statusSubcommand, {
+            columns: 120,
+            parent: promote.promoteCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -444,6 +455,28 @@ describe('help command', () => {
     });
     it('rollback help column width 120', () => {
       expect(help(rollbackCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('target help output snapshots', () => {
+    it('target help column width 40', () => {
+      expect(help(target.targetCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('target help column width 80', () => {
+      expect(help(target.targetCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('target help column width 120', () => {
+      expect(help(target.targetCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('target list help output snapshots', () => {
+      it('target list help column width 120', () => {
+        expect(
+          help(target.listSubcommand, {
+            columns: 120,
+            parent: target.targetCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

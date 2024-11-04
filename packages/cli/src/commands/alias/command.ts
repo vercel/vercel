@@ -25,15 +25,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
-  options: [
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
-    nextOption,
-  ],
+  options: [limitOption, nextOption],
   examples: [],
 } as const;
 
