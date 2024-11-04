@@ -10,9 +10,9 @@ import { formatEnvironment } from '../../util/target/format-environment';
 import type { CustomEnvironment } from '@vercel-internals/types';
 import output from '../../output-manager';
 
-export default async function list(client: Client, args: string[]) {
+export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
-  if (args.length !== 0) {
+  if (argv.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('target ls')}`

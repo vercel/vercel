@@ -6,6 +6,7 @@ import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
 import output from '../../output-manager';
+import { TeamsSwitchTelemetryClient } from '../../util/telemetry/commands/teams/switch';
 import type Client from '../../util/client';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
@@ -19,7 +20,13 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
 };
 
 export default async function main(client: Client, desiredSlug?: string) {
-  const { config } = client;
+  const { config, telemetryEventStore } = client;
+  const telemetry = new TeamsSwitchTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliArgumentDesiredSlug(desiredSlug);
   const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');

@@ -56,7 +56,7 @@ describe('env ls', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:${subcommand}`,
+          value: `${command}:list`,
         },
       ]);
     });

@@ -56,6 +56,7 @@ describe('teams switch', () => {
       expect(exitCode, 'exit code for "teams"').toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:switch', value: 'switch' },
+        { key: 'argument:slug', value: '[REDACTED]' },
       ]);
     });
     it('should not let you switch to personal account', async () => {

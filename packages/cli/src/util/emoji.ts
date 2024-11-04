@@ -12,7 +12,9 @@ const stripEmojiRegex = new RegExp(Object.values(emojiLabels).join('|'), 'gi');
 
 export type EmojiLabel = keyof typeof emojiLabels;
 
-export function emoji(label: EmojiLabel) {
+export function emoji<Label extends EmojiLabel>(
+  label: Label
+): (typeof emojiLabels)[Label] {
   return emojiLabels[label];
 }
 
