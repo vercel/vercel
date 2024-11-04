@@ -13,7 +13,7 @@ export const addSubcommand = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: "Show all teams you're a part of",
+  description: "Show all teams that you're a member of",
   arguments: [],
   options: [
     nextOption,
