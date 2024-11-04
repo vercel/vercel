@@ -22,7 +22,7 @@ export const devCommand = {
     },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {
