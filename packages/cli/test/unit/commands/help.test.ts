@@ -23,6 +23,7 @@ import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
 import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
+import * as target from '../../../src/commands/target/command';
 import { teamsCommand } from '../../../src/commands/teams/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
 import {
@@ -454,6 +455,28 @@ describe('help command', () => {
     });
     it('rollback help column width 120', () => {
       expect(help(rollbackCommand, { columns: 120 })).toMatchSnapshot();
+    });
+  });
+
+  describe('target help output snapshots', () => {
+    it('target help column width 40', () => {
+      expect(help(target.targetCommand, { columns: 40 })).toMatchSnapshot();
+    });
+    it('target help column width 80', () => {
+      expect(help(target.targetCommand, { columns: 80 })).toMatchSnapshot();
+    });
+    it('target help column width 120', () => {
+      expect(help(target.targetCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('target list help output snapshots', () => {
+      it('target list help column width 120', () => {
+        expect(
+          help(target.listSubcommand, {
+            columns: 120,
+            parent: target.targetCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

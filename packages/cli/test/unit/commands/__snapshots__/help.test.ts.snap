@@ -4349,6 +4349,144 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
 `;
 
+exports[`help command > target help output snapshots > target help column width 40 1`] = `
+"
+  ▲ vercel target command
+
+  Manage your Vercel Project's          
+  "targets" (custom environments).      
+
+  Commands:
+
+  list    List targets defined  
+          for the current       
+          Project               
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the  
+                              current   
+                              working   
+                              directory 
+                              for a     
+                              single run
+                              of a      
+                              command   
+  -d,  --debug                Debug mode
+                              (default  
+                              off)      
+  -Q,  --global-config <DIR>  Path to   
+                              the global
+                              \`.vercel\` 
+                              directory 
+  -h,  --help                 Output    
+                              usage     
+                              informati…
+  -A,  --local-config <FILE>  Path to   
+                              the local 
+                              \`vercel.j…
+                              file      
+       --no-color             No color  
+                              mode      
+                              (default  
+                              off)      
+  -S,  --scope                Set a     
+                              custom    
+                              scope     
+  -t,  --token <TOKEN>        Login     
+                              token     
+  -v,  --version              Output the
+                              version   
+                              number    
+
+
+"
+`;
+
+exports[`help command > target help output snapshots > target help column width 80 1`] = `
+"
+  ▲ vercel target command
+
+  Manage your Vercel Project's "targets" (custom environments).                 
+
+  Commands:
+
+  list    List targets defined for the current Project                  
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
+
+
+"
+`;
+
+exports[`help command > target help output snapshots > target help column width 120 1`] = `
+"
+  ▲ vercel target command
+
+  Manage your Vercel Project's "targets" (custom environments).                                                         
+
+  Commands:
+
+  list    List targets defined for the current Project                                                          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > target help output snapshots > target list help output snapshots > target list help column width 120 1`] = `
+"
+  ▲ vercel target list
+
+  List targets defined for the current Project                                                                          
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all targets for the current Project
+
+    $ vercel target ls my-project
+
+"
+`;
+
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
   ▲ vercel teams command
