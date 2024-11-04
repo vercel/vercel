@@ -110,19 +110,11 @@ export const domainsCommand = {
   ],
   options: [
     {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-    {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
     },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
+    limitOption,
+    nextOption,
     {
       ...forceOption,
       shorthand: null,

@@ -30,19 +30,7 @@ export const listSubcommand = {
       required: true,
     },
   ],
-  options: [
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
-  ],
+  options: [limitOption, nextOption],
   examples: [],
 } as const;
 
