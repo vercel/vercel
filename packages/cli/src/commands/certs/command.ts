@@ -78,12 +78,7 @@ export const listSubcommand = {
   description: 'Show all available certificates',
   arguments: [],
   options: [
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'VALUE',
-    },
+    limitOption,
     {
       ...nextOption,
       description: 'Show next page of results',
