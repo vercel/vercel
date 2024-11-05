@@ -4500,7 +4500,7 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   add             Create a new  
                   team          
-  invite  emails  Invite a new  
+  invite  email   Invite a new  
                   member to a   
                   team          
   list            Show all teams
@@ -4560,7 +4560,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
   Commands:
 
   add             Create a new team                                     
-  invite  emails  Invite a new member to a team                         
+  invite  email   Invite a new member to a team                         
   list            Show all teams that you're a member of                
   switch  [name]  Switch to a different team                            
 
@@ -4591,7 +4591,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   Commands:
 
   add             Create a new team                                                                             
-  invite  emails  Invite a new member to a team                                                                 
+  invite  email   Invite a new member to a team                                                                 
   list            Show all teams that you're a member of                                                        
   switch  [name]  Switch to a different team                                                                    
 
@@ -4614,7 +4614,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
 exports[`help command > teams help output snapshots > teams invite help output snapshots > teams invite help column width 120 1`] = `
 "
-  ▲ vercel teams invite emails
+  ▲ vercel teams invite email ...
 
   Invite a new member to a team                                                                                         
 

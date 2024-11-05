@@ -86,7 +86,7 @@ export default async function invite(
     introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
   );
 
-  telemetry.trackCliArgumentEmails(emails.length > 1 ? 'MANY' : 'ONE');
+  telemetry.trackCliArgumentEmail(emails);
 
   if (emails.length > 0) {
     for (const email of emails) {

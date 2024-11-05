@@ -6,11 +6,11 @@ export class TeamsInviteTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof inviteSubcommand>
 {
-  trackCliArgumentEmails(value: string | undefined) {
-    if (value) {
+  trackCliArgumentEmail(values: string[]) {
+    if (values) {
       this.trackCliArgument({
         arg: 'email',
-        value,
+        value: this.redactedArgumentsLength(values),
       });
     }
   }

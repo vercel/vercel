@@ -54,8 +54,9 @@ export const inviteSubcommand = {
   description: 'Invite a new member to a team',
   arguments: [
     {
-      name: 'emails',
+      name: 'email',
       required: true,
+      multiple: true,
     },
   ],
   options: [],
