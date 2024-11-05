@@ -82,7 +82,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  let cwd = parsedArgs.args[1] || client.cwd;
+  const cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const isProduction = Boolean(parsedArgs.flags['--prod']);
   const environment =
