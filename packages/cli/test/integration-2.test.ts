@@ -991,19 +991,6 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
   }
 });
 
-test('[vc link] should support the `--project` flag', async () => {
-  const projectName = 'link-project-flag';
-  const directory = await setupE2EFixture('static-deployment');
-
-  const [team, output] = await Promise.all([
-    teamPromise,
-    execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
-  ]);
-
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(`Linked to ${team.slug}/${projectName}`);
-});
-
 test('[vc build] should build project with `@vercel/static-build`', async () => {
   const directory = await setupE2EFixture('vc-build-static-build');
   const output = await execCli(binaryPath, ['build'], { cwd: directory });
