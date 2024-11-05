@@ -23,6 +23,7 @@ export interface CommandOption {
 export interface CommandArgument {
   readonly name: string;
   readonly required: boolean;
+  readonly multiple?: true;
 }
 export interface CommandExample {
   readonly name: string;
@@ -124,7 +125,11 @@ export function buildCommandSynopsisLine(command: Command, parent?: Command) {
 
   if (args.length > 0) {
     for (const argument of args) {
-      line.push(argument.required ? argument.name : `[${argument.name}]`);
+      let { name } = argument;
+      if (argument.multiple) {
+        name += ' ...';
+      }
+      line.push(argument.required ? name : `[${name}]`);
     }
   }
   if (command.options.length > 0) {
