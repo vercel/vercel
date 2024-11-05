@@ -59,27 +59,25 @@ export default async function list(client: Client, argv: string[]) {
       ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
         header => chalk.bold(chalk.cyan(header))
       ),
-      ...result
-        .map(target => {
-          const type =
-            target.type === 'production'
-              ? 'Production'
-              : target.type === 'development'
-                ? 'Development'
-                : 'Preview';
-          return [
-            [
-              formatEnvironment(link.org.slug, link.project.name, target),
-              target.slug,
-              target.id,
-              type,
-              chalk.gray(
-                target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
-              ),
-            ],
-          ];
-        })
-        .flat(),
+      ...result.flatMap(target => {
+        const type =
+          target.type === 'production'
+            ? 'Production'
+            : target.type === 'development'
+              ? 'Development'
+              : 'Preview';
+        return [
+          [
+            formatEnvironment(link.org.slug, link.project.name, target),
+            target.slug,
+            target.id,
+            type,
+            chalk.gray(
+              target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+            ),
+          ],
+        ];
+      }),
     ],
     { hsep: 3 }
   ).replace(/^/gm, '  ');
