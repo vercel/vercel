@@ -4500,6 +4500,9 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   add             Create a new  
                   team          
+  invite  emails  Invite a new  
+                  member to a   
+                  team          
   list            Show all teams
                   that you're a 
                   member of     
@@ -4557,6 +4560,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
   Commands:
 
   add             Create a new team                                     
+  invite  emails  Invite a new member to a team                         
   list            Show all teams that you're a member of                
   switch  [name]  Switch to a different team                            
 
@@ -4587,6 +4591,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   Commands:
 
   add             Create a new team                                                                             
+  invite  emails  Invite a new member to a team                                                                 
   list            Show all teams that you're a member of                                                        
   switch  [name]  Switch to a different team                                                                    
 
