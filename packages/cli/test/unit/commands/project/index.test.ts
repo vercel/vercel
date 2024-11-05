@@ -29,13 +29,12 @@ describe('project', () => {
   });
 
   it('routes to ls subcommand', async () => {
-    const user = useUser();
+    useUser();
     const args: string[] = [];
-    const opts = {};
 
     client.setArgv('project', ...args);
     await project(client);
-    expect(lsSpy).toHaveBeenCalledWith(client, opts, args, user.username);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
   });
 
   describe('unrecognized subcommand', () => {
