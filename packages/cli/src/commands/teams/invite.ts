@@ -17,7 +17,7 @@ import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
-import { listSubcommand } from './command';
+import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -53,7 +53,7 @@ export default async function invite(
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(inviteSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
