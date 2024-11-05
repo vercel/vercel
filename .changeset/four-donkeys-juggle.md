@@ -1,0 +1,4 @@
+---
+---
+
+Fix MockClient typescript errors
