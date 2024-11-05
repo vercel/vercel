@@ -8,23 +8,22 @@ import {
 
 export const domainsCommand = {
   name: 'domains',
+  aliases: ['domain'],
   description: 'Manage domains',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
+  arguments: [],
   subcommands: [
     {
       name: 'ls',
+      aliases: ['list'],
       description: 'Show all domains in a list',
+      default: true,
       arguments: [],
       options: [],
       examples: [],
     },
     {
       name: 'inspect',
+      aliases: [],
       description: 'Displays information related to a domain',
       arguments: [
         {
@@ -37,6 +36,7 @@ export const domainsCommand = {
     },
     {
       name: 'add',
+      aliases: [],
       description: 'Add a new domain that you already own',
       arguments: [
         {
@@ -53,6 +53,7 @@ export const domainsCommand = {
     },
     {
       name: 'rm',
+      aliases: ['remove'],
       description: 'Remove a domain',
       arguments: [
         {
@@ -65,6 +66,7 @@ export const domainsCommand = {
     },
     {
       name: 'buy',
+      aliases: [],
       description: "Buy a domain that you don't yet own",
       arguments: [
         {
@@ -77,6 +79,7 @@ export const domainsCommand = {
     },
     {
       name: 'move',
+      aliases: [],
       description: 'Move a domain to another scope',
       arguments: [
         {
@@ -93,6 +96,7 @@ export const domainsCommand = {
     },
     {
       name: 'transfer-in',
+      aliases: [],
       description: 'Transfer in a domain to Vercel',
       arguments: [
         {
@@ -106,19 +110,11 @@ export const domainsCommand = {
   ],
   options: [
     {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-    {
       ...yesOption,
       description: 'Skip the confirmation prompt when removing a domain',
     },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
+    limitOption,
+    nextOption,
     {
       ...forceOption,
       shorthand: null,

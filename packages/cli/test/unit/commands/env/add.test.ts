@@ -35,6 +35,24 @@ describe('env add', () => {
     client.cwd = cwd;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'add';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[name]', () => {
     describe('--sensitive', () => {
       it('tracks flag', async () => {
@@ -64,7 +82,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -103,7 +121,7 @@ describe('env add', () => {
           },
           {
             key: `argument:environment`,
-            value: '[REDACTED]',
+            value: 'preview',
           },
           {
             key: `argument:git-branch`,
@@ -118,6 +136,31 @@ describe('env add', () => {
     });
 
     describe('[environment]', () => {
+      it('should redact custom [environment] values', async () => {
+        client.setArgv('env', 'add', 'environment-variable', 'custom-env-name');
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput(
+          "What's the value of environment-variable?"
+        );
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: `subcommand:add`,
+            value: 'add',
+          },
+          {
+            key: `argument:name`,
+            value: '[REDACTED]',
+          },
+          {
+            key: `argument:environment`,
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+
       describe('[gitBranch]', () => {
         it('should allow `gitBranch` to be passed', async () => {
           client.setArgv(
@@ -135,7 +178,8 @@ describe('env add', () => {
           await expect(client.stderr).toOutput(
             'Added Environment Variable REDIS_CONNECTION_STRING to Project vercel-env-pull'
           );
-          await expect(exitCodePromise).resolves.toEqual(0);
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "env"').toEqual(0);
         });
 
         it('tracks telemetry events', async () => {
@@ -164,7 +208,7 @@ describe('env add', () => {
             },
             {
               key: `argument:environment`,
-              value: '[REDACTED]',
+              value: 'preview',
             },
             {
               key: `argument:git-branch`,

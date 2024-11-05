@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { dnsCommand } from '../../../../commands/dns/command';
 
-export class DnsTelemetryClient extends TelemetryClient {
+export class DnsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof dnsCommand>
+{
   trackCliSubcommandAdd(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'add',

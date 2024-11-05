@@ -11,6 +11,23 @@ describe('project', () => {
     lsSpy.mockClear();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'project';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = project(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('routes to ls subcommand', async () => {
     const user = useUser();
     const args: string[] = [];
@@ -19,5 +36,16 @@ describe('project', () => {
     client.setArgv('project', ...args);
     await project(client);
     expect(lsSpy).toHaveBeenCalledWith(client, opts, args, user.username);
+  });
+
+  describe('unrecognized subcommand', () => {
+    it('shows help', async () => {
+      useUser();
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('project', ...args);
+      const exitCode = await project(client);
+      expect(exitCode).toEqual(2);
+    });
   });
 });

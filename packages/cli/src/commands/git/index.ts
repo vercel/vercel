@@ -36,18 +36,23 @@ export default async function main(client: Client) {
     },
   });
 
+  parsedArgs.args = parsedArgs.args.slice(1);
+  subcommand = parsedArgs.args[0];
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('git', subcommand);
     output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;
   }
+
+  telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   if ('--confirm' in parsedArgs.flags) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  parsedArgs.args = parsedArgs.args.slice(1);
-  subcommand = parsedArgs.args[0];
   const args = parsedArgs.args.slice(1);
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const { cwd } = client;

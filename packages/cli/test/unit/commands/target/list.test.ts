@@ -10,6 +10,34 @@ import createLineIterator from 'line-async-iterator';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('target ls', () => {
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      client.setArgv('target', 'ls', 'balderdash');
+      const exitCode = await target(client);
+
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'target';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = target(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:list`,
+        },
+      ]);
+    });
+  });
+
   describe('telemetry', () => {
     beforeEach(() => {
       useTeams('team_dummy');

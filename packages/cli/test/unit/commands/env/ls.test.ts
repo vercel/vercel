@@ -23,6 +23,16 @@ describe('env ls', () => {
     client.cwd = cwd;
   });
 
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      client.setArgv('target', 'ls', 'preview', 'branch-name', 'balderdash');
+      const exitCode = await env(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
   it('tracks `ls` subcommand', async () => {
     client.setArgv('env', 'ls');
     await env(client);
@@ -32,6 +42,24 @@ describe('env ls', () => {
         value: 'ls',
       },
     ]);
+  });
+
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:list`,
+        },
+      ]);
+    });
   });
 
   describe('[environment]', () => {

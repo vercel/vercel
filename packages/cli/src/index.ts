@@ -41,7 +41,7 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import commands from './commands';
+import { commands } from './commands';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
@@ -317,6 +317,21 @@ const main = async () => {
     return 1;
   }
 
+  // Shared API `Client` instance for all sub-commands to utilize
+  client = new Client({
+    agent: new ProxyAgent({ keepAlive: true }),
+    apiUrl,
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: output.stream,
+    config,
+    authConfig,
+    localConfig,
+    localConfigPath,
+    argv: process.argv,
+    telemetryEventStore,
+  });
+
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
     client.cwd = parsedArgs.flags['--cwd'];
@@ -364,6 +379,7 @@ const main = async () => {
   }
 
   if (subcommand === 'help') {
+    telemetry.trackCliCommandHelp('help');
     subcommand = subSubCommand || 'deploy';
     client.argv.push('-h');
   }
@@ -641,6 +657,10 @@ const main = async () => {
         case 'integration':
           telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
           func = require('./commands/integration').default;
+          break;
+        case 'integration-resource':
+          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
+          func = require('./commands/integration-resource').default;
           break;
         case 'link':
           telemetry.trackCliCommandLink(userSuppliedSubCommand);

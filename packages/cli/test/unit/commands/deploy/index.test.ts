@@ -16,13 +16,31 @@ import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 
 describe('deploy', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'deploy';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = deploy(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should reject deploying a single file', async () => {
     client.setArgv('deploy', __filename);
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
       `Error: Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'argument:project-path',
@@ -37,7 +55,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       `Error: Can't deploy more than one path.\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that does not exist', async () => {
@@ -49,7 +68,8 @@ describe('deploy', () => {
         join(client.cwd, 'does-not-exist')
       )}”\n`
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed before Builders', async () => {
@@ -68,7 +88,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed (top-level)\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying when `--prebuilt` is used and `vc build` failed within a Builder', async () => {
@@ -87,7 +108,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       '> Prebuilt deployment cannot be created because `vercel build` failed with error:\n\nError: The build failed within a Builder\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that does not contain ".vercel/output" when `--prebuilt` is used', async () => {
@@ -105,7 +127,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The "--prebuilt" option was used, but no prebuilt output found in ".vercel/output". Run `vercel build` to generate a local build.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt --prod` is used on "preview" output', async () => {
@@ -127,7 +150,8 @@ describe('deploy', () => {
         ' Please run `vercel --prebuilt`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying a directory that was built with a different target environment when `--prebuilt` is used on "production" output', async () => {
@@ -149,7 +173,8 @@ describe('deploy', () => {
         ' Please run `vercel --prebuilt --prod`.\n' +
         'Learn More: https://vercel.link/prebuilt-environment-mismatch\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying "version: 1"', async () => {
@@ -162,7 +187,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The value of the `version` property within vercel.json can only be `2`.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should reject deploying "version: {}"', async () => {
@@ -176,7 +202,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'Error: The `version` property inside your vercel.json file must be a number.\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(1);
   });
 
   it('should send a tgz file when `--archive=tgz`', async () => {
@@ -626,7 +653,8 @@ describe('deploy', () => {
     await expect(client.stderr).toOutput(
       'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "deploy"').toEqual(0);
     expect(body).toMatchObject({
       source: 'cli',
       version: 2,
@@ -708,7 +736,6 @@ describe('deploy', () => {
   describe('calls createDeploy with the appropriate arguments', () => {
     let mock: MockInstance;
     beforeEach(() => {
-      // mock = vi.spyOn(createDeployModule, 'createDeploy');
       mock = vi.spyOn(createDeployModule, 'default');
       const user = useUser();
       useTeams('team_dummy');
@@ -1115,6 +1142,118 @@ describe('deploy', () => {
           value: 'TRUE',
         },
       ]);
+    });
+  });
+
+  describe('first deploy', () => {
+    describe('project setup', () => {
+      const directoryName = 'unlinked';
+      beforeEach(() => {
+        const user = useUser();
+        client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+          return res.status(404).json({});
+        });
+
+        const createdDeploymentId = 'dpl_1';
+        client.scenario.post(`/v13/deployments`, (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: createdDeploymentId,
+            readyState: 'READY',
+          });
+        });
+
+        client.scenario.get(
+          `/v13/deployments/${createdDeploymentId}`,
+          (req, res) => {
+            res.json({
+              creator: {
+                uid: user.id,
+                username: user.username,
+              },
+              id: createdDeploymentId,
+              readyState: 'READY',
+              aliasAssigned: true,
+              alias: [],
+            });
+          }
+        );
+
+        useTeams('team_dummy');
+        client.cwd = setupUnitFixture(`commands/deploy/${directoryName}`);
+      });
+
+      it('prefills "project name" prompt based on --name option', async () => {
+        const nameOption = 'a-distinct-name';
+        client.setArgv('deploy', '--name', nameOption);
+        const exitCodePromise = deploy(client);
+
+        await expect(client.stderr).toOutput(
+          'The "--name" option is deprecated'
+        );
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope do you want to deploy to?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${nameOption})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
+
+      it('prefills "project name" prompt based on directory name', async () => {
+        client.setArgv('deploy');
+        const exitCodePromise = deploy(client);
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope do you want to deploy to?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${directoryName})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
     });
   });
 });

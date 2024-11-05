@@ -10,6 +10,23 @@ beforeEach(() => {
 });
 
 describe('install', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'install';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = install(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[integration]', () => {
     it('is an alias for "integration add"', async () => {
       client.setArgv('install', 'acme');

@@ -45,6 +45,7 @@ export default async function inspect(client: Client) {
   }
 
   if (parsedArguments.flags['--help']) {
+    telemetry.trackCliFlagHelp('inspect');
     print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -71,7 +72,7 @@ export default async function inspect(client: Client) {
     return 1;
   }
 
-  telemetry.trackCliArgumentDeploymentIdOrHost(deploymentIdOrHost);
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
   telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
   telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
   telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);

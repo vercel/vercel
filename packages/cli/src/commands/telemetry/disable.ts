@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { writeToConfigFile } from '../../util/config/files';
 import status from './status';
 

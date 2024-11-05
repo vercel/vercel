@@ -52,10 +52,11 @@ describe('teams switch', () => {
 
       client.config.currentTeam = team.id;
       client.setArgv('teams', 'switch', team.slug);
-      const exitCodePromise = teams(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await teams(client);
+      expect(exitCode, 'exit code for "teams"').toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:switch', value: '[REDACTED]' },
+        { key: 'subcommand:switch', value: 'switch' },
+        { key: 'argument:slug', value: '[REDACTED]' },
       ]);
     });
     it('should not let you switch to personal account', async () => {
@@ -78,7 +79,7 @@ describe('teams switch', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       await expect(client.stderr).toOutput('No changes made');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:switch', value: '[TRIGGER_PROMPT]' },
+        { key: 'subcommand:switch', value: 'switch' },
       ]);
     });
 

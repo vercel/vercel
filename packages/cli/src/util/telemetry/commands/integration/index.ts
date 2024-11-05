@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { integrationCommand } from '../../../../commands/integration/command';
 
-export class IntegrationTelemetryClient extends TelemetryClient {
+export class IntegrationTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof integrationCommand>
+{
   trackCliSubcommandAdd(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'add',
@@ -18,6 +23,13 @@ export class IntegrationTelemetryClient extends TelemetryClient {
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove',
       value: actual,
     });
   }

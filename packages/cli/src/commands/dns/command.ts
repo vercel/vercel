@@ -1,86 +1,83 @@
 import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption } from '../../util/arg-common';
 
-export const dnsCommand = {
-  name: 'dns',
-  description: 'Interact with DNS entries for a project.',
+export const importSubcommand = {
+  name: 'import',
+  aliases: [],
+  description: 'Import a DNS zone file (see below for examples)',
   arguments: [
     {
-      name: 'command',
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'zonefile',
       required: true,
     },
   ],
+  options: [],
+  examples: [],
+} as const;
+
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all DNS entries for a domain',
+  default: true,
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [limitOption, nextOption],
+  examples: [],
+} as const;
+
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a new DNS entry (see below for examples)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'details',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a DNS entry using its ID',
+  arguments: [
+    {
+      name: 'id',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const dnsCommand = {
+  name: 'dns',
+  aliases: [],
+  description: 'Interact with DNS entries for a project',
+  arguments: [],
   subcommands: [
-    {
-      name: 'import',
-      description: 'Import a DNS zone file (see below for examples)',
-      arguments: [
-        {
-          name: 'domain',
-          required: true,
-        },
-        {
-          name: 'zonefile',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'ls',
-      description: 'List all DNS entries for a domain',
-      arguments: [
-        {
-          name: 'domain',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'add',
-      description: 'Add a new DNS entry (see below for examples)',
-      arguments: [
-        {
-          name: 'details',
-          required: true,
-        },
-        {
-          name: 'alias',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove a DNS entry using its ID',
-      arguments: [
-        {
-          name: 'id',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
+    addSubcommand,
+    importSubcommand,
+    listSubcommand,
+    removeSubcommand,
   ],
-  options: [
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
-  ],
+  options: [],
   examples: [
     {
       name: 'Add an A record for a subdomain',
@@ -118,7 +115,7 @@ export const dnsCommand = {
       ],
     },
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: [
         `${packageName} dns ls --next 1584722256178`,
         `${packageName} dns ls zeit.rocks --next 1584722256178`,

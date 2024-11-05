@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { devCommand } from '../../../../commands/dev/command';
 
-export class DevTelemetryClient extends TelemetryClient {
+export class DevTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof devCommand>
+{
   trackCliArgumentDir(dir: string | undefined) {
     if (dir) {
       this.trackCliArgument({
@@ -10,7 +15,7 @@ export class DevTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionListen(uri?: string) {
+  trackCliOptionListen(uri: string | undefined) {
     if (uri) {
       this.trackCliOption({
         option: 'listen',
@@ -19,7 +24,7 @@ export class DevTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionPort(port?: string) {
+  trackCliOptionPort(port: string | undefined) {
     if (port) {
       this.trackCliOption({
         option: 'port',
@@ -28,21 +33,15 @@ export class DevTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }
   }
 
-  trackCliFlagConfirm(confirm?: boolean) {
+  trackCliFlagConfirm(confirm: boolean | undefined) {
     if (confirm) {
       this.trackCliFlag('confirm');
-    }
-  }
-
-  trackCliFlagHelp(help?: boolean) {
-    if (help) {
-      this.trackCliFlagHelp();
     }
   }
 }

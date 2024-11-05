@@ -10,12 +10,44 @@ describe('dns ls', () => {
     useDns();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:list`,
+        },
+      ]);
+    });
+  });
+
   describe('[domain] missing', () => {
     it('should list up to 20 dns by default', async () => {
       client.setArgv('dns', 'ls');
       let exitCodePromise = dns(client);
       await expect(client.stderr).toOutput('example-19.com');
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "dns"').toEqual(0);
+    });
+
+    it('track subcommand invocation', async () => {
+      client.setArgv('dns', 'ls');
+      let exitCodePromise = dns(client);
+
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+      ]);
     });
 
     it('track subcommand invocation', async () => {
@@ -36,7 +68,25 @@ describe('dns ls', () => {
         client.setArgv('dns', 'ls', '--limit', '2');
         let exitCodePromise = dns(client);
         await expect(client.stderr).toOutput('example-2.com');
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "dns"').toEqual(0);
+      });
+
+      it('track subcommand invocation', async () => {
+        client.setArgv('dns', 'ls', '--limit', '2');
+        let exitCodePromise = dns(client);
+
         await expect(exitCodePromise).resolves.toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:list',
+            value: 'ls',
+          },
+          {
+            key: 'option:limit',
+            value: '[REDACTED]',
+          },
+        ]);
       });
 
       it('track subcommand invocation', async () => {
@@ -96,6 +146,50 @@ describe('dns ls', () => {
         },
         {
           key: 'argument:domainName',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    describe('--next', () => {
+      it('tracks the use of next option', async () => {
+        client.setArgv('dns', 'ls', '--next', '1729878610745');
+        let exitCodePromise = dns(client);
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:list',
+            value: 'ls',
+          },
+          {
+            key: 'option:next',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+  });
+
+  describe('[domain]', () => {
+    it('tracks the use of domain argument', async () => {
+      client.scenario.get('/v4/domains/:domain?/records', (req, res) => {
+        res.json({
+          records: [],
+          pagination: { count: 1, total: 1, page: 1, pages: 1 },
+        });
+      });
+      client.setArgv('dns', 'ls', 'example-19.com');
+      let exitCodePromise = dns(client);
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: 'ls',
+        },
+        {
+          key: 'argument:domain',
           value: '[REDACTED]',
         },
       ]);

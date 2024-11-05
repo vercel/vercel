@@ -3,6 +3,7 @@ import { forceOption } from '../../util/arg-common';
 
 export const initCommand = {
   name: 'init',
+  aliases: [],
   description: 'Initialize example Vercel Projects',
   arguments: [
     {
@@ -14,7 +15,6 @@ export const initCommand = {
       required: false,
     },
   ],
-  subcommands: undefined,
   options: [
     {
       ...forceOption,

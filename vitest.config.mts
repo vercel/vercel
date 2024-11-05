@@ -13,6 +13,7 @@ export default defineConfig({
       // Fix: https://github.com/JoshuaKGoldberg/expect-no-axe-violations/pull/3/files
       FORCE_COLOR: '1',
     },
+    hideSkippedTests: true,
     exclude: [
       // default
       '**/node_modules/**',
