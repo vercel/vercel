@@ -1,3 +1,4 @@
+import { getAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -19,10 +20,10 @@ import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 
 const COMMAND_CONFIG = {
-  add: ['add'],
-  open: ['open'],
-  list: ['list', 'ls'],
-  remove: ['remove'],
+  add: getAliases(addSubcommand),
+  open: getAliases(openSubcommand),
+  list: getAliases(listSubcommand),
+  remove: getAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {

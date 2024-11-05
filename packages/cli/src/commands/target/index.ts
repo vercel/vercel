@@ -8,9 +8,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import output from '../../output-manager';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
+import { getAliases } from '..';
 
 const COMMAND_CONFIG = {
-  ls: ['ls', 'list'],
+  ls: getAliases(listSubcommand),
 };
 
 export default async function main(client: Client) {
