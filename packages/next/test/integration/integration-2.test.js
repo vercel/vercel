@@ -525,7 +525,7 @@ describe('PPR', () => {
     });
   });
 
-  it('should have the chain mirrored to the experimentalStreamingLambdaPath', async () => {
+  it('should have the chain added', async () => {
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'ppr'));
@@ -543,12 +543,6 @@ describe('PPR', () => {
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
     expect(output['index'].chain?.outputPath).toBe('index');
-
-    // TODO: remove the following once we have stabilized the chained responses
-    expect(output['index'].experimentalStreamingLambdaPath).toBe(
-      '_next/postponed/resume/index'
-    );
-    expect(output['_next/postponed/resume/index']).toBeDefined();
   });
 
   it('should support basePath', async () => {
@@ -571,18 +565,6 @@ describe('PPR', () => {
     expect(output['chat/index'].type).toBe('Prerender');
     expect(output['chat/index'].lambda).toBeDefined();
     expect(output['chat/index'].lambda.type).toBe('Lambda');
-
-    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
-
-    // TODO: remove the following once we have stabilized the chained responses
-    expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
-      'chat/_next/postponed/resume/index'
-    );
-    expect(output['chat/_next/postponed/resume/index']).toBeDefined();
-    expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
-    expect(output['chat/_next/postponed/resume/index']).toBe(
-      output['chat/index'].lambda
-    );
 
     expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
     expect(output['chat/index'].chain?.headers).toEqual({
