@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { join } from 'path';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
