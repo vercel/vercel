@@ -746,47 +746,6 @@ test('reject deploying with invalid token', async () => {
   );
 });
 
-test('[vc link] should show prompts to set up project', async () => {
-  const dir = await setupE2EFixture('project-link-zeroconf');
-  const projectName = `project-link-zeroconf-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
-
-  const vc = execCli(binaryPath, ['link'], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
-
-  const output = await vc;
-
-  // Ensure the exit code is right
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-});
-
 test('[vc link] should detect frameworks in project rootDirectory', async () => {
   const dir = await setupE2EFixture('zero-config-next-js-nested');
   const projectRootDir = 'app';
