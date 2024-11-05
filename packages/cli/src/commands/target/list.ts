@@ -1,7 +1,7 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { targetCommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';
