@@ -736,7 +736,6 @@ describe('deploy', () => {
   describe('calls createDeploy with the appropriate arguments', () => {
     let mock: MockInstance;
     beforeEach(() => {
-      // mock = vi.spyOn(createDeployModule, 'createDeploy');
       mock = vi.spyOn(createDeployModule, 'default');
       const user = useUser();
       useTeams('team_dummy');
@@ -1143,6 +1142,118 @@ describe('deploy', () => {
           value: 'TRUE',
         },
       ]);
+    });
+  });
+
+  describe('first deploy', () => {
+    describe('project setup', () => {
+      const directoryName = 'unlinked';
+      beforeEach(() => {
+        const user = useUser();
+        client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+          return res.status(404).json({});
+        });
+
+        const createdDeploymentId = 'dpl_1';
+        client.scenario.post(`/v13/deployments`, (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: createdDeploymentId,
+            readyState: 'READY',
+          });
+        });
+
+        client.scenario.get(
+          `/v13/deployments/${createdDeploymentId}`,
+          (req, res) => {
+            res.json({
+              creator: {
+                uid: user.id,
+                username: user.username,
+              },
+              id: createdDeploymentId,
+              readyState: 'READY',
+              aliasAssigned: true,
+              alias: [],
+            });
+          }
+        );
+
+        useTeams('team_dummy');
+        client.cwd = setupUnitFixture(`commands/deploy/${directoryName}`);
+      });
+
+      it('prefills "project name" prompt based on --name option', async () => {
+        const nameOption = 'a-distinct-name';
+        client.setArgv('deploy', '--name', nameOption);
+        const exitCodePromise = deploy(client);
+
+        await expect(client.stderr).toOutput(
+          'The "--name" option is deprecated'
+        );
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope do you want to deploy to?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${nameOption})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
+
+      it('prefills "project name" prompt based on directory name', async () => {
+        client.setArgv('deploy');
+        const exitCodePromise = deploy(client);
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope do you want to deploy to?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${directoryName})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
     });
   });
 });
