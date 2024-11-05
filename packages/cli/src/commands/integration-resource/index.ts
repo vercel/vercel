@@ -17,7 +17,7 @@ import { remove } from './remove-resource';
 
 const COMMAND_CONFIG = {
   remove: getAliases(removeSubcommand),
-  disconnect: getAliases(integrationResourceCommand),
+  disconnect: getAliases(disconnectSubcommand),
 };
 
 export default async function main(client: Client) {
