@@ -23,7 +23,7 @@ chalk.level = 0;
 
 export type Scenario = Router;
 
-class MockStream extends PassThrough {
+class MockStream extends PassThrough implements NodeJS.WriteStream {
   isTTY: boolean;
   #_fullOutput: string = '';
   #_chunks: Array<string> = [];
@@ -33,10 +33,6 @@ class MockStream extends PassThrough {
     super();
     this.isTTY = true;
   }
-
-  // These are for the `ora` module
-  clearLine() {}
-  cursorTo() {}
 
   override _write(
     chunk: any,
@@ -71,6 +67,73 @@ class MockStream extends PassThrough {
   getFullOutput(): string {
     return this.#_fullOutput;
   }
+
+  // BEGIN: Stub the `WriteStream` interface to avoid TypeScript errors
+  bufferSize = 0;
+  bytesRead = 0;
+  bytesWritten = 0;
+  connecting = false;
+  localAddress = '';
+  localPort = 0;
+  allowHalfOpen = false;
+  readyState = 'readOnly' as const;
+  // These are for the `ora` module
+  clearLine() {
+    return true;
+  }
+  cursorTo() {
+    return true;
+  }
+  getColorDepth() {
+    return 1;
+  }
+  hasColors() {
+    return false;
+  }
+  getWindowSize(): [number, number] {
+    return [80, 24];
+  }
+  moveCursor() {
+    return false;
+  }
+  get columns() {
+    return 80;
+  }
+  get rows() {
+    return 24;
+  }
+  write(chunk: unknown, encoding?: unknown, cb?: unknown): boolean {
+    return super.write(
+      chunk,
+      encoding as BufferEncoding | undefined,
+      cb as ((error: Error | null | undefined) => void) | undefined
+    );
+  }
+  clearScreenDown() {
+    return true;
+  }
+  connect() {
+    return this;
+  }
+  setTimeout() {
+    return this;
+  }
+  setNoDelay() {
+    return this;
+  }
+  setKeepAlive() {
+    return this;
+  }
+  address() {
+    return {};
+  }
+  unref() {
+    return this;
+  }
+  ref() {
+    return this;
+  }
+  // END: Stub `WriteStream` interface to avoid TypeScript errors
 }
 
 class MockTelemetryEventStore extends TelemetryEventStore {
@@ -132,13 +195,12 @@ export class MockClient extends Client {
       authConfig: {},
       config: {},
       localConfig: {},
-      stdin: new PassThrough(),
-      stdout: new PassThrough(),
-      stderr: new PassThrough(),
-    });
-
-    this.telemetryEventStore = new MockTelemetryEventStore({
-      config: undefined,
+      stdin: new MockStream(),
+      stdout: new MockStream(),
+      stderr: new MockStream(),
+      telemetryEventStore: new MockTelemetryEventStore({
+        config: undefined,
+      }),
     });
 
     this.scenario = Router();
