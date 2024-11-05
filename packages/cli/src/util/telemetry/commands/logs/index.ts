@@ -1,28 +1,33 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { logsCommand } from '../../../../commands/logs/command';
 
-export class LogsTelemetryClient extends TelemetryClient {
-  trackCliArgumentUrl(path?: string) {
+export class LogsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof logsCommand>
+{
+  trackCliArgumentUrlOrDeploymentId(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
-        arg: 'url',
+        arg: 'urlOrDeploymentId',
         value: this.redactedValue,
       });
     }
   }
 
-  trackCliFlagJson(v?: boolean) {
+  trackCliFlagJson(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('json');
     }
   }
 
-  trackCliFlagFollow(v?: boolean) {
+  trackCliFlagFollow(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('follow');
     }
   }
 
-  trackCliOptionLimit(n?: number) {
+  trackCliOptionLimit(n: number | undefined) {
     if (typeof n === 'number') {
       this.trackCliOption({
         option: 'limit',
@@ -31,7 +36,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionSince(n?: string) {
+  trackCliOptionSince(n: string | undefined) {
     if (n) {
       this.trackCliOption({
         option: 'since',
@@ -40,7 +45,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionUntil(n?: string) {
+  trackCliOptionUntil(n: string | undefined) {
     if (n) {
       this.trackCliOption({
         option: 'until',
@@ -49,7 +54,7 @@ export class LogsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionOutput(n?: string, known?: boolean) {
+  trackCliOptionOutput(n: string | undefined, known?: boolean) {
     if (n) {
       this.trackCliOption({
         option: 'output',

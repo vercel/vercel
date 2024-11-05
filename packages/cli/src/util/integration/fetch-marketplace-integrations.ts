@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Configuration } from '../../commands/integration/types';
+import type { Configuration } from './types';
 
 export async function fetchMarketplaceIntegrations(
   client: Client,
@@ -15,4 +15,15 @@ export async function fetchMarketplaceIntegrations(
       json: true,
     }
   );
+}
+
+export async function getFirstConfiguration(
+  client: Client,
+  integrationSlug: string
+) {
+  const configurations = await fetchMarketplaceIntegrations(
+    client,
+    integrationSlug
+  );
+  return configurations.length > 0 ? configurations[0] : undefined;
 }

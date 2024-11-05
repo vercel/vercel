@@ -2,12 +2,19 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import type { Configuration } from './types';
-import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
+import type { Configuration } from '../../util/integration/types';
+import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';
 import output from '../../output-manager';
 
 export async function openIntegration(client: Client, args: string[]) {
+  const telemetry = new IntegrationOpenTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (args.length > 1) {
     output.error('Cannot open more than one dashboard at a time');
     return 1;
@@ -28,14 +35,18 @@ export async function openIntegration(client: Client, args: string[]) {
   }
 
   let configuration: Configuration | undefined;
+  let knownIntegrationSlug = false;
 
   try {
     configuration = await getFirstConfiguration(client, integrationSlug);
+    knownIntegrationSlug = !!configuration;
   } catch (error) {
     output.error(
       `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
     return 1;
+  } finally {
+    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
 
   if (!configuration) {
@@ -50,12 +61,4 @@ export async function openIntegration(client: Client, args: string[]) {
   open(buildSSOLink(team, configuration.id));
 
   return 0;
-}
-
-async function getFirstConfiguration(client: Client, integrationSlug: string) {
-  const configurations = await fetchMarketplaceIntegrations(
-    client,
-    integrationSlug
-  );
-  return configurations.length > 0 ? configurations[0] : undefined;
 }

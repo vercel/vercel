@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
 import Client from '../../util/client';
@@ -13,21 +12,33 @@ import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
-import { CertsCommandFlags } from './command';
 import output from '../../output-manager';
 import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
+import { issueSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { handleError } from '../../util/error';
 
 export default async function issue(
   client: Client,
-  opts: CertsCommandFlags,
-  args: string[]
-) {
+  argv: string[]
+): Promise<number> {
   let cert;
   const { telemetryEventStore } = client;
   const addStamp = stamp();
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(issueSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
   const {
     '--challenge-only': challengeOnly,
-    '--overwrite': overwite,
+    '--overwrite': overwrite,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
@@ -39,12 +50,12 @@ export default async function issue(
     },
   });
   telemetry.trackCliFlagChallengeOnly(challengeOnly);
-  telemetry.trackCliFlagOverwrite(overwite);
+  telemetry.trackCliFlagOverwrite(overwrite);
   telemetry.trackCliOptionCrt(crtPath);
   telemetry.trackCliOptionKey(keyPath);
   telemetry.trackCliOptionCa(caPath);
 
-  if (overwite) {
+  if (overwrite) {
     output.error('Overwrite option is deprecated');
     return 1;
   }
@@ -90,6 +101,7 @@ export default async function issue(
     );
     return 1;
   }
+  telemetry.trackCliArgumentCn(args[0]);
 
   const cns = getCnsFromArgs(args);
 

@@ -12,6 +12,24 @@ describe('git connect', () => {
   const fixture = (name: string) =>
     join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'git';
+      const subcommand = 'connect';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = git(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('connecting an unlinked project', () => {
     const cwd = fixture('unlinked');
     beforeEach(async () => {
@@ -92,12 +110,12 @@ describe('git connect', () => {
         expect(exitCode).toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'subcommand:connect',
-            value: 'connect',
-          },
-          {
             key: 'flag:yes',
             value: 'TRUE',
+          },
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
           },
         ]);
       });
@@ -117,18 +135,15 @@ describe('git connect', () => {
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
+
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
-          {
-            key: 'subcommand:connect',
-            value: 'connect',
-          },
-          {
-            key: 'flag:yes',
-            value: 'TRUE',
-          },
           {
             key: 'flag:confirm',
             value: 'TRUE',
+          },
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
           },
         ]);
       });

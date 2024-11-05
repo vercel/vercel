@@ -9,6 +9,35 @@ import { client } from '../../../mocks/client';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('list', () => {
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      useUser();
+      client.setArgv('project', 'list', 'balderdash');
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'project';
+      const subcommand = 'list';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = projects(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('--update-required', () => {
     it('should track flag', async () => {
       useUser();

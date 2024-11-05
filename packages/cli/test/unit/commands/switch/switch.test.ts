@@ -21,7 +21,8 @@ describe('switch', () => {
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      let exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Success! The team ${team.name} (${team.slug}) is now active!`
       );
@@ -37,7 +38,8 @@ describe('switch', () => {
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[A'); // Up arrow
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Your account (${user.username}) is now active!`
       );
@@ -61,7 +63,8 @@ describe('switch', () => {
       // Test that personal account is not displayed in scope switcher
       await expect(client.stderr).not.toOutput(user.username);
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput('No changes made');
     });
 
@@ -76,7 +79,8 @@ describe('switch', () => {
       await expect(client.stderr).toOutput(
         'You cannot set your Personal Account as the scope.'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(1);
     });
   });
 });

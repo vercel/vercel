@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
-import { GlobalConfig } from '@vercel-internals/types';
+import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
-import { resolve as resolvePath } from 'path';
-import { spawn } from 'child_process';
 
 const LogLabel = `['telemetry']:`;
 
@@ -34,7 +32,8 @@ export class TelemetryClient {
   protected redactedArgumentsLength = (args: string[]) => {
     if (args && args.length === 1) {
       return 'ONE';
-    } else if (args.length > 1) {
+    }
+    if (args.length > 1) {
       return 'MANY';
     }
     return 'NONE';
@@ -160,8 +159,16 @@ export class TelemetryClient {
     return;
   }
 
-  trackFlagHelp() {
-    this.trackCliFlag('help');
+  trackCliFlagHelp(command: string, subcommands?: string | string[]) {
+    let subcommand: string | undefined;
+    if (subcommands) {
+      subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
+    }
+
+    this.track({
+      key: 'flag:help',
+      value: subcommand ? `${command}:${subcommand}` : command,
+    });
   }
 }
 
@@ -169,11 +176,11 @@ export class TelemetryEventStore {
   private events: Event[];
   private isDebug: boolean;
   private sessionId: string;
-  private teamId: string = 'NO_TEAM_ID';
+  private teamId = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
-  constructor(opts: { isDebug?: boolean; config?: GlobalConfig['telemetry'] }) {
-    this.isDebug = opts.isDebug || false;
+  constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
+    this.isDebug = opts?.isDebug || false;
     this.sessionId = randomUUID();
     this.events = [];
     this.config = opts?.config;
@@ -204,7 +211,7 @@ export class TelemetryEventStore {
       return false;
     }
 
-    return this.config?.enabled === false ? false : true;
+    return this.config?.enabled ?? true;
   }
 
   async save() {
@@ -212,9 +219,9 @@ export class TelemetryEventStore {
       // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
       output.log(`${LogLabel} Flushing Events`);
-      this.events.forEach(event => {
+      for (const event of this.events) {
         output.log(JSON.stringify(event));
-      });
+      }
 
       return;
     }

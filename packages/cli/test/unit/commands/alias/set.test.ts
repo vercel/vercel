@@ -7,6 +7,24 @@ import { useDeployment } from '../../../mocks/deployment';
 vi.setConfig({ testTimeout: 600000 });
 
 describe('alias set', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'alias';
+      const subcommand = 'set';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = alias(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('missing args', () => {
     it.todo('errors');
   });
@@ -41,8 +59,8 @@ describe('alias set', () => {
         response.json({ deployment });
       });
       client.setArgv('alias', 'set', 'custom');
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await alias(client);
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -68,8 +86,8 @@ describe('alias set', () => {
         }
       );
       client.setArgv('alias', 'set', url, 'custom');
-      const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await alias(client);
+      expect(exitCode, 'exit code of "alias"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

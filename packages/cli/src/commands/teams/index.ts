@@ -10,6 +10,14 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
+import getSubcommand from '../../util/get-subcommand';
+
+const COMMAND_CONFIG = {
+  list: ['ls', 'list'],
+  switch: ['switch', 'change'],
+  add: ['create', 'add'],
+  invite: ['invite'],
+};
 
 export default async (client: Client) => {
   const telemetryClient = new TeamsTelemetryClient({
@@ -17,8 +25,6 @@ export default async (client: Client) => {
       store: client.telemetryEventStore,
     },
   });
-
-  let subcommand;
 
   let parsedArgs = null;
 
@@ -34,44 +40,45 @@ export default async (client: Client) => {
     return 1;
   }
 
-  if (parsedArgs.flags['--help']) {
-    output.print(help(teamsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const isSwitch = parsedArgs.args[0] === 'switch';
-
   parsedArgs.args = parsedArgs.args.slice(1);
+  let subcommand: string | string[] | undefined;
+  let subcommandOriginal: string | undefined;
 
   if (isSwitch) {
     subcommand = 'switch';
   } else {
-    subcommand = parsedArgs.args.shift();
+    const getSubcommandResult = getSubcommand(parsedArgs.args, COMMAND_CONFIG);
+    subcommand = getSubcommandResult.subcommand;
+    subcommandOriginal = getSubcommandResult.subcommandOriginal;
+    parsedArgs.args.shift();
+  }
+
+  if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('teams', subcommand);
+    output.print(help(teamsCommand, { columns: client.stderr.columns }));
+    return 2;
   }
 
   let exitCode = 0;
   switch (subcommand) {
-    case 'list':
-    case 'ls': {
-      telemetryClient.trackCliSubcommandList('list');
+    case 'list': {
+      telemetryClient.trackCliSubcommandList(subcommandOriginal);
       exitCode = await list(client);
       break;
     }
-    case 'switch':
-    case 'change': {
-      telemetryClient.trackCliSubcommandSwitch(parsedArgs.args[0]);
+    case 'switch': {
+      telemetryClient.trackCliSubcommandSwitch(subcommandOriginal);
       exitCode = await change(client, parsedArgs.args[0]);
       break;
     }
-    case 'add':
-    case 'create': {
-      telemetryClient.trackCliSubcommandAdd('add');
+    case 'add': {
+      telemetryClient.trackCliSubcommandAdd(subcommandOriginal);
       exitCode = await add(client);
       break;
     }
-
     case 'invite': {
-      telemetryClient.trackCliSubcommandInvite('invite');
+      telemetryClient.trackCliSubcommandInvite(subcommandOriginal);
       exitCode = await invite(client, parsedArgs.args);
       break;
     }

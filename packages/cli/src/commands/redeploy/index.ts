@@ -44,6 +44,7 @@ export default async function redeploy(client: Client): Promise<number> {
   });
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('redeploy');
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -58,7 +59,7 @@ export default async function redeploy(client: Client): Promise<number> {
     return 1;
   }
 
-  telemetry.trackCliArgumentDeploymentIdOrName(deployIdOrUrl);
+  telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
 
   const { contextName } = await getScope(client);

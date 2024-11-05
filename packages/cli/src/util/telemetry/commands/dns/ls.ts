@@ -1,16 +1,21 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { listSubcommand } from '../../../../commands/dns/command';
 
-export class DnsLsTelemetryClient extends TelemetryClient {
-  trackCliArgumentDomainName(domainName?: string) {
+export class DnsLsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof listSubcommand>
+{
+  trackCliArgumentDomain(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({
-        arg: 'domainName',
+        arg: 'domain',
         value: this.redactedValue,
       });
     }
   }
 
-  trackCliOptionLimit(limit?: number) {
+  trackCliOptionLimit(limit: number | undefined) {
     if (limit) {
       this.trackCliOption({
         option: 'limit',
@@ -19,7 +24,7 @@ export class DnsLsTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionNext(next?: number) {
+  trackCliOptionNext(next: number | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',

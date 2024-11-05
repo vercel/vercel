@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { certsCommand } from '../../../../commands/certs/command';
 
-export class CertsTelemetryClient extends TelemetryClient {
+export class CertsTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof certsCommand>
+{
   trackCliSubcommandIssue(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'issue',

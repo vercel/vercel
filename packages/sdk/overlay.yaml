@@ -1,0 +1,1057 @@
+overlay: 1.0.0
+info:
+  title: Fix https://openapi.vercel.sh/ with lint issues
+  version: 0.0.0
+# The fixes below from the errors found with speakeasy openapi lint
+actions:
+  - target: $["paths"]["/data-cache/purge-all"]["delete"]
+    update:
+      operationId: datacachePurgeall
+  - target: $["paths"]["/data-cache/billing-settings"]["patch"]
+    update:
+      operationId: dataCacheBillingSettings
+  - target: $["paths"]["/certs"]["get"]
+    update:
+      operationId: getCerts
+  - target: $["paths"]["/v13/deployments"]["post"]["parameters"][0]
+    remove: true
+  - target: $["paths"]["/v13/deployments"]["post"]["parameters"][2]
+    remove: true
+  - target: $["paths"]["/v1/domains/{domain}/registry"]["get"]["parameters"]
+    update:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          example: example.com
+  - target: $["paths"]["/v1/security/firewall/config/{configVersion}"]["get"]["parameters"]
+    update:
+      - description: The deployed configVersion for the firewall configuration
+        in: path
+        name: configVersion
+        required: true
+        schema:
+          type: string
+  - target: $["paths"]["/v2/teams/{teamId}/members"]["get"]["parameters"]
+    update:
+      - description: The Team identifier to perform the request on behalf of.
+        required: true
+        in: path
+        name: teamId
+        schema:
+          type: string
+  - target: $["paths"]["/v1/teams/{teamId}/members"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request/{userId}"]["get"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/request/{userId}"]["get"]["parameters"][?(@.name == 'userId')]
+    update:
+      name: userId
+      required: true
+      in: path
+      schema:
+        type: string
+        description: The unique user identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/teams/join"]["post"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/{uid}"]["delete"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v1/teams/{teamId}/members/{uid}"]["patch"]["parameters"]
+    update:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The unique team identifier
+  - target: $["paths"]["/v2/teams/{teamId}"]["get"]["parameters"][0]
+    remove: true
+  - target: $["paths"]["/v2/teams/{teamId}"]["get"]["parameters"][?(@.name == 'teamId')]["required"]
+    update: true
+  - target: $["paths"]["/v1/teams/{teamId}/invites/{inviteId}"]["delete"]["parameters"]
+    update:
+      - name: teamId
+        description: The Team identifier to perform the request on behalf of.
+        in: path
+        required: true
+        schema:
+          type: string
+          description: The Team identifier to perform the request on behalf of.
+          example: team_LLHUOMOoDlqOp8wPE4kFo9pE
+  - target: $["paths"]["/v2/secrets/{name}"]["post"]["parameters"]
+    update:
+      - name: name
+        description: The name of the secret.
+        in: path
+        required: true
+        schema:
+          description: The name of the secret.
+          type: string
+          example: my-api-key
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects'].get.responses['200'].content['application/json'].schema.properties['projects'].items.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects'].get.responses['200'].content['application/json'].schema.properties['projects'].items.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}'].get.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].get.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['envs'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['envs'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['envs'].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[0].items.properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[0].items.properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].delete.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[1].properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1].enum
+    remove: true
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[1]
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[0].properties['target'].oneOf[0].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['value'].oneOf[1].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['failed'].items.properties['error'].properties['value'].oneOf[1].items
+    update:
+      enum:
+        - production
+        - preview
+        - development
+  - target: $.paths['/v1/projects/{idOrName}/env/{id}'].get.responses['200'].content['application/json'].schema.oneOf[2].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env/{id}'].patch.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects'].post.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v9/projects/{idOrName}/env'].get.responses['200'].content['application/json'].schema.oneOf[0].properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v10/projects/{idOrName}/env'].post.responses['201'].content['application/json'].schema.properties['created'].oneOf[1].items.properties['target'].oneOf[0].items.enum
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members'].post.requestBody.content['application/json'].schema.properties['role'].default
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members'].post.requestBody.content['application/json'].schema.properties['role']
+    update:
+      default: MEMBER
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['role'].default
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['role']
+    update:
+      default: MEMBER
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['priority'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['priority']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['weight'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['weight']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['port'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[6].properties['srv'].properties['port']
+    update:
+      nullable: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[7].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['name']
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['https']['properties']['priority'].anyOf[1]
+    remove: true
+  - target: $.paths['/v2/domains/{domain}/records'].post.requestBody.content['application/json'].schema.anyOf[9].properties['https']['properties']['priority']
+    update:
+      nullable: true
+  - target: $.paths['/v1/domains/records/{recordId}'].patch.requestBody.content['application/json'].schema.properties['additionalProperties']
+    remove: true
+  - target: $.paths['/v3/domains/{domain}'].patch.parameters[0]
+    update:
+      required: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['propertyNames']
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][0].oneOf[3].type
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][0].oneOf[3].type
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][1].items['oneOf'][3].type
+    remove: true
+  - target: $.paths['/v1/edge-config'].post.requestBody.content['application/json'].schema.properties['items']['additionalProperties']['oneOf'][1].items
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[0].oneOf[3].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[1].items['oneOf'][3].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['value'].oneOf[1].items
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['description'].oneOf[1].type
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].properties['description']
+    update:
+      nullable: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[0].properties['operation']['const']
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[0].properties['operation']
+    update:
+      type: string
+      enum: [create]
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[3].properties['operation']['const']
+    remove: true
+  - target: $.paths['/v1/edge-config/{edgeConfigId}/items'].patch.requestBody.content['application/json'].schema.properties['items']['items']['oneOf'][0].anyOf[3].properties['operation']
+    update:
+      type: string
+      enum: [delete]
+  - target: $.paths['/v1/integrations/search-repo'].get.parameters[1].schema.type
+    remove: true
+  - target: $.paths['/v1/integrations/search-repo'].get.parameters[1].schema
+    update:
+      oneOf:
+        - type: string
+        - type: number
+  - target: $.paths['/v1/log-drains'].post.requestBody.content['application/json'].schema.properties['samplingRate']['multiplesOf']
+    remove: true
+  - target: $.paths['/v1/log-drains'].post.requestBody.content['application/json'].schema.properties['samplingRate']
+    update:
+      multipleOf: 0.01
+  - target: $.paths['/v1/projects/{idOrName}/protection-bypass'].patch.requestBody.content['application/json'].schema.properties['generate'].properties['secret']['errorMessage']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].put.requestBody.content['application/json'].schema.properties['rules']['items']['properties']['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['action']
+    update:
+      type: string
+      enum: [firewallEnabled]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[0].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['action']
+    update:
+      type: string
+      enum: [rules.insert]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[1].properties['value'].properties['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['action']
+    update:
+      type: string
+      enum: [rules.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[0].properties['action']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['rateLimit']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['redirect'].anyOf[1].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[2].properties['value'].properties['action'].properties['mitigate'].properties['redirect']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['action']
+    update:
+      type: string
+      enum: [rules.remove]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[3].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[4].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[4].properties['action']
+    update:
+      type: string
+      enum: [rules.priority]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[5].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[5].properties['action']
+    update:
+      type: string
+      enum: [crs.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['action']
+    update:
+      type: string
+      enum: [crs.disable]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[6].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['action']
+    update:
+      type: string
+      enum: [ip.insert]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['id'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[7].properties['id']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[8].properties['action'].const
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[8].properties['action']
+    update:
+      type: string
+      enum: [ip.update]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['action'].const
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['action']
+    update:
+      type: string
+      enum: [ip.remove]
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['value'].type
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[9].properties['value']
+    update:
+      nullable: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[10].properties['action']['const']
+    remove: true
+  - target: $.paths['/v1/security/firewall/config'].patch.requestBody.content['application/json'].schema.oneOf[10].properties['action']
+    update:
+      type: string
+      enum: [managedRules.update]
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['joinedFrom'].properties['ssoUserId'].type
+    remove: true
+  - target: $.paths['/v1/teams/{teamId}/members/{uid}'].patch.requestBody.content['application/json'].schema.properties['joinedFrom'].properties['ssoUserId']
+    update:
+      nullable: true
+  - target: $.paths['/v4/aliases'].get.parameters[?(@.name == 'domain')]['schema'].items
+    remove: true
+  - target: $.paths['/v4/aliases'].get.parameters[?(@.name == 'domain')]['schema'].oneOf[0]
+    update:
+      items:
+        type: string
+  # The fixes below are from test performed with using the SDK - https://www.notion.so/vercel/Vercel-SDK-Edits-104e06b059c48085ad11f9288118b604
+  - target: $.paths['/v4/aliases'].get.responses['200'].content['application/json'].schema.properties['aliases'].items.properties.deletedAt
+    update:
+      nullable: true
+  - target: $.paths['/v1/projects/{projectId}/pause'].post.responses['200']
+    update:
+      description: Project successfully paused
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+              type: boolean
+              description: Whether the project was successfully paused
+              example: true
+  - target: $.paths['/v1/projects/{projectId}/unpause'].post.responses['200']
+    update:
+      description: Project successfully unpaused
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+              type: boolean
+              description: Whether the project was successfully unpaused
+              example: true
+  - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.type
+    remove: true
+  - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.items
+    remove: true
+  - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema
+    update:
+      properties:
+        alias:
+          type: string
+          description: The alias name, it could be a `.vercel.app` subdomain or a custom domain
+          example: my-alias.vercel.app
+        created:
+          type: string
+          format: date-time
+          description: The date when the alias was created
+          example: '2017-04-26T23:00:34.232Z'
+        createdAt:
+          type: number
+          description: The date when the alias was created in milliseconds since the UNIX epoch
+          example: 1540095775941
+        creator:
+          properties:
+            uid:
+              type: string
+              description: ID of the user who created the alias
+              example: 96SnxkFiMyVKsK3pnoHfx3Hz
+            email:
+              type: string
+              description: Email of the user who created the alias
+              example: john-doe@gmail.com
+            username:
+              type: string
+              description: Username of the user who created the alias
+              example: john-doe
+          required:
+            - uid
+            - email
+            - username
+          type: object
+          description: Information of the user who created the alias
+        deletedAt:
+          type: number
+          description: The date when the alias was deleted in milliseconds since the UNIX epoch
+          example: 1540095775941
+        deployment:
+          properties:
+            id:
+              type: string
+              description: The deployment unique identifier
+              example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
+            url:
+              type: string
+              description: The deployment unique URL
+              example: my-instant-deployment-3ij3cxz9qr.now.sh
+            meta:
+              type: string
+              description: The deployment metadata
+              example: {}
+          required:
+            - id
+            - url
+          type: object
+          description: A map with the deployment ID, URL and metadata
+        deploymentId:
+          nullable: true
+          type: string
+          description: The deployment ID
+          example: dpl_5m8CQaRBm3FnWRW1od3wKTpaECPx
+        projectId:
+          nullable: true
+          type: string
+          description: The unique identifier of the project
+          example: prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
+        redirect:
+          nullable: true
+          type: string
+          description: Target destination domain for redirect when the alias is a redirect
+        redirectStatusCode:
+          nullable: true
+          type: number
+          enum:
+            - 301
+            - 302
+            - 307
+            - 308
+          description: Status code to be used on redirect
+        uid:
+          type: string
+          description: The unique identifier of the alias
+        updatedAt:
+          type: number
+          description: The date when the alias was updated in milliseconds since the UNIX epoch
+          example: 1540095775941
+        protectionBypass:
+          additionalProperties:
+            oneOf:
+              - properties:
+                  createdAt:
+                    type: number
+                  createdBy:
+                    type: string
+                  scope:
+                    type: string
+                    enum:
+                      - shareable-link
+                required:
+                  - createdAt
+                  - createdBy
+                  - scope
+                type: object
+                description: The protection bypass for the alias
+              - properties:
+                  createdAt:
+                    type: number
+                  lastUpdatedAt:
+                    type: number
+                  lastUpdatedBy:
+                    type: string
+                  access:
+                    type: string
+                    enum:
+                      - requested
+                      - granted
+                  scope:
+                    type: string
+                    enum:
+                      - user
+                required:
+                  - createdAt
+                  - lastUpdatedAt
+                  - lastUpdatedBy
+                  - access
+                  - scope
+                type: object
+                description: The protection bypass for the alias
+              - properties:
+                  createdAt:
+                    type: number
+                  createdBy:
+                    type: string
+                  scope:
+                    type: string
+                    enum:
+                      - alias-protection-override
+                required:
+                  - createdAt
+                  - createdBy
+                  - scope
+                type: object
+                description: The protection bypass for the alias
+              - properties:
+                  createdAt:
+                    type: number
+                  lastUpdatedAt:
+                    type: number
+                  lastUpdatedBy:
+                    type: string
+                  scope:
+                    type: string
+                    enum:
+                      - email_invite
+                required:
+                  - createdAt
+                  - lastUpdatedAt
+                  - lastUpdatedBy
+                  - scope
+                type: object
+                description: The protection bypass for the alias
+          type: object
+          description: The protection bypass for the alias
+      required:
+        - alias
+        - created
+        - deploymentId
+        - projectId
+        - uid
+      type: object
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items.properties['createdFrom']['enum']
+    update:
+      - integration
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items.required
+    remove: true
+  - target: $.paths['/v1/log-drains'].get.responses['200'].content['application/json'].schema.items
+    update:
+      required:
+        - id
+        - deliveryFormat
+        - url
+        - name
+        - ownerId
+        - createdAt
+        - deletedAt
+        - updatedAt
+        - environments
+  - target: components.schemas['Team']
+    update:
+      additionalProperties: true
+  - target: $.paths['/v1/edge-config'].get.responses['200'].content['application/json'].schema.properties
+    remove: true
+  - target: $.paths['/v1/edge-config'].get.responses['200'].content['application/json'].schema.required
+    remove: true
+  - target: $.paths['/v1/edge-config'].get.responses['200'].content['application/json'].schema.type
+    update: array
+  - target: $.paths['/v1/edge-config'].get.responses['200'].content['application/json'].schema
+    update:
+      items:
+        properties:
+          id:
+            type: string
+          createdAt:
+            type: number
+          ownerId:
+            type: string
+          slug:
+            type: string
+            description: Name for the Edge Config Names are not unique. Must start with an alphabetic character and can contain only alphanumeric characters and underscores).
+          updatedAt:
+            type: number
+          digest:
+            type: string
+          transfer:
+            properties:
+              fromAccountId:
+                type: string
+              startedAt:
+                type: number
+              doneAt:
+                nullable: true
+                type: number
+            required:
+              - fromAccountId
+              - startedAt
+              - doneAt
+            type: object
+            description: Keeps track of the current state of the Edge Config while it gets transferred.
+          schema:
+            type: object
+          purpose:
+            properties:
+              type:
+                type: string
+                enum:
+                  - flags
+              projectId:
+                type: string
+            required:
+              - type
+              - projectId
+            type: object
+          sizeInBytes:
+            type: number
+          itemCount:
+            type: number
+        required:
+          - sizeInBytes
+          - itemCount
+  - target: $["paths"]["/v1/webhooks"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]["properties"]["events"]["items"]
+    update:
+      x-speakeasy-enums:
+        - budget.reached
+        - budget.reset
+        - domain.created
+        - deployment.created
+        - deployment.error
+        - deployment.canceled
+        - deployment.succeeded
+        - deployment.ready
+        - deployment.check-rerequested
+        - deployment.promoted
+        - deployment.integration.action.start
+        - edge-config.created
+        - edge-config.deleted
+        - edge-config.items.updated
+        - firewall.attack
+        - integration-configuration.permission-upgraded
+        - integration-configuration.removed
+        - integration-configuration.scope-change-confirmed
+        - project.created
+        - project.removed
+        - deployment-checks-completed-legacy
+        - deployment-ready-legacy
+        - deployment-prepared-legacy
+        - deployment-error-legacy
+        - deployment-check-rerequested-legacy
+        - deployment-canceled-legacy
+        - project-created-legacy
+        - project-removed-legacy
+        - domain-created-legacy
+        - deployment-legacy
+        - integration-configuration-permission-updated-legacy
+        - integration-configuration-removed-legacy
+        - integration-configuration-scope-change-confirmed-legacy
+        - marketplace.invoice.created
+        - marketplace.invoice.paid
+        - marketplace.invoice.notpaid
+        - marketplace.invoice.refunded
+        - test-webhook
+  - target: $["paths"]["/v1/webhooks"]["post"]["requestBody"]["content"]["application/json"]["schema"]["properties"]["events"]["items"]
+    update:
+      x-speakeasy-enums:
+        - budget.reached
+        - budget.reset
+        - domain.created
+        - deployment.created
+        - deployment.error
+        - deployment.canceled
+        - deployment.succeeded
+        - deployment.ready
+        - deployment.check-rerequested
+        - deployment.promoted
+        - deployment.integration.action.start
+        - edge-config.created
+        - edge-config.deleted
+        - edge-config.items.updated
+        - firewall.attack
+        - integration-configuration.permission-upgraded
+        - integration-configuration.removed
+        - integration-configuration.scope-change-confirmed
+        - project.created
+        - project.removed
+        - deployment-checks-completed-legacy
+        - deployment-ready-legacy
+        - deployment-prepared-legacy
+        - deployment-error-legacy
+        - deployment-check-rerequested-legacy
+        - deployment-canceled-legacy
+        - project-created-legacy
+        - project-removed-legacy
+        - domain-created-legacy
+        - deployment-legacy
+        - integration-configuration-permission-updated-legacy
+        - integration-configuration-removed-legacy
+        - integration-configuration-scope-change-confirmed-legacy
+        - marketplace.invoice.created
+        - marketplace.invoice.paid
+        - marketplace.invoice.notpaid
+        - marketplace.invoice.refunded
+        - test-webhook
+  - target: $["paths"]["/v1/webhooks"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["oneOf"][0]["items"]["properties"]["events"]["items"]
+    update:
+      x-speakeasy-enums:
+        - budget.reached
+        - budget.reset
+        - domain.created
+        - deployment.created
+        - deployment.error
+        - deployment.canceled
+        - deployment.succeeded
+        - deployment.ready
+        - deployment.check-rerequested
+        - deployment.promoted
+        - deployment.integration.action.start
+        - edge-config.created
+        - edge-config.deleted
+        - edge-config.items.updated
+        - firewall.attack
+        - integration-configuration.permission-upgraded
+        - integration-configuration.removed
+        - integration-configuration.scope-change-confirmed
+        - project.created
+        - project.removed
+        - deployment-checks-completed-legacy
+        - deployment-ready-legacy
+        - deployment-prepared-legacy
+        - deployment-error-legacy
+        - deployment-check-rerequested-legacy
+        - deployment-canceled-legacy
+        - project-created-legacy
+        - project-removed-legacy
+        - domain-created-legacy
+        - deployment-legacy
+        - integration-configuration-permission-updated-legacy
+        - integration-configuration-removed-legacy
+        - integration-configuration-scope-change-confirmed-legacy
+        - marketplace.invoice.created
+        - marketplace.invoice.paid
+        - marketplace.invoice.notpaid
+        - marketplace.invoice.refunded
+        - test-webhook
+  - target: $["paths"]["/v1/webhooks"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["oneOf"][1]["items"]["properties"]["events"]["items"]
+    update:
+      x-speakeasy-enums:
+        - budget.reached
+        - budget.reset
+        - domain.created
+        - deployment.created
+        - deployment.error
+        - deployment.canceled
+        - deployment.succeeded
+        - deployment.ready
+        - deployment.check-rerequested
+        - deployment.promoted
+        - deployment.integration.action.start
+        - edge-config.created
+        - edge-config.deleted
+        - edge-config.items.updated
+        - firewall.attack
+        - integration-configuration.permission-upgraded
+        - integration-configuration.removed
+        - integration-configuration.scope-change-confirmed
+        - project.created
+        - project.removed
+        - deployment-checks-completed-legacy
+        - deployment-ready-legacy
+        - deployment-prepared-legacy
+        - deployment-error-legacy
+        - deployment-check-rerequested-legacy
+        - deployment-canceled-legacy
+        - project-created-legacy
+        - project-removed-legacy
+        - domain-created-legacy
+        - deployment-legacy
+        - integration-configuration-permission-updated-legacy
+        - integration-configuration-removed-legacy
+        - integration-configuration-scope-change-confirmed-legacy
+        - marketplace.invoice.created
+        - marketplace.invoice.paid
+        - marketplace.invoice.notpaid
+        - marketplace.invoice.refunded
+        - test-webhook
+  - target: $["paths"]["/v1/webhooks/{id}"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["properties"]["events"]["items"]
+    update:
+      x-speakeasy-enums:
+        - budget.reached
+        - budget.reset
+        - domain.created
+        - deployment.created
+        - deployment.error
+        - deployment.canceled
+        - deployment.succeeded
+        - deployment.ready
+        - deployment.check-rerequested
+        - deployment.promoted
+        - deployment.integration.action.start
+        - edge-config.created
+        - edge-config.deleted
+        - edge-config.items.updated
+        - firewall.attack
+        - integration-configuration.permission-upgraded
+        - integration-configuration.removed
+        - integration-configuration.scope-change-confirmed
+        - project.created
+        - project.removed
+        - deployment-checks-completed-legacy
+        - deployment-ready-legacy
+        - deployment-prepared-legacy
+        - deployment-error-legacy
+        - deployment-check-rerequested-legacy
+        - deployment-canceled-legacy
+        - project-created-legacy
+        - project-removed-legacy
+        - domain-created-legacy
+        - deployment-legacy
+        - integration-configuration-permission-updated-legacy
+        - integration-configuration-removed-legacy
+        - integration-configuration-scope-change-confirmed-legacy
+        - marketplace.invoice.created
+        - marketplace.invoice.paid
+        - marketplace.invoice.notpaid
+        - marketplace.invoice.refunded
+        - test-webhook

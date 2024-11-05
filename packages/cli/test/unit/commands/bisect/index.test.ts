@@ -38,6 +38,23 @@ function setupBisectState() {
 }
 
 describe('bisect', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'bisect';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = bisect(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('--good', () => {
     it('should not prompt for good deployment when `--good` option is used', async () => {
       const { deployment1, deployment2, deployment3 } = setupBisectState();

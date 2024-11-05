@@ -43,6 +43,23 @@ const logsFixtures = [
 ];
 
 describe('logs', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'logs';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = logs(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[url|deploymentId]', () => {
     let user: ReturnType<typeof useUser>;
     let deployment: Deployment;
@@ -225,7 +242,7 @@ describe('logs', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:url',
+          key: 'argument:urlOrDeploymentId',
           value: '[REDACTED]',
         },
       ]);
@@ -491,7 +508,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -519,7 +536,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -547,7 +564,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -580,7 +597,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -613,7 +630,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -641,7 +658,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {
@@ -667,7 +684,7 @@ describe('logs', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'argument:url',
+            key: 'argument:urlOrDeploymentId',
             value: '[REDACTED]',
           },
           {

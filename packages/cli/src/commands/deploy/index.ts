@@ -126,6 +126,7 @@ export default async (client: Client): Promise<number> => {
   }
 
   if (parsedArguments.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('deploy');
     output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -141,7 +142,7 @@ export default async (client: Client): Promise<number> => {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
     paths = parsedArguments.args.map(item => resolve(client.cwd, item));
-    telemetryClient.trackCliArgumentProjectPath(paths);
+    telemetryClient.trackCliArgumentProjectPath(paths[0]);
   } else {
     paths = [client.cwd];
   }

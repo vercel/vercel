@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { envCommand } from '../../../../commands/env/command';
 
-export class EnvTelemetryClient extends TelemetryClient {
-  trackCliSubcommandLs(actual: string) {
+export class EnvTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof envCommand>
+{
+  trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'ls',
       value: actual,
@@ -15,7 +20,7 @@ export class EnvTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliSubcommandRm(actual: string) {
+  trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
       value: actual,

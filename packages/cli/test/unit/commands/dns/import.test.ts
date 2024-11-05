@@ -25,6 +25,24 @@ describe('dns import', () => {
     vol.reset();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'dns';
+      const subcommand = 'import';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = dns(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[domain]', () => {
     describe('[zonefile]', () => {
       it('tracks telemetry', async () => {
@@ -38,8 +56,8 @@ describe('dns import', () => {
         };
         vol.fromJSON(json);
         client.setArgv('dns', 'import', 'example.com', '/path/to/file');
-        const exitCodePromise = dns(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await dns(client);
+        expect(exitCode, 'exit code for "dns"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {

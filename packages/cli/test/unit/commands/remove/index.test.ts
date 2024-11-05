@@ -10,10 +10,21 @@ import { useDeployment } from '../../../mocks/deployment';
 import { useUser } from '../../../mocks/user';
 
 describe('remove', () => {
-  describe('[deploymentId|deploymentName]', () => {
-    describe.todo('--yes');
-    describe.todo('--safe');
-    describe.todo('--hard');
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'remove';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = remove(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
   });
 
   describe('fails', () => {
@@ -24,7 +35,12 @@ describe('remove', () => {
       await expect(client.stderr).toOutput(
         'Error: `vercel rm` expects at least one argument'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "remove"').toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: 'NONE' },
+      ]);
     });
 
     it('should error without calling API for invalid names', async () => {
@@ -35,11 +51,12 @@ describe('remove', () => {
       await expect(client.stderr).toOutput(
         `Error: The provided argument "${badDeployName}" is not a valid deployment or project`
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "remove"').toEqual(1);
     });
   });
 
-  describe('suceeds', () => {
+  describe('succeeds', () => {
     it('when using --hard', async () => {
       const user = useUser();
 
@@ -63,6 +80,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:hard', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -95,6 +113,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:safe', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -126,6 +145,7 @@ describe('remove', () => {
 
       expect(deleteAPIWasCalled);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
     });

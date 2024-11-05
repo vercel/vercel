@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { pullSubcommand } from '../../../../commands/env/command';
 
-export class EnvPullTelemetryClient extends TelemetryClient {
-  trackCliArgumentFilename(filename?: string) {
+export class EnvPullTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof pullSubcommand>
+{
+  trackCliArgumentFilename(filename: string | undefined) {
     if (filename) {
       this.trackCliArgument({
         arg: 'filename',
@@ -10,7 +15,7 @@ export class EnvPullTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionEnvironment(environment?: string) {
+  trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
       const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliOption({
@@ -22,7 +27,7 @@ export class EnvPullTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliOptionGitBranch(gitBranch?: string) {
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
     if (gitBranch) {
       this.trackCliOption({
         option: 'git-branch',
@@ -31,7 +36,7 @@ export class EnvPullTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }

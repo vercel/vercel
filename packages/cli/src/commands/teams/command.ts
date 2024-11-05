@@ -2,25 +2,28 @@ import { packageName } from '../../util/pkg-name';
 import { nextOption } from '../../util/arg-common';
 
 export const listSubcommand = {
-  name: 'ls',
+  name: 'list',
+  aliases: ['ls'],
   description: "Show all teams you're a part of",
   arguments: [],
   options: [
     nextOption,
-    { name: 'since', shorthand: null, type: String, deprecated: false },
-    { name: 'until', shorthand: null, type: String, deprecated: false },
-    { name: 'count', shorthand: 'C', type: Number, deprecated: false },
+    { name: 'since', shorthand: null, type: String, deprecated: true },
+    { name: 'until', shorthand: null, type: String, deprecated: true },
+    { name: 'count', shorthand: 'C', type: Number, deprecated: true },
   ],
   examples: [],
 } as const;
 
 export const teamsCommand = {
   name: 'teams',
+  aliases: ['switch', 'team'],
   description: 'Manage teams under your Vercel account',
   arguments: [],
   subcommands: [
     {
       name: 'add',
+      aliases: ['create'],
       description: 'Create a new team',
       arguments: [],
       options: [],
@@ -29,6 +32,7 @@ export const teamsCommand = {
     listSubcommand,
     {
       name: 'switch',
+      aliases: ['change'],
       description: 'Switch to a different team',
       arguments: [
         {
@@ -41,6 +45,7 @@ export const teamsCommand = {
     },
     {
       name: 'invite',
+      aliases: [],
       description: 'Invite a new member to a team',
       arguments: [
         {
