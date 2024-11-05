@@ -23,7 +23,7 @@ Vercel’s Frontend Cloud provides the developer experience and infrastructure t
 
 ## Deploy
 
-Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
+Get started by [importing a project](https://vercel.com/new), [choosing a template](https://vercel.com/templates), or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
 
 ## Documentation
 
