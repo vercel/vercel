@@ -1,3 +1,4 @@
+import { getAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -15,8 +16,8 @@ import { disconnect } from './disconnect';
 import { remove } from './remove-resource';
 
 const COMMAND_CONFIG = {
-  remove: ['remove', 'rm'],
-  disconnect: ['disconnect'],
+  remove: getAliases(removeSubcommand),
+  disconnect: getAliases(disconnectSubcommand),
 };
 
 export default async function main(client: Client) {
