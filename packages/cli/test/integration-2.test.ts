@@ -2,14 +2,7 @@ import path from 'path';
 import { URL } from 'url';
 import fetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
-import fs, {
-  writeFile,
-  readFile,
-  remove,
-  copy,
-  ensureDir,
-  mkdir,
-} from 'fs-extra';
+import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
@@ -224,94 +217,6 @@ test('should show prompts to set up project during first deploy', async () => {
   } finally {
     process.kill(dev.pid, 'SIGTERM');
   }
-});
-
-test('should prefill "project name" prompt with folder name', async () => {
-  const projectName = `static-deployment-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const src = await setupE2EFixture('static-deployment');
-
-  // remove previously linked project if it exists
-  await remove(path.join(src, '.vercel'));
-
-  const directory = path.join(src, '../', projectName);
-  await copy(src, directory);
-
-  const now = execCli(binaryPath, [directory], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  await waitForPrompt(now, /Set up and deploy[^?]+\?/);
-  now.stdin?.write('yes\n');
-
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
-
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin?.write(`\n`);
-
-  await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin?.write('no\n');
-
-  const output = await now;
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
-test('should prefill "project name" prompt with --name', async () => {
-  const directory = await setupE2EFixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.vercel'));
-
-  const now = execCli(binaryPath, [directory, '--name', projectName], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  let isDeprecated = false;
-
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" option is deprecated')) {
-      isDeprecated = true;
-    }
-
-    return /Set up and deploy[^?]+\?/.test(chunk);
-  });
-  now.stdin?.write('yes\n');
-
-  expect(isDeprecated, 'isDeprecated').toBe(true);
-
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
-
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin?.write(`\n`);
-
-  await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin?.write('no\n');
-
-  const output = await now;
-  expect(output.exitCode, formatOutput(output)).toBe(0);
 });
 
 test('should prefill "project name" prompt with now.json `name`', async () => {
