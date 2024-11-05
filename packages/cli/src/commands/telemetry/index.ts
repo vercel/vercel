@@ -1,11 +1,16 @@
 import { handleError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { help } from '../help';
+import { type Command, help } from '../help';
 import status from './status';
 import enable from './enable';
 import disable from './disable';
-import { telemetryCommand } from './command';
+import {
+  disableSubcommand,
+  enableSubcommand,
+  statusSubcommand,
+  telemetryCommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
@@ -40,7 +45,18 @@ export default async function telemetry(client: Client) {
     COMMAND_CONFIG
   );
 
-  if (parsedArguments.flags['--help']) {
+  const needHelp = parsedArguments.flags['--help'];
+
+  function printHelp(command: Command) {
+    output.print(
+      help(command, {
+        columns: client.stderr.columns,
+        parent: telemetryCommand,
+      })
+    );
+  }
+
+  if (!subcommand && needHelp) {
     telemetryClient.trackCliFlagHelp('telemetry', subcommand);
     output.print(help(telemetryCommand, { columns: client.stderr.columns }));
     return 2;
@@ -48,12 +64,27 @@ export default async function telemetry(client: Client) {
 
   switch (subcommand) {
     case 'status':
+      if (needHelp) {
+        telemetryClient.trackCliFlagHelp('telemetry', 'status');
+        printHelp(statusSubcommand);
+        return 2;
+      }
       telemetryClient.trackCliSubcommandStatus(subcommand);
       return status(client);
     case 'enable':
+      if (needHelp) {
+        telemetryClient.trackCliFlagHelp('telemetry', 'enable');
+        printHelp(enableSubcommand);
+        return 2;
+      }
       telemetryClient.trackCliSubcommandEnable(subcommand);
       return enable(client);
     case 'disable':
+      if (needHelp) {
+        telemetryClient.trackCliFlagHelp('telemetry', 'disable');
+        printHelp(disableSubcommand);
+        return 2;
+      }
       return disable(client);
     default: {
       const errorMessage =

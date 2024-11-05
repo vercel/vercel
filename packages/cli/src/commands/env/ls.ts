@@ -17,20 +17,28 @@ import formatEnvironments from '../../util/env/format-environments';
 import { formatProject } from '../../util/projects/format-project';
 import output from '../../output-manager';
 import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {};
-
-export default async function ls(
-  client: Client,
-  link: ProjectLinked,
-  opts: Partial<Options>,
-  args: string[]
-) {
+export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
 
   if (args.length > 2) {
     output.error(
@@ -44,6 +52,21 @@ export default async function ls(
   const [envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
   const { project, org } = link;
 
   const lsStamp = stamp();

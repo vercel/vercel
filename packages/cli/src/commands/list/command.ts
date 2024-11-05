@@ -38,15 +38,11 @@ export const listCommand = {
       type: String,
       deprecated: false,
     },
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
+    nextOption,
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

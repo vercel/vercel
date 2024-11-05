@@ -3,7 +3,8 @@ import { packageName } from '../../util/pkg-name';
 export const bisectCommand = {
   name: 'bisect',
   aliases: [],
-  description: 'Bisect the current project interactively.',
+  description:
+    'Bisect the current project interactively or via an automated test script.',
   arguments: [],
   options: [
     {
@@ -33,7 +34,7 @@ export const bisectCommand = {
     {
       name: 'path',
       description: 'Subpath of the deployment URL to test',
-      argument: 'URL',
+      argument: 'PATH',
       shorthand: 'p',
       type: String,
       deprecated: false,
@@ -41,7 +42,7 @@ export const bisectCommand = {
     {
       name: 'run',
       description: 'Test script to run for each deployment',
-      argument: 'URL',
+      argument: 'SCRIPT',
       shorthand: 'r',
       type: String,
       deprecated: false,

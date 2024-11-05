@@ -27,7 +27,7 @@ export const linkCommand = {
       description:
         'Skip questions when setting up new project using default scope and settings',
     },
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

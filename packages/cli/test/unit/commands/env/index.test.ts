@@ -27,7 +27,7 @@ describe('env', () => {
   it('errors when invoked without subcommand', async () => {
     client.setArgv('env');
     const exitCodePromise = env(client);
-    await expect(exitCodePromise).resolves.toBe(1);
+    await expect(exitCodePromise).resolves.toBe(2);
   });
 
   describe('unrecognized subcommand', () => {

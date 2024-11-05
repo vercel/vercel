@@ -523,7 +523,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
   const team = await teamPromise;
-  const output = await execCli(binaryPath, ['env'], {
+  const output = await execCli(binaryPath, ['env', 'ls'], {
     env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
