@@ -783,7 +783,7 @@ describe('deploy', () => {
       archive: undefined,
     };
 
-    it.todo('--force', async () => {
+    it('--force', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--force');
       const exitCode = await deploy(client);
