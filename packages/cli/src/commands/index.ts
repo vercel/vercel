@@ -65,13 +65,13 @@ const commandsStructs = [
   { name: 'help', aliases: [] },
 ];
 
-export function getAliases(command: Pick<Command, 'name' | 'aliases'>) {
+export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);
 }
 
 export const commands = new Map();
 for (const command of commandsStructs) {
-  const aliases = getAliases(command);
+  const aliases = getCommandAliases(command);
   for (const alias of aliases) {
     commands.set(alias, command.name);
   }
