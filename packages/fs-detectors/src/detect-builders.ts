@@ -480,8 +480,11 @@ function getApiMatches(): Builder[] {
     },
     { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
+    { src: 'vercel/api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
+    { src: 'vercel/api/**/*.py', use: `@vercel/python`, config },
     { src: 'api/**/*.rb', use: `@vercel/ruby`, config },
+    { src: 'vercel/api/**/*.rb', use: `@vercel/ruby`, config },
   ];
 }
 
