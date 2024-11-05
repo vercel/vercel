@@ -29,7 +29,13 @@ let value: TeamLimited = {
   slug: "my-team",
   name: "My Team",
   avatar: "6eb07268bcfadd309905ffb1579354084c24655c",
-  membership: {},
+  membership: {
+    confirmed: false,
+    confirmedAt: 7711.46,
+    role: "MEMBER",
+    createdAt: 1125.13,
+    created: 5408.95,
+  },
   created: "<value>",
   createdAt: 1630748523395,
 };

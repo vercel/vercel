@@ -29,3 +29,13 @@ Based on:
 - [typescript v14.0.0-canary.3] packages/sdk
 ### Releases
 - [NPM v14.0.0-canary.3] https://www.npmjs.com/package/@vercel/sdk/v/14.0.0-canary.3 - packages/sdk
+
+## 2024-11-05 14:39:45
+### Changes
+Based on:
+- OpenAPI Doc  
+- Speakeasy CLI 1.426.0 (2.446.5) https://github.com/speakeasy-api/speakeasy
+### Generated
+- [typescript v14.0.0-canary.4] packages/sdk
+### Releases
+- [NPM v14.0.0-canary.4] https://www.npmjs.com/package/@vercel/sdk/v/14.0.0-canary.4 - packages/sdk

@@ -5,12 +5,12 @@
 
 ### Available Operations
 
-* [getById](#getbyid) - Get cert by id
-* [remove](#remove) - Remove cert
-* [issue](#issue) - Issue a new cert
-* [upload](#upload) - Upload a cert
+* [getCertById](#getcertbyid) - Get cert by id
+* [removeCert](#removecert) - Remove cert
+* [issueCert](#issuecert) - Issue a new cert
+* [uploadCert](#uploadcert) - Upload a cert
 
-## getById
+## getCertById
 
 Get cert by id
 
@@ -24,7 +24,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.certs.getById({
+  const result = await vercel.certs.getCertById({
     id: "<id>",
   });
 
@@ -41,7 +41,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { certsGetById } from "@vercel/sdk/funcs/certsGetById.js";
+import { certsGetCertById } from "@vercel/sdk/funcs/certsGetCertById.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -50,7 +50,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await certsGetById(vercel, {
+  const res = await certsGetCertById(vercel, {
     id: "<id>",
   });
 
@@ -82,12 +82,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## remove
+## removeCert
 
 Remove cert
 
@@ -101,7 +100,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.certs.remove({
+  const result = await vercel.certs.removeCert({
     id: "<id>",
   });
 
@@ -118,7 +117,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { certsRemove } from "@vercel/sdk/funcs/certsRemove.js";
+import { certsRemoveCert } from "@vercel/sdk/funcs/certsRemoveCert.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -127,7 +126,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await certsRemove(vercel, {
+  const res = await certsRemoveCert(vercel, {
     id: "<id>",
   });
 
@@ -159,12 +158,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## issue
+## issueCert
 
 Issue a new cert
 
@@ -178,7 +176,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.certs.issue({});
+  const result = await vercel.certs.issueCert({});
 
   // Handle the result
   console.log(result);
@@ -193,7 +191,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { certsIssue } from "@vercel/sdk/funcs/certsIssue.js";
+import { certsIssueCert } from "@vercel/sdk/funcs/certsIssueCert.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -202,7 +200,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await certsIssue(vercel, {});
+  const res = await certsIssueCert(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -232,12 +230,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## upload
+## uploadCert
 
 Upload a cert
 
@@ -251,7 +248,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.certs.upload({});
+  const result = await vercel.certs.uploadCert({});
 
   // Handle the result
   console.log(result);
@@ -266,7 +263,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { certsUpload } from "@vercel/sdk/funcs/certsUpload.js";
+import { certsUploadCert } from "@vercel/sdk/funcs/certsUploadCert.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -275,7 +272,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await certsUpload(vercel, {});
+  const res = await certsUploadCert(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -305,6 +302,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

@@ -7,8 +7,8 @@
 
 ```typescript
 const value: operations.ResponseBody1 = {
-  size: 1103.75,
-  taskDurationMs: 6563.30,
+  size: 1613.10,
+  taskDurationMs: 6531.08,
 };
 ```
 

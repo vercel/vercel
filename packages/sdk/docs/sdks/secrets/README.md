@@ -3,17 +3,15 @@
 
 ## Overview
 
-Secrets
-
 ### Available Operations
 
-* [list](#list) - List secrets
-* [create](#create) - Create a new secret
-* [rename](#rename) - Change secret name
-* [get](#get) - Get a single secret
-* [delete](#delete) - Delete a secret
+* [getSecrets](#getsecrets) - List secrets
+* [createSecret](#createsecret) - Create a new secret
+* [renameSecret](#renamesecret) - Change secret name
+* [getSecret](#getsecret) - Get a single secret
+* [deleteSecret](#deletesecret) - Delete a secret
 
-## list
+## getSecrets
 
 Retrieves the active Vercel secrets for the authenticated user or team. By default it returns 20 secrets. The rest can be retrieved using the pagination options. The body will contain an entry for each secret.
 
@@ -27,7 +25,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.secrets.list({
+  const result = await vercel.secrets.getSecrets({
     id: "sec_RKc5iV0rV3ZSrFrHiruRno7k,sec_fGc5iV0rV3ZSrFrHiruRnouQ",
     projectId: "prj_2WjyKQmM8ZnGcJsPWMrHRHrE",
   });
@@ -45,7 +43,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { secretsList } from "@vercel/sdk/funcs/secretsList.js";
+import { secretsGetSecrets } from "@vercel/sdk/funcs/secretsGetSecrets.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -54,7 +52,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await secretsList(vercel, {
+  const res = await secretsGetSecrets(vercel, {
     id: "sec_RKc5iV0rV3ZSrFrHiruRno7k,sec_fGc5iV0rV3ZSrFrHiruRnouQ",
     projectId: "prj_2WjyKQmM8ZnGcJsPWMrHRHrE",
   });
@@ -87,12 +85,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## create
+## createSecret
 
 Allows to create a new secret.
 
@@ -106,7 +103,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.secrets.create({
+  const result = await vercel.secrets.createSecret({
     name: "my-api-key",
     requestBody: {
       name: "my-api-key",
@@ -128,7 +125,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { secretsCreate } from "@vercel/sdk/funcs/secretsCreate.js";
+import { secretsCreateSecret } from "@vercel/sdk/funcs/secretsCreateSecret.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -137,7 +134,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await secretsCreate(vercel, {
+  const res = await secretsCreateSecret(vercel, {
     name: "my-api-key",
     requestBody: {
       name: "my-api-key",
@@ -174,12 +171,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## rename
+## renameSecret
 
 Enables to edit the name of a secret. The name has to be unique to the user or team’s secrets.
 
@@ -193,7 +189,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.secrets.rename({
+  const result = await vercel.secrets.renameSecret({
     name: "my-api-key",
     requestBody: {
       name: "my-api-key",
@@ -213,7 +209,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { secretsRename } from "@vercel/sdk/funcs/secretsRename.js";
+import { secretsRenameSecret } from "@vercel/sdk/funcs/secretsRenameSecret.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -222,7 +218,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await secretsRename(vercel, {
+  const res = await secretsRenameSecret(vercel, {
     name: "my-api-key",
     requestBody: {
       name: "my-api-key",
@@ -257,12 +253,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getSecret
 
 Retrieves the information for a specific secret by passing either the secret id or name in the URL.
 
@@ -276,7 +271,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.secrets.get({
+  const result = await vercel.secrets.getSecret({
     idOrName: "sec_RKc5iV0rV3ZSrFrHiruRno7k",
     decrypt: "true",
   });
@@ -294,7 +289,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { secretsGet } from "@vercel/sdk/funcs/secretsGet.js";
+import { secretsGetSecret } from "@vercel/sdk/funcs/secretsGetSecret.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -303,7 +298,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await secretsGet(vercel, {
+  const res = await secretsGetSecret(vercel, {
     idOrName: "sec_RKc5iV0rV3ZSrFrHiruRno7k",
     decrypt: "true",
   });
@@ -336,12 +331,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteSecret
 
 This deletes the user or team’s secret defined in the URL.
 
@@ -355,7 +349,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.secrets.delete({
+  const result = await vercel.secrets.deleteSecret({
     idOrName: "sec_RKc5iV0rV3ZSrFrHiruRno7k",
   });
 
@@ -372,7 +366,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { secretsDelete } from "@vercel/sdk/funcs/secretsDelete.js";
+import { secretsDeleteSecret } from "@vercel/sdk/funcs/secretsDeleteSecret.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -381,7 +375,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await secretsDelete(vercel, {
+  const res = await secretsDeleteSecret(vercel, {
     idOrName: "sec_RKc5iV0rV3ZSrFrHiruRno7k",
   });
 
@@ -413,6 +407,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

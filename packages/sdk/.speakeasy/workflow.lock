@@ -1,17 +1,32 @@
-speakeasyVersion: 1.404.4
-sources: {}
+speakeasyVersion: 1.426.0
+sources:
+    vercel-OAS:
+        sourceNamespace: vercel-oas
+        sourceRevisionDigest: sha256:598f4acbc07bef616e952c546908fda6a2be8c511f35b2c974c4ee55a7c359c5
+        sourceBlobDigest: sha256:bcae4c261ceb68ef38e576dcec5141ae225b739a0318334caa1ef27e98a886e8
+        tags:
+            - latest
+            - main
 targets:
     vercel:
         source: vercel-OAS
+        sourceNamespace: vercel-oas
+        sourceRevisionDigest: sha256:598f4acbc07bef616e952c546908fda6a2be8c511f35b2c974c4ee55a7c359c5
+        sourceBlobDigest: sha256:bcae4c261ceb68ef38e576dcec5141ae225b739a0318334caa1ef27e98a886e8
+        codeSamplesNamespace: vercel-oas-code-samples
+        codeSamplesRevisionDigest: sha256:613983e62f4abc1ea84eaa1fb34c7cc2ee3fd9921cc834786053097cde778e8f
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest
     sources:
         vercel-OAS:
             inputs:
-                - location: ../../open-api.yaml
+                - location: https://openapi.vercel.sh/
+            overlays:
+                - location: overlay.yaml
+            ruleset: vercelRestAPIRuleset
             registry:
-                location: registry.speakeasyapi.dev/vercel-nv/vercel/vercel-oas
+                location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas
     targets:
         vercel:
             target: typescript
@@ -19,3 +34,7 @@ workflow:
             publish:
                 npm:
                     token: $npm_token
+            codeSamples:
+                registry:
+                    location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas-code-samples
+                blocking: false

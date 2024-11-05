@@ -48,10 +48,8 @@ export async function userRequestDelete(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => RequestDeleteRequestBody$outboundSchema.optional().parse(value),
     "Input validation failed",
   );
@@ -94,7 +92,7 @@ export async function userRequestDelete(
 
   const doResult = await client._do(req, {
     context,
-    errorCodes: ["400", "403", "4XX", "5XX"],
+    errorCodes: ["400", "401", "402", "403", "4XX", "5XX"],
     retryConfig: options?.retries
       || client._options.retryConfig,
     retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
@@ -115,7 +113,7 @@ export async function userRequestDelete(
     | ConnectionError
   >(
     M.json(202, RequestDeleteResponseBody$inboundSchema),
-    M.fail([400, 403, "4XX", "5XX"]),
+    M.fail([400, 401, 402, 403, "4XX", "5XX"]),
   )(response);
   if (!result.ok) {
     return result;

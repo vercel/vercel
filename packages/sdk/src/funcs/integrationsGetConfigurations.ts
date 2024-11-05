@@ -48,10 +48,8 @@ export async function integrationsGetConfigurations(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => GetConfigurationsRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -64,6 +62,8 @@ export async function integrationsGetConfigurations(
   const path = pathToFunc("/v1/integrations/configurations")();
 
   const query = encodeFormQuery({
+    "installationType": payload.installationType,
+    "integrationIdOrSlug": payload.integrationIdOrSlug,
     "slug": payload.slug,
     "teamId": payload.teamId,
     "view": payload.view,

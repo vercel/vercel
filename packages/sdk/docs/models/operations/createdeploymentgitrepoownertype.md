@@ -11,5 +11,5 @@ let value: CreateDeploymentGitRepoOwnerType = "user";
 ## Values
 
 ```typescript
-"team" | "user"
+"user" | "team"
 ```

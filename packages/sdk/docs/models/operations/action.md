@@ -3,13 +3,13 @@
 ## Example Usage
 
 ```typescript
-import { Action } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
+import { Action } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
-let value: Action = "challenge";
+let value: Action = "deny";
 ```
 
 ## Values
 
 ```typescript
-"deny" | "challenge" | "log" | "bypass" | "rate_limit" | "redirect"
+"deny" | "log"
 ```
