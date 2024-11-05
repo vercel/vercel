@@ -54,17 +54,17 @@ export default async function remove(client: Client) {
   }
 
   const ids = parsedArgs.args.slice(1);
+  const hard = parsedArgs.flags['--hard'];
+  const skipConfirmation = parsedArgs.flags['--yes'];
+  const safe = parsedArgs.flags['--safe'];
   telemetryClient.trackCliArgumentNameOrDeploymentId(ids);
-  telemetryClient.trackCliFlagSafe(parsedArgs.flags['--safe']);
-  telemetryClient.trackCliFlagHard(parsedArgs.flags['--hard']);
-  telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetryClient.trackCliFlagSafe(safe);
+  telemetryClient.trackCliFlagHard(hard);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
 
   const {
     config: { currentTeam },
   } = client;
-  const hard = parsedArgs.flags['--hard'];
-  const skipConfirmation = parsedArgs.flags['--yes'];
-  const safe = parsedArgs.flags['--safe'];
   const { success, error, log } = output;
 
   if (ids.length < 1) {

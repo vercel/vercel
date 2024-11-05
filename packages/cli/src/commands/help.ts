@@ -127,7 +127,7 @@ export function buildCommandSynopsisLine(command: Command, parent?: Command) {
     for (const argument of args) {
       let { name } = argument;
       if (argument.multiple) {
-        name += '...';
+        name += ' ...';
       }
       line.push(argument.required ? name : `[${name}]`);
     }
