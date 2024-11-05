@@ -1,9 +1,15 @@
 dist
 worker
 .solid
-.vercel
-.vinxi
 .output
+.vercel
+.netlify
+.vinxi
+app.config.timestamp_*.js
+
+# Environment
+.env
+.env*.local
 
 # dependencies
 /node_modules

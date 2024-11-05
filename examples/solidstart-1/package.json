@@ -8,11 +8,11 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@solidjs/meta": "^0.29.2",
-    "@solidjs/router": "^0.13.1",
-    "@solidjs/start": "^1.0.0-rc.0",
-    "solid-js": "^1.8.16",
-    "vinxi": "^0.3.10"
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.15.0",
+    "@solidjs/start": "^1.0.10",
+    "solid-js": "^1.9.2",
+    "vinxi": "^0.4.3"
   },
   "engines": {
     "node": ">=18"

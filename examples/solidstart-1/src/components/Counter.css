@@ -9,6 +9,7 @@
   outline: none;
   width: 200px;
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
 .increment:focus {
