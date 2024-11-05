@@ -4009,7 +4009,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
 exports[`help command > remove help output snapshots > remove help column width 40 1`] = `
 "
-  ▲ vercel remove name|deploymentId [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name  
   or deployment ID.                     
@@ -4078,7 +4078,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
 exports[`help command > remove help output snapshots > remove help column width 80 1`] = `
 "
-  ▲ vercel remove name|deploymentId [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name or deployment ID.                        
 
@@ -4121,7 +4121,7 @@ exports[`help command > remove help output snapshots > remove help column width 
 
 exports[`help command > remove help output snapshots > remove help column width 120 1`] = `
 "
-  ▲ vercel remove name|deploymentId [options]
+  ▲ vercel remove name|deploymentId ... [options]
 
   Remove deployment(s) by project name or deployment ID.                                                                
 
