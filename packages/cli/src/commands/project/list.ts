@@ -135,6 +135,6 @@ export default async function list(
 
 function getLatestProdUrl(project: Project): string {
   const alias = project.targets?.production?.alias?.[0];
-  if (alias) return 'https://' + alias;
+  if (alias) return `https://${alias}`;
   return '--';
 }
