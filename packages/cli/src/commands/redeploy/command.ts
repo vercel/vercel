@@ -36,8 +36,8 @@ export const redeployCommand = {
       value: `${packageName} redeploy my-deployment.vercel.app > deployment-url.txt`,
     },
     {
-      name: 'Rebuild and deploy an existing deployment to a specific environment',
-      value: `${packageName} redeploy my-deployment.vercel.app --environment preview`,
+      name: 'Rebuild and deploy an existing deployment to a specific target environment',
+      value: `${packageName} redeploy my-deployment.vercel.app --target preview`,
     },
   ],
 } as const;
