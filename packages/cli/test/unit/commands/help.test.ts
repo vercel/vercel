@@ -17,7 +17,7 @@ import { inspectCommand } from '../../../src/commands/inspect/command';
 import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
-import { projectCommand } from '../../../src/commands/project/command';
+import * as project from '../../../src/commands/project/command';
 import * as promote from '../../../src/commands/promote/command';
 import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
@@ -407,13 +407,43 @@ describe('help command', () => {
 
   describe('project help output snapshots', () => {
     it('project help column width 40', () => {
-      expect(help(projectCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('project help column width 80', () => {
-      expect(help(projectCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('project help column width 120', () => {
-      expect(help(projectCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('project add help output snapshots', () => {
+      it('project add help column width 120', () => {
+        expect(
+          help(project.addSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project list help output snapshots', () => {
+      it('project list help column width 120', () => {
+        expect(
+          help(project.listSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project remove help output snapshots', () => {
+      it('project remove help column width 120', () => {
+        expect(
+          help(project.removeSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
