@@ -3,6 +3,7 @@ import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const devCommand = {
   name: 'dev',
+  aliases: ['develop'],
   description: `Starts the \`${packageName} dev\` server.`,
   arguments: [
     {
@@ -21,7 +22,7 @@ export const devCommand = {
     },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

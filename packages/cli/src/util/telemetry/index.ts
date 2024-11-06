@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Output } from '../output';
 import os from 'node:os';
-import { GlobalConfig } from '@vercel-internals/types';
+import type { GlobalConfig } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 const LogLabel = `['telemetry']:`;
 
@@ -10,12 +10,12 @@ interface Args {
 }
 
 interface Options {
-  output: Output;
   store: TelemetryEventStore;
   isDebug?: boolean;
 }
 
 interface Event {
+  teamId?: string;
   sessionId?: string;
   id: string;
   key: string;
@@ -23,21 +23,29 @@ interface Event {
 }
 
 export class TelemetryClient {
-  private output: Output;
   private isDebug: boolean;
   store: TelemetryEventStore;
 
   protected redactedValue = '[REDACTED]';
+  protected noValueToTriggerPrompt = '[TRIGGER_PROMPT]';
+  protected redactedArgumentsLength = (args: string[]) => {
+    if (args && args.length === 1) {
+      return 'ONE';
+    }
+    if (args.length > 1) {
+      return 'MANY';
+    }
+    return 'NONE';
+  };
 
   constructor({ opts }: Args) {
-    this.output = opts.output;
     this.isDebug = opts.isDebug || false;
     this.store = opts.store;
   }
 
   private track(eventData: { key: string; value: string }) {
     if (this.isDebug) {
-      this.output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
+      output.debug(`${LogLabel} ${eventData.key}:${eventData.value}`);
     }
 
     const event: Event = {
@@ -77,9 +85,9 @@ export class TelemetryClient {
     }
   }
 
-  protected trackCliOption(eventData: { flag: string; value: string }) {
+  protected trackCliOption(eventData: { option: string; value: string }) {
     this.track({
-      key: `flag:${eventData.flag}`,
+      key: `option:${eventData.option}`,
       value: eventData.value,
     });
   }
@@ -130,38 +138,62 @@ export class TelemetryClient {
     }
   }
 
+  protected trackDefaultDeploy() {
+    this.track({
+      key: 'default-deploy',
+      value: 'TRUE',
+    });
+  }
+
+  protected trackExtension(extension: string) {
+    this.track({
+      key: 'extension',
+      value: extension,
+    });
+  }
+
   trackCommandError(error: string): Event | undefined {
-    this.output.error(error);
+    output.error(error);
     return;
   }
 
-  trackFlagHelp() {
-    this.trackCliFlag('help');
+  trackCliFlagHelp(command: string, subcommands?: string | string[]) {
+    let subcommand: string | undefined;
+    if (subcommands) {
+      subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
+    }
+
+    this.track({
+      key: 'flag:help',
+      value: subcommand ? `${command}:${subcommand}` : command,
+    });
   }
 }
 
 export class TelemetryEventStore {
   private events: Event[];
-  private output: Output;
   private isDebug: boolean;
   private sessionId: string;
+  private teamId = 'NO_TEAM_ID';
   private config: GlobalConfig['telemetry'];
 
-  constructor(opts: {
-    output: Output;
-    isDebug?: boolean;
-    config: GlobalConfig['telemetry'];
-  }) {
-    this.isDebug = opts.isDebug || false;
-    this.output = opts.output;
+  constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
+    this.isDebug = opts?.isDebug || false;
     this.sessionId = randomUUID();
     this.events = [];
-    this.config = opts.config;
+    this.config = opts?.config;
   }
 
   add(event: Event) {
     event.sessionId = this.sessionId;
+    event.teamId = this.teamId;
     this.events.push(event);
+  }
+
+  updateTeamId(teamId?: string) {
+    if (teamId) {
+      this.teamId = teamId;
+    }
   }
 
   get readonlyEvents() {
@@ -177,17 +209,17 @@ export class TelemetryEventStore {
       return false;
     }
 
-    return this.config?.enabled === false ? false : true;
+    return this.config?.enabled ?? true;
   }
 
   save() {
     if (this.isDebug) {
-      // Intentionally not using `this.output.debug` as it will
+      // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
-      this.output.log(`${LogLabel} Flushing Events`);
-      this.events.forEach(event => {
-        this.output.log(JSON.stringify(event));
-      });
+      output.log(`${LogLabel} Flushing Events`);
+      for (const event of this.events) {
+        output.log(JSON.stringify(event));
+      }
 
       return;
     }

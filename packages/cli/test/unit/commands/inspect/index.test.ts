@@ -6,10 +6,108 @@ import inspect from '../../../../src/commands/inspect';
 import sleep from '../../../../src/util/sleep';
 
 describe('inspect', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'inspect';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = inspect(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   describe('[url]', () => {
-    describe.todo('--timeout');
-    describe.todo('--wait');
-    describe.todo('--logs');
+    describe('--timeout', async () => {
+      it('tracks --timeout', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.setArgv('inspect', deployment.url, '--timeout', '0');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:deploymentIdOrHost',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:timeout',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--wait', async () => {
+      it('tracks --wait', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.setArgv('inspect', deployment.url, '--wait');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:deploymentIdOrHost',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:wait',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    describe('--logs', async () => {
+      it('tracks logs', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.scenario.get(
+          `/v3/now/deployments/${deployment.id}/events`,
+          (req, res) => {
+            res.json([]);
+          }
+        );
+
+        client.setArgv('inspect', deployment.url, '--logs');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:deploymentIdOrHost',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:logs',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    it('tracks deplomymentUrl as telemetry', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+      client.setArgv('inspect', deployment.url);
+      const exitCode = await inspect(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:deploymentIdOrHost',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
 
     it('prints error when not providing deployement id or url', async () => {
       client.setArgv('inspect');

@@ -13,6 +13,7 @@ import { domainsCommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
+import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
@@ -37,38 +38,45 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const { output, telemetryEventStore } = client;
+  const { telemetryEventStore } = client;
   const telemetry = new DomainsTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
-
-  if (parsedArgs.flags['--help']) {
-    output.print(help(domainsCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('domains', subcommand);
+    output.print(help(domainsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
   switch (subcommand) {
     case 'add':
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, parsedArgs.flags, args);
     case 'inspect':
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, parsedArgs.flags, args);
     case 'move':
+      telemetry.trackCliSubcommandMove(subcommandOriginal);
       return move(client, parsedArgs.flags, args);
     case 'buy':
+      telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, parsedArgs.flags, args);
     case 'rm':
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, parsedArgs.flags, args);
     case 'transferIn':
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, parsedArgs.flags, args);
     default:
+      telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, parsedArgs.flags, args);
   }
 }

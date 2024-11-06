@@ -13,6 +13,25 @@ try {
   }
 }
 
+{
+  const SILENCED_ERRORS = [
+    'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
+  ];
+
+  // eslint-disable-next-line no-console
+  const originalError = console.error;
+  // eslint-disable-next-line no-console
+  console.error = (msg: unknown) => {
+    const isSilencedError = SILENCED_ERRORS.some(
+      error => typeof msg === 'string' && msg.includes(error)
+    );
+    if (isSilencedError) {
+      return;
+    }
+    originalError(msg);
+  };
+}
+
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
@@ -22,9 +41,8 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import * as Sentry from '@sentry/node';
 import hp from './util/humanize-path';
-import commands from './commands';
+import { commands } from './commands';
 import pkg from './util/pkg';
-import { Output } from './util/output';
 import cmd from './util/output/cmd';
 import param from './util/output/param';
 import highlight from './util/output/highlight';
@@ -56,6 +74,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import output from './output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -80,9 +99,9 @@ Sentry.init({
 });
 
 let client: Client;
-let output: Output;
+
 let { isTTY } = process.stdout;
-let debug: (s: string) => void = () => {};
+
 let apiUrl = 'https://api.vercel.com';
 
 const main = async () => {
@@ -100,26 +119,20 @@ const main = async () => {
       { '--version': Boolean, '-v': '--version' },
       { permissive: true }
     );
+    const isDebugging = parsedArgs.flags['--debug'];
+    const isNoColor = parsedArgs.flags['--no-color'];
+    output.initialize({
+      debug: isDebugging,
+      noColor: isNoColor,
+    });
   } catch (err: unknown) {
     handleError(err);
     return 1;
   }
 
-  const isDebugging = parsedArgs.flags['--debug'];
-  const isNoColor = parsedArgs.flags['--no-color'];
-
-  output = new Output(process.stderr, {
-    debug: isDebugging,
-    noColor: isNoColor,
-  });
-
-  debug = output.debug;
-
   const localConfigPath = parsedArgs.flags['--local-config'];
-  let localConfig: VercelConfig | Error | undefined = await getConfig(
-    output,
-    localConfigPath
-  );
+  let localConfig: VercelConfig | Error | undefined =
+    await getConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
@@ -199,7 +212,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       config = defaultGlobalConfig;
       try {
-        configFiles.writeToConfigFile(output, config);
+        configFiles.writeToConfigFile(config);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to save the config to "${hp(
@@ -225,7 +238,7 @@ const main = async () => {
     if (isErrnoException(err) && err.code === 'ENOENT') {
       authConfig = defaultAuthConfig;
       try {
-        configFiles.writeToAuthConfigFile(output, authConfig);
+        configFiles.writeToAuthConfigFile(authConfig);
       } catch (err: unknown) {
         output.error(
           `An unexpected error occurred while trying to write the auth config to "${hp(
@@ -246,14 +259,12 @@ const main = async () => {
 
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
-    output,
     config: config.telemetry,
   });
 
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
-      output,
     },
   });
 
@@ -262,6 +273,15 @@ const main = async () => {
   telemetry.trackArch();
   telemetry.trackCIVendorName();
   telemetry.trackVersion(pkg.version);
+  telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
+  telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
+  telemetry.trackCliOptionGlobalConfig(parsedArgs.flags['--global-config']);
+  telemetry.trackCliFlagDebug(parsedArgs.flags['--debug']);
+  telemetry.trackCliFlagNoColor(parsedArgs.flags['--no-color']);
+  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
+  telemetry.trackCliOptionToken(parsedArgs.flags['--token']);
+  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
+  telemetry.trackCliOptionApi(parsedArgs.flags['--api']);
 
   if (typeof parsedArgs.flags['--api'] === 'string') {
     apiUrl = parsedArgs.flags['--api'];
@@ -283,7 +303,6 @@ const main = async () => {
     stdin: process.stdin,
     stdout: process.stdout,
     stderr: output.stream,
-    output,
     config,
     authConfig,
     localConfig,
@@ -298,6 +317,7 @@ const main = async () => {
   }
   const { cwd } = client;
 
+  let defaultDeploy = false;
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
@@ -323,18 +343,22 @@ const main = async () => {
     }
 
     if (subcommandExists) {
-      debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
+      output.debug(`user supplied known subcommand: "${targetOrSubcommand}"`);
       subcommand = targetOrSubcommand;
       userSuppliedSubCommand = targetOrSubcommand;
     } else {
-      debug('user supplied a possible target for deployment or an extension');
+      output.debug(
+        'user supplied a possible target for deployment or an extension'
+      );
     }
   } else {
-    debug('user supplied no target, defaulting to deploy');
+    output.debug('user supplied no target, defaulting to deploy');
     subcommand = 'deploy';
+    defaultDeploy = true;
   }
 
   if (subcommand === 'help') {
+    telemetry.trackCliCommandHelp('help');
     subcommand = subSubCommand || 'deploy';
     client.argv.push('-h');
   }
@@ -363,10 +387,10 @@ const main = async () => {
       // It needs to be saved to the configuration file.
       client.authConfig.token = result.token;
 
-      await updateCurrentTeamAfterLogin(client, output, result.teamId);
+      await updateCurrentTeamAfterLogin(client, result.teamId);
 
-      configFiles.writeToAuthConfigFile(output, client.authConfig);
-      configFiles.writeToConfigFile(output, client.config);
+      configFiles.writeToAuthConfigFile(client.authConfig);
+      configFiles.writeToConfigFile(client.config);
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
@@ -523,6 +547,8 @@ const main = async () => {
     }
   }
 
+  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
+
   let exitCode;
 
   try {
@@ -538,6 +564,7 @@ const main = async () => {
           parsedArgs.args.slice(3),
           cwd
         );
+        telemetry.trackCliExtension(targetCommand);
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`
@@ -558,21 +585,28 @@ const main = async () => {
           func = require('./commands/alias').default;
           break;
         case 'bisect':
+          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
           break;
         case 'build':
+          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
           break;
         case 'certs':
+          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
           break;
         case 'deploy':
+          telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
+          telemetry.trackCliDefaultDeploy(defaultDeploy);
           func = require('./commands/deploy').default;
           break;
         case 'dev':
+          telemetry.trackCliCommandDev(userSuppliedSubCommand);
           func = require('./commands/dev').default;
           break;
         case 'dns':
+          telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = require('./commands/dns').default;
           break;
         case 'domains':
@@ -580,66 +614,91 @@ const main = async () => {
           func = require('./commands/domains').default;
           break;
         case 'env':
+          telemetry.trackCliCommandEnv(userSuppliedSubCommand);
           func = require('./commands/env').default;
           break;
         case 'git':
+          telemetry.trackCliCommandGit(userSuppliedSubCommand);
           func = require('./commands/git').default;
           break;
         case 'init':
+          telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
           break;
         case 'inspect':
+          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
           func = require('./commands/inspect').default;
           break;
         case 'install':
+          telemetry.trackCliCommandInstall(userSuppliedSubCommand);
           func = require('./commands/install').default;
           break;
         case 'integration':
+          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
           func = require('./commands/integration').default;
           break;
+        case 'integration-resource':
+          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
+          func = require('./commands/integration-resource').default;
+          break;
         case 'link':
+          telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = require('./commands/link').default;
           break;
         case 'list':
+          telemetry.trackCliCommandList(userSuppliedSubCommand);
           func = require('./commands/list').default;
           break;
         case 'logs':
+          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = require('./commands/logs').default;
           break;
         case 'login':
+          telemetry.trackCliCommandLogin(userSuppliedSubCommand);
           func = require('./commands/login').default;
           break;
         case 'logout':
+          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
           func = require('./commands/logout').default;
           break;
         case 'project':
+          telemetry.trackCliCommandProject(userSuppliedSubCommand);
           func = require('./commands/project').default;
           break;
         case 'promote':
+          telemetry.trackCliCommandPromote(userSuppliedSubCommand);
           func = require('./commands/promote').default;
           break;
         case 'pull':
+          telemetry.trackCliCommandPull(userSuppliedSubCommand);
           func = require('./commands/pull').default;
           break;
         case 'redeploy':
+          telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
           func = require('./commands/redeploy').default;
           break;
         case 'remove':
+          telemetry.trackCliCommandRemove(userSuppliedSubCommand);
           func = require('./commands/remove').default;
           break;
         case 'rollback':
+          telemetry.trackCliCommandRollback(userSuppliedSubCommand);
           func = require('./commands/rollback').default;
           break;
         case 'target':
+          telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = require('./commands/target').default;
           break;
         case 'teams':
+          telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = require('./commands/teams').default;
           break;
         case 'telemetry':
+          telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = require('./commands/telemetry').default;
           break;
         case 'whoami':
+          telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
           break;
         default:
@@ -733,8 +792,6 @@ const main = async () => {
 };
 
 const handleRejection = async (err: any) => {
-  debug('handling rejection');
-
   if (err) {
     if (err instanceof Error) {
       await handleUnexpected(err);
@@ -754,7 +811,7 @@ const handleUnexpected = async (err: Error) => {
 
   // We do not want to render errors about Sentry not being reachable
   if (message.includes('sentry') && message.includes('ENOTFOUND')) {
-    debug(`Sentry is not reachable: ${err}`);
+    output.debug(`Sentry is not reachable: ${err}`);
     return;
   }
 
@@ -774,7 +831,6 @@ main()
       // Check if an update is available. If so, `latest` will contain a string
       // of the latest version, otherwise `undefined`.
       const latest = getLatestVersion({
-        output,
         pkg,
       });
       if (latest) {

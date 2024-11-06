@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import { SetDifference } from 'utility-types';
 import { AliasRecord } from '../../util/alias/create-alias';
-import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
 import Client from '../../util/client';
@@ -17,20 +15,38 @@ import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
+import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { handleError } from '../../util/error';
+import { listSubcommand } from './command';
+import type { Domain } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 
-type Options = {
-  '--debug': boolean;
-  '--local-config': string;
-};
+export default async function set(client: Client, argv: string[]) {
+  let parsedArguments;
 
-export default async function set(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArguments;
+
   const setStamp = stamp();
-  const { output, localConfig } = client;
+  const { localConfig } = client;
+  const telemetryClient = new AliasSetTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagDebug(opts['--debug']);
+  telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
   const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
@@ -66,11 +82,11 @@ export default async function set(
 
   // For `vercel alias set <argument>`
   if (args.length === 1) {
+    const [aliasTarget] = args;
+    telemetryClient.trackCliArgumentAlias(aliasTarget);
     const deployment = handleCertError(
-      output,
       await getDeploymentForAlias(
         client,
-        output,
         args,
         opts['--local-config'],
         user,
@@ -106,17 +122,10 @@ export default async function set(
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-      const record = await assignAlias(
-        output,
-        client,
-        deployment,
-        target,
-        contextName
-      );
+      const record = await assignAlias(client, deployment, target, contextName);
 
       const handleResult = handleSetupDomainError(
-        output,
-        handleCreateAliasError(output, record)
+        handleCreateAliasError(record)
       );
 
       if (handleResult === 1) {
@@ -134,8 +143,9 @@ export default async function set(
   }
 
   const [deploymentIdOrHost, aliasTarget] = args;
+  telemetryClient.trackCliArgumentDeployment(deploymentIdOrHost);
+  telemetryClient.trackCliArgumentAlias(aliasTarget);
   const deployment = handleCertError(
-    output,
     await getDeployment(client, contextName, deploymentIdOrHost)
   );
 
@@ -154,16 +164,12 @@ export default async function set(
 
   const isWildcard = isWildcardAlias(aliasTarget);
   const record = await assignAlias(
-    output,
     client,
     deployment,
     aliasTarget,
     contextName
   );
-  const handleResult = handleSetupDomainError(
-    output,
-    handleCreateAliasError(output, record)
-  );
+  const handleResult = handleSetupDomainError(handleCreateAliasError(record));
   if (handleResult === 1) {
     return 1;
   }
@@ -183,10 +189,7 @@ type ThenArg<T> = T extends Promise<infer U> ? U : T;
 type SetupDomainResolve = ThenArg<ReturnType<typeof setupDomain>>;
 type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
-function handleSetupDomainError<T>(
-  output: Output,
-  error: SetupDomainError | T
-): T | 1 {
+function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -283,10 +286,9 @@ type RemainingAssignAliasErrors = SetDifference<
 >;
 
 function handleCreateAliasError<T>(
-  output: Output,
   errorOrResult: RemainingAssignAliasErrors | T
 ): 1 | T {
-  const error = handleCertError(output, errorOrResult);
+  const error = handleCertError(errorOrResult);
   if (error === 1) {
     return error;
   }

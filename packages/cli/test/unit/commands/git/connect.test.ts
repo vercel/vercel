@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, beforeEach, afterEach, expect, it } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import { useUser } from '../../../mocks/user';
@@ -9,18 +9,30 @@ import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
 
 describe('git connect', () => {
-  describe.todo('[git url]');
-  describe.todo('--yes');
-  describe.todo('--confirm');
-
   const fixture = (name: string) =>
     join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
 
-  it('connects an unlinked project', async () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'git';
+      const subcommand = 'connect';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = git(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
+  describe('connecting an unlinked project', () => {
     const cwd = fixture('unlinked');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+    beforeEach(async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -28,6 +40,118 @@ describe('git connect', () => {
         id: 'unlinked',
         name: 'unlinked',
       });
+
+      client.cwd = cwd;
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+    });
+
+    afterEach(async () => {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    });
+
+    describe('passing [git url]', () => {
+      it('tracks telemetry', async () => {
+        const remoteUrl = 'https://github.com/user2/repo2';
+        client.setArgv('git', 'connect', remoteUrl);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Which scope should contain your project?'
+        );
+        client.stdin.write('\r');
+
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Do you still want to connect https://github.com/user2/repo2?`
+        );
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user2/repo2`
+        );
+
+        const exitCode = await gitPromise;
+        await expect(client.stderr).toOutput(
+          'Connected GitHub repository user2/repo2!'
+        );
+
+        expect(exitCode).toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+          {
+            key: 'argument:gitUrl',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--yes', () => {
+      it('tracks telemetry', async () => {
+        client.setArgv('git', 'connect', '--yes');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user/repo!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+        ]);
+      });
+    });
+
+    describe('--confirm', () => {
+      it('tracks telemetry', async () => {
+        client.setArgv('git', 'connect', '--confirm');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user/repo!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'flag:confirm',
+            value: 'TRUE',
+          },
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+        ]);
+      });
+    });
+
+    it('connects an unlinked project', async () => {
+      const cwd = fixture('unlinked');
+      client.cwd = cwd;
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
 
@@ -63,9 +187,7 @@ describe('git connect', () => {
         createdAt: 1656109539791,
         updatedAt: 1656109539791,
       });
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
+    });
   });
 
   it('connects an unlinked project with a remote url', async () => {

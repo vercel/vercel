@@ -11,13 +11,21 @@ import { errorToString } from '@vercel/error-utils';
 import { help } from '../help';
 import { logoutCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 
 export default async function main(client: Client): Promise<number> {
-  const { authConfig, config, output } = client;
+  const { authConfig, config } = client;
 
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(logoutCommand.options);
+
+  const telemetry = new LogoutTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   // Parse CLI args
   try {
@@ -28,6 +36,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -69,8 +78,8 @@ export default async function main(client: Client): Promise<number> {
   delete authConfig.token;
 
   try {
-    writeToConfigFile(output, config);
-    writeToAuthConfigFile(output, authConfig);
+    writeToConfigFile(config);
+    writeToAuthConfigFile(authConfig);
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));

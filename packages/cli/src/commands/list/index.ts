@@ -24,7 +24,9 @@ import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
+import { ListTelemetryClient } from '../../util/telemetry/commands/list';
 import type { Deployment, Project } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -39,7 +41,7 @@ function toDate(timestamp: number): string {
 }
 
 export default async function list(client: Client) {
-  const { print, log, warn, error, note, debug, spinner } = client.output;
+  const { print, log, warn, error, note, debug, spinner } = output;
 
   let parsedArgs = null;
 
@@ -52,14 +54,16 @@ export default async function list(client: Client) {
     return 1;
   }
 
+  const telemetry = new ListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('list');
     print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
-  }
-
-  if ('--confirm' in parsedArgs.flags) {
-    warn('`--confirm` is deprecated, please use `--yes` instead');
-    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
   if (parsedArgs.args.length > 2) {
@@ -67,12 +71,24 @@ export default async function list(client: Client) {
     return 1;
   }
 
+  telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
+
+  if ('--confirm' in parsedArgs.flags) {
+    telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+    warn('`--confirm` is deprecated, please use `--yes` instead');
+    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
+  }
+
   const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
   const target = parseTarget({
-    output: client.output,
     flagName: 'environment',
     flags: parsedArgs.flags,
   });
@@ -89,6 +105,8 @@ export default async function list(client: Client) {
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
+    telemetry.trackCliArgumentApp(app);
+
     if (app.includes('.')) {
       // `app` looks like a hostname / URL, so fetch the deployment
       // from the API and retrieve the project ID from the deployment
@@ -159,7 +177,7 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  const projectSlugLink = formatProject(client, contextName, project.name);
+  const projectSlugLink = formatProject(contextName, project.name);
 
   if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
@@ -234,7 +252,7 @@ export default async function list(client: Client) {
             chalk.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            formatEnvironment(client, contextName, project.name, {
+            formatEnvironment(contextName, project.name, {
               id: targetSlug,
               name: targetName,
             }),

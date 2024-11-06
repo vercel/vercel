@@ -2,7 +2,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -11,21 +11,32 @@ import { formatDateWithoutTime } from '../../util/format-date';
 import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import {
-  PaginationOptions,
+  type PaginationOptions,
   getPaginationOpts,
 } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import output from '../../output-manager';
+import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
 
 export default async function ls(
   client: Client,
   opts: Partial<PaginationOptions>,
   args: string[]
 ) {
-  const { output } = client;
+  const { telemetryEventStore } = client;
 
-  let paginationOptions;
+  const telemetry = new DomainsLsTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
+
+  let paginationOptions: (number | undefined)[];
 
   try {
     paginationOptions = getPaginationOpts(opts);

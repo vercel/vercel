@@ -9,6 +9,8 @@ import rollbackStatus from './status';
 import { help } from '../help';
 import { rollbackCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
+import output from '../../output-manager';
 
 /**
  * `vc rollback` command
@@ -19,6 +21,11 @@ export default async (client: Client): Promise<number> => {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
+  const telemetry = new RollbackTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   // Parse CLI args
   try {
@@ -28,9 +35,14 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  const { output } = client;
+  const actionOrDeployId = parsedArgs.args[1] || 'status';
+
+  telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   if (parsedArgs.flags['--help']) {
+    const subcommand = actionOrDeployId === 'status' ? 'status' : undefined;
+    telemetry.trackCliFlagHelp('rollback', subcommand);
     output.print(help(rollbackCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -38,14 +50,13 @@ export default async (client: Client): Promise<number> => {
   // validate the timeout
   let timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+    output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
-  const actionOrDeployId = parsedArgs.args[1] || 'status';
-
   try {
     if (actionOrDeployId === 'status') {
+      telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
         autoConfirm: Boolean(parsedArgs.flags['--yes']),
         client,
@@ -77,7 +88,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    client.output.prettyError(err);
+    output.prettyError(err);
     return 1;
   }
 };

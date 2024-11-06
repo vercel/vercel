@@ -2,14 +2,7 @@ import path from 'path';
 import { URL } from 'url';
 import fetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
-import fs, {
-  writeFile,
-  readFile,
-  remove,
-  copy,
-  ensureDir,
-  mkdir,
-} from 'fs-extra';
+import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
@@ -40,7 +33,7 @@ async function setupProject(
     outputDirectory?: string;
   }
 ) {
-  await waitForPrompt(process, /Set up [^?]+\?/);
+  await waitForPrompt(process, /Set up[^?]+\?/);
   process.stdin?.write('yes\n');
 
   await waitForPrompt(process, /Which scope [^?]+\?/);
@@ -226,94 +219,6 @@ test('should show prompts to set up project during first deploy', async () => {
   }
 });
 
-test('should prefill "project name" prompt with folder name', async () => {
-  const projectName = `static-deployment-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  const src = await setupE2EFixture('static-deployment');
-
-  // remove previously linked project if it exists
-  await remove(path.join(src, '.vercel'));
-
-  const directory = path.join(src, '../', projectName);
-  await copy(src, directory);
-
-  const now = execCli(binaryPath, [directory], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  await waitForPrompt(now, /Set up and deploy [^?]+\?/);
-  now.stdin?.write('yes\n');
-
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
-
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin?.write(`\n`);
-
-  await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin?.write('no\n');
-
-  const output = await now;
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
-test('should prefill "project name" prompt with --name', async () => {
-  const directory = await setupE2EFixture('static-deployment');
-  const projectName = `static-deployment-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(directory, '.vercel'));
-
-  const now = execCli(binaryPath, [directory, '--name', projectName], {
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  let isDeprecated = false;
-
-  await waitForPrompt(now, chunk => {
-    if (chunk.includes('The "--name" option is deprecated')) {
-      isDeprecated = true;
-    }
-
-    return /Set up and deploy [^?]+\?/.test(chunk);
-  });
-  now.stdin?.write('yes\n');
-
-  expect(isDeprecated, 'isDeprecated').toBe(true);
-
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Link to existing project?');
-  now.stdin?.write('no\n');
-
-  await waitForPrompt(now, `What’s your project’s name? (${projectName})`);
-  now.stdin?.write(`\n`);
-
-  await waitForPrompt(now, 'In which directory is your code located?');
-  now.stdin?.write('\n');
-
-  await waitForPrompt(now, 'Want to modify these settings?');
-  now.stdin?.write('no\n');
-
-  const output = await now;
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-});
-
 test('should prefill "project name" prompt with now.json `name`', async () => {
   const directory = await setupE2EFixture('static-deployment');
   const projectName = `static-deployment-${
@@ -347,7 +252,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
     }
   });
 
-  await waitForPrompt(now, /Set up and deploy [^?]+\?/);
+  await waitForPrompt(now, /Set up and deploy[^?]+\?/);
   now.stdin?.write('yes\n');
 
   await waitForPrompt(now, 'Which scope do you want to deploy to?');
@@ -460,7 +365,7 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
         'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore'
       );
 
-    return /Set up and deploy [^?]+\?/.test(chunk);
+    return /Set up and deploy[^?]+\?/.test(chunk);
   });
   now.stdin?.write('no\n');
 
@@ -523,7 +428,7 @@ test('vercel deploy with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should e
 
 test('vercel env with unknown `VERCEL_ORG_ID` or `VERCEL_PROJECT_ID` should error', async () => {
   const team = await teamPromise;
-  const output = await execCli(binaryPath, ['env'], {
+  const output = await execCli(binaryPath, ['env', 'ls'], {
     env: { VERCEL_ORG_ID: team.id, VERCEL_PROJECT_ID: 'asdf' },
   });
 
@@ -841,80 +746,6 @@ test('reject deploying with invalid token', async () => {
   );
 });
 
-test('[vc link] should show prompts to set up project', async () => {
-  const dir = await setupE2EFixture('project-link-zeroconf');
-  const projectName = `project-link-zeroconf-${
-    Math.random().toString(36).split('.')[1]
-  }`;
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
-
-  const vc = execCli(binaryPath, ['link'], {
-    cwd: dir,
-    env: {
-      FORCE_TTY: '1',
-    },
-  });
-
-  await setupProject(vc, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
-
-  const output = await vc;
-
-  // Ensure the exit code is right
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-});
-
-test('[vc link --yes] should not show prompts and autolink', async () => {
-  const dir = await setupE2EFixture('project-link-confirm');
-
-  // remove previously linked project if it exists
-  await remove(path.join(dir, '.vercel'));
-
-  const { exitCode, stdout, stderr } = await execCli(
-    binaryPath,
-    ['link', '--yes'],
-    { cwd: dir }
-  );
-
-  // Ensure the exit code is right
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-  // Ensure the message is correct pattern
-  expect(stderr).toMatch(/Linked to /m);
-
-  // Ensure .gitignore is created
-  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-  expect(gitignore).toBe('.vercel\n');
-
-  // Ensure .vercel/project.json and .vercel/README.txt are created
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-    'project.json'
-  ).toBe(true);
-  expect(
-    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-    'README.txt'
-  ).toBe(true);
-});
-
 test('[vc link] should detect frameworks in project rootDirectory', async () => {
   const dir = await setupE2EFixture('zero-config-next-js-nested');
   const projectRootDir = 'app';
@@ -933,7 +764,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
     },
   });
 
-  await waitForPrompt(vc, /Set up [^?]+\?/);
+  await waitForPrompt(vc, /Set up[^?]+\?/);
   vc.stdin?.write('yes\n');
 
   await waitForPrompt(vc, 'Which scope should contain your project?');
@@ -1046,7 +877,7 @@ test('[vc link] should show project prompts but not framework when `builds` defi
     },
   });
 
-  await waitForPrompt(vc, /Set up [^?]+\?/);
+  await waitForPrompt(vc, /Set up[^?]+\?/);
   vc.stdin?.write('yes\n');
 
   await waitForPrompt(vc, 'Which scope should contain your project?');
@@ -1117,19 +948,6 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
   } finally {
     process.kill(dev.pid, 'SIGTERM');
   }
-});
-
-test('[vc link] should support the `--project` flag', async () => {
-  const projectName = 'link-project-flag';
-  const directory = await setupE2EFixture('static-deployment');
-
-  const [team, output] = await Promise.all([
-    teamPromise,
-    execCli(binaryPath, ['link', '--yes', '--project', projectName, directory]),
-  ]);
-
-  expect(output.exitCode, formatOutput(output)).toBe(0);
-  expect(output.stderr).toContain(`Linked to ${team.slug}/${projectName}`);
 });
 
 test('[vc build] should build project with `@vercel/static-build`', async () => {

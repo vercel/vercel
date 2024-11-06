@@ -16,6 +16,8 @@ import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
 
 /**
  * `vc redeploy` command
@@ -23,8 +25,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async function redeploy(client: Client): Promise<number> {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(redeployCommand.options);
@@ -37,7 +37,14 @@ export default async function redeploy(client: Client): Promise<number> {
     return 1;
   }
 
+  const telemetry = new RedeployTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('redeploy');
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -51,6 +58,9 @@ export default async function redeploy(client: Client): Promise<number> {
     );
     return 1;
   }
+
+  telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
+  telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
@@ -113,7 +123,7 @@ export default async function redeploy(client: Client): Promise<number> {
           const clientOptions: VercelClientOptions = {
             agent: client.agent,
             apiUrl: client.apiUrl,
-            debug: client.output.debugEnabled,
+            debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()
             teamId: fromDeployment.team?.id,
             token: client.authConfig.token!,
@@ -166,7 +176,7 @@ export default async function redeploy(client: Client): Promise<number> {
       }
     }
 
-    return printDeploymentStatus(client, deployment, deployStamp, noWait);
+    return printDeploymentStatus(deployment, deployStamp, noWait);
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {

@@ -11,32 +11,37 @@ import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
+import output from '../../output-manager';
+import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 
-export default async function list(client: Client): Promise<number> {
-  const { config, output } = client;
+export default async function list(
+  client: Client,
+  argv: string[]
+): Promise<number> {
+  const { config, telemetryEventStore } = client;
+  const telemetry = new TeamsListTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
 
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
-
-  // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     handleError(error);
     return 1;
   }
 
   const next = parsedArgs.flags['--next'];
-  const count = parsedArgs.flags['--count'];
+  telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
+  telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
+  telemetry.trackCliOptionSince(parsedArgs.flags['--since']);
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
     output.error('Please provide a number for flag `--next`');
-    return 1;
-  }
-
-  if (typeof count !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--count`');
     return 1;
   }
 
