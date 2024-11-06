@@ -728,7 +728,7 @@ test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
   expect(
-    stripAnsi(result.stderr).includes(
+    stripAnsi(result.stderr.toString()).includes(
       'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
     )
   ).toBeTruthy();
