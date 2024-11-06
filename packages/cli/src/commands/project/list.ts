@@ -62,7 +62,7 @@ export default async function list(
     projectsUrl += `&until=${next}`;
   }
 
-  let {
+  const {
     projects: projectList,
     pagination,
   }: {
