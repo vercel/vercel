@@ -129,7 +129,7 @@ describe('list', () => {
       ...defaultProject,
       targets: {
         production: {
-          ...defaultProject!.targets!.production,
+          ...defaultProject!.targets!.production!,
           alias: [],
         },
       },

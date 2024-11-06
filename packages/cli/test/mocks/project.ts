@@ -119,8 +119,13 @@ const latestProductionDeployment: Deployment = {
   private: true,
   readyState: 'READY',
   target: 'production',
-  type: undefined,
+  type: 'LAMBDAS',
   url: 'a-project-name-rjtr4pz3f.vercel.app',
+  name: 'a-project-name',
+  regions: ['sfo1'],
+  public: false,
+  status: 'READY',
+  version: 2,
 };
 export const defaultProject: Project = {
   id: 'foo',

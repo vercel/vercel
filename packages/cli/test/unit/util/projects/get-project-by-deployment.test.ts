@@ -5,6 +5,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useDeployment } from '../../../mocks/deployment';
 import { defaultProject, useProject } from '../../../mocks/project';
+import assert from 'assert';
 
 describe('getProjectByDeployment', () => {
   it('should get project and deployment', async () => {
@@ -30,7 +31,9 @@ describe('getProjectByDeployment', () => {
   });
 
   it('should get project and deployment associated to a team', async () => {
-    const [team] = useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const team = teams[0];
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,
@@ -61,7 +64,9 @@ describe('getProjectByDeployment', () => {
   });
 
   it("should error if deployment team doesn't match current user's team", async () => {
-    const [team] = useTeams('team_dummy');
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const team = teams[0];
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,

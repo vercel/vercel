@@ -699,7 +699,7 @@ describe('deploy', () => {
       },
     });
 
-    let exitCode: number;
+    let exitCode: number | undefined;
     const runCommand = async () => {
       const repoRoot = setupUnitFixture('commands/deploy/node');
       client.cwd = repoRoot;

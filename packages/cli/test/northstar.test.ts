@@ -130,7 +130,7 @@ describe('CLI initialization', () => {
         email: 'test@example.com',
         version: 'northstar',
         defaultTeamId: 'test-default-team-id',
-      };
+      } as const;
       it('should set currentTeam to defaultTeamId', async () => {
         const loginApiUrl = await setupLocalApiServer(user);
         const vercel = execCli(

@@ -716,8 +716,8 @@ importers:
         specifier: 6.1.47
         version: 6.1.47
       tmp-promise:
-        specifier: 1.0.3
-        version: 1.0.3
+        specifier: 3.0.3
+        version: 3.0.3
       tree-kill:
         specifier: 1.2.2
         version: 1.2.2
@@ -2389,7 +2389,7 @@ packages:
       '@babel/traverse': 7.24.1
       '@babel/types': 7.24.0
       convert-source-map: 2.0.0
-      debug: 4.3.5
+      debug: 4.3.7
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -8208,10 +8208,6 @@ packages:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
-
-  /bluebird@3.7.2:
-    resolution: {integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==}
-    dev: true
 
   /body-parser@1.19.0:
     resolution: {integrity: sha512-dhEPs72UPbDnAQJ9ZKMNTP6ptJaionhP5cBb541nXPlW60Jepo9RV/a4fX4XWW9CuFNK22krhrj1+rgzifNCsw==}
@@ -17420,18 +17416,10 @@ packages:
       tldts-core: 6.1.47
     dev: true
 
-  /tmp-promise@1.0.3:
-    resolution: {integrity: sha512-jXOAjsm29lsfg3Wanosgh7AJzO+NQ8FF1iQANLTBXtsVM3vD+EoPrA96xKt2ArV3wFh5kuwcP1cg9LANtRXCZw==}
+  /tmp-promise@3.0.3:
+    resolution: {integrity: sha512-RwM7MoPojPxsOBYnyd2hy0bxtIlVrihNs9pj5SUvY8Zz1sQcQG2tG1hSr8PDxfgEB8RNKDhqbIlroIarSNDNsQ==}
     dependencies:
-      bluebird: 3.7.2
-      tmp: 0.0.31
-    dev: true
-
-  /tmp@0.0.31:
-    resolution: {integrity: sha512-lfyEfOppKvWNeId5CArFLwgwef+iCnbEIy0JWYf1httIEXnx4ndL4Dr1adw7hPgeQfSlTbc/gqn6iaKcROpw5Q==}
-    engines: {node: '>=0.4.0'}
-    dependencies:
-      os-tmpdir: 1.0.2
+      tmp: 0.2.3
     dev: true
 
   /tmp@0.0.33:
@@ -17439,6 +17427,11 @@ packages:
     engines: {node: '>=0.6.0'}
     dependencies:
       os-tmpdir: 1.0.2
+    dev: true
+
+  /tmp@0.2.3:
+    resolution: {integrity: sha512-nZD7m9iCPC5g0pYmcaxogYKggSfLsdxl8of3Q/oIbqCqLLIO9IAF0GWjX1z9NZRHPiXv8Wex4yDCaZsgEw0Y8w==}
+    engines: {node: '>=14.14'}
     dev: true
 
   /tmpl@1.0.5:

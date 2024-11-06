@@ -11,4 +11,5 @@ declare module 'vitest' {
       ToHaveTelemetryEventsMatchers<T> {}
 }
 
+// @ts-expect-error
 expect.extend({ toOutput, toHaveTelemetryEvents });
