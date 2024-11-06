@@ -22,7 +22,7 @@ import * as promote from '../../../src/commands/promote/command';
 import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
 import { removeCommand } from '../../../src/commands/remove/command';
-import { rollbackCommand } from '../../../src/commands/rollback/command';
+import * as rollback from '../../../src/commands/rollback/command';
 import * as target from '../../../src/commands/target/command';
 import * as teams from '../../../src/commands/teams/command';
 import * as telemetry from '../../../src/commands/telemetry/command';
@@ -507,13 +507,22 @@ describe('help command', () => {
 
   describe('rollback help output snapshots', () => {
     it('rollback help column width 40', () => {
-      expect(help(rollbackCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(rollback.rollbackCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('rollback help column width 80', () => {
-      expect(help(rollbackCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(rollback.rollbackCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('rollback help column width 120', () => {
-      expect(help(rollbackCommand, { columns: 120 })).toMatchSnapshot();
+      expect(
+        help(rollback.rollbackCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('rollback status help output snapshots', () => {
+      it('rollback status help column width 120', () => {
+        expect(
+          help(rollback.rollbackCommand, { columns: 120 })
+        ).toMatchSnapshot();
+      });
     });
   });
 
