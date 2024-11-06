@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import teamsSwitch from '../../../../src/commands/teams/switch';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 
 describe('switch', () => {
   describe('non-northstar', () => {
     it('should let you switch to team and back', async () => {
       const user = useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       // ? Switch to:
       // ── Personal Account ──────────────
@@ -51,7 +51,7 @@ describe('switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      const team = useTeams()[0];
+      const team = useTeam();
       client.config.currentTeam = team.id;
 
       // ? Switch to:
@@ -72,7 +72,7 @@ describe('switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      useTeams();
+      useTeam();
 
       const exitCodePromise = teamsSwitch(client, [user.username]);
       // Personal account should be hidden
