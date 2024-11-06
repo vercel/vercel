@@ -4240,7 +4240,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
   ▲ vercel rollback url|deploymentId [options]
 
   Quickly revert back to a previous     
-  deployment.                           
+  deployment                            
 
   Commands:
 
@@ -4298,13 +4298,6 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
-
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
-
   - Rollback a deployment using id or url
 
     $ vercel rollback <deployment id/url>
@@ -4316,7 +4309,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
   ▲ vercel rollback url|deploymentId [options]
 
-  Quickly revert back to a previous deployment.                                 
+  Quickly revert back to a previous deployment                                  
 
   Commands:
 
@@ -4344,13 +4337,6 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
-
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
-
   - Rollback a deployment using id or url
 
     $ vercel rollback <deployment id/url>
@@ -4362,7 +4348,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
   ▲ vercel rollback url|deploymentId [options]
 
-  Quickly revert back to a previous deployment.                                                                         
+  Quickly revert back to a previous deployment                                                                          
 
   Commands:
 
@@ -4389,12 +4375,43 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
+  - Rollback a deployment using id or url
 
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
+    $ vercel rollback <deployment id/url>
+
+"
+`;
+
+exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
+"
+  ▲ vercel rollback url|deploymentId [options]
+
+  Quickly revert back to a previous deployment                                                                          
+
+  Commands:
+
+  status  [project]  Show the status of any current pending rollbacks                                           
+
+
+  Options:
+
+   --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
   - Rollback a deployment using id or url
 
