@@ -78,7 +78,7 @@ describe('certs issue', () => {
       ]);
     });
 
-    it('should handle conflicts', async () => {
+    it('should handle challenges', async () => {
       useUser();
       client.scenario.post('v3/now/certs', (_, res) => {
         return res.json({});
