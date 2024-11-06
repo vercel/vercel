@@ -1,0 +1,4 @@
+---
+---
+
+Typecheck CLI tests
