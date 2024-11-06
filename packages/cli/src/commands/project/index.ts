@@ -15,13 +15,13 @@ import {
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
 import output from '../../output-manager';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
 
 const COMMAND_CONFIG = {
-  list: getAliases(listSubcommand),
-  add: getAliases(addSubcommand),
-  remove: getAliases(removeSubcommand),
+  list: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
