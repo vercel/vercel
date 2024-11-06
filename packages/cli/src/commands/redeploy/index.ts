@@ -18,7 +18,7 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
-import { CustomEnvironment } from '@vercel-internals/types';
+import type { CustomEnvironment } from '@vercel-internals/types';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
