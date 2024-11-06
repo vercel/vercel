@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { isIP } from 'net';
 import { exec, fixture, testFixture, testFixtureStdio } from './utils';
 
@@ -40,6 +41,7 @@ test('[vercel dev] validate env var names', async () => {
     let stderr = '';
 
     await new Promise<void>((resolve, reject) => {
+      assert(dev.stderr);
       dev.stderr.on('data', (b: string) => {
         stderr += b;
         if (
