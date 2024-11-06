@@ -17,7 +17,7 @@ describe('rm', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: `${command}:${subcommand}`,
+          value: `${command}:remove`,
         },
       ]);
     });
@@ -65,7 +65,7 @@ describe('rm', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: `subcommand:rm`,
+          key: `subcommand:remove`,
           value: 'rm',
         },
         {

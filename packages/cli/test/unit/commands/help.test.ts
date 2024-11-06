@@ -17,14 +17,14 @@ import { inspectCommand } from '../../../src/commands/inspect/command';
 import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
-import { projectCommand } from '../../../src/commands/project/command';
+import * as project from '../../../src/commands/project/command';
 import * as promote from '../../../src/commands/promote/command';
 import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
 import { removeCommand } from '../../../src/commands/remove/command';
 import { rollbackCommand } from '../../../src/commands/rollback/command';
 import * as target from '../../../src/commands/target/command';
-import { teamsCommand } from '../../../src/commands/teams/command';
+import * as teams from '../../../src/commands/teams/command';
 import * as telemetry from '../../../src/commands/telemetry/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
 import {
@@ -407,13 +407,43 @@ describe('help command', () => {
 
   describe('project help output snapshots', () => {
     it('project help column width 40', () => {
-      expect(help(projectCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('project help column width 80', () => {
-      expect(help(projectCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('project help column width 120', () => {
-      expect(help(projectCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('project add help output snapshots', () => {
+      it('project add help column width 120', () => {
+        expect(
+          help(project.addSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project list help output snapshots', () => {
+      it('project list help column width 120', () => {
+        expect(
+          help(project.listSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project remove help output snapshots', () => {
+      it('project remove help column width 120', () => {
+        expect(
+          help(project.removeSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -511,13 +541,53 @@ describe('help command', () => {
 
   describe('teams help output snapshots', () => {
     it('teams help column width 40', () => {
-      expect(help(teamsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('teams help column width 80', () => {
-      expect(help(teamsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('teams help column width 120', () => {
-      expect(help(teamsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('teams add help output snapshots', () => {
+      it('teams add help column width 120', () => {
+        expect(
+          help(teams.addSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams list help output snapshots', () => {
+      it('teams list help column width 120', () => {
+        expect(
+          help(teams.listSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams invite help output snapshots', () => {
+      it('teams invite help column width 120', () => {
+        expect(
+          help(teams.inviteSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams switch help output snapshots', () => {
+      it('teams switch help column width 120', () => {
+        expect(
+          help(teams.switchSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
