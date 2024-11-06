@@ -18,6 +18,11 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
+import { CustomEnvironment } from '@vercel-internals/types';
+import {
+  getCustomEnvironments,
+  pickCustomEnvironment,
+} from '../../util/target/get-custom-environments';
 
 /**
  * `vc redeploy` command
@@ -64,6 +69,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
+  const environment = parsedArgs.flags['--environment'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({
@@ -71,6 +77,43 @@ export default async function redeploy(client: Client): Promise<number> {
       contextName,
       deployIdOrUrl,
     });
+
+    let target: 'production' | 'staging' | string | null | undefined;
+    let customEnvironmentSlugOrId: string | undefined;
+
+    if (!environment) {
+      target = fromDeployment.target ?? undefined;
+      customEnvironmentSlugOrId = fromDeployment.customEnvironment?.id;
+    } else if (environment === 'staging' || environment === 'production') {
+      target = environment;
+    } else if (environment === 'preview') {
+      target = undefined;
+    } else if (environment) {
+      // custom environment
+      customEnvironmentSlugOrId = environment;
+      target = undefined;
+    } else {
+      target = fromDeployment.target;
+    }
+
+    let customEnvironment: CustomEnvironment | undefined;
+    if (fromDeployment?.projectId && customEnvironmentSlugOrId) {
+      const customEnvironments = await getCustomEnvironments(
+        client,
+        fromDeployment.projectId
+      );
+      customEnvironment = pickCustomEnvironment(
+        customEnvironments,
+        customEnvironmentSlugOrId
+      );
+    }
+
+    if (customEnvironmentSlugOrId && !customEnvironment) {
+      output.error(
+        `The provided argument "${environment}" is not a valid environment.`
+      );
+      return 1;
+    }
 
     const deployStamp = stamp();
     output.spinner(`Redeploying project ${fromDeployment.id}`, 0);
@@ -82,21 +125,28 @@ export default async function redeploy(client: Client): Promise<number> {
           action: 'redeploy',
         },
         name: fromDeployment.name,
-        target: fromDeployment.target ?? undefined,
+        target,
+        customEnvironmentSlugOrId,
       },
       method: 'POST',
     });
 
     output.stopSpinner();
 
-    const isProdDeployment = deployment.target === 'production';
     const previewUrl = `https://${deployment.url}`;
+    let isProdDeployment: boolean = target === 'production';
+
+    if (customEnvironmentSlugOrId && customEnvironment) {
+      isProdDeployment = customEnvironment.type === 'production';
+    }
+
     output.print(
       `${prependEmoji(
         `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
         emoji('inspect')
       )}\n`
     );
+
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(

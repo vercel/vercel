@@ -143,20 +143,110 @@ describe('redeploy', () => {
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
   });
 
-  it('should redeploy to preview', async () => {
-    const { fromDeployment } = initRedeployTest({ target: null });
-    client.setArgv('rollback', fromDeployment.id);
-    const exitCodePromise = redeploy(client);
-    await expect(client.stderr).toOutput(
-      `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
-    );
-    await expect(client.stderr).toOutput('Preview');
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+  describe('--environment', () => {
+    it('should redeploy from preview to production', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: undefined,
+        toTarget: 'production',
+      });
+      client.setArgv(
+        'redeploy',
+        fromDeployment.id,
+        '--environment',
+        'production'
+      );
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Production');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+    });
+
+    it('should redeploy production to staging', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: 'production',
+        toTarget: 'staging',
+      });
+      client.setArgv('redeploy', fromDeployment.id, '--environment', 'staging');
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Preview');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+    });
+
+    it('should redeploy production to preview', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: 'production',
+        toTarget: undefined,
+      });
+      client.setArgv('redeploy', fromDeployment.id, '--environment', 'preview');
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Preview');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+    });
+
+    it('should redeploy to custom environment', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: 'production',
+        toTarget: undefined,
+      });
+      client.setArgv('redeploy', fromDeployment.id, '--environment', 'custom');
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput(
+        `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
+      );
+      await expect(client.stderr).toOutput('Preview');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+    });
+
+    it('should error if environment is not found', async () => {
+      const invalidCustomEnvironment = 'custom-but-404';
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: 'production',
+        toTarget: undefined,
+      });
+      client.setArgv(
+        'redeploy',
+        fromDeployment.id,
+        '--environment',
+        invalidCustomEnvironment
+      );
+      const exitCodePromise = redeploy(client);
+
+      await expect(client.stderr).toOutput(
+        `The provided argument "${invalidCustomEnvironment}" is not a valid environment.`
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(1);
+    });
   });
 });
 
-function initRedeployTest({ target }: { target?: Deployment['target'] } = {}) {
+function initRedeployTest({
+  fromTarget,
+  toTarget,
+}: {
+  fromTarget?: Deployment['target'];
+  toTarget?: Deployment['target'] | undefined;
+} = {}) {
   setupUnitFixture('commands/redeploy/simple-static');
   const user = useUser();
   useTeams('team_dummy');
@@ -164,12 +254,23 @@ function initRedeployTest({ target }: { target?: Deployment['target'] } = {}) {
     ...defaultProject,
     id: 'vercel-redeploy',
     name: 'vercel-redeploy',
+    customEnvironments: [
+      {
+        name: 'Custom',
+        slug: 'custom',
+        id: 'env_123123',
+        type: 'preview',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ],
   });
-  const fromDeployment = useDeployment({ creator: user, target });
-  const toDeployment = useDeployment({ creator: user, target });
+
+  const fromDeployment = useDeployment({ creator: user, target: fromTarget });
+  const toDeployment = useDeployment({ creator: user, target: toTarget });
 
   client.scenario.post(`/v13/deployments`, (req, res) => {
-    const { target } = req.body;
+    const { target, customEnvironmentSlugOrId } = req.body;
     if (target !== undefined && typeof target !== 'string') {
       res.status(400).json({
         message: 'Invalid request: `target` should be string',
@@ -177,8 +278,40 @@ function initRedeployTest({ target }: { target?: Deployment['target'] } = {}) {
       return;
     }
 
+    if (
+      customEnvironmentSlugOrId !== undefined &&
+      typeof customEnvironmentSlugOrId !== 'string'
+    ) {
+      res.status(400).json({
+        message:
+          'Invalid request: `customEnvironmentSlugOrId` should be string',
+      });
+      return;
+    }
+
+    if (
+      customEnvironmentSlugOrId &&
+      !project.customEnvironments?.some(
+        ({ slug, id }) =>
+          customEnvironmentSlugOrId === slug || customEnvironmentSlugOrId === id
+      )
+    ) {
+      res.status(404).json({
+        message: 'Invalid request: Custom Environment not found',
+      });
+      return;
+    }
+
     res.json(toDeployment);
   });
+
+  client.scenario.get(
+    `/projects/:projectNameOrId/custom-environments`,
+    (_req, res) => {
+      res.json({ environments: project.customEnvironments });
+      return;
+    }
+  );
 
   return {
     project,
