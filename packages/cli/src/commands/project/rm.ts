@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
