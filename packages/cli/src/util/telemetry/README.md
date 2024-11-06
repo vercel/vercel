@@ -93,7 +93,7 @@ const myTelemetryClient = new TelemetryClientSubClass({
 })
 ```
 
-This instance is the central object containing all events tracked during a CLI invocation. At the end of the invocation `client.telemetryEventStore.save()` is called to persist the metrics data.
+This instance is the central object containing all events tracked during a CLI invocation. At the end of the invocation `client.telemetryEventStore.save()` is called in a forked process to persist the metrics data.
 
 ## Testing
 
