@@ -5,6 +5,7 @@ import { client } from './client';
 import { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
 import { defaultProject } from './project';
+import assert from 'assert';
 
 let deployments = new Map<string, Deployment>();
 let deploymentBuilds = new Map<Deployment, Build[]>();
@@ -211,6 +212,7 @@ function setupDeploymentEndpoints(): void {
   });
 
   client.scenario.get('/:version/deployments/:id/aliases', (req, res) => {
+    assert(typeof req.query.limit === 'string');
     const limit = parseInt(req.query.limit);
     res.json({
       aliases: [],
