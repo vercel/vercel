@@ -66,6 +66,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
+  telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
