@@ -4467,25 +4467,47 @@ exports[`help command > target help output snapshots > target list help output s
 "
 `;
 
+exports[`help command > teams help output snapshots > teams add help output snapshots > teams add help column width 120 1`] = `
+"
+  ▲ vercel teams add
+
+  Create a new team                                                                                                     
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
   ▲ vercel teams command
 
-  Manage teams under your Vercel        
+  Manage Teams under your Vercel        
   account                               
 
   Commands:
 
   add             Create a new  
                   team          
-  list            Show all teams
-                  you're a part 
-                  of            
-  switch  [name]  Switch to a   
-                  different team
-  invite  emails  Invite a new  
+  invite  email   Invite a new  
                   member to a   
                   team          
+  list            Show all teams
+                  that you're a 
+                  member of     
+  switch  [name]  Switch to a   
+                  different team
 
 
   Global Options:
@@ -4526,24 +4548,6 @@ exports[`help command > teams help output snapshots > teams help column width 40
                               number    
 
 
-  Examples:
-
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
-
-  - Invite new members (interactively)
-
-    $ vercel teams invite
-
-  - Invite multiple members simultaneously
-
-    $ vercel teams invite abc@vercel.com xyz@vercel.com
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
-
-    $ vercel teams ls --next 1584722256178
-
 "
 `;
 
@@ -4551,14 +4555,14 @@ exports[`help command > teams help output snapshots > teams help column width 80
 "
   ▲ vercel teams command
 
-  Manage teams under your Vercel account                                        
+  Manage Teams under your Vercel account                                        
 
   Commands:
 
   add             Create a new team                                     
-  list            Show all teams you're a part of                       
+  invite  email   Invite a new member to a team                         
+  list            Show all teams that you're a member of                
   switch  [name]  Switch to a different team                            
-  invite  emails  Invite a new member to a team                         
 
 
   Global Options:
@@ -4575,11 +4579,59 @@ exports[`help command > teams help output snapshots > teams help column width 80
   -v,  --version              Output the version number                         
 
 
+"
+`;
+
+exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
+"
+  ▲ vercel teams command
+
+  Manage Teams under your Vercel account                                                                                
+
+  Commands:
+
+  add             Create a new team                                                                             
+  invite  email   Invite a new member to a team                                                                 
+  list            Show all teams that you're a member of                                                        
+  switch  [name]  Switch to a different team                                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams invite help output snapshots > teams invite help column width 120 1`] = `
+"
+  ▲ vercel teams invite email ...
+
+  Invite a new member to a team                                                                                         
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
   Examples:
-
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
 
   - Invite new members (interactively)
 
@@ -4589,25 +4641,18 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
     $ vercel teams invite abc@vercel.com xyz@vercel.com
 
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
-
-    $ vercel teams ls --next 1584722256178
-
 "
 `;
 
-exports[`help command > teams help output snapshots > teams help column width 120 1`] = `
+exports[`help command > teams help output snapshots > teams list help output snapshots > teams list help column width 120 1`] = `
 "
-  ▲ vercel teams command
+  ▲ vercel teams list [options]
 
-  Manage teams under your Vercel account                                                                                
+  Show all teams that you're a member of                                                                                
 
-  Commands:
+  Options:
 
-  add             Create a new team                                                                             
-  list            Show all teams you're a part of                                                               
-  switch  [name]  Switch to a different team                                                                    
-  invite  emails  Invite a new member to a team                                                                 
+  -N,  --next <MS>  Show next page of results                                                                           
 
 
   Global Options:
@@ -4625,21 +4670,37 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
   Examples:
 
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
-
-  - Invite new members (interactively)
-
-    $ vercel teams invite
-
-  - Invite multiple members simultaneously
-
-    $ vercel teams invite abc@vercel.com xyz@vercel.com
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel teams ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams switch help output snapshots > teams switch help column width 120 1`] = `
+"
+  ▲ vercel teams switch [name]
+
+  Switch to a different team                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively
+
+    $ vercel teams switch <slug>
 
 "
 `;
