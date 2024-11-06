@@ -143,18 +143,13 @@ describe('redeploy', () => {
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
   });
 
-  describe('--environment', () => {
+  describe('--target', () => {
     it('should redeploy from preview to production', async () => {
       const { fromDeployment } = initRedeployTest({
         fromTarget: undefined,
         toTarget: 'production',
       });
-      client.setArgv(
-        'redeploy',
-        fromDeployment.id,
-        '--environment',
-        'production'
-      );
+      client.setArgv('redeploy', fromDeployment.id, '--target', 'production');
 
       const exitCodePromise = redeploy(client);
       await expect(client.stderr).toOutput(
@@ -171,7 +166,7 @@ describe('redeploy', () => {
         fromTarget: 'production',
         toTarget: 'staging',
       });
-      client.setArgv('redeploy', fromDeployment.id, '--environment', 'staging');
+      client.setArgv('redeploy', fromDeployment.id, '--target', 'staging');
 
       const exitCodePromise = redeploy(client);
       await expect(client.stderr).toOutput(
@@ -188,7 +183,7 @@ describe('redeploy', () => {
         fromTarget: 'production',
         toTarget: undefined,
       });
-      client.setArgv('redeploy', fromDeployment.id, '--environment', 'preview');
+      client.setArgv('redeploy', fromDeployment.id, '--target', 'preview');
 
       const exitCodePromise = redeploy(client);
       await expect(client.stderr).toOutput(
@@ -200,12 +195,12 @@ describe('redeploy', () => {
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
     });
 
-    it('should redeploy to custom environment', async () => {
+    it('should redeploy to custom target', async () => {
       const { fromDeployment } = initRedeployTest({
         fromTarget: 'production',
         toTarget: undefined,
       });
-      client.setArgv('redeploy', fromDeployment.id, '--environment', 'custom');
+      client.setArgv('redeploy', fromDeployment.id, '--target', 'custom');
 
       const exitCodePromise = redeploy(client);
       await expect(client.stderr).toOutput(
@@ -217,7 +212,7 @@ describe('redeploy', () => {
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
     });
 
-    it('should error if environment is not found', async () => {
+    it('should error if target environment is not found', async () => {
       const invalidCustomEnvironment = 'custom-but-404';
       const { fromDeployment } = initRedeployTest({
         fromTarget: 'production',
@@ -226,13 +221,13 @@ describe('redeploy', () => {
       client.setArgv(
         'redeploy',
         fromDeployment.id,
-        '--environment',
+        '--target',
         invalidCustomEnvironment
       );
       const exitCodePromise = redeploy(client);
 
       await expect(client.stderr).toOutput(
-        `The provided argument "${invalidCustomEnvironment}" is not a valid environment.`
+        `The provided argument "${invalidCustomEnvironment}" is not a valid target environment.`
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(1);

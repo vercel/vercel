@@ -19,9 +19,9 @@ export const redeployCommand = {
       deprecated: false,
     },
     {
-      name: 'environment',
+      name: 'target',
       shorthand: null,
-      description: 'Redeploy to an specific environment',
+      description: 'Redeploy to an specific target environment',
       type: String,
       deprecated: false,
     },

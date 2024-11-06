@@ -69,7 +69,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
-  const environment = parsedArgs.flags['--environment'];
+  const targetArgument = parsedArgs.flags['--target'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({
@@ -81,16 +81,19 @@ export default async function redeploy(client: Client): Promise<number> {
     let target: 'production' | 'staging' | string | null | undefined;
     let customEnvironmentSlugOrId: string | undefined;
 
-    if (!environment) {
+    if (!targetArgument) {
       target = fromDeployment.target ?? undefined;
       customEnvironmentSlugOrId = fromDeployment.customEnvironment?.id;
-    } else if (environment === 'staging' || environment === 'production') {
-      target = environment;
-    } else if (environment === 'preview') {
+    } else if (
+      targetArgument === 'staging' ||
+      targetArgument === 'production'
+    ) {
+      target = targetArgument;
+    } else if (targetArgument === 'preview') {
       target = undefined;
-    } else if (environment) {
+    } else if (targetArgument) {
       // custom environment
-      customEnvironmentSlugOrId = environment;
+      customEnvironmentSlugOrId = targetArgument;
       target = undefined;
     } else {
       target = fromDeployment.target;
@@ -110,7 +113,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
     if (customEnvironmentSlugOrId && !customEnvironment) {
       output.error(
-        `The provided argument "${environment}" is not a valid environment.`
+        `The provided argument "${targetArgument}" is not a valid target environment.`
       );
       return 1;
     }
