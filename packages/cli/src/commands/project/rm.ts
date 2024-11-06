@@ -82,7 +82,7 @@ async function readConfirmation(
   output.print(
     prependEmoji(
       `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
-        `It will also delete everything under the project including deployments.\n`,
+        'It will also delete everything under the project including deployments.\n',
       emoji('warning')
     )
   );
