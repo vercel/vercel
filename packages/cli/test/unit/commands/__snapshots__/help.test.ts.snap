@@ -3918,6 +3918,8 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
    --no-wait  Don't wait for the redeploy
               to finish                  
+   --target   Redeploy to a specific     
+              target environment         
 
 
   Global Options:
@@ -3968,6 +3970,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
+
 "
 `;
 
@@ -3980,6 +3986,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   Options:
 
    --no-wait  Don't wait for the redeploy to finish                              
+   --target   Redeploy to a specific target environment                          
 
 
   Global Options:
@@ -4006,6 +4013,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
+
 "
 `;
 
@@ -4018,6 +4029,7 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   Options:
 
    --no-wait  Don't wait for the redeploy to finish                                                                      
+   --target   Redeploy to a specific target environment                                                                  
 
 
   Global Options:
@@ -4042,6 +4054,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   - Write Deployment URL to a file
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
+
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
 
 "
 `;
