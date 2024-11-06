@@ -1,15 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'fs-extra';
-import { join } from 'path';
 import git from '../../../../src/commands/git';
 import { client } from '../../../mocks/client';
-import { useTeams } from '../../../mocks/team';
-import { defaultProject, useProject } from '../../../mocks/project';
 
 describe('git', () => {
-  const fixture = (name: string) =>
-    join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
-
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'git';
@@ -35,24 +28,9 @@ describe('git', () => {
 
   describe('unrecognized subcommand', () => {
     it('shows help', async () => {
-      const cwd = fixture('new-connection');
-      client.cwd = cwd;
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'new-connection',
-        name: 'new-connection',
-      });
-      const args = ['not-a-command'];
-      client.setArgv('git', ...args);
-
-      try {
-        await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
-        const exitCode = await git(client);
-        expect(exitCode).toEqual(2);
-      } finally {
-        await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-      }
+      client.setArgv('git', 'not-a-command');
+      const exitCode = await git(client);
+      expect(exitCode).toEqual(2);
     });
   });
 });

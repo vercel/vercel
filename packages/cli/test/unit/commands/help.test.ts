@@ -11,7 +11,7 @@ import * as certs from '../../../src/commands/certs/command';
 import * as dns from '../../../src/commands/dns/command';
 import { domainsCommand } from '../../../src/commands/domains/command';
 import * as env from '../../../src/commands/env/command';
-import { gitCommand } from '../../../src/commands/git/command';
+import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
 import { linkCommand } from '../../../src/commands/link/command';
@@ -296,13 +296,30 @@ describe('help command', () => {
 
   describe('git help output snapshots', () => {
     it('git help column width 40', () => {
-      expect(help(gitCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('git help column width 80', () => {
-      expect(help(gitCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('git help column width 120', () => {
-      expect(help(gitCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('git connect help output snapshots', () => {
+      it('git connect help column width 120', () => {
+        expect(
+          help(git.connectSubcommand, { columns: 120, parent: git.gitCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('git disconnect help output snapshots', () => {
+      it('git disconnect help column width 120', () => {
+        expect(
+          help(git.disconnectSubcommand, {
+            columns: 120,
+            parent: git.gitCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
