@@ -8,16 +8,18 @@ import { CreateProjectEnvRequest } from "@vercel/sdk/models/operations/createpro
 let value: CreateProjectEnvRequest = {
   idOrName: "prj_XLKmu1DyR1eY7zq8UgeRKbA7yVLA",
   upsert: "true",
-  requestBody: {
-    key: "API_URL",
-    value: "https://api.vercel.com",
-    type: "plain",
-    target: [
-      "preview",
-    ],
-    gitBranch: "feature-1",
-    comment: "database connection string for production",
-  },
+  requestBody: [
+    {
+      key: "API_URL",
+      value: "https://api.vercel.com",
+      type: "plain",
+      target: [
+        "preview",
+      ],
+      gitBranch: "feature-1",
+      comment: "database connection string for production",
+    },
+  ],
 };
 ```
 

@@ -3,25 +3,20 @@
 
 ## Overview
 
-Domains
-
 ### Available Operations
 
-* [buy](#buy) - Purchase a domain
-* [checkPrice](#checkprice) - Check the price for a domain
-* [checkStatus](#checkstatus) - Check a Domain Availability
-* [getTransfer](#gettransfer) - Get domain transfer info.
-* [getConfig](#getconfig) - Get a Domain's configuration
-* [get](#get) - Get Information for a Single Domain
-* [list](#list) - List all the domains
-* [createOrTransfer](#createortransfer) - Register or transfer-in a new Domain
-* [update](#update) - Update or move apex domain
-* [delete](#delete) - Remove a domain by name
-* [listByProject](#listbyproject) - Retrieve project domains by project by id or name
-* [create](#create) - Add a domain to a project
-* [verify](#verify) - Verify project domain
+* [buyDomain](#buydomain) - Purchase a domain
+* [checkDomainPrice](#checkdomainprice) - Check the price for a domain
+* [checkDomainStatus](#checkdomainstatus) - Check a Domain Availability
+* [getDomainTransfer](#getdomaintransfer) - Get domain transfer info.
+* [getDomainConfig](#getdomainconfig) - Get a Domain's configuration
+* [getDomain](#getdomain) - Get Information for a Single Domain
+* [getDomains](#getdomains) - List all the domains
+* [createOrTransferDomain](#createortransferdomain) - Register or transfer-in a new Domain
+* [patchDomain](#patchdomain) - Update or move apex domain
+* [deleteDomain](#deletedomain) - Remove a domain by name
 
-## buy
+## buyDomain
 
 Allows to purchase the specified domain.
 
@@ -35,7 +30,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.buy({
+  const result = await vercel.domains.buyDomain({
     requestBody: {
       name: "example.com",
       expectedPrice: 10,
@@ -66,7 +61,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsBuy } from "@vercel/sdk/funcs/domainsBuy.js";
+import { domainsBuyDomain } from "@vercel/sdk/funcs/domainsBuyDomain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -75,7 +70,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsBuy(vercel, {
+  const res = await domainsBuyDomain(vercel, {
     requestBody: {
       name: "example.com",
       expectedPrice: 10,
@@ -121,12 +116,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## checkPrice
+## checkDomainPrice
 
 Check the price to purchase a domain and how long a single purchase period is.
 
@@ -140,7 +134,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.checkPrice({
+  const result = await vercel.domains.checkDomainPrice({
     name: "example.com",
     type: "new",
   });
@@ -158,7 +152,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsCheckPrice } from "@vercel/sdk/funcs/domainsCheckPrice.js";
+import { domainsCheckDomainPrice } from "@vercel/sdk/funcs/domainsCheckDomainPrice.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -167,7 +161,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsCheckPrice(vercel, {
+  const res = await domainsCheckDomainPrice(vercel, {
     name: "example.com",
     type: "new",
   });
@@ -200,12 +194,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## checkStatus
+## checkDomainStatus
 
 Check if a domain name is available for purchase.
 
@@ -219,7 +212,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.checkStatus({
+  const result = await vercel.domains.checkDomainStatus({
     name: "example.com",
   });
 
@@ -236,7 +229,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsCheckStatus } from "@vercel/sdk/funcs/domainsCheckStatus.js";
+import { domainsCheckDomainStatus } from "@vercel/sdk/funcs/domainsCheckDomainStatus.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -245,7 +238,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsCheckStatus(vercel, {
+  const res = await domainsCheckDomainStatus(vercel, {
     name: "example.com",
   });
 
@@ -277,12 +270,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getTransfer
+## getDomainTransfer
 
 Fetch domain transfer availability or transfer status if a transfer is in progress.
 
@@ -296,7 +288,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.getTransfer({
+  const result = await vercel.domains.getDomainTransfer({
     domain: "example.com",
   });
 
@@ -313,7 +305,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsGetTransfer } from "@vercel/sdk/funcs/domainsGetTransfer.js";
+import { domainsGetDomainTransfer } from "@vercel/sdk/funcs/domainsGetDomainTransfer.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -322,7 +314,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsGetTransfer(vercel, {
+  const res = await domainsGetDomainTransfer(vercel, {
     domain: "example.com",
   });
 
@@ -354,12 +346,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getConfig
+## getDomainConfig
 
 Get a Domain's configuration.
 
@@ -373,7 +364,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.getConfig({
+  const result = await vercel.domains.getDomainConfig({
     domain: "example.com",
   });
 
@@ -390,7 +381,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsGetConfig } from "@vercel/sdk/funcs/domainsGetConfig.js";
+import { domainsGetDomainConfig } from "@vercel/sdk/funcs/domainsGetDomainConfig.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -399,7 +390,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsGetConfig(vercel, {
+  const res = await domainsGetDomainConfig(vercel, {
     domain: "example.com",
   });
 
@@ -431,12 +422,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getDomain
 
 Get information for a single domain in an account or team.
 
@@ -450,7 +440,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.get({
+  const result = await vercel.domains.getDomain({
     domain: "example.com",
   });
 
@@ -467,7 +457,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsGet } from "@vercel/sdk/funcs/domainsGet.js";
+import { domainsGetDomain } from "@vercel/sdk/funcs/domainsGetDomain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -476,7 +466,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsGet(vercel, {
+  const res = await domainsGetDomain(vercel, {
     domain: "example.com",
   });
 
@@ -508,12 +498,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## getDomains
 
 Retrieves a list of domains registered for the authenticated user or team. By default it returns the last 20 domains if no limit is provided.
 
@@ -527,16 +516,14 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.list({
+  const result = await vercel.domains.getDomains({
     limit: 20,
     since: 1609499532000,
     until: 1612264332000,
   });
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -548,7 +535,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsList } from "@vercel/sdk/funcs/domainsList.js";
+import { domainsGetDomains } from "@vercel/sdk/funcs/domainsGetDomains.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -557,7 +544,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsList(vercel, {
+  const res = await domainsGetDomains(vercel, {
     limit: 20,
     since: 1609499532000,
     until: 1612264332000,
@@ -569,10 +556,8 @@ async function run() {
 
   const { value: result } = res;
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -589,16 +574,15 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetDomainsResponse](../../models/operations/getdomainsresponse.md)\>**
+**Promise\<[operations.GetDomainsResponseBody](../../models/operations/getdomainsresponsebody.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## createOrTransfer
+## createOrTransferDomain
 
 This endpoint is used for adding a new apex domain name with Vercel for the authenticating user. Can also be used for initiating a domain transfer request from an external Registrar to Vercel.
 
@@ -612,7 +596,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.createOrTransfer({
+  const result = await vercel.domains.createOrTransferDomain({
     requestBody: {
       name: "example.com",
       method: "transfer-in",
@@ -634,7 +618,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsCreateOrTransfer } from "@vercel/sdk/funcs/domainsCreateOrTransfer.js";
+import { domainsCreateOrTransferDomain } from "@vercel/sdk/funcs/domainsCreateOrTransferDomain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -643,7 +627,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsCreateOrTransfer(vercel, {
+  const res = await domainsCreateOrTransferDomain(vercel, {
     requestBody: {
       name: "example.com",
       method: "transfer-in",
@@ -680,12 +664,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## update
+## patchDomain
 
 Update or move apex domain.
 
@@ -699,7 +682,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.update({
+  const result = await vercel.domains.patchDomain({
     domain: "alarming-nondisclosure.com",
     requestBody: {
       op: "update",
@@ -719,7 +702,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsUpdate } from "@vercel/sdk/funcs/domainsUpdate.js";
+import { domainsPatchDomain } from "@vercel/sdk/funcs/domainsPatchDomain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -728,7 +711,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsUpdate(vercel, {
+  const res = await domainsPatchDomain(vercel, {
     domain: "alarming-nondisclosure.com",
     requestBody: {
       op: "update",
@@ -763,12 +746,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteDomain
 
 Delete a previously registered domain name from Vercel. Deleting a domain will automatically remove any associated aliases.
 
@@ -782,7 +764,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.domains.delete({
+  const result = await vercel.domains.deleteDomain({
     domain: "example.com",
   });
 
@@ -799,7 +781,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsDelete } from "@vercel/sdk/funcs/domainsDelete.js";
+import { domainsDeleteDomain } from "@vercel/sdk/funcs/domainsDeleteDomain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -808,7 +790,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await domainsDelete(vercel, {
+  const res = await domainsDeleteDomain(vercel, {
     domain: "example.com",
   });
 
@@ -840,263 +822,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
-
-## listByProject
-
-Retrieve the domains associated with a given project by passing either the project `id` or `name` in the URL.
-
-### Example Usage
-
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.domains.listByProject({
-    idOrName: "<value>",
-    redirect: "example.com",
-    limit: 20,
-    since: 1609499532000,
-    until: 1612264332000,
-  });
-
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
-}
-
-run();
-```
-
-### Standalone function
-
-The standalone function version of this method:
-
-```typescript
-import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsListByProject } from "@vercel/sdk/funcs/domainsListByProject.js";
-
-// Use `VercelCore` for best tree-shaking performance.
-// You can create one instance of it to use across an application.
-const vercel = new VercelCore({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const res = await domainsListByProject(vercel, {
-    idOrName: "<value>",
-    redirect: "example.com",
-    limit: 20,
-    since: 1609499532000,
-    until: 1612264332000,
-  });
-
-  if (!res.ok) {
-    throw res.error;
-  }
-
-  const { value: result } = res;
-
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
-}
-
-run();
-```
-
-### Parameters
-
-| Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `request`                                                                                                                                                                      | [operations.GetProjectDomainsRequest](../../models/operations/getprojectdomainsrequest.md)                                                                                     | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
-| `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
-| `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
-| `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
-
-### Response
-
-**Promise\<[operations.GetProjectDomainsResponse](../../models/operations/getprojectdomainsresponse.md)\>**
-
-### Errors
-
-| Error Object    | Status Code     | Content Type    |
-| --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
-
-## create
-
-Add a domain to the project by passing its domain name and by specifying the project by either passing the project `id` or `name` in the URL. If the domain is not yet verified to be used on this project, the request will return `verified = false`, and the domain will need to be verified according to the `verification` challenge via `POST /projects/:idOrName/domains/:domain/verify`. If the domain already exists on the project, the request will fail with a `400` status code.
-
-### Example Usage
-
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.domains.create({
-    idOrName: "<value>",
-    requestBody: {
-      name: "www.example.com",
-      gitBranch: null,
-      redirect: "foobar.com",
-      redirectStatusCode: 307,
-    },
-  });
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Standalone function
-
-The standalone function version of this method:
-
-```typescript
-import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsCreate } from "@vercel/sdk/funcs/domainsCreate.js";
-
-// Use `VercelCore` for best tree-shaking performance.
-// You can create one instance of it to use across an application.
-const vercel = new VercelCore({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const res = await domainsCreate(vercel, {
-    idOrName: "<value>",
-    requestBody: {
-      name: "www.example.com",
-      gitBranch: null,
-      redirect: "foobar.com",
-      redirectStatusCode: 307,
-    },
-  });
-
-  if (!res.ok) {
-    throw res.error;
-  }
-
-  const { value: result } = res;
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Parameters
-
-| Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `request`                                                                                                                                                                      | [operations.AddProjectDomainRequest](../../models/operations/addprojectdomainrequest.md)                                                                                       | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
-| `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
-| `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
-| `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
-
-### Response
-
-**Promise\<[operations.AddProjectDomainResponseBody](../../models/operations/addprojectdomainresponsebody.md)\>**
-
-### Errors
-
-| Error Object    | Status Code     | Content Type    |
-| --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
-
-## verify
-
-Attempts to verify a project domain with `verified = false` by checking the correctness of the project domain's `verification` challenge.
-
-### Example Usage
-
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.domains.verify({
-    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
-    domain: "example.com",
-  });
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Standalone function
-
-The standalone function version of this method:
-
-```typescript
-import { VercelCore } from "@vercel/sdk/core.js";
-import { domainsVerify } from "@vercel/sdk/funcs/domainsVerify.js";
-
-// Use `VercelCore` for best tree-shaking performance.
-// You can create one instance of it to use across an application.
-const vercel = new VercelCore({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const res = await domainsVerify(vercel, {
-    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
-    domain: "example.com",
-  });
-
-  if (!res.ok) {
-    throw res.error;
-  }
-
-  const { value: result } = res;
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Parameters
-
-| Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `request`                                                                                                                                                                      | [operations.VerifyProjectDomainRequest](../../models/operations/verifyprojectdomainrequest.md)                                                                                 | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
-| `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
-| `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
-| `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
-
-### Response
-
-**Promise\<[operations.VerifyProjectDomainResponseBody](../../models/operations/verifyprojectdomainresponsebody.md)\>**
-
-### Errors
-
-| Error Object    | Status Code     | Content Type    |
-| --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

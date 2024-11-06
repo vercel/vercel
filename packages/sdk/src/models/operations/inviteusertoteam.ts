@@ -221,7 +221,7 @@ export const InviteUserToTeamRequestBody$inboundSchema: z.ZodType<
 > = z.object({
   uid: z.string().optional(),
   email: z.string().optional(),
-  role: InviteUserToTeamRole$inboundSchema.default("VIEWER"),
+  role: InviteUserToTeamRole$inboundSchema.default("MEMBER"),
   projects: z.array(z.lazy(() => InviteUserToTeamProjects$inboundSchema))
     .optional(),
 });
@@ -242,7 +242,7 @@ export const InviteUserToTeamRequestBody$outboundSchema: z.ZodType<
 > = z.object({
   uid: z.string().optional(),
   email: z.string().optional(),
-  role: InviteUserToTeamRole$outboundSchema.default("VIEWER"),
+  role: InviteUserToTeamRole$outboundSchema.default("MEMBER"),
   projects: z.array(z.lazy(() => InviteUserToTeamProjects$outboundSchema))
     .optional(),
 });

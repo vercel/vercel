@@ -9,8 +9,8 @@ import { UpdateEdgeConfigTransfer } from "@vercel/sdk/models/operations/updateed
 
 let value: UpdateEdgeConfigTransfer = {
   fromAccountId: "<id>",
-  startedAt: 3772.69,
-  doneAt: 9260.27,
+  startedAt: 4526.54,
+  doneAt: 7137.18,
 };
 ```
 

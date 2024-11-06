@@ -27,7 +27,7 @@ const value: operations.GetDeploymentGitSourceDeployments2 = {
 ```typescript
 const value: operations.GetDeploymentGitSourceDeployments3 = {
   type: "gitlab",
-  projectId: "<id>",
+  projectId: 4355.32,
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.GetDeploymentGitSourceDeployments6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://fussy-typeface.org/",
+  gitUrl: "https://vague-essence.info",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.GetDeploymentGitSourceDeployments7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 8603.11,
+  repoId: 4862.72,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.GetDeploymentGitSourceDeployments8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 6530.00,
+  projectId: 5881.51,
 };
 ```
 
