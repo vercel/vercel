@@ -3,6 +3,7 @@ import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
 import { Deployment } from './types';
 import { createDeployment } from '../src/index';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
