@@ -2531,6 +2531,17 @@ export const onPrerenderRoute =
       let experimentalStreamingLambdaPath: string | undefined;
       if (
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        routesManifest?.ppr?.chain?.headers
+      ) {
+        // When the chain is present in the routes manifest, we use the
+        // output path as the target for the chain and assign all the provided
+        // headers to the chain.
+        chain = {
+          outputPath: pathnameToOutputName(entryDirectory, routeKey),
+          headers: routesManifest.ppr.chain.headers,
+        };
+      } else if (
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
         experimentalStreamingLambdaPaths
       ) {
         // Try to get the experimental streaming lambda path for the specific
@@ -2558,25 +2569,15 @@ export const onPrerenderRoute =
         // and this should be the pathname that will work for those cases.
         experimentalStreamingLambdaPath = paths.output;
 
-        if (routesManifest?.ppr?.chain?.headers) {
-          // When the chain is present in the routes manifest, we use the
-          // output path as the target for the chain and assign all the provided
-          // headers to the chain.
-          chain = {
-            outputPath: pathnameToOutputName(entryDirectory, routeKey),
-            headers: routesManifest.ppr.chain.headers,
-          };
-        } else {
-          // When the chain is not present in the routes manifest, we use the
-          // experimental streaming lambda path as the target for the chain and
-          // assign the pathname as the matched path to the headers. This allows
-          // for deployments to upgrade to working when Vercel supports reading
-          // the chain parameter.
-          chain = {
-            outputPath: paths.output,
-            headers: { 'x-matched-path': paths.pathname },
-          };
-        }
+        // When the chain is not present in the routes manifest, we use the
+        // experimental streaming lambda path as the target for the chain and
+        // assign the pathname as the matched path to the headers. This allows
+        // for deployments to upgrade to working when Vercel supports reading
+        // the chain parameter.
+        chain = {
+          outputPath: paths.output,
+          headers: { 'x-matched-path': paths.pathname },
+        };
       }
 
       // If this is a fallback page with PPR enabled, we should not have the
