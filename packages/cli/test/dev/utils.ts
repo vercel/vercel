@@ -659,7 +659,7 @@ async function nukeProcessTree(pid: number, signal?: string) {
 
   // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
-  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
+  await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
 
 beforeEach(() => {
