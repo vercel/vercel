@@ -1,20 +1,11 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { connectSubcommand } from '../../../../commands/git/command';
+import type { disconnectSubcommand } from '../../../../commands/git/command';
 
-export class GitConnectTelemetryClient
+export class GitDisconnectTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof connectSubcommand>
+  implements TelemetryMethods<typeof disconnectSubcommand>
 {
-  trackCliArgumentGitUrl(name: string | undefined) {
-    if (name) {
-      this.trackCliArgument({
-        arg: 'gitUrl',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliFlagConfirm(confirm: boolean | undefined) {
     if (confirm) {
       this.trackCliFlag('confirm');

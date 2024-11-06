@@ -1957,15 +1957,76 @@ exports[`help command > env help output snapshots > env remove help output snaps
 "
 `;
 
+exports[`help command > git help output snapshots > git connect help output snapshots > git connect help column width 120 1`] = `
+"
+  ▲ vercel git connect [git-url] [options]
+
+  Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository                   
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Connect your Vercel Project to your Git repository defined in your local \`.git\` config
+
+    $ vercel git connect
+
+  - Connect your Vercel Project to a Git repository using the remote URL
+
+    $ vercel git connect https://github.com/user/repo.git
+
+"
+`;
+
+exports[`help command > git help output snapshots > git disconnect help output snapshots > git disconnect help column width 120 1`] = `
+"
+  ▲ vercel git disconnect [options]
+
+  Disconnect the Git repository from your Vercel Project                                                                
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Disconnect the Git repository
+
+    $ vercel git disconnect
+
+"
+`;
+
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections. 
+  Manage your Git repository connection 
+  to the current Project                
 
   Commands:
 
-  connect     [git url]  Connect   
+  connect     [git-url]  Connect   
                          your      
                          Vercel    
                          Project to
@@ -1978,10 +2039,10 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          repository
   disconnect             Disconnect
                          the Git   
-                         provider  
                          repository
                          from your 
-                         project   
+                         Vercel    
+                         Project   
 
 
   Global Options:
@@ -2022,35 +2083,21 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                               number    
 
 
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
-
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections.                                         
+  Manage your Git repository connection to the current Project                  
 
   Commands:
 
-  connect     [git url]  Connect your Vercel Project to your Git repository
+  connect     [git-url]  Connect your Vercel Project to your Git repository
                          or provide the remote URL to your Git repository  
-  disconnect             Disconnect the Git provider repository from your  
-                         project                                           
+  disconnect             Disconnect the Git repository from your Vercel    
+                         Project                                           
 
 
   Global Options:
@@ -2067,34 +2114,20 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
-
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections.                                                                                 
+  Manage your Git repository connection to the current Project                                                          
 
   Commands:
 
-  connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
+  connect     [git-url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
                          repository                                                                                
-  disconnect             Disconnect the Git provider repository from your project                                  
+  disconnect             Disconnect the Git repository from your Vercel Project                                    
 
 
   Global Options:
@@ -2109,20 +2142,6 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
-
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
 
 "
 `;
