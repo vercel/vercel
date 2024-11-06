@@ -112,15 +112,13 @@ export default async function list(
         ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
-        ...projectList
-          .map(project => [
-            [
-              chalk.bold(project.name),
-              getLatestProdUrl(project),
-              chalk.gray(ms(Date.now() - project.updatedAt)),
-            ],
-          ])
-          .flat(),
+        ...projectList.flatMap(project => [
+          [
+            chalk.bold(project.name),
+            getLatestProdUrl(project),
+            chalk.gray(ms(Date.now() - project.updatedAt)),
+          ],
+        ]),
       ],
       { hsep: 3 }
     ).replace(/^/gm, '  ');
