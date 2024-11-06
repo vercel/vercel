@@ -18,13 +18,13 @@ import {
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  ls: getAliases(listSubcommand),
-  add: getAliases(addSubcommand),
-  rm: getAliases(removeSubcommand),
-  pull: getAliases(pullSubcommand),
+  ls: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  rm: getCommandAliases(removeSubcommand),
+  pull: getCommandAliases(pullSubcommand),
 };
 
 export default async function main(client: Client) {

@@ -17,13 +17,13 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
 import type Client from '../../util/client';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  add: getAliases(addSubcommand),
-  import: getAliases(importSubcommand),
-  ls: getAliases(listSubcommand),
-  rm: getAliases(removeSubcommand),
+  add: getCommandAliases(addSubcommand),
+  import: getCommandAliases(importSubcommand),
+  ls: getCommandAliases(listSubcommand),
+  rm: getCommandAliases(removeSubcommand),
 };
 
 export default async function dns(client: Client) {
