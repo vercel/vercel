@@ -3,6 +3,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const addSubcommand = {
   name: 'add',
+  aliases: [],
   description: 'Installs a marketplace integration',
   arguments: [
     {
@@ -24,6 +25,7 @@ export const addSubcommand = {
 
 export const openSubcommand = {
   name: 'open',
+  aliases: [],
   description: "Opens a marketplace integration's dashboard",
   arguments: [
     {
@@ -45,6 +47,7 @@ export const openSubcommand = {
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'Lists all resources from marketplace integrations',
   arguments: [
     {
@@ -94,6 +97,7 @@ export const listSubcommand = {
 
 export const removeSubcommand = {
   name: 'remove',
+  aliases: [],
   description: 'Uninstalls a marketplace integration',
   arguments: [
     {
@@ -121,6 +125,7 @@ export const removeSubcommand = {
 
 export const integrationCommand = {
   name: 'integration',
+  aliases: [],
   description: 'Manage marketplace integrations',
   options: [],
   arguments: [],

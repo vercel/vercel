@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import { join } from 'path';
-import Client from '../../util/client';
+import { join } from 'node:path';
+import type Client from '../../util/client';
 import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
@@ -16,8 +16,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
-import { pullCommand } from './command';
-import { type EnvCommandFlags } from '../env/command';
+import { pullCommand, type PullCommandFlags } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
@@ -28,7 +27,7 @@ async function pullAllEnvFiles(
   environment: string,
   client: Client,
   link: ProjectLinked,
-  flags: EnvCommandFlags,
+  flags: PullCommandFlags,
   cwd: string
 ): Promise<number> {
   const environmentFile = `.env.${environment}.local`;
@@ -83,7 +82,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  let cwd = parsedArgs.args[1] || client.cwd;
+  const cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const isProduction = Boolean(parsedArgs.flags['--prod']);
   const environment =
@@ -113,7 +112,7 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: EnvCommandFlags
+  flags: PullCommandFlags
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, { autoConfirm });
   if (typeof link === 'number') {
@@ -122,8 +121,11 @@ export async function pullCommandLogic(
 
   const { project, org, repoRoot } = link;
 
+  let currentDirectory: string;
   if (repoRoot) {
-    cwd = join(repoRoot, project.rootDirectory || '');
+    currentDirectory = join(repoRoot, project.rootDirectory || '');
+  } else {
+    currentDirectory = cwd;
   }
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -133,7 +135,7 @@ export async function pullCommandLogic(
     client,
     link,
     flags,
-    cwd
+    currentDirectory
   );
   if (pullResultCode !== 0) {
     return pullResultCode;
@@ -142,13 +144,13 @@ export async function pullCommandLogic(
   output.print('\n');
   output.log('Downloading project settings');
   const isRepoLinked = typeof repoRoot === 'string';
-  await writeProjectSettings(cwd, project, org, isRepoLinked);
+  await writeProjectSettings(currentDirectory, project, org, isRepoLinked);
 
   const settingsStamp = stamp();
   output.print(
     `${prependEmoji(
       `Downloaded project settings to ${chalk.bold(
-        humanizePath(join(cwd, VERCEL_DIR, VERCEL_DIR_PROJECT))
+        humanizePath(join(currentDirectory, VERCEL_DIR, VERCEL_DIR_PROJECT))
       )} ${chalk.gray(settingsStamp())}`,
       emoji('success')
     )}\n`

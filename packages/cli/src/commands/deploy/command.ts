@@ -2,6 +2,7 @@ import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 
 export const deployCommand = {
   name: 'deploy',
+  aliases: [],
   description:
     'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
   arguments: [
@@ -134,11 +135,7 @@ export const deployCommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
-    {
-      ...confirmOption,
-      deprecated: true,
-      description: 'Use default options to skip all prompts',
-    },
+    confirmOption,
   ],
   examples: [
     {

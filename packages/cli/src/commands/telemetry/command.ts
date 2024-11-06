@@ -1,5 +1,6 @@
 export const statusSubcommand = {
   name: 'status',
+  aliases: [],
   description: 'Shows whether telemetry collection is enabled or disabled',
   arguments: [],
   options: [],
@@ -8,6 +9,7 @@ export const statusSubcommand = {
 
 export const enableSubcommand = {
   name: 'enable',
+  aliases: [],
   description: 'Enables telemetry collection',
   arguments: [],
   options: [],
@@ -16,6 +18,7 @@ export const enableSubcommand = {
 
 export const disableSubcommand = {
   name: 'disable',
+  aliases: [],
   description: 'Disables telemetry collection',
   arguments: [],
   options: [],
@@ -24,6 +27,7 @@ export const disableSubcommand = {
 
 export const telemetryCommand = {
   name: 'telemetry',
+  aliases: [],
   description: 'Allows you to enable or disable telemetry collection',
   arguments: [],
   subcommands: [enableSubcommand, disableSubcommand, statusSubcommand],

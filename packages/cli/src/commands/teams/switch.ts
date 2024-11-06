@@ -1,8 +1,4 @@
-// Packages
 import chalk from 'chalk';
-
-// Utilities
-import Client from '../../util/client';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
@@ -10,6 +6,12 @@ import listInput from '../../util/input/list';
 import { Team, GlobalConfig } from '@vercel-internals/types';
 import { writeToConfigFile } from '../../util/config/files';
 import output from '../../output-manager';
+import { TeamsSwitchTelemetryClient } from '../../util/telemetry/commands/teams/switch';
+import type Client from '../../util/client';
+import { switchSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -21,8 +23,26 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   writeToConfigFile(config);
 };
 
-export default async function main(client: Client, desiredSlug?: string) {
-  const { config } = client;
+export default async function change(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(switchSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  let {
+    args: [desiredSlug],
+  } = parsedArgs;
+
+  const { config, telemetryEventStore } = client;
+  const telemetry = new TeamsSwitchTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliArgumentName(desiredSlug);
   const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');

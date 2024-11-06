@@ -11,7 +11,7 @@ export default async function status(client: Client) {
 
   // TODO: enable this message when we have a proper URL
   // const learnMoreMessage = `\n\nLearn more: ${chalk.cyan(`https://vercel.com/some-link`)}\n`;
-  const learnMoreMessage = ``;
+  const learnMoreMessage = '';
 
   if (enabled) {
     output.log(`You have opted in to Vercel CLI telemetry${learnMoreMessage}.`);

@@ -10,14 +10,21 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = {};
-
-export default async function rm(
-  client: Client,
-  _opts: Options,
-  args: string[]
-) {
+export default async function rm(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
   const { telemetryEventStore } = client;
   const telemetry = new DnsRmTelemetryClient({
     opts: {
@@ -36,7 +43,7 @@ export default async function rm(
     return 1;
   }
 
-  telemetry.trackCliArgumentRecordId(recordId);
+  telemetry.trackCliArgumentId(recordId);
 
   const record = await getDNSRecordById(client, recordId);
 

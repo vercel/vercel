@@ -3,6 +3,7 @@ import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const listCommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'List app deployments for an app.',
   arguments: [
     {
@@ -37,15 +38,11 @@ export const listCommand = {
       type: String,
       deprecated: false,
     },
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
+    nextOption,
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

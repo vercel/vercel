@@ -17,3 +17,14 @@ export async function getCustomEnvironments(client: Client, projectId: string) {
     throw error;
   }
 }
+
+export function pickCustomEnvironment(
+  customEnvironments: CustomEnvironment[],
+  customEnvironmentSlugOrId?: string | undefined
+): CustomEnvironment | undefined {
+  if (!customEnvironmentSlugOrId) return undefined;
+  return customEnvironments.find(
+    ({ slug, id }) =>
+      slug === customEnvironmentSlugOrId || id === customEnvironmentSlugOrId
+  );
+}

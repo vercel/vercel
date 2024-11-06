@@ -3,11 +3,13 @@ import { yesOption } from '../../util/arg-common';
 
 export const removeCommand = {
   name: 'remove',
+  aliases: ['rm'],
   description: 'Remove deployment(s) by project name or deployment ID.',
   arguments: [
     {
       name: 'name|deploymentId',
       required: true,
+      multiple: true,
     },
   ],
   options: [

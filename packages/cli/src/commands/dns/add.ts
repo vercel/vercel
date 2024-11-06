@@ -14,15 +14,21 @@ import getDNSData from '../../util/dns/get-dns-data';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
+import { addSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = Record<string, number | boolean | string | undefined>;
-
-export default async function add(
-  client: Client,
-  _opts: Options,
-  args: string[]
-) {
-  const { contextName } = await getScope(client);
+export default async function add(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
 
   const parsedParams = parseAddDNSRecordArgs(args);
   if (!parsedParams) {
@@ -54,6 +60,8 @@ export default async function add(
     output.log(`Canceled`);
     return 1;
   }
+
+  const { contextName } = await getScope(client);
 
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {

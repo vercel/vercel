@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 
 describe('teams switch', () => {
   describe('non-northstar', () => {
     it('should let you switch to team and back', async () => {
       const user = useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       // ? Switch to:
       // ── Personal Account ──────────────
@@ -48,21 +48,22 @@ describe('teams switch', () => {
   describe('northstar', () => {
     it('should let you provide a slug to bypass prompt', async () => {
       useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       client.config.currentTeam = team.id;
       client.setArgv('teams', 'switch', team.slug);
       const exitCode = await teams(client);
       expect(exitCode, 'exit code for "teams"').toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:switch', value: '[REDACTED]' },
+        { key: 'subcommand:switch', value: 'switch' },
+        { key: 'argument:slug', value: '[REDACTED]' },
       ]);
     });
     it('should not let you switch to personal account', async () => {
       const user = useUser({
         version: 'northstar',
       });
-      const team = useTeams()[0];
+      const team = useTeam();
       client.config.currentTeam = team.id;
 
       // ? Switch to:
@@ -78,7 +79,7 @@ describe('teams switch', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
       await expect(client.stderr).toOutput('No changes made');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:switch', value: '[TRIGGER_PROMPT]' },
+        { key: 'subcommand:switch', value: 'switch' },
       ]);
     });
 
@@ -86,7 +87,7 @@ describe('teams switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      useTeams();
+      useTeam();
       client.setArgv('teams', 'switch', user.username);
       const exitCodePromise = teams(client);
       // Personal account should be hidden

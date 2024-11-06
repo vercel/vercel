@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { addSubcommand } from '../../../../commands/env/command';
 
-export class EnvAddTelemetryClient extends TelemetryClient {
+export class EnvAddTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof addSubcommand>
+{
   trackCliArgumentName(name: string | undefined) {
     if (name) {
       this.trackCliArgument({

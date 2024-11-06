@@ -51,7 +51,7 @@ export class DomainsTelemetryClient extends TelemetryClient {
   }
 
   trackCliFlagHelp(command: string, subcommand?: string | string[]) {
-    let passedSubcommand;
+    let passedSubcommand: string | string[] | undefined;
     if (subcommand === 'transferIn') {
       passedSubcommand = 'transfer-in';
     } else {

@@ -2,6 +2,7 @@ import chance from 'chance';
 import { client } from './client';
 import { beforeEach } from 'vitest';
 import { teamCache } from '../../src/util/teams/get-team-by-id';
+import assert from 'assert';
 
 export type Team = {
   id: string;
@@ -74,6 +75,12 @@ export function useTeams(
   });
 
   return options.apiVersion === 2 ? { teams } : teams;
+}
+
+export function useTeam() {
+  const teams = useTeams();
+  assert(Array.isArray(teams));
+  return teams[0];
 }
 
 export function createTeam(teamId?: string, slug?: string, name?: string) {
