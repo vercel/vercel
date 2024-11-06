@@ -1,5 +1,6 @@
 import { delimiter } from 'path';
 import { getSpawnOptions } from '../src';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 describe('Test `getSpawnOptions()`', () => {
   const origProcessEnvPath = process.env.PATH;
