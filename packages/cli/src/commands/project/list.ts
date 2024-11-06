@@ -94,7 +94,7 @@ export default async function list(
       )}. Please upgrade your projects immediately.`
     );
     output.log(
-      `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
+      'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
     );
   }
 
