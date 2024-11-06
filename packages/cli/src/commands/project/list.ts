@@ -48,7 +48,7 @@ export default async function list(
   const { contextName } = await getScope(client);
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = `/v9/projects?limit=20`;
+  let projectsUrl = '/v9/projects?limit=20';
 
   const deprecated = opts['--update-required'] || false;
   telemetryClient.trackCliFlagUpdateRequired(deprecated);
