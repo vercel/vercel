@@ -9,7 +9,7 @@ import * as alias from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
 import * as certs from '../../../src/commands/certs/command';
 import * as dns from '../../../src/commands/dns/command';
-import { domainsCommand } from '../../../src/commands/domains/command';
+import * as domains from '../../../src/commands/domains/command';
 import * as env from '../../../src/commands/env/command';
 import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
@@ -244,13 +244,83 @@ describe('help command', () => {
 
   describe('domains help output snapshots', () => {
     it('domains help column width 40', () => {
-      expect(help(domainsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('domains help column width 80', () => {
-      expect(help(domainsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('domains help column width 120', () => {
-      expect(help(domainsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('domains add help output snapshots', () => {
+      it('domains add help column width 120', () => {
+        expect(
+          help(domains.addSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains buy help output snapshots', () => {
+      it('domains buy help column width 120', () => {
+        expect(
+          help(domains.buySubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains inspect help output snapshots', () => {
+      it('domains inspect help column width 120', () => {
+        expect(
+          help(domains.inspectSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains list help output snapshots', () => {
+      it('domains list help column width 120', () => {
+        expect(
+          help(domains.listSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains move help output snapshots', () => {
+      it('domains move help column width 120', () => {
+        expect(
+          help(domains.moveSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains remove help output snapshots', () => {
+      it('domains remove help column width 120', () => {
+        expect(
+          help(domains.removeSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains transfer-in help output snapshots', () => {
+      it('domains transfer-in help column width 120', () => {
+        expect(
+          help(domains.transferInSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

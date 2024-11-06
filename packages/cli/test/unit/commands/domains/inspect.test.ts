@@ -43,7 +43,7 @@ describe('domains inspect', () => {
           value: 'inspect',
         },
         {
-          key: 'argument:domainName',
+          key: 'argument:domain',
           value: '[REDACTED]',
         },
       ]);

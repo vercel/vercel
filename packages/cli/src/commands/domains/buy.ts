@@ -13,19 +13,27 @@ import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DomainsBuyTelemetryClient } from '../../util/telemetry/commands/domains/buy';
 import type Client from '../../util/client';
+import { buySubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = {};
-
-export default async function buy(
-  client: Client,
-  _opts: Partial<Options>,
-  args: string[]
-) {
+export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(buySubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args } = parsedArgs;
 
   const [domainName] = args;
   const skipConfirmation = !!process.env.CI;

@@ -1416,69 +1416,121 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
 "
 `;
 
+exports[`help command > domains help output snapshots > domains add help output snapshots > domains add help column width 120 1`] = `
+"
+  ▲ vercel domains add domain project [options]
+
+  Add a domain name that you already own to a Vercel Team                                                               
+
+  Options:
+
+   --force  Force a domain name for a project and remove it from an existing one                                         
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Add a domain that you already own
+
+    $ vercel domains add domain-name.com
+    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
+    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains buy help output snapshots > domains buy help column width 120 1`] = `
+"
+  ▲ vercel domains buy domain
+
+  Purchase a new domain name                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
   Manage domains                        
 
   Commands:
 
-  ls                             Show  
-                                 all   
-                                 domai…
-                                 in a  
-                                 list  
-  inspect      name              Displ…
-                                 infor…
-                                 relat…
-                                 to a  
-                                 domain
-  add          name project      Add a 
-                                 new   
-                                 domain
-                                 that  
-                                 you   
-                                 alrea…
-                                 own   
-  rm           name              Remove
-                                 a     
-                                 domain
-  buy          name              Buy a 
-                                 domain
-                                 that  
-                                 you   
-                                 don't 
-                                 yet   
-                                 own   
-  move         name destination  Move a
-                                 domain
-                                 to    
-                                 anoth…
-                                 scope 
-  transfer-in  name              Trans…
-                                 in a  
-                                 domain
-                                 to    
-                                 Vercel
-
-
-  Options:
-
-       --force           Force a domain on a 
-                         project and remove  
-                         it from an existing 
-                         one                 
-       --limit <NUMBER>  Number of results to
-                         return per page     
-                         (default: 20, max:  
-                         100)                
-  -N,  --next <MS>       Show next page of   
-                         results             
-  -y,  --yes             Skip the            
-                         confirmation prompt 
-                         when removing a     
-                         domain              
+  list                             Show
+                                   all 
+                                   Dom…
+                                   in a
+                                   list
+  inspect      domain              Dis…
+                                   inf…
+                                   rel…
+                                   to a
+                                   dom…
+  add          domain project      Add 
+                                   a   
+                                   dom…
+                                   name
+                                   that
+                                   you 
+                                   alr…
+                                   own 
+                                   to a
+                                   Ver…
+                                   Team
+  buy          domain              Pur…
+                                   a   
+                                   new 
+                                   dom…
+                                   name
+  move         domain destination  Move
+                                   own…
+                                   of a
+                                   dom…
+                                   name
+                                   to  
+                                   ano…
+                                   Ver…
+                                   Team
+  transfer-in  domain              Tra…
+                                   in a
+                                   dom…
+                                   name
+                                   to  
+                                   Ver…
+  remove       domain              Rem…
+                                   own…
+                                   of a
+                                   dom…
+                                   name
+                                   from
+                                   a   
+                                   Ver…
+                                   Team
 
 
   Global Options:
@@ -1519,45 +1571,27 @@ exports[`help command > domains help output snapshots > domains help column widt
                               number    
 
 
-  Examples:
-
-  - Add a domain that you already own
-
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel domains ls--next 1584722256178
-
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
   Manage domains                                                                
 
   Commands:
 
-  ls                             Show all domains in a list                    
-  inspect      name              Displays information related to a domain      
-  add          name project      Add a new domain that you already own         
-  rm           name              Remove a domain                               
-  buy          name              Buy a domain that you don't yet own           
-  move         name destination  Move a domain to another scope                
-  transfer-in  name              Transfer in a domain to Vercel                
-
-
-  Options:
-
-       --force           Force a domain on a project and remove it from an existing  
-                         one                                                         
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results                                   
-  -y,  --yes             Skip the confirmation prompt when removing a domain         
+  list                             Show all Domains in a list                  
+  inspect      domain              Displays information related to a domain    
+  add          domain project      Add a domain name that you already own to a 
+                                   Vercel Team                                 
+  buy          domain              Purchase a new domain name                  
+  move         domain destination  Move ownership of a domain name to another  
+                                   Vercel Team                                 
+  transfer-in  domain              Transfer in a domain name to Vercel         
+  remove       domain              Remove ownership of a domain name from a    
+                                   Vercel Team                                 
 
 
   Global Options:
@@ -1574,44 +1608,74 @@ exports[`help command > domains help output snapshots > domains help column widt
   -v,  --version              Output the version number                         
 
 
-  Examples:
-
-  - Add a domain that you already own
-
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel domains ls--next 1584722256178
-
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
   Manage domains                                                                                                        
 
   Commands:
 
-  ls                             Show all domains in a list                                                            
-  inspect      name              Displays information related to a domain                                              
-  add          name project      Add a new domain that you already own                                                 
-  rm           name              Remove a domain                                                                       
-  buy          name              Buy a domain that you don't yet own                                                   
-  move         name destination  Move a domain to another scope                                                        
-  transfer-in  name              Transfer in a domain to Vercel                                                        
+  list                             Show all Domains in a list                                                          
+  inspect      domain              Displays information related to a domain                                            
+  add          domain project      Add a domain name that you already own to a Vercel Team                             
+  buy          domain              Purchase a new domain name                                                          
+  move         domain destination  Move ownership of a domain name to another Vercel Team                              
+  transfer-in  domain              Transfer in a domain name to Vercel                                                 
+  remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains inspect help output snapshots > domains inspect help column width 120 1`] = `
+"
+  ▲ vercel domains inspect domain
+
+  Displays information related to a domain                                                                              
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains list help output snapshots > domains list help column width 120 1`] = `
+"
+  ▲ vercel domains list [options]
+
+  Show all Domains in a list                                                                                            
 
   Options:
 
-       --force           Force a domain on a project and remove it from an existing one                                      
        --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
   -N,  --next <MS>       Show next page of results                                                                           
-  -y,  --yes             Skip the confirmation prompt when removing a domain                                                 
 
 
   Global Options:
@@ -1629,15 +1693,85 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   Examples:
 
-  - Add a domain that you already own
-
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
-
   - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
-    $ vercel domains ls--next 1584722256178
+    $ vercel domains ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains move help output snapshots > domains move help column width 120 1`] = `
+"
+  ▲ vercel domains move domain destination [options]
+
+  Move ownership of a domain name to another Vercel Team                                                                
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when moving a domain                                                         
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains remove help output snapshots > domains remove help column width 120 1`] = `
+"
+  ▲ vercel domains remove domain [options]
+
+  Remove ownership of a domain name from a Vercel Team                                                                  
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when removing a domain                                                       
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains transfer-in help output snapshots > domains transfer-in help column width 120 1`] = `
+"
+  ▲ vercel domains transfer-in domain [options]
+
+  Transfer in a domain name to Vercel                                                                                   
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
 
 "
 `;
