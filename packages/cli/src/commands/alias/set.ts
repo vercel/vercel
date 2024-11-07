@@ -53,7 +53,7 @@ export default async function set(client: Client, argv: string[]) {
   if (args.length > 2) {
     output.error(
       `${getCommandName(
-        `alias <deployment> <target>`
+        'alias <deployment> <target>'
       )} accepts at most two arguments`
     );
     return 1;
