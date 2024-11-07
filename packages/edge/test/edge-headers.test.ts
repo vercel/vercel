@@ -1,7 +1,8 @@
 /**
- * @jest-environment @edge-runtime/jest-environment
+ * @vitest-environment edge-runtime
  */
 
+import { describe, expect, test } from 'vitest';
 import {
   CITY_HEADER_NAME,
   COUNTRY_HEADER_NAME,
@@ -14,6 +15,11 @@ import {
   REGION_HEADER_NAME,
   REQUEST_ID_HEADER_NAME,
 } from '../src';
+
+test('vitest environment is correctly added', () => {
+  // @ts-ignore
+  expect(globalThis.EdgeRuntime).toBeDefined();
+});
 
 test('`ipAddress` returns the value from the header', () => {
   const req = new Request('https://example.vercel.sh', {

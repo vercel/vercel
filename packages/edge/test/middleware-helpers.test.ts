@@ -1,7 +1,8 @@
 /**
- * @jest-environment @edge-runtime/jest-environment
+ * @vitest-environment edge-runtime
  */
 
+import { describe, expect, test } from 'vitest';
 import { next, rewrite } from '../src/middleware-helpers';
 
 describe('rewrite', () => {

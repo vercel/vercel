@@ -1,7 +1,8 @@
 /**
- * @jest-environment @edge-runtime/jest-environment
+ * @vitest-environment edge-runtime
  */
 
+import { describe, expect, it } from 'vitest';
 import { json } from '../src/response';
 
 describe('json', () => {
