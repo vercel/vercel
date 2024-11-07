@@ -17,8 +17,6 @@ describe('checkTelemetryStatus', () => {
     beforeEach(() => {
       checkTelemetryStatus({
         config: {},
-        // @ts-ignore; client and mock client don't match types. know issue.
-        client,
       });
     });
 
@@ -38,7 +36,7 @@ describe('checkTelemetryStatus', () => {
     });
 
     it('opts the customer in', async () => {
-      expect(fileWriterSpy).toHaveBeenCalledWith(client.output, {
+      expect(fileWriterSpy).toHaveBeenCalledWith({
         telemetry: { enabled: true },
       });
     });
@@ -52,8 +50,6 @@ describe('checkTelemetryStatus', () => {
             enabled: true,
           },
         },
-        // @ts-ignore; client and mock client don't match types. know issue.
-        client,
       });
     });
 
@@ -85,8 +81,6 @@ describe('checkTelemetryStatus', () => {
             enabled: false,
           },
         },
-        // @ts-ignore; client and mock client don't match types. know issue.
-        client,
       });
     });
 
