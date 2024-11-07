@@ -33,7 +33,7 @@ describe('certs issue', () => {
 
   it('should issue cert', async () => {
     useUser();
-    client.scenario.post('v3/certs', (_, res) => {
+    client.scenario.post('/v3/certs', (_, res) => {
       return res.json({});
     });
     client.scenario.patch('/v3/certs', (_, res) => {
