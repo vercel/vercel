@@ -152,11 +152,6 @@ export class TelemetryClient {
     });
   }
 
-  trackCommandError(error: string): Event | undefined {
-    output.error(error);
-    return;
-  }
-
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {
     let subcommand: string | undefined;
     if (subcommands) {
