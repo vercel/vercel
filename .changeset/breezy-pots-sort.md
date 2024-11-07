@@ -1,4 +1,5 @@
 ---
+'vercel': patch
 ---
 
-Typecheck CLI tests
+Make tests type-checked
