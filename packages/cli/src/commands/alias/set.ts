@@ -1,13 +1,13 @@
 import chalk from 'chalk';
-import { SetDifference } from 'utility-types';
-import { AliasRecord } from '../../util/alias/create-alias';
+import type { SetDifference } from 'utility-types';
+import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
-import setupDomain from '../../util/domains/setup-domain';
+import type setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
