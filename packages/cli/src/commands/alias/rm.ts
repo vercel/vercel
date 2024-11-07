@@ -98,7 +98,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
     { hsep: 4 }
   );
 
-  output.log(`The following alias will be removed permanently`);
+  output.log('The following alias will be removed permanently');
   output.print(`  ${tbl}\n`);
   return confirm(client, chalk.red('Are you sure?'), false);
 }
