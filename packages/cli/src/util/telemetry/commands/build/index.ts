@@ -19,7 +19,7 @@ export class BuildTelemetryClient
     if (option) {
       this.trackCliOption({
         option: 'target',
-        value: option,
+        value: this.redactedTargetName(option),
       });
     }
   }

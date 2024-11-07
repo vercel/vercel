@@ -37,6 +37,12 @@ export class TelemetryClient {
     }
     return 'NONE';
   };
+  protected redactedTargetName = (target: string) => {
+    if (['production', 'preview', 'development'].includes(target)) {
+      return target;
+    }
+    return this.redactedValue;
+  };
 
   constructor({ opts }: Args) {
     this.isDebug = opts.isDebug || false;
