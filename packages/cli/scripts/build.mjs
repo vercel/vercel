@@ -2,6 +2,7 @@ import path, { join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { esbuild } from '../../../utils/build.mjs';
 import { compileDevTemplates } from './compile-templates.mjs';
+import { fileURLToPath } from 'node:url';
 
 const repoRoot = new URL('../', import.meta.url);
 
@@ -38,10 +39,13 @@ await Promise.all([
   // We call send-telemetry as a subprocess, so it needs to be bundled separately
   esbuild({
     entryPoints: [
-      new URL(
-        path.join('src', 'util', 'telemetry', 'send-telemetry.ts'),
-        repoRoot
-      ).pathname,
+      path.join(
+        fileURLToPath(repoRoot),
+        'src',
+        'util',
+        'telemetry',
+        'send-telemetry.ts'
+      ),
     ],
     bundle: true,
   }),
