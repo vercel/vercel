@@ -39,7 +39,8 @@ await Promise.all([
   esbuild({
     entryPoints: [
       new URL(
-        path.join('src', 'util', 'telemetry', 'send-telemetry.ts', repoRoot)
+        path.join('src', 'util', 'telemetry', 'send-telemetry.ts'),
+        repoRoot
       ).pathname,
     ],
     bundle: true,
