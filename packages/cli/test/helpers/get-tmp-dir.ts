@@ -1,4 +1,3 @@
-// @ts-ignore
 import tmp from 'tmp-promise';
 import type { TmpDir } from './types';
 

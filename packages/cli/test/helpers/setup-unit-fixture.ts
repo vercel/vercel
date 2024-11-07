@@ -2,14 +2,14 @@ import { afterAll } from 'vitest';
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';
-import tmp, { type DirectoryResult } from 'tmp-promise';
+import tmp from 'tmp-promise';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
 // So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
 tmp.setGracefulCleanup();
 
 let fixturesRoot: string | undefined;
-let tempRoot: DirectoryResult | undefined;
+let tempRoot: ReturnType<typeof tmp.dirSync> | undefined;
 let tempNumber = 0;
 
 /**
@@ -43,19 +43,16 @@ export function setupTmpDir(fixtureName?: string) {
   if (!tempRoot) {
     // Create a shared root temp directory for fixture files
     tempRoot = tmp.dirSync({ unsafeCleanup: true }); // clean up even if files are left
-    if (!tempRoot) {
-      throw new Error('Failed to create temp directory');
-    }
   }
 
-  const cwd = path.join(tempRoot.path, String(tempNumber++), fixtureName ?? '');
+  const cwd = path.join(tempRoot.name, String(tempNumber++), fixtureName ?? '');
   fs.mkdirpSync(cwd);
   return fs.realpathSync(cwd);
 }
 
 export function cleanupFixtures() {
   if (tempRoot) {
-    tempRoot.cleanup();
+    tempRoot.removeCallback();
     tempRoot = undefined;
   }
 }
