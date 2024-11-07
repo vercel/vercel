@@ -824,6 +824,9 @@ importers:
 
   packages/edge:
     devDependencies:
+      '@edge-runtime/vm':
+        specifier: 4.0.4
+        version: 4.0.4
       '@types/jest':
         specifier: 27.4.1
         version: 27.4.1
@@ -850,7 +853,7 @@ importers:
         version: 4.9.5
       vitest:
         specifier: 2.1.4
-        version: 2.1.4(@types/node@14.18.33)
+        version: 2.1.4(@edge-runtime/vm@4.0.4)(@types/node@14.18.33)
 
   packages/error-utils:
     devDependencies:
@@ -3054,11 +3057,23 @@ packages:
     resolution: {integrity: sha512-Vw0lbJ2lvRUqc7/soqygUX216Xb8T3WBZ987oywz6aJqRxcwSVWwr9e+Nqo2m9bxobA9mdbWNNoRY6S9eko1EQ==}
     engines: {node: '>=16'}
 
+  /@edge-runtime/primitives@5.1.1:
+    resolution: {integrity: sha512-osrHE4ObQ3XFkvd1sGBLkheV2mcHUqJI/Bum2AWA0R3U78h9lif3xZAdl6eLD/XnW4xhsdwjPUejLusXbjvI4Q==}
+    engines: {node: '>=16'}
+    dev: true
+
   /@edge-runtime/vm@3.2.0:
     resolution: {integrity: sha512-0dEVyRLM/lG4gp1R/Ik5bfPl/1wX00xFwd5KcNH602tzBa09oF7pbTKETEhR1GjZ75K6OJnYFu8II2dyMhONMw==}
     engines: {node: '>=16'}
     dependencies:
       '@edge-runtime/primitives': 4.1.0
+
+  /@edge-runtime/vm@4.0.4:
+    resolution: {integrity: sha512-LqPw+yaSPpCNnVZl5XoHQAySEzlnZiC9gReUuQHMh9GI03KKqwpVqWkIK1UfK116Yww7f2WZuAgnY/nhHwTsJA==}
+    engines: {node: '>=16'}
+    dependencies:
+      '@edge-runtime/primitives': 5.1.1
+    dev: true
 
   /@emotion/hash@0.9.1:
     resolution: {integrity: sha512-gJB6HLm5rYwSLI6PQa+X1t5CFGrv1J1TWG+sOyMCeKz2ojaj6Fnl/rZEspogG+cvqbt4AE/2eIyD2QfLKTBNlQ==}
@@ -18664,7 +18679,7 @@ packages:
       - terser
     dev: true
 
-  /vitest@2.1.4(@types/node@14.18.33):
+  /vitest@2.1.4(@edge-runtime/vm@4.0.4)(@types/node@14.18.33):
     resolution: {integrity: sha512-eDjxbVAJw1UJJCHr5xr/xM86Zx+YxIEXGAR+bmnEID7z9qWfoxpHw0zdobz+TQAFOLT+nEXz3+gx6nUJ7RgmlQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -18689,6 +18704,7 @@ packages:
       jsdom:
         optional: true
     dependencies:
+      '@edge-runtime/vm': 4.0.4
       '@types/node': 14.18.33
       '@vitest/expect': 2.1.4
       '@vitest/mocker': 2.1.4(vite@5.1.6)
