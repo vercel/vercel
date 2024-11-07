@@ -11,6 +11,7 @@ describe('teams add', () => {
   beforeEach(() => {
     useUser();
     useTeams(team.id);
+
     client.config = {
       currentTeam: currentTeamId,
     };

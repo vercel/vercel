@@ -109,7 +109,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel-cli-private/blob/main/packages/functions/src/get-env.ts#L6)
+[packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
 
 ---
 
@@ -181,4 +181,4 @@ export function GET(request) {
 
 #### Defined in
 
-[packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel-cli-private/blob/main/packages/functions/src/wait-until.ts#L19)
+[packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
