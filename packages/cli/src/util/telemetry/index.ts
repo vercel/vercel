@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { spawn } from 'node:child_process';
+import { resolve as resolvePath } from 'node:path';
 
 const LogLabel = `['telemetry']:`;
 
