@@ -17,7 +17,7 @@
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "vitest-run": "vitest -c ../../vitest.config.mts",
-    "vitest-unit": "glob --absolute 'test/unit.*.test.ts'",
+    "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
     "vitest-e2e": "pnpm vitest tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "type-check": "tsc --noEmit"
   },
