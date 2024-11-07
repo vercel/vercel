@@ -11,5 +11,5 @@ let value: CreateProjectProjectsResponseType = "sensitive";
 ## Values
 
 ```typescript
-"system" | "encrypted" | "plain" | "sensitive" | "secret"
+"system" | "secret" | "encrypted" | "plain" | "sensitive"
 ```

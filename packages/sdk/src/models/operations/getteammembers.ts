@@ -23,10 +23,6 @@ export type QueryParamRole = ClosedEnum<typeof QueryParamRole>;
 
 export type GetTeamMembersRequest = {
   /**
-   * The Team identifier to perform the request on behalf of.
-   */
-  teamId: string;
-  /**
    * Limit how many teams should be returned
    */
   limit?: number | undefined;
@@ -54,6 +50,10 @@ export type GetTeamMembersRequest = {
    * Include team members who are eligible to be members of the specified project.
    */
   eligibleMembersForProjectId?: string | undefined;
+  /**
+   * The Team identifier to perform the request on behalf of.
+   */
+  teamId: string;
 };
 
 /**
@@ -84,8 +84,8 @@ export const GetTeamMembersRole = {
   Owner: "OWNER",
   Member: "MEMBER",
   Developer: "DEVELOPER",
-  Billing: "BILLING",
   Viewer: "VIEWER",
+  Billing: "BILLING",
   Contributor: "CONTRIBUTOR",
 } as const;
 /**
@@ -208,8 +208,8 @@ export const GetTeamMembersTeamsRole = {
   Owner: "OWNER",
   Member: "MEMBER",
   Developer: "DEVELOPER",
-  Billing: "BILLING",
   Viewer: "VIEWER",
+  Billing: "BILLING",
   Contributor: "CONTRIBUTOR",
 } as const;
 export type GetTeamMembersTeamsRole = ClosedEnum<
@@ -234,6 +234,7 @@ export type EmailInviteCodes = {
   createdAt?: number | undefined;
   expired?: boolean | undefined;
   projects?: { [k: string]: GetTeamMembersTeamsProjects } | undefined;
+  entitlements?: Array<string> | undefined;
 };
 
 export type GetTeamMembersPagination = {
@@ -285,7 +286,6 @@ export const GetTeamMembersRequest$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  teamId: z.string(),
   limit: z.number().optional(),
   since: z.number().optional(),
   until: z.number().optional(),
@@ -293,11 +293,11 @@ export const GetTeamMembersRequest$inboundSchema: z.ZodType<
   role: QueryParamRole$inboundSchema.optional(),
   excludeProject: z.string().optional(),
   eligibleMembersForProjectId: z.string().optional(),
+  teamId: z.string(),
 });
 
 /** @internal */
 export type GetTeamMembersRequest$Outbound = {
-  teamId: string;
   limit?: number | undefined;
   since?: number | undefined;
   until?: number | undefined;
@@ -305,6 +305,7 @@ export type GetTeamMembersRequest$Outbound = {
   role?: string | undefined;
   excludeProject?: string | undefined;
   eligibleMembersForProjectId?: string | undefined;
+  teamId: string;
 };
 
 /** @internal */
@@ -313,7 +314,6 @@ export const GetTeamMembersRequest$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetTeamMembersRequest
 > = z.object({
-  teamId: z.string(),
   limit: z.number().optional(),
   since: z.number().optional(),
   until: z.number().optional(),
@@ -321,6 +321,7 @@ export const GetTeamMembersRequest$outboundSchema: z.ZodType<
   role: QueryParamRole$outboundSchema.optional(),
   excludeProject: z.string().optional(),
   eligibleMembersForProjectId: z.string().optional(),
+  teamId: z.string(),
 });
 
 /**
@@ -778,6 +779,7 @@ export const EmailInviteCodes$inboundSchema: z.ZodType<
   createdAt: z.number().optional(),
   expired: z.boolean().optional(),
   projects: z.record(GetTeamMembersTeamsProjects$inboundSchema).optional(),
+  entitlements: z.array(z.string()).optional(),
 });
 
 /** @internal */
@@ -790,6 +792,7 @@ export type EmailInviteCodes$Outbound = {
   createdAt?: number | undefined;
   expired?: boolean | undefined;
   projects?: { [k: string]: string } | undefined;
+  entitlements?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -806,6 +809,7 @@ export const EmailInviteCodes$outboundSchema: z.ZodType<
   createdAt: z.number().optional(),
   expired: z.boolean().optional(),
   projects: z.record(GetTeamMembersTeamsProjects$outboundSchema).optional(),
+  entitlements: z.array(z.string()).optional(),
 });
 
 /**

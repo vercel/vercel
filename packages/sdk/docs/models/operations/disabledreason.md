@@ -5,7 +5,7 @@
 ```typescript
 import { DisabledReason } from "@vercel/sdk/models/operations/getconfigurablelogdrain.js";
 
-let value: DisabledReason = "feature-not-available";
+let value: DisabledReason = "disabled-by-admin";
 ```
 
 ## Values

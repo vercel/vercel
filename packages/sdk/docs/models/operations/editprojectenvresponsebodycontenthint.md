@@ -132,3 +132,12 @@ const value: operations.EditProjectEnvContentHint14 = {
 };
 ```
 
+### `operations.EditProjectEnvContentHint15`
+
+```typescript
+const value: operations.EditProjectEnvContentHint15 = {
+  type: "flags-connection-string",
+  projectId: "<id>",
+};
+```
+

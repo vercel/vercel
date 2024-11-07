@@ -1,10 +1,8 @@
 import { TelemetryClient } from '.';
 
 export class RootTelemetryClient extends TelemetryClient {
-  trackCliExtension(extension: string | undefined) {
-    if (extension) {
-      this.trackExtension(extension);
-    }
+  trackCliExtension() {
+    this.trackExtension();
   }
 
   trackCliDefaultDeploy(defaultDeploy: boolean) {

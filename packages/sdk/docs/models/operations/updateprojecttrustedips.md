@@ -7,7 +7,7 @@
 
 ```typescript
 const value: operations.UpdateProjectTrustedIps1 = {
-  deploymentType: "preview",
+  deploymentType: "prod_deployment_urls_and_all_previews",
   addresses: [
     {
       value: "<value>",

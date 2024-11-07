@@ -5,15 +5,15 @@
 
 ### Available Operations
 
-* [read](#read) - Reads an access group
-* [update](#update) - Update an access group
-* [delete](#delete) - Deletes an access group
-* [listMembers](#listmembers) - List members of an access group
-* [list](#list) - List access groups for a team, project or member
-* [create](#create) - Creates an access group
-* [listProjects](#listprojects) - List projects of an access group
+* [readAccessGroup](#readaccessgroup) - Reads an access group
+* [updateAccessGroup](#updateaccessgroup) - Update an access group
+* [deleteAccessGroup](#deleteaccessgroup) - Deletes an access group
+* [listAccessGroupMembers](#listaccessgroupmembers) - List members of an access group
+* [listAccessGroups](#listaccessgroups) - List access groups for a team, project or member
+* [createAccessGroup](#createaccessgroup) - Creates an access group
+* [listAccessGroupProjects](#listaccessgroupprojects) - List projects of an access group
 
-## read
+## readAccessGroup
 
 Allows to read an access group
 
@@ -27,7 +27,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.read({
+  const result = await vercel.accessGroups.readAccessGroup({
     idOrName: "<value>",
   });
 
@@ -44,7 +44,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsRead } from "@vercel/sdk/funcs/accessGroupsRead.js";
+import { accessGroupsReadAccessGroup } from "@vercel/sdk/funcs/accessGroupsReadAccessGroup.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -53,7 +53,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsRead(vercel, {
+  const res = await accessGroupsReadAccessGroup(vercel, {
     idOrName: "<value>",
   });
 
@@ -85,12 +85,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## update
+## updateAccessGroup
 
 Allows to update an access group metadata
 
@@ -104,7 +103,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.update({
+  const result = await vercel.accessGroups.updateAccessGroup({
     idOrName: "<value>",
     requestBody: {
       name: "My access group",
@@ -130,7 +129,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsUpdate } from "@vercel/sdk/funcs/accessGroupsUpdate.js";
+import { accessGroupsUpdateAccessGroup } from "@vercel/sdk/funcs/accessGroupsUpdateAccessGroup.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -139,7 +138,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsUpdate(vercel, {
+  const res = await accessGroupsUpdateAccessGroup(vercel, {
     idOrName: "<value>",
     requestBody: {
       name: "My access group",
@@ -176,16 +175,15 @@ run();
 
 ### Response
 
-**Promise\<[components.AccessGroup](../../models/components/accessgroup.md)\>**
+**Promise\<[operations.UpdateAccessGroupResponseBody](../../models/operations/updateaccessgroupresponsebody.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteAccessGroup
 
 Allows to delete an access group
 
@@ -199,7 +197,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.accessGroups.delete({
+  await vercel.accessGroups.deleteAccessGroup({
     idOrName: "<value>",
   });
 
@@ -215,7 +213,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsDelete } from "@vercel/sdk/funcs/accessGroupsDelete.js";
+import { accessGroupsDeleteAccessGroup } from "@vercel/sdk/funcs/accessGroupsDeleteAccessGroup.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -224,7 +222,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsDelete(vercel, {
+  const res = await accessGroupsDeleteAccessGroup(vercel, {
     idOrName: "<value>",
   });
 
@@ -255,12 +253,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## listMembers
+## listAccessGroupMembers
 
 List members of an access group
 
@@ -274,7 +271,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.listMembers({
+  const result = await vercel.accessGroups.listAccessGroupMembers({
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
@@ -292,7 +289,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsListMembers } from "@vercel/sdk/funcs/accessGroupsListMembers.js";
+import { accessGroupsListAccessGroupMembers } from "@vercel/sdk/funcs/accessGroupsListAccessGroupMembers.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -301,7 +298,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsListMembers(vercel, {
+  const res = await accessGroupsListAccessGroupMembers(vercel, {
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
@@ -334,12 +331,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## listAccessGroups
 
 List access groups
 
@@ -353,7 +349,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.list({
+  const result = await vercel.accessGroups.listAccessGroups({
     projectId: "prj_pavWOn1iLObbx3RowVvzmPrTWyTf",
     search: "example",
     membersLimit: 20,
@@ -374,7 +370,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsList } from "@vercel/sdk/funcs/accessGroupsList.js";
+import { accessGroupsListAccessGroups } from "@vercel/sdk/funcs/accessGroupsListAccessGroups.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -383,7 +379,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsList(vercel, {
+  const res = await accessGroupsListAccessGroups(vercel, {
     projectId: "prj_pavWOn1iLObbx3RowVvzmPrTWyTf",
     search: "example",
     membersLimit: 20,
@@ -419,12 +415,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## create
+## createAccessGroup
 
 Allows to create an access group
 
@@ -438,7 +433,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.create({
+  const result = await vercel.accessGroups.createAccessGroup({
     requestBody: {
       name: "My access group",
       projects: [
@@ -463,7 +458,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsCreate } from "@vercel/sdk/funcs/accessGroupsCreate.js";
+import { accessGroupsCreateAccessGroup } from "@vercel/sdk/funcs/accessGroupsCreateAccessGroup.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -472,7 +467,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsCreate(vercel, {
+  const res = await accessGroupsCreateAccessGroup(vercel, {
     requestBody: {
       name: "My access group",
       projects: [
@@ -512,12 +507,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## listProjects
+## listAccessGroupProjects
 
 List projects of an access group
 
@@ -531,7 +525,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.accessGroups.listProjects({
+  const result = await vercel.accessGroups.listAccessGroupProjects({
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
@@ -549,7 +543,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { accessGroupsListProjects } from "@vercel/sdk/funcs/accessGroupsListProjects.js";
+import { accessGroupsListAccessGroupProjects } from "@vercel/sdk/funcs/accessGroupsListAccessGroupProjects.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -558,7 +552,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await accessGroupsListProjects(vercel, {
+  const res = await accessGroupsListAccessGroupProjects(vercel, {
     idOrName: "ag_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
   });
@@ -591,6 +585,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

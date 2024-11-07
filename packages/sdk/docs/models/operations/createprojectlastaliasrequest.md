@@ -9,7 +9,7 @@ let value: CreateProjectLastAliasRequest = {
   fromDeploymentId: "<id>",
   toDeploymentId: "<id>",
   jobStatus: "succeeded",
-  requestedAt: 2476.85,
+  requestedAt: 8956.91,
   type: "promote",
 };
 ```

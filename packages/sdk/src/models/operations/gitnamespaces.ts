@@ -19,17 +19,9 @@ export type GitNamespacesRequest = {
    */
   host?: string | undefined;
   provider?: Provider | undefined;
-  /**
-   * The Team identifier to perform the request on behalf of.
-   */
-  teamId?: string | undefined;
-  /**
-   * The Team slug to perform the request on behalf of.
-   */
-  slug?: string | undefined;
 };
 
-export type Id = string | number;
+export type GitNamespacesId = string | number;
 
 export type GitNamespacesResponseBody = {
   provider: string;
@@ -69,16 +61,12 @@ export const GitNamespacesRequest$inboundSchema: z.ZodType<
 > = z.object({
   host: z.string().optional(),
   provider: Provider$inboundSchema.optional(),
-  teamId: z.string().optional(),
-  slug: z.string().optional(),
 });
 
 /** @internal */
 export type GitNamespacesRequest$Outbound = {
   host?: string | undefined;
   provider?: string | undefined;
-  teamId?: string | undefined;
-  slug?: string | undefined;
 };
 
 /** @internal */
@@ -89,8 +77,6 @@ export const GitNamespacesRequest$outboundSchema: z.ZodType<
 > = z.object({
   host: z.string().optional(),
   provider: Provider$outboundSchema.optional(),
-  teamId: z.string().optional(),
-  slug: z.string().optional(),
 });
 
 /**
@@ -107,29 +93,33 @@ export namespace GitNamespacesRequest$ {
 }
 
 /** @internal */
-export const Id$inboundSchema: z.ZodType<Id, z.ZodTypeDef, unknown> = z.union([
-  z.string(),
-  z.number(),
-]);
+export const GitNamespacesId$inboundSchema: z.ZodType<
+  GitNamespacesId,
+  z.ZodTypeDef,
+  unknown
+> = z.union([z.string(), z.number()]);
 
 /** @internal */
-export type Id$Outbound = string | number;
+export type GitNamespacesId$Outbound = string | number;
 
 /** @internal */
-export const Id$outboundSchema: z.ZodType<Id$Outbound, z.ZodTypeDef, Id> = z
-  .union([z.string(), z.number()]);
+export const GitNamespacesId$outboundSchema: z.ZodType<
+  GitNamespacesId$Outbound,
+  z.ZodTypeDef,
+  GitNamespacesId
+> = z.union([z.string(), z.number()]);
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace Id$ {
-  /** @deprecated use `Id$inboundSchema` instead. */
-  export const inboundSchema = Id$inboundSchema;
-  /** @deprecated use `Id$outboundSchema` instead. */
-  export const outboundSchema = Id$outboundSchema;
-  /** @deprecated use `Id$Outbound` instead. */
-  export type Outbound = Id$Outbound;
+export namespace GitNamespacesId$ {
+  /** @deprecated use `GitNamespacesId$inboundSchema` instead. */
+  export const inboundSchema = GitNamespacesId$inboundSchema;
+  /** @deprecated use `GitNamespacesId$outboundSchema` instead. */
+  export const outboundSchema = GitNamespacesId$outboundSchema;
+  /** @deprecated use `GitNamespacesId$Outbound` instead. */
+  export type Outbound = GitNamespacesId$Outbound;
 }
 
 /** @internal */

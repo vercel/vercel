@@ -5,11 +5,11 @@
 ```typescript
 import { GetProjectsProjectsResponse200ApplicationJSONType } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsProjectsResponse200ApplicationJSONType = "flags-secret";
+let value: GetProjectsProjectsResponse200ApplicationJSONType = "startsWith";
 ```
 
 ## Values
 
 ```typescript
-"flags-secret"
+"endsWith" | "startsWith" | "equals"
 ```

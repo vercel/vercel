@@ -5,11 +5,11 @@
 ```typescript
 import { UpdateProjectDataCacheType } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheType = "system";
+let value: UpdateProjectDataCacheType = "LAMBDAS";
 ```
 
 ## Values
 
 ```typescript
-"secret" | "system" | "encrypted" | "plain" | "sensitive"
+"LAMBDAS"
 ```

@@ -19,6 +19,16 @@ export type UnpauseProjectRequest = {
   slug?: string | undefined;
 };
 
+/**
+ * Project successfully unpaused
+ */
+export type UnpauseProjectResponseBody = {
+  success?: any | undefined;
+  type?: any | undefined;
+  description?: any | undefined;
+  example?: any | undefined;
+};
+
 /** @internal */
 export const UnpauseProjectRequest$inboundSchema: z.ZodType<
   UnpauseProjectRequest,
@@ -59,4 +69,49 @@ export namespace UnpauseProjectRequest$ {
   export const outboundSchema = UnpauseProjectRequest$outboundSchema;
   /** @deprecated use `UnpauseProjectRequest$Outbound` instead. */
   export type Outbound = UnpauseProjectRequest$Outbound;
+}
+
+/** @internal */
+export const UnpauseProjectResponseBody$inboundSchema: z.ZodType<
+  UnpauseProjectResponseBody,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  success: z.any().optional(),
+  type: z.any().optional(),
+  description: z.any().optional(),
+  example: z.any().optional(),
+});
+
+/** @internal */
+export type UnpauseProjectResponseBody$Outbound = {
+  success?: any | undefined;
+  type?: any | undefined;
+  description?: any | undefined;
+  example?: any | undefined;
+};
+
+/** @internal */
+export const UnpauseProjectResponseBody$outboundSchema: z.ZodType<
+  UnpauseProjectResponseBody$Outbound,
+  z.ZodTypeDef,
+  UnpauseProjectResponseBody
+> = z.object({
+  success: z.any().optional(),
+  type: z.any().optional(),
+  description: z.any().optional(),
+  example: z.any().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace UnpauseProjectResponseBody$ {
+  /** @deprecated use `UnpauseProjectResponseBody$inboundSchema` instead. */
+  export const inboundSchema = UnpauseProjectResponseBody$inboundSchema;
+  /** @deprecated use `UnpauseProjectResponseBody$outboundSchema` instead. */
+  export const outboundSchema = UnpauseProjectResponseBody$outboundSchema;
+  /** @deprecated use `UnpauseProjectResponseBody$Outbound` instead. */
+  export type Outbound = UnpauseProjectResponseBody$Outbound;
 }

@@ -16,12 +16,12 @@ import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetr
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  status: getAliases(statusSubcommand),
-  enable: getAliases(enableSubcommand),
-  disable: getAliases(disableSubcommand),
+  status: getCommandAliases(statusSubcommand),
+  enable: getCommandAliases(enableSubcommand),
+  disable: getCommandAliases(disableSubcommand),
 };
 
 export default async function telemetry(client: Client) {

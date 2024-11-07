@@ -6,14 +6,7 @@
 ### `operations.GetDeploymentCustomEnvironmentDeployments1`
 
 ```typescript
-const value: operations.GetDeploymentCustomEnvironmentDeployments1 = {
-  id: "<id>",
-  name: "<value>",
-  slug: "<value>",
-  type: "development",
-  createdAt: 9253.95,
-  updatedAt: 6646.66,
-};
+const value: operations.GetDeploymentCustomEnvironmentDeployments1 = {};
 ```
 
 ### `operations.GetDeploymentCustomEnvironmentDeployments2`

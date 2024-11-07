@@ -10,13 +10,7 @@ import { CreateTeamResponseBody } from "@vercel/sdk/models/operations/createteam
 let value: CreateTeamResponseBody = {
   id: "team_nLlpyC6RE1qxqglFKbrMxlud",
   slug: "<value>",
-  billing: {
-    period: {
-      start: 5902.80,
-      end: 3114.49,
-    },
-    plan: "pro",
-  },
+  billing: {},
 };
 ```
 

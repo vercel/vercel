@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import selectOrg from '../../../../src/util/input/select-org';
-import { createTeam, useTeams } from '../../../mocks/team';
+import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('selectOrg', () => {
@@ -9,7 +9,7 @@ describe('selectOrg', () => {
   let team;
 
   beforeEach(() => {
-    team = useTeams()[0];
+    team = useTeam();
   });
 
   describe('non-northstar', () => {

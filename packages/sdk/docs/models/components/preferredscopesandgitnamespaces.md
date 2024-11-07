@@ -7,7 +7,7 @@ import { PreferredScopesAndGitNamespaces } from "@vercel/sdk/models/components/a
 
 let value: PreferredScopesAndGitNamespaces = {
   scopeId: "<id>",
-  gitNamespaceId: 3532.14,
+  gitNamespaceId: "<id>",
 };
 ```
 

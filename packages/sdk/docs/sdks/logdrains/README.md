@@ -5,15 +5,15 @@
 
 ### Available Operations
 
-* [list](#list) - Retrieves a list of Integration log drains
-* [create](#create) - Creates a new Integration Log Drain
-* [deleteIntegration](#deleteintegration) - Deletes the Integration log drain with the provided `id`
-* [getConfigurable](#getconfigurable) - Retrieves a Configurable Log Drain
-* [deleteConfigurable](#deleteconfigurable) - Deletes a Configurable Log Drain
-* [getAll](#getall) - Retrieves a list of all the Log Drains
-* [createConfigurable](#createconfigurable) - Creates a Configurable Log Drain
+* [getIntegrationLogDrains](#getintegrationlogdrains) - Retrieves a list of Integration log drains
+* [createLogDrain](#createlogdrain) - Creates a new Integration Log Drain
+* [deleteIntegrationLogDrain](#deleteintegrationlogdrain) - Deletes the Integration log drain with the provided `id`
+* [getConfigurableLogDrain](#getconfigurablelogdrain) - Retrieves a Configurable Log Drain
+* [deleteConfigurableLogDrain](#deleteconfigurablelogdrain) - Deletes a Configurable Log Drain
+* [getAllLogDrains](#getalllogdrains) - Retrieves a list of all the Log Drains
+* [createConfigurableLogDrain](#createconfigurablelogdrain) - Creates a Configurable Log Drain
 
-## list
+## getIntegrationLogDrains
 
 Retrieves a list of all Integration log drains that are defined for the authenticated user or team. When using an OAuth2 token, the list is limited to log drains created by the authenticated integration.
 
@@ -27,7 +27,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.logDrains.list({});
+  const result = await vercel.logDrains.getIntegrationLogDrains({});
 
   // Handle the result
   console.log(result);
@@ -42,7 +42,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsList } from "@vercel/sdk/funcs/logDrainsList.js";
+import { logDrainsGetIntegrationLogDrains } from "@vercel/sdk/funcs/logDrainsGetIntegrationLogDrains.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -51,7 +51,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsList(vercel, {});
+  const res = await logDrainsGetIntegrationLogDrains(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -81,12 +81,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## create
+## createLogDrain
 
 Creates an Integration log drain. This endpoint must be called with an OAuth2 client (integration), since log drains are tied to integrations. If it is called with a different token type it will produce a 400 error.
 
@@ -100,7 +99,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.logDrains.create({
+  const result = await vercel.logDrains.createLogDrain({
     requestBody: {
       name: "My first log drain",
       secret: "a1Xsfd325fXcs",
@@ -122,7 +121,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsCreate } from "@vercel/sdk/funcs/logDrainsCreate.js";
+import { logDrainsCreateLogDrain } from "@vercel/sdk/funcs/logDrainsCreateLogDrain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -131,7 +130,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsCreate(vercel, {
+  const res = await logDrainsCreateLogDrain(vercel, {
     requestBody: {
       name: "My first log drain",
       secret: "a1Xsfd325fXcs",
@@ -168,12 +167,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## deleteIntegration
+## deleteIntegrationLogDrain
 
 Deletes the Integration log drain with the provided `id`. When using an OAuth2 Token, the log drain can be deleted only if the integration owns it.
 
@@ -187,7 +185,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.logDrains.deleteIntegration({
+  await vercel.logDrains.deleteIntegrationLogDrain({
     id: "<id>",
   });
 
@@ -203,7 +201,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsDeleteIntegration } from "@vercel/sdk/funcs/logDrainsDeleteIntegration.js";
+import { logDrainsDeleteIntegrationLogDrain } from "@vercel/sdk/funcs/logDrainsDeleteIntegrationLogDrain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -212,7 +210,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsDeleteIntegration(vercel, {
+  const res = await logDrainsDeleteIntegrationLogDrain(vercel, {
     id: "<id>",
   });
 
@@ -243,12 +241,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getConfigurable
+## getConfigurableLogDrain
 
 Retrieves a Configurable Log Drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated team can be accessed.
 
@@ -262,7 +259,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.logDrains.getConfigurable({
+  const result = await vercel.logDrains.getConfigurableLogDrain({
     id: "<id>",
   });
 
@@ -279,7 +276,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsGetConfigurable } from "@vercel/sdk/funcs/logDrainsGetConfigurable.js";
+import { logDrainsGetConfigurableLogDrain } from "@vercel/sdk/funcs/logDrainsGetConfigurableLogDrain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -288,7 +285,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsGetConfigurable(vercel, {
+  const res = await logDrainsGetConfigurableLogDrain(vercel, {
     id: "<id>",
   });
 
@@ -320,12 +317,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## deleteConfigurable
+## deleteConfigurableLogDrain
 
 Deletes a Configurable Log Drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated team can be deleted.
 
@@ -339,7 +335,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.logDrains.deleteConfigurable({
+  await vercel.logDrains.deleteConfigurableLogDrain({
     id: "<id>",
   });
 
@@ -355,7 +351,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsDeleteConfigurable } from "@vercel/sdk/funcs/logDrainsDeleteConfigurable.js";
+import { logDrainsDeleteConfigurableLogDrain } from "@vercel/sdk/funcs/logDrainsDeleteConfigurableLogDrain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -364,7 +360,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsDeleteConfigurable(vercel, {
+  const res = await logDrainsDeleteConfigurableLogDrain(vercel, {
     id: "<id>",
   });
 
@@ -395,12 +391,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getAll
+## getAllLogDrains
 
 Retrieves a list of all the Log Drains owned by the account. This endpoint must be called with an account AccessToken (integration OAuth2 clients are not allowed). Only log drains owned by the authenticated account can be accessed.
 
@@ -414,7 +409,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.logDrains.getAll({});
+  const result = await vercel.logDrains.getAllLogDrains({});
 
   // Handle the result
   console.log(result);
@@ -429,7 +424,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsGetAll } from "@vercel/sdk/funcs/logDrainsGetAll.js";
+import { logDrainsGetAllLogDrains } from "@vercel/sdk/funcs/logDrainsGetAllLogDrains.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -438,7 +433,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsGetAll(vercel, {});
+  const res = await logDrainsGetAllLogDrains(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -468,12 +463,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## createConfigurable
+## createConfigurableLogDrain
 
 Creates a configurable log drain. This endpoint must be called with a team AccessToken (integration OAuth2 clients are not allowed)
 
@@ -487,12 +481,12 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.logDrains.createConfigurable({
+  const result = await vercel.logDrains.createConfigurableLogDrain({
     requestBody: {
       deliveryFormat: "json",
       url: "https://equal-hedgehog.com",
       sources: [
-        "edge",
+        "firewall",
       ],
     },
   });
@@ -510,7 +504,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { logDrainsCreateConfigurable } from "@vercel/sdk/funcs/logDrainsCreateConfigurable.js";
+import { logDrainsCreateConfigurableLogDrain } from "@vercel/sdk/funcs/logDrainsCreateConfigurableLogDrain.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -519,12 +513,12 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await logDrainsCreateConfigurable(vercel, {
+  const res = await logDrainsCreateConfigurableLogDrain(vercel, {
     requestBody: {
       deliveryFormat: "json",
       url: "https://equal-hedgehog.com",
       sources: [
-        "lambda",
+        "firewall",
       ],
     },
   });
@@ -557,6 +551,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

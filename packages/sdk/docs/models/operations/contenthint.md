@@ -93,10 +93,10 @@ const value: operations.ContentHint10 = {
 };
 ```
 
-### `operations.Eleven`
+### `operations.UpdateProjectDataCacheContentHint11`
 
 ```typescript
-const value: operations.Eleven = {
+const value: operations.UpdateProjectDataCacheContentHint11 = {
   type: "postgres-password",
   storeId: "<id>",
 };
@@ -129,6 +129,15 @@ const value: operations.Fourteen = {
   integrationId: "<id>",
   integrationProductId: "<id>",
   integrationConfigurationId: "<id>",
+};
+```
+
+### `operations.Fifteen`
+
+```typescript
+const value: operations.Fifteen = {
+  type: "flags-connection-string",
+  projectId: "<id>",
 };
 ```
 

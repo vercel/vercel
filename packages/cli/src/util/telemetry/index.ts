@@ -147,10 +147,10 @@ export class TelemetryClient {
     });
   }
 
-  protected trackExtension(extension: string) {
+  protected trackExtension() {
     this.track({
       key: 'extension',
-      value: extension,
+      value: this.redactedValue,
     });
   }
 

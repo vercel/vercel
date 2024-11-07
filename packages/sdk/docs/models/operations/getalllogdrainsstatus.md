@@ -5,7 +5,7 @@
 ```typescript
 import { GetAllLogDrainsStatus } from "@vercel/sdk/models/operations/getalllogdrains.js";
 
-let value: GetAllLogDrainsStatus = "enabled";
+let value: GetAllLogDrainsStatus = "errored";
 ```
 
 ## Values

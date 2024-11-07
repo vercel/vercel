@@ -5,8 +5,8 @@
 import { integrationsDeleteConfiguration } from "../funcs/integrationsDeleteConfiguration.js";
 import { integrationsGetConfiguration } from "../funcs/integrationsGetConfiguration.js";
 import { integrationsGetConfigurations } from "../funcs/integrationsGetConfigurations.js";
-import { integrationsGetGitNamespaces } from "../funcs/integrationsGetGitNamespaces.js";
-import { integrationsSearchRepos } from "../funcs/integrationsSearchRepos.js";
+import { integrationsGitNamespaces } from "../funcs/integrationsGitNamespaces.js";
+import { integrationsSearchRepo } from "../funcs/integrationsSearchRepo.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import { DeleteConfigurationRequest } from "../models/operations/deleteconfiguration.js";
 import {
@@ -85,11 +85,11 @@ export class Integrations extends ClientSDK {
    * @remarks
    * Lists git namespaces for a supported provider. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider is not provided, it will try to obtain it from the user that authenticated the request.
    */
-  async getGitNamespaces(
+  async gitNamespaces(
     request: GitNamespacesRequest,
     options?: RequestOptions,
   ): Promise<Array<GitNamespacesResponseBody>> {
-    return unwrapAsync(integrationsGetGitNamespaces(
+    return unwrapAsync(integrationsGitNamespaces(
       this,
       request,
       options,
@@ -102,11 +102,11 @@ export class Integrations extends ClientSDK {
    * @remarks
    * Lists git repositories linked to a namespace `id` for a supported provider. A specific namespace `id` can be obtained via the `git-namespaces`  endpoint. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider or namespace is not provided, it will try to obtain it from the user that authenticated the request.
    */
-  async searchRepos(
+  async searchRepo(
     request: SearchRepoRequest,
     options?: RequestOptions,
   ): Promise<SearchRepoResponseBody> {
-    return unwrapAsync(integrationsSearchRepos(
+    return unwrapAsync(integrationsSearchRepo(
       this,
       request,
       options,

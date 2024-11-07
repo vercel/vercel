@@ -15,5 +15,5 @@ let value: Owner = {
 
 | Field                                 | Type                                  | Required                              | Description                           |
 | ------------------------------------- | ------------------------------------- | ------------------------------------- | ------------------------------------- |
-| `id`                                  | *operations.SearchRepoIntegrationsId* | :heavy_check_mark:                    | N/A                                   |
+| `id`                                  | *operations.SearchRepoResponseBodyId* | :heavy_check_mark:                    | N/A                                   |
 | `name`                                | *string*                              | :heavy_check_mark:                    | N/A                                   |

@@ -80,9 +80,6 @@ export type BuyDomainDomain = {
   pending: boolean;
 };
 
-/**
- * Domain purchase is being processed asynchronously.
- */
 export type BuyDomainDomainsResponseBody = {
   domain: BuyDomainDomain;
 };
@@ -95,9 +92,6 @@ export type BuyDomainDomainsDomain = {
   pending: boolean;
 };
 
-/**
- * Successful response for purchasing a Domain.
- */
 export type BuyDomainResponseBody = {
   domain: BuyDomainDomainsDomain;
 };

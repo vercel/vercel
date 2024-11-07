@@ -15,9 +15,6 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
-  describe.todo('--timeout');
-  describe.todo('--yes');
-
   describe('telemetry', () => {
     it('tracks usage', async () => {
       const { cwd, previousDeployment } = initRollbackTest();
