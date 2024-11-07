@@ -18,40 +18,39 @@ const value: operations.GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://hateful-t-shirt.name",
+  inspectorUrl: "https://brave-barge.biz/",
   isInConcurrentBuildsQueue: false,
+  isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 4299.97,
-  buildingAt: 357.43,
+  bootedAt: 1693.13,
+  buildingAt: 9650.95,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "READY",
+  status: "QUEUED",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 5021.06,
+  createdAt: 8054.62,
   name: "<value>",
-  readyState: "READY",
+  readyState: "INITIALIZING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://staid-eternity.net",
-  version: 5488.46,
+  url: "https://messy-vista.info",
+  version: 7879.16,
   projectId: "<id>",
   plan: "enterprise",
   createdIn: "<value>",
   ownerId: "<id>",
   routes: [
     {
-      src: "<value>",
-      continue: false,
-      middleware: 213.59,
+      handle: "resource",
     },
   ],
 };
@@ -62,27 +61,27 @@ const value: operations.GetDeploymentResponseBody1 = {
 ```typescript
 const value: operations.GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 1023.17,
-  buildingAt: 2921.77,
+  bootedAt: 5983.16,
+  buildingAt: 1189.17,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "CANCELED",
+  status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 1397.46,
+  createdAt: 7815.82,
   name: "<value>",
-  readyState: "BUILDING",
+  readyState: "READY",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://grandiose-fax.org/",
-  version: 8451.54,
+  url: "https://far-off-reward.info",
+  version: 5736.10,
 };
 ```
 

@@ -36,10 +36,6 @@ export type RequestBodyHttps = {
 
 export type Ten = {
   /**
-   * A subdomain name or an empty string for the root domain.
-   */
-  name: string;
-  /**
    * The type of record, it could be one of the valid DNS records.
    */
   type: CreateRecordRequestBodyDnsRequest10Type;
@@ -123,10 +119,6 @@ export type CreateRecordRequestBodyDnsRequest8Type = ClosedEnum<
 
 export type Eight = {
   /**
-   * A subdomain name or an empty string for the root domain.
-   */
-  name: string;
-  /**
    * The type of record, it could be one of the valid DNS records.
    */
   type: CreateRecordRequestBodyDnsRequest8Type;
@@ -174,10 +166,6 @@ export type RequestBodySrv = {
 };
 
 export type Seven = {
-  /**
-   * A subdomain name or an empty string for the root domain.
-   */
-  name: string;
   /**
    * The type of record, it could be one of the valid DNS records.
    */
@@ -463,15 +451,15 @@ export type RequestBody1 = {
 };
 
 export type CreateRecordRequestBody =
+  | Seven
+  | Eight
+  | Ten
   | RequestBody1
   | RequestBody2
   | RequestBody3
   | RequestBody4
   | RequestBody5
-  | Seven
-  | Eight
   | Nine
-  | Ten
   | Six;
 
 export type CreateRecordRequest = {
@@ -488,15 +476,15 @@ export type CreateRecordRequest = {
    */
   slug?: string | undefined;
   requestBody?:
+    | Seven
+    | Eight
+    | Ten
     | RequestBody1
     | RequestBody2
     | RequestBody3
     | RequestBody4
     | RequestBody5
-    | Seven
-    | Eight
     | Nine
-    | Ten
     | Six
     | undefined;
 };
@@ -588,7 +576,6 @@ export namespace RequestBodyHttps$ {
 /** @internal */
 export const Ten$inboundSchema: z.ZodType<Ten, z.ZodTypeDef, unknown> = z
   .object({
-    name: z.string(),
     type: CreateRecordRequestBodyDnsRequest10Type$inboundSchema,
     ttl: z.number().optional(),
     https: z.lazy(() => RequestBodyHttps$inboundSchema),
@@ -597,7 +584,6 @@ export const Ten$inboundSchema: z.ZodType<Ten, z.ZodTypeDef, unknown> = z
 
 /** @internal */
 export type Ten$Outbound = {
-  name: string;
   type: string;
   ttl?: number | undefined;
   https: RequestBodyHttps$Outbound;
@@ -607,7 +593,6 @@ export type Ten$Outbound = {
 /** @internal */
 export const Ten$outboundSchema: z.ZodType<Ten$Outbound, z.ZodTypeDef, Ten> = z
   .object({
-    name: z.string(),
     type: CreateRecordRequestBodyDnsRequest10Type$outboundSchema,
     ttl: z.number().optional(),
     https: z.lazy(() => RequestBodyHttps$outboundSchema),
@@ -720,7 +705,6 @@ export namespace CreateRecordRequestBodyDnsRequest8Type$ {
 /** @internal */
 export const Eight$inboundSchema: z.ZodType<Eight, z.ZodTypeDef, unknown> = z
   .object({
-    name: z.string(),
     type: CreateRecordRequestBodyDnsRequest8Type$inboundSchema,
     ttl: z.number().optional(),
     value: z.string(),
@@ -729,7 +713,6 @@ export const Eight$inboundSchema: z.ZodType<Eight, z.ZodTypeDef, unknown> = z
 
 /** @internal */
 export type Eight$Outbound = {
-  name: string;
   type: string;
   ttl?: number | undefined;
   value: string;
@@ -742,7 +725,6 @@ export const Eight$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Eight
 > = z.object({
-  name: z.string(),
   type: CreateRecordRequestBodyDnsRequest8Type$outboundSchema,
   ttl: z.number().optional(),
   value: z.string(),
@@ -834,7 +816,6 @@ export namespace RequestBodySrv$ {
 /** @internal */
 export const Seven$inboundSchema: z.ZodType<Seven, z.ZodTypeDef, unknown> = z
   .object({
-    name: z.string(),
     type: CreateRecordRequestBodyDnsRequest7Type$inboundSchema,
     ttl: z.number().optional(),
     srv: z.lazy(() => RequestBodySrv$inboundSchema),
@@ -843,7 +824,6 @@ export const Seven$inboundSchema: z.ZodType<Seven, z.ZodTypeDef, unknown> = z
 
 /** @internal */
 export type Seven$Outbound = {
-  name: string;
   type: string;
   ttl?: number | undefined;
   srv: RequestBodySrv$Outbound;
@@ -856,7 +836,6 @@ export const Seven$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Seven
 > = z.object({
-  name: z.string(),
   type: CreateRecordRequestBodyDnsRequest7Type$outboundSchema,
   ttl: z.number().optional(),
   srv: z.lazy(() => RequestBodySrv$outboundSchema),
@@ -1302,29 +1281,29 @@ export const CreateRecordRequestBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.union([
+  z.lazy(() => Seven$inboundSchema),
+  z.lazy(() => Eight$inboundSchema),
+  z.lazy(() => Ten$inboundSchema),
   z.lazy(() => RequestBody1$inboundSchema),
   z.lazy(() => RequestBody2$inboundSchema),
   z.lazy(() => RequestBody3$inboundSchema),
   z.lazy(() => RequestBody4$inboundSchema),
   z.lazy(() => RequestBody5$inboundSchema),
-  z.lazy(() => Seven$inboundSchema),
-  z.lazy(() => Eight$inboundSchema),
   z.lazy(() => Nine$inboundSchema),
-  z.lazy(() => Ten$inboundSchema),
   z.lazy(() => Six$inboundSchema),
 ]);
 
 /** @internal */
 export type CreateRecordRequestBody$Outbound =
+  | Seven$Outbound
+  | Eight$Outbound
+  | Ten$Outbound
   | RequestBody1$Outbound
   | RequestBody2$Outbound
   | RequestBody3$Outbound
   | RequestBody4$Outbound
   | RequestBody5$Outbound
-  | Seven$Outbound
-  | Eight$Outbound
   | Nine$Outbound
-  | Ten$Outbound
   | Six$Outbound;
 
 /** @internal */
@@ -1333,15 +1312,15 @@ export const CreateRecordRequestBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   CreateRecordRequestBody
 > = z.union([
+  z.lazy(() => Seven$outboundSchema),
+  z.lazy(() => Eight$outboundSchema),
+  z.lazy(() => Ten$outboundSchema),
   z.lazy(() => RequestBody1$outboundSchema),
   z.lazy(() => RequestBody2$outboundSchema),
   z.lazy(() => RequestBody3$outboundSchema),
   z.lazy(() => RequestBody4$outboundSchema),
   z.lazy(() => RequestBody5$outboundSchema),
-  z.lazy(() => Seven$outboundSchema),
-  z.lazy(() => Eight$outboundSchema),
   z.lazy(() => Nine$outboundSchema),
-  z.lazy(() => Ten$outboundSchema),
   z.lazy(() => Six$outboundSchema),
 ]);
 
@@ -1368,15 +1347,15 @@ export const CreateRecordRequest$inboundSchema: z.ZodType<
   teamId: z.string().optional(),
   slug: z.string().optional(),
   RequestBody: z.union([
+    z.lazy(() => Seven$inboundSchema),
+    z.lazy(() => Eight$inboundSchema),
+    z.lazy(() => Ten$inboundSchema),
     z.lazy(() => RequestBody1$inboundSchema),
     z.lazy(() => RequestBody2$inboundSchema),
     z.lazy(() => RequestBody3$inboundSchema),
     z.lazy(() => RequestBody4$inboundSchema),
     z.lazy(() => RequestBody5$inboundSchema),
-    z.lazy(() => Seven$inboundSchema),
-    z.lazy(() => Eight$inboundSchema),
     z.lazy(() => Nine$inboundSchema),
-    z.lazy(() => Ten$inboundSchema),
     z.lazy(() => Six$inboundSchema),
   ]).optional(),
 }).transform((v) => {
@@ -1391,15 +1370,15 @@ export type CreateRecordRequest$Outbound = {
   teamId?: string | undefined;
   slug?: string | undefined;
   RequestBody?:
+    | Seven$Outbound
+    | Eight$Outbound
+    | Ten$Outbound
     | RequestBody1$Outbound
     | RequestBody2$Outbound
     | RequestBody3$Outbound
     | RequestBody4$Outbound
     | RequestBody5$Outbound
-    | Seven$Outbound
-    | Eight$Outbound
     | Nine$Outbound
-    | Ten$Outbound
     | Six$Outbound
     | undefined;
 };
@@ -1414,15 +1393,15 @@ export const CreateRecordRequest$outboundSchema: z.ZodType<
   teamId: z.string().optional(),
   slug: z.string().optional(),
   requestBody: z.union([
+    z.lazy(() => Seven$outboundSchema),
+    z.lazy(() => Eight$outboundSchema),
+    z.lazy(() => Ten$outboundSchema),
     z.lazy(() => RequestBody1$outboundSchema),
     z.lazy(() => RequestBody2$outboundSchema),
     z.lazy(() => RequestBody3$outboundSchema),
     z.lazy(() => RequestBody4$outboundSchema),
     z.lazy(() => RequestBody5$outboundSchema),
-    z.lazy(() => Seven$outboundSchema),
-    z.lazy(() => Eight$outboundSchema),
     z.lazy(() => Nine$outboundSchema),
-    z.lazy(() => Ten$outboundSchema),
     z.lazy(() => Six$outboundSchema),
   ]).optional(),
 }).transform((v) => {

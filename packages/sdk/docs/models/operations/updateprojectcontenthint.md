@@ -132,3 +132,12 @@ const value: operations.UpdateProjectContentHint14 = {
 };
 ```
 
+### `operations.UpdateProjectContentHint15`
+
+```typescript
+const value: operations.UpdateProjectContentHint15 = {
+  type: "flags-connection-string",
+  projectId: "<id>",
+};
+```
+

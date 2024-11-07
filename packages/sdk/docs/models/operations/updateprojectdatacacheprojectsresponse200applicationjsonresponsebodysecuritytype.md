@@ -7,11 +7,11 @@ import { UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodySec
 
 let value:
   UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodySecurityType =
-    "environment";
+    "ip_address";
 ```
 
 ## Values
 
 ```typescript
-"host" | "method" | "path" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
+"path" | "host" | "method" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
 ```

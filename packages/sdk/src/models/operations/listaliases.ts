@@ -3,7 +3,6 @@
  */
 
 import * as z from "zod";
-import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
 import {
   Pagination,
@@ -191,7 +190,7 @@ export type Aliases = {
   /**
    * The date when the alias was deleted in milliseconds since the UNIX epoch
    */
-  deletedAt?: number | undefined;
+  deletedAt?: number | null | undefined;
   /**
    * A map with the deployment ID, URL and metadata
    */
@@ -241,10 +240,6 @@ export type ListAliasesResponseBody = {
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
   pagination: Pagination;
-};
-
-export type ListAliasesResponse = {
-  result: ListAliasesResponseBody;
 };
 
 /** @internal */
@@ -757,7 +752,7 @@ export const Aliases$inboundSchema: z.ZodType<Aliases, z.ZodTypeDef, unknown> =
     created: z.string().datetime({ offset: true }).transform(v => new Date(v)),
     createdAt: z.number().optional(),
     creator: z.lazy(() => ListAliasesCreator$inboundSchema).optional(),
-    deletedAt: z.number().optional(),
+    deletedAt: z.nullable(z.number()).optional(),
     deployment: z.lazy(() => ListAliasesDeployment$inboundSchema).optional(),
     deploymentId: z.nullable(z.string()),
     projectId: z.nullable(z.string()),
@@ -781,7 +776,7 @@ export type Aliases$Outbound = {
   created: string;
   createdAt?: number | undefined;
   creator?: ListAliasesCreator$Outbound | undefined;
-  deletedAt?: number | undefined;
+  deletedAt?: number | null | undefined;
   deployment?: ListAliasesDeployment$Outbound | undefined;
   deploymentId: string | null;
   projectId: string | null;
@@ -808,7 +803,7 @@ export const Aliases$outboundSchema: z.ZodType<
   created: z.date().transform(v => v.toISOString()),
   createdAt: z.number().optional(),
   creator: z.lazy(() => ListAliasesCreator$outboundSchema).optional(),
-  deletedAt: z.number().optional(),
+  deletedAt: z.nullable(z.number()).optional(),
   deployment: z.lazy(() => ListAliasesDeployment$outboundSchema).optional(),
   deploymentId: z.nullable(z.string()),
   projectId: z.nullable(z.string()),
@@ -876,48 +871,4 @@ export namespace ListAliasesResponseBody$ {
   export const outboundSchema = ListAliasesResponseBody$outboundSchema;
   /** @deprecated use `ListAliasesResponseBody$Outbound` instead. */
   export type Outbound = ListAliasesResponseBody$Outbound;
-}
-
-/** @internal */
-export const ListAliasesResponse$inboundSchema: z.ZodType<
-  ListAliasesResponse,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  Result: z.lazy(() => ListAliasesResponseBody$inboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    "Result": "result",
-  });
-});
-
-/** @internal */
-export type ListAliasesResponse$Outbound = {
-  Result: ListAliasesResponseBody$Outbound;
-};
-
-/** @internal */
-export const ListAliasesResponse$outboundSchema: z.ZodType<
-  ListAliasesResponse$Outbound,
-  z.ZodTypeDef,
-  ListAliasesResponse
-> = z.object({
-  result: z.lazy(() => ListAliasesResponseBody$outboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    result: "Result",
-  });
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace ListAliasesResponse$ {
-  /** @deprecated use `ListAliasesResponse$inboundSchema` instead. */
-  export const inboundSchema = ListAliasesResponse$inboundSchema;
-  /** @deprecated use `ListAliasesResponse$outboundSchema` instead. */
-  export const outboundSchema = ListAliasesResponse$outboundSchema;
-  /** @deprecated use `ListAliasesResponse$Outbound` instead. */
-  export type Outbound = ListAliasesResponse$Outbound;
 }

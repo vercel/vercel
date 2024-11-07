@@ -11,7 +11,7 @@ let value: GetDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/var/yp",
+  path: "/var",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

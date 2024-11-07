@@ -3,7 +3,7 @@
 ## Example Usage
 
 ```typescript
-import { Algo } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
+import { Algo } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Algo = "token_bucket";
 ```

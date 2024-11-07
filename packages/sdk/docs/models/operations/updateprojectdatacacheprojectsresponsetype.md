@@ -5,11 +5,11 @@
 ```typescript
 import { UpdateProjectDataCacheProjectsResponseType } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheProjectsResponseType = "LAMBDAS";
+let value: UpdateProjectDataCacheProjectsResponseType = "rollback";
 ```
 
 ## Values
 
 ```typescript
-"LAMBDAS"
+"promote" | "rollback"
 ```

@@ -3,16 +3,14 @@
 
 ## Overview
 
-Webhooks
-
 ### Available Operations
 
-* [create](#create) - Creates a webhook
-* [list](#list) - Get a list of webhooks
-* [get](#get) - Get a webhook
-* [delete](#delete) - Deletes a webhook
+* [createWebhook](#createwebhook) - Creates a webhook
+* [getWebhooks](#getwebhooks) - Get a list of webhooks
+* [getWebhook](#getwebhook) - Get a webhook
+* [deleteWebhook](#deletewebhook) - Deletes a webhook
 
-## create
+## createWebhook
 
 Creates a webhook
 
@@ -26,7 +24,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.webhooks.create({});
+  const result = await vercel.webhooks.createWebhook({});
 
   // Handle the result
   console.log(result);
@@ -41,7 +39,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { webhooksCreate } from "@vercel/sdk/funcs/webhooksCreate.js";
+import { webhooksCreateWebhook } from "@vercel/sdk/funcs/webhooksCreateWebhook.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -50,7 +48,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await webhooksCreate(vercel, {});
+  const res = await webhooksCreateWebhook(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -80,12 +78,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## getWebhooks
 
 Get a list of webhooks
 
@@ -99,7 +96,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.webhooks.list({});
+  const result = await vercel.webhooks.getWebhooks({});
 
   // Handle the result
   console.log(result);
@@ -114,7 +111,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { webhooksList } from "@vercel/sdk/funcs/webhooksList.js";
+import { webhooksGetWebhooks } from "@vercel/sdk/funcs/webhooksGetWebhooks.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -123,7 +120,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await webhooksList(vercel, {});
+  const res = await webhooksGetWebhooks(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -153,12 +150,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getWebhook
 
 Get a webhook
 
@@ -172,7 +168,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.webhooks.get({
+  const result = await vercel.webhooks.getWebhook({
     id: "<id>",
   });
 
@@ -189,7 +185,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { webhooksGet } from "@vercel/sdk/funcs/webhooksGet.js";
+import { webhooksGetWebhook } from "@vercel/sdk/funcs/webhooksGetWebhook.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -198,7 +194,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await webhooksGet(vercel, {
+  const res = await webhooksGetWebhook(vercel, {
     id: "<id>",
   });
 
@@ -230,12 +226,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteWebhook
 
 Deletes a webhook
 
@@ -249,7 +244,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.webhooks.delete({
+  await vercel.webhooks.deleteWebhook({
     id: "<id>",
   });
 
@@ -265,7 +260,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { webhooksDelete } from "@vercel/sdk/funcs/webhooksDelete.js";
+import { webhooksDeleteWebhook } from "@vercel/sdk/funcs/webhooksDeleteWebhook.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -274,7 +269,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await webhooksDelete(vercel, {
+  const res = await webhooksDeleteWebhook(vercel, {
     id: "<id>",
   });
 
@@ -305,6 +300,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

@@ -29,6 +29,7 @@ const value: operations.GetConfigurationsResponseBody1[] = [
     ],
     disabledAt: 1558531915505,
     deletedAt: 1558531915505,
+    deleteRequestedAt: 1558531915505,
   },
 ];
 ```
@@ -64,6 +65,7 @@ const value: operations.GetConfigurationsResponseBody2[] = [
     ],
     disabledAt: 1558531915505,
     deletedAt: 1558531915505,
+    deleteRequestedAt: 1558531915505,
   },
 ];
 ```

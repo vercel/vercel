@@ -3,7 +3,6 @@
  */
 
 import * as z from "zod";
-import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
 import {
   Pagination,
@@ -267,6 +266,7 @@ export const GetDeploymentsFramework = {
   Vuepress: "vuepress",
   Parcel: "parcel",
   Fasthtml: "fasthtml",
+  SanityV3: "sanity-v3",
   Sanity: "sanity",
   Storybook: "storybook",
 } as const;
@@ -275,6 +275,7 @@ export type GetDeploymentsFramework = ClosedEnum<
 >;
 
 export const GetDeploymentsNodeVersion = {
+  TwentyTwoX: "22.x",
   TwentyX: "20.x",
   EighteenX: "18.x",
   SixteenX: "16.x",
@@ -453,15 +454,15 @@ export type Deployments = {
    */
   projectSettings?: GetDeploymentsProjectSettings | undefined;
   /**
-   * The flag saying if Vercel Connect configuration is used for builds
+   * The flag saying if Secure Compute network is used for builds
    */
   connectBuildsEnabled?: boolean | undefined;
   /**
-   * The ID of Vercel Connect configuration used for this deployment
+   * The ID of Secure Compute network used for this deployment
    */
   connectConfigurationId?: string | undefined;
   /**
-   * The ID of Vercel Connect configuration used for this deployment's passive functions
+   * The ID of Secure Compute network used for this deployment's passive functions
    */
   passiveConnectConfigurationId?: string | undefined;
   /**
@@ -484,10 +485,6 @@ export type GetDeploymentsResponseBody = {
    */
   pagination: Pagination;
   deployments: Array<Deployments>;
-};
-
-export type GetDeploymentsResponse = {
-  result: GetDeploymentsResponseBody;
 };
 
 /** @internal */
@@ -1331,48 +1328,4 @@ export namespace GetDeploymentsResponseBody$ {
   export const outboundSchema = GetDeploymentsResponseBody$outboundSchema;
   /** @deprecated use `GetDeploymentsResponseBody$Outbound` instead. */
   export type Outbound = GetDeploymentsResponseBody$Outbound;
-}
-
-/** @internal */
-export const GetDeploymentsResponse$inboundSchema: z.ZodType<
-  GetDeploymentsResponse,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  Result: z.lazy(() => GetDeploymentsResponseBody$inboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    "Result": "result",
-  });
-});
-
-/** @internal */
-export type GetDeploymentsResponse$Outbound = {
-  Result: GetDeploymentsResponseBody$Outbound;
-};
-
-/** @internal */
-export const GetDeploymentsResponse$outboundSchema: z.ZodType<
-  GetDeploymentsResponse$Outbound,
-  z.ZodTypeDef,
-  GetDeploymentsResponse
-> = z.object({
-  result: z.lazy(() => GetDeploymentsResponseBody$outboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    result: "Result",
-  });
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace GetDeploymentsResponse$ {
-  /** @deprecated use `GetDeploymentsResponse$inboundSchema` instead. */
-  export const inboundSchema = GetDeploymentsResponse$inboundSchema;
-  /** @deprecated use `GetDeploymentsResponse$outboundSchema` instead. */
-  export const outboundSchema = GetDeploymentsResponse$outboundSchema;
-  /** @deprecated use `GetDeploymentsResponse$Outbound` instead. */
-  export type Outbound = GetDeploymentsResponse$Outbound;
 }

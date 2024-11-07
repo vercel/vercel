@@ -3,16 +3,14 @@
 
 ## Overview
 
-Artifacts
-
 ### Available Operations
 
 * [recordEvents](#recordevents) - Record an artifacts cache usage event
 * [status](#status) - Get status of Remote Caching for this principal
-* [upload](#upload) - Upload a cache artifact
-* [download](#download) - Download a cache artifact
-* [exists](#exists) - Check if a cache artifact exists
-* [query](#query) - Query information about an artifact
+* [uploadArtifact](#uploadartifact) - Upload a cache artifact
+* [downloadArtifact](#downloadartifact) - Download a cache artifact
+* [artifactExists](#artifactexists) - Check if a cache artifact exists
+* [artifactQuery](#artifactquery) - Query information about an artifact
 
 ## recordEvents
 
@@ -104,10 +102,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## status
 
@@ -177,12 +174,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## upload
+## uploadArtifact
 
 Uploads a cache artifact identified by the `hash` specified on the path. The cache artifact can then be downloaded with the provided `hash`.
 
@@ -196,7 +192,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.artifacts.upload({
+  const result = await vercel.artifacts.uploadArtifact({
     contentLength: 4036.54,
     xArtifactDuration: 400,
     xArtifactClientCi: "VERCEL",
@@ -218,7 +214,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { artifactsUpload } from "@vercel/sdk/funcs/artifactsUpload.js";
+import { artifactsUploadArtifact } from "@vercel/sdk/funcs/artifactsUploadArtifact.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -227,7 +223,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await artifactsUpload(vercel, {
+  const res = await artifactsUploadArtifact(vercel, {
     contentLength: 4036.54,
     xArtifactDuration: 400,
     xArtifactClientCi: "VERCEL",
@@ -264,12 +260,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## download
+## downloadArtifact
 
 Downloads a cache artifact indentified by its `hash` specified on the request path. The artifact is downloaded as an octet-stream. The client should verify the content-length header and response body.
 
@@ -283,7 +278,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.artifacts.download({
+  const result = await vercel.artifacts.downloadArtifact({
     xArtifactClientCi: "VERCEL",
     xArtifactClientInteractive: 0,
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
@@ -302,7 +297,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { artifactsDownload } from "@vercel/sdk/funcs/artifactsDownload.js";
+import { artifactsDownloadArtifact } from "@vercel/sdk/funcs/artifactsDownloadArtifact.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -311,7 +306,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await artifactsDownload(vercel, {
+  const res = await artifactsDownloadArtifact(vercel, {
     xArtifactClientCi: "VERCEL",
     xArtifactClientInteractive: 0,
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
@@ -345,12 +340,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## exists
+## artifactExists
 
 Check that a cache artifact with the given `hash` exists. This request returns response headers only and is equivalent to a `GET` request to this endpoint where the response contains no body.
 
@@ -364,7 +358,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.artifacts.exists({
+  await vercel.artifacts.artifactExists({
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
 
@@ -380,7 +374,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { artifactsExists } from "@vercel/sdk/funcs/artifactsExists.js";
+import { artifactsArtifactExists } from "@vercel/sdk/funcs/artifactsArtifactExists.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -389,7 +383,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await artifactsExists(vercel, {
+  const res = await artifactsArtifactExists(vercel, {
     hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
   });
 
@@ -420,12 +414,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## query
+## artifactQuery
 
 Query information about an array of artifacts.
 
@@ -439,7 +432,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.artifacts.query({});
+  const result = await vercel.artifacts.artifactQuery({});
 
   // Handle the result
   console.log(result);
@@ -454,7 +447,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { artifactsQuery } from "@vercel/sdk/funcs/artifactsQuery.js";
+import { artifactsArtifactQuery } from "@vercel/sdk/funcs/artifactsArtifactQuery.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -463,7 +456,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await artifactsQuery(vercel, {});
+  const res = await artifactsArtifactQuery(vercel, {});
 
   if (!res.ok) {
     throw res.error;
@@ -493,6 +486,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
