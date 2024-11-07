@@ -15,7 +15,7 @@ export function checkTelemetryStatus({
     return;
   }
 
-  client.output.note('The Vercel CLI now collects telemetry regarding usage.');
+  client.output.note('The Vercel CLI now collects telemetry regarding usage of the CLI.');
   client.output.log(
     'This information is used to shape the CLI roadmap and prioritize features.'
   );
