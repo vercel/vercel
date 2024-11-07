@@ -347,7 +347,9 @@ export async function testFixture(
   };
 
   return {
-    dev,
+    dev: dev as any as Omit<typeof dev, 'kill'> & {
+      kill: () => Promise<{ stdout: string; stderr: string }>;
+    },
     port,
     readyResolver,
   };

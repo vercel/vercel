@@ -117,7 +117,6 @@ test('[vercel dev] throws an error when an edge function has no response', async
     let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stdout } = await dev.kill();
 
     expect(await res.status).toBe(500);
@@ -173,7 +172,6 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -203,7 +201,6 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -233,7 +230,6 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
     });
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -262,7 +258,6 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
     });
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -294,7 +289,6 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
     );
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -327,7 +321,6 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
     );
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stdout } = await dev.kill();
 
     expect(await res.text()).toMatch(
@@ -360,7 +353,6 @@ test('[vercel dev] should handle invalid middleware config', async () => {
     });
     validateResponseHeaders(res);
 
-    // @ts-expect-error
     const { stderr } = await dev.kill();
 
     expect(await res.text()).toMatch(
