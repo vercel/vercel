@@ -33,10 +33,10 @@ describe('certs issue', () => {
 
   it('should issue cert', async () => {
     useUser();
-    client.scenario.post('v3/now/certs', (_, res) => {
+    client.scenario.post('v3/certs', (_, res) => {
       return res.json({});
     });
-    client.scenario.patch('/v3/now/certs', (_, res) => {
+    client.scenario.patch('/v3/certs', (_, res) => {
       return res.json({ cns: ['acme.com'] });
     });
 
@@ -80,10 +80,10 @@ describe('certs issue', () => {
 
     it('should handle challenges', async () => {
       useUser();
-      client.scenario.post('v3/now/certs', (_, res) => {
+      client.scenario.post('v3/certs', (_, res) => {
         return res.json({});
       });
-      client.scenario.patch('/v3/now/certs', (_, res) => {
+      client.scenario.patch('/v3/certs', (_, res) => {
         return res.json({
           cns: ['acme.com'],
           challengesToResolve: [{ domain: 'acme.com', status: 'pending' }],
