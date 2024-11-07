@@ -263,24 +263,8 @@ const main = async () => {
     config: config.telemetry,
   });
 
-  // Shared API `Client` instance for all sub-commands to utilize
-  client = new Client({
-    agent: new ProxyAgent({ keepAlive: true }),
-    apiUrl,
-    stdin: process.stdin,
-    stdout: process.stdout,
-    stderr: output.stream,
-    config,
-    authConfig,
-    localConfig,
-    localConfigPath,
-    argv: process.argv,
-    telemetryEventStore,
-  });
-
   checkTelemetryStatus({
     config,
-    client,
   });
 
   const telemetry = new RootTelemetryClient({

@@ -1,32 +1,29 @@
 import { GlobalConfig } from '@vercel-internals/types';
 import * as configFiles from '../config/files';
-import Client from '../client';
 
-export function checkTelemetryStatus({
-  config,
-  client,
-}: {
-  config: GlobalConfig;
-  client: Client;
-}) {
+import output from '../../output-manager';
+
+export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
   if (config.telemetry) {
     // telemetry has been set previously by this check of
     // user running vercel telemetry commands
     return;
   }
 
-  client.output.note('The Vercel CLI now collects telemetry regarding usage of the CLI.');
-  client.output.log(
+  output.note(
+    'The Vercel CLI now collects telemetry regarding usage of the CLI.'
+  );
+  output.log(
     'This information is used to shape the CLI roadmap and prioritize features.'
   );
-  client.output.log(
+  output.log(
     "You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:"
   );
-  client.output.log('https://vercel.com/docs/cli/about-telemetry');
+  output.log('https://vercel.com/docs/cli/about-telemetry');
 
   config.telemetry = {
     enabled: true,
   };
 
-  configFiles.writeToConfigFile(client.output, config);
+  configFiles.writeToConfigFile(config);
 }
