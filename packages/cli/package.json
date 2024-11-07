@@ -167,7 +167,7 @@
     "tar-fs": "1.16.3",
     "title": "3.4.1",
     "tldts": "6.1.47",
-    "tmp-promise": "3.0.3",
+    "tmp-promise": "1.0.3",
     "tree-kill": "1.2.2",
     "ts-node": "10.9.1",
     "utility-types": "2.1.0",
