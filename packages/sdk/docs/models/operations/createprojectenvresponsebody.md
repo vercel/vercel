@@ -8,9 +8,7 @@ The environment variable was created successfully
 import { CreateProjectEnvResponseBody } from "@vercel/sdk/models/operations/createprojectenv.js";
 
 let value: CreateProjectEnvResponseBody = {
-  created: [
-    {},
-  ],
+  created: {},
   failed: [
     {
       error: {

@@ -32,7 +32,7 @@ interface GetLatestWorkerPayload {
  * detected version. The version could be stale, but still newer than the
  * current version.
  *
- * @returns {String|undefined} If a newer version is found, then the lastest
+ * @returns {String|undefined} If a newer version is found, then the latest
  * version, otherwise `undefined`.
  */
 export default function getLatestVersion({

@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectDataCacheProjectsPlan } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheProjectsPlan = "pro";
+let value: UpdateProjectDataCacheProjectsPlan = "hobby";
 ```
 
 ## Values

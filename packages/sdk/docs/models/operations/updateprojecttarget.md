@@ -3,17 +3,17 @@
 
 ## Supported Types
 
-### `operations.UpdateProjectTarget1[]`
+### `string[]`
 
 ```typescript
-const value: operations.UpdateProjectTarget1[] = [
-  "development",
+const value: string[] = [
+  "<value>",
 ];
 ```
 
 ### `operations.UpdateProjectTarget2`
 
 ```typescript
-const value: operations.UpdateProjectTarget2 = "preview";
+const value: operations.UpdateProjectTarget2 = "development";
 ```
 

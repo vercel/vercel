@@ -16,7 +16,7 @@ const value: operations.Missing1 = {
 
 ```typescript
 const value: operations.Missing2 = {
-  type: "query",
+  type: "cookie",
   key: "<key>",
 };
 ```

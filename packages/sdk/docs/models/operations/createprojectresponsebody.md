@@ -10,9 +10,9 @@ import { CreateProjectResponseBody } from "@vercel/sdk/models/operations/createp
 let value: CreateProjectResponseBody = {
   accountId: "<id>",
   crons: {
-    enabledAt: 8428.55,
-    disabledAt: 8180.33,
-    updatedAt: 1024.14,
+    enabledAt: 9663.90,
+    disabledAt: 5076.36,
+    updatedAt: 3004.04,
     deploymentId: "<id>",
     definitions: [
       {
@@ -26,46 +26,46 @@ let value: CreateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 1563.83,
+      id: "<id>",
+      createdAt: 5495.01,
       createdIn: "<value>",
       creator: {
-        email: "Arch_Breitenberg@gmail.com",
+        email: "Jovan.Thiel0@hotmail.com",
         uid: "<id>",
-        username: "Bill.Watsica-Huel",
+        username: "Emilio33",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "QUEUED",
-      type: "LAMBDAS",
-      url: "https://humble-sideboard.net/",
-      userId: "<id>",
+      plan: "hobby",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "CANCELED",
+      type: "LAMBDAS",
+      url: "https://wide-scratch.net/",
+      userId: "<id>",
     },
   ],
   name: "<value>",
-  nodeVersion: "8.10.x",
+  nodeVersion: "20.x",
   targets: {
     "key": {
-      createdAt: 3519.36,
+      id: "<id>",
+      createdAt: 2164.57,
       createdIn: "<value>",
       creator: {
-        email: "Okey.Mueller87@hotmail.com",
+        email: "Theresa77@gmail.com",
         uid: "<id>",
-        username: "Coy_Jacobson",
+        username: "Brock_Spinka10",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
       plan: "pro",
-      private: false,
-      readyState: "INITIALIZING",
-      type: "LAMBDAS",
-      url: "https://dual-tribe.biz/",
-      userId: "<id>",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "BUILDING",
+      type: "LAMBDAS",
+      url: "https://celebrated-metabolite.biz/",
+      userId: "<id>",
     },
   },
 };
@@ -94,10 +94,12 @@ let value: CreateProjectResponseBody = {
 | `directoryListing`                                                                                                   | *boolean*                                                                                                            | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `installCommand`                                                                                                     | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `env`                                                                                                                | [operations.CreateProjectEnv](../../models/operations/createprojectenv.md)[]                                         | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `customEnvironments`                                                                                                 | [operations.CreateProjectCustomEnvironments](../../models/operations/createprojectcustomenvironments.md)[]           | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `framework`                                                                                                          | [operations.CreateProjectProjectsFramework](../../models/operations/createprojectprojectsframework.md)               | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitForkProtection`                                                                                                  | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitLFS`                                                                                                             | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `id`                                                                                                                 | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
+| `ipBuckets`                                                                                                          | [operations.CreateProjectIpBuckets](../../models/operations/createprojectipbuckets.md)[]                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `latestDeployments`                                                                                                  | [operations.CreateProjectLatestDeployments](../../models/operations/createprojectlatestdeployments.md)[]             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `link`                                                                                                               | *operations.CreateProjectLink*                                                                                       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `name`                                                                                                               | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
@@ -108,6 +110,7 @@ let value: CreateProjectResponseBody = {
 | `passwordProtection`                                                                                                 | [operations.CreateProjectPasswordProtection](../../models/operations/createprojectpasswordprotection.md)             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `productionDeploymentsFastLane`                                                                                      | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `publicSource`                                                                                                       | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `resourceConfig`                                                                                                     | [operations.CreateProjectResourceConfig](../../models/operations/createprojectresourceconfig.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `rootDirectory`                                                                                                      | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionRegion`                                                                                           | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionZeroConfigFailover`                                                                               | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

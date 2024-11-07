@@ -4,7 +4,6 @@
 
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
-import { ClosedEnum } from "../../types/enums.js";
 import {
   AuthToken,
   AuthToken$inboundSchema,
@@ -12,29 +11,10 @@ import {
   AuthToken$outboundSchema,
 } from "../components/authtoken.js";
 
-export const CreateAuthTokenRequestBodyType = {
-  Oauth2Token: "oauth2-token",
-} as const;
-export type CreateAuthTokenRequestBodyType = ClosedEnum<
-  typeof CreateAuthTokenRequestBodyType
->;
-
-export type CreateAuthTokenRequestBody2 = {
-  type: CreateAuthTokenRequestBodyType;
-  name: string;
-  clientId?: string | undefined;
-  installationId?: string | undefined;
-  expiresAt?: number | undefined;
-};
-
-export type CreateAuthTokenRequestBody1 = {
+export type CreateAuthTokenRequestBody = {
   name: string;
   expiresAt?: number | undefined;
 };
-
-export type CreateAuthTokenRequestBody =
-  | CreateAuthTokenRequestBody1
-  | CreateAuthTokenRequestBody2;
 
 export type CreateAuthTokenRequest = {
   /**
@@ -45,10 +25,7 @@ export type CreateAuthTokenRequest = {
    * The Team slug to perform the request on behalf of.
    */
   slug?: string | undefined;
-  requestBody?:
-    | CreateAuthTokenRequestBody1
-    | CreateAuthTokenRequestBody2
-    | undefined;
+  requestBody?: CreateAuthTokenRequestBody | undefined;
 };
 
 /**
@@ -66,137 +43,30 @@ export type CreateAuthTokenResponseBody = {
 };
 
 /** @internal */
-export const CreateAuthTokenRequestBodyType$inboundSchema: z.ZodNativeEnum<
-  typeof CreateAuthTokenRequestBodyType
-> = z.nativeEnum(CreateAuthTokenRequestBodyType);
-
-/** @internal */
-export const CreateAuthTokenRequestBodyType$outboundSchema: z.ZodNativeEnum<
-  typeof CreateAuthTokenRequestBodyType
-> = CreateAuthTokenRequestBodyType$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateAuthTokenRequestBodyType$ {
-  /** @deprecated use `CreateAuthTokenRequestBodyType$inboundSchema` instead. */
-  export const inboundSchema = CreateAuthTokenRequestBodyType$inboundSchema;
-  /** @deprecated use `CreateAuthTokenRequestBodyType$outboundSchema` instead. */
-  export const outboundSchema = CreateAuthTokenRequestBodyType$outboundSchema;
-}
-
-/** @internal */
-export const CreateAuthTokenRequestBody2$inboundSchema: z.ZodType<
-  CreateAuthTokenRequestBody2,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  type: CreateAuthTokenRequestBodyType$inboundSchema,
-  name: z.string(),
-  clientId: z.string().optional(),
-  installationId: z.string().optional(),
-  expiresAt: z.number().optional(),
-});
-
-/** @internal */
-export type CreateAuthTokenRequestBody2$Outbound = {
-  type: string;
-  name: string;
-  clientId?: string | undefined;
-  installationId?: string | undefined;
-  expiresAt?: number | undefined;
-};
-
-/** @internal */
-export const CreateAuthTokenRequestBody2$outboundSchema: z.ZodType<
-  CreateAuthTokenRequestBody2$Outbound,
-  z.ZodTypeDef,
-  CreateAuthTokenRequestBody2
-> = z.object({
-  type: CreateAuthTokenRequestBodyType$outboundSchema,
-  name: z.string(),
-  clientId: z.string().optional(),
-  installationId: z.string().optional(),
-  expiresAt: z.number().optional(),
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateAuthTokenRequestBody2$ {
-  /** @deprecated use `CreateAuthTokenRequestBody2$inboundSchema` instead. */
-  export const inboundSchema = CreateAuthTokenRequestBody2$inboundSchema;
-  /** @deprecated use `CreateAuthTokenRequestBody2$outboundSchema` instead. */
-  export const outboundSchema = CreateAuthTokenRequestBody2$outboundSchema;
-  /** @deprecated use `CreateAuthTokenRequestBody2$Outbound` instead. */
-  export type Outbound = CreateAuthTokenRequestBody2$Outbound;
-}
-
-/** @internal */
-export const CreateAuthTokenRequestBody1$inboundSchema: z.ZodType<
-  CreateAuthTokenRequestBody1,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  name: z.string(),
-  expiresAt: z.number().optional(),
-});
-
-/** @internal */
-export type CreateAuthTokenRequestBody1$Outbound = {
-  name: string;
-  expiresAt?: number | undefined;
-};
-
-/** @internal */
-export const CreateAuthTokenRequestBody1$outboundSchema: z.ZodType<
-  CreateAuthTokenRequestBody1$Outbound,
-  z.ZodTypeDef,
-  CreateAuthTokenRequestBody1
-> = z.object({
-  name: z.string(),
-  expiresAt: z.number().optional(),
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateAuthTokenRequestBody1$ {
-  /** @deprecated use `CreateAuthTokenRequestBody1$inboundSchema` instead. */
-  export const inboundSchema = CreateAuthTokenRequestBody1$inboundSchema;
-  /** @deprecated use `CreateAuthTokenRequestBody1$outboundSchema` instead. */
-  export const outboundSchema = CreateAuthTokenRequestBody1$outboundSchema;
-  /** @deprecated use `CreateAuthTokenRequestBody1$Outbound` instead. */
-  export type Outbound = CreateAuthTokenRequestBody1$Outbound;
-}
-
-/** @internal */
 export const CreateAuthTokenRequestBody$inboundSchema: z.ZodType<
   CreateAuthTokenRequestBody,
   z.ZodTypeDef,
   unknown
-> = z.union([
-  z.lazy(() => CreateAuthTokenRequestBody1$inboundSchema),
-  z.lazy(() => CreateAuthTokenRequestBody2$inboundSchema),
-]);
+> = z.object({
+  name: z.string(),
+  expiresAt: z.number().optional(),
+});
 
 /** @internal */
-export type CreateAuthTokenRequestBody$Outbound =
-  | CreateAuthTokenRequestBody1$Outbound
-  | CreateAuthTokenRequestBody2$Outbound;
+export type CreateAuthTokenRequestBody$Outbound = {
+  name: string;
+  expiresAt?: number | undefined;
+};
 
 /** @internal */
 export const CreateAuthTokenRequestBody$outboundSchema: z.ZodType<
   CreateAuthTokenRequestBody$Outbound,
   z.ZodTypeDef,
   CreateAuthTokenRequestBody
-> = z.union([
-  z.lazy(() => CreateAuthTokenRequestBody1$outboundSchema),
-  z.lazy(() => CreateAuthTokenRequestBody2$outboundSchema),
-]);
+> = z.object({
+  name: z.string(),
+  expiresAt: z.number().optional(),
+});
 
 /**
  * @internal
@@ -219,10 +89,8 @@ export const CreateAuthTokenRequest$inboundSchema: z.ZodType<
 > = z.object({
   teamId: z.string().optional(),
   slug: z.string().optional(),
-  RequestBody: z.union([
-    z.lazy(() => CreateAuthTokenRequestBody1$inboundSchema),
-    z.lazy(() => CreateAuthTokenRequestBody2$inboundSchema),
-  ]).optional(),
+  RequestBody: z.lazy(() => CreateAuthTokenRequestBody$inboundSchema)
+    .optional(),
 }).transform((v) => {
   return remap$(v, {
     "RequestBody": "requestBody",
@@ -233,10 +101,7 @@ export const CreateAuthTokenRequest$inboundSchema: z.ZodType<
 export type CreateAuthTokenRequest$Outbound = {
   teamId?: string | undefined;
   slug?: string | undefined;
-  RequestBody?:
-    | CreateAuthTokenRequestBody1$Outbound
-    | CreateAuthTokenRequestBody2$Outbound
-    | undefined;
+  RequestBody?: CreateAuthTokenRequestBody$Outbound | undefined;
 };
 
 /** @internal */
@@ -247,10 +112,8 @@ export const CreateAuthTokenRequest$outboundSchema: z.ZodType<
 > = z.object({
   teamId: z.string().optional(),
   slug: z.string().optional(),
-  requestBody: z.union([
-    z.lazy(() => CreateAuthTokenRequestBody1$outboundSchema),
-    z.lazy(() => CreateAuthTokenRequestBody2$outboundSchema),
-  ]).optional(),
+  requestBody: z.lazy(() => CreateAuthTokenRequestBody$outboundSchema)
+    .optional(),
 }).transform((v) => {
   return remap$(v, {
     requestBody: "RequestBody",

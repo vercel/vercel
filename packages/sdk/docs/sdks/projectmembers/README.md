@@ -5,11 +5,11 @@
 
 ### Available Operations
 
-* [get](#get) - List project members
-* [add](#add) - Adds a new member to a project.
-* [remove](#remove) - Remove a Project Member
+* [getProjectMembers](#getprojectmembers) - List project members
+* [addProjectMember](#addprojectmember) - Adds a new member to a project.
+* [removeProjectMember](#removeprojectmember) - Remove a Project Member
 
-## get
+## getProjectMembers
 
 Lists all members of a project.
 
@@ -23,7 +23,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.projectMembers.get({
+  const result = await vercel.projectMembers.getProjectMembers({
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
     since: 1540095775951,
@@ -43,7 +43,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { projectMembersGet } from "@vercel/sdk/funcs/projectMembersGet.js";
+import { projectMembersGetProjectMembers } from "@vercel/sdk/funcs/projectMembersGetProjectMembers.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -52,7 +52,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await projectMembersGet(vercel, {
+  const res = await projectMembersGetProjectMembers(vercel, {
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     limit: 20,
     since: 1540095775951,
@@ -87,12 +87,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## add
+## addProjectMember
 
 Adds a new member to the project.
 
@@ -106,7 +105,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.projectMembers.add({
+  const result = await vercel.projectMembers.addProjectMember({
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     requestBody: {
       uid: "ndlgr43fadlPyCtREAqxxdyFK",
@@ -129,7 +128,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { projectMembersAdd } from "@vercel/sdk/funcs/projectMembersAdd.js";
+import { projectMembersAddProjectMember } from "@vercel/sdk/funcs/projectMembersAddProjectMember.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -138,7 +137,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await projectMembersAdd(vercel, {
+  const res = await projectMembersAddProjectMember(vercel, {
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     requestBody: {
       uid: "ndlgr43fadlPyCtREAqxxdyFK",
@@ -176,12 +175,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## remove
+## removeProjectMember
 
 Remove a member from a specific project
 
@@ -195,7 +193,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.projectMembers.remove({
+  const result = await vercel.projectMembers.removeProjectMember({
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     uid: "ndlgr43fadlPyCtREAqxxdyFK",
   });
@@ -213,7 +211,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { projectMembersRemove } from "@vercel/sdk/funcs/projectMembersRemove.js";
+import { projectMembersRemoveProjectMember } from "@vercel/sdk/funcs/projectMembersRemoveProjectMember.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -222,7 +220,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await projectMembersRemove(vercel, {
+  const res = await projectMembersRemoveProjectMember(vercel, {
     idOrName: "prj_pavWOn1iLObbXLRiwVvzmPrTWyTf",
     uid: "ndlgr43fadlPyCtREAqxxdyFK",
   });
@@ -255,6 +253,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

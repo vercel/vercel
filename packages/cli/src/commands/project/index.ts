@@ -1,8 +1,8 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import add from './add';
 import list from './list';
 import rm from './rm';

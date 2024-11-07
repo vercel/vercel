@@ -6,11 +6,11 @@
 import { UpdateProjectProjectsResponse200ApplicationJSONResponseBodyType } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectProjectsResponse200ApplicationJSONResponseBodyType =
-  "region";
+  "equals";
 ```
 
 ## Values
 
 ```typescript
-"host" | "method" | "path" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
+"endsWith" | "startsWith" | "equals"
 ```
