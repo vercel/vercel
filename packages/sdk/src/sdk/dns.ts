@@ -3,7 +3,7 @@
  */
 
 import { dnsCreateRecord } from "../funcs/dnsCreateRecord.js";
-import { dnsListRecords } from "../funcs/dnsListRecords.js";
+import { dnsGetRecords } from "../funcs/dnsGetRecords.js";
 import { dnsRemoveRecord } from "../funcs/dnsRemoveRecord.js";
 import { dnsUpdateRecord } from "../funcs/dnsUpdateRecord.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
@@ -13,7 +13,7 @@ import {
 } from "../models/operations/createrecord.js";
 import {
   GetRecordsRequest,
-  GetRecordsResponse,
+  GetRecordsResponseBody,
 } from "../models/operations/getrecords.js";
 import {
   RemoveRecordRequest,
@@ -24,7 +24,6 @@ import {
   UpdateRecordResponseBody,
 } from "../models/operations/updaterecord.js";
 import { unwrapAsync } from "../types/fp.js";
-import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
 export class Dns extends ClientSDK {
   /**
@@ -33,11 +32,11 @@ export class Dns extends ClientSDK {
    * @remarks
    * Retrieves a list of DNS records created for a domain name. By default it returns 20 records if no limit is provided. The rest can be retrieved using the pagination options.
    */
-  async listRecords(
+  async getRecords(
     request: GetRecordsRequest,
     options?: RequestOptions,
-  ): Promise<PageIterator<GetRecordsResponse>> {
-    return unwrapResultIterator(dnsListRecords(
+  ): Promise<GetRecordsResponseBody> {
+    return unwrapAsync(dnsGetRecords(
       this,
       request,
       options,

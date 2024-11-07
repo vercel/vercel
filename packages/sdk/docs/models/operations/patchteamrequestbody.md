@@ -22,6 +22,7 @@ let value: PatchTeamRequestBody = {
     enabled: true,
   },
   hideIpAddresses: false,
+  hideIpAddressesInLogDrains: false,
 };
 ```
 
@@ -42,3 +43,4 @@ let value: PatchTeamRequestBody = {
 | `sensitiveEnvironmentVariablePolicy`                                 | *string*                                                             | :heavy_minus_sign:                                                   | Sensitive environment variable policy: one of on, off or default.    | on                                                                   |
 | `remoteCaching`                                                      | [operations.RemoteCaching](../../models/operations/remotecaching.md) | :heavy_minus_sign:                                                   | Whether or not remote caching is enabled for the team                |                                                                      |
 | `hideIpAddresses`                                                    | *boolean*                                                            | :heavy_minus_sign:                                                   | Display or hide IP addresses in Monitoring queries.                  | false                                                                |
+| `hideIpAddressesInLogDrains`                                         | *boolean*                                                            | :heavy_minus_sign:                                                   | Display or hide IP addresses in Log Drains.                          | false                                                                |

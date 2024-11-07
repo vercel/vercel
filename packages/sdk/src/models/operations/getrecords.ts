@@ -3,7 +3,6 @@
  */
 
 import * as z from "zod";
-import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
 import {
   Pagination,
@@ -120,10 +119,6 @@ export type GetRecordsResponseBody =
   | GetRecordsResponseBody2
   | ResponseBody3
   | string;
-
-export type GetRecordsResponse = {
-  result: GetRecordsResponseBody2 | ResponseBody3 | string;
-};
 
 /** @internal */
 export const GetRecordsRequest$inboundSchema: z.ZodType<
@@ -467,56 +462,4 @@ export namespace GetRecordsResponseBody$ {
   export const outboundSchema = GetRecordsResponseBody$outboundSchema;
   /** @deprecated use `GetRecordsResponseBody$Outbound` instead. */
   export type Outbound = GetRecordsResponseBody$Outbound;
-}
-
-/** @internal */
-export const GetRecordsResponse$inboundSchema: z.ZodType<
-  GetRecordsResponse,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  Result: z.union([
-    z.lazy(() => GetRecordsResponseBody2$inboundSchema),
-    z.lazy(() => ResponseBody3$inboundSchema),
-    z.string(),
-  ]),
-}).transform((v) => {
-  return remap$(v, {
-    "Result": "result",
-  });
-});
-
-/** @internal */
-export type GetRecordsResponse$Outbound = {
-  Result: GetRecordsResponseBody2$Outbound | ResponseBody3$Outbound | string;
-};
-
-/** @internal */
-export const GetRecordsResponse$outboundSchema: z.ZodType<
-  GetRecordsResponse$Outbound,
-  z.ZodTypeDef,
-  GetRecordsResponse
-> = z.object({
-  result: z.union([
-    z.lazy(() => GetRecordsResponseBody2$outboundSchema),
-    z.lazy(() => ResponseBody3$outboundSchema),
-    z.string(),
-  ]),
-}).transform((v) => {
-  return remap$(v, {
-    result: "Result",
-  });
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace GetRecordsResponse$ {
-  /** @deprecated use `GetRecordsResponse$inboundSchema` instead. */
-  export const inboundSchema = GetRecordsResponse$inboundSchema;
-  /** @deprecated use `GetRecordsResponse$outboundSchema` instead. */
-  export const outboundSchema = GetRecordsResponse$outboundSchema;
-  /** @deprecated use `GetRecordsResponse$Outbound` instead. */
-  export type Outbound = GetRecordsResponse$Outbound;
 }

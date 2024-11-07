@@ -130,15 +130,6 @@ export type CreateConfigurableLogDrainDisabledReason = ClosedEnum<
   typeof CreateConfigurableLogDrainDisabledReason
 >;
 
-export const CreateConfigurableLogDrainCompression = {
-  Gzip: "gzip",
-  Zstd: "zstd",
-  None: "none",
-} as const;
-export type CreateConfigurableLogDrainCompression = ClosedEnum<
-  typeof CreateConfigurableLogDrainCompression
->;
-
 export const CreateConfigurableLogDrainCreatedFrom = {
   SelfServed: "self-served",
 } as const;
@@ -172,7 +163,7 @@ export type CreateConfigurableLogDrainResponseBody = {
   disabledBy?: string | undefined;
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
-  compression?: CreateConfigurableLogDrainCompression | undefined;
+  hideIpAddresses?: boolean | undefined;
   createdFrom?: CreateConfigurableLogDrainCreatedFrom | undefined;
 };
 
@@ -477,30 +468,6 @@ export namespace CreateConfigurableLogDrainDisabledReason$ {
 }
 
 /** @internal */
-export const CreateConfigurableLogDrainCompression$inboundSchema:
-  z.ZodNativeEnum<typeof CreateConfigurableLogDrainCompression> = z.nativeEnum(
-    CreateConfigurableLogDrainCompression,
-  );
-
-/** @internal */
-export const CreateConfigurableLogDrainCompression$outboundSchema:
-  z.ZodNativeEnum<typeof CreateConfigurableLogDrainCompression> =
-    CreateConfigurableLogDrainCompression$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateConfigurableLogDrainCompression$ {
-  /** @deprecated use `CreateConfigurableLogDrainCompression$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateConfigurableLogDrainCompression$inboundSchema;
-  /** @deprecated use `CreateConfigurableLogDrainCompression$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateConfigurableLogDrainCompression$outboundSchema;
-}
-
-/** @internal */
 export const CreateConfigurableLogDrainCreatedFrom$inboundSchema:
   z.ZodNativeEnum<typeof CreateConfigurableLogDrainCreatedFrom> = z.nativeEnum(
     CreateConfigurableLogDrainCreatedFrom,
@@ -557,7 +524,7 @@ export const CreateConfigurableLogDrainResponseBody$inboundSchema: z.ZodType<
   disabledBy: z.string().optional(),
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
-  compression: CreateConfigurableLogDrainCompression$inboundSchema.optional(),
+  hideIpAddresses: z.boolean().optional(),
   createdFrom: CreateConfigurableLogDrainCreatedFrom$inboundSchema.optional(),
 });
 
@@ -585,7 +552,7 @@ export type CreateConfigurableLogDrainResponseBody$Outbound = {
   disabledBy?: string | undefined;
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
-  compression?: string | undefined;
+  hideIpAddresses?: boolean | undefined;
   createdFrom?: string | undefined;
 };
 
@@ -622,7 +589,7 @@ export const CreateConfigurableLogDrainResponseBody$outboundSchema: z.ZodType<
   disabledBy: z.string().optional(),
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
-  compression: CreateConfigurableLogDrainCompression$outboundSchema.optional(),
+  hideIpAddresses: z.boolean().optional(),
   createdFrom: CreateConfigurableLogDrainCreatedFrom$outboundSchema.optional(),
 });
 

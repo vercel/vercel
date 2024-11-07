@@ -19,7 +19,7 @@ let value: ListAccessGroupsResponseBody2 = {
     },
   ],
   pagination: {
-    count: 6976.31,
+    count: 6120.96,
     next: "<value>",
   },
 };

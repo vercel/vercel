@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GitSource1 = {
   type: "github",
-  repoId: "<id>",
+  repoId: 2942.66,
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.CreateDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://salty-unique.net",
+  gitUrl: "https://remarkable-tuber.name",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.CreateDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 7811.93,
+  repoId: 978.10,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.CreateDeploymentGitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 1689.26,
+  projectId: 8843.60,
 };
 ```
 

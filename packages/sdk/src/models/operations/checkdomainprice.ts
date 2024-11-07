@@ -11,6 +11,7 @@ import { ClosedEnum } from "../../types/enums.js";
 export const QueryParamType = {
   New: "new",
   Renewal: "renewal",
+  Transfer: "transfer",
 } as const;
 /**
  * In which status of the domain the price needs to be checked.

@@ -48,7 +48,7 @@ export default async function list(
   const { contextName } = await getScope(client);
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = `/v9/projects?limit=20`;
+  let projectsUrl = '/v9/projects?limit=20';
 
   const deprecated = opts['--update-required'] || false;
   telemetryClient.trackCliFlagUpdateRequired(deprecated);
@@ -62,7 +62,7 @@ export default async function list(
     projectsUrl += `&until=${next}`;
   }
 
-  let {
+  const {
     projects: projectList,
     pagination,
   }: {
@@ -94,7 +94,7 @@ export default async function list(
       )}. Please upgrade your projects immediately.`
     );
     output.log(
-      `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
+      'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
     );
   }
 
@@ -112,15 +112,13 @@ export default async function list(
         ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
           chalk.bold(chalk.cyan(header))
         ),
-        ...projectList
-          .map(project => [
-            [
-              chalk.bold(project.name),
-              getLatestProdUrl(project),
-              chalk.gray(ms(Date.now() - project.updatedAt)),
-            ],
-          ])
-          .flat(),
+        ...projectList.flatMap(project => [
+          [
+            chalk.bold(project.name),
+            getLatestProdUrl(project),
+            chalk.gray(ms(Date.now() - project.updatedAt)),
+          ],
+        ]),
       ],
       { hsep: 3 }
     ).replace(/^/gm, '  ');
@@ -137,6 +135,6 @@ export default async function list(
 
 function getLatestProdUrl(project: Project): string {
   const alias = project.targets?.production?.alias?.[0];
-  if (alias) return 'https://' + alias;
+  if (alias) return `https://${alias}`;
   return '--';
 }

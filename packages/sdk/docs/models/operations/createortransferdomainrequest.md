@@ -9,8 +9,7 @@ let value: CreateOrTransferDomainRequest = {
   requestBody: {
     name: "example.com",
     method: "transfer-in",
-    authCode: "fdhfr820ad#@FAdlj$$",
-    expectedPrice: 8,
+    token: "fdhfr820ad#@FAdlj$$",
   },
 };
 ```

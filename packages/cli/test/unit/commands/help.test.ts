@@ -14,6 +14,8 @@ import * as env from '../../../src/commands/env/command';
 import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
+import * as integration from '../../../src/commands/integration/command';
+import * as integrationResource from '../../../src/commands/integration-resource/command';
 import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
@@ -27,10 +29,6 @@ import * as target from '../../../src/commands/target/command';
 import * as teams from '../../../src/commands/teams/command';
 import * as telemetry from '../../../src/commands/telemetry/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
-import {
-  integrationCommand,
-  listSubcommand as integrationListSubcommand,
-} from '../../../src/commands/integration/command';
 import dev from '../../../src/commands/dev';
 import { client } from '../../mocks/client';
 
@@ -419,37 +417,64 @@ describe('help command', () => {
 
   describe('integration help output snapshots', () => {
     it('integration help column width 40', () => {
-      expect(help(integrationCommand, { columns: 40 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 40 })
+      ).toMatchSnapshot();
     });
     it('integration help column width 80', () => {
-      expect(help(integrationCommand, { columns: 80 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 80 })
+      ).toMatchSnapshot();
     });
     it('integration help column width 120', () => {
-      expect(help(integrationCommand, { columns: 120 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 120 })
+      ).toMatchSnapshot();
     });
-
     describe('integration list subcommand', () => {
-      it('integration list subcommand help column width 40', () => {
-        expect(
-          help(integrationListSubcommand, {
-            columns: 40,
-            parent: integrationCommand,
-          })
-        ).toMatchSnapshot();
-      });
-      it('integration list subcommand help column width 80', () => {
-        expect(
-          help(integrationListSubcommand, {
-            columns: 80,
-            parent: integrationCommand,
-          })
-        ).toMatchSnapshot();
-      });
       it('integration list subcommand help column width 120', () => {
         expect(
-          help(integrationListSubcommand, {
+          help(integration.listSubcommand, {
             columns: 120,
-            parent: integrationCommand,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+  });
+
+  describe('integration-resource help output snapshots', () => {
+    it('integration-resource help column width 40', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 40 })
+      ).toMatchSnapshot();
+    });
+    it('integration-resource help column width 80', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 80 })
+      ).toMatchSnapshot();
+    });
+    it('integration-resource help column width 120', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('integration-resource disconnect subcommand', () => {
+      it('integration-resource disconnect subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.disconnectSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration-resource remove subcommand', () => {
+      it('integration-resource remove subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.removeSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
           })
         ).toMatchSnapshot();
       });

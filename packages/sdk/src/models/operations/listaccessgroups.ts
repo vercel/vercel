@@ -42,6 +42,7 @@ export type ListAccessGroupsRequest = {
 export type AccessGroups = {
   members?: Array<string> | undefined;
   projects?: Array<string> | undefined;
+  entitlements?: Array<string> | undefined;
   isDsyncManaged: boolean;
   /**
    * The name of this access group.
@@ -154,6 +155,7 @@ export const AccessGroups$inboundSchema: z.ZodType<
 > = z.object({
   members: z.array(z.string()).optional(),
   projects: z.array(z.string()).optional(),
+  entitlements: z.array(z.string()).optional(),
   isDsyncManaged: z.boolean(),
   name: z.string(),
   createdAt: z.string(),
@@ -168,6 +170,7 @@ export const AccessGroups$inboundSchema: z.ZodType<
 export type AccessGroups$Outbound = {
   members?: Array<string> | undefined;
   projects?: Array<string> | undefined;
+  entitlements?: Array<string> | undefined;
   isDsyncManaged: boolean;
   name: string;
   createdAt: string;
@@ -186,6 +189,7 @@ export const AccessGroups$outboundSchema: z.ZodType<
 > = z.object({
   members: z.array(z.string()).optional(),
   projects: z.array(z.string()).optional(),
+  entitlements: z.array(z.string()).optional(),
   isDsyncManaged: z.boolean(),
   name: z.string(),
   createdAt: z.string(),

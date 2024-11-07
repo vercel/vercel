@@ -7,11 +7,11 @@ import { UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodyTyp
 
 let value:
   UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodyType =
-    "query";
+    "flags-secret";
 ```
 
 ## Values
 
 ```typescript
-"host" | "method" | "path" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
+"flags-secret"
 ```

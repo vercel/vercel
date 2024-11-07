@@ -1,22 +1,18 @@
 # CreateAuthTokenRequestBody
 
-
-## Supported Types
-
-### `operations.CreateAuthTokenRequestBody1`
+## Example Usage
 
 ```typescript
-const value: operations.CreateAuthTokenRequestBody1 = {
+import { CreateAuthTokenRequestBody } from "@vercel/sdk/models/operations/createauthtoken.js";
+
+let value: CreateAuthTokenRequestBody = {
   name: "<value>",
 };
 ```
 
-### `operations.CreateAuthTokenRequestBody2`
+## Fields
 
-```typescript
-const value: operations.CreateAuthTokenRequestBody2 = {
-  type: "oauth2-token",
-  name: "<value>",
-};
-```
-
+| Field              | Type               | Required           | Description        |
+| ------------------ | ------------------ | ------------------ | ------------------ |
+| `name`             | *string*           | :heavy_check_mark: | N/A                |
+| `expiresAt`        | *number*           | :heavy_minus_sign: | N/A                |

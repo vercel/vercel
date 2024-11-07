@@ -9,7 +9,7 @@ let value: LinkDeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://pleased-lox.name",
+  url: "https://dark-omelet.name/",
 };
 ```
 

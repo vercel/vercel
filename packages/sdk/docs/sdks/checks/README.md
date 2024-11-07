@@ -5,13 +5,13 @@
 
 ### Available Operations
 
-* [create](#create) - Creates a new Check
-* [list](#list) - Retrieve a list of all checks
-* [get](#get) - Get a single check
-* [update](#update) - Update a check
-* [rerequest](#rerequest) - Rerequest a check
+* [createCheck](#createcheck) - Creates a new Check
+* [getAllChecks](#getallchecks) - Retrieve a list of all checks
+* [getCheck](#getcheck) - Get a single check
+* [updateCheck](#updatecheck) - Update a check
+* [rerequestCheck](#rerequestcheck) - Rerequest a check
 
-## create
+## createCheck
 
 Creates a new check. This endpoint must be called with an OAuth2 or it will produce a 400 error.
 
@@ -25,7 +25,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.checks.create({
+  const result = await vercel.checks.createCheck({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     requestBody: {
       name: "Performance Check",
@@ -50,7 +50,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { checksCreate } from "@vercel/sdk/funcs/checksCreate.js";
+import { checksCreateCheck } from "@vercel/sdk/funcs/checksCreateCheck.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -59,7 +59,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await checksCreate(vercel, {
+  const res = await checksCreateCheck(vercel, {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     requestBody: {
       name: "Performance Check",
@@ -99,12 +99,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## getAllChecks
 
 List all of the checks created for a deployment.
 
@@ -118,7 +117,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.checks.list({
+  const result = await vercel.checks.getAllChecks({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
 
@@ -135,7 +134,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { checksList } from "@vercel/sdk/funcs/checksList.js";
+import { checksGetAllChecks } from "@vercel/sdk/funcs/checksGetAllChecks.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -144,7 +143,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await checksList(vercel, {
+  const res = await checksGetAllChecks(vercel, {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
 
@@ -176,12 +175,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getCheck
 
 Return a detailed response for a single check.
 
@@ -195,7 +193,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.checks.get({
+  const result = await vercel.checks.getCheck({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
@@ -213,7 +211,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { checksGet } from "@vercel/sdk/funcs/checksGet.js";
+import { checksGetCheck } from "@vercel/sdk/funcs/checksGetCheck.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -222,7 +220,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await checksGet(vercel, {
+  const res = await checksGetCheck(vercel, {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
@@ -255,12 +253,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## update
+## updateCheck
 
 Update an existing check. This endpoint must be called with an OAuth2 or it will produce a 400 error.
 
@@ -274,7 +271,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.checks.update({
+  const result = await vercel.checks.updateCheck({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     requestBody: {
@@ -327,7 +324,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { checksUpdate } from "@vercel/sdk/funcs/checksUpdate.js";
+import { checksUpdateCheck } from "@vercel/sdk/funcs/checksUpdateCheck.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -336,7 +333,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await checksUpdate(vercel, {
+  const res = await checksUpdateCheck(vercel, {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     requestBody: {
@@ -404,12 +401,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## rerequest
+## rerequestCheck
 
 Rerequest a selected check that has failed.
 
@@ -423,7 +419,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.checks.rerequest({
+  const result = await vercel.checks.rerequestCheck({
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
@@ -441,7 +437,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { checksRerequest } from "@vercel/sdk/funcs/checksRerequest.js";
+import { checksRerequestCheck } from "@vercel/sdk/funcs/checksRerequestCheck.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -450,7 +446,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await checksRerequest(vercel, {
+  const res = await checksRerequestCheck(vercel, {
     deploymentId: "dpl_2qn7PZrx89yxY34vEZPD31Y9XVj6",
     checkId: "check_2qn7PZrx89yxY34vEZPD31Y9XVj6",
   });
@@ -483,6 +479,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

@@ -9,7 +9,7 @@ import { GitRepository } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: GitRepository = {
   repo: "<value>",
-  type: "bitbucket",
+  type: "github",
 };
 ```
 

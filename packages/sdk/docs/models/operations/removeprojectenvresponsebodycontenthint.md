@@ -132,3 +132,12 @@ const value: operations.RemoveProjectEnvContentHint14 = {
 };
 ```
 
+### `operations.RemoveProjectEnvContentHint15`
+
+```typescript
+const value: operations.RemoveProjectEnvContentHint15 = {
+  type: "flags-connection-string",
+  projectId: "<id>",
+};
+```
+

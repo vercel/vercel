@@ -12,6 +12,7 @@ let value: UpdateProjectDataCacheOidcTokenConfig = {
 
 ## Fields
 
-| Field              | Type               | Required           | Description        |
-| ------------------ | ------------------ | ------------------ | ------------------ |
-| `enabled`          | *boolean*          | :heavy_check_mark: | N/A                |
+| Field                                                                                                      | Type                                                                                                       | Required                                                                                                   | Description                                                                                                |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `enabled`                                                                                                  | *boolean*                                                                                                  | :heavy_check_mark:                                                                                         | N/A                                                                                                        |
+| `issuerMode`                                                                                               | [operations.UpdateProjectDataCacheIssuerMode](../../models/operations/updateprojectdatacacheissuermode.md) | :heavy_minus_sign:                                                                                         | - team: `https://oidc.vercel.com/[team_slug]` - global: `https://oidc.vercel.com`                          |

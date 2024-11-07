@@ -3,17 +3,17 @@
 
 ## Supported Types
 
-### `operations.FilterProjectEnvsTarget1[]`
+### `string[]`
 
 ```typescript
-const value: operations.FilterProjectEnvsTarget1[] = [
-  "production",
+const value: string[] = [
+  "<value>",
 ];
 ```
 
 ### `operations.FilterProjectEnvsTarget2`
 
 ```typescript
-const value: operations.FilterProjectEnvsTarget2 = "production";
+const value: operations.FilterProjectEnvsTarget2 = "preview";
 ```
 

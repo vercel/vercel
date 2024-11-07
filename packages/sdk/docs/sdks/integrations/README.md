@@ -3,15 +3,13 @@
 
 ## Overview
 
-Integrations
-
 ### Available Operations
 
 * [getConfigurations](#getconfigurations) - Get configurations for the authenticated user or team
 * [getConfiguration](#getconfiguration) - Retrieve an integration configuration
 * [deleteConfiguration](#deleteconfiguration) - Delete an integration configuration
-* [getGitNamespaces](#getgitnamespaces) - List git namespaces by provider
-* [searchRepos](#searchrepos) - List git repositories linked to namespace by provider
+* [gitNamespaces](#gitnamespaces) - List git namespaces by provider
+* [searchRepo](#searchrepo) - List git repositories linked to namespace by provider
 
 ## getConfigurations
 
@@ -85,10 +83,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## getConfiguration
 
@@ -162,10 +159,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## deleteConfiguration
 
@@ -237,12 +233,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getGitNamespaces
+## gitNamespaces
 
 Lists git namespaces for a supported provider. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider is not provided, it will try to obtain it from the user that authenticated the request.
 
@@ -256,7 +251,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.integrations.getGitNamespaces({
+  const result = await vercel.integrations.gitNamespaces({
     host: "ghes-test.now.systems",
   });
 
@@ -273,7 +268,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { integrationsGetGitNamespaces } from "@vercel/sdk/funcs/integrationsGetGitNamespaces.js";
+import { integrationsGitNamespaces } from "@vercel/sdk/funcs/integrationsGitNamespaces.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -282,7 +277,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await integrationsGetGitNamespaces(vercel, {
+  const res = await integrationsGitNamespaces(vercel, {
     host: "ghes-test.now.systems",
   });
 
@@ -314,12 +309,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## searchRepos
+## searchRepo
 
 Lists git repositories linked to a namespace `id` for a supported provider. A specific namespace `id` can be obtained via the `git-namespaces`  endpoint. Supported providers are `github`, `gitlab` and `bitbucket`. If the provider or namespace is not provided, it will try to obtain it from the user that authenticated the request.
 
@@ -333,7 +327,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.integrations.searchRepos({
+  const result = await vercel.integrations.searchRepo({
     host: "ghes-test.now.systems",
   });
 
@@ -350,7 +344,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { integrationsSearchRepos } from "@vercel/sdk/funcs/integrationsSearchRepos.js";
+import { integrationsSearchRepo } from "@vercel/sdk/funcs/integrationsSearchRepo.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -359,7 +353,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await integrationsSearchRepos(vercel, {
+  const res = await integrationsSearchRepo(vercel, {
     host: "ghes-test.now.systems",
   });
 
@@ -391,6 +385,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

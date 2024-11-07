@@ -6,8 +6,8 @@
 import { GetTeamAccessRequestRequest } from "@vercel/sdk/models/operations/getteamaccessrequest.js";
 
 let value: GetTeamAccessRequestRequest = {
-  teamId: "<id>",
   userId: "<id>",
+  teamId: "<id>",
 };
 ```
 
@@ -15,5 +15,5 @@ let value: GetTeamAccessRequestRequest = {
 
 | Field              | Type               | Required           | Description        |
 | ------------------ | ------------------ | ------------------ | ------------------ |
-| `teamId`           | *string*           | :heavy_check_mark: | N/A                |
 | `userId`           | *string*           | :heavy_check_mark: | N/A                |
+| `teamId`           | *string*           | :heavy_check_mark: | N/A                |

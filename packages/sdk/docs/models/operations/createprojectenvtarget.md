@@ -3,17 +3,17 @@
 
 ## Supported Types
 
-### `operations.CreateProjectEnvTargetEnvsResponse1[]`
+### `operations.CreateProjectEnvTargetProjects1[]`
 
 ```typescript
-const value: operations.CreateProjectEnvTargetEnvsResponse1[] = [
-  "production",
+const value: operations.CreateProjectEnvTargetProjects1[] = [
+  "development",
 ];
 ```
 
-### `operations.CreateProjectEnvTargetEnvsResponse2`
+### `operations.CreateProjectEnvTargetProjectsResponse2`
 
 ```typescript
-const value: operations.CreateProjectEnvTargetEnvsResponse2 = "preview";
+const value: operations.CreateProjectEnvTargetProjectsResponse2 = "production";
 ```
 

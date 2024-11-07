@@ -45,8 +45,13 @@ export default async function main(client: Client) {
 
   const needHelp = flags['--help'];
 
-  function printHelp(command: Command, parent = integrationCommand) {
-    output.print(help(command, { columns: client.stderr.columns, parent }));
+  function printHelp(command: Command) {
+    output.print(
+      help(command, {
+        columns: client.stderr.columns,
+        parent: integrationCommand,
+      })
+    );
   }
 
   if (!subcommand && needHelp) {
@@ -54,7 +59,6 @@ export default async function main(client: Client) {
     output.print(
       help(integrationCommand, {
         columns: client.stderr.columns,
-        parent: undefined,
       })
     );
     return 2;

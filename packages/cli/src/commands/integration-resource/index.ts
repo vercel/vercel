@@ -46,7 +46,12 @@ export default async function main(client: Client) {
   }
 
   function printHelp(command: Command) {
-    output.print(help(command, { columns: client.stderr.columns }));
+    output.print(
+      help(command, {
+        columns: client.stderr.columns,
+        parent: integrationResourceCommand,
+      })
+    );
   }
 
   switch (subcommand) {
