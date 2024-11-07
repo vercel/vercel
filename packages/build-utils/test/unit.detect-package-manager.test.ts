@@ -1,3 +1,4 @@
+import { describe, test, expect } from 'vitest';
 import { detectPackageManager } from '../src/fs/run-user-scripts';
 
 describe('Test `detectPackageManager()`', () => {

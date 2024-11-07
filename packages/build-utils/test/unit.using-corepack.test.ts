@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { usingCorepack } from '../src/fs/run-user-scripts';
 
 describe('usingCorepack', () => {

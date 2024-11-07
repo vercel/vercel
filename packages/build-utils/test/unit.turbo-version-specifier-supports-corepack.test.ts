@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { turboVersionSpecifierSupportsCorepack } from '../src/fs/run-user-scripts';
 
 describe('Test `turboRangeSupportsCorepack()`', () => {
