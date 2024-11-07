@@ -1,7 +1,5 @@
 # BuyDomainDomainsResponseBody
 
-Domain purchase is being processed asynchronously.
-
 ## Example Usage
 
 ```typescript
@@ -14,7 +12,7 @@ let value: BuyDomainDomainsResponseBody = {
       "<value>",
     ],
     verified: false,
-    created: 4909.66,
+    created: 7128.92,
     pending: false,
   },
 };

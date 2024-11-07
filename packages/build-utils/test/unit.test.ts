@@ -15,8 +15,9 @@ import {
   Prerender,
 } from '../src';
 import type { Files } from '../src';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-jest.setTimeout(10 * 1000);
+vi.setConfig({ testTimeout: 10 * 1000 });
 
 async function expectBuilderError(promise: Promise<any>, pattern: string) {
   let result;

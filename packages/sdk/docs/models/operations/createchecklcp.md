@@ -6,7 +6,7 @@
 import { CreateCheckLCP } from "@vercel/sdk/models/operations/createcheck.js";
 
 let value: CreateCheckLCP = {
-  value: 8209.93,
+  value: 1589.70,
   source: "web-vitals",
 };
 ```

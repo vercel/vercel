@@ -3,11 +3,13 @@
  */
 
 import { HTTPClient, RequestInput } from "../lib/http.js";
+import { RetryConfig } from "../lib/retries.js";
 
 export type HookContext = {
   operationID: string;
   oAuth2Scopes?: string[];
   securitySource?: any | (() => Promise<any>);
+  retryConfig: RetryConfig;
 };
 
 export type Awaitable<T> = T | Promise<T>;

@@ -3,7 +3,6 @@
  */
 
 import * as z from "zod";
-import { remap as remap$ } from "../../lib/primitives.js";
 import {
   Pagination,
   Pagination$inboundSchema,
@@ -58,10 +57,6 @@ export type ListPromoteAliasesResponseBody1 = {};
 export type ListPromoteAliasesResponseBody =
   | ListPromoteAliasesResponseBody1
   | ListPromoteAliasesResponseBody2;
-
-export type ListPromoteAliasesResponse = {
-  result: ListPromoteAliasesResponseBody1 | ListPromoteAliasesResponseBody2;
-};
 
 /** @internal */
 export const ListPromoteAliasesRequest$inboundSchema: z.ZodType<
@@ -264,56 +259,4 @@ export namespace ListPromoteAliasesResponseBody$ {
   export const outboundSchema = ListPromoteAliasesResponseBody$outboundSchema;
   /** @deprecated use `ListPromoteAliasesResponseBody$Outbound` instead. */
   export type Outbound = ListPromoteAliasesResponseBody$Outbound;
-}
-
-/** @internal */
-export const ListPromoteAliasesResponse$inboundSchema: z.ZodType<
-  ListPromoteAliasesResponse,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  Result: z.union([
-    z.lazy(() => ListPromoteAliasesResponseBody1$inboundSchema),
-    z.lazy(() => ListPromoteAliasesResponseBody2$inboundSchema),
-  ]),
-}).transform((v) => {
-  return remap$(v, {
-    "Result": "result",
-  });
-});
-
-/** @internal */
-export type ListPromoteAliasesResponse$Outbound = {
-  Result:
-    | ListPromoteAliasesResponseBody1$Outbound
-    | ListPromoteAliasesResponseBody2$Outbound;
-};
-
-/** @internal */
-export const ListPromoteAliasesResponse$outboundSchema: z.ZodType<
-  ListPromoteAliasesResponse$Outbound,
-  z.ZodTypeDef,
-  ListPromoteAliasesResponse
-> = z.object({
-  result: z.union([
-    z.lazy(() => ListPromoteAliasesResponseBody1$outboundSchema),
-    z.lazy(() => ListPromoteAliasesResponseBody2$outboundSchema),
-  ]),
-}).transform((v) => {
-  return remap$(v, {
-    result: "Result",
-  });
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace ListPromoteAliasesResponse$ {
-  /** @deprecated use `ListPromoteAliasesResponse$inboundSchema` instead. */
-  export const inboundSchema = ListPromoteAliasesResponse$inboundSchema;
-  /** @deprecated use `ListPromoteAliasesResponse$outboundSchema` instead. */
-  export const outboundSchema = ListPromoteAliasesResponse$outboundSchema;
-  /** @deprecated use `ListPromoteAliasesResponse$Outbound` instead. */
-  export type Outbound = ListPromoteAliasesResponse$Outbound;
 }

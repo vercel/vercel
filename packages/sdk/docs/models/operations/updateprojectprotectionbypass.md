@@ -6,7 +6,7 @@
 import { UpdateProjectProtectionBypass } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectProtectionBypass = {
-  createdAt: 7348.14,
+  createdAt: 8138.80,
   createdBy: "<value>",
   scope: "automation-bypass",
 };

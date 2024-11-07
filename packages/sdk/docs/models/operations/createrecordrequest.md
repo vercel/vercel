@@ -9,9 +9,9 @@ let value: CreateRecordRequest = {
   domain: "example.com",
   requestBody: {
     name: "subdomain",
-    type: "A",
+    type: "NS",
     ttl: 60,
-    value: "192.0.2.42",
+    value: "0 issue \\"letsencrypt.org\\"",
     comment: "used to verify ownership of domain",
   },
 };

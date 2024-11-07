@@ -3,132 +3,141 @@
 
 ## Supported Types
 
-### `operations.FilterProjectEnvsContentHintEnvs1`
+### `operations.FilterProjectEnvsContentHintProjects1`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs1 = {
+const value: operations.FilterProjectEnvsContentHintProjects1 = {
   type: "redis-url",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs2`
+### `operations.FilterProjectEnvsContentHintProjects2`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs2 = {
+const value: operations.FilterProjectEnvsContentHintProjects2 = {
   type: "redis-rest-api-url",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs3`
+### `operations.FilterProjectEnvsContentHintProjects3`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs3 = {
+const value: operations.FilterProjectEnvsContentHintProjects3 = {
   type: "redis-rest-api-token",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs4`
+### `operations.FilterProjectEnvsContentHintProjects4`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs4 = {
+const value: operations.FilterProjectEnvsContentHintProjects4 = {
   type: "redis-rest-api-read-only-token",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs5`
+### `operations.FilterProjectEnvsContentHintProjects5`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs5 = {
+const value: operations.FilterProjectEnvsContentHintProjects5 = {
   type: "blob-read-write-token",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs6`
+### `operations.FilterProjectEnvsContentHintProjects6`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs6 = {
+const value: operations.FilterProjectEnvsContentHintProjects6 = {
   type: "postgres-url",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs7`
+### `operations.FilterProjectEnvsContentHintProjects7`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs7 = {
+const value: operations.FilterProjectEnvsContentHintProjects7 = {
   type: "postgres-url-non-pooling",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs8`
+### `operations.FilterProjectEnvsContentHintProjects8`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs8 = {
+const value: operations.FilterProjectEnvsContentHintProjects8 = {
   type: "postgres-prisma-url",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs9`
+### `operations.FilterProjectEnvsContentHintProjects9`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs9 = {
+const value: operations.FilterProjectEnvsContentHintProjects9 = {
   type: "postgres-user",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs10`
+### `operations.FilterProjectEnvsContentHintProjects10`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs10 = {
+const value: operations.FilterProjectEnvsContentHintProjects10 = {
   type: "postgres-host",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs11`
+### `operations.FilterProjectEnvsContentHintProjects11`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs11 = {
+const value: operations.FilterProjectEnvsContentHintProjects11 = {
   type: "postgres-password",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs12`
+### `operations.FilterProjectEnvsContentHintProjects12`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs12 = {
+const value: operations.FilterProjectEnvsContentHintProjects12 = {
   type: "postgres-database",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs13`
+### `operations.FilterProjectEnvsContentHintProjects13`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs13 = {
+const value: operations.FilterProjectEnvsContentHintProjects13 = {
   type: "postgres-url-no-ssl",
   storeId: "<id>",
 };
 ```
 
-### `operations.FilterProjectEnvsContentHintEnvs14`
+### `operations.FilterProjectEnvsContentHintProjects14`
 
 ```typescript
-const value: operations.FilterProjectEnvsContentHintEnvs14 = {
+const value: operations.FilterProjectEnvsContentHintProjects14 = {
   type: "integration-store-secret",
   storeId: "<id>",
   integrationId: "<id>",
   integrationProductId: "<id>",
   integrationConfigurationId: "<id>",
+};
+```
+
+### `operations.FilterProjectEnvsContentHintProjects15`
+
+```typescript
+const value: operations.FilterProjectEnvsContentHintProjects15 = {
+  type: "flags-connection-string",
+  projectId: "<id>",
 };
 ```
 

@@ -3,17 +3,17 @@
 
 ## Supported Types
 
-### `operations.EditProjectEnvTarget1[]`
+### `string[]`
 
 ```typescript
-const value: operations.EditProjectEnvTarget1[] = [
-  "production",
+const value: string[] = [
+  "<value>",
 ];
 ```
 
 ### `operations.EditProjectEnvTarget2`
 
 ```typescript
-const value: operations.EditProjectEnvTarget2 = "preview";
+const value: operations.EditProjectEnvTarget2 = "development";
 ```
 

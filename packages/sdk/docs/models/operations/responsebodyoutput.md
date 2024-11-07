@@ -6,7 +6,7 @@
 import { ResponseBodyOutput } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: ResponseBodyOutput = {
-  path: "/usr/local/bin",
+  path: "/usr/bin",
   functionName: "<value>",
 };
 ```

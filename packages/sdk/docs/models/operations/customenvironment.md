@@ -6,14 +6,7 @@
 ### `operations.CustomEnvironment1`
 
 ```typescript
-const value: operations.CustomEnvironment1 = {
-  id: "<id>",
-  name: "<value>",
-  slug: "<value>",
-  type: "development",
-  createdAt: 8661.35,
-  updatedAt: 9608.13,
-};
+const value: operations.CustomEnvironment1 = {};
 ```
 
 ### `operations.CustomEnvironment2`

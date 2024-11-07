@@ -5,7 +5,7 @@
 ```typescript
 import { CreateConfigurableLogDrainDisabledReason } from "@vercel/sdk/models/operations/createconfigurablelogdrain.js";
 
-let value: CreateConfigurableLogDrainDisabledReason = "disabled-by-admin";
+let value: CreateConfigurableLogDrainDisabledReason = "account-plan-downgrade";
 ```
 
 ## Values

@@ -585,7 +585,7 @@ const main = async () => {
           parsedArgs.args.slice(3),
           cwd
         );
-        telemetry.trackCliExtension(targetCommand);
+        telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`

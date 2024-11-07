@@ -1416,69 +1416,121 @@ exports[`help command > dns help output snapshots > dns remove help output snaps
 "
 `;
 
+exports[`help command > domains help output snapshots > domains add help output snapshots > domains add help column width 120 1`] = `
+"
+  ▲ vercel domains add domain project [options]
+
+  Add a domain name that you already own to a Vercel Team                                                               
+
+  Options:
+
+   --force  Force a domain name for a project and remove it from an existing one                                         
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Add a domain that you already own
+
+    $ vercel domains add domain-name.com
+    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
+    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains buy help output snapshots > domains buy help column width 120 1`] = `
+"
+  ▲ vercel domains buy domain
+
+  Purchase a new domain name                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
 exports[`help command > domains help output snapshots > domains help column width 40 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
   Manage domains
 
   Commands:
 
-  ls                             Show
-                                 all
-                                 domai…
-                                 in a
-                                 list
-  inspect      name              Displ…
-                                 infor…
-                                 relat…
-                                 to a
-                                 domain
-  add          name project      Add a
-                                 new
-                                 domain
-                                 that
-                                 you
-                                 alrea…
-                                 own
-  rm           name              Remove
-                                 a
-                                 domain
-  buy          name              Buy a
-                                 domain
-                                 that
-                                 you
-                                 don't
-                                 yet
-                                 own
-  move         name destination  Move a
-                                 domain
-                                 to
-                                 anoth…
-                                 scope
-  transfer-in  name              Trans…
-                                 in a
-                                 domain
-                                 to
-                                 Vercel
-
-
-  Options:
-
-       --force           Force a domain on a
-                         project and remove
-                         it from an existing
-                         one
-       --limit <NUMBER>  Number of results to
-                         return per page
-                         (default: 20, max:
-                         100)
-  -N,  --next <MS>       Show next page of
-                         results
-  -y,  --yes             Skip the
-                         confirmation prompt
-                         when removing a
-                         domain
+  list                             Show
+                                   all 
+                                   Dom…
+                                   in a
+                                   list
+  inspect      domain              Dis…
+                                   inf…
+                                   rel…
+                                   to a
+                                   dom…
+  add          domain project      Add 
+                                   a   
+                                   dom…
+                                   name
+                                   that
+                                   you 
+                                   alr…
+                                   own 
+                                   to a
+                                   Ver…
+                                   Team
+  buy          domain              Pur…
+                                   a   
+                                   new 
+                                   dom…
+                                   name
+  move         domain destination  Move
+                                   own…
+                                   of a
+                                   dom…
+                                   name
+                                   to  
+                                   ano…
+                                   Ver…
+                                   Team
+  transfer-in  domain              Tra…
+                                   in a
+                                   dom…
+                                   name
+                                   to  
+                                   Ver…
+  remove       domain              Rem…
+                                   own…
+                                   of a
+                                   dom…
+                                   name
+                                   from
+                                   a   
+                                   Ver…
+                                   Team
 
 
   Global Options:
@@ -1519,99 +1571,171 @@ exports[`help command > domains help output snapshots > domains help column widt
                               number
 
 
-  Examples:
-
-  - Add a domain that you already own
-
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel domains ls--next 1584722256178
-
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 80 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
-  Manage domains
+  Manage domains                                                                
 
   Commands:
 
-  ls                             Show all domains in a list
-  inspect      name              Displays information related to a domain
-  add          name project      Add a new domain that you already own
-  rm           name              Remove a domain
-  buy          name              Buy a domain that you don't yet own
-  move         name destination  Move a domain to another scope
-  transfer-in  name              Transfer in a domain to Vercel
-
-
-  Options:
-
-       --force           Force a domain on a project and remove it from an existing
-                         one
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results
-  -y,  --yes             Skip the confirmation prompt when removing a domain
+  list                             Show all Domains in a list                  
+  inspect      domain              Displays information related to a domain    
+  add          domain project      Add a domain name that you already own to a 
+                                   Vercel Team                                 
+  buy          domain              Purchase a new domain name                  
+  move         domain destination  Move ownership of a domain name to another  
+                                   Vercel Team                                 
+  transfer-in  domain              Transfer in a domain name to Vercel         
+  remove       domain              Remove ownership of a domain name from a    
+                                   Vercel Team                                 
 
 
   Global Options:
 
-       --cwd <DIR>            Sets the current working directory for a single
-                              run of a command
-  -d,  --debug                Debug mode (default off)
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory
-  -h,  --help                 Output usage information
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file
-       --no-color             No color mode (default off)
-  -S,  --scope                Set a custom scope
-  -t,  --token <TOKEN>        Login token
-  -v,  --version              Output the version number
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
 
-
-  Examples:
-
-  - Add a domain that you already own
-
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel domains ls--next 1584722256178
 
 "
 `;
 
 exports[`help command > domains help output snapshots > domains help column width 120 1`] = `
 "
-  ▲ vercel domains [command] [options]
+  ▲ vercel domains [command]
 
-  Manage domains
+  Manage domains                                                                                                        
 
   Commands:
 
-  ls                             Show all domains in a list
-  inspect      name              Displays information related to a domain
-  add          name project      Add a new domain that you already own
-  rm           name              Remove a domain
-  buy          name              Buy a domain that you don't yet own
-  move         name destination  Move a domain to another scope
-  transfer-in  name              Transfer in a domain to Vercel
+  list                             Show all Domains in a list                                                          
+  inspect      domain              Displays information related to a domain                                            
+  add          domain project      Add a domain name that you already own to a Vercel Team                             
+  buy          domain              Purchase a new domain name                                                          
+  move         domain destination  Move ownership of a domain name to another Vercel Team                              
+  transfer-in  domain              Transfer in a domain name to Vercel                                                 
+  remove       domain              Remove ownership of a domain name from a Vercel Team                                
 
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains inspect help output snapshots > domains inspect help column width 120 1`] = `
+"
+  ▲ vercel domains inspect domain
+
+  Displays information related to a domain                                                                              
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains list help output snapshots > domains list help column width 120 1`] = `
+"
+  ▲ vercel domains list [options]
+
+  Show all Domains in a list                                                                                            
 
   Options:
 
-       --force           Force a domain on a project and remove it from an existing one
-       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)
-  -N,  --next <MS>       Show next page of results
-  -y,  --yes             Skip the confirmation prompt when removing a domain
+       --limit <NUMBER>  Number of results to return per page (default: 20, max: 100)                                        
+  -N,  --next <MS>       Show next page of results                                                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+
+    $ vercel domains ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains move help output snapshots > domains move help column width 120 1`] = `
+"
+  ▲ vercel domains move domain destination [options]
+
+  Move ownership of a domain name to another Vercel Team                                                                
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when moving a domain                                                         
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > domains help output snapshots > domains remove help output snapshots > domains remove help column width 120 1`] = `
+"
+  ▲ vercel domains remove domain [options]
+
+  Remove ownership of a domain name from a Vercel Team                                                                  
+
+  Options:
+
+  -y,  --yes  Skip the confirmation prompt when removing a domain                                                       
 
 
   Global Options:
@@ -1627,17 +1751,27 @@ exports[`help command > domains help output snapshots > domains help column widt
   -v,  --version              Output the version number
 
 
-  Examples:
+"
+`;
 
-  - Add a domain that you already own
+exports[`help command > domains help output snapshots > domains transfer-in help output snapshots > domains transfer-in help column width 120 1`] = `
+"
+  ▲ vercel domains transfer-in domain [options]
 
-    $ vercel domains add domain-name.com
-    $ Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network
-    $ NOTE: Running vercel alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')
+  Transfer in a domain name to Vercel                                                                                   
 
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  Global Options:
 
-    $ vercel domains ls--next 1584722256178
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
 
 "
 `;
@@ -1957,17 +2091,78 @@ exports[`help command > env help output snapshots > env remove help output snaps
 "
 `;
 
+exports[`help command > git help output snapshots > git connect help output snapshots > git connect help column width 120 1`] = `
+"
+  ▲ vercel git connect [git-url] [options]
+
+  Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository                   
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Connect your Vercel Project to your Git repository defined in your local \`.git\` config
+
+    $ vercel git connect
+
+  - Connect your Vercel Project to a Git repository using the remote URL
+
+    $ vercel git connect https://github.com/user/repo.git
+
+"
+`;
+
+exports[`help command > git help output snapshots > git disconnect help output snapshots > git disconnect help column width 120 1`] = `
+"
+  ▲ vercel git disconnect [options]
+
+  Disconnect the Git repository from your Vercel Project                                                                
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Disconnect the Git repository
+
+    $ vercel git disconnect
+
+"
+`;
+
 exports[`help command > git help output snapshots > git help column width 40 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections.
+  Manage your Git repository connection 
+  to the current Project                
 
   Commands:
 
-  connect     [git url]  Connect
-                         your
-                         Vercel
+  connect     [git-url]  Connect   
+                         your      
+                         Vercel    
                          Project to
                          your Git
                          repository
@@ -1977,11 +2172,11 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                          your Git
                          repository
   disconnect             Disconnect
-                         the Git
-                         provider
+                         the Git   
                          repository
-                         from your
-                         project
+                         from your 
+                         Vercel    
+                         Project   
 
 
   Global Options:
@@ -2022,35 +2217,21 @@ exports[`help command > git help output snapshots > git help column width 40 1`]
                               number
 
 
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
-
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 80 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections.
+  Manage your Git repository connection to the current Project                  
 
   Commands:
 
-  connect     [git url]  Connect your Vercel Project to your Git repository
-                         or provide the remote URL to your Git repository
-  disconnect             Disconnect the Git provider repository from your
-                         project
+  connect     [git-url]  Connect your Vercel Project to your Git repository
+                         or provide the remote URL to your Git repository  
+  disconnect             Disconnect the Git repository from your Vercel    
+                         Project                                           
 
 
   Global Options:
@@ -2067,34 +2248,20 @@ exports[`help command > git help output snapshots > git help column width 80 1`]
   -v,  --version              Output the version number
 
 
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
-
 "
 `;
 
 exports[`help command > git help output snapshots > git help column width 120 1`] = `
 "
-  ▲ vercel git command [options]
+  ▲ vercel git command
 
-  Manage your Git provider connections.
+  Manage your Git repository connection to the current Project                                                          
 
   Commands:
 
-  connect     [git url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git
-                         repository
-  disconnect             Disconnect the Git provider repository from your project
+  connect     [git-url]  Connect your Vercel Project to your Git repository or provide the remote URL to your Git  
+                         repository                                                                                
+  disconnect             Disconnect the Git repository from your Vercel Project                                    
 
 
   Global Options:
@@ -2109,20 +2276,6 @@ exports[`help command > git help output snapshots > git help column width 120 1`
   -t,  --token <TOKEN>        Login token
   -v,  --version              Output the version number
 
-
-  Examples:
-
-  - Connect your Vercel Project to your Git repository defined in your local .git config
-
-    $ vercel git connect
-
-  - Connect your Vercel Project to a Git repository using the remote URL
-
-    $ vercel git connect https://github.com/user/repo.git
-
-  - Disconnect the Git provider repository
-
-    $ vercel git disconnect
 
 "
 `;
@@ -2603,24 +2756,120 @@ exports[`help command > integration help output snapshots > integration help col
 "
 `;
 
-exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 40 1`] = `
+exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 120 1`] = `
 "
   ▲ vercel integration list [project] [options]
 
-  Lists all resources from marketplace
-  integrations
+  Lists all resources from marketplace integrations                                                                     
 
   Options:
 
-  -a,  --all                 lists all
-                             resources
-                             regardless
-                             of project
-  -i,  --integration <NAME>  limits the
-                             resources
-                             listed to a
-                             designated
-                             integration
+  -a,  --all                 lists all resources regardless of project                                                  
+  -i,  --integration <NAME>  limits the resources listed to a designated integration                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all resources
+
+    $ vercel integrations list
+
+  - Filter the resources to a single integration
+
+    $ vercel integration list --integration <integration>
+    $ vercel integration list --integration acme
+    $ vercel integration list -i acme
+
+  - List all marketplace resources for the current team
+
+    $ vercel integration list --all
+    $ vercel integration list -a
+
+"
+`;
+
+exports[`help command > integration-resource help output snapshots > integration-resource disconnect subcommand > integration-resource disconnect subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration-resource disconnect resource [project] [options]
+
+  Disconnect a resource from a project, or the current project                                                          
+
+  Options:
+
+  -a,  --all  disconnects all projects from the specified resource                                                      
+  -y,  --yes  Skip the confirmation prompt when disconnecting a resource                                                
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Disconnect a resource from the current projecct
+
+    $ vercel integration-resource disconnect <resource>
+    $ vercel integration-resource disconnect my-acme-resource
+
+  - Disconnect all projects from a resource
+
+    $ vercel integration-resource disconnect <resource> --unlink-all
+    $ vercel integration-resource disconnect my-acme-resource --all
+    $ vercel integration-resource disconnect my-acme-resource -a
+
+  - Disconnect a resource from a specified project
+
+    $ vercel integration-resource disconnect <resource> <project>
+    $ vercel integration-resource disconnect my-acme-resource my-project
+
+"
+`;
+
+exports[`help command > integration-resource help output snapshots > integration-resource help column width 40 1`] = `
+"
+  ▲ vercel integration-resource command
+
+  Manage marketplace integration        
+  resources                             
+
+  Commands:
+
+  disconnect  resource [project]  …
+                                  a
+                                  …
+                                  …
+                                  a
+                                  …
+                                  …
+                                  …
+                                  …
+                                  …
+  remove      resource            …
+                                  …
+                                  …
+                                  …
 
 
   Global Options:
@@ -2661,37 +2910,20 @@ exports[`help command > integration help output snapshots > integration list sub
                               number
 
 
-  Examples:
-
-  - List all resources
-
-    $ vercel integrations list
-
-  - Filter the resources to a single integration
-
-    $ vercel integration list --integration <integration>
-    $ vercel integration list --integration acme
-    $ vercel integration list -i acme
-
-  - List all marketplace resources for the current team
-
-    $ vercel integration list --all
-    $ vercel integration list -a
-
 "
 `;
 
-exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 80 1`] = `
+exports[`help command > integration-resource help output snapshots > integration-resource help column width 80 1`] = `
 "
-  ▲ vercel integration list [project] [options]
+  ▲ vercel integration-resource command
 
-  Lists all resources from marketplace integrations
+  Manage marketplace integration resources                                      
 
-  Options:
+  Commands:
 
-  -a,  --all                 lists all resources regardless of project
-  -i,  --integration <NAME>  limits the resources listed to a designated
-                             integration
+  disconnect  resource [project]  Disconnect a resource from a project, 
+                                  or the current project                
+  remove      resource            Delete an integration resource        
 
 
   Global Options:
@@ -2708,36 +2940,47 @@ exports[`help command > integration help output snapshots > integration list sub
   -v,  --version              Output the version number
 
 
-  Examples:
+"
+`;
 
-  - List all resources
+exports[`help command > integration-resource help output snapshots > integration-resource help column width 120 1`] = `
+"
+  ▲ vercel integration-resource command
 
-    $ vercel integrations list
+  Manage marketplace integration resources                                                                              
 
-  - Filter the resources to a single integration
+  Commands:
 
-    $ vercel integration list --integration <integration>
-    $ vercel integration list --integration acme
-    $ vercel integration list -i acme
+  disconnect  resource [project]  Disconnect a resource from a project, or the current project                  
+  remove      resource            Delete an integration resource                                                
 
-  - List all marketplace resources for the current team
 
-    $ vercel integration list --all
-    $ vercel integration list -a
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
 
 "
 `;
 
-exports[`help command > integration help output snapshots > integration list subcommand > integration list subcommand help column width 120 1`] = `
+exports[`help command > integration-resource help output snapshots > integration-resource remove subcommand > integration-resource remove subcommand help column width 120 1`] = `
 "
-  ▲ vercel integration list [project] [options]
+  ▲ vercel integration-resource remove resource [options]
 
-  Lists all resources from marketplace integrations
+  Delete an integration resource                                                                                        
 
   Options:
 
-  -a,  --all                 lists all resources regardless of project
-  -i,  --integration <NAME>  limits the resources listed to a designated integration
+  -a,  --disconnect-all  disconnects all projects from the specified resource before deletion                           
+  -y,  --yes             Skip the confirmation prompt when deleting a resource                                          
 
 
   Global Options:
@@ -2755,20 +2998,16 @@ exports[`help command > integration help output snapshots > integration list sub
 
   Examples:
 
-  - List all resources
+  - Delete a resource
 
-    $ vercel integrations list
+    $ vercel integration-resource remove <resource>
+    $ vercel integration-resource remove my-acme-resource
 
-  - Filter the resources to a single integration
+  - Disconnect all projects from a resource, then delete it
 
-    $ vercel integration list --integration <integration>
-    $ vercel integration list --integration acme
-    $ vercel integration list -i acme
-
-  - List all marketplace resources for the current team
-
-    $ vercel integration list --all
-    $ vercel integration list -a
+    $ vercel integration-resource remove <resource> --disconnect-all
+    $ vercel integration-resource remove my-acme-resource --disconnect-all
+    $ vercel integration-resource remove my-acme-resource -a
 
 "
 `;
@@ -3319,25 +3558,48 @@ exports[`help command > login help output snapshots > login help column width 12
 "
 `;
 
+exports[`help command > project help output snapshots > project add help output snapshots > project add help column width 120 1`] = `
+"
+  ▲ vercel project add name
+
+  Add a new Project                                                                                                     
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Add a new Project
+
+    $ vercel project add my-project
+
+"
+`;
+
 exports[`help command > project help output snapshots > project help column width 40 1`] = `
 "
-  ▲ vercel project [command] [options]
+  ▲ vercel project [command]
 
-  Manage your Vercel Projects.
+  Manage your Vercel Projects           
 
   Commands:
 
-  ls         Show all projects
-             in the selected
-             scope
-  add  name  Add a new project
-  rm   name  Remove a project
-
-
-  Options:
-
-  -N,  --next <MS>  Show next page of
-                    results
+  add     name  Add a new       
+                Project         
+  list          Show all        
+                Projects in the 
+                selected scope  
+  remove  name  Delete a Project
 
 
   Global Options:
@@ -3378,35 +3640,20 @@ exports[`help command > project help output snapshots > project help column widt
                               number
 
 
-  Examples:
-
-  - Add a new project
-
-    $ vercel project add my-project
-
-  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel project ls --next 1584722256178
-
 "
 `;
 
 exports[`help command > project help output snapshots > project help column width 80 1`] = `
 "
-  ▲ vercel project [command] [options]
+  ▲ vercel project [command]
 
-  Manage your Vercel Projects.
+  Manage your Vercel Projects                                                   
 
   Commands:
 
-  ls         Show all projects in the selected scope
-  add  name  Add a new project
-  rm   name  Remove a project
-
-
-  Options:
-
-  -N,  --next <MS>  Show next page of results
+  add     name  Add a new Project                                       
+  list          Show all Projects in the selected scope                 
+  remove  name  Delete a Project                                        
 
 
   Global Options:
@@ -3423,35 +3670,48 @@ exports[`help command > project help output snapshots > project help column widt
   -v,  --version              Output the version number
 
 
-  Examples:
-
-  - Add a new project
-
-    $ vercel project add my-project
-
-  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
-
-    $ vercel project ls --next 1584722256178
-
 "
 `;
 
 exports[`help command > project help output snapshots > project help column width 120 1`] = `
 "
-  ▲ vercel project [command] [options]
+  ▲ vercel project [command]
 
-  Manage your Vercel Projects.
+  Manage your Vercel Projects                                                                                           
 
   Commands:
 
-  ls         Show all projects in the selected scope
-  add  name  Add a new project
-  rm   name  Remove a project
+  add     name  Add a new Project                                                                               
+  list          Show all Projects in the selected scope                                                         
+  remove  name  Delete a Project                                                                                
 
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > project help output snapshots > project list help output snapshots > project list help column width 120 1`] = `
+"
+  ▲ vercel project list [options]
+
+  Show all Projects in the selected scope                                                                               
 
   Options:
 
-  -N,  --next <MS>  Show next page of results
+  -N,  --next <MS>                          Show next page of results                                                        
+       --update-required <update-required>  A list of projects affected by an upcoming deprecation                           
 
 
   Global Options:
@@ -3469,13 +3729,31 @@ exports[`help command > project help output snapshots > project help column widt
 
   Examples:
 
-  - Add a new project
-
-    $ vercel project add my-project
-
-  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate Projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel project ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > project help output snapshots > project remove help output snapshots > project remove help column width 120 1`] = `
+"
+  ▲ vercel project remove name
+
+  Delete a Project                                                                                                      
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
 
 "
 `;
@@ -3878,7 +4156,9 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   Options:
 
    --no-wait  Don't wait for the redeploy
-              to finish
+              to finish                  
+   --target   Redeploy to a specific     
+              target environment         
 
 
   Global Options:
@@ -3929,6 +4209,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
+
 "
 `;
 
@@ -3940,7 +4224,8 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
   Options:
 
-   --no-wait  Don't wait for the redeploy to finish
+   --no-wait  Don't wait for the redeploy to finish                              
+   --target   Redeploy to a specific target environment                          
 
 
   Global Options:
@@ -3967,6 +4252,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
 
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
+
 "
 `;
 
@@ -3978,7 +4267,8 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
   Options:
 
-   --no-wait  Don't wait for the redeploy to finish
+   --no-wait  Don't wait for the redeploy to finish                                                                      
+   --target   Redeploy to a specific target environment                                                                  
 
 
   Global Options:
@@ -4003,6 +4293,10 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
   - Write Deployment URL to a file
 
     $ vercel redeploy my-deployment.vercel.app > deployment-url.txt
+
+  - Rebuild and deploy an existing deployment to a specific target environment
+
+    $ vercel redeploy my-deployment.vercel.app --target preview
 
 "
 `;
@@ -4165,8 +4459,8 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
   ▲ vercel rollback url|deploymentId [options]
 
-  Quickly revert back to a previous
-  deployment.
+  Quickly revert back to a previous     
+  deployment                            
 
   Commands:
 
@@ -4224,13 +4518,6 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
-
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
-
   - Rollback a deployment using id or url
 
     $ vercel rollback <deployment id/url>
@@ -4242,7 +4529,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
   ▲ vercel rollback url|deploymentId [options]
 
-  Quickly revert back to a previous deployment.
+  Quickly revert back to a previous deployment                                  
 
   Commands:
 
@@ -4270,13 +4557,6 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
-
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
-
   - Rollback a deployment using id or url
 
     $ vercel rollback <deployment id/url>
@@ -4288,7 +4568,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 "
   ▲ vercel rollback url|deploymentId [options]
 
-  Quickly revert back to a previous deployment.
+  Quickly revert back to a previous deployment                                                                          
 
   Commands:
 
@@ -4315,12 +4595,43 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Examples:
 
-  - Show the status of any current pending rollbacks
+  - Rollback a deployment using id or url
 
-    $ vercel rollback
-    $ vercel rollback status
-    $ vercel rollback status <project>
-    $ vercel rollback status --timeout 30s
+    $ vercel rollback <deployment id/url>
+
+"
+`;
+
+exports[`help command > rollback help output snapshots > rollback status help output snapshots > rollback status help column width 120 1`] = `
+"
+  ▲ vercel rollback url|deploymentId [options]
+
+  Quickly revert back to a previous deployment                                                                          
+
+  Commands:
+
+  status  [project]  Show the status of any current pending rollbacks                                           
+
+
+  Options:
+
+   --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
 
   - Rollback a deployment using id or url
 
@@ -4467,25 +4778,47 @@ exports[`help command > target help output snapshots > target list help output s
 "
 `;
 
+exports[`help command > teams help output snapshots > teams add help output snapshots > teams add help column width 120 1`] = `
+"
+  ▲ vercel teams add
+
+  Create a new team                                                                                                     
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
 exports[`help command > teams help output snapshots > teams help column width 40 1`] = `
 "
   ▲ vercel teams command
 
-  Manage teams under your Vercel
-  account
+  Manage Teams under your Vercel        
+  account                               
 
   Commands:
 
-  add             Create a new
-                  team
+  add             Create a new  
+                  team          
+  invite  email   Invite a new  
+                  member to a   
+                  team          
   list            Show all teams
-                  you're a part
-                  of
-  switch  [name]  Switch to a
+                  that you're a 
+                  member of     
+  switch  [name]  Switch to a   
                   different team
-  invite  emails  Invite a new
-                  member to a
-                  team
 
 
   Global Options:
@@ -4526,24 +4859,6 @@ exports[`help command > teams help output snapshots > teams help column width 40
                               number
 
 
-  Examples:
-
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
-
-  - Invite new members (interactively)
-
-    $ vercel teams invite
-
-  - Invite multiple members simultaneously
-
-    $ vercel teams invite abc@vercel.com xyz@vercel.com
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
-
-    $ vercel teams ls --next 1584722256178
-
 "
 `;
 
@@ -4551,47 +4866,29 @@ exports[`help command > teams help output snapshots > teams help column width 80
 "
   ▲ vercel teams command
 
-  Manage teams under your Vercel account
+  Manage Teams under your Vercel account                                        
 
   Commands:
 
-  add             Create a new team
-  list            Show all teams you're a part of
-  switch  [name]  Switch to a different team
-  invite  emails  Invite a new member to a team
+  add             Create a new team                                     
+  invite  email   Invite a new member to a team                         
+  list            Show all teams that you're a member of                
+  switch  [name]  Switch to a different team                            
 
 
   Global Options:
 
-       --cwd <DIR>            Sets the current working directory for a single
-                              run of a command
-  -d,  --debug                Debug mode (default off)
-  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory
-  -h,  --help                 Output usage information
-  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file
-       --no-color             No color mode (default off)
-  -S,  --scope                Set a custom scope
-  -t,  --token <TOKEN>        Login token
-  -v,  --version              Output the version number
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file              
+       --no-color             No color mode (default off)                       
+  -S,  --scope                Set a custom scope                                
+  -t,  --token <TOKEN>        Login token                                       
+  -v,  --version              Output the version number                         
 
-
-  Examples:
-
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
-
-  - Invite new members (interactively)
-
-    $ vercel teams invite
-
-  - Invite multiple members simultaneously
-
-    $ vercel teams invite abc@vercel.com xyz@vercel.com
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
-
-    $ vercel teams ls --next 1584722256178
 
 "
 `;
@@ -4600,14 +4897,73 @@ exports[`help command > teams help output snapshots > teams help column width 12
 "
   ▲ vercel teams command
 
-  Manage teams under your Vercel account
+  Manage Teams under your Vercel account                                                                                
 
   Commands:
 
-  add             Create a new team
-  list            Show all teams you're a part of
-  switch  [name]  Switch to a different team
-  invite  emails  Invite a new member to a team
+  add             Create a new team                                                                             
+  invite  email   Invite a new member to a team                                                                 
+  list            Show all teams that you're a member of                                                        
+  switch  [name]  Switch to a different team                                                                    
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams invite help output snapshots > teams invite help column width 120 1`] = `
+"
+  ▲ vercel teams invite email ...
+
+  Invite a new member to a team                                                                                         
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Invite new members (interactively)
+
+    $ vercel teams invite
+
+  - Invite multiple members simultaneously
+
+    $ vercel teams invite abc@vercel.com xyz@vercel.com
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams list help output snapshots > teams list help column width 120 1`] = `
+"
+  ▲ vercel teams list [options]
+
+  Show all teams that you're a member of                                                                                
+
+  Options:
+
+  -N,  --next <MS>  Show next page of results                                                                           
 
 
   Global Options:
@@ -4625,21 +4981,37 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
   Examples:
 
-  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively.
-
-    $ vercel teams switch <slug>
-
-  - Invite new members (interactively)
-
-    $ vercel teams invite
-
-  - Invite multiple members simultaneously
-
-    $ vercel teams invite abc@vercel.com xyz@vercel.com
-
-  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch.
+  - Paginate results, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel teams ls --next 1584722256178
+
+"
+`;
+
+exports[`help command > teams help output snapshots > teams switch help output snapshots > teams switch help column width 120 1`] = `
+"
+  ▲ vercel teams switch [name]
+
+  Switch to a different team                                                                                            
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively
+
+    $ vercel teams switch <slug>
 
 "
 `;

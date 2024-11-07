@@ -113,7 +113,7 @@ export default async function issue(
     return runStartOrder(client, cns, contextName, addStamp);
   }
 
-  // If the user does not specify anything, we try to fullfill a pending order that may exist
+  // If the user does not specify anything, we try to fulfill a pending order that may exist
   // and if it doesn't exist we try to issue the cert solving from the server
   cert = await finishCertOrder(client, cns, contextName);
   if (cert instanceof ERRORS.CertOrderNotFound) {
