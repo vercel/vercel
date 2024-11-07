@@ -6,8 +6,8 @@ import * as z from "zod";
 import { ClosedEnum } from "../../types/enums.js";
 
 export type GetTeamAccessRequestRequest = {
-  teamId: string;
   userId: string;
+  teamId: string;
 };
 
 export const GetTeamAccessRequestOrigin = {
@@ -111,14 +111,14 @@ export const GetTeamAccessRequestRequest$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  teamId: z.string(),
   userId: z.string(),
+  teamId: z.string(),
 });
 
 /** @internal */
 export type GetTeamAccessRequestRequest$Outbound = {
-  teamId: string;
   userId: string;
+  teamId: string;
 };
 
 /** @internal */
@@ -127,8 +127,8 @@ export const GetTeamAccessRequestRequest$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetTeamAccessRequestRequest
 > = z.object({
-  teamId: z.string(),
   userId: z.string(),
+  teamId: z.string(),
 });
 
 /**

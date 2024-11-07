@@ -5,7 +5,7 @@
 ```typescript
 import { Provider } from "@vercel/sdk/models/operations/gitnamespaces.js";
 
-let value: Provider = "gitlab";
+let value: Provider = "github";
 ```
 
 ## Values

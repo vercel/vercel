@@ -2,7 +2,7 @@
 
 {
   "name": "@vercel/sdk",
-  "version": "14.0.0-canary.3",
+  "version": "14.0.0-canary.4",
   "exports": {
     ".": "./src/index.ts",    
     "./models/errors": "./src/models/errors/index.ts",    

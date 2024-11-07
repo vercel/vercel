@@ -8,14 +8,14 @@ import { GetAllLogDrainsResponseBody } from "@vercel/sdk/models/operations/getal
 let value: GetAllLogDrainsResponseBody = {
   id: "<id>",
   deliveryFormat: "json",
-  url: "https://courageous-spring.name",
+  url: "https://common-accelerator.name/",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 590.23,
-  deletedAt: 8109.82,
-  updatedAt: 6277.56,
+  createdAt: 1138.94,
+  deletedAt: 7220.25,
+  updatedAt: 6981.16,
   environments: [
-    "preview",
+    "production",
   ],
 };
 ```
@@ -45,6 +45,6 @@ let value: GetAllLogDrainsResponseBody = {
 | `disabledBy`                                                                                         | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `firstErrorTimestamp`                                                                                | *number*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `samplingRate`                                                                                       | *number*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
-| `compression`                                                                                        | [operations.GetAllLogDrainsCompression](../../models/operations/getalllogdrainscompression.md)       | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
+| `hideIpAddresses`                                                                                    | *boolean*                                                                                            | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `secret`                                                                                             | *string*                                                                                             | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |
 | `createdFrom`                                                                                        | [operations.GetAllLogDrainsCreatedFrom](../../models/operations/getalllogdrainscreatedfrom.md)       | :heavy_minus_sign:                                                                                   | N/A                                                                                                  |

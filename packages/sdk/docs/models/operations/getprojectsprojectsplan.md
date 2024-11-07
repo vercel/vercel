@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsProjectsPlan } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsProjectsPlan = "pro";
+let value: GetProjectsProjectsPlan = "enterprise";
 ```
 
 ## Values

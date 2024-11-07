@@ -8,9 +8,9 @@ import { GetProjectsLastAliasRequest } from "@vercel/sdk/models/operations/getpr
 let value: GetProjectsLastAliasRequest = {
   fromDeploymentId: "<id>",
   toDeploymentId: "<id>",
-  jobStatus: "succeeded",
-  requestedAt: 7307.09,
-  type: "rollback",
+  jobStatus: "failed",
+  requestedAt: 7487.88,
+  type: "promote",
 };
 ```
 

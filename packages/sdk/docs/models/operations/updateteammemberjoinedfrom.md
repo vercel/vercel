@@ -12,4 +12,4 @@ let value: UpdateTeamMemberJoinedFrom = {};
 
 | Field              | Type               | Required           | Description        |
 | ------------------ | ------------------ | ------------------ | ------------------ |
-| `ssoUserId`        | *string*           | :heavy_minus_sign: | N/A                |
+| `ssoUserId`        | *any*              | :heavy_minus_sign: | N/A                |

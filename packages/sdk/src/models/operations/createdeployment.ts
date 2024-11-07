@@ -13,18 +13,6 @@ import {
 } from "../components/flagjsonvalue.js";
 
 /**
- * Forces a new deployment even if there is a previous similar deployment
- */
-export const ForceNew = {
-  Zero: "0",
-  One: "1",
-} as const;
-/**
- * Forces a new deployment even if there is a previous similar deployment
- */
-export type ForceNew = ClosedEnum<typeof ForceNew>;
-
-/**
  * Allows to skip framework detection so the API would not fail to ask for confirmation
  */
 export const SkipAutoDetectionConfirmation = {
@@ -37,6 +25,18 @@ export const SkipAutoDetectionConfirmation = {
 export type SkipAutoDetectionConfirmation = ClosedEnum<
   typeof SkipAutoDetectionConfirmation
 >;
+
+/**
+ * Forces a new deployment even if there is a previous similar deployment
+ */
+export const ForceNew = {
+  Zero: "0",
+  One: "1",
+} as const;
+/**
+ * Forces a new deployment even if there is a previous similar deployment
+ */
+export type ForceNew = ClosedEnum<typeof ForceNew>;
 
 /**
  * Used in the case you want to reference a file that was already uploaded
@@ -242,6 +242,7 @@ export const Framework = {
   Vuepress: "vuepress",
   Parcel: "parcel",
   Fasthtml: "fasthtml",
+  SanityV3: "sanity-v3",
   Sanity: "sanity",
   Storybook: "storybook",
 } as const;
@@ -254,9 +255,14 @@ export type Framework = ClosedEnum<typeof Framework>;
  * Override the Node.js version that should be used for this deployment
  */
 export const NodeVersion = {
+  TwentyTwoX: "22.x",
   TwentyX: "20.x",
   EighteenX: "18.x",
   SixteenX: "16.x",
+  FourteenX: "14.x",
+  TwelveX: "12.x",
+  TenX: "10.x",
+  Eight10X: "8.10.x",
 } as const;
 /**
  * Override the Node.js version that should be used for this deployment
@@ -373,13 +379,13 @@ export type CreateDeploymentRequestBody = {
 
 export type CreateDeploymentRequest = {
   /**
-   * Forces a new deployment even if there is a previous similar deployment
-   */
-  forceNew?: ForceNew | undefined;
-  /**
    * Allows to skip framework detection so the API would not fail to ask for confirmation
    */
   skipAutoDetectionConfirmation?: SkipAutoDetectionConfirmation | undefined;
+  /**
+   * Forces a new deployment even if there is a previous similar deployment
+   */
+  forceNew?: ForceNew | undefined;
   /**
    * The Team identifier to perform the request on behalf of.
    */
@@ -397,7 +403,7 @@ export type Build = {
   env: Array<string>;
 };
 
-export type CreateDeploymentBuilds = {};
+export type Builds = {};
 
 export const CreateDeploymentFramework = {
   Blitzjs: "blitzjs",
@@ -442,6 +448,7 @@ export const CreateDeploymentFramework = {
   Vuepress: "vuepress",
   Parcel: "parcel",
   Fasthtml: "fasthtml",
+  SanityV3: "sanity-v3",
   Sanity: "sanity",
   Storybook: "storybook",
 } as const;
@@ -477,20 +484,39 @@ export type CreateDeploymentProjectSettings = {
   webAnalytics?: CreateDeploymentWebAnalytics | undefined;
 };
 
+export const CreateDeploymentDeploymentsStatus = {
+  Error: "error",
+  Skipped: "skipped",
+  Pending: "pending",
+  Ready: "ready",
+  Timeout: "timeout",
+} as const;
+export type CreateDeploymentDeploymentsStatus = ClosedEnum<
+  typeof CreateDeploymentDeploymentsStatus
+>;
+
+export type Integrations = {
+  status: CreateDeploymentDeploymentsStatus;
+  startedAt: number;
+  completedAt?: number | undefined;
+  skippedAt?: number | undefined;
+  skippedBy?: string | undefined;
+};
+
 export type Creator = {
   uid: string;
   username?: string | undefined;
   avatar?: string | undefined;
 };
 
-export const CreateDeploymentDeploymentsReadyState = {
+export const CreateDeploymentReadyState = {
   Building: "BUILDING",
   Error: "ERROR",
   Initializing: "INITIALIZING",
   Ready: "READY",
 } as const;
-export type CreateDeploymentDeploymentsReadyState = ClosedEnum<
-  typeof CreateDeploymentDeploymentsReadyState
+export type CreateDeploymentReadyState = ClosedEnum<
+  typeof CreateDeploymentReadyState
 >;
 
 export type CreateDeploymentOutput = {
@@ -505,7 +531,7 @@ export type Lambdas = {
   id?: string | undefined;
   createdAt?: number | undefined;
   entrypoint?: string | null | undefined;
-  readyState?: CreateDeploymentDeploymentsReadyState | undefined;
+  readyState?: CreateDeploymentReadyState | undefined;
   readyStateAt?: number | undefined;
   output: Array<CreateDeploymentOutput>;
 };
@@ -531,72 +557,9 @@ export type CustomEnvironment2 = {
   id: string;
 };
 
-export const CustomEnvironmentType = {
-  Production: "production",
-  Preview: "preview",
-  Development: "development",
-} as const;
-export type CustomEnvironmentType = ClosedEnum<typeof CustomEnvironmentType>;
+export type CustomEnvironment1 = {};
 
-export const CreateDeploymentCustomEnvironmentType = {
-  StartsWith: "startsWith",
-  Equals: "equals",
-  EndsWith: "endsWith",
-} as const;
-export type CreateDeploymentCustomEnvironmentType = ClosedEnum<
-  typeof CreateDeploymentCustomEnvironmentType
->;
-
-export type BranchMatcher = {
-  type: CreateDeploymentCustomEnvironmentType;
-  pattern: string;
-};
-
-/**
- * A list of verification challenges, one of which must be completed to verify the domain for use on the project. After the challenge is complete `POST /projects/:idOrName/domains/:domain/verify` to verify the domain. Possible challenges: - If `verification.type = TXT` the `verification.domain` will be checked for a TXT record matching `verification.value`.
- */
-export type CreateDeploymentCustomEnvironmentVerification = {
-  type: string;
-  domain: string;
-  value: string;
-  reason: string;
-};
-
-export type CreateDeploymentCustomEnvironmentDomains = {
-  name: string;
-  apexName: string;
-  projectId: string;
-  redirect?: string | null | undefined;
-  redirectStatusCode?: number | null | undefined;
-  gitBranch?: string | null | undefined;
-  customEnvironmentId?: string | null | undefined;
-  updatedAt?: number | undefined;
-  createdAt?: number | undefined;
-  /**
-   * `true` if the domain is verified for use with the project. If `false` it will not be used as an alias on this project until the challenge in `verification` is completed.
-   */
-  verified: boolean;
-  /**
-   * A list of verification challenges, one of which must be completed to verify the domain for use on the project. After the challenge is complete `POST /projects/:idOrName/domains/:domain/verify` to verify the domain. Possible challenges: - If `verification.type = TXT` the `verification.domain` will be checked for a TXT record matching `verification.value`.
-   */
-  verification?:
-    | Array<CreateDeploymentCustomEnvironmentVerification>
-    | undefined;
-};
-
-export type CustomEnvironment1 = {
-  id: string;
-  name: string;
-  slug: string;
-  type: CustomEnvironmentType;
-  description?: string | undefined;
-  branchMatcher?: BranchMatcher | undefined;
-  createdAt: number;
-  updatedAt: number;
-  domains?: Array<CreateDeploymentCustomEnvironmentDomains> | undefined;
-};
-
-export type CustomEnvironment = CustomEnvironment2 | CustomEnvironment1;
+export type CustomEnvironment = CustomEnvironment1 | CustomEnvironment2;
 
 export const CreateDeploymentType = {
   Lambdas: "LAMBDAS",
@@ -783,7 +746,7 @@ export type Project = {
   framework?: string | null | undefined;
 };
 
-export const CreateDeploymentReadyState = {
+export const ReadyState = {
   Canceled: "CANCELED",
   Error: "ERROR",
   Queued: "QUEUED",
@@ -791,9 +754,7 @@ export const CreateDeploymentReadyState = {
   Initializing: "INITIALIZING",
   Ready: "READY",
 } as const;
-export type CreateDeploymentReadyState = ClosedEnum<
-  typeof CreateDeploymentReadyState
->;
+export type ReadyState = ClosedEnum<typeof ReadyState>;
 
 export const CreateDeploymentSource = {
   Cli: "cli",
@@ -851,7 +812,17 @@ export const ReadySubstate = {
  */
 export type ReadySubstate = ClosedEnum<typeof ReadySubstate>;
 
-export type OidcTokenClaims = string | Array<string>;
+export type OidcTokenClaims = {
+  iss: string;
+  sub: string;
+  scope: string;
+  aud: string;
+  owner: string;
+  ownerId: string;
+  project: string;
+  projectId: string;
+  environment: string;
+};
 
 export type Functions = {
   memory?: number | undefined;
@@ -1031,7 +1002,7 @@ export type GitRepo2 = {
   repo: string;
   repoId: number;
   type: CreateDeploymentGitRepoType;
-  repoOwnerId: string;
+  repoOwnerId: number;
   path: string;
   defaultBranch: string;
   name: string;
@@ -1044,13 +1015,11 @@ export const GitRepoType = {
 } as const;
 export type GitRepoType = ClosedEnum<typeof GitRepoType>;
 
-export const CreateDeploymentGitRepoDeploymentsOwnerType = {
+export const OwnerType = {
   Team: "team",
   User: "user",
 } as const;
-export type CreateDeploymentGitRepoDeploymentsOwnerType = ClosedEnum<
-  typeof CreateDeploymentGitRepoDeploymentsOwnerType
->;
+export type OwnerType = ClosedEnum<typeof OwnerType>;
 
 export type GitRepo1 = {
   namespace: string;
@@ -1061,7 +1030,7 @@ export type GitRepo1 = {
   defaultBranch: string;
   name: string;
   private: boolean;
-  ownerType: CreateDeploymentGitRepoDeploymentsOwnerType;
+  ownerType: OwnerType;
 };
 
 export type GitRepo = GitRepo1 | GitRepo2 | GitRepo3;
@@ -1099,12 +1068,14 @@ export type CreateDeploymentResponseBody = {
   alwaysRefuseToBuild?: boolean | undefined;
   build: Build;
   buildArtifactUrls?: Array<string> | undefined;
-  builds?: Array<CreateDeploymentBuilds> | undefined;
+  builds?: Array<Builds> | undefined;
   env: Array<string>;
   inspectorUrl: string | null;
   isInConcurrentBuildsQueue: boolean;
+  isInSystemBuildsQueue: boolean;
   projectSettings: CreateDeploymentProjectSettings;
   readyStateReason?: string | undefined;
+  integrations?: Integrations | undefined;
   alias?: Array<string> | undefined;
   aliasAssigned: boolean;
   bootedAt: number;
@@ -1121,7 +1092,7 @@ export type CreateDeploymentResponseBody = {
   userAliases?: Array<string> | undefined;
   previewCommentsEnabled?: boolean | undefined;
   ttyBuildLogs?: boolean | undefined;
-  customEnvironment?: CustomEnvironment2 | CustomEnvironment1 | undefined;
+  customEnvironment?: CustomEnvironment1 | CustomEnvironment2 | undefined;
   type: CreateDeploymentType;
   createdAt: number;
   name: string;
@@ -1145,7 +1116,7 @@ export type CreateDeploymentResponseBody = {
     | undefined;
   meta: { [k: string]: string };
   project?: Project | undefined;
-  readyState: CreateDeploymentReadyState;
+  readyState: ReadyState;
   source?: CreateDeploymentSource | undefined;
   target?: CreateDeploymentTarget | null | undefined;
   /**
@@ -1161,6 +1132,10 @@ export type CreateDeploymentResponseBody = {
   buildErrorAt?: number | undefined;
   checksState?: ChecksState | undefined;
   checksConclusion?: ChecksConclusion | undefined;
+  /**
+   * Computed field that is only available for deployments with a micro-frontend configuration.
+   */
+  defaultRoute?: string | undefined;
   canceledAt?: number | undefined;
   errorCode?: string | undefined;
   errorLink?: string | undefined;
@@ -1172,7 +1147,7 @@ export type CreateDeploymentResponseBody = {
   softDeletedByRetention?: boolean | undefined;
   undeletedAt?: number | undefined;
   url: string;
-  oidcTokenClaims?: { [k: string]: string | Array<string> } | undefined;
+  oidcTokenClaims?: OidcTokenClaims | undefined;
   projectId: string;
   ownerId: string;
   monorepoManager?: string | null | undefined;
@@ -1184,31 +1159,12 @@ export type CreateDeploymentResponseBody = {
   connectConfigurationId?: string | undefined;
   createdIn: string;
   /**
-   * Since November 2023 this field defines a connect configuration that will only be used to deploy passive lambdas to (as in passiveRegions)
+   * Since November 2023 this field defines a Secure Compute network that will only be used to deploy passive lambdas to (as in passiveRegions)
    */
   passiveConnectConfigurationId?: string | undefined;
   gitRepo?: GitRepo1 | GitRepo2 | GitRepo3 | null | undefined;
   flags?: Flags1 | Array<Flags2> | undefined;
 };
-
-/** @internal */
-export const ForceNew$inboundSchema: z.ZodNativeEnum<typeof ForceNew> = z
-  .nativeEnum(ForceNew);
-
-/** @internal */
-export const ForceNew$outboundSchema: z.ZodNativeEnum<typeof ForceNew> =
-  ForceNew$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace ForceNew$ {
-  /** @deprecated use `ForceNew$inboundSchema` instead. */
-  export const inboundSchema = ForceNew$inboundSchema;
-  /** @deprecated use `ForceNew$outboundSchema` instead. */
-  export const outboundSchema = ForceNew$outboundSchema;
-}
 
 /** @internal */
 export const SkipAutoDetectionConfirmation$inboundSchema: z.ZodNativeEnum<
@@ -1229,6 +1185,25 @@ export namespace SkipAutoDetectionConfirmation$ {
   export const inboundSchema = SkipAutoDetectionConfirmation$inboundSchema;
   /** @deprecated use `SkipAutoDetectionConfirmation$outboundSchema` instead. */
   export const outboundSchema = SkipAutoDetectionConfirmation$outboundSchema;
+}
+
+/** @internal */
+export const ForceNew$inboundSchema: z.ZodNativeEnum<typeof ForceNew> = z
+  .nativeEnum(ForceNew);
+
+/** @internal */
+export const ForceNew$outboundSchema: z.ZodNativeEnum<typeof ForceNew> =
+  ForceNew$inboundSchema;
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace ForceNew$ {
+  /** @deprecated use `ForceNew$inboundSchema` instead. */
+  export const inboundSchema = ForceNew$inboundSchema;
+  /** @deprecated use `ForceNew$outboundSchema` instead. */
+  export const outboundSchema = ForceNew$outboundSchema;
 }
 
 /** @internal */
@@ -2060,9 +2035,9 @@ export const CreateDeploymentRequest$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  forceNew: ForceNew$inboundSchema.optional(),
   skipAutoDetectionConfirmation: SkipAutoDetectionConfirmation$inboundSchema
     .optional(),
+  forceNew: ForceNew$inboundSchema.optional(),
   teamId: z.string().optional(),
   slug: z.string().optional(),
   RequestBody: z.lazy(() => CreateDeploymentRequestBody$inboundSchema)
@@ -2075,8 +2050,8 @@ export const CreateDeploymentRequest$inboundSchema: z.ZodType<
 
 /** @internal */
 export type CreateDeploymentRequest$Outbound = {
-  forceNew?: string | undefined;
   skipAutoDetectionConfirmation?: string | undefined;
+  forceNew?: string | undefined;
   teamId?: string | undefined;
   slug?: string | undefined;
   RequestBody?: CreateDeploymentRequestBody$Outbound | undefined;
@@ -2088,9 +2063,9 @@ export const CreateDeploymentRequest$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   CreateDeploymentRequest
 > = z.object({
-  forceNew: ForceNew$outboundSchema.optional(),
   skipAutoDetectionConfirmation: SkipAutoDetectionConfirmation$outboundSchema
     .optional(),
+  forceNew: ForceNew$outboundSchema.optional(),
   teamId: z.string().optional(),
   slug: z.string().optional(),
   requestBody: z.lazy(() => CreateDeploymentRequestBody$outboundSchema)
@@ -2178,33 +2153,30 @@ export namespace Build$ {
 }
 
 /** @internal */
-export const CreateDeploymentBuilds$inboundSchema: z.ZodType<
-  CreateDeploymentBuilds,
-  z.ZodTypeDef,
-  unknown
-> = z.object({});
+export const Builds$inboundSchema: z.ZodType<Builds, z.ZodTypeDef, unknown> = z
+  .object({});
 
 /** @internal */
-export type CreateDeploymentBuilds$Outbound = {};
+export type Builds$Outbound = {};
 
 /** @internal */
-export const CreateDeploymentBuilds$outboundSchema: z.ZodType<
-  CreateDeploymentBuilds$Outbound,
+export const Builds$outboundSchema: z.ZodType<
+  Builds$Outbound,
   z.ZodTypeDef,
-  CreateDeploymentBuilds
+  Builds
 > = z.object({});
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace CreateDeploymentBuilds$ {
-  /** @deprecated use `CreateDeploymentBuilds$inboundSchema` instead. */
-  export const inboundSchema = CreateDeploymentBuilds$inboundSchema;
-  /** @deprecated use `CreateDeploymentBuilds$outboundSchema` instead. */
-  export const outboundSchema = CreateDeploymentBuilds$outboundSchema;
-  /** @deprecated use `CreateDeploymentBuilds$Outbound` instead. */
-  export type Outbound = CreateDeploymentBuilds$Outbound;
+export namespace Builds$ {
+  /** @deprecated use `Builds$inboundSchema` instead. */
+  export const inboundSchema = Builds$inboundSchema;
+  /** @deprecated use `Builds$outboundSchema` instead. */
+  export const outboundSchema = Builds$outboundSchema;
+  /** @deprecated use `Builds$Outbound` instead. */
+  export type Outbound = Builds$Outbound;
 }
 
 /** @internal */
@@ -2389,6 +2361,76 @@ export namespace CreateDeploymentProjectSettings$ {
 }
 
 /** @internal */
+export const CreateDeploymentDeploymentsStatus$inboundSchema: z.ZodNativeEnum<
+  typeof CreateDeploymentDeploymentsStatus
+> = z.nativeEnum(CreateDeploymentDeploymentsStatus);
+
+/** @internal */
+export const CreateDeploymentDeploymentsStatus$outboundSchema: z.ZodNativeEnum<
+  typeof CreateDeploymentDeploymentsStatus
+> = CreateDeploymentDeploymentsStatus$inboundSchema;
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace CreateDeploymentDeploymentsStatus$ {
+  /** @deprecated use `CreateDeploymentDeploymentsStatus$inboundSchema` instead. */
+  export const inboundSchema = CreateDeploymentDeploymentsStatus$inboundSchema;
+  /** @deprecated use `CreateDeploymentDeploymentsStatus$outboundSchema` instead. */
+  export const outboundSchema =
+    CreateDeploymentDeploymentsStatus$outboundSchema;
+}
+
+/** @internal */
+export const Integrations$inboundSchema: z.ZodType<
+  Integrations,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  status: CreateDeploymentDeploymentsStatus$inboundSchema,
+  startedAt: z.number(),
+  completedAt: z.number().optional(),
+  skippedAt: z.number().optional(),
+  skippedBy: z.string().optional(),
+});
+
+/** @internal */
+export type Integrations$Outbound = {
+  status: string;
+  startedAt: number;
+  completedAt?: number | undefined;
+  skippedAt?: number | undefined;
+  skippedBy?: string | undefined;
+};
+
+/** @internal */
+export const Integrations$outboundSchema: z.ZodType<
+  Integrations$Outbound,
+  z.ZodTypeDef,
+  Integrations
+> = z.object({
+  status: CreateDeploymentDeploymentsStatus$outboundSchema,
+  startedAt: z.number(),
+  completedAt: z.number().optional(),
+  skippedAt: z.number().optional(),
+  skippedBy: z.string().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Integrations$ {
+  /** @deprecated use `Integrations$inboundSchema` instead. */
+  export const inboundSchema = Integrations$inboundSchema;
+  /** @deprecated use `Integrations$outboundSchema` instead. */
+  export const outboundSchema = Integrations$outboundSchema;
+  /** @deprecated use `Integrations$Outbound` instead. */
+  export type Outbound = Integrations$Outbound;
+}
+
+/** @internal */
 export const Creator$inboundSchema: z.ZodType<Creator, z.ZodTypeDef, unknown> =
   z.object({
     uid: z.string(),
@@ -2428,27 +2470,24 @@ export namespace Creator$ {
 }
 
 /** @internal */
-export const CreateDeploymentDeploymentsReadyState$inboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentDeploymentsReadyState> = z.nativeEnum(
-    CreateDeploymentDeploymentsReadyState,
-  );
+export const CreateDeploymentReadyState$inboundSchema: z.ZodNativeEnum<
+  typeof CreateDeploymentReadyState
+> = z.nativeEnum(CreateDeploymentReadyState);
 
 /** @internal */
-export const CreateDeploymentDeploymentsReadyState$outboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentDeploymentsReadyState> =
-    CreateDeploymentDeploymentsReadyState$inboundSchema;
+export const CreateDeploymentReadyState$outboundSchema: z.ZodNativeEnum<
+  typeof CreateDeploymentReadyState
+> = CreateDeploymentReadyState$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace CreateDeploymentDeploymentsReadyState$ {
-  /** @deprecated use `CreateDeploymentDeploymentsReadyState$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateDeploymentDeploymentsReadyState$inboundSchema;
-  /** @deprecated use `CreateDeploymentDeploymentsReadyState$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateDeploymentDeploymentsReadyState$outboundSchema;
+export namespace CreateDeploymentReadyState$ {
+  /** @deprecated use `CreateDeploymentReadyState$inboundSchema` instead. */
+  export const inboundSchema = CreateDeploymentReadyState$inboundSchema;
+  /** @deprecated use `CreateDeploymentReadyState$outboundSchema` instead. */
+  export const outboundSchema = CreateDeploymentReadyState$outboundSchema;
 }
 
 /** @internal */
@@ -2496,7 +2535,7 @@ export const Lambdas$inboundSchema: z.ZodType<Lambdas, z.ZodTypeDef, unknown> =
     id: z.string().optional(),
     createdAt: z.number().optional(),
     entrypoint: z.nullable(z.string()).optional(),
-    readyState: CreateDeploymentDeploymentsReadyState$inboundSchema.optional(),
+    readyState: CreateDeploymentReadyState$inboundSchema.optional(),
     readyStateAt: z.number().optional(),
     output: z.array(z.lazy(() => CreateDeploymentOutput$inboundSchema)),
   });
@@ -2520,7 +2559,7 @@ export const Lambdas$outboundSchema: z.ZodType<
   id: z.string().optional(),
   createdAt: z.number().optional(),
   entrypoint: z.nullable(z.string()).optional(),
-  readyState: CreateDeploymentDeploymentsReadyState$outboundSchema.optional(),
+  readyState: CreateDeploymentReadyState$outboundSchema.optional(),
   readyStateAt: z.number().optional(),
   output: z.array(z.lazy(() => CreateDeploymentOutput$outboundSchema)),
 });
@@ -2635,264 +2674,21 @@ export namespace CustomEnvironment2$ {
 }
 
 /** @internal */
-export const CustomEnvironmentType$inboundSchema: z.ZodNativeEnum<
-  typeof CustomEnvironmentType
-> = z.nativeEnum(CustomEnvironmentType);
-
-/** @internal */
-export const CustomEnvironmentType$outboundSchema: z.ZodNativeEnum<
-  typeof CustomEnvironmentType
-> = CustomEnvironmentType$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CustomEnvironmentType$ {
-  /** @deprecated use `CustomEnvironmentType$inboundSchema` instead. */
-  export const inboundSchema = CustomEnvironmentType$inboundSchema;
-  /** @deprecated use `CustomEnvironmentType$outboundSchema` instead. */
-  export const outboundSchema = CustomEnvironmentType$outboundSchema;
-}
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentType$inboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentCustomEnvironmentType> = z.nativeEnum(
-    CreateDeploymentCustomEnvironmentType,
-  );
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentType$outboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentCustomEnvironmentType> =
-    CreateDeploymentCustomEnvironmentType$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateDeploymentCustomEnvironmentType$ {
-  /** @deprecated use `CreateDeploymentCustomEnvironmentType$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateDeploymentCustomEnvironmentType$inboundSchema;
-  /** @deprecated use `CreateDeploymentCustomEnvironmentType$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateDeploymentCustomEnvironmentType$outboundSchema;
-}
-
-/** @internal */
-export const BranchMatcher$inboundSchema: z.ZodType<
-  BranchMatcher,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  type: CreateDeploymentCustomEnvironmentType$inboundSchema,
-  pattern: z.string(),
-});
-
-/** @internal */
-export type BranchMatcher$Outbound = {
-  type: string;
-  pattern: string;
-};
-
-/** @internal */
-export const BranchMatcher$outboundSchema: z.ZodType<
-  BranchMatcher$Outbound,
-  z.ZodTypeDef,
-  BranchMatcher
-> = z.object({
-  type: CreateDeploymentCustomEnvironmentType$outboundSchema,
-  pattern: z.string(),
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace BranchMatcher$ {
-  /** @deprecated use `BranchMatcher$inboundSchema` instead. */
-  export const inboundSchema = BranchMatcher$inboundSchema;
-  /** @deprecated use `BranchMatcher$outboundSchema` instead. */
-  export const outboundSchema = BranchMatcher$outboundSchema;
-  /** @deprecated use `BranchMatcher$Outbound` instead. */
-  export type Outbound = BranchMatcher$Outbound;
-}
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentVerification$inboundSchema:
-  z.ZodType<
-    CreateDeploymentCustomEnvironmentVerification,
-    z.ZodTypeDef,
-    unknown
-  > = z.object({
-    type: z.string(),
-    domain: z.string(),
-    value: z.string(),
-    reason: z.string(),
-  });
-
-/** @internal */
-export type CreateDeploymentCustomEnvironmentVerification$Outbound = {
-  type: string;
-  domain: string;
-  value: string;
-  reason: string;
-};
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentVerification$outboundSchema:
-  z.ZodType<
-    CreateDeploymentCustomEnvironmentVerification$Outbound,
-    z.ZodTypeDef,
-    CreateDeploymentCustomEnvironmentVerification
-  > = z.object({
-    type: z.string(),
-    domain: z.string(),
-    value: z.string(),
-    reason: z.string(),
-  });
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateDeploymentCustomEnvironmentVerification$ {
-  /** @deprecated use `CreateDeploymentCustomEnvironmentVerification$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateDeploymentCustomEnvironmentVerification$inboundSchema;
-  /** @deprecated use `CreateDeploymentCustomEnvironmentVerification$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateDeploymentCustomEnvironmentVerification$outboundSchema;
-  /** @deprecated use `CreateDeploymentCustomEnvironmentVerification$Outbound` instead. */
-  export type Outbound = CreateDeploymentCustomEnvironmentVerification$Outbound;
-}
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentDomains$inboundSchema: z.ZodType<
-  CreateDeploymentCustomEnvironmentDomains,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  name: z.string(),
-  apexName: z.string(),
-  projectId: z.string(),
-  redirect: z.nullable(z.string()).optional(),
-  redirectStatusCode: z.nullable(z.number()).optional(),
-  gitBranch: z.nullable(z.string()).optional(),
-  customEnvironmentId: z.nullable(z.string()).optional(),
-  updatedAt: z.number().optional(),
-  createdAt: z.number().optional(),
-  verified: z.boolean(),
-  verification: z.array(
-    z.lazy(() => CreateDeploymentCustomEnvironmentVerification$inboundSchema),
-  ).optional(),
-});
-
-/** @internal */
-export type CreateDeploymentCustomEnvironmentDomains$Outbound = {
-  name: string;
-  apexName: string;
-  projectId: string;
-  redirect?: string | null | undefined;
-  redirectStatusCode?: number | null | undefined;
-  gitBranch?: string | null | undefined;
-  customEnvironmentId?: string | null | undefined;
-  updatedAt?: number | undefined;
-  createdAt?: number | undefined;
-  verified: boolean;
-  verification?:
-    | Array<CreateDeploymentCustomEnvironmentVerification$Outbound>
-    | undefined;
-};
-
-/** @internal */
-export const CreateDeploymentCustomEnvironmentDomains$outboundSchema: z.ZodType<
-  CreateDeploymentCustomEnvironmentDomains$Outbound,
-  z.ZodTypeDef,
-  CreateDeploymentCustomEnvironmentDomains
-> = z.object({
-  name: z.string(),
-  apexName: z.string(),
-  projectId: z.string(),
-  redirect: z.nullable(z.string()).optional(),
-  redirectStatusCode: z.nullable(z.number()).optional(),
-  gitBranch: z.nullable(z.string()).optional(),
-  customEnvironmentId: z.nullable(z.string()).optional(),
-  updatedAt: z.number().optional(),
-  createdAt: z.number().optional(),
-  verified: z.boolean(),
-  verification: z.array(
-    z.lazy(() => CreateDeploymentCustomEnvironmentVerification$outboundSchema),
-  ).optional(),
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace CreateDeploymentCustomEnvironmentDomains$ {
-  /** @deprecated use `CreateDeploymentCustomEnvironmentDomains$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateDeploymentCustomEnvironmentDomains$inboundSchema;
-  /** @deprecated use `CreateDeploymentCustomEnvironmentDomains$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateDeploymentCustomEnvironmentDomains$outboundSchema;
-  /** @deprecated use `CreateDeploymentCustomEnvironmentDomains$Outbound` instead. */
-  export type Outbound = CreateDeploymentCustomEnvironmentDomains$Outbound;
-}
-
-/** @internal */
 export const CustomEnvironment1$inboundSchema: z.ZodType<
   CustomEnvironment1,
   z.ZodTypeDef,
   unknown
-> = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string(),
-  type: CustomEnvironmentType$inboundSchema,
-  description: z.string().optional(),
-  branchMatcher: z.lazy(() => BranchMatcher$inboundSchema).optional(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-  domains: z.array(
-    z.lazy(() => CreateDeploymentCustomEnvironmentDomains$inboundSchema),
-  ).optional(),
-});
+> = z.object({});
 
 /** @internal */
-export type CustomEnvironment1$Outbound = {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  description?: string | undefined;
-  branchMatcher?: BranchMatcher$Outbound | undefined;
-  createdAt: number;
-  updatedAt: number;
-  domains?:
-    | Array<CreateDeploymentCustomEnvironmentDomains$Outbound>
-    | undefined;
-};
+export type CustomEnvironment1$Outbound = {};
 
 /** @internal */
 export const CustomEnvironment1$outboundSchema: z.ZodType<
   CustomEnvironment1$Outbound,
   z.ZodTypeDef,
   CustomEnvironment1
-> = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string(),
-  type: CustomEnvironmentType$outboundSchema,
-  description: z.string().optional(),
-  branchMatcher: z.lazy(() => BranchMatcher$outboundSchema).optional(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-  domains: z.array(
-    z.lazy(() => CreateDeploymentCustomEnvironmentDomains$outboundSchema),
-  ).optional(),
-});
+> = z.object({});
 
 /**
  * @internal
@@ -2913,14 +2709,14 @@ export const CustomEnvironment$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.union([
-  z.lazy(() => CustomEnvironment2$inboundSchema),
   z.lazy(() => CustomEnvironment1$inboundSchema),
+  z.lazy(() => CustomEnvironment2$inboundSchema),
 ]);
 
 /** @internal */
 export type CustomEnvironment$Outbound =
-  | CustomEnvironment2$Outbound
-  | CustomEnvironment1$Outbound;
+  | CustomEnvironment1$Outbound
+  | CustomEnvironment2$Outbound;
 
 /** @internal */
 export const CustomEnvironment$outboundSchema: z.ZodType<
@@ -2928,8 +2724,8 @@ export const CustomEnvironment$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   CustomEnvironment
 > = z.union([
-  z.lazy(() => CustomEnvironment2$outboundSchema),
   z.lazy(() => CustomEnvironment1$outboundSchema),
+  z.lazy(() => CustomEnvironment2$outboundSchema),
 ]);
 
 /**
@@ -3825,24 +3621,22 @@ export namespace Project$ {
 }
 
 /** @internal */
-export const CreateDeploymentReadyState$inboundSchema: z.ZodNativeEnum<
-  typeof CreateDeploymentReadyState
-> = z.nativeEnum(CreateDeploymentReadyState);
+export const ReadyState$inboundSchema: z.ZodNativeEnum<typeof ReadyState> = z
+  .nativeEnum(ReadyState);
 
 /** @internal */
-export const CreateDeploymentReadyState$outboundSchema: z.ZodNativeEnum<
-  typeof CreateDeploymentReadyState
-> = CreateDeploymentReadyState$inboundSchema;
+export const ReadyState$outboundSchema: z.ZodNativeEnum<typeof ReadyState> =
+  ReadyState$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace CreateDeploymentReadyState$ {
-  /** @deprecated use `CreateDeploymentReadyState$inboundSchema` instead. */
-  export const inboundSchema = CreateDeploymentReadyState$inboundSchema;
-  /** @deprecated use `CreateDeploymentReadyState$outboundSchema` instead. */
-  export const outboundSchema = CreateDeploymentReadyState$outboundSchema;
+export namespace ReadyState$ {
+  /** @deprecated use `ReadyState$inboundSchema` instead. */
+  export const inboundSchema = ReadyState$inboundSchema;
+  /** @deprecated use `ReadyState$outboundSchema` instead. */
+  export const outboundSchema = ReadyState$outboundSchema;
 }
 
 /** @internal */
@@ -4037,17 +3831,57 @@ export const OidcTokenClaims$inboundSchema: z.ZodType<
   OidcTokenClaims,
   z.ZodTypeDef,
   unknown
-> = z.union([z.string(), z.array(z.string())]);
+> = z.object({
+  iss: z.string(),
+  sub: z.string(),
+  scope: z.string(),
+  aud: z.string(),
+  owner: z.string(),
+  owner_id: z.string(),
+  project: z.string(),
+  project_id: z.string(),
+  environment: z.string(),
+}).transform((v) => {
+  return remap$(v, {
+    "owner_id": "ownerId",
+    "project_id": "projectId",
+  });
+});
 
 /** @internal */
-export type OidcTokenClaims$Outbound = string | Array<string>;
+export type OidcTokenClaims$Outbound = {
+  iss: string;
+  sub: string;
+  scope: string;
+  aud: string;
+  owner: string;
+  owner_id: string;
+  project: string;
+  project_id: string;
+  environment: string;
+};
 
 /** @internal */
 export const OidcTokenClaims$outboundSchema: z.ZodType<
   OidcTokenClaims$Outbound,
   z.ZodTypeDef,
   OidcTokenClaims
-> = z.union([z.string(), z.array(z.string())]);
+> = z.object({
+  iss: z.string(),
+  sub: z.string(),
+  scope: z.string(),
+  aud: z.string(),
+  owner: z.string(),
+  ownerId: z.string(),
+  project: z.string(),
+  projectId: z.string(),
+  environment: z.string(),
+}).transform((v) => {
+  return remap$(v, {
+    ownerId: "owner_id",
+    projectId: "project_id",
+  });
+});
 
 /**
  * @internal
@@ -4903,7 +4737,7 @@ export const GitRepo2$inboundSchema: z.ZodType<
   repo: z.string(),
   repoId: z.number(),
   type: CreateDeploymentGitRepoType$inboundSchema,
-  repoOwnerId: z.string(),
+  repoOwnerId: z.number(),
   path: z.string(),
   defaultBranch: z.string(),
   name: z.string(),
@@ -4917,7 +4751,7 @@ export type GitRepo2$Outbound = {
   repo: string;
   repoId: number;
   type: string;
-  repoOwnerId: string;
+  repoOwnerId: number;
   path: string;
   defaultBranch: string;
   name: string;
@@ -4935,7 +4769,7 @@ export const GitRepo2$outboundSchema: z.ZodType<
   repo: z.string(),
   repoId: z.number(),
   type: CreateDeploymentGitRepoType$outboundSchema,
-  repoOwnerId: z.string(),
+  repoOwnerId: z.number(),
   path: z.string(),
   defaultBranch: z.string(),
   name: z.string(),
@@ -4976,26 +4810,22 @@ export namespace GitRepoType$ {
 }
 
 /** @internal */
-export const CreateDeploymentGitRepoDeploymentsOwnerType$inboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentGitRepoDeploymentsOwnerType> = z
-    .nativeEnum(CreateDeploymentGitRepoDeploymentsOwnerType);
+export const OwnerType$inboundSchema: z.ZodNativeEnum<typeof OwnerType> = z
+  .nativeEnum(OwnerType);
 
 /** @internal */
-export const CreateDeploymentGitRepoDeploymentsOwnerType$outboundSchema:
-  z.ZodNativeEnum<typeof CreateDeploymentGitRepoDeploymentsOwnerType> =
-    CreateDeploymentGitRepoDeploymentsOwnerType$inboundSchema;
+export const OwnerType$outboundSchema: z.ZodNativeEnum<typeof OwnerType> =
+  OwnerType$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace CreateDeploymentGitRepoDeploymentsOwnerType$ {
-  /** @deprecated use `CreateDeploymentGitRepoDeploymentsOwnerType$inboundSchema` instead. */
-  export const inboundSchema =
-    CreateDeploymentGitRepoDeploymentsOwnerType$inboundSchema;
-  /** @deprecated use `CreateDeploymentGitRepoDeploymentsOwnerType$outboundSchema` instead. */
-  export const outboundSchema =
-    CreateDeploymentGitRepoDeploymentsOwnerType$outboundSchema;
+export namespace OwnerType$ {
+  /** @deprecated use `OwnerType$inboundSchema` instead. */
+  export const inboundSchema = OwnerType$inboundSchema;
+  /** @deprecated use `OwnerType$outboundSchema` instead. */
+  export const outboundSchema = OwnerType$outboundSchema;
 }
 
 /** @internal */
@@ -5012,7 +4842,7 @@ export const GitRepo1$inboundSchema: z.ZodType<
   defaultBranch: z.string(),
   name: z.string(),
   private: z.boolean(),
-  ownerType: CreateDeploymentGitRepoDeploymentsOwnerType$inboundSchema,
+  ownerType: OwnerType$inboundSchema,
 });
 
 /** @internal */
@@ -5042,7 +4872,7 @@ export const GitRepo1$outboundSchema: z.ZodType<
   defaultBranch: z.string(),
   name: z.string(),
   private: z.boolean(),
-  ownerType: CreateDeploymentGitRepoDeploymentsOwnerType$outboundSchema,
+  ownerType: OwnerType$outboundSchema,
 });
 
 /**
@@ -5277,13 +5107,14 @@ export const CreateDeploymentResponseBody$inboundSchema: z.ZodType<
   alwaysRefuseToBuild: z.boolean().optional(),
   build: z.lazy(() => Build$inboundSchema),
   buildArtifactUrls: z.array(z.string()).optional(),
-  builds: z.array(z.lazy(() => CreateDeploymentBuilds$inboundSchema))
-    .optional(),
+  builds: z.array(z.lazy(() => Builds$inboundSchema)).optional(),
   env: z.array(z.string()),
   inspectorUrl: z.nullable(z.string()),
   isInConcurrentBuildsQueue: z.boolean(),
+  isInSystemBuildsQueue: z.boolean(),
   projectSettings: z.lazy(() => CreateDeploymentProjectSettings$inboundSchema),
   readyStateReason: z.string().optional(),
+  integrations: z.lazy(() => Integrations$inboundSchema).optional(),
   alias: z.array(z.string()).optional(),
   aliasAssigned: z.boolean(),
   bootedAt: z.number(),
@@ -5301,8 +5132,8 @@ export const CreateDeploymentResponseBody$inboundSchema: z.ZodType<
   previewCommentsEnabled: z.boolean().optional(),
   ttyBuildLogs: z.boolean().optional(),
   customEnvironment: z.union([
-    z.lazy(() => CustomEnvironment2$inboundSchema),
     z.lazy(() => CustomEnvironment1$inboundSchema),
+    z.lazy(() => CustomEnvironment2$inboundSchema),
   ]).optional(),
   type: CreateDeploymentType$inboundSchema,
   createdAt: z.number(),
@@ -5324,7 +5155,7 @@ export const CreateDeploymentResponseBody$inboundSchema: z.ZodType<
   ]).optional(),
   meta: z.record(z.string()),
   project: z.lazy(() => Project$inboundSchema).optional(),
-  readyState: CreateDeploymentReadyState$inboundSchema,
+  readyState: ReadyState$inboundSchema,
   source: CreateDeploymentSource$inboundSchema.optional(),
   target: z.nullable(CreateDeploymentTarget$inboundSchema).optional(),
   passiveRegions: z.array(z.string()).optional(),
@@ -5337,6 +5168,7 @@ export const CreateDeploymentResponseBody$inboundSchema: z.ZodType<
   buildErrorAt: z.number().optional(),
   checksState: ChecksState$inboundSchema.optional(),
   checksConclusion: ChecksConclusion$inboundSchema.optional(),
+  defaultRoute: z.string().optional(),
   canceledAt: z.number().optional(),
   errorCode: z.string().optional(),
   errorLink: z.string().optional(),
@@ -5345,8 +5177,7 @@ export const CreateDeploymentResponseBody$inboundSchema: z.ZodType<
   softDeletedByRetention: z.boolean().optional(),
   undeletedAt: z.number().optional(),
   url: z.string(),
-  oidcTokenClaims: z.record(z.union([z.string(), z.array(z.string())]))
-    .optional(),
+  oidcTokenClaims: z.lazy(() => OidcTokenClaims$inboundSchema).optional(),
   projectId: z.string(),
   ownerId: z.string(),
   monorepoManager: z.nullable(z.string()).optional(),
@@ -5386,12 +5217,14 @@ export type CreateDeploymentResponseBody$Outbound = {
   alwaysRefuseToBuild?: boolean | undefined;
   build: Build$Outbound;
   buildArtifactUrls?: Array<string> | undefined;
-  builds?: Array<CreateDeploymentBuilds$Outbound> | undefined;
+  builds?: Array<Builds$Outbound> | undefined;
   env: Array<string>;
   inspectorUrl: string | null;
   isInConcurrentBuildsQueue: boolean;
+  isInSystemBuildsQueue: boolean;
   projectSettings: CreateDeploymentProjectSettings$Outbound;
   readyStateReason?: string | undefined;
+  integrations?: Integrations$Outbound | undefined;
   alias?: Array<string> | undefined;
   aliasAssigned: boolean;
   bootedAt: number;
@@ -5409,8 +5242,8 @@ export type CreateDeploymentResponseBody$Outbound = {
   previewCommentsEnabled?: boolean | undefined;
   ttyBuildLogs?: boolean | undefined;
   customEnvironment?:
-    | CustomEnvironment2$Outbound
     | CustomEnvironment1$Outbound
+    | CustomEnvironment2$Outbound
     | undefined;
   type: string;
   createdAt: number;
@@ -5445,6 +5278,7 @@ export type CreateDeploymentResponseBody$Outbound = {
   buildErrorAt?: number | undefined;
   checksState?: string | undefined;
   checksConclusion?: string | undefined;
+  defaultRoute?: string | undefined;
   canceledAt?: number | undefined;
   errorCode?: string | undefined;
   errorLink?: string | undefined;
@@ -5453,7 +5287,7 @@ export type CreateDeploymentResponseBody$Outbound = {
   softDeletedByRetention?: boolean | undefined;
   undeletedAt?: number | undefined;
   url: string;
-  oidcTokenClaims?: { [k: string]: string | Array<string> } | undefined;
+  oidcTokenClaims?: OidcTokenClaims$Outbound | undefined;
   projectId: string;
   ownerId: string;
   monorepoManager?: string | null | undefined;
@@ -5484,13 +5318,14 @@ export const CreateDeploymentResponseBody$outboundSchema: z.ZodType<
   alwaysRefuseToBuild: z.boolean().optional(),
   build: z.lazy(() => Build$outboundSchema),
   buildArtifactUrls: z.array(z.string()).optional(),
-  builds: z.array(z.lazy(() => CreateDeploymentBuilds$outboundSchema))
-    .optional(),
+  builds: z.array(z.lazy(() => Builds$outboundSchema)).optional(),
   env: z.array(z.string()),
   inspectorUrl: z.nullable(z.string()),
   isInConcurrentBuildsQueue: z.boolean(),
+  isInSystemBuildsQueue: z.boolean(),
   projectSettings: z.lazy(() => CreateDeploymentProjectSettings$outboundSchema),
   readyStateReason: z.string().optional(),
+  integrations: z.lazy(() => Integrations$outboundSchema).optional(),
   alias: z.array(z.string()).optional(),
   aliasAssigned: z.boolean(),
   bootedAt: z.number(),
@@ -5508,8 +5343,8 @@ export const CreateDeploymentResponseBody$outboundSchema: z.ZodType<
   previewCommentsEnabled: z.boolean().optional(),
   ttyBuildLogs: z.boolean().optional(),
   customEnvironment: z.union([
-    z.lazy(() => CustomEnvironment2$outboundSchema),
     z.lazy(() => CustomEnvironment1$outboundSchema),
+    z.lazy(() => CustomEnvironment2$outboundSchema),
   ]).optional(),
   type: CreateDeploymentType$outboundSchema,
   createdAt: z.number(),
@@ -5531,7 +5366,7 @@ export const CreateDeploymentResponseBody$outboundSchema: z.ZodType<
   ]).optional(),
   meta: z.record(z.string()),
   project: z.lazy(() => Project$outboundSchema).optional(),
-  readyState: CreateDeploymentReadyState$outboundSchema,
+  readyState: ReadyState$outboundSchema,
   source: CreateDeploymentSource$outboundSchema.optional(),
   target: z.nullable(CreateDeploymentTarget$outboundSchema).optional(),
   passiveRegions: z.array(z.string()).optional(),
@@ -5545,6 +5380,7 @@ export const CreateDeploymentResponseBody$outboundSchema: z.ZodType<
   buildErrorAt: z.number().optional(),
   checksState: ChecksState$outboundSchema.optional(),
   checksConclusion: ChecksConclusion$outboundSchema.optional(),
+  defaultRoute: z.string().optional(),
   canceledAt: z.number().optional(),
   errorCode: z.string().optional(),
   errorLink: z.string().optional(),
@@ -5553,8 +5389,7 @@ export const CreateDeploymentResponseBody$outboundSchema: z.ZodType<
   softDeletedByRetention: z.boolean().optional(),
   undeletedAt: z.number().optional(),
   url: z.string(),
-  oidcTokenClaims: z.record(z.union([z.string(), z.array(z.string())]))
-    .optional(),
+  oidcTokenClaims: z.lazy(() => OidcTokenClaims$outboundSchema).optional(),
   projectId: z.string(),
   ownerId: z.string(),
   monorepoManager: z.nullable(z.string()).optional(),

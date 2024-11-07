@@ -11,16 +11,10 @@ let value: GetAuthUserResponseBody = {
   user: {
     createdAt: 1630748523395,
     softBlock: {
-      blockedAt: 7569.35,
-      reason: "UNPAID_INVOICE",
+      blockedAt: 3772.69,
+      reason: "BLOCKED_FOR_PLATFORM_ABUSE",
     },
-    billing: {
-      period: {
-        start: 6379.69,
-        end: 6037.83,
-      },
-      plan: "enterprise",
-    },
+    billing: {},
     resourceConfig: {},
     stagingPrefix: "<value>",
     hasTrialAvailable: false,

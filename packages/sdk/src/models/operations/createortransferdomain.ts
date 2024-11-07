@@ -134,6 +134,10 @@ export type CreateOrTransferDomainDomain = {
    */
   creator: CreateOrTransferDomainCreator;
   /**
+   * The domain name.
+   */
+  name: string;
+  /**
    * If it was purchased through Vercel, the timestamp in milliseconds when it was purchased.
    */
   boughtAt: number | null;
@@ -149,10 +153,6 @@ export type CreateOrTransferDomainDomain = {
    * The unique identifier of the domain.
    */
   id: string;
-  /**
-   * The domain name.
-   */
-  name: string;
   /**
    * Timestamp in milliseconds at which the domain was ordered.
    */
@@ -501,11 +501,11 @@ export const CreateOrTransferDomainDomain$inboundSchema: z.ZodType<
   intendedNameservers: z.array(z.string()),
   customNameservers: z.array(z.string()).optional(),
   creator: z.lazy(() => CreateOrTransferDomainCreator$inboundSchema),
+  name: z.string(),
   boughtAt: z.nullable(z.number()),
   createdAt: z.number(),
   expiresAt: z.nullable(z.number()),
   id: z.string(),
-  name: z.string(),
   orderedAt: z.number().optional(),
   renew: z.boolean().optional(),
   serviceType: CreateOrTransferDomainServiceType$inboundSchema,
@@ -522,11 +522,11 @@ export type CreateOrTransferDomainDomain$Outbound = {
   intendedNameservers: Array<string>;
   customNameservers?: Array<string> | undefined;
   creator: CreateOrTransferDomainCreator$Outbound;
+  name: string;
   boughtAt: number | null;
   createdAt: number;
   expiresAt: number | null;
   id: string;
-  name: string;
   orderedAt?: number | undefined;
   renew?: boolean | undefined;
   serviceType: string;
@@ -547,11 +547,11 @@ export const CreateOrTransferDomainDomain$outboundSchema: z.ZodType<
   intendedNameservers: z.array(z.string()),
   customNameservers: z.array(z.string()).optional(),
   creator: z.lazy(() => CreateOrTransferDomainCreator$outboundSchema),
+  name: z.string(),
   boughtAt: z.nullable(z.number()),
   createdAt: z.number(),
   expiresAt: z.nullable(z.number()),
   id: z.string(),
-  name: z.string(),
   orderedAt: z.number().optional(),
   renew: z.boolean().optional(),
   serviceType: CreateOrTransferDomainServiceType$outboundSchema,

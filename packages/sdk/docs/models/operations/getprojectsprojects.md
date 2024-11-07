@@ -8,9 +8,9 @@ import { GetProjectsProjects } from "@vercel/sdk/models/operations/getprojects.j
 let value: GetProjectsProjects = {
   accountId: "<id>",
   crons: {
-    enabledAt: 1523.55,
-    disabledAt: 4174.86,
-    updatedAt: 1312.89,
+    enabledAt: 9677.95,
+    disabledAt: 5468.85,
+    updatedAt: 2748.24,
     deploymentId: "<id>",
     definitions: [
       {
@@ -24,46 +24,46 @@ let value: GetProjectsProjects = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 6041.18,
+      id: "<id>",
+      createdAt: 5922.30,
       createdIn: "<value>",
       creator: {
-        email: "Sonia_Lockman-Goodwin@yahoo.com",
+        email: "Gwen.Goldner40@hotmail.com",
         uid: "<id>",
-        username: "Katrina.Klocko",
+        username: "Jodie_Hintz",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "INITIALIZING",
-      type: "LAMBDAS",
-      url: "https://sizzling-finger.org",
-      userId: "<id>",
+      plan: "hobby",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "CANCELED",
+      type: "LAMBDAS",
+      url: "https://fair-hydrolyze.com/",
+      userId: "<id>",
     },
   ],
   name: "<value>",
-  nodeVersion: "8.10.x",
+  nodeVersion: "18.x",
   targets: {
     "key": {
-      createdAt: 486.90,
+      id: "<id>",
+      createdAt: 7400.98,
       createdIn: "<value>",
       creator: {
-        email: "Isabella_Heidenreich@gmail.com",
+        email: "Lilyan67@hotmail.com",
         uid: "<id>",
-        username: "Meredith_Heaney",
+        username: "Karina_Bartell",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "BUILDING",
-      type: "LAMBDAS",
-      url: "https://acidic-gastropod.name",
-      userId: "<id>",
+      plan: "enterprise",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "CANCELED",
+      type: "LAMBDAS",
+      url: "https://impressive-airmail.info/",
+      userId: "<id>",
     },
   },
 };
@@ -92,10 +92,12 @@ let value: GetProjectsProjects = {
 | `directoryListing`                                                                                               | *boolean*                                                                                                        | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `installCommand`                                                                                                 | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `env`                                                                                                            | [operations.GetProjectsEnv](../../models/operations/getprojectsenv.md)[]                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `customEnvironments`                                                                                             | [operations.GetProjectsCustomEnvironments](../../models/operations/getprojectscustomenvironments.md)[]           | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `framework`                                                                                                      | [operations.GetProjectsFramework](../../models/operations/getprojectsframework.md)                               | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `gitForkProtection`                                                                                              | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `gitLFS`                                                                                                         | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `id`                                                                                                             | *string*                                                                                                         | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
+| `ipBuckets`                                                                                                      | [operations.GetProjectsIpBuckets](../../models/operations/getprojectsipbuckets.md)[]                             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `latestDeployments`                                                                                              | [operations.GetProjectsLatestDeployments](../../models/operations/getprojectslatestdeployments.md)[]             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `link`                                                                                                           | *operations.GetProjectsLink*                                                                                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `name`                                                                                                           | *string*                                                                                                         | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
@@ -106,6 +108,7 @@ let value: GetProjectsProjects = {
 | `passwordProtection`                                                                                             | [operations.GetProjectsPasswordProtection](../../models/operations/getprojectspasswordprotection.md)             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `productionDeploymentsFastLane`                                                                                  | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `publicSource`                                                                                                   | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `resourceConfig`                                                                                                 | [operations.GetProjectsResourceConfig](../../models/operations/getprojectsresourceconfig.md)                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `rootDirectory`                                                                                                  | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `serverlessFunctionRegion`                                                                                       | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `serverlessFunctionZeroConfigFailover`                                                                           | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |

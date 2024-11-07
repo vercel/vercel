@@ -1,17 +1,42 @@
 import chalk from 'chalk';
-import { Org, Project } from '@vercel-internals/types';
-import Client from '../../util/client';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
 import { disconnectGitProvider } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
+import { disconnectSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
+import type Client from '../../util/client';
+import { ensureLink } from '../../util/link/ensure-link';
 
-export default async function disconnect(
-  client: Client,
-  args: string[],
-  project: Project | undefined,
-  org: Org | undefined
-) {
+export default async function disconnect(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(
+    disconnectSubcommand.options
+  );
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
+  const telemetry = new GitDisconnectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagConfirm(opts['--confirm']);
+  telemetry.trackCliFlagYes(opts['--yes']);
+
+  if ('--confirm' in opts) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    opts['--yes'] = opts['--confirm'];
+  }
+
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -20,10 +45,17 @@ export default async function disconnect(
     );
     return 2;
   }
-  if (!project || !org) {
-    output.error('An unexpected error occurred.');
-    return 1;
+
+  const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const linkedProject = await ensureLink('git', client, client.cwd, {
+    autoConfirm,
+  });
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
   }
+
+  const { org, project } = linkedProject;
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.link) {
     const { org: linkOrg, repo } = project.link;

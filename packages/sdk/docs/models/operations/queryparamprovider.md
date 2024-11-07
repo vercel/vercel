@@ -5,7 +5,7 @@
 ```typescript
 import { QueryParamProvider } from "@vercel/sdk/models/operations/searchrepo.js";
 
-let value: QueryParamProvider = "github";
+let value: QueryParamProvider = "github-custom-host";
 ```
 
 ## Values

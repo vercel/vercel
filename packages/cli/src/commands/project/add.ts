@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import createProject from '../../util/projects/create-project';

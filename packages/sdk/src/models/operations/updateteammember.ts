@@ -31,7 +31,7 @@ export type UpdateTeamMemberProjects = {
 };
 
 export type UpdateTeamMemberJoinedFrom = {
-  ssoUserId?: string | undefined;
+  ssoUserId?: any | null | undefined;
 };
 
 export type UpdateTeamMemberRequestBody = {
@@ -48,8 +48,11 @@ export type UpdateTeamMemberRequestBody = {
 };
 
 export type UpdateTeamMemberRequest = {
-  teamId: string;
+  /**
+   * The ID of the member.
+   */
   uid: string;
+  teamId: string;
   requestBody?: UpdateTeamMemberRequestBody | undefined;
 };
 
@@ -129,12 +132,12 @@ export const UpdateTeamMemberJoinedFrom$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  ssoUserId: z.string().optional(),
+  ssoUserId: z.nullable(z.any()).optional(),
 });
 
 /** @internal */
 export type UpdateTeamMemberJoinedFrom$Outbound = {
-  ssoUserId?: string | undefined;
+  ssoUserId?: any | null | undefined;
 };
 
 /** @internal */
@@ -143,7 +146,7 @@ export const UpdateTeamMemberJoinedFrom$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   UpdateTeamMemberJoinedFrom
 > = z.object({
-  ssoUserId: z.string().optional(),
+  ssoUserId: z.nullable(z.any()).optional(),
 });
 
 /**
@@ -166,7 +169,7 @@ export const UpdateTeamMemberRequestBody$inboundSchema: z.ZodType<
   unknown
 > = z.object({
   confirmed: z.boolean().optional(),
-  role: z.string().default("VIEWER"),
+  role: z.string().default("MEMBER"),
   projects: z.array(z.lazy(() => UpdateTeamMemberProjects$inboundSchema))
     .optional(),
   joinedFrom: z.lazy(() => UpdateTeamMemberJoinedFrom$inboundSchema).optional(),
@@ -187,7 +190,7 @@ export const UpdateTeamMemberRequestBody$outboundSchema: z.ZodType<
   UpdateTeamMemberRequestBody
 > = z.object({
   confirmed: z.boolean().optional(),
-  role: z.string().default("VIEWER"),
+  role: z.string().default("MEMBER"),
   projects: z.array(z.lazy(() => UpdateTeamMemberProjects$outboundSchema))
     .optional(),
   joinedFrom: z.lazy(() => UpdateTeamMemberJoinedFrom$outboundSchema)
@@ -213,8 +216,8 @@ export const UpdateTeamMemberRequest$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  teamId: z.string(),
   uid: z.string(),
+  teamId: z.string(),
   RequestBody: z.lazy(() => UpdateTeamMemberRequestBody$inboundSchema)
     .optional(),
 }).transform((v) => {
@@ -225,8 +228,8 @@ export const UpdateTeamMemberRequest$inboundSchema: z.ZodType<
 
 /** @internal */
 export type UpdateTeamMemberRequest$Outbound = {
-  teamId: string;
   uid: string;
+  teamId: string;
   RequestBody?: UpdateTeamMemberRequestBody$Outbound | undefined;
 };
 
@@ -236,8 +239,8 @@ export const UpdateTeamMemberRequest$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   UpdateTeamMemberRequest
 > = z.object({
-  teamId: z.string(),
   uid: z.string(),
+  teamId: z.string(),
   requestBody: z.lazy(() => UpdateTeamMemberRequestBody$outboundSchema)
     .optional(),
 }).transform((v) => {
