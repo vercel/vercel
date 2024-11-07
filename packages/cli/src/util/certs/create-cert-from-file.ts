@@ -19,7 +19,7 @@ export default async function createCertFromFile(
     const key = readFileSync(resolve(keyPath), 'utf8');
     const ca = readFileSync(resolve(caPath), 'utf8');
 
-    const certificate = await client.fetch<Cert>('/v3/now/certs', {
+    const certificate = await client.fetch<Cert>('/v3/certs', {
       method: 'PUT',
       body: {
         ca,
