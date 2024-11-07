@@ -15,6 +15,7 @@ import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
 
 import './test/mocks/matchers/index';
+import { client } from '../mocks/client';
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -172,6 +173,7 @@ describe('main', () => {
           it('exits before the detached child process completes', async () => {
             const telemetryEventStore = new TelemetryEventStore({
               isDebug: false,
+              config: {},
             });
             const spy = vi
               .spyOn(telemetryEventStore, 'sendToSubprocess')
@@ -219,6 +221,7 @@ describe('main', () => {
           it('waits for the child process to exit and logs the response', async () => {
             const telemetryEventStore = new TelemetryEventStore({
               isDebug: false,
+              config: {},
             });
             vi.spyOn(
               telemetryEventStore,
