@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 const LogLabel = `['telemetry']:`;
 
@@ -38,7 +39,7 @@ export class TelemetryClient {
     return 'NONE';
   };
   protected redactedTargetName = (target: string) => {
-    if (['production', 'preview', 'development'].includes(target)) {
+    if ((PROJECT_ENV_TARGET as ReadonlyArray<string>).includes(target)) {
       return target;
     }
     return this.redactedValue;
