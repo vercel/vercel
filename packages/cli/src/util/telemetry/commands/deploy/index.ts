@@ -16,9 +16,12 @@ export class DeployTelemetryClient
   }
   trackCliOptionArchive(format: string | undefined) {
     if (format) {
+      const allowedFormat = ['tgz'].includes(format)
+        ? format
+        : this.redactedValue;
       this.trackCliOption({
         option: 'archive',
-        value: format,
+        value: allowedFormat,
       });
     }
   }
