@@ -75,7 +75,7 @@ export default async function set(client: Client, argv: string[]) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
         'https://vercel.link/domain-configuration'
-      )}) and run ${getCommandName(`--prod`)}.`
+      )}) and run ${getCommandName('--prod')}.`
     );
     return 1;
   }
