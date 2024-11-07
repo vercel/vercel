@@ -747,8 +747,33 @@ async function writeGoWork(
   const workspaces = new Set(['.']);
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
 
+  // Get version from go.mod as default
+  let goVersion = '1.21'; // fallback default
+  if (modulePath) {
+    const goModPath = join(modulePath, 'go.mod');
+    if (await pathExists(goModPath)) {
+      const modContents = await readFile(goModPath, 'utf-8');
+      const goVersionMatch = /^go (\d+\.\d+)/m.exec(modContents);
+      if (goVersionMatch) {
+        goVersion = goVersionMatch[1];
+      }
+    }
+  }
+
+  // Check if go.work exists and has a different version
+  let contents = '';
   if (goWorkPath) {
-    const contents = await readFile(goWorkPath, 'utf-8');
+    const existingContents = await readFile(goWorkPath, 'utf-8');
+    const workVersionMatch = /^go (\d+\.\d+)/m.exec(existingContents);
+    if (workVersionMatch) {
+      goVersion = workVersionMatch[1];
+    }
+  }
+
+  contents = `go ${goVersion}\n\n`;
+
+  // Rest of the workspace path handling remains the same
+  if (goWorkPath) {
     const addPath = (path: string) => {
       if (path) {
         if (path.startsWith('.')) {
@@ -759,33 +784,34 @@ async function writeGoWork(
       }
     };
 
+    const existingContents = await readFile(goWorkPath, 'utf-8');
     // find grouped paths
     const multiRE = /use\s*\(([^)]+)/g;
-    let match = multiRE.exec(contents);
+    let match = multiRE.exec(existingContents);
     while (match) {
       if (match[1]) {
         for (const line of match[1].split(/\r?\n/)) {
           addPath(line.trim());
         }
       }
-      match = multiRE.exec(contents);
+      match = multiRE.exec(existingContents);
     }
 
     // find single paths
     const singleRE = /use\s+(?!\()(.+)/g;
-    match = singleRE.exec(contents);
+    match = singleRE.exec(existingContents);
     while (match) {
       addPath(match[1].trim());
-      match = singleRE.exec(contents);
+      match = singleRE.exec(existingContents);
     }
   } else if (modulePath) {
     workspaces.add(relative(destDir, modulePath));
   }
 
-  const contents = `use (\n${Array.from(workspaces)
+  contents += `use (\n${Array.from(workspaces)
     .map(w => `  ${w}\n`)
     .join('')})\n`;
-  // console.log(contents);
+
   await writeFile(join(destDir, 'go.work'), contents, 'utf-8');
 }
 
