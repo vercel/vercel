@@ -22,7 +22,7 @@ describe('checkTelemetryStatus', () => {
 
     it('informs the user', async () => {
       await expect(client.stderr).toOutput(
-        'The Vercel CLI now collects telemetry regarding usage.'
+        'The Vercel CLI now collects telemetry regarding usage of the CLI.'
       );
       await expect(client.stderr).toOutput(
         'This information is used to shape the CLI roadmap and prioritize features.'
