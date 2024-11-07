@@ -57,6 +57,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'remove': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
@@ -65,6 +66,7 @@ export default async function main(client: Client) {
     }
     case 'disconnect': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(disconnectSubcommand);
         return 2;
       }
