@@ -41,7 +41,7 @@ export default async function ls(client: Client, argv: string[]) {
 
   try {
     paginationOptions = getPaginationOpts(opts);
-    let [next, limit] = paginationOptions;
+    const [next, limit] = paginationOptions;
 
     telemetryClient.trackCliOptionNext(next);
     telemetryClient.trackCliOptionLimit(limit);
