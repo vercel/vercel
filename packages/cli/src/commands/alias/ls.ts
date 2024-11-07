@@ -92,7 +92,7 @@ function printAliasTable(aliases: Alias[]) {
         // for legacy reasons, we might have situations
         // where the deployment was deleted and the alias
         // not collected appropriately, and we need to handle it
-        a.deployment && a.deployment.url ? a.deployment.url : chalk.gray('–'),
+        a.deployment?.url ? a.deployment.url : chalk.gray('–'),
         a.alias,
         ms(Date.now() - a.createdAt),
       ]),
