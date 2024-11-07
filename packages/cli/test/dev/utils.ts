@@ -332,22 +332,22 @@ export async function testFixture(
     readyResolver.resolve(null);
   });
 
-  return {
-    dev: {
-      ...dev,
-      kill: async () => {
-        // kill the entire process tree for the child as some tests will spawn
-        // child processes that either become defunct or assigned a new parent
-        // process
-        await nukeProcessTree(dev.pid);
+  // @ts-expect-error
+  dev.kill = async () => {
+    // kill the entire process tree for the child as some tests will spawn
+    // child processes that either become defunct or assigned a new parent
+    // process
+    await nukeProcessTree(dev.pid);
 
-        await exitResolver;
-        return {
-          stdout,
-          stderr,
-        };
-      },
-    },
+    await exitResolver;
+    return {
+      stdout,
+      stderr,
+    };
+  };
+
+  return {
+    dev,
     port,
     readyResolver,
   };
