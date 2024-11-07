@@ -200,12 +200,12 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User canceled.`);
+    output.error('User canceled.');
     return 1;
   }
 
   if (error instanceof ERRORS.DomainNotFound) {
-    output.error(`You should buy the domain before aliasing.`);
+    output.error('You should buy the domain before aliasing.');
     return 1;
   }
 
@@ -232,13 +232,13 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
 
   if (error instanceof ERRORS.DomainServiceNotAvailable) {
     output.error(
-      `The domain purchase service is not available. Try again later.`
+      'The domain purchase service is not available. Try again later.'
     );
     return 1;
   }
 
   if (error instanceof ERRORS.UnexpectedDomainPurchaseError) {
-    output.error(`There was an unexpected error while purchasing the domain.`);
+    output.error('There was an unexpected error while purchasing the domain.');
     return 1;
   }
 
@@ -254,7 +254,7 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
       `The domain ${error.meta.domain} is processing and will be available once the order is completed.`
     );
     output.print(
-      `  An email will be sent upon completion so you can alias to your new domain.\n`
+      '  An email will be sent upon completion so you can alias to your new domain.\n'
     );
     return 1;
   }
@@ -263,7 +263,7 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     output.error(
       `You can't purchase the domain you're aliasing to since you have no valid payment method.`
     );
-    output.print(`  Please add a valid payment method and retry.\n`);
+    output.print('  Please add a valid payment method and retry.\n');
     return 1;
   }
 
@@ -271,7 +271,7 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     output.error(
       `You can't purchase the domain you're aliasing to since your card was declined.`
     );
-    output.print(`  Please add a valid payment method and retry.\n`);
+    output.print('  Please add a valid payment method and retry.\n');
     return 1;
   }
 
@@ -312,7 +312,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.InvalidAlias) {
     output.error(
-      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`vercel.app\`, only sub and sub-sub domains are supported.`
+      'Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For `vercel.app`, only sub and sub-sub domains are supported.'
     );
     return 1;
   }
