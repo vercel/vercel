@@ -116,6 +116,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandIntegrationResource(actual: string) {
+    this.trackCliCommand({
+      command: 'integration-resource',
+      value: actual,
+    });
+  }
+
   trackCliCommandLink(actual: string) {
     this.trackCliCommand({
       command: 'link',
