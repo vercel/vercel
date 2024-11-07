@@ -15,12 +15,12 @@ import {
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
 import output from '../../output-manager';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  ls: getAliases(listSubcommand),
-  rm: getAliases(removeSubcommand),
-  set: getAliases(setSubcommand),
+  ls: getCommandAliases(listSubcommand),
+  rm: getCommandAliases(removeSubcommand),
+  set: getCommandAliases(setSubcommand),
 };
 
 export default async function alias(client: Client) {

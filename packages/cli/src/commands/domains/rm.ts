@@ -17,23 +17,29 @@ import { findProjectsForDomain } from '../../util/projects/find-projects-for-dom
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/rm';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = {
-  '--yes': boolean;
-};
-
-export default async function rm(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const [domainName] = args;
-
+export default async function rm(client: Client, argv: string[]) {
   const telemetry = new DomainsRmTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+  const [domainName] = args;
+
   telemetry.trackCliArgumentDomain(domainName);
   telemetry.trackCliFlagYes(opts['--yes']);
 
