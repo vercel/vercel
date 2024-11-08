@@ -748,7 +748,7 @@ async function writeGoWork(
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
 
   // Get version from go.mod as default
-  let goVersion = '1.23'; // fallback default
+  let goVersion = '1.18'; // default
   if (modulePath) {
     const goModPath = join(modulePath, 'go.mod');
     if (await pathExists(goModPath)) {
