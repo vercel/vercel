@@ -2,6 +2,7 @@ import { afterAll } from 'vitest';
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';
+// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
