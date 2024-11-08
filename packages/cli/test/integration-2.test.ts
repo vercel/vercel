@@ -1,6 +1,9 @@
 import path from 'path';
 import { URL } from 'url';
 import fetch from 'node-fetch';
+import express from 'express';
+import { createServer } from 'http';
+import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -579,6 +582,38 @@ test('whoami with local .vercel scope', async () => {
 
   // clean up
   await remove(path.join(directory, '.vercel'));
+});
+
+test('telemtry submits data', async () => {
+  let mockTelemetryBridgeWasCalled = false;
+  const mockTelemetryBridgeApp = express();
+  mockTelemetryBridgeApp.use(express.json());
+  mockTelemetryBridgeApp.use(() => {
+    mockTelemetryBridgeWasCalled = true;
+    // TODO, expect specific req.body JSON format
+  });
+  const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
+  await listen(mockTelemetryBridgeServer, 0);
+  const address = mockTelemetryBridgeServer.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Unexpected http server address');
+  }
+  process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
+  const directory = await setupE2EFixture('static-deployment');
+  // create local .vercel
+  await ensureDir(path.join(directory, '.vercel'));
+  await fs.writeFile(
+    path.join(directory, '.vercel', 'project.json'),
+    JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
+  );
+  const output = await execCli(binaryPath, ['whoami'], {
+    cwd: directory,
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(mockTelemetryBridgeWasCalled).toEqual(true);
+  // clean up
+  await remove(path.join(directory, '.vercel'));
+  delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
 });
 
 test('deploys with only now.json and README.md', async () => {

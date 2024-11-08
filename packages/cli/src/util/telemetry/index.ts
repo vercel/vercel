@@ -229,8 +229,6 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
-
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
         output.debug('Unable to send metrics: no session ID');
@@ -241,17 +239,14 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      const scriptPath = resolvePath('dist', 'send-telemetry.js');
+      const scriptPath = resolvePath(__dirname, 'send-telemetry.js');
       const payload = {
-        url,
-        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Client-id': 'vercel-cli',
           'x-vercel-cli-topic-id': 'generic',
           'x-vercel-cli-session-id': sessionId,
         },
-        body: JSON.stringify(events),
+        body: events,
       };
       await this.sendToSubprocess(
         scriptPath,
@@ -285,23 +280,34 @@ export class TelemetryEventStore {
       wasRecorded: boolean;
     }) => void
   ) {
+    const args = [process.execPath, process.argv[0], process.argv[1]];
+    if (args[0] === args[1]) {
+      args.shift();
+    }
+    const nodeBinaryPath = args[0];
+    const script = [
+      ...args.slice(1),
+      'telemetry',
+      'flush',
+      JSON.stringify(payload),
+    ];
     // When debugging, we want to know about the response from the server, so we can't exit early
     if (outputDebugEnabled) {
       return new Promise<void>((resolve, reject) => {
-        const childProcess = spawn(
-          process.execPath,
-          [scriptPath, JSON.stringify(payload)],
-          {
-            stdio: ['ignore', 'pipe', 'pipe'],
-          }
-        );
+        const childProcess = spawn(nodeBinaryPath, script, {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
         childProcess.stdout.on('data', data => {
           const responsePayload = JSON.parse(data);
           debugCallback({
-            status: Number(responsePayload.status),
+            status: responsePayload.status,
             wasRecorded: responsePayload.cliTracked === '1',
           });
         });
+        childProcess.stderr.on('data', data => {
+          output.debug(data.toString());
+        });
+        childProcess.on('error', reject);
         childProcess.on('exit', code => {
           return code === 0
             ? resolve()
@@ -311,15 +317,11 @@ export class TelemetryEventStore {
         });
       });
     } else {
-      const childProcess = spawn(
-        process.execPath,
-        [scriptPath, JSON.stringify(payload)],
-        {
-          stdio: 'ignore',
-          windowsHide: true,
-          detached: true,
-        }
-      );
+      const childProcess = spawn(nodeBinaryPath, script, {
+        stdio: 'ignore',
+        windowsHide: true,
+        detached: true,
+      });
       childProcess.unref();
     }
   }
