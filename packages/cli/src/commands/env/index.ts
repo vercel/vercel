@@ -68,7 +68,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'list');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -76,7 +76,7 @@ export default async function main(client: Client) {
       return ls(client, args);
     case 'add':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'add');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
@@ -84,7 +84,7 @@ export default async function main(client: Client) {
       return add(client, args);
     case 'rm':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'remove');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
@@ -92,7 +92,7 @@ export default async function main(client: Client) {
       return rm(client, args);
     case 'pull':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'pull');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(pullSubcommand);
         return 2;
       }

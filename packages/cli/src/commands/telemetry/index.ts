@@ -66,7 +66,7 @@ export default async function telemetry(client: Client) {
   switch (subcommand) {
     case 'status':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'status');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(statusSubcommand);
         return 2;
       }
@@ -74,7 +74,7 @@ export default async function telemetry(client: Client) {
       return status(client);
     case 'enable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'enable');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(enableSubcommand);
         return 2;
       }
@@ -82,7 +82,7 @@ export default async function telemetry(client: Client) {
       return enable(client);
     case 'disable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'disable');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(disableSubcommand);
         return 2;
       }
