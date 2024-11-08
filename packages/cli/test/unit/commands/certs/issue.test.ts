@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import certs from '../../../../src/commands/certs';
+import { useUser } from '../../../mocks/user';
 
 describe('certs issue', () => {
   describe('--help', () => {
@@ -30,6 +31,24 @@ describe('certs issue', () => {
     await expect(exitCodePromise).resolves.toEqual(1);
   });
 
+  it('should issue cert', async () => {
+    useUser();
+    client.scenario.post('/v3/certs', (_, res) => {
+      return res.json({});
+    });
+    client.scenario.patch('/v3/certs', (_, res) => {
+      return res.json({ cns: ['acme.com'] });
+    });
+
+    client.setArgv('certs', 'issue', 'acme.com');
+    const exitCode = certs(client);
+    await expect(client.stderr).toOutput('Issuing a certificate for acme.com');
+    await expect(client.stderr).toOutput(
+      'Success! Certificate entry for acme.com created'
+    );
+    await expect(exitCode).resolves.toEqual(0);
+  });
+
   it('should track subcommand usage', async () => {
     client.setArgv('certs', 'issue');
     const exitCode = await certs(client);
@@ -57,6 +76,26 @@ describe('certs issue', () => {
           value: 'TRUE',
         },
       ]);
+    });
+
+    it('should handle challenges', async () => {
+      useUser();
+      client.scenario.post('/v3/certs', (_, res) => {
+        return res.json({});
+      });
+      client.scenario.patch('/v3/certs', (_, res) => {
+        return res.json({
+          cns: ['acme.com'],
+          challengesToResolve: [{ domain: 'acme.com', status: 'pending' }],
+        });
+      });
+
+      client.setArgv('certs', 'issue', 'acme.com', '--challenge-only');
+      const exitCode = certs(client);
+      await expect(client.stderr).toOutput(
+        'A certificate issuance for acme.com has been started'
+      );
+      await expect(exitCode).resolves.toEqual(0);
     });
   });
 
