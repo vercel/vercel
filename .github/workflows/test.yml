@@ -10,6 +10,7 @@ on:
   merge_group:
 
 env:
+  VERCEL_TELEMETRY_DISABLED: '1'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
