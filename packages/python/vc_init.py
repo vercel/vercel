@@ -53,17 +53,10 @@ if "VERCEL_IPC_FD" in os.environ:
             # to send the end message after the response is fully sent.
             def handle_one_request(self):
                 self.raw_requestline = self.rfile.readline(65537)
-                if len(self.raw_requestline) > 65536:
-                    self.requestline = ''
-                    self.request_version = ''
-                    self.command = ''
-                    self.send_error(http.HTTPStatus.REQUEST_URI_TOO_LONG)
-                    return
                 if not self.raw_requestline:
                     self.close_connection = True
                     return
                 if not self.parse_request():
-                    # An error code has been sent, just exit
                     return
 
                 invocationId = self.headers.get('x-vercel-internal-invocation-id')
@@ -78,7 +71,7 @@ if "VERCEL_IPC_FD" in os.environ:
                       return
                   method = getattr(self, mname)
                   method()
-                  self.wfile.flush() #actually send the response if not already done.
+                  self.wfile.flush()
                 finally:
                   send_message({
                       "type": "end",
@@ -104,7 +97,116 @@ if "VERCEL_IPC_FD" in os.environ:
             not inspect.iscoroutinefunction(__vc_module.app) and
             not inspect.iscoroutinefunction(__vc_module.app.__call__)
         ):
-            print('using Web Server Gateway Interface (WSGI)')
+            from http.server import HTTPServer
+            import http
+            import time
+            import contextvars
+            from io import BytesIO
+
+            ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
+            sock = socket.socket(fileno=ipc_fd)
+            start_time = time.time()
+
+            send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
+            storage = contextvars.ContextVar('storage', default=None)
+            fetch_id = 0
+
+            string_types = (str,)
+            app = __vc_module.app
+
+            def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
+                if isinstance(s, str):
+                    s = s.encode(charset)
+                return s.decode("latin1", errors)
+
+            class Handler(BaseHTTPRequestHandler):
+                # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
+                # to send the end message after the response is fully sent.
+                def handle_one_request(self):
+                    self.raw_requestline = self.rfile.readline(65537)
+                    if not self.raw_requestline:
+                        self.close_connection = True
+                        return
+                    if not self.parse_request():
+                        return
+
+                    invocationId = self.headers.get('x-vercel-internal-invocation-id')
+                    requestId = int(self.headers.get('x-vercel-internal-request-id'))
+
+                    try:
+                        # Prepare WSGI environment
+                        if '?' in self.path:
+                            path, query = self.path.split('?', 1)
+                        else:
+                            path, query = self.path, ''
+                        content_length = int(self.headers.get('Content-Length', 0))
+                        env = {
+                            'CONTENT_LENGTH': str(content_length),
+                            'CONTENT_TYPE': self.headers.get('content-type', ''),
+                            'PATH_INFO': path,
+                            'QUERY_STRING': query,
+                            'REMOTE_ADDR': self.headers.get(
+                                'x-forwarded-for', self.headers.get(
+                                    'x-real-ip')),
+                            'REQUEST_METHOD': self.command,
+                            'SERVER_NAME': self.headers.get('host', 'lambda'),
+                            'SERVER_PORT': self.headers.get('x-forwarded-port', '80'),
+                            'SERVER_PROTOCOL': 'HTTP/1.1',
+                            'wsgi.errors': sys.stderr,
+                            'wsgi.input': BytesIO(self.rfile.read(content_length)),
+                            'wsgi.multiprocess': False,
+                            'wsgi.multithread': False,
+                            'wsgi.run_once': False,
+                            'wsgi.url_scheme': self.headers.get('x-forwarded-proto', 'http'),
+                            'wsgi.version': (1, 0),
+                        }
+                        for key, value in env.items():
+                            if isinstance(value, string_types):
+                                env[key] = wsgi_encoding_dance(value)
+                        for k, v in self.headers.items():
+                            env['HTTP_' + k.replace('-', '_').upper()] = v
+                        # Response body
+                        body = BytesIO()
+
+                        def start_response(status, headers, exc_info=None):
+                            self.send_response(int(status.split(' ')[0]))
+                            for name, value in headers:
+                                self.send_header(name, value)
+                            self.end_headers()
+                            return body.write
+
+                        # Call the application
+                        response = app(env, start_response)
+                        try:
+                            for data in response:
+                                if data:
+                                    body.write(data)
+                        finally:
+                            if hasattr(response, 'close'):
+                                response.close()
+                        body = body.getvalue()
+                        self.wfile.write(body)
+                        self.wfile.flush()
+                    finally:
+                      send_message({
+                          "type": "end",
+                          "payload": {
+                              "context": {
+                                  "invocationId": invocationId,
+                                  "requestId": requestId,
+                              }
+                          }
+                      })
+
+            server = HTTPServer(('127.0.0.1', 0), Handler)
+            send_message({
+                "type": "server-started",
+                "payload": {
+                    "initDuration": int((time.time() - start_time) * 1000),
+                    "httpPort": server.server_address[1],
+                }
+            })
+            server.serve_forever()
         else:
             print('using Asynchronous Server Gateway Interface (ASGI)')
 
