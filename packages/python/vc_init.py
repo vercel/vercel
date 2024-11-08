@@ -27,26 +27,26 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
-if "VERCEL_IPC_FD" in os.environ:
+if 'VERCEL_IPC_FD' in os.environ:
+    from http.server import HTTPServer
+    import http
+    import time
+    import contextvars
+
+    ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
+    sock = socket.socket(fileno=ipc_fd)
+    start_time = time.time()
+
+    send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
+    storage = contextvars.ContextVar('storage', default=None)
+    fetch_id = 0
+
     if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
         if not issubclass(base, BaseHTTPRequestHandler):
             print('Handler must inherit from BaseHTTPRequestHandler')
             print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
             exit(1)
-
-        from http.server import HTTPServer
-        import http
-        import time
-        import contextvars
-
-        ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
-        sock = socket.socket(fileno=ipc_fd)
-        start_time = time.time()
-
-        send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
-        storage = contextvars.ContextVar('storage', default=None)
-        fetch_id = 0
 
         class Handler(base):
             # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
@@ -82,34 +82,12 @@ if "VERCEL_IPC_FD" in os.environ:
                             }
                         }
                     })
-
-        server = HTTPServer(('127.0.0.1', 0), Handler)
-        send_message({
-            "type": "server-started",
-            "payload": {
-                "initDuration": int((time.time() - start_time) * 1000),
-                "httpPort": server.server_address[1],
-            }
-        })
-        server.serve_forever()
     elif 'app' in __vc_variables:
         if (
             not inspect.iscoroutinefunction(__vc_module.app) and
             not inspect.iscoroutinefunction(__vc_module.app.__call__)
         ):
-            from http.server import HTTPServer
-            import http
-            import time
-            import contextvars
             from io import BytesIO
-
-            ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
-            sock = socket.socket(fileno=ipc_fd)
-            start_time = time.time()
-
-            send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
-            storage = contextvars.ContextVar('storage', default=None)
-            fetch_id = 0
 
             string_types = (str,)
             app = __vc_module.app
@@ -197,32 +175,10 @@ if "VERCEL_IPC_FD" in os.environ:
                               }
                           }
                       })
-
-            server = HTTPServer(('127.0.0.1', 0), Handler)
-            send_message({
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],
-                }
-            })
-            server.serve_forever()
         else:
-            from http.server import HTTPServer
-            import http
-            import time
-            import contextvars
             from urllib.parse import urlparse
             from io import BytesIO
             import asyncio
-
-            ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
-            sock = socket.socket(fileno=ipc_fd)
-            start_time = time.time()
-
-            send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
-            storage = contextvars.ContextVar('storage', default=None)
-            fetch_id = 0
 
             app = __vc_module.app
 
@@ -310,15 +266,16 @@ if "VERCEL_IPC_FD" in os.environ:
                             }
                         })
 
-            server = HTTPServer(('127.0.0.1', 0), Handler)
-            send_message({
-                "type": "server-started",
-                "payload": {
-                    "initDuration": int((time.time() - start_time) * 1000),
-                    "httpPort": server.server_address[1],
-                }
-            })
-            server.serve_forever()
+    if 'Handler' in locals():
+        server = HTTPServer(('127.0.0.1', 0), Handler)
+        send_message({
+            "type": "server-started",
+            "payload": {
+                "initDuration": int((time.time() - start_time) * 1000),
+                "httpPort": server.server_address[1],
+            }
+        })
+        server.serve_forever()
 
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
