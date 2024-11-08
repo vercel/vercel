@@ -10,6 +10,7 @@ on:
   merge_group:
 
 env:
+  VERCEL_TELEMETRY_DISABLED: '1'
   NODE_VERSION: '18'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
