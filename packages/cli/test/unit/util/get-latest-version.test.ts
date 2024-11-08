@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
-import tmp from 'tmp-promise';
+import tmp from 'tmp';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';
 import { vi } from 'vitest';
