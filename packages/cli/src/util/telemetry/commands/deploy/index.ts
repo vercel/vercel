@@ -64,7 +64,8 @@ export class DeployTelemetryClient
     if (regions) {
       this.trackCliOption({
         option: 'regions',
-        value: regions,
+        // consider revisiting once we come up with a way to query the list of regions
+        value: this.redactedValue,
       });
     }
   }

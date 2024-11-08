@@ -906,7 +906,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:regions', value: 'us-east-1,us-east-2' },
+        { key: 'option:regions', value: '[REDACTED]' },
       ]);
     });
     it('--prebuilt', async () => {
