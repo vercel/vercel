@@ -63,25 +63,25 @@ if "VERCEL_IPC_FD" in os.environ:
                 requestId = int(self.headers.get('x-vercel-internal-request-id'))
 
                 try:
-                  mname = 'do_' + self.command
-                  if not hasattr(self, mname):
-                      self.send_error(
-                          http.HTTPStatus.NOT_IMPLEMENTED,
-                          "Unsupported method (%r)" % self.command)
-                      return
-                  method = getattr(self, mname)
-                  method()
-                  self.wfile.flush()
+                    mname = 'do_' + self.command
+                    if not hasattr(self, mname):
+                        self.send_error(
+                            http.HTTPStatus.NOT_IMPLEMENTED,
+                            "Unsupported method (%r)" % self.command)
+                        return
+                    method = getattr(self, mname)
+                    method()
+                    self.wfile.flush()
                 finally:
-                  send_message({
-                      "type": "end",
-                      "payload": {
-                          "context": {
-                              "invocationId": invocationId,
-                              "requestId": requestId,
-                          }
-                      }
-                  })
+                    send_message({
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": invocationId,
+                                "requestId": requestId,
+                            }
+                        }
+                    })
 
         server = HTTPServer(('127.0.0.1', 0), Handler)
         send_message({
@@ -208,7 +208,117 @@ if "VERCEL_IPC_FD" in os.environ:
             })
             server.serve_forever()
         else:
-            print('using Asynchronous Server Gateway Interface (ASGI)')
+            from http.server import HTTPServer
+            import http
+            import time
+            import contextvars
+            from urllib.parse import urlparse
+            from io import BytesIO
+            import asyncio
+
+            ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
+            sock = socket.socket(fileno=ipc_fd)
+            start_time = time.time()
+
+            send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
+            storage = contextvars.ContextVar('storage', default=None)
+            fetch_id = 0
+
+            app = __vc_module.app
+
+            class Handler(BaseHTTPRequestHandler):
+                # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
+                # to send the end message after the response is fully sent.
+                def handle_one_request(self):
+                    self.raw_requestline = self.rfile.readline(65537)
+                    if not self.raw_requestline:
+                        self.close_connection = True
+                        return
+                    if not self.parse_request():
+                        return
+
+                    invocationId = self.headers.get('x-vercel-internal-invocation-id')
+                    requestId = int(self.headers.get('x-vercel-internal-request-id'))
+
+                    try:
+                        # Prepare ASGI scope
+                        url = urlparse(self.path)
+                        headers_encoded = []
+                        for k, v in self.headers.items():
+                            # Cope with repeated headers in the encoding.
+                            if isinstance(v, list):
+                                headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
+                            else:
+                                headers_encoded.append([k.lower().encode(), v.encode()])
+                        scope = {
+                            'server': (self.headers.get('host', 'lambda'), self.headers.get('x-forwarded-port', 80)),
+                            'client': (self.headers.get(
+                                'x-forwarded-for', self.headers.get(
+                                    'x-real-ip')), 0),
+                            'scheme': self.headers.get('x-forwarded-proto', 'http'),
+                            'root_path': '',
+                            'query_string': url.query.encode(),
+                            'headers': headers_encoded,
+                            'type': 'http',
+                            'http_version': '1.1',
+                            'method': self.command,
+                            'path': url.path,
+                            'raw_path': url.path.encode(),
+                        }
+
+                        # Prepare ASGI receive function
+                        async def receive():
+                            if 'content-length' in self.headers:
+                                content_length = int(self.headers['content-length'])
+                                body = self.rfile.read(content_length)
+                                return {
+                                    'type': 'http.request',
+                                    'body': body,
+                                    'more_body': False,
+                                }
+                            return {
+                                'type': 'http.request',
+                                'body': b'',
+                                'more_body': False,
+                            }
+
+                        # Prepare ASGI send function
+                        response_started = False
+                        async def send(event):
+                            nonlocal response_started
+                            if event['type'] == 'http.response.start':
+                                self.send_response(event['status'])
+                                for name, value in event['headers']:
+                                    self.send_header(name.decode(), value.decode())
+                                self.end_headers()
+                                response_started = True
+                            elif event['type'] == 'http.response.body':
+                                self.wfile.write(event['body'])
+                                if not event.get('more_body', False):
+                                    self.wfile.flush()
+
+                        # Run the ASGI application
+                        asyncio.run(app(scope, receive, send))
+                    finally:
+                        send_message({
+                            "type": "end",
+                            "payload": {
+                                "context": {
+                                    "invocationId": invocationId,
+                                    "requestId": requestId,
+                                }
+                            }
+                        })
+
+            server = HTTPServer(('127.0.0.1', 0), Handler)
+            send_message({
+                "type": "server-started",
+                "payload": {
+                    "initDuration": int((time.time() - start_time) * 1000),
+                    "httpPort": server.server_address[1],
+                }
+            })
+            server.serve_forever()
 
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
