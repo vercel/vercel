@@ -1,4 +1,4 @@
-import tmp from 'tmp-promise';
+import tmp from 'tmp';
 import type { TmpDir } from './types';
 
 const allTmpDirs: TmpDir[] = [];
