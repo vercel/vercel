@@ -1098,7 +1098,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:target',
-          value: 'CUSTOM_ID_OR_SLUG',
+          value: '[REDACTED]',
         },
       ]);
     });

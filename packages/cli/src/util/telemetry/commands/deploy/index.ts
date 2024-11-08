@@ -71,12 +71,9 @@ export class DeployTelemetryClient
   }
   trackCliOptionTarget(target: string | undefined) {
     if (target) {
-      const value = ['production', 'preview'].includes(target)
-        ? target
-        : 'CUSTOM_ID_OR_SLUG';
       this.trackCliOption({
         option: 'target',
-        value,
+        value: this.redactedTargetName(target),
       });
     }
   }

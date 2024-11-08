@@ -23,10 +23,9 @@ export class RedeployTelemetryClient
 
   trackCliOptionTarget(target: string | undefined) {
     if (target) {
-      const trackedValues = ['production', 'staging', 'preview'];
       this.trackCliArgument({
         arg: 'target',
-        value: trackedValues.includes(target) ? target : this.redactedValue,
+        value: this.redactedTargetName(target),
       });
     }
   }
