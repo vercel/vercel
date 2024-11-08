@@ -748,13 +748,15 @@ async function writeGoWork(
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
 
   // Get version from go.mod as default
-  let goVersion = '1.21'; // fallback default
+  let goVersion = '1.23'; // fallback default
   if (modulePath) {
     const goModPath = join(modulePath, 'go.mod');
     if (await pathExists(goModPath)) {
       const modContents = await readFile(goModPath, 'utf-8');
-      const goVersionMatch = /^go (\d+\.\d+)/m.exec(modContents);
+      // Update regex to capture patch version
+      const goVersionMatch = /^go (\d+\.\d+(?:\.\d+)?)/m.exec(modContents);
       if (goVersionMatch) {
+        // Use the full version string including patch
         goVersion = goVersionMatch[1];
       }
     }
@@ -764,7 +766,8 @@ async function writeGoWork(
   let contents = '';
   if (goWorkPath) {
     const existingContents = await readFile(goWorkPath, 'utf-8');
-    const workVersionMatch = /^go (\d+\.\d+)/m.exec(existingContents);
+    // Update regex to capture patch version
+    const workVersionMatch = /^go (\d+\.\d+(?:\.\d+)?)/m.exec(existingContents);
     if (workVersionMatch) {
       goVersion = workVersionMatch[1];
     }
