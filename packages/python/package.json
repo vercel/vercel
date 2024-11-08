@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test": "VERCEL_FORCE_STREAMING_RUNTIME=1 jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "pnpm test test/unit.test.ts",
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit"
