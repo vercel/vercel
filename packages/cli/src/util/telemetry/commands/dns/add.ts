@@ -2,6 +2,16 @@ import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { addSubcommand } from '../../../../commands/dns/command';
 
+const ALLOWED_RECORD_TYPES = [
+  'A',
+  'AAAA',
+  'ALIAS',
+  'CNAME',
+  'TXT',
+  'MX',
+  'SRV',
+];
+
 export class DnsAddTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addSubcommand>
@@ -30,9 +40,12 @@ export class DnsAddTelemetryClient
 
   trackCliArgumentType(type: string | undefined) {
     if (type) {
+      const allowedType = ALLOWED_RECORD_TYPES.includes(type)
+        ? type
+        : this.redactedValue;
       this.trackCliArgument({
         arg: 'type',
-        value: type,
+        value: allowedType,
       });
     }
   }
