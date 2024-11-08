@@ -564,7 +564,7 @@ const main = async () => {
           parsedArgs.args.slice(3),
           cwd
         );
-        telemetry.trackCliExtension(targetCommand);
+        telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`
@@ -638,7 +638,7 @@ const main = async () => {
           func = require('./commands/integration').default;
           break;
         case 'integration-resource':
-          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
+          telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = require('./commands/integration-resource').default;
           break;
         case 'link':

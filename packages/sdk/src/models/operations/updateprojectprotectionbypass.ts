@@ -20,11 +20,25 @@ export type Revoke = {
   regenerate: boolean;
 };
 
+/**
+ * Generate a new secret. If neither generate or revoke are provided, a new random secret will be generated.
+ */
+export type Generate = {
+  /**
+   * Optional value of the secret to generate
+   */
+  secret?: string | undefined;
+};
+
 export type UpdateProjectProtectionBypassRequestBody = {
   /**
    * Optional instructions for revoking and regenerating a automation bypass
    */
   revoke?: Revoke | undefined;
+  /**
+   * Generate a new secret. If neither generate or revoke are provided, a new random secret will be generated.
+   */
+  generate?: Generate | undefined;
 };
 
 export type UpdateProjectProtectionBypassRequest = {
@@ -99,17 +113,55 @@ export namespace Revoke$ {
 }
 
 /** @internal */
+export const Generate$inboundSchema: z.ZodType<
+  Generate,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  secret: z.string().optional(),
+});
+
+/** @internal */
+export type Generate$Outbound = {
+  secret?: string | undefined;
+};
+
+/** @internal */
+export const Generate$outboundSchema: z.ZodType<
+  Generate$Outbound,
+  z.ZodTypeDef,
+  Generate
+> = z.object({
+  secret: z.string().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Generate$ {
+  /** @deprecated use `Generate$inboundSchema` instead. */
+  export const inboundSchema = Generate$inboundSchema;
+  /** @deprecated use `Generate$outboundSchema` instead. */
+  export const outboundSchema = Generate$outboundSchema;
+  /** @deprecated use `Generate$Outbound` instead. */
+  export type Outbound = Generate$Outbound;
+}
+
+/** @internal */
 export const UpdateProjectProtectionBypassRequestBody$inboundSchema: z.ZodType<
   UpdateProjectProtectionBypassRequestBody,
   z.ZodTypeDef,
   unknown
 > = z.object({
   revoke: z.lazy(() => Revoke$inboundSchema).optional(),
+  generate: z.lazy(() => Generate$inboundSchema).optional(),
 });
 
 /** @internal */
 export type UpdateProjectProtectionBypassRequestBody$Outbound = {
   revoke?: Revoke$Outbound | undefined;
+  generate?: Generate$Outbound | undefined;
 };
 
 /** @internal */
@@ -119,6 +171,7 @@ export const UpdateProjectProtectionBypassRequestBody$outboundSchema: z.ZodType<
   UpdateProjectProtectionBypassRequestBody
 > = z.object({
   revoke: z.lazy(() => Revoke$outboundSchema).optional(),
+  generate: z.lazy(() => Generate$outboundSchema).optional(),
 });
 
 /**

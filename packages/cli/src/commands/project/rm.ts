@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
@@ -82,7 +82,7 @@ async function readConfirmation(
   output.print(
     prependEmoji(
       `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
-        `It will also delete everything under the project including deployments.\n`,
+        'It will also delete everything under the project including deployments.\n',
       emoji('warning')
     )
   );

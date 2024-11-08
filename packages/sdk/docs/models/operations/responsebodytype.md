@@ -3,13 +3,13 @@
 ## Example Usage
 
 ```typescript
-import { ResponseBodyType } from "@vercel/sdk/models/operations/getdeploymentevents.js";
+import { ResponseBodyType } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: ResponseBodyType = "command";
+let value: ResponseBodyType = "LAMBDAS";
 ```
 
 ## Values
 
 ```typescript
-"command" | "stdout" | "stderr" | "exit" | "deployment-state" | "delimiter" | "middleware" | "middleware-invocation" | "edge-function-invocation" | "fatal"
+"LAMBDAS"
 ```

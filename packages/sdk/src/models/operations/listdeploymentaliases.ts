@@ -20,13 +20,12 @@ export type ListDeploymentAliasesRequest = {
   slug?: string | undefined;
 };
 
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope =
-  {
-    EmailInvite: "email_invite",
-  } as const;
-export type ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope =
+export const ListDeploymentAliasesProtectionBypassAliasesResponse200Scope = {
+  EmailInvite: "email_invite",
+} as const;
+export type ListDeploymentAliasesProtectionBypassAliasesResponse200Scope =
   ClosedEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope
+    typeof ListDeploymentAliasesProtectionBypassAliasesResponse200Scope
   >;
 
 /**
@@ -36,16 +35,14 @@ export type ListDeploymentAliasesProtectionBypass4 = {
   createdAt: number;
   lastUpdatedAt: number;
   lastUpdatedBy: string;
-  scope: ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope;
+  scope: ListDeploymentAliasesProtectionBypassAliasesResponse200Scope;
 };
 
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponseScope = {
+export const ListDeploymentAliasesProtectionBypassAliasesResponseScope = {
   AliasProtectionOverride: "alias-protection-override",
 } as const;
-export type ListDeploymentAliasesProtectionBypassDeploymentsResponseScope =
-  ClosedEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponseScope
-  >;
+export type ListDeploymentAliasesProtectionBypassAliasesResponseScope =
+  ClosedEnum<typeof ListDeploymentAliasesProtectionBypassAliasesResponseScope>;
 
 /**
  * The protection bypass for the alias
@@ -53,7 +50,7 @@ export type ListDeploymentAliasesProtectionBypassDeploymentsResponseScope =
 export type ListDeploymentAliasesProtectionBypass3 = {
   createdAt: number;
   createdBy: string;
-  scope: ListDeploymentAliasesProtectionBypassDeploymentsResponseScope;
+  scope: ListDeploymentAliasesProtectionBypassAliasesResponseScope;
 };
 
 export const ListDeploymentAliasesProtectionBypassAccess = {
@@ -64,11 +61,11 @@ export type ListDeploymentAliasesProtectionBypassAccess = ClosedEnum<
   typeof ListDeploymentAliasesProtectionBypassAccess
 >;
 
-export const ListDeploymentAliasesProtectionBypassDeploymentsScope = {
+export const ListDeploymentAliasesProtectionBypassAliasesScope = {
   User: "user",
 } as const;
-export type ListDeploymentAliasesProtectionBypassDeploymentsScope = ClosedEnum<
-  typeof ListDeploymentAliasesProtectionBypassDeploymentsScope
+export type ListDeploymentAliasesProtectionBypassAliasesScope = ClosedEnum<
+  typeof ListDeploymentAliasesProtectionBypassAliasesScope
 >;
 
 /**
@@ -79,7 +76,7 @@ export type ListDeploymentAliasesProtectionBypass2 = {
   lastUpdatedAt: number;
   lastUpdatedBy: string;
   access: ListDeploymentAliasesProtectionBypassAccess;
-  scope: ListDeploymentAliasesProtectionBypassDeploymentsScope;
+  scope: ListDeploymentAliasesProtectionBypassAliasesScope;
 };
 
 export const ListDeploymentAliasesProtectionBypassScope = {
@@ -189,31 +186,31 @@ export namespace ListDeploymentAliasesRequest$ {
 }
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$inboundSchema:
+export const ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$inboundSchema:
   z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope
+    typeof ListDeploymentAliasesProtectionBypassAliasesResponse200Scope
   > = z.nativeEnum(
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope,
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope,
   );
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$outboundSchema:
+export const ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$outboundSchema:
   z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope
+    typeof ListDeploymentAliasesProtectionBypassAliasesResponse200Scope
   > =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$inboundSchema;
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$ {
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$inboundSchema` instead. */
+export namespace ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$ {
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$inboundSchema` instead. */
   export const inboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$inboundSchema;
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$outboundSchema` instead. */
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$inboundSchema;
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$outboundSchema` instead. */
   export const outboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$outboundSchema;
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$outboundSchema;
 }
 
 /** @internal */
@@ -226,7 +223,7 @@ export const ListDeploymentAliasesProtectionBypass4$inboundSchema: z.ZodType<
   lastUpdatedAt: z.number(),
   lastUpdatedBy: z.string(),
   scope:
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$inboundSchema,
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$inboundSchema,
 });
 
 /** @internal */
@@ -247,7 +244,7 @@ export const ListDeploymentAliasesProtectionBypass4$outboundSchema: z.ZodType<
   lastUpdatedAt: z.number(),
   lastUpdatedBy: z.string(),
   scope:
-    ListDeploymentAliasesProtectionBypassDeploymentsResponse200Scope$outboundSchema,
+    ListDeploymentAliasesProtectionBypassAliasesResponse200Scope$outboundSchema,
 });
 
 /**
@@ -266,31 +263,28 @@ export namespace ListDeploymentAliasesProtectionBypass4$ {
 }
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$inboundSchema:
+export const ListDeploymentAliasesProtectionBypassAliasesResponseScope$inboundSchema:
   z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponseScope
-  > = z.nativeEnum(
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope,
-  );
+    typeof ListDeploymentAliasesProtectionBypassAliasesResponseScope
+  > = z.nativeEnum(ListDeploymentAliasesProtectionBypassAliasesResponseScope);
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$outboundSchema:
+export const ListDeploymentAliasesProtectionBypassAliasesResponseScope$outboundSchema:
   z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsResponseScope
-  > =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$inboundSchema;
+    typeof ListDeploymentAliasesProtectionBypassAliasesResponseScope
+  > = ListDeploymentAliasesProtectionBypassAliasesResponseScope$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$ {
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$inboundSchema` instead. */
+export namespace ListDeploymentAliasesProtectionBypassAliasesResponseScope$ {
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesResponseScope$inboundSchema` instead. */
   export const inboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$inboundSchema;
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$outboundSchema` instead. */
+    ListDeploymentAliasesProtectionBypassAliasesResponseScope$inboundSchema;
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesResponseScope$outboundSchema` instead. */
   export const outboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$outboundSchema;
+    ListDeploymentAliasesProtectionBypassAliasesResponseScope$outboundSchema;
 }
 
 /** @internal */
@@ -302,7 +296,7 @@ export const ListDeploymentAliasesProtectionBypass3$inboundSchema: z.ZodType<
   createdAt: z.number(),
   createdBy: z.string(),
   scope:
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$inboundSchema,
+    ListDeploymentAliasesProtectionBypassAliasesResponseScope$inboundSchema,
 });
 
 /** @internal */
@@ -321,7 +315,7 @@ export const ListDeploymentAliasesProtectionBypass3$outboundSchema: z.ZodType<
   createdAt: z.number(),
   createdBy: z.string(),
   scope:
-    ListDeploymentAliasesProtectionBypassDeploymentsResponseScope$outboundSchema,
+    ListDeploymentAliasesProtectionBypassAliasesResponseScope$outboundSchema,
 });
 
 /**
@@ -363,28 +357,26 @@ export namespace ListDeploymentAliasesProtectionBypassAccess$ {
 }
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsScope$inboundSchema:
-  z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsScope
-  > = z.nativeEnum(ListDeploymentAliasesProtectionBypassDeploymentsScope);
+export const ListDeploymentAliasesProtectionBypassAliasesScope$inboundSchema:
+  z.ZodNativeEnum<typeof ListDeploymentAliasesProtectionBypassAliasesScope> = z
+    .nativeEnum(ListDeploymentAliasesProtectionBypassAliasesScope);
 
 /** @internal */
-export const ListDeploymentAliasesProtectionBypassDeploymentsScope$outboundSchema:
-  z.ZodNativeEnum<
-    typeof ListDeploymentAliasesProtectionBypassDeploymentsScope
-  > = ListDeploymentAliasesProtectionBypassDeploymentsScope$inboundSchema;
+export const ListDeploymentAliasesProtectionBypassAliasesScope$outboundSchema:
+  z.ZodNativeEnum<typeof ListDeploymentAliasesProtectionBypassAliasesScope> =
+    ListDeploymentAliasesProtectionBypassAliasesScope$inboundSchema;
 
 /**
  * @internal
  * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
  */
-export namespace ListDeploymentAliasesProtectionBypassDeploymentsScope$ {
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsScope$inboundSchema` instead. */
+export namespace ListDeploymentAliasesProtectionBypassAliasesScope$ {
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesScope$inboundSchema` instead. */
   export const inboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsScope$inboundSchema;
-  /** @deprecated use `ListDeploymentAliasesProtectionBypassDeploymentsScope$outboundSchema` instead. */
+    ListDeploymentAliasesProtectionBypassAliasesScope$inboundSchema;
+  /** @deprecated use `ListDeploymentAliasesProtectionBypassAliasesScope$outboundSchema` instead. */
   export const outboundSchema =
-    ListDeploymentAliasesProtectionBypassDeploymentsScope$outboundSchema;
+    ListDeploymentAliasesProtectionBypassAliasesScope$outboundSchema;
 }
 
 /** @internal */
@@ -397,7 +389,7 @@ export const ListDeploymentAliasesProtectionBypass2$inboundSchema: z.ZodType<
   lastUpdatedAt: z.number(),
   lastUpdatedBy: z.string(),
   access: ListDeploymentAliasesProtectionBypassAccess$inboundSchema,
-  scope: ListDeploymentAliasesProtectionBypassDeploymentsScope$inboundSchema,
+  scope: ListDeploymentAliasesProtectionBypassAliasesScope$inboundSchema,
 });
 
 /** @internal */
@@ -419,7 +411,7 @@ export const ListDeploymentAliasesProtectionBypass2$outboundSchema: z.ZodType<
   lastUpdatedAt: z.number(),
   lastUpdatedBy: z.string(),
   access: ListDeploymentAliasesProtectionBypassAccess$outboundSchema,
-  scope: ListDeploymentAliasesProtectionBypassDeploymentsScope$outboundSchema,
+  scope: ListDeploymentAliasesProtectionBypassAliasesScope$outboundSchema,
 });
 
 /**

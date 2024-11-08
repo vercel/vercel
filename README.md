@@ -59,11 +59,11 @@ Make sure all the tests pass before making changes.
 
 #### Running Vercel CLI Changes
 
-You can use `pnpm dev` from the `cli` package to invoke Vercel CLI with local changes:
+You can use `pnpm vercel` from the `cli` package to invoke Vercel CLI with local changes:
 
 ```
 cd ./packages/cli
-pnpm dev <cli-commands...>
+pnpm vercel <cli-commands...>
 ```
 
 See [CLI Local Development](../packages/cli#local-development) for more details.

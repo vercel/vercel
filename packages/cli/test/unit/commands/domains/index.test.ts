@@ -29,21 +29,19 @@ describe('domains', () => {
 
   it('routes to ls subcommand', async () => {
     const args: string[] = [];
-    const opts = {};
 
     client.setArgv('domains', ...args);
     await domains(client);
-    expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
   });
 
   describe('unrecognized subcommand', () => {
     it('routes to ls', async () => {
       const args: string[] = ['not-a-command'];
-      const opts = {};
 
       client.setArgv('domains', ...args);
       await domains(client);
-      expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+      expect(lsSpy).toHaveBeenCalledWith(client, args);
     });
   });
 });

@@ -12,7 +12,7 @@ const value: operations.Link1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://rubbery-gift.biz/",
+      url: "https://enchanted-disclosure.com/",
     },
   ],
 };
@@ -27,7 +27,7 @@ const value: operations.Link2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://bitter-platter.info/",
+      url: "https://general-possession.info/",
     },
   ],
 };
@@ -42,7 +42,7 @@ const value: operations.Link3 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://unlucky-word.biz",
+      url: "https://alive-bathhouse.net/",
     },
   ],
 };

@@ -2,6 +2,7 @@ import { walkParentDirs } from '../src';
 import { strict } from 'assert';
 import { join } from 'path';
 import { promises } from 'fs';
+import { describe, it } from 'vitest';
 const { notDeepEqual, fail } = strict;
 const { readFile } = promises;
 const fixture = (name: string) => join(__dirname, 'walk', name);

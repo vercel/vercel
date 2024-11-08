@@ -5,7 +5,7 @@
 ```typescript
 import { GetRecordsResponseBodyType } from "@vercel/sdk/models/operations/getrecords.js";
 
-let value: GetRecordsResponseBodyType = "A";
+let value: GetRecordsResponseBodyType = "SRV";
 ```
 
 ## Values

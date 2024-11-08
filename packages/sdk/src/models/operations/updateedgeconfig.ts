@@ -4,6 +4,7 @@
 
 import * as z from "zod";
 import { remap as remap$ } from "../../lib/primitives.js";
+import { ClosedEnum } from "../../types/enums.js";
 
 export type UpdateEdgeConfigRequestBody = {
   slug: string;
@@ -33,6 +34,16 @@ export type UpdateEdgeConfigTransfer = {
 
 export type UpdateEdgeConfigSchema = {};
 
+export const UpdateEdgeConfigType = {
+  Flags: "flags",
+} as const;
+export type UpdateEdgeConfigType = ClosedEnum<typeof UpdateEdgeConfigType>;
+
+export type UpdateEdgeConfigPurpose = {
+  type: UpdateEdgeConfigType;
+  projectId: string;
+};
+
 /**
  * An Edge Config
  */
@@ -51,6 +62,7 @@ export type UpdateEdgeConfigResponseBody = {
    */
   transfer?: UpdateEdgeConfigTransfer | undefined;
   schema?: UpdateEdgeConfigSchema | undefined;
+  purpose?: UpdateEdgeConfigPurpose | undefined;
   sizeInBytes: number;
   itemCount: number;
 };
@@ -219,6 +231,66 @@ export namespace UpdateEdgeConfigSchema$ {
 }
 
 /** @internal */
+export const UpdateEdgeConfigType$inboundSchema: z.ZodNativeEnum<
+  typeof UpdateEdgeConfigType
+> = z.nativeEnum(UpdateEdgeConfigType);
+
+/** @internal */
+export const UpdateEdgeConfigType$outboundSchema: z.ZodNativeEnum<
+  typeof UpdateEdgeConfigType
+> = UpdateEdgeConfigType$inboundSchema;
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace UpdateEdgeConfigType$ {
+  /** @deprecated use `UpdateEdgeConfigType$inboundSchema` instead. */
+  export const inboundSchema = UpdateEdgeConfigType$inboundSchema;
+  /** @deprecated use `UpdateEdgeConfigType$outboundSchema` instead. */
+  export const outboundSchema = UpdateEdgeConfigType$outboundSchema;
+}
+
+/** @internal */
+export const UpdateEdgeConfigPurpose$inboundSchema: z.ZodType<
+  UpdateEdgeConfigPurpose,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  type: UpdateEdgeConfigType$inboundSchema,
+  projectId: z.string(),
+});
+
+/** @internal */
+export type UpdateEdgeConfigPurpose$Outbound = {
+  type: string;
+  projectId: string;
+};
+
+/** @internal */
+export const UpdateEdgeConfigPurpose$outboundSchema: z.ZodType<
+  UpdateEdgeConfigPurpose$Outbound,
+  z.ZodTypeDef,
+  UpdateEdgeConfigPurpose
+> = z.object({
+  type: UpdateEdgeConfigType$outboundSchema,
+  projectId: z.string(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace UpdateEdgeConfigPurpose$ {
+  /** @deprecated use `UpdateEdgeConfigPurpose$inboundSchema` instead. */
+  export const inboundSchema = UpdateEdgeConfigPurpose$inboundSchema;
+  /** @deprecated use `UpdateEdgeConfigPurpose$outboundSchema` instead. */
+  export const outboundSchema = UpdateEdgeConfigPurpose$outboundSchema;
+  /** @deprecated use `UpdateEdgeConfigPurpose$Outbound` instead. */
+  export type Outbound = UpdateEdgeConfigPurpose$Outbound;
+}
+
+/** @internal */
 export const UpdateEdgeConfigResponseBody$inboundSchema: z.ZodType<
   UpdateEdgeConfigResponseBody,
   z.ZodTypeDef,
@@ -232,6 +304,7 @@ export const UpdateEdgeConfigResponseBody$inboundSchema: z.ZodType<
   digest: z.string().optional(),
   transfer: z.lazy(() => UpdateEdgeConfigTransfer$inboundSchema).optional(),
   schema: z.lazy(() => UpdateEdgeConfigSchema$inboundSchema).optional(),
+  purpose: z.lazy(() => UpdateEdgeConfigPurpose$inboundSchema).optional(),
   sizeInBytes: z.number(),
   itemCount: z.number(),
 });
@@ -246,6 +319,7 @@ export type UpdateEdgeConfigResponseBody$Outbound = {
   digest?: string | undefined;
   transfer?: UpdateEdgeConfigTransfer$Outbound | undefined;
   schema?: UpdateEdgeConfigSchema$Outbound | undefined;
+  purpose?: UpdateEdgeConfigPurpose$Outbound | undefined;
   sizeInBytes: number;
   itemCount: number;
 };
@@ -264,6 +338,7 @@ export const UpdateEdgeConfigResponseBody$outboundSchema: z.ZodType<
   digest: z.string().optional(),
   transfer: z.lazy(() => UpdateEdgeConfigTransfer$outboundSchema).optional(),
   schema: z.lazy(() => UpdateEdgeConfigSchema$outboundSchema).optional(),
+  purpose: z.lazy(() => UpdateEdgeConfigPurpose$outboundSchema).optional(),
   sizeInBytes: z.number(),
   itemCount: z.number(),
 });

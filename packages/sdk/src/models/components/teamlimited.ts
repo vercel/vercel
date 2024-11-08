@@ -71,6 +71,10 @@ export type Saml = {
   enforced: boolean;
 };
 
+export type Entitlements = {
+  entitlement: string;
+};
+
 export const Role = {
   Owner: "OWNER",
   Member: "MEMBER",
@@ -116,15 +120,16 @@ export type JoinedFrom = {
  * The membership of the authenticated User in relation to the Team.
  */
 export type Membership = {
-  confirmed?: boolean | undefined;
-  confirmedAt?: number | undefined;
-  accessRequestedAt?: number | undefined;
-  role?: Role | undefined;
-  teamId?: string | undefined;
-  createdAt?: number | undefined;
-  created?: number | undefined;
-  joinedFrom?: JoinedFrom | undefined;
   uid?: string | undefined;
+  entitlements?: Array<Entitlements> | undefined;
+  confirmed: boolean;
+  confirmedAt: number;
+  accessRequestedAt?: number | undefined;
+  role: Role;
+  teamId?: string | undefined;
+  createdAt: number;
+  created: number;
+  joinedFrom?: JoinedFrom | undefined;
 };
 
 /**
@@ -299,6 +304,42 @@ export namespace Saml$ {
 }
 
 /** @internal */
+export const Entitlements$inboundSchema: z.ZodType<
+  Entitlements,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  entitlement: z.string(),
+});
+
+/** @internal */
+export type Entitlements$Outbound = {
+  entitlement: string;
+};
+
+/** @internal */
+export const Entitlements$outboundSchema: z.ZodType<
+  Entitlements$Outbound,
+  z.ZodTypeDef,
+  Entitlements
+> = z.object({
+  entitlement: z.string(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Entitlements$ {
+  /** @deprecated use `Entitlements$inboundSchema` instead. */
+  export const inboundSchema = Entitlements$inboundSchema;
+  /** @deprecated use `Entitlements$outboundSchema` instead. */
+  export const outboundSchema = Entitlements$outboundSchema;
+  /** @deprecated use `Entitlements$Outbound` instead. */
+  export type Outbound = Entitlements$Outbound;
+}
+
+/** @internal */
 export const Role$inboundSchema: z.ZodNativeEnum<typeof Role> = z.nativeEnum(
   Role,
 );
@@ -439,28 +480,30 @@ export const Membership$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  confirmed: z.boolean().optional(),
-  confirmedAt: z.number().optional(),
-  accessRequestedAt: z.number().optional(),
-  role: Role$inboundSchema.optional(),
-  teamId: z.string().optional(),
-  createdAt: z.number().optional(),
-  created: z.number().optional(),
-  joinedFrom: z.lazy(() => JoinedFrom$inboundSchema).optional(),
   uid: z.string().optional(),
+  entitlements: z.array(z.lazy(() => Entitlements$inboundSchema)).optional(),
+  confirmed: z.boolean(),
+  confirmedAt: z.number(),
+  accessRequestedAt: z.number().optional(),
+  role: Role$inboundSchema,
+  teamId: z.string().optional(),
+  createdAt: z.number(),
+  created: z.number(),
+  joinedFrom: z.lazy(() => JoinedFrom$inboundSchema).optional(),
 });
 
 /** @internal */
 export type Membership$Outbound = {
-  confirmed?: boolean | undefined;
-  confirmedAt?: number | undefined;
-  accessRequestedAt?: number | undefined;
-  role?: string | undefined;
-  teamId?: string | undefined;
-  createdAt?: number | undefined;
-  created?: number | undefined;
-  joinedFrom?: JoinedFrom$Outbound | undefined;
   uid?: string | undefined;
+  entitlements?: Array<Entitlements$Outbound> | undefined;
+  confirmed: boolean;
+  confirmedAt: number;
+  accessRequestedAt?: number | undefined;
+  role: string;
+  teamId?: string | undefined;
+  createdAt: number;
+  created: number;
+  joinedFrom?: JoinedFrom$Outbound | undefined;
 };
 
 /** @internal */
@@ -469,15 +512,16 @@ export const Membership$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Membership
 > = z.object({
-  confirmed: z.boolean().optional(),
-  confirmedAt: z.number().optional(),
-  accessRequestedAt: z.number().optional(),
-  role: Role$outboundSchema.optional(),
-  teamId: z.string().optional(),
-  createdAt: z.number().optional(),
-  created: z.number().optional(),
-  joinedFrom: z.lazy(() => JoinedFrom$outboundSchema).optional(),
   uid: z.string().optional(),
+  entitlements: z.array(z.lazy(() => Entitlements$outboundSchema)).optional(),
+  confirmed: z.boolean(),
+  confirmedAt: z.number(),
+  accessRequestedAt: z.number().optional(),
+  role: Role$outboundSchema,
+  teamId: z.string().optional(),
+  createdAt: z.number(),
+  created: z.number(),
+  joinedFrom: z.lazy(() => JoinedFrom$outboundSchema).optional(),
 });
 
 /**

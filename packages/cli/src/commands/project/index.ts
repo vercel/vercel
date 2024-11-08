@@ -1,8 +1,8 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import add from './add';
 import list from './list';
 import rm from './rm';
@@ -15,13 +15,13 @@ import {
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
 import output from '../../output-manager';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
 
 const COMMAND_CONFIG = {
-  list: getAliases(listSubcommand),
-  add: getAliases(addSubcommand),
-  remove: getAliases(removeSubcommand),
+  list: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {

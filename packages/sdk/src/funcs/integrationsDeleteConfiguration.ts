@@ -47,10 +47,8 @@ export async function integrationsDeleteConfiguration(
     | ConnectionError
   >
 > {
-  const input = request;
-
   const parsed = safeParse(
-    input,
+    request,
     (value) => DeleteConfigurationRequest$outboundSchema.parse(value),
     "Input validation failed",
   );
@@ -80,12 +78,17 @@ export async function integrationsDeleteConfiguration(
 
   const secConfig = await extractSecurity(client._options.bearerToken);
   const securityInput = secConfig == null ? {} : { bearerToken: secConfig };
+  const requestSecurity = resolveGlobalSecurity(securityInput);
+
   const context = {
     operationID: "deleteConfiguration",
     oAuth2Scopes: [],
     securitySource: client._options.bearerToken,
+    retryConfig: options?.retries
+      || client._options.retryConfig
+      || { strategy: "none" },
+    retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
   };
-  const requestSecurity = resolveGlobalSecurity(securityInput);
 
   const requestRes = client._createRequest(context, {
     security: requestSecurity,
@@ -104,9 +107,8 @@ export async function integrationsDeleteConfiguration(
   const doResult = await client._do(req, {
     context,
     errorCodes: ["400", "401", "403", "404", "4XX", "5XX"],
-    retryConfig: options?.retries
-      || client._options.retryConfig,
-    retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
+    retryConfig: context.retryConfig,
+    retryCodes: context.retryCodes,
   });
   if (!doResult.ok) {
     return doResult;

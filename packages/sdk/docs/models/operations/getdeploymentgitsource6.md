@@ -9,7 +9,7 @@ let value: GetDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://wee-range.biz/",
+  gitUrl: "https://harmful-coin.info/",
 };
 ```
 

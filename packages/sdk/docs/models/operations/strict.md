@@ -7,7 +7,7 @@ When true, the response will only include the nameservers assigned directly to t
 ```typescript
 import { Strict } from "@vercel/sdk/models/operations/getdomainconfig.js";
 
-let value: Strict = "true";
+let value: Strict = "false";
 ```
 
 ## Values

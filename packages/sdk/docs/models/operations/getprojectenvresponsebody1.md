@@ -7,7 +7,7 @@ import { GetProjectEnvResponseBody1 } from "@vercel/sdk/models/operations/getpro
 
 let value: GetProjectEnvResponseBody1 = {
   decrypted: false,
-  type: "plain",
+  type: "secret",
   key: "<key>",
 };
 ```

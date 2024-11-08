@@ -13,7 +13,7 @@ export default async function startCertOrder(
 ) {
   output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {
-    const cert = await client.fetch<Cert>('/v3/now/certs', {
+    const cert = await client.fetch<Cert>('/v3/certs', {
       method: 'PATCH',
       body: {
         op: 'finalizeOrder',

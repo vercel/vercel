@@ -16,12 +16,12 @@ import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetr
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  status: getAliases(statusSubcommand),
-  enable: getAliases(enableSubcommand),
-  disable: getAliases(disableSubcommand),
+  status: getCommandAliases(statusSubcommand),
+  enable: getCommandAliases(enableSubcommand),
+  disable: getCommandAliases(disableSubcommand),
 };
 
 export default async function telemetry(client: Client) {
@@ -41,7 +41,7 @@ export default async function telemetry(client: Client) {
     return 1;
   }
 
-  const { subcommand } = getSubcommand(
+  const { subcommand, subcommandOriginal } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
@@ -70,7 +70,7 @@ export default async function telemetry(client: Client) {
         printHelp(statusSubcommand);
         return 2;
       }
-      telemetryClient.trackCliSubcommandStatus(subcommand);
+      telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
       return status(client);
     case 'enable':
       if (needHelp) {
@@ -78,7 +78,7 @@ export default async function telemetry(client: Client) {
         printHelp(enableSubcommand);
         return 2;
       }
-      telemetryClient.trackCliSubcommandEnable(subcommand);
+      telemetryClient.trackCliSubcommandEnable(subcommandOriginal);
       return enable(client);
     case 'disable':
       if (needHelp) {

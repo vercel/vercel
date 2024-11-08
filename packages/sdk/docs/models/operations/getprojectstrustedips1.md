@@ -6,13 +6,13 @@
 import { GetProjectsTrustedIps1 } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsTrustedIps1 = {
-  deploymentType: "all",
+  deploymentType: "prod_deployment_urls_and_all_previews",
   addresses: [
     {
       value: "<value>",
     },
   ],
-  protectionMode: "additional",
+  protectionMode: "exclusive",
 };
 ```
 
