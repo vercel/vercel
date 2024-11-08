@@ -303,7 +303,11 @@ export class TelemetryEventStore {
           });
         });
         childProcess.on('exit', code => {
-          return code === 0 ? resolve() : reject();
+          return code === 0
+            ? resolve()
+            : reject(
+                new Error(`Failed to send telemetry events, exit code: ${code}`)
+              );
         });
       });
     } else {
