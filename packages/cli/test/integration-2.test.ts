@@ -1,6 +1,9 @@
 import path from 'path';
 import { URL } from 'url';
 import fetch from 'node-fetch';
+import express from 'express';
+import { createServer } from 'http';
+import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
 import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -579,6 +582,111 @@ test('whoami with local .vercel scope', async () => {
 
   // clean up
   await remove(path.join(directory, '.vercel'));
+});
+
+describe('telemtry submits data', () => {
+  describe('when --debug is enabled', () => {
+    test('gracefully exits if the server does not respond', async () => {
+      let mockTelemetryBridgeWasCalled = false;
+      const mockTelemetryBridgeApp = express();
+      mockTelemetryBridgeApp.use(express.json());
+      mockTelemetryBridgeApp.use(() => {
+        mockTelemetryBridgeWasCalled = true;
+        // No response to simulate a timeout
+      });
+      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
+      await listen(mockTelemetryBridgeServer, 0);
+      const address = mockTelemetryBridgeServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Unexpected http server address');
+      }
+      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
+      const directory = await setupE2EFixture('static-deployment');
+      // create local .vercel
+      await ensureDir(path.join(directory, '.vercel'));
+      await fs.writeFile(
+        path.join(directory, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
+      );
+      const output = await execCli(binaryPath, ['whoami', '-d'], {
+        cwd: directory,
+      });
+      expect(output.stderr).toContain('Telemetry event subprocess timed out');
+      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(mockTelemetryBridgeWasCalled).toEqual(true);
+      // clean up
+      await mockTelemetryBridgeServer.close();
+      await remove(path.join(directory, '.vercel'));
+      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+    });
+    test('gracefully exits if the server responds with a non-204 error', async () => {
+      let mockTelemetryBridgeWasCalled = false;
+      const mockTelemetryBridgeApp = express();
+      mockTelemetryBridgeApp.use(express.json());
+      mockTelemetryBridgeApp.use((_req, res) => {
+        mockTelemetryBridgeWasCalled = true;
+        res.status(403).send();
+      });
+      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
+      await listen(mockTelemetryBridgeServer, 0);
+      const address = mockTelemetryBridgeServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Unexpected http server address');
+      }
+      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
+      const directory = await setupE2EFixture('static-deployment');
+      // create local .vercel
+      await ensureDir(path.join(directory, '.vercel'));
+      await fs.writeFile(
+        path.join(directory, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
+      );
+      const output = await execCli(binaryPath, ['whoami', '-d'], {
+        cwd: directory,
+      });
+      expect(output.stderr).toContain('Failed to send telemetry events');
+      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(mockTelemetryBridgeWasCalled).toEqual(true);
+      // clean up
+      await mockTelemetryBridgeServer.close();
+      await remove(path.join(directory, '.vercel'));
+      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+    });
+    test('it waits for the response and logs it', async () => {
+      let mockTelemetryBridgeWasCalled = false;
+      const mockTelemetryBridgeApp = express();
+      mockTelemetryBridgeApp.use(express.json());
+      mockTelemetryBridgeApp.use((_req, res) => {
+        mockTelemetryBridgeWasCalled = true;
+        res.header('x-vercel-cli-tracked', '1');
+        res.status(204).send();
+      });
+      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
+      await listen(mockTelemetryBridgeServer, 0);
+      const address = mockTelemetryBridgeServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Unexpected http server address');
+      }
+      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
+      const directory = await setupE2EFixture('static-deployment');
+      // create local .vercel
+      await ensureDir(path.join(directory, '.vercel'));
+      await fs.writeFile(
+        path.join(directory, '.vercel', 'project.json'),
+        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
+      );
+      const output = await execCli(binaryPath, ['whoami', '-d'], {
+        cwd: directory,
+      });
+      expect(output.stderr).toContain('Telemetry event tracked');
+      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(mockTelemetryBridgeWasCalled).toEqual(true);
+      // clean up
+      await mockTelemetryBridgeServer.close();
+      await remove(path.join(directory, '.vercel'));
+      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+    });
+  });
 });
 
 test('deploys with only now.json and README.md', async () => {

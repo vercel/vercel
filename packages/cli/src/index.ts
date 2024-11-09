@@ -791,8 +791,10 @@ const main = async () => {
     return 1;
   }
 
-  // specifically don't await this, we want to fire and forget
-  await telemetryEventStore.save();
+  // FIXME: the telemetry flush event is called by `telemetryEventStore.save`, and it reinvokes the `main` function
+  if (parsedArgs.args[3] !== 'flush') {
+    await telemetryEventStore.save();
+  }
   return exitCode;
 };
 

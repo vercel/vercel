@@ -3,7 +3,6 @@ import os from 'node:os';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { spawn } from 'node:child_process';
-import { resolve as resolvePath } from 'node:path';
 
 const LogLabel = `['telemetry']:`;
 
@@ -229,8 +228,6 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const url = 'https://telemetry.vercel.com/api/vercel-cli/v1/events';
-
       const sessionId = this.events[0].sessionId;
       if (!sessionId) {
         output.debug('Unable to send metrics: no session ID');
@@ -241,85 +238,63 @@ export class TelemetryEventStore {
         const { eventTime, teamId, ...rest } = event;
         return { event_time: eventTime, team_id: teamId, ...rest };
       });
-      const scriptPath = resolvePath('dist', 'send-telemetry.js');
       const payload = {
-        url,
-        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Client-id': 'vercel-cli',
           'x-vercel-cli-topic-id': 'generic',
           'x-vercel-cli-session-id': sessionId,
         },
-        body: JSON.stringify(events),
+        body: events,
       };
-      await this.sendToSubprocess(
-        scriptPath,
-        payload,
-        output.debugEnabled,
-        // Only called when debugging is enabled
-        ({ status, wasRecorded }) => {
-          if (status === 204) {
-            if (wasRecorded) {
-              output.debug('Telemetry event tracked');
-            } else {
-              output.debug('Telemetry event ignored');
-            }
-          } else {
-            output.debug(
-              `Failed to send telemetry events. Unexpected response from telemetry server: ${status}`
-            );
-          }
-        }
-      );
+      await this.sendToSubprocess(payload, output.debugEnabled);
     }
   }
 
   // This is separated so that we can easily mock it for testing purposes
-  async sendToSubprocess(
-    scriptPath: string,
-    payload: object,
-    outputDebugEnabled: boolean,
-    debugCallback: (responsePayload: {
-      status: number;
-      wasRecorded: boolean;
-    }) => void
-  ) {
+  async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
+    const args = [process.execPath, process.argv[0], process.argv[1]];
+    if (args[0] === args[1]) {
+      args.shift();
+    }
+    const nodeBinaryPath = args[0];
+    const script = [
+      ...args.slice(1),
+      'telemetry',
+      'flush',
+      JSON.stringify(payload),
+    ];
     // When debugging, we want to know about the response from the server, so we can't exit early
     if (outputDebugEnabled) {
-      return new Promise<void>((resolve, reject) => {
-        const childProcess = spawn(
-          process.execPath,
-          [scriptPath, JSON.stringify(payload)],
-          {
-            stdio: ['ignore', 'pipe', 'pipe'],
-          }
-        );
-        childProcess.stdout.on('data', data => {
-          const responsePayload = JSON.parse(data);
-          debugCallback({
-            status: Number(responsePayload.status),
-            wasRecorded: responsePayload.cliTracked === '1',
-          });
+      return new Promise<void>(resolve => {
+        const childProcess = spawn(nodeBinaryPath, script, {
+          stdio: ['ignore', 'pipe', 'pipe'],
         });
-        childProcess.on('exit', code => {
-          return code === 0
-            ? resolve()
-            : reject(
-                new Error(`Failed to send telemetry events, exit code: ${code}`)
-              );
+
+        // If the child process doesn't exit within 2 seconds, kill it
+        setTimeout(() => {
+          childProcess.kill();
+          output.debug('Telemetry event subprocess timed out');
+        }, 2000);
+
+        childProcess.stderr.on('data', data => output.debug(data.toString()));
+        childProcess.stdout.on('data', data => output.debug(data.toString()));
+        childProcess.on('error', d => {
+          output.debug(d);
+        });
+
+        childProcess.on('exit', () => {
+          childProcess.unref();
+          // An error in the subprocess should not trigger a bad exit code, so don't reject under any circumstances
+          resolve();
         });
       });
     } else {
-      const childProcess = spawn(
-        process.execPath,
-        [scriptPath, JSON.stringify(payload)],
-        {
-          stdio: 'ignore',
-          windowsHide: true,
-          detached: true,
-        }
-      );
+      const childProcess = spawn(nodeBinaryPath, script, {
+        stdio: 'ignore',
+        windowsHide: true,
+        detached: true,
+      });
+
       childProcess.unref();
     }
   }
