@@ -244,8 +244,9 @@ if 'VERCEL_IPC_FD' in os.environ:
                             nonlocal response_started
                             if event['type'] == 'http.response.start':
                                 self.send_response(event['status'])
-                                for name, value in event['headers']:
-                                    self.send_header(name.decode(), value.decode())
+                                if 'headers' in event:
+                                    for name, value in event['headers']:
+                                        self.send_header(name.decode(), value.decode())
                                 self.end_headers()
                                 response_started = True
                             elif event['type'] == 'http.response.body':
