@@ -2367,7 +2367,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,
@@ -2412,7 +2419,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,
