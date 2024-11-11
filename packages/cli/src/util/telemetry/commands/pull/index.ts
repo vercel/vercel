@@ -17,12 +17,9 @@ export class PullTelemetryClient
 
   trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
-      const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliOption({
         option: 'environment',
-        value: standardEnvironments.includes(environment)
-          ? environment
-          : this.redactedValue,
+        value: this.redactedTargetName(environment),
       });
     }
   }

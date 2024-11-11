@@ -68,7 +68,7 @@ export default async function dns(client: Client) {
   switch (subcommand) {
     case 'add':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('dns', 'add');
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
@@ -76,7 +76,7 @@ export default async function dns(client: Client) {
       return add(client, args);
     case 'import':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('dns', 'import');
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(importSubcommand);
         return 2;
       }
@@ -84,7 +84,7 @@ export default async function dns(client: Client) {
       return importZone(client, args);
     case 'rm':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('dns', 'remove');
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
@@ -92,7 +92,7 @@ export default async function dns(client: Client) {
       return rm(client, args);
     default:
       if (needHelp) {
-        telemetry.trackCliFlagHelp('dns', 'list');
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }

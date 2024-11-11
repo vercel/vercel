@@ -67,7 +67,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'add': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'add');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
@@ -76,7 +76,7 @@ export default async function main(client: Client) {
     }
     case 'list': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'list');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -85,7 +85,7 @@ export default async function main(client: Client) {
     }
     case 'open': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'open');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(openSubcommand);
         return 2;
       }
@@ -94,7 +94,7 @@ export default async function main(client: Client) {
     }
     case 'remove': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'remove');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }

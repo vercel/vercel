@@ -91,10 +91,7 @@ export default async function logs(client: Client) {
 
   // Note: only send literal values to telemetry for known values
   const outputMode = parsedArguments.flags['--output'];
-  telemetry.trackCliOptionOutput(
-    outputMode,
-    outputMode === 'raw' || outputMode === 'short'
-  );
+  telemetry.trackCliOptionOutput(outputMode);
 
   let contextName: string | null = null;
 
