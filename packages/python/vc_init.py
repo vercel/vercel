@@ -32,6 +32,9 @@ if 'VERCEL_IPC_FD' in os.environ:
     import http
     import time
     import contextvars
+    import functools
+    import builtins
+    import logging
 
     ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
     sock = socket.socket(fileno=ipc_fd)
@@ -39,7 +42,71 @@ if 'VERCEL_IPC_FD' in os.environ:
 
     send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
     storage = contextvars.ContextVar('storage', default=None)
-    fetch_id = 0
+
+    # Override sys.stdout and sys.stderr to map logs to the correct request
+    class StreamWrapper:
+        def __init__(self, stream, stream_name):
+            self.stream = stream
+            self.stream_name = stream_name
+
+        def write(self, message):
+            context = storage.get()
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
+            else:
+                self.stream.write(message)
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+    sys.stdout = StreamWrapper(sys.stdout, "stdout")
+    sys.stderr = StreamWrapper(sys.stderr, "stderr")
+
+    # Override the global print to log to stdout
+    def print_wrapper(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            sys.stdout.write(' '.join(map(str, args)) + '\n')
+        return wrapper
+    builtins.print = print_wrapper(builtins.print)
+
+    # Override logging to maps logs to the correct request
+    def logging_wrapper(func, level="info"):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            context = storage.get()
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(f"{args[0]}\\n".encode()).decode(),
+                        "level": level,
+                    }
+                })
+            else:
+                func(*args, **kwargs)
+        return wrapper
+
+    logging.basicConfig(level=logging.INFO)
+    logging.debug = logging_wrapper(logging.debug)
+    logging.info = logging_wrapper(logging.info)
+    logging.warning = logging_wrapper(logging.warning, "warn")
+    logging.error = logging_wrapper(logging.error, "error")
+    logging.critical = logging_wrapper(logging.critical, "error")
 
     if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
@@ -49,6 +116,15 @@ if 'VERCEL_IPC_FD' in os.environ:
             exit(1)
 
         class Handler(base):
+            # Re-implementation of BaseHTTPRequestHandler's log_message method to
+            # log to stdout instead of stderr.
+            def log_message(self, format, *args):
+                message = format % args
+                sys.stdout.write("%s - - [%s] %s\n" %
+                                 (self.address_string(),
+                                  self.log_date_time_string(),
+                                  message.translate(self._control_char_table)))
+
             # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
             # to send the end message after the response is fully sent.
             def handle_one_request(self):
@@ -61,6 +137,13 @@ if 'VERCEL_IPC_FD' in os.environ:
 
                 invocationId = self.headers.get('x-vercel-internal-invocation-id')
                 requestId = int(self.headers.get('x-vercel-internal-request-id'))
+                del self.headers['x-vercel-internal-invocation-id']
+                del self.headers['x-vercel-internal-request-id']
+
+                token = storage.set({
+                    "invocationId": invocationId,
+                    "requestId": requestId,
+                })
 
                 try:
                     mname = 'do_' + self.command
@@ -73,6 +156,7 @@ if 'VERCEL_IPC_FD' in os.environ:
                     method()
                     self.wfile.flush()
                 finally:
+                    storage.reset(token)
                     send_message({
                         "type": "end",
                         "payload": {
@@ -98,6 +182,15 @@ if 'VERCEL_IPC_FD' in os.environ:
                 return s.decode("latin1", errors)
 
             class Handler(BaseHTTPRequestHandler):
+                # Re-implementation of BaseHTTPRequestHandler's log_message method to
+                # log to stdout instead of stderr.
+                def log_message(self, format, *args):
+                    message = format % args
+                    sys.stdout.write("%s - - [%s] %s\n" %
+                                     (self.address_string(),
+                                      self.log_date_time_string(),
+                                      message.translate(self._control_char_table)))
+
                 # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
                 # to send the end message after the response is fully sent.
                 def handle_one_request(self):
@@ -110,6 +203,13 @@ if 'VERCEL_IPC_FD' in os.environ:
 
                     invocationId = self.headers.get('x-vercel-internal-invocation-id')
                     requestId = int(self.headers.get('x-vercel-internal-request-id'))
+                    del self.headers['x-vercel-internal-invocation-id']
+                    del self.headers['x-vercel-internal-request-id']
+
+                    token = storage.set({
+                        "invocationId": invocationId,
+                        "requestId": requestId,
+                    })
 
                     try:
                         # Prepare WSGI environment
@@ -166,15 +266,16 @@ if 'VERCEL_IPC_FD' in os.environ:
                         self.wfile.write(body)
                         self.wfile.flush()
                     finally:
-                      send_message({
-                          "type": "end",
-                          "payload": {
-                              "context": {
-                                  "invocationId": invocationId,
-                                  "requestId": requestId,
-                              }
-                          }
-                      })
+                        storage.reset(token)
+                        send_message({
+                            "type": "end",
+                            "payload": {
+                                "context": {
+                                    "invationId": invocationId,
+                                    "requestId": requestId,
+                                }
+                            }
+                        })
         else:
             from urllib.parse import urlparse
             from io import BytesIO
@@ -183,6 +284,15 @@ if 'VERCEL_IPC_FD' in os.environ:
             app = __vc_module.app
 
             class Handler(BaseHTTPRequestHandler):
+                # Re-implementation of BaseHTTPRequestHandler's log_message method to
+                # log to stdout instead of stderr.
+                def log_message(self, format, *args):
+                    message = format % args
+                    sys.stdout.write("%s - - [%s] %s\n" %
+                                     (self.address_string(),
+                                      self.log_date_time_string(),
+                                      message.translate(self._control_char_table)))
+
                 # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
                 # to send the end message after the response is fully sent.
                 def handle_one_request(self):
@@ -195,6 +305,13 @@ if 'VERCEL_IPC_FD' in os.environ:
 
                     invocationId = self.headers.get('x-vercel-internal-invocation-id')
                     requestId = int(self.headers.get('x-vercel-internal-request-id'))
+                    del self.headers['x-vercel-internal-invocation-id']
+                    del self.headers['x-vercel-internal-request-id']
+
+                    storage.set({
+                        "invocationId": invocationId,
+                        "requestId": requestId,
+                    })
 
                     try:
                         # Prepare ASGI scope
@@ -257,6 +374,7 @@ if 'VERCEL_IPC_FD' in os.environ:
                         # Run the ASGI application
                         asyncio.run(app(scope, receive, send))
                     finally:
+                        storage.reset()
                         send_message({
                             "type": "end",
                             "payload": {
