@@ -93,7 +93,7 @@ if 'VERCEL_IPC_FD' in os.environ:
                             "invocationId": context['invocationId'],
                             "requestId": context['requestId'],
                         },
-                        "message": base64.b64encode(f"{args[0]}\\n".encode()).decode(),
+                        "message": base64.b64encode(f"{args[0]}".encode()).decode(),
                         "level": level,
                     }
                 })
@@ -108,6 +108,52 @@ if 'VERCEL_IPC_FD' in os.environ:
     logging.error = logging_wrapper(logging.error, "error")
     logging.critical = logging_wrapper(logging.critical, "error")
 
+    class BaseHandler(BaseHTTPRequestHandler):
+        # Re-implementation of BaseHTTPRequestHandler's log_message method to
+        # log to stdout instead of stderr.
+        def log_message(self, format, *args):
+            message = format % args
+            sys.stdout.write("%s - - [%s] %s\n" %
+                             (self.address_string(),
+                              self.log_date_time_string(),
+                              message.translate(self._control_char_table)))
+
+        # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
+        # to send the end message after the response is fully sent.
+        def handle_one_request(self):
+            self.raw_requestline = self.rfile.readline(65537)
+            if not self.raw_requestline:
+                self.close_connection = True
+                return
+            if not self.parse_request():
+                return
+
+            invocationId = self.headers.get('x-vercel-internal-invocation-id')
+            requestId = int(self.headers.get('x-vercel-internal-request-id'))
+            del self.headers['x-vercel-internal-invocation-id']
+            del self.headers['x-vercel-internal-request-id']
+            del self.headers['x-vercel-internal-span-id']
+            del self.headers['x-vercel-internal-trace-id']
+
+            token = storage.set({
+                "invocationId": invocationId,
+                "requestId": requestId,
+            })
+
+            try:
+                self.handle_request()
+            finally:
+                storage.reset(token)
+                send_message({
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": invocationId,
+                            "requestId": requestId,
+                        }
+                    }
+                })
+
     if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         base = __vc_module.handler if ('handler' in __vc_variables) else  __vc_module.Handler
         if not issubclass(base, BaseHTTPRequestHandler):
@@ -115,57 +161,17 @@ if 'VERCEL_IPC_FD' in os.environ:
             print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
             exit(1)
 
-        class Handler(base):
-            # Re-implementation of BaseHTTPRequestHandler's log_message method to
-            # log to stdout instead of stderr.
-            def log_message(self, format, *args):
-                message = format % args
-                sys.stdout.write("%s - - [%s] %s\n" %
-                                 (self.address_string(),
-                                  self.log_date_time_string(),
-                                  message.translate(self._control_char_table)))
-
-            # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
-            # to send the end message after the response is fully sent.
-            def handle_one_request(self):
-                self.raw_requestline = self.rfile.readline(65537)
-                if not self.raw_requestline:
-                    self.close_connection = True
+        class Handler(BaseHandler, base):
+            def handle_request(self):
+                mname = 'do_' + self.command
+                if not hasattr(self, mname):
+                    self.send_error(
+                        http.HTTPStatus.NOT_IMPLEMENTED,
+                        "Unsupported method (%r)" % self.command)
                     return
-                if not self.parse_request():
-                    return
-
-                invocationId = self.headers.get('x-vercel-internal-invocation-id')
-                requestId = int(self.headers.get('x-vercel-internal-request-id'))
-                del self.headers['x-vercel-internal-invocation-id']
-                del self.headers['x-vercel-internal-request-id']
-
-                token = storage.set({
-                    "invocationId": invocationId,
-                    "requestId": requestId,
-                })
-
-                try:
-                    mname = 'do_' + self.command
-                    if not hasattr(self, mname):
-                        self.send_error(
-                            http.HTTPStatus.NOT_IMPLEMENTED,
-                            "Unsupported method (%r)" % self.command)
-                        return
-                    method = getattr(self, mname)
-                    method()
-                    self.wfile.flush()
-                finally:
-                    storage.reset(token)
-                    send_message({
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocationId,
-                                "requestId": requestId,
-                            }
-                        }
-                    })
+                method = getattr(self, mname)
+                method()
+                self.wfile.flush()
     elif 'app' in __vc_variables:
         if (
             not inspect.iscoroutinefunction(__vc_module.app) and
@@ -181,101 +187,61 @@ if 'VERCEL_IPC_FD' in os.environ:
                     s = s.encode(charset)
                 return s.decode("latin1", errors)
 
-            class Handler(BaseHTTPRequestHandler):
-                # Re-implementation of BaseHTTPRequestHandler's log_message method to
-                # log to stdout instead of stderr.
-                def log_message(self, format, *args):
-                    message = format % args
-                    sys.stdout.write("%s - - [%s] %s\n" %
-                                     (self.address_string(),
-                                      self.log_date_time_string(),
-                                      message.translate(self._control_char_table)))
+            class Handler(BaseHandler):
+                def handle_request(self):
+                    # Prepare WSGI environment
+                    if '?' in self.path:
+                        path, query = self.path.split('?', 1)
+                    else:
+                        path, query = self.path, ''
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    env = {
+                        'CONTENT_LENGTH': str(content_length),
+                        'CONTENT_TYPE': self.headers.get('content-type', ''),
+                        'PATH_INFO': path,
+                        'QUERY_STRING': query,
+                        'REMOTE_ADDR': self.headers.get(
+                            'x-forwarded-for', self.headers.get(
+                                'x-real-ip')),
+                        'REQUEST_METHOD': self.command,
+                        'SERVER_NAME': self.headers.get('host', 'lambda'),
+                        'SERVER_PORT': self.headers.get('x-forwarded-port', '80'),
+                        'SERVER_PROTOCOL': 'HTTP/1.1',
+                        'wsgi.errors': sys.stderr,
+                        'wsgi.input': BytesIO(self.rfile.read(content_length)),
+                        'wsgi.multiprocess': False,
+                        'wsgi.multithread': False,
+                        'wsgi.run_once': False,
+                        'wsgi.url_scheme': self.headers.get('x-forwarded-proto', 'http'),
+                        'wsgi.version': (1, 0),
+                    }
+                    for key, value in env.items():
+                        if isinstance(value, string_types):
+                            env[key] = wsgi_encoding_dance(value)
+                    for k, v in self.headers.items():
+                        env['HTTP_' + k.replace('-', '_').upper()] = v
+                    # Response body
+                    body = BytesIO()
 
-                # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
-                # to send the end message after the response is fully sent.
-                def handle_one_request(self):
-                    self.raw_requestline = self.rfile.readline(65537)
-                    if not self.raw_requestline:
-                        self.close_connection = True
-                        return
-                    if not self.parse_request():
-                        return
+                    def start_response(status, headers, exc_info=None):
+                        self.send_response(int(status.split(' ')[0]))
+                        for name, value in headers:
+                            self.send_header(name, value)
+                        self.end_headers()
+                        return body.write
 
-                    invocationId = self.headers.get('x-vercel-internal-invocation-id')
-                    requestId = int(self.headers.get('x-vercel-internal-request-id'))
-                    del self.headers['x-vercel-internal-invocation-id']
-                    del self.headers['x-vercel-internal-request-id']
-
-                    token = storage.set({
-                        "invocationId": invocationId,
-                        "requestId": requestId,
-                    })
-
+                    # Call the application
+                    response = app(env, start_response)
                     try:
-                        # Prepare WSGI environment
-                        if '?' in self.path:
-                            path, query = self.path.split('?', 1)
-                        else:
-                            path, query = self.path, ''
-                        content_length = int(self.headers.get('Content-Length', 0))
-                        env = {
-                            'CONTENT_LENGTH': str(content_length),
-                            'CONTENT_TYPE': self.headers.get('content-type', ''),
-                            'PATH_INFO': path,
-                            'QUERY_STRING': query,
-                            'REMOTE_ADDR': self.headers.get(
-                                'x-forwarded-for', self.headers.get(
-                                    'x-real-ip')),
-                            'REQUEST_METHOD': self.command,
-                            'SERVER_NAME': self.headers.get('host', 'lambda'),
-                            'SERVER_PORT': self.headers.get('x-forwarded-port', '80'),
-                            'SERVER_PROTOCOL': 'HTTP/1.1',
-                            'wsgi.errors': sys.stderr,
-                            'wsgi.input': BytesIO(self.rfile.read(content_length)),
-                            'wsgi.multiprocess': False,
-                            'wsgi.multithread': False,
-                            'wsgi.run_once': False,
-                            'wsgi.url_scheme': self.headers.get('x-forwarded-proto', 'http'),
-                            'wsgi.version': (1, 0),
-                        }
-                        for key, value in env.items():
-                            if isinstance(value, string_types):
-                                env[key] = wsgi_encoding_dance(value)
-                        for k, v in self.headers.items():
-                            env['HTTP_' + k.replace('-', '_').upper()] = v
-                        # Response body
-                        body = BytesIO()
-
-                        def start_response(status, headers, exc_info=None):
-                            self.send_response(int(status.split(' ')[0]))
-                            for name, value in headers:
-                                self.send_header(name, value)
-                            self.end_headers()
-                            return body.write
-
-                        # Call the application
-                        response = app(env, start_response)
-                        try:
-                            for data in response:
-                                if data:
-                                    body.write(data)
-                        finally:
-                            if hasattr(response, 'close'):
-                                response.close()
-                        body = body.getvalue()
-                        self.wfile.write(body)
-                        self.wfile.flush()
+                        for data in response:
+                            if data:
+                                body.write(data)
                     finally:
-                        storage.reset(token)
-                        send_message({
-                            "type": "end",
-                            "payload": {
-                                "context": {
-                                    "invationId": invocationId,
-                                    "requestId": requestId,
-                                }
-                            }
-                        })
+                        if hasattr(response, 'close'):
+                            response.close()
+                    body = body.getvalue()
+                    self.wfile.write(body)
+                    self.wfile.flush()
         else:
             from urllib.parse import urlparse
             from io import BytesIO
@@ -283,107 +249,67 @@ if 'VERCEL_IPC_FD' in os.environ:
 
             app = __vc_module.app
 
-            class Handler(BaseHTTPRequestHandler):
-                # Re-implementation of BaseHTTPRequestHandler's log_message method to
-                # log to stdout instead of stderr.
-                def log_message(self, format, *args):
-                    message = format % args
-                    sys.stdout.write("%s - - [%s] %s\n" %
-                                     (self.address_string(),
-                                      self.log_date_time_string(),
-                                      message.translate(self._control_char_table)))
+            class Handler(BaseHandler):
+                def handle_request(self):
+                    # Prepare ASGI scope
+                    url = urlparse(self.path)
+                    headers_encoded = []
+                    for k, v in self.headers.items():
+                        # Cope with repeated headers in the encoding.
+                        if isinstance(v, list):
+                            headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
+                        else:
+                            headers_encoded.append([k.lower().encode(), v.encode()])
+                    scope = {
+                        'server': (self.headers.get('host', 'lambda'), self.headers.get('x-forwarded-port', 80)),
+                        'client': (self.headers.get(
+                            'x-forwarded-for', self.headers.get(
+                                'x-real-ip')), 0),
+                        'scheme': self.headers.get('x-forwarded-proto', 'http'),
+                        'root_path': '',
+                        'query_string': url.query.encode(),
+                        'headers': headers_encoded,
+                        'type': 'http',
+                        'http_version': '1.1',
+                        'method': self.command,
+                        'path': url.path,
+                        'raw_path': url.path.encode(),
+                    }
 
-                # Re-implementation of BaseHTTPRequestHandler's handle_one_request method
-                # to send the end message after the response is fully sent.
-                def handle_one_request(self):
-                    self.raw_requestline = self.rfile.readline(65537)
-                    if not self.raw_requestline:
-                        self.close_connection = True
-                        return
-                    if not self.parse_request():
-                        return
-
-                    invocationId = self.headers.get('x-vercel-internal-invocation-id')
-                    requestId = int(self.headers.get('x-vercel-internal-request-id'))
-                    del self.headers['x-vercel-internal-invocation-id']
-                    del self.headers['x-vercel-internal-request-id']
-
-                    storage.set({
-                        "invocationId": invocationId,
-                        "requestId": requestId,
-                    })
-
-                    try:
-                        # Prepare ASGI scope
-                        url = urlparse(self.path)
-                        headers_encoded = []
-                        for k, v in self.headers.items():
-                            # Cope with repeated headers in the encoding.
-                            if isinstance(v, list):
-                                headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
-                            else:
-                                headers_encoded.append([k.lower().encode(), v.encode()])
-                        scope = {
-                            'server': (self.headers.get('host', 'lambda'), self.headers.get('x-forwarded-port', 80)),
-                            'client': (self.headers.get(
-                                'x-forwarded-for', self.headers.get(
-                                    'x-real-ip')), 0),
-                            'scheme': self.headers.get('x-forwarded-proto', 'http'),
-                            'root_path': '',
-                            'query_string': url.query.encode(),
-                            'headers': headers_encoded,
-                            'type': 'http',
-                            'http_version': '1.1',
-                            'method': self.command,
-                            'path': url.path,
-                            'raw_path': url.path.encode(),
-                        }
-
-                        # Prepare ASGI receive function
-                        async def receive():
-                            if 'content-length' in self.headers:
-                                content_length = int(self.headers['content-length'])
-                                body = self.rfile.read(content_length)
-                                return {
-                                    'type': 'http.request',
-                                    'body': body,
-                                    'more_body': False,
-                                }
+                    # Prepare ASGI receive function
+                    async def receive():
+                        if 'content-length' in self.headers:
+                            content_length = int(self.headers['content-length'])
+                            body = self.rfile.read(content_length)
                             return {
                                 'type': 'http.request',
-                                'body': b'',
+                                'body': body,
                                 'more_body': False,
                             }
+                        return {
+                            'type': 'http.request',
+                            'body': b'',
+                            'more_body': False,
+                        }
 
-                        # Prepare ASGI send function
-                        response_started = False
-                        async def send(event):
-                            nonlocal response_started
-                            if event['type'] == 'http.response.start':
-                                self.send_response(event['status'])
-                                if 'headers' in event:
-                                    for name, value in event['headers']:
-                                        self.send_header(name.decode(), value.decode())
-                                self.end_headers()
-                                response_started = True
-                            elif event['type'] == 'http.response.body':
-                                self.wfile.write(event['body'])
-                                if not event.get('more_body', False):
-                                    self.wfile.flush()
+                    # Prepare ASGI send function
+                    response_started = False
+                    async def send(event):
+                        nonlocal response_started
+                        if event['type'] == 'http.response.start':
+                            self.send_response(event['status'])
+                            if 'headers' in event:
+                                for name, value in event['headers']:
+                                    self.send_header(name.decode(), value.decode())
+                            self.end_headers()
+                            response_started = True
+                        elif event['type'] == 'http.response.body':
+                            self.wfile.write(event['body'])
+                            if not event.get('more_body', False):
+                                self.wfile.flush()
 
-                        # Run the ASGI application
-                        asyncio.run(app(scope, receive, send))
-                    finally:
-                        storage.reset()
-                        send_message({
-                            "type": "end",
-                            "payload": {
-                                "context": {
-                                    "invocationId": invocationId,
-                                    "requestId": requestId,
-                                }
-                            }
-                        })
+                    # Run the ASGI application
+                    asyncio.run(app(scope, receive, send))
 
     if 'Handler' in locals():
         server = HTTPServer(('127.0.0.1', 0), Handler)
