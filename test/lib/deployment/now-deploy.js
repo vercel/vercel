@@ -35,7 +35,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
     FORCE_BUILD_IN_REGION,
     VERCEL_DEBUG,
     VERCEL_CLI_VERSION,
-    VERCEL_FORCE_STREAMING_RUNTIME,
+    VERCEL_FORCE_PYTHON_STREAMING,
   } = process.env;
   const nowJson = JSON.parse(
     bodies['vercel.json'] || bodies['now.json'] || '{}'
@@ -62,7 +62,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         FORCE_BUILD_IN_REGION,
         VERCEL_DEBUG,
         VERCEL_CLI_VERSION,
-        VERCEL_FORCE_STREAMING_RUNTIME,
+        VERCEL_FORCE_PYTHON_STREAMING,
         NEXT_TELEMETRY_DISABLED: '1',
       },
     },
