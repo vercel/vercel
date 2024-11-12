@@ -270,12 +270,6 @@ export class TelemetryEventStore {
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
-        // If the child process doesn't exit within 2 seconds, kill it
-        setTimeout(() => {
-          childProcess.kill();
-          output.debug('Telemetry event subprocess timed out');
-        }, 2000);
-
         childProcess.stderr.on('data', data => output.debug(data.toString()));
         childProcess.stdout.on('data', data => output.debug(data.toString()));
         childProcess.on('error', d => {
@@ -283,7 +277,9 @@ export class TelemetryEventStore {
         });
 
         childProcess.on('exit', () => {
+          output.debug('Telemetry subprocess exited');
           childProcess.unref();
+          process.exit(0);
           // An error in the subprocess should not trigger a bad exit code, so don't reject under any circumstances
           resolve();
         });
