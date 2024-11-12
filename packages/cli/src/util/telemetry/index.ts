@@ -282,6 +282,10 @@ export class TelemetryEventStore {
           output.debug(d);
         });
 
+        setTimeout(() => {
+          childProcess.kill();
+        }, 2000);
+
         childProcess.on('exit', () => {
           output.debug('Telemetry subprocess exited');
           childProcess.unref();

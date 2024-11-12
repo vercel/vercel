@@ -609,7 +609,6 @@ describe('telemetry submits data', () => {
     };
     return {
       mockTelemetryBridgeApp,
-      mockTelemetryBridgeServer,
       directory,
       cleanup,
     };
@@ -622,6 +621,7 @@ describe('telemetry submits data', () => {
       });
       const { mockTelemetryBridgeApp, directory, cleanup } =
         await prepareBridge();
+
       let mockTelemetryBridgeWasCalled = false;
       mockTelemetryBridgeApp.use((_req, res) => {
         mockTelemetryBridgeWasCalled = true;
@@ -629,75 +629,88 @@ describe('telemetry submits data', () => {
         res.status(204).send();
         resolveBridgeEvent();
       });
-      const output = await execCli(binaryPath, ['whoami'], {
+      const output = await execCli(binaryPath, ['help', 'deploy'], {
         cwd: directory,
       });
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
-      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(output.exitCode, formatOutput(output)).toBe(2);
 
       await bridgeEventPromise;
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
 
       await cleanup();
     });
-  });
-  describe('when --debug is enabled', () => {
     test('gracefully exits if the server does not respond', async () => {
-      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+      const { mockTelemetryBridgeApp, cleanup, directory } =
         await prepareBridge();
+
       let mockTelemetryBridgeWasCalled = false;
       mockTelemetryBridgeApp.use(() => {
         mockTelemetryBridgeWasCalled = true;
       });
-      const output = await execCli(binaryPath, ['whoami', '-d'], {
+      const output = await execCli(binaryPath, ['help', 'deploy'], {
+        cwd: directory,
+      });
+      expect(output.exitCode, formatOutput(output)).toBe(2);
+      expect(mockTelemetryBridgeWasCalled).toEqual(false);
+      expect(output.exitCode, formatOutput(output)).toBe(2);
+
+      await cleanup();
+    });
+  });
+  describe('when --debug is enabled', () => {
+    test('gracefully exits if the server does not respond', async () => {
+      const { mockTelemetryBridgeApp, cleanup, directory } =
+        await prepareBridge();
+
+      let mockTelemetryBridgeWasCalled = false;
+      mockTelemetryBridgeApp.use(() => {
+        mockTelemetryBridgeWasCalled = true;
+      });
+      const output = await execCli(binaryPath, ['help', 'deploy', '-d'], {
         cwd: directory,
       });
       expect(output.stderr).toContain('Telemetry subprocess exited');
-      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(output.exitCode, formatOutput(output)).toBe(2);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
-      // clean up
-      await mockTelemetryBridgeServer.close();
-      await remove(path.join(directory, '.vercel'));
-      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+
+      await cleanup();
     });
     test('gracefully exits if the server responds with a non-204 error', async () => {
-      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+      const { mockTelemetryBridgeApp, cleanup, directory } =
         await prepareBridge();
       let mockTelemetryBridgeWasCalled = false;
       mockTelemetryBridgeApp.use((_req, res) => {
         mockTelemetryBridgeWasCalled = true;
         res.status(403).send();
       });
-      const output = await execCli(binaryPath, ['whoami', '-d'], {
+      const output = await execCli(binaryPath, ['help', 'deploy', '-d'], {
         cwd: directory,
       });
       expect(output.stderr).toContain('Failed to send telemetry events');
-      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(output.exitCode, formatOutput(output)).toBe(2);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
-      // clean up
-      await mockTelemetryBridgeServer.close();
-      await remove(path.join(directory, '.vercel'));
-      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+
+      await cleanup();
     });
     test('it waits for the response and logs it', async () => {
-      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+      const { mockTelemetryBridgeApp, cleanup, directory } =
         await prepareBridge();
+
       let mockTelemetryBridgeWasCalled = false;
       mockTelemetryBridgeApp.use((_req, res) => {
         mockTelemetryBridgeWasCalled = true;
         res.header('x-vercel-cli-tracked', '1');
         res.status(204).send();
       });
-      const output = await execCli(binaryPath, ['whoami', '-d'], {
+      const output = await execCli(binaryPath, ['help', 'deploy', '-d'], {
         cwd: directory,
       });
       expect(output.stderr).toContain('Telemetry event tracked');
-      expect(output.exitCode, formatOutput(output)).toBe(0);
+      expect(output.exitCode, formatOutput(output)).toBe(2);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
-      // clean up
-      await mockTelemetryBridgeServer.close();
-      await remove(path.join(directory, '.vercel'));
-      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+
+      await cleanup();
     });
   });
 });
