@@ -368,7 +368,14 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'build',
+    'telemetry',
+  ];
 
   // Prompt for login if there is no current token
   if (
