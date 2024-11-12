@@ -652,7 +652,7 @@ describe('telemetry submits data', () => {
       const output = await execCli(binaryPath, ['whoami', '-d'], {
         cwd: directory,
       });
-      expect(output.stderr).toContain('Telemetry event subprocess timed out');
+      expect(output.stderr).toContain('Telemetry subprocess exited');
       expect(output.exitCode, formatOutput(output)).toBe(0);
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
       // clean up
