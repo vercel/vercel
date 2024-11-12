@@ -210,7 +210,7 @@ test(
   })
 );
 
-test.only(
+test(
   '[vercel dev] Do not fail if `src` is missing',
   testFixtureStdio('missing-src-property', async (testPath: any) => {
     await testPath(200, '/', /hello:index.txt/m);

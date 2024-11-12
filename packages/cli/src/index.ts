@@ -368,7 +368,14 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'build',
+    'telemetry',
+  ];
 
   // Prompt for login if there is no current token
   if (
@@ -791,8 +798,10 @@ const main = async () => {
     return 1;
   }
 
-  // specifically don't await this, we want to fire and forget
-  await telemetryEventStore.save();
+  // The telemetry flush event is called by `telemetryEventStore.save`, and it reinvokes the `main` function
+  if (subSubCommand !== 'flush') {
+    await telemetryEventStore.save();
+  }
   return exitCode;
 };
 

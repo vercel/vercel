@@ -15,7 +15,6 @@ import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
 
 import './test/mocks/matchers/index';
-import { client } from '../mocks/client';
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -170,7 +169,7 @@ describe('main', () => {
               debug: true,
             });
           });
-          it('exits before the detached child process completes', async () => {
+          it('sends the event to the subprocess with the expected payload', async () => {
             const telemetryEventStore = new TelemetryEventStore({
               isDebug: false,
               config: {},
@@ -192,66 +191,23 @@ describe('main', () => {
             await telemetryEventStore.save();
 
             expect(spy).toHaveBeenCalledWith(
-              expect.stringContaining('send-telemetry.js'),
               expect.objectContaining({
-                url: expect.stringContaining('/api/vercel-cli/v1/events'),
-                method: 'POST',
                 headers: expect.objectContaining({
                   'x-vercel-cli-topic-id': 'generic',
                   'x-vercel-cli-session-id': expect.any(String),
                 }),
-                body: expect.toHaveFetchBody(
-                  expect.arrayContaining([
-                    expect.objectContaining({
-                      event_time: expect.any(Number),
-                      id: expect.any(String),
-                      key: expect.any(String),
-                      value: expect.any(String),
-                      team_id: expect.any(String),
-                    }),
-                  ])
-                ),
+                body: expect.arrayContaining([
+                  expect.objectContaining({
+                    event_time: expect.any(Number),
+                    id: expect.any(String),
+                    key: expect.any(String),
+                    value: expect.any(String),
+                    team_id: expect.any(String),
+                  }),
+                ]),
               }),
-              expect.any(Boolean),
-              expect.any(Function)
+              expect.any(Boolean)
             );
-          });
-        });
-        describe('when output debug is enabled', () => {
-          it('waits for the child process to exit and logs the response', async () => {
-            const telemetryEventStore = new TelemetryEventStore({
-              isDebug: false,
-              config: {},
-            });
-            vi.spyOn(
-              telemetryEventStore,
-              'sendToSubprocess'
-            ).mockImplementation(
-              async (
-                ...args: Parameters<
-                  (typeof telemetryEventStore)['sendToSubprocess']
-                >
-              ) => {
-                const debugEnabled = args[2];
-                const callback = args[3];
-
-                if (debugEnabled) {
-                  callback({ status: 204, wasRecorded: true });
-                }
-              }
-            );
-
-            const telemetry = new RootTelemetryClient({
-              opts: {
-                store: telemetryEventStore,
-              },
-            });
-            telemetry.trackPlatform();
-            telemetry.trackArch();
-
-            await telemetryEventStore.save();
-
-            expect(client.stderr).toOutput('Telemetry event tracked');
           });
         });
       });
