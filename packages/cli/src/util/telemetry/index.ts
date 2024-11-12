@@ -250,7 +250,13 @@ export class TelemetryEventStore {
     }
   }
 
-  // This is separated so that we can easily mock it for testing purposes
+  /**
+   * Send the telemetry events to a subprocess, this invokes the `telemetry flush` command
+   * and passes a stringified payload to the subprocess, there's a risk that if the event payload
+   * increases in size, it may exceed the maximum buffer size for the subprocess, in which case the
+   * child process will error and not send anything.
+   * FIXME: handle max buffer size
+   */
   async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
     const args = [process.execPath, process.argv[0], process.argv[1]];
     if (args[0] === args[1]) {
