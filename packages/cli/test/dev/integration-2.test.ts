@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { isIP } from 'net';
 import { exec, fixture, testFixture, testFixtureStdio } from './utils';
 
@@ -34,12 +35,13 @@ test('[vercel dev] validate mixed routes and rewrites', async () => {
 
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
-  const { dev } = await testFixture(directory, { encoding: 'utf8' });
+  const { dev } = await testFixture(directory);
 
   try {
     let stderr = '';
 
     await new Promise<void>((resolve, reject) => {
+      assert(dev.stderr);
       dev.stderr.on('data', (b: string) => {
         stderr += b;
         if (

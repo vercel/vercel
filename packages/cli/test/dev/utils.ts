@@ -332,7 +332,7 @@ export async function testFixture(
     readyResolver.resolve(null);
   });
 
-  // @ts-ignore
+  // @ts-expect-error
   dev.kill = async () => {
     // kill the entire process tree for the child as some tests will spawn
     // child processes that either become defunct or assigned a new parent
@@ -347,7 +347,9 @@ export async function testFixture(
   };
 
   return {
-    dev,
+    dev: dev as any as Omit<typeof dev, 'kill'> & {
+      kill: () => Promise<{ stdout: string; stderr: string }>;
+    },
     port,
     readyResolver,
   };
@@ -659,7 +661,7 @@ async function nukeProcessTree(pid: number, signal?: string) {
 
   // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
-  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
+  await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
 
 beforeEach(() => {

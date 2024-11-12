@@ -77,8 +77,8 @@ export function useTeams(
   return options.apiVersion === 2 ? { teams } : teams;
 }
 
-export function useTeam() {
-  const teams = useTeams();
+export function useTeam(teamId?: string) {
+  const teams = useTeams(teamId);
   assert(Array.isArray(teams));
   return teams[0];
 }

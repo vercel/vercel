@@ -521,8 +521,8 @@ importers:
         specifier: 3.1.0
         version: link:../routing-utils
       '@vitest/expect':
-        specifier: 1.4.0
-        version: 1.4.0
+        specifier: 2.1.3
+        version: 2.1.3
       ajv:
         specifier: 6.12.2
         version: 6.12.2
@@ -2398,7 +2398,7 @@ packages:
       '@babel/traverse': 7.24.1
       '@babel/types': 7.24.0
       convert-source-map: 2.0.0
-      debug: 4.3.5
+      debug: 4.3.7
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -6450,7 +6450,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/type-utils': 5.54.1(eslint@8.24.0)(typescript@4.9.5)
       '@typescript-eslint/utils': 5.54.1(eslint@8.24.0)(typescript@4.9.5)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.24.0
       grapheme-splitter: 1.0.4
       ignore: 5.2.4
@@ -6478,7 +6478,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/type-utils': 5.54.1(eslint@8.57.0)(typescript@4.9.4)
       '@typescript-eslint/utils': 5.54.1(eslint@8.57.0)(typescript@4.9.4)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.57.0
       grapheme-splitter: 1.0.4
       ignore: 5.2.4
@@ -6506,7 +6506,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/type-utils': 5.54.1(eslint@8.57.0)(typescript@5.4.5)
       '@typescript-eslint/utils': 5.54.1(eslint@8.57.0)(typescript@5.4.5)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.57.0
       grapheme-splitter: 1.0.4
       ignore: 5.2.4
@@ -6581,7 +6581,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/types': 5.54.1
       '@typescript-eslint/typescript-estree': 5.54.1(typescript@4.9.5)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.24.0
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -6601,7 +6601,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/types': 5.54.1
       '@typescript-eslint/typescript-estree': 5.54.1(typescript@4.9.4)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.57.0
       typescript: 4.9.4
     transitivePeerDependencies:
@@ -6621,7 +6621,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.54.1
       '@typescript-eslint/types': 5.54.1
       '@typescript-eslint/typescript-estree': 5.54.1(typescript@5.4.5)
-      debug: 4.3.5
+      debug: 4.3.7
       eslint: 8.57.0
       typescript: 5.4.5
     transitivePeerDependencies:
@@ -7428,7 +7428,7 @@ packages:
     dependencies:
       '@vitest/spy': 2.0.1
       '@vitest/utils': 2.0.1
-      chai: 5.1.1
+      chai: 5.1.2
     dev: true
 
   /@vitest/expect@2.0.3:
@@ -7436,7 +7436,7 @@ packages:
     dependencies:
       '@vitest/spy': 2.0.3
       '@vitest/utils': 2.0.3
-      chai: 5.1.1
+      chai: 5.1.2
       tinyrainbow: 1.2.0
     dev: true
 
@@ -7445,7 +7445,7 @@ packages:
     dependencies:
       '@vitest/spy': 2.1.3
       '@vitest/utils': 2.1.3
-      chai: 5.1.1
+      chai: 5.1.2
       tinyrainbow: 1.2.0
     dev: true
 
@@ -7539,19 +7539,19 @@ packages:
   /@vitest/spy@2.0.1:
     resolution: {integrity: sha512-NLkdxbSefAtJN56GtCNcB4GiHFb5i9q1uh4V229lrlTZt2fnwsTyjLuWIli1xwK2fQspJJmHXHyWx0Of3KTXWA==}
     dependencies:
-      tinyspy: 3.0.0
+      tinyspy: 3.0.2
     dev: true
 
   /@vitest/spy@2.0.3:
     resolution: {integrity: sha512-sfqyAw/ypOXlaj4S+w8689qKM1OyPOqnonqOc9T91DsoHbfN5mU7FdifWWv3MtQFf0lEUstEwR9L/q/M390C+A==}
     dependencies:
-      tinyspy: 3.0.0
+      tinyspy: 3.0.2
     dev: true
 
   /@vitest/spy@2.1.3:
     resolution: {integrity: sha512-Nb2UzbcUswzeSP7JksMDaqsI43Sj5+Kry6ry6jQJT4b5gAK+NS9NED6mDb8FlMRCX8m5guaHCDZmqYMMWRy5nQ==}
     dependencies:
-      tinyspy: 3.0.0
+      tinyspy: 3.0.2
     dev: true
 
   /@vitest/utils@1.4.0:
@@ -7568,7 +7568,7 @@ packages:
     dependencies:
       diff-sequences: 29.6.3
       estree-walker: 3.0.3
-      loupe: 3.1.1
+      loupe: 3.1.2
       pretty-format: 29.7.0
     dev: true
 
@@ -7577,7 +7577,7 @@ packages:
     dependencies:
       '@vitest/pretty-format': 2.0.3
       estree-walker: 3.0.3
-      loupe: 3.1.1
+      loupe: 3.1.2
       tinyrainbow: 1.2.0
     dev: true
 
@@ -7585,7 +7585,7 @@ packages:
     resolution: {integrity: sha512-xpiVfDSg1RrYT0tX6czgerkpcKFmFOF/gCr30+Mve5V2kewCy4Prn1/NDMSRwaSmT7PRaOF83wu+bEtsY1wrvA==}
     dependencies:
       '@vitest/pretty-format': 2.1.3
-      loupe: 3.1.1
+      loupe: 3.1.2
       tinyrainbow: 1.2.0
     dev: true
 
@@ -8524,6 +8524,17 @@ packages:
       check-error: 2.1.1
       deep-eql: 5.0.2
       loupe: 3.1.1
+      pathval: 2.0.0
+    dev: true
+
+  /chai@5.1.2:
+    resolution: {integrity: sha512-aGtmf24DW6MLHHG5gCx4zaI3uBq3KRtxeVs0DjFH6Z0rDNbsvTxFASFvdj79pxjxZ8/5u3PIiN3IwEIQkiiuPw==}
+    engines: {node: '>=12'}
+    dependencies:
+      assertion-error: 2.0.1
+      check-error: 2.1.1
+      deep-eql: 5.0.2
+      loupe: 3.1.2
       pathval: 2.0.0
     dev: true
 
@@ -10154,7 +10165,7 @@ packages:
       eslint: '*'
       eslint-plugin-import: '*'
     dependencies:
-      debug: 4.3.5
+      debug: 4.3.7
       enhanced-resolve: 5.12.0
       eslint: 8.24.0
       eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
@@ -10174,7 +10185,7 @@ packages:
       eslint: '*'
       eslint-plugin-import: '*'
     dependencies:
-      debug: 4.3.5
+      debug: 4.3.7
       enhanced-resolve: 5.12.0
       eslint: 8.57.0
       eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.54.1)(eslint-import-resolver-typescript@3.5.3)(eslint@8.24.0)
@@ -10278,7 +10289,7 @@ packages:
     dependencies:
       escape-string-regexp: 1.0.5
       eslint: 8.24.0
-      ignore: 5.3.2
+      ignore: 5.2.4
     dev: true
 
   /eslint-plugin-eslint-comments@3.2.0(eslint@8.57.0):
@@ -13818,6 +13829,10 @@ packages:
     resolution: {integrity: sha512-edNu/8D5MKVfGVFRhFf8aAxiTM6Wumfz5XsaatSxlD3w4R1d/WEKUTydCdPGbl9K7QG/Ca3GnDV2sIKIpXRQcw==}
     dependencies:
       get-func-name: 2.0.2
+    dev: true
+
+  /loupe@3.1.2:
+    resolution: {integrity: sha512-23I4pFZHmAemUnz8WZXbYRSKYj801VDaNv9ETuMh7IrMc7VuVVSo+Z9iLE3ni30+U48iDWfi30d3twAXBYmnCg==}
     dev: true
 
   /lowercase-keys@2.0.0:
@@ -17399,8 +17414,8 @@ packages:
     engines: {node: '>=14.0.0'}
     dev: true
 
-  /tinyspy@3.0.0:
-    resolution: {integrity: sha512-q5nmENpTHgiPVd1cJDDc9cVoYN5x4vCvwT3FMilvKPKneCBZAxn2YWQjDF0UMcE9k0Cay1gBiDfTMU0g+mPMQA==}
+  /tinyspy@3.0.2:
+    resolution: {integrity: sha512-n1cw8k1k0x4pgA2+9XrOkFydTerNcJ1zWCO5Nn9scWHTD+5tp8dghT2x1uduQePZTZgd3Tupf+x9BxJjeJi77Q==}
     engines: {node: '>=14.0.0'}
     dev: true
 
