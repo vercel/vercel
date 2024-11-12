@@ -52,20 +52,3 @@ export function toHaveTelemetryEvents(
     pass,
   };
 }
-
-export interface ToHaveFetchBody<R = unknown> {
-  toHaveFetchBody: (test: string) => Promise<R>;
-}
-
-export function toHaveFetchBody(received: string, expected: any) {
-  const body = JSON.parse(received);
-  try {
-    expect(body).toEqual(expected);
-    return { pass: true, message: () => '' };
-  } catch (e) {
-    if (e instanceof Error) {
-      return { pass: false, message: () => e.message };
-    }
-    return { pass: false, message: () => 'Unknown error' };
-  }
-}
