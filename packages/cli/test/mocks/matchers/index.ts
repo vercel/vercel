@@ -16,4 +16,5 @@ declare module 'vitest' {
   interface AsymmetricMatchersContaining extends ToHaveFetchBody {}
 }
 
+// @ts-expect-error
 expect.extend({ toOutput, toHaveTelemetryEvents, toHaveFetchBody });
