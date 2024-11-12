@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.3.19
+
+### Patch Changes
+
+- Fix basePath root matching for error pages ([#12559](https://github.com/vercel/vercel/pull/12559))
+
+- Stabilize Chained Prerenders ([#12507](https://github.com/vercel/vercel/pull/12507))
+
 ## 4.3.18
 
 ### Patch Changes
