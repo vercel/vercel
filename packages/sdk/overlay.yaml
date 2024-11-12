@@ -18,15 +18,15 @@ actions:
     remove: true
   # End of remove paths
   # Marking endpoints to show up in Example Usage section of readme
-  - target: $["paths"]["/v6/deployments"]["get"]
+  - target: $["paths"]["/v6/deployments"].get
     update:
-      - x-speakeasy-usage-example:
+      x-speakeasy-usage-example:
         title: List deployments
         description: List deployments under the authenticated user or team.
         position: 1
-  - target: $["paths"]["/v9/projects/{idOrName}"]["patch"]
+  - target: $["paths"]["/v9/projects/{idOrName}"].patch
     update:
-      - x-speakeasy-usage-example:
+      x-speakeasy-usage-example:
         title: Update an existing project
         description: Update the fields of a project using either its name or id.
         position: 2
