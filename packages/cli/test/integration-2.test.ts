@@ -585,29 +585,70 @@ test('whoami with local .vercel scope', async () => {
 });
 
 describe('telemtry submits data', () => {
+  const prepareBridge = async () => {
+    const mockTelemetryBridgeApp = express();
+    const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
+    await listen(mockTelemetryBridgeServer, 0);
+    const address = mockTelemetryBridgeServer.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Unexpected http server address');
+    }
+    process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
+
+    const directory = await setupE2EFixture('static-deployment');
+    // create local .vercel
+    await ensureDir(path.join(directory, '.vercel'));
+    await fs.writeFile(
+      path.join(directory, '.vercel', 'project.json'),
+      JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
+    );
+    const cleanup = async () => {
+      await mockTelemetryBridgeServer.close();
+      await remove(path.join(directory, '.vercel'));
+      delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
+    };
+    return {
+      mockTelemetryBridgeApp,
+      mockTelemetryBridgeServer,
+      directory,
+      cleanup,
+    };
+  };
+  describe('when --debug is not enabled', () => {
+    test('does not wait for the send process before exiting', async () => {
+      let resolveThing: () => void;
+      let promiseSomething = new Promise<void>(resolve => {
+        resolveThing = resolve;
+      });
+      const { mockTelemetryBridgeApp, directory, cleanup } =
+        await prepareBridge();
+      let mockTelemetryBridgeWasCalled = false;
+      mockTelemetryBridgeApp.use((_req, res) => {
+        mockTelemetryBridgeWasCalled = true;
+        res.header('x-vercel-cli-tracked', '1');
+        res.status(204).send();
+        resolveThing();
+      });
+      const output = await execCli(binaryPath, ['whoami'], {
+        cwd: directory,
+      });
+      expect(mockTelemetryBridgeWasCalled).toEqual(false);
+      expect(output.exitCode, formatOutput(output)).toBe(0);
+
+      await promiseSomething;
+      expect(mockTelemetryBridgeWasCalled).toEqual(true);
+
+      await cleanup();
+    });
+  });
   describe('when --debug is enabled', () => {
     test('gracefully exits if the server does not respond', async () => {
+      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+        await prepareBridge();
       let mockTelemetryBridgeWasCalled = false;
-      const mockTelemetryBridgeApp = express();
-      mockTelemetryBridgeApp.use(express.json());
       mockTelemetryBridgeApp.use(() => {
         mockTelemetryBridgeWasCalled = true;
-        // No response to simulate a timeout
       });
-      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
-      await listen(mockTelemetryBridgeServer, 0);
-      const address = mockTelemetryBridgeServer.address();
-      if (!address || typeof address === 'string') {
-        throw new Error('Unexpected http server address');
-      }
-      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
-      const directory = await setupE2EFixture('static-deployment');
-      // create local .vercel
-      await ensureDir(path.join(directory, '.vercel'));
-      await fs.writeFile(
-        path.join(directory, '.vercel', 'project.json'),
-        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
-      );
       const output = await execCli(binaryPath, ['whoami', '-d'], {
         cwd: directory,
       });
@@ -620,27 +661,13 @@ describe('telemtry submits data', () => {
       delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
     });
     test('gracefully exits if the server responds with a non-204 error', async () => {
+      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+        await prepareBridge();
       let mockTelemetryBridgeWasCalled = false;
-      const mockTelemetryBridgeApp = express();
-      mockTelemetryBridgeApp.use(express.json());
       mockTelemetryBridgeApp.use((_req, res) => {
         mockTelemetryBridgeWasCalled = true;
         res.status(403).send();
       });
-      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
-      await listen(mockTelemetryBridgeServer, 0);
-      const address = mockTelemetryBridgeServer.address();
-      if (!address || typeof address === 'string') {
-        throw new Error('Unexpected http server address');
-      }
-      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
-      const directory = await setupE2EFixture('static-deployment');
-      // create local .vercel
-      await ensureDir(path.join(directory, '.vercel'));
-      await fs.writeFile(
-        path.join(directory, '.vercel', 'project.json'),
-        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
-      );
       const output = await execCli(binaryPath, ['whoami', '-d'], {
         cwd: directory,
       });
@@ -653,28 +680,14 @@ describe('telemtry submits data', () => {
       delete process.env.VERCEL_TELEMETRY_BRIDGE_URL;
     });
     test('it waits for the response and logs it', async () => {
+      const { mockTelemetryBridgeApp, mockTelemetryBridgeServer, directory } =
+        await prepareBridge();
       let mockTelemetryBridgeWasCalled = false;
-      const mockTelemetryBridgeApp = express();
-      mockTelemetryBridgeApp.use(express.json());
       mockTelemetryBridgeApp.use((_req, res) => {
         mockTelemetryBridgeWasCalled = true;
         res.header('x-vercel-cli-tracked', '1');
         res.status(204).send();
       });
-      const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
-      await listen(mockTelemetryBridgeServer, 0);
-      const address = mockTelemetryBridgeServer.address();
-      if (!address || typeof address === 'string') {
-        throw new Error('Unexpected http server address');
-      }
-      process.env.VERCEL_TELEMETRY_BRIDGE_URL = `http://127.0.0.1:${address.port}`;
-      const directory = await setupE2EFixture('static-deployment');
-      // create local .vercel
-      await ensureDir(path.join(directory, '.vercel'));
-      await fs.writeFile(
-        path.join(directory, '.vercel', 'project.json'),
-        JSON.stringify({ orgId: process.env.VERCEL_TEAM_ID, projectId: 'xxx' })
-      );
       const output = await execCli(binaryPath, ['whoami', '-d'], {
         cwd: directory,
       });
