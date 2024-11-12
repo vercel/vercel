@@ -792,7 +792,7 @@ const main = async () => {
   }
 
   // FIXME: the telemetry flush event is called by `telemetryEventStore.save`, and it reinvokes the `main` function
-  if (parsedArgs.args[3] !== 'flush') {
+  if (subSubCommand !== 'flush') {
     await telemetryEventStore.save();
   }
   return exitCode;
