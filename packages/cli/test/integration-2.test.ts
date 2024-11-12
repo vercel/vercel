@@ -585,6 +585,13 @@ test('whoami with local .vercel scope', async () => {
 });
 
 describe('telemetry submits data', () => {
+  const telemetryDisabledEnvVariable = process.env.VERCEL_TELEMETRY_DISABLED;
+  beforeAll(() => {
+    delete process.env.VERCEL_TELEMETRY_DISABLED;
+  });
+  afterAll(() => {
+    process.env.VERCEL_TELEMETRY_DISABLED = telemetryDisabledEnvVariable;
+  });
   const prepareBridge = async () => {
     const mockTelemetryBridgeApp = express();
     const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
