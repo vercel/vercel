@@ -163,6 +163,7 @@ describe('main', () => {
             output.initialize({
               debug: false,
             });
+            vi.stubEnv('VERCEL_TELEMETRY_DISABLED', undefined);
           });
           afterEach(() => {
             output.initialize({

@@ -137,7 +137,7 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
 }
 
 class MockTelemetryEventStore extends TelemetryEventStore {
-  save(): void {
+  async save(): Promise<void> {
     return;
   }
 }
