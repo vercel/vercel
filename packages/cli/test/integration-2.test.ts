@@ -584,7 +584,7 @@ test('whoami with local .vercel scope', async () => {
   await remove(path.join(directory, '.vercel'));
 });
 
-describe('telemtry submits data', () => {
+describe('telemetry submits data', () => {
   const prepareBridge = async () => {
     const mockTelemetryBridgeApp = express();
     const mockTelemetryBridgeServer = createServer(mockTelemetryBridgeApp);
@@ -616,9 +616,9 @@ describe('telemtry submits data', () => {
   };
   describe('when --debug is not enabled', () => {
     test('does not wait for the send process before exiting', async () => {
-      let resolveThing: () => void;
-      let promiseSomething = new Promise<void>(resolve => {
-        resolveThing = resolve;
+      let resolveBridgeEvent: () => void;
+      let bridgeEventPromise = new Promise<void>(resolve => {
+        resolveBridgeEvent = resolve;
       });
       const { mockTelemetryBridgeApp, directory, cleanup } =
         await prepareBridge();
@@ -627,7 +627,7 @@ describe('telemtry submits data', () => {
         mockTelemetryBridgeWasCalled = true;
         res.header('x-vercel-cli-tracked', '1');
         res.status(204).send();
-        resolveThing();
+        resolveBridgeEvent();
       });
       const output = await execCli(binaryPath, ['whoami'], {
         cwd: directory,
@@ -635,7 +635,7 @@ describe('telemtry submits data', () => {
       expect(mockTelemetryBridgeWasCalled).toEqual(false);
       expect(output.exitCode, formatOutput(output)).toBe(0);
 
-      await promiseSomething;
+      await bridgeEventPromise;
       expect(mockTelemetryBridgeWasCalled).toEqual(true);
 
       await cleanup();
