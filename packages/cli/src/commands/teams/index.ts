@@ -69,7 +69,7 @@ export default async function teams(client: Client) {
   switch (subcommand) {
     case 'list': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('teams', 'list');
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -78,7 +78,7 @@ export default async function teams(client: Client) {
     }
     case 'switch': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('teams', 'switch');
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(switchSubcommand);
         return 2;
       }
@@ -87,7 +87,7 @@ export default async function teams(client: Client) {
     }
     case 'add': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('teams', 'add');
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
@@ -96,7 +96,7 @@ export default async function teams(client: Client) {
     }
     case 'invite': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('teams', 'invite');
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(inviteSubcommand);
         return 2;
       }

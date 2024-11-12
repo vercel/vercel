@@ -199,7 +199,7 @@ async function runStartOrder(
   const [header, ...rows] = dnsTable(
     pendingChallenges.map(challenge => {
       const subdomain = getSubdomain(challenge.domain);
-      if (!subdomain) {
+      if (subdomain === null) {
         throw new ERRORS.InvalidDomain(challenge.domain);
       }
       return [

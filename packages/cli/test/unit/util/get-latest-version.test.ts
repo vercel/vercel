@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
+// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';

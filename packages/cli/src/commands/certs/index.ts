@@ -70,7 +70,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'issue':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('certs', 'issue');
+        telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(issueSubcommand);
         return 2;
       }
@@ -78,7 +78,7 @@ export default async function main(client: Client) {
       return issue(client, args);
     case 'ls':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('certs', 'list');
+        telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -86,7 +86,7 @@ export default async function main(client: Client) {
       return ls(client, args);
     case 'rm':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('certs', 'remove');
+        telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
@@ -94,7 +94,7 @@ export default async function main(client: Client) {
       return rm(client, args);
     case 'add':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('certs', 'add');
+        telemetry.trackCliFlagHelp('certs', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }

@@ -3,6 +3,7 @@ import os from 'node:os';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { spawn } from 'node:child_process';
+import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 const LogLabel = `['telemetry']:`;
 
@@ -38,6 +39,12 @@ export class TelemetryClient {
       return 'MANY';
     }
     return 'NONE';
+  };
+  protected redactedTargetName = (target: string) => {
+    if ((PROJECT_ENV_TARGET as ReadonlyArray<string>).includes(target)) {
+      return target;
+    }
+    return this.redactedValue;
   };
 
   constructor({ opts }: Args) {
@@ -153,11 +160,6 @@ export class TelemetryClient {
       key: 'extension',
       value: this.redactedValue,
     });
-  }
-
-  trackCommandError(error: string): Event | undefined {
-    output.error(error);
-    return;
   }
 
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {

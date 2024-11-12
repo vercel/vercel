@@ -699,7 +699,7 @@ describe('deploy', () => {
       },
     });
 
-    let exitCode: number;
+    let exitCode: number | undefined;
     const runCommand = async () => {
       const repoRoot = setupUnitFixture('commands/deploy/node');
       client.cwd = repoRoot;
@@ -906,7 +906,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:regions', value: 'us-east-1,us-east-2' },
+        { key: 'option:regions', value: '[REDACTED]' },
       ]);
     });
     it('--prebuilt', async () => {
@@ -1098,7 +1098,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:target',
-          value: 'CUSTOM_ID_OR_SLUG',
+          value: '[REDACTED]',
         },
       ]);
     });

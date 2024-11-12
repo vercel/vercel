@@ -18,8 +18,7 @@ const mockPath = join(
 );
 
 let mock: MockInstance<
-  [url: string, opts?: FetchOptions | undefined],
-  Promise<unknown>
+  (url: string, options?: FetchOptions) => Promise<unknown>
 >;
 beforeEach(() => {
   // The examples list endpoint comes from an API that we don't typically mock

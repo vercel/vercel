@@ -9,6 +9,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import assert from 'assert';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -98,8 +99,10 @@ test('[vercel dev] no build matches warning', async () => {
     // start `vercel dev` detached in child_process
     dev.unref();
 
+    assert(dev.stderr);
     dev.stderr.setEncoding('utf8');
     await new Promise<void>(resolve => {
+      assert(dev.stderr);
       dev.stderr.on('data', (str: string) => {
         if (str.includes('did not match any source files')) {
           resolve();
@@ -129,9 +132,11 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
     dev.unref();
 
     // Monitor `stderr` for the warning
+    assert(dev.stderr);
     dev.stderr.setEncoding('utf8');
     const msg = 'There are no files inside your deployment.';
     await new Promise<void>(resolve => {
+      assert(dev.stderr);
       dev.stderr.on('data', (str: string) => {
         if (str.includes(msg)) {
           resolve();
@@ -162,6 +167,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
     let stderr: any = [];
     const start = Date.now();
 
+    assert(dev.stderr);
     dev.stderr.on('data', (str: any) => stderr.push(str));
 
     while (stderr.join('').includes('Ready') === false) {
