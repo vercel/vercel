@@ -11,7 +11,7 @@ export function useUser(additionalAttrs: Partial<User> = {}) {
     ...additionalAttrs,
   };
   client.scenario.get('/v2/user', (_req, res) => {
-    res.json({
+    return res.json({
       user,
     });
   });

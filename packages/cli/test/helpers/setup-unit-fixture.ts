@@ -60,5 +60,5 @@ export function cleanupFixtures() {
 
 // After all tests are run, we clean up our fixtures
 afterAll(() => {
-  cleanupFixtures();
+  //cleanupFixtures();
 });

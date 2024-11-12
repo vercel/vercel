@@ -1,0 +1,1 @@
+export default () => <div><h1>Now CLI test</h1><p>Zero-config + Next.js</p></div>

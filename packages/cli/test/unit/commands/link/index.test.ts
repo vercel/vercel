@@ -1,5 +1,5 @@
 import { EOL } from 'node:os';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
 import { readJSON, mkdirp, writeFile, pathExists } from 'fs-extra';
@@ -13,6 +13,7 @@ import {
   useUnknownProject,
 } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 describe('link', () => {
   describe('--help', () => {
@@ -381,5 +382,93 @@ describe('link', () => {
         value: '[REDACTED]',
       },
     ]);
+  });
+
+  describe('nested projects', () => {
+    const projectName = 'nested-framework';
+    const projectRootDir = 'app';
+    const createdDeploymentId = 'dpl_123';
+
+    beforeEach(() => {
+      const cwd = setupUnitFixture(`commands/link/${projectName}`);
+      client.cwd = cwd;
+
+      const user = useUser();
+      useTeams('team_dummy', {
+        apiVersion: 1,
+      });
+      useUnknownProject();
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: createdDeploymentId,
+        });
+      });
+
+      client.scenario.get(
+        `/v13/deployments/${createdDeploymentId}`,
+        (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            code: 'missing_project_settings',
+            id: createdDeploymentId,
+            readyState: 'READY',
+            aliasAssigned: true,
+            alias: [],
+            projectSettings: {
+              devCommand: 'dev',
+              installCommand: 'install',
+              buildCommand: 'build',
+              outputDirectory: '',
+              rootDirectory: '',
+            },
+            framework: {
+              settings: {},
+              slug: 'Next.js',
+            },
+          });
+        }
+      );
+    });
+
+    it.only('asks user to provide code location', async () => {
+      client.setArgv('link');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('? Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Link to existing project?');
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('What’s your project’s name?');
+      client.stdin.write(`${projectName}\n`);
+
+      await expect(client.stderr).toOutput(
+        'In which directory is your code located?'
+      );
+      client.stdin.write(`${projectRootDir}\n`);
+
+      await expect(client.stderr).toOutput('Want to modify these settings?');
+      client.stdin.write('\n');
+
+      // OK!
+      // await expect(client.stderr).toOutput('Auto-detected Project Settings (Next.js)');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
   });
 });
