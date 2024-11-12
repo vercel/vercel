@@ -9,7 +9,7 @@ export default async function flush(client: Client, args: string[]) {
     const res = await client.fetch(url, {
       method: 'POST',
       headers,
-      body,
+      body: JSON.stringify(body),
       json: false,
     });
     const status = res.status;
