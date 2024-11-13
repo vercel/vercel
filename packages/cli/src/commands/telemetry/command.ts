@@ -19,7 +19,7 @@ export const enableSubcommand = {
 export const flushSubcommand = {
   name: 'flush',
   aliases: [],
-  description: 'Interal command to flush telemetry events',
+  description: 'Internal command to flush telemetry events',
   hidden: true,
   arguments: [],
   options: [],
