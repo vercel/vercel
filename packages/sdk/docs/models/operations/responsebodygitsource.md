@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GetDeploymentGitSource1 = {
   type: "github",
-  repoId: 9623.95,
+  repoId: "<id>",
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.GetDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://zany-willow.name",
+  gitUrl: "https://another-testing.net",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.GetDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 1280.21,
+  repoId: 5525.81,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.GetDeploymentGitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 5831.93,
+  projectId: 8518.09,
 };
 ```
 

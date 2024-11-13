@@ -84,6 +84,9 @@ export async function domainsDeleteDomain(
   const context = {
     operationID: "deleteDomain",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

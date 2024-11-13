@@ -8,14 +8,14 @@
 ```typescript
 const value: operations.GitRepo1 = {
   namespace: "<value>",
-  projectId: 6940.87,
+  projectId: 2375.23,
   type: "gitlab",
-  url: "https://deadly-gerbil.info",
-  path: "/usr/X11R6",
+  url: "https://far-flung-lotion.net/",
+  path: "/var/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 
@@ -25,14 +25,14 @@ const value: operations.GitRepo1 = {
 const value: operations.GitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 3032.92,
+  repoId: 7811.93,
   type: "github",
-  repoOwnerId: 3558.89,
-  path: "/usr/local/src",
+  repoOwnerId: 1689.26,
+  path: "/opt/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -45,7 +45,7 @@ const value: operations.GitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/dev",
+  path: "/usr/X11R6",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

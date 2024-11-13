@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 2b328f77-299a-476f-8aa9-59080c9107fe
 management:
-  docChecksum: 86ddb097159c11ac094d69be920ee422
+  docChecksum: c12b67760dfe67d254ab60df545d1af3
   docVersion: 0.0.1
-  speakeasyVersion: 1.431.0
-  generationVersion: 2.451.0
-  releaseVersion: 14.0.0-canary.4
-  configChecksum: 8b29555243606173805dec1c9bfa941f
+  speakeasyVersion: 1.438.2
+  generationVersion: 2.457.7
+  releaseVersion: 14.0.0-canary.5
+  configChecksum: af23993d03b3ef6109505883ad034a27
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk
@@ -15,7 +15,7 @@ features:
   typescript:
     additionalDependencies: 0.1.0
     constsAndDefaults: 0.1.11
-    core: 3.18.3
+    core: 3.18.4
     defaultEnabledRetries: 0.1.0
     deprecations: 2.81.1
     devContainers: 2.90.0
@@ -23,6 +23,7 @@ features:
     enumUnions: 0.1.0
     enums: 2.82.1
     envVarSecurityUsage: 0.1.2
+    examples: 2.81.4
     globalSecurity: 2.82.11
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -64,7 +65,6 @@ generatedFiles:
   - docs/models/components/edgeconfigitem.md
   - docs/models/components/edgeconfigitemvalue.md
   - docs/models/components/edgeconfigtoken.md
-  - docs/models/components/entities.md
   - docs/models/components/entitlements.md
   - docs/models/components/favoriteprojectsandspaces.md
   - docs/models/components/favoritesviewpreference.md
@@ -99,9 +99,7 @@ generatedFiles:
   - docs/models/components/teamlimited.md
   - docs/models/components/two.md
   - docs/models/components/type.md
-  - docs/models/components/user.md
   - docs/models/components/userevent.md
-  - docs/models/components/usereventtype.md
   - docs/models/components/version.md
   - docs/models/components/viewpreference.md
   - docs/models/components/webanalytics.md
@@ -234,7 +232,6 @@ generatedFiles:
   - docs/models/operations/canceldeploymentteam.md
   - docs/models/operations/canceldeploymenttype.md
   - docs/models/operations/canceldeploymentwebanalytics.md
-  - docs/models/operations/certs.md
   - docs/models/operations/changes.md
   - docs/models/operations/checkdomainpricerequest.md
   - docs/models/operations/checkdomainpriceresponsebody.md
@@ -621,9 +618,6 @@ generatedFiles:
   - docs/models/operations/customenvironment2.md
   - docs/models/operations/customenvironments.md
   - docs/models/operations/datacache.md
-  - docs/models/operations/datacachebillingsettingsrequestbody.md
-  - docs/models/operations/datacachebillingsettingsresponsebody.md
-  - docs/models/operations/datacachepurgeallrequest.md
   - docs/models/operations/decrypt.md
   - docs/models/operations/definitions.md
   - docs/models/operations/deleteaccessgrouprequest.md
@@ -888,7 +882,6 @@ generatedFiles:
   - docs/models/operations/getauthuserresponsebody.md
   - docs/models/operations/getcertbyidrequest.md
   - docs/models/operations/getcertbyidresponsebody.md
-  - docs/models/operations/getcertsresponsebody.md
   - docs/models/operations/getcheckchecksresponse200applicationjsonsource.md
   - docs/models/operations/getcheckchecksresponse200source.md
   - docs/models/operations/getcheckchecksresponsesource.md
@@ -1409,8 +1402,6 @@ generatedFiles:
   - docs/models/operations/getrecordsresponsebodytype.md
   - docs/models/operations/getsecretrequest.md
   - docs/models/operations/getsecretresponsebody.md
-  - docs/models/operations/getsecretsrequest.md
-  - docs/models/operations/getsecretsresponsebody.md
   - docs/models/operations/getteamaccessrequestbitbucket.md
   - docs/models/operations/getteamaccessrequestgithub.md
   - docs/models/operations/getteamaccessrequestgitlab.md
@@ -1972,7 +1963,6 @@ generatedFiles:
   - docs/models/operations/searchreporesponsebody2.md
   - docs/models/operations/searchreporesponsebodyid.md
   - docs/models/operations/searchreporesponsebodyprovider.md
-  - docs/models/operations/secrets.md
   - docs/models/operations/security.md
   - docs/models/operations/servicetype.md
   - docs/models/operations/seven.md
@@ -2414,8 +2404,6 @@ generatedFiles:
   - src/funcs/checksGetCheck.ts
   - src/funcs/checksRerequestCheck.ts
   - src/funcs/checksUpdateCheck.ts
-  - src/funcs/dataCacheBillingSettings.ts
-  - src/funcs/datacachePurgeall.ts
   - src/funcs/deploymentsCancelDeployment.ts
   - src/funcs/deploymentsCreateDeployment.ts
   - src/funcs/deploymentsDeleteDeployment.ts
@@ -2455,7 +2443,6 @@ generatedFiles:
   - src/funcs/edgeConfigGetEdgeConfigs.ts
   - src/funcs/edgeConfigPatchEdgeConfigSchema.ts
   - src/funcs/edgeConfigUpdateEdgeConfig.ts
-  - src/funcs/getCerts.ts
   - src/funcs/integrationsDeleteConfiguration.ts
   - src/funcs/integrationsGetConfiguration.ts
   - src/funcs/integrationsGetConfigurations.ts
@@ -2494,7 +2481,6 @@ generatedFiles:
   - src/funcs/secretsCreateSecret.ts
   - src/funcs/secretsDeleteSecret.ts
   - src/funcs/secretsGetSecret.ts
-  - src/funcs/secretsGetSecrets.ts
   - src/funcs/secretsRenameSecret.ts
   - src/funcs/securityGetFirewallConfig.ts
   - src/funcs/securityPutFirewallConfig.ts
@@ -2578,8 +2564,6 @@ generatedFiles:
   - src/models/operations/createsecret.ts
   - src/models/operations/createteam.ts
   - src/models/operations/createwebhook.ts
-  - src/models/operations/datacachebillingsettings.ts
-  - src/models/operations/datacachepurgeall.ts
   - src/models/operations/deleteaccessgroup.ts
   - src/models/operations/deletealias.ts
   - src/models/operations/deleteauthtoken.ts
@@ -2605,7 +2589,6 @@ generatedFiles:
   - src/models/operations/getauthtoken.ts
   - src/models/operations/getauthuser.ts
   - src/models/operations/getcertbyid.ts
-  - src/models/operations/getcerts.ts
   - src/models/operations/getcheck.ts
   - src/models/operations/getconfigurablelogdrain.ts
   - src/models/operations/getconfiguration.ts
@@ -2635,7 +2618,6 @@ generatedFiles:
   - src/models/operations/getprojects.ts
   - src/models/operations/getrecords.ts
   - src/models/operations/getsecret.ts
-  - src/models/operations/getsecrets.ts
   - src/models/operations/getteam.ts
   - src/models/operations/getteamaccessrequest.ts
   - src/models/operations/getteammembers.ts

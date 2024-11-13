@@ -9,7 +9,7 @@ let value: ResponseBodyBillingPlan = {
   id: "<id>",
   type: "prepayment",
   name: "<value>",
-  description: "even forenenst lazily afore spring",
+  description: "inasmuch uh-huh the unless scorpion ha scamper safe",
 };
 ```
 

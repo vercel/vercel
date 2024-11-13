@@ -25,7 +25,7 @@ const value: operations.Routes2 = {
 const value: operations.Routes3 = {
   src: "<value>",
   continue: false,
-  middleware: 8661.35,
+  middleware: 9942.33,
 };
 ```
 

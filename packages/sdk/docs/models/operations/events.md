@@ -5,7 +5,7 @@
 ```typescript
 import { Events } from "@vercel/sdk/models/operations/createwebhook.js";
 
-let value: Events = "deployment.integration.action.cleanup";
+let value: Events = "integration-configuration-scope-change-confirmed";
 ```
 
 ## Values

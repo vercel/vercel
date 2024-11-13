@@ -8,14 +8,14 @@ import { GitRepo2 } from "@vercel/sdk/models/operations/createdeployment.js";
 let value: GitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 9824.45,
+  repoId: 9608.13,
   type: "github",
-  repoOwnerId: 4004.49,
-  path: "/Users",
+  repoOwnerId: 651.21,
+  path: "/boot",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

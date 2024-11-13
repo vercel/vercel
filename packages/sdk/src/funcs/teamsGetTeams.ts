@@ -78,6 +78,9 @@ export async function teamsGetTeams(
   const context = {
     operationID: "getTeams",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -7,7 +7,7 @@ import { Nine } from "@vercel/sdk/models/operations/createrecord.js";
 
 let value: Nine = {
   name: "subdomain",
-  type: "AAAA",
+  type: "HTTPS",
   ttl: 60,
   value: "ns1.example.com",
   comment: "used to verify ownership of domain",

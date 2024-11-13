@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentRoutesHandle } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentRoutesHandle = "rewrite";
+let value: GetDeploymentRoutesHandle = "resource";
 ```
 
 ## Values

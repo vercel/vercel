@@ -6,7 +6,7 @@
 import { TrustedIps2 } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: TrustedIps2 = {
-  deploymentType: "preview",
+  deploymentType: "production",
 };
 ```
 

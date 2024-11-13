@@ -6,8 +6,8 @@
 import { Ips } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Ips = {
-  hostname: "authorized-tributary.biz",
-  ip: "05ab:288c:eca8:3bf8:be30:6daf:ca2c:caff",
+  hostname: "curly-heating.info",
+  ip: "33.10.6.69",
   action: "challenge",
 };
 ```

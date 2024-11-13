@@ -9,8 +9,7 @@ import { RequestDeleteReasons } from "@vercel/sdk/models/operations/requestdelet
 
 let value: RequestDeleteReasons = {
   slug: "<value>",
-  description:
-    "splash psst before anguished emergent upward rival inasmuch uh-huh",
+  description: "ew lazily elegantly celebrate until furthermore",
 };
 ```
 

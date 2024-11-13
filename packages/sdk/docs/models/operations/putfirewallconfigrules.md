@@ -13,8 +13,8 @@ let value: PutFirewallConfigRules = {
     {
       conditions: [
         {
-          type: "method",
-          op: "lte",
+          type: "geo_as_number",
+          op: "sub",
         },
       ],
     },

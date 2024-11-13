@@ -78,6 +78,9 @@ export async function webhooksCreateWebhook(
   const context = {
     operationID: "createWebhook",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -5,11 +5,11 @@
 ```typescript
 import { UpdateProjectJobStatus } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectJobStatus = "succeeded";
+let value: UpdateProjectJobStatus = "in-progress";
 ```
 
 ## Values
 
 ```typescript
-"pending" | "in-progress" | "succeeded" | "failed" | "skipped"
+"succeeded" | "failed" | "skipped" | "pending" | "in-progress"
 ```

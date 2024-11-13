@@ -6,9 +6,9 @@
 import { Repos } from "@vercel/sdk/models/operations/searchrepo.js";
 
 let value: Repos = {
-  id: "<id>",
-  provider: "github-custom-host",
-  url: "https://rich-draft.com",
+  id: 9550.64,
+  provider: "gitlab",
+  url: "https://physical-following.biz",
   name: "<value>",
   slug: "<value>",
   namespace: "<value>",
@@ -19,7 +19,7 @@ let value: Repos = {
   ownerType: "team",
   private: false,
   defaultBranch: "<value>",
-  updatedAt: 1861.30,
+  updatedAt: 444.43,
 };
 ```
 

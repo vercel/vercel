@@ -13,5 +13,5 @@ let value: QueryParamType = "new";
 ## Values
 
 ```typescript
-"new" | "renewal" | "transfer"
+"new" | "renewal" | "transfer" | "redemption"
 ```

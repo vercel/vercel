@@ -12,9 +12,9 @@ let value: GetProjectsResponseBody = {
     {
       accountId: "<id>",
       crons: {
-        enabledAt: 6222.31,
-        disabledAt: 2790.68,
-        updatedAt: 2097.50,
+        enabledAt: 9221.11,
+        disabledAt: 894.95,
+        updatedAt: 4059.42,
         deploymentId: "<id>",
         definitions: [
           {
@@ -29,12 +29,12 @@ let value: GetProjectsResponseBody = {
       latestDeployments: [
         {
           id: "<id>",
-          createdAt: 1157.03,
+          createdAt: 243.13,
           createdIn: "<value>",
           creator: {
-            email: "Maureen.White@yahoo.com",
+            email: "Lily57@yahoo.com",
             uid: "<id>",
-            username: "Laila_Armstrong-Predovic",
+            username: "Margarett_Abernathy",
           },
           deploymentHostname: "<value>",
           name: "<value>",
@@ -43,30 +43,30 @@ let value: GetProjectsResponseBody = {
           private: false,
           readyState: "BUILDING",
           type: "LAMBDAS",
-          url: "https://miserable-popularity.com/",
+          url: "https://stylish-language.info",
           userId: "<id>",
         },
       ],
       name: "<value>",
-      nodeVersion: "20.x",
+      nodeVersion: "10.x",
       targets: {
         "key": {
           id: "<id>",
-          createdAt: 4103.02,
+          createdAt: 972.43,
           createdIn: "<value>",
           creator: {
-            email: "Sherman_Collier@yahoo.com",
+            email: "Josie.Borer@yahoo.com",
             uid: "<id>",
-            username: "Theodore96",
+            username: "Sherman_Collier",
           },
           deploymentHostname: "<value>",
           name: "<value>",
-          plan: "pro",
+          plan: "hobby",
           previewCommentsEnabled: false,
           private: false,
-          readyState: "ERROR",
+          readyState: "QUEUED",
           type: "LAMBDAS",
-          url: "https://well-groomed-eternity.com/",
+          url: "https://svelte-video.org",
           userId: "<id>",
         },
       },

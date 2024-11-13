@@ -18,39 +18,39 @@ const value: operations.GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://brave-barge.biz/",
+  inspectorUrl: "https://clear-formation.com/",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 1693.13,
-  buildingAt: 9650.95,
+  bootedAt: 4248.54,
+  buildingAt: 6641.97,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "QUEUED",
+  status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 8054.62,
+  createdAt: 857.95,
   name: "<value>",
-  readyState: "INITIALIZING",
+  readyState: "QUEUED",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://messy-vista.info",
-  version: 7879.16,
+  url: "https://deafening-vibraphone.com/",
+  version: 8054.62,
   projectId: "<id>",
   plan: "enterprise",
   createdIn: "<value>",
   ownerId: "<id>",
   routes: [
     {
-      handle: "resource",
+      handle: "miss",
     },
   ],
 };
@@ -61,27 +61,27 @@ const value: operations.GetDeploymentResponseBody1 = {
 ```typescript
 const value: operations.GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 5983.16,
-  buildingAt: 1189.17,
+  bootedAt: 9717.63,
+  buildingAt: 3638.45,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "ERROR",
+  status: "READY",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 7815.82,
+  createdAt: 5552.94,
   name: "<value>",
-  readyState: "READY",
+  readyState: "ERROR",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://far-off-reward.info",
-  version: 5736.10,
+  url: "https://pastel-cardboard.info",
+  version: 7815.82,
 };
 ```
 

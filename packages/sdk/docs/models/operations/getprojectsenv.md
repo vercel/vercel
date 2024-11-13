@@ -6,7 +6,7 @@
 import { GetProjectsEnv } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsEnv = {
-  type: "sensitive",
+  type: "system",
   key: "<key>",
   value: "<value>",
 };

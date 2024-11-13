@@ -36,10 +36,6 @@ export type CreateSecretRequest = {
    * The Team slug to perform the request on behalf of.
    */
   slug?: string | undefined;
-  /**
-   * The name of the secret.
-   */
-  name: string;
   requestBody?: CreateSecretRequestBody | undefined;
 };
 
@@ -145,7 +141,6 @@ export const CreateSecretRequest$inboundSchema: z.ZodType<
 > = z.object({
   teamId: z.string().optional(),
   slug: z.string().optional(),
-  name: z.string(),
   RequestBody: z.lazy(() => CreateSecretRequestBody$inboundSchema).optional(),
 }).transform((v) => {
   return remap$(v, {
@@ -157,7 +152,6 @@ export const CreateSecretRequest$inboundSchema: z.ZodType<
 export type CreateSecretRequest$Outbound = {
   teamId?: string | undefined;
   slug?: string | undefined;
-  name: string;
   RequestBody?: CreateSecretRequestBody$Outbound | undefined;
 };
 
@@ -169,7 +163,6 @@ export const CreateSecretRequest$outboundSchema: z.ZodType<
 > = z.object({
   teamId: z.string().optional(),
   slug: z.string().optional(),
-  name: z.string(),
   requestBody: z.lazy(() => CreateSecretRequestBody$outboundSchema).optional(),
 }).transform((v) => {
   return remap$(v, {
