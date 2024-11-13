@@ -4,6 +4,7 @@ import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import { cloneEnv } from '@vercel/build-utils/dist';
 
 const LogLabel = `['telemetry']:`;
 
@@ -271,10 +272,15 @@ export class TelemetryEventStore {
       'flush',
       JSON.stringify(payload),
     ];
+    // We need to disable telemetry in the subprocess, otherwise we'll end up in an infinite loop
+    const env = cloneEnv(process.env, {
+      VERCEL_TELEMETRY_DISABLED: '1',
+    });
     // When debugging, we want to know about the response from the server, so we can't exit early
     if (outputDebugEnabled) {
       return new Promise<void>(resolve => {
         const childProcess = spawn(nodeBinaryPath, script, {
+          env,
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
@@ -299,6 +305,7 @@ export class TelemetryEventStore {
     } else {
       const childProcess = spawn(nodeBinaryPath, script, {
         stdio: 'ignore',
+        env,
         windowsHide: true,
         detached: true,
       });
