@@ -43,7 +43,7 @@ typescript:
   inputModelSuffix: input
   maxMethodParams: 0
   methodArguments: require-security-and-request
-  moduleFormat: dual
+  moduleFormat: esm
   outputModelSuffix: output
   packageName: '@vercel/sdk'
   responseFormat: flat
