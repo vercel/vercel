@@ -27,5 +27,8 @@ export class TelemetryTelemetryClient
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  trackCliSubcommandFlush(_: string) {}
+  trackCliSubcommandFlush(_: string) {
+    // NOTE: this function is intentionally not implemented
+    // because it is intended for internal use only and doesn't need to be tracked
+  }
 }

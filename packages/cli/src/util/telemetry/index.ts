@@ -285,6 +285,7 @@ export class TelemetryEventStore {
         });
 
         setTimeout(() => {
+          // If the subprocess doesn't respond within 2 seconds, kill it so the process can exit
           childProcess.kill();
         }, 2000);
 
