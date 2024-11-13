@@ -10,4 +10,4 @@ Telemetry allows Vercel to accurately gauge Vercel CLI feature usage, pain point
 
 Participation in this program is optional, and you may opt-out if you would prefer not to share any telemetry information with Vercel.
 
-Learn more about Vercel CLI Telemetry.
+Learn more about Vercel CLI Telemetry at https://vercel.com/docs/cli/about-telemetry.
