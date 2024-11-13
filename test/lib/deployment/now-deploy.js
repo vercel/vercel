@@ -64,6 +64,7 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
         VERCEL_CLI_VERSION,
         VERCEL_FORCE_PYTHON_STREAMING,
         NEXT_TELEMETRY_DISABLED: '1',
+        VERCEL_TELEMETRY_DISABLED: '1',
       },
     },
   };
