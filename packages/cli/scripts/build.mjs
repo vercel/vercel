@@ -1,8 +1,7 @@
-import path, { join } from 'node:path';
+import { join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { esbuild } from '../../../utils/build.mjs';
 import { compileDevTemplates } from './compile-templates.mjs';
-import { fileURLToPath } from 'node:url';
 
 const repoRoot = new URL('../', import.meta.url);
 
@@ -31,25 +30,10 @@ await compileDevTemplates();
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const externals = Object.keys(pkg.dependencies || {});
-await Promise.all([
-  esbuild({
-    bundle: true,
-    external: externals,
-  }),
-  // We call send-telemetry as a subprocess, so it needs to be bundled separately
-  esbuild({
-    entryPoints: [
-      path.join(
-        fileURLToPath(repoRoot),
-        'src',
-        'util',
-        'telemetry',
-        'send-telemetry.ts'
-      ),
-    ],
-    bundle: true,
-  }),
-]);
+await esbuild({
+  bundle: true,
+  external: externals,
+});
 
 // Copy a few static files into `dist`
 const distRoot = new URL('dist/', repoRoot);
