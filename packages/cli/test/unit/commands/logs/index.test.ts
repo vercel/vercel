@@ -92,7 +92,7 @@ describe('logs', () => {
 
           Options:
 
-          -j,  --json  print each log line as a JSON object (compatible with JQ)        
+          -j,  --json  Print each log line as a JSON object (compatible with JQ)        
 
 
           Global Options:
