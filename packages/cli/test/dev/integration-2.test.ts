@@ -174,6 +174,15 @@ test(
 );
 
 test(
+  '[vercel dev] Should support `*.go` API serverless functions with external modules',
+  testFixtureStdio('go-external-module', async (testPath: any) => {
+    await testPath(200, `/api`, /Using Fiber version: /);
+    await testPath(200, `/api/index`, /Using Fiber version: /);
+    await testPath(200, `/api/index.go`, /Using Fiber version: /);
+  })
+);
+
+test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
     await testPath(200, `/api`, 'hello:go1.20.14');
