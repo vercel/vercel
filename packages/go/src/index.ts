@@ -747,35 +747,32 @@ async function writeGoWork(
   const workspaces = new Set(['.']);
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
 
-  // Get version from go.mod as default
+  // Get version and toolchain from go.mod as default
   let goVersion = '1.18'; // default
+  let toolchain: string | undefined;
+
   if (modulePath) {
     const goModPath = join(modulePath, 'go.mod');
     if (await pathExists(goModPath)) {
       const modContents = await readFile(goModPath, 'utf-8');
-      // Update regex to capture patch version
       const goVersionMatch = /^go (\d+\.\d+(?:\.\d+)?)/m.exec(modContents);
+      const toolchainMatch = /^toolchain ([^\s]+)/m.exec(modContents);
+
       if (goVersionMatch) {
-        // Use the full version string including patch
         goVersion = goVersionMatch[1];
+      }
+      if (toolchainMatch) {
+        toolchain = toolchainMatch[1];
       }
     }
   }
 
-  // Check if go.work exists and has a different version
-  let contents = '';
-  if (goWorkPath) {
-    const existingContents = await readFile(goWorkPath, 'utf-8');
-    // Update regex to capture patch version
-    const workVersionMatch = /^go (\d+\.\d+(?:\.\d+)?)/m.exec(existingContents);
-    if (workVersionMatch) {
-      goVersion = workVersionMatch[1];
-    }
+  let contents = `go ${goVersion}\n`;
+  if (toolchain) {
+    contents += `toolchain ${toolchain}\n`;
   }
+  contents += '\n';
 
-  contents = `go ${goVersion}\n\n`;
-
-  // Rest of the workspace path handling remains the same
   if (goWorkPath) {
     const addPath = (path: string) => {
       if (path) {
