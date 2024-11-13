@@ -211,7 +211,8 @@ function setupDeploymentEndpoints(): void {
   });
 
   client.scenario.get('/:version/deployments/:id/aliases', (req, res) => {
-    const limit = parseInt(req.query.limit);
+    const limit =
+      typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
     res.json({
       aliases: [],
       pagination: { count: limit, total: limit, page: 1, pages: 1 },
