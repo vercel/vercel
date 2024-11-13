@@ -7,7 +7,7 @@ The current state of an ongoing transfer. `pending_owner`: Awaiting approval by 
 ```typescript
 import { GetDomainTransferStatus } from "@vercel/sdk/models/operations/getdomaintransfer.js";
 
-let value: GetDomainTransferStatus = "cancelled";
+let value: GetDomainTransferStatus = "completed";
 ```
 
 ## Values

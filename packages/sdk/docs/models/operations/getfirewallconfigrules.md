@@ -14,7 +14,7 @@ let value: GetFirewallConfigRules = {
       conditions: [
         {
           type: "ip_address",
-          op: "lt",
+          op: "ninc",
         },
       ],
     },

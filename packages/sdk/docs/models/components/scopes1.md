@@ -9,16 +9,16 @@ import { Scopes1 } from "@vercel/sdk/models/components/authtoken.js";
 
 let value: Scopes1 = {
   type: "user",
-  origin: "email",
-  createdAt: 5146.26,
+  origin: "sms",
+  createdAt: 6520.13,
 };
 ```
 
 ## Fields
 
-| Field                                                              | Type                                                               | Required                                                           | Description                                                        |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `type`                                                             | [components.ScopesType](../../models/components/scopestype.md)     | :heavy_check_mark:                                                 | N/A                                                                |
-| `origin`                                                           | [components.ScopesOrigin](../../models/components/scopesorigin.md) | :heavy_check_mark:                                                 | N/A                                                                |
-| `createdAt`                                                        | *number*                                                           | :heavy_check_mark:                                                 | N/A                                                                |
-| `expiresAt`                                                        | *number*                                                           | :heavy_minus_sign:                                                 | N/A                                                                |
+| Field                                                                            | Type                                                                             | Required                                                                         | Description                                                                      |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `type`                                                                           | [components.AuthTokenScopesType](../../models/components/authtokenscopestype.md) | :heavy_check_mark:                                                               | N/A                                                                              |
+| `origin`                                                                         | [components.ScopesOrigin](../../models/components/scopesorigin.md)               | :heavy_check_mark:                                                               | N/A                                                                              |
+| `createdAt`                                                                      | *number*                                                                         | :heavy_check_mark:                                                               | N/A                                                                              |
+| `expiresAt`                                                                      | *number*                                                                         | :heavy_minus_sign:                                                               | N/A                                                                              |

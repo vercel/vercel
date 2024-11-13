@@ -87,6 +87,9 @@ export async function securityGetFirewallConfig(
   const context = {
     operationID: "getFirewallConfig",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

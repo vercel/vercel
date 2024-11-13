@@ -5,11 +5,11 @@
 ```typescript
 import { AuthTokenScopesType } from "@vercel/sdk/models/components/authtoken.js";
 
-let value: AuthTokenScopesType = "team";
+let value: AuthTokenScopesType = "user";
 ```
 
 ## Values
 
 ```typescript
-"team"
+"user"
 ```

@@ -7,7 +7,7 @@ import { UpdateFirewallConfigRequestBodyConditions } from "@vercel/sdk/models/op
 
 let value: UpdateFirewallConfigRequestBodyConditions = {
   type: "scheme",
-  op: "ex",
+  op: "suf",
 };
 ```
 

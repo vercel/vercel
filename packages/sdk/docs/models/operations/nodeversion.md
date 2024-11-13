@@ -7,7 +7,7 @@ Override the Node.js version that should be used for this deployment
 ```typescript
 import { NodeVersion } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: NodeVersion = "12.x";
+let value: NodeVersion = "16.x";
 ```
 
 ## Values

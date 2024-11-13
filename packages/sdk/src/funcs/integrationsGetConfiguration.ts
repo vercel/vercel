@@ -84,6 +84,9 @@ export async function integrationsGetConfiguration(
   const context = {
     operationID: "getConfiguration",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -24,8 +24,8 @@ const value: operations.UpdateFirewallConfigRequestBody2 = {
       {
         conditions: [
           {
-            type: "target_path",
-            op: "ninc",
+            type: "path",
+            op: "ex",
           },
         ],
       },
@@ -48,8 +48,8 @@ const value: operations.UpdateFirewallConfigRequestBody3 = {
       {
         conditions: [
           {
-            type: "header",
-            op: "neq",
+            type: "scheme",
+            op: "ex",
           },
         ],
       },
@@ -74,7 +74,7 @@ const value: operations.UpdateFirewallConfigRequestBody4 = {
 const value: operations.UpdateFirewallConfigRequestBody5 = {
   action: "rules.priority",
   id: "<id>",
-  value: 4358.41,
+  value: 8766.82,
 };
 ```
 
@@ -83,7 +83,7 @@ const value: operations.UpdateFirewallConfigRequestBody5 = {
 ```typescript
 const value: operations.RequestBody6 = {
   action: "crs.update",
-  id: "sqli",
+  id: "rfi",
   value: {
     active: false,
     action: "log",
@@ -105,9 +105,9 @@ const value: operations.RequestBody7 = {
 const value: operations.RequestBody8 = {
   action: "ip.insert",
   value: {
-    hostname: "unfortunate-sonar.com",
-    ip: "df0b:41ca:b080:5447:6f7d:3a1a:0be0:eb7d",
-    action: "challenge",
+    hostname: "wise-hyphenation.biz",
+    ip: "198.69.97.122",
+    action: "log",
   },
 };
 ```
@@ -119,9 +119,9 @@ const value: operations.RequestBody9 = {
   action: "ip.update",
   id: "<id>",
   value: {
-    hostname: "incomparable-boyfriend.name",
-    ip: "124.174.210.38",
-    action: "bypass",
+    hostname: "yummy-department.info",
+    ip: "92.25.92.227",
+    action: "challenge",
   },
 };
 ```

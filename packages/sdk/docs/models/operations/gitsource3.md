@@ -7,7 +7,7 @@ import { GitSource3 } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: GitSource3 = {
   type: "gitlab",
-  projectId: 6605.36,
+  projectId: "<id>",
 };
 ```
 

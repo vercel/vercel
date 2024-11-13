@@ -7,7 +7,7 @@ import { GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyCrsSqliA
 
 let value:
   GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyCrsSqliAction =
-    "deny";
+    "log";
 ```
 
 ## Values

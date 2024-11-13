@@ -7,7 +7,7 @@ The Git Provider of the repository
 ```typescript
 import { CreateProjectProjectsType } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectProjectsType = "github";
+let value: CreateProjectProjectsType = "bitbucket";
 ```
 
 ## Values

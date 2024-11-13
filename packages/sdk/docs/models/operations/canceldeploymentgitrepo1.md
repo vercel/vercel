@@ -7,14 +7,14 @@ import { CancelDeploymentGitRepo1 } from "@vercel/sdk/models/operations/cancelde
 
 let value: CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 2961.28,
+  projectId: 2550.64,
   type: "gitlab",
-  url: "https://questionable-independence.org/",
-  path: "/usr/src",
+  url: "https://zealous-lounge.org",
+  path: "/opt/include",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 

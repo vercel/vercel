@@ -20,16 +20,21 @@ specific category of applications.
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { datacachePurgeall } from "@vercel/sdk/funcs/datacachePurgeall.js";
+import { projectsUpdateProject } from "@vercel/sdk/funcs/projectsUpdateProject.js";
 import { SDKValidationError } from "@vercel/sdk/models/errors/sdkvalidationerror.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
-const vercel = new VercelCore();
+const vercel = new VercelCore({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
-  const res = await datacachePurgeall(vercel, {
-    projectIdOrName: "<value>",
+  const res = await projectsUpdateProject(vercel, {
+    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
+    requestBody: {
+      name: "a-project-name",
+    },
   });
 
   switch (true) {
@@ -51,7 +56,8 @@ async function run() {
 
   const { value: result } = res;
 
-  
+  // Handle the result
+  console.log(result);
 }
 
 run();

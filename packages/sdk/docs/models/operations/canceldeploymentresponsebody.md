@@ -16,13 +16,13 @@ let value: CancelDeploymentResponseBody = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://phony-lift.name/",
+  inspectorUrl: "https://scared-object.net",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 9376.63,
-  buildingAt: 3051.89,
+  bootedAt: 8356.46,
+  buildingAt: 4834.59,
   buildSkipped: false,
   creator: {
     uid: "<id>",
@@ -30,18 +30,18 @@ let value: CancelDeploymentResponseBody = {
   public: false,
   status: "CANCELED",
   id: "<id>",
-  createdAt: 9021.31,
+  createdAt: 9164.19,
   name: "<value>",
   meta: {
     "key": "<value>",
   },
-  readyState: "INITIALIZING",
+  readyState: "ERROR",
   regions: [
     "<value>",
   ],
   type: "LAMBDAS",
-  url: "https://soggy-planula.biz",
-  version: 1964.51,
+  url: "https://monumental-luck.org",
+  version: 3051.89,
   createdIn: "<value>",
   ownerId: "<id>",
   plan: "hobby",
@@ -50,7 +50,7 @@ let value: CancelDeploymentResponseBody = {
     {
       src: "<value>",
       continue: false,
-      middleware: 162.53,
+      middleware: 4587.23,
     },
   ],
 };

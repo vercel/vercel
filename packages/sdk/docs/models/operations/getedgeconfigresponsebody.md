@@ -8,8 +8,8 @@ The EdgeConfig.
 import { GetEdgeConfigResponseBody } from "@vercel/sdk/models/operations/getedgeconfig.js";
 
 let value: GetEdgeConfigResponseBody = {
-  sizeInBytes: 987.60,
-  itemCount: 7486.06,
+  sizeInBytes: 5881.58,
+  itemCount: 342.67,
 };
 ```
 

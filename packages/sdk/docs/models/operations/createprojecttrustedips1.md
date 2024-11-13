@@ -12,7 +12,7 @@ let value: CreateProjectTrustedIps1 = {
       value: "<value>",
     },
   ],
-  protectionMode: "additional",
+  protectionMode: "exclusive",
 };
 ```
 

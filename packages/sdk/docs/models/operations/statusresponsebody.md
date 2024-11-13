@@ -6,7 +6,7 @@
 import { StatusResponseBody } from "@vercel/sdk/models/operations/status.js";
 
 let value: StatusResponseBody = {
-  status: "paused",
+  status: "enabled",
 };
 ```
 

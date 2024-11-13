@@ -6,7 +6,7 @@
 import { PatchDomainRequest } from "@vercel/sdk/models/operations/patchdomain.js";
 
 let value: PatchDomainRequest = {
-  domain: "questionable-fort.org",
+  domain: "well-to-do-pigpen.org",
   requestBody: {
     op: "move-out",
   },

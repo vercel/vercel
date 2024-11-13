@@ -85,6 +85,9 @@ export async function secretsGetSecret(
   const context = {
     operationID: "getSecret",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -6,7 +6,7 @@
 import { CancelDeploymentHas2 } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentHas2 = {
-  type: "header",
+  type: "cookie",
   key: "<key>",
 };
 ```

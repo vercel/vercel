@@ -3,7 +3,7 @@
  */
 
 import { VercelCore } from "../core.js";
-import { encodeFormQuery, encodeJSON, encodeSimple } from "../lib/encodings.js";
+import { encodeFormQuery, encodeJSON } from "../lib/encodings.js";
 import * as M from "../lib/matchers.js";
 import { safeParse } from "../lib/schemas.js";
 import { RequestOptions } from "../lib/sdks.js";
@@ -59,14 +59,7 @@ export async function secretsCreateSecret(
   const payload = parsed.value;
   const body = encodeJSON("body", payload.RequestBody, { explode: true });
 
-  const pathParams = {
-    name: encodeSimple("name", payload.name, {
-      explode: false,
-      charEncoding: "percent",
-    }),
-  };
-
-  const path = pathToFunc("/v2/secrets/{name}")(pathParams);
+  const path = pathToFunc("/v2/secrets/{name}")();
 
   const query = encodeFormQuery({
     "slug": payload.slug,
@@ -85,6 +78,9 @@ export async function secretsCreateSecret(
   const context = {
     operationID: "createSecret",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

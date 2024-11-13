@@ -8,7 +8,6 @@ import { CreateDeploymentRequestBody } from "@vercel/sdk/models/operations/creat
 let value: CreateDeploymentRequestBody = {
   files: [
     {
-      data: "<value>",
       file: "folder/file.js",
     },
   ],

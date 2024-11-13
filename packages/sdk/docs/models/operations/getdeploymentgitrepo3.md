@@ -11,11 +11,11 @@ let value: GetDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/var",
+  path: "/opt/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

@@ -12,8 +12,8 @@ let value: GetCheckResponseBody = {
   blocking: false,
   integrationId: "<id>",
   deploymentId: "<id>",
-  createdAt: 6778.17,
-  updatedAt: 2700.08,
+  createdAt: 5865.13,
+  updatedAt: 201.08,
 };
 ```
 

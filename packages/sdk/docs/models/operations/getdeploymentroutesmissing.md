@@ -16,7 +16,7 @@ const value: operations.GetDeploymentMissing1 = {
 
 ```typescript
 const value: operations.GetDeploymentMissing2 = {
-  type: "cookie",
+  type: "query",
   key: "<key>",
 };
 ```
