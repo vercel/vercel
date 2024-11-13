@@ -7,9 +7,9 @@ import { PutFirewallConfigIps } from "@vercel/sdk/models/operations/putfirewallc
 
 let value: PutFirewallConfigIps = {
   id: "<id>",
-  hostname: "deficient-fat.net",
-  ip: "1afb:c4cc:ff9d:00c6:567a:cbcc:99ee:1b7f",
-  action: "deny",
+  hostname: "corrupt-shadowbox.net",
+  ip: "132.170.42.6",
+  action: "log",
 };
 ```
 

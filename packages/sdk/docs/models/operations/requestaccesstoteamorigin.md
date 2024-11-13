@@ -5,7 +5,7 @@
 ```typescript
 import { RequestAccessToTeamOrigin } from "@vercel/sdk/models/operations/requestaccesstoteam.js";
 
-let value: RequestAccessToTeamOrigin = "bitbucket";
+let value: RequestAccessToTeamOrigin = "feedback";
 ```
 
 ## Values

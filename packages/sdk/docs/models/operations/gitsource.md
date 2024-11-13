@@ -30,7 +30,7 @@ const value: operations.Two = {
 
 ```typescript
 const value: operations.Three = {
-  projectId: "<id>",
+  projectId: 8877.01,
   ref: "<value>",
   type: "gitlab",
 };

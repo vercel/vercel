@@ -6,7 +6,7 @@
 import { GetConfigurationsRequest } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: GetConfigurationsRequest = {
-  view: "account",
+  view: "project",
 };
 ```
 

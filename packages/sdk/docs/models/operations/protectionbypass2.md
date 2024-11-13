@@ -8,10 +8,10 @@ The protection bypass for the alias
 import { ProtectionBypass2 } from "@vercel/sdk/models/operations/getalias.js";
 
 let value: ProtectionBypass2 = {
-  createdAt: 7457.64,
-  lastUpdatedAt: 3530.36,
+  createdAt: 7433.40,
+  lastUpdatedAt: 4245.05,
   lastUpdatedBy: "<value>",
-  access: "requested",
+  access: "granted",
   scope: "user",
 };
 ```

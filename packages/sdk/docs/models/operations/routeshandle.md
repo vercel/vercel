@@ -5,7 +5,7 @@
 ```typescript
 import { RoutesHandle } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: RoutesHandle = "resource";
+let value: RoutesHandle = "rewrite";
 ```
 
 ## Values

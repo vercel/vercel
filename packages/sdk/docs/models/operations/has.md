@@ -6,7 +6,7 @@
 import { Has } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Has = {
-  type: "path",
+  type: "protocol",
 };
 ```
 

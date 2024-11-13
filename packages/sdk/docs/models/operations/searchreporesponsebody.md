@@ -14,25 +14,25 @@ const value: operations.SearchRepoResponseBody1 = {};
 ```typescript
 const value: operations.SearchRepoResponseBody2 = {
   gitAccount: {
-    provider: "bitbucket",
-    namespaceId: "<id>",
+    provider: "gitlab",
+    namespaceId: 7088.83,
   },
   repos: [
     {
       id: "<id>",
       provider: "gitlab",
-      url: "https://pleasing-unblinking.com/",
+      url: "https://stiff-airport.net",
       name: "<value>",
       slug: "<value>",
       namespace: "<value>",
       owner: {
-        id: 6090.94,
+        id: 7468.34,
         name: "<value>",
       },
-      ownerType: "user",
+      ownerType: "team",
       private: false,
       defaultBranch: "<value>",
-      updatedAt: 62.03,
+      updatedAt: 4580.21,
     },
   ],
 };

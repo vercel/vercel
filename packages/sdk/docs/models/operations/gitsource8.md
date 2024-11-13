@@ -9,7 +9,7 @@ let value: GitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 6455.44,
+  projectId: 7018.40,
 };
 ```
 

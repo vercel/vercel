@@ -82,6 +82,9 @@ export async function integrationsSearchRepo(
   const context = {
     operationID: "searchRepo",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -6,9 +6,9 @@
 import { UpdateFirewallConfigRequestBodySecurityRequestValue } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequestValue = {
-  hostname: "good-slime.name",
-  ip: "be92:cd9e:bdcc:2f5f:ba5f:2fcb:96bd:6b57",
-  action: "deny",
+  hostname: "glossy-tinderbox.biz",
+  ip: "f8bb:fb2b:8f65:7cd3:6c99:ceaf:bb6e:cd1e",
+  action: "log",
 };
 ```
 

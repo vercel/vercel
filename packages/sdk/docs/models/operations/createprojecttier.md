@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectTier } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectTier = "critical";
+let value: CreateProjectTier = "standard";
 ```
 
 ## Values

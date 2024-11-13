@@ -135,7 +135,15 @@ export const transferInSubcommand = {
       required: true,
     },
   ],
-  options: [{ name: 'code', shorthand: null, type: String, deprecated: false }],
+  options: [
+    {
+      name: 'code',
+      argument: 'CODE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+  ],
   examples: [],
 } as const;
 

@@ -436,8 +436,8 @@ export const CancelDeploymentSource = {
 export type CancelDeploymentSource = ClosedEnum<typeof CancelDeploymentSource>;
 
 export const CancelDeploymentTarget = {
-  Staging: "staging",
   Production: "production",
+  Staging: "staging",
 } as const;
 export type CancelDeploymentTarget = ClosedEnum<typeof CancelDeploymentTarget>;
 

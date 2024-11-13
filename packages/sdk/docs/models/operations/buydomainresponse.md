@@ -13,7 +13,7 @@ const value: operations.BuyDomainResponseBody = {
       "<value>",
     ],
     verified: false,
-    created: 2913.89,
+    created: 8980.88,
     pending: false,
   },
 };
@@ -29,7 +29,7 @@ const value: operations.BuyDomainDomainsResponseBody = {
       "<value>",
     ],
     verified: false,
-    created: 380.45,
+    created: 3214.73,
     pending: false,
   },
 };

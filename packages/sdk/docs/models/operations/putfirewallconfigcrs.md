@@ -12,7 +12,7 @@ let value: PutFirewallConfigCrs = {
   },
   ma: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   lfi: {
     active: false,
@@ -28,7 +28,7 @@ let value: PutFirewallConfigCrs = {
   },
   php: {
     active: false,
-    action: "log",
+    action: "deny",
   },
   gen: {
     active: false,
@@ -44,11 +44,11 @@ let value: PutFirewallConfigCrs = {
   },
   sf: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   java: {
     active: false,
-    action: "log",
+    action: "deny",
   },
 };
 ```

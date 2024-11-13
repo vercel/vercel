@@ -5,11 +5,11 @@
 ```typescript
 import { RemoveProjectEnvResponseBodyProjectsResponseType } from "@vercel/sdk/models/operations/removeprojectenv.js";
 
-let value: RemoveProjectEnvResponseBodyProjectsResponseType = "plain";
+let value: RemoveProjectEnvResponseBodyProjectsResponseType = "system";
 ```
 
 ## Values
 
 ```typescript
-"system" | "secret" | "encrypted" | "plain" | "sensitive"
+"system" | "encrypted" | "plain" | "sensitive" | "secret"
 ```

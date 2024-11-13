@@ -85,6 +85,9 @@ export async function deploymentsDeleteDeployment(
   const context = {
     operationID: "deleteDeployment",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

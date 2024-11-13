@@ -87,6 +87,9 @@ export async function artifactsRecordEvents(
   const context = {
     operationID: "recordEvents",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

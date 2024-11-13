@@ -5,7 +5,7 @@
 ```typescript
 import { Origin } from "@vercel/sdk/models/components/teamlimited.js";
 
-let value: Origin = "mail";
+let value: Origin = "teams";
 ```
 
 ## Values

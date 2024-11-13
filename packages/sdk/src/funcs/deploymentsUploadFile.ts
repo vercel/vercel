@@ -95,6 +95,9 @@ export async function deploymentsUploadFile(
   const context = {
     operationID: "uploadFile",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

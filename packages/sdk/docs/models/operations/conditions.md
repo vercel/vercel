@@ -7,7 +7,7 @@ import { Conditions } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Conditions = {
   type: "header",
-  op: "gt",
+  op: "lt",
 };
 ```
 

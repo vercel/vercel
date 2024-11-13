@@ -7,7 +7,7 @@ import { PutFirewallConfigSecurityResponse200ApplicationJSONResponseBodyActiveCr
 
 let value:
   PutFirewallConfigSecurityResponse200ApplicationJSONResponseBodyActiveCrsMaAction =
-    "deny";
+    "log";
 ```
 
 ## Values

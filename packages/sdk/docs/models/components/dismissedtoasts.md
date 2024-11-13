@@ -12,7 +12,7 @@ let value: DismissedToasts = {
   dismissals: [
     {
       scopeId: "<id>",
-      createdAt: 4493.69,
+      createdAt: 4475.03,
     },
   ],
 };

@@ -15,7 +15,7 @@ export const removeSubcommand = {
     {
       name: 'disconnect-all',
       description:
-        'disconnects all projects from the specified resource before deletion',
+        'Disconnects all projects from the specified resource before deletion',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
@@ -61,7 +61,7 @@ export const disconnectSubcommand = {
   options: [
     {
       name: 'all',
-      description: 'disconnects all projects from the specified resource',
+      description: 'Disconnects all projects from the specified resource',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,

@@ -79,6 +79,9 @@ export async function securityUpdateFirewallConfig(
   const context = {
     operationID: "updateFirewallConfig",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig
@@ -102,7 +105,7 @@ export async function securityUpdateFirewallConfig(
 
   const doResult = await client._do(req, {
     context,
-    errorCodes: ["400", "401", "403", "404", "4XX", "500", "5XX"],
+    errorCodes: ["400", "401", "402", "403", "404", "4XX", "500", "5XX"],
     retryConfig: context.retryConfig,
     retryCodes: context.retryCodes,
   });
@@ -122,7 +125,7 @@ export async function securityUpdateFirewallConfig(
     | ConnectionError
   >(
     M.json(200, UpdateFirewallConfigResponseBody$inboundSchema),
-    M.fail([400, 401, 403, 404, "4XX", 500, "5XX"]),
+    M.fail([400, 401, 402, 403, 404, "4XX", 500, "5XX"]),
   )(response);
   if (!result.ok) {
     return result;

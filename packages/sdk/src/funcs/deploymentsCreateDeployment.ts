@@ -80,6 +80,9 @@ export async function deploymentsCreateDeployment(
   const context = {
     operationID: "createDeployment",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig
