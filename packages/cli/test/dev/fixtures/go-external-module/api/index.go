@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gofiber/fiber/v3"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
-	app := fiber.New()
-	version := app.Config().Version
-	fmt.Fprintf(w, "Using Fiber version: %s", version)
+	w.Header().Set("Content-Type", "text/plain")
+
+	message := "Hello from Go!"
+	transformed := cases.Lower(language.English).String(message)
+
+	fmt.Fprint(w, transformed)
 }

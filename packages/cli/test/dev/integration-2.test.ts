@@ -176,9 +176,9 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with external modules',
   testFixtureStdio('go-external-module', async (testPath: any) => {
-    await testPath(200, `/api`, /Using Fiber version: /);
-    await testPath(200, `/api/index`, /Using Fiber version: /);
-    await testPath(200, `/api/index.go`, /Using Fiber version: /);
+    await testPath(200, `/api`, 'hello from go!');
+    await testPath(200, `/api/index`, 'hello from go!');
+    await testPath(200, `/api/index.go`, 'hello from go!');
   })
 );
 
