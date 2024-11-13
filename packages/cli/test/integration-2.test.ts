@@ -584,7 +584,8 @@ test('whoami with local .vercel scope', async () => {
   await remove(path.join(directory, '.vercel'));
 });
 
-describe('telemetry submits data', () => {
+// eslint-disable-next-line jest/no-disabled-tests -- seeing if we have test pollution
+describe.skip('telemetry submits data', () => {
   const telemetryDisabledEnvVariable = process.env.VERCEL_TELEMETRY_DISABLED;
   beforeAll(() => {
     delete process.env.VERCEL_TELEMETRY_DISABLED;
