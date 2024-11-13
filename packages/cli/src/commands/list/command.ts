@@ -16,7 +16,7 @@ export const listCommand = {
       name: 'meta',
       description:
         'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
-      argument: 'KEY=value',
+      argument: 'KEY=VALUE',
       shorthand: 'm',
       type: [String],
       deprecated: false,
@@ -25,7 +25,7 @@ export const listCommand = {
       name: 'policy',
       description:
         'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
-      argument: 'KEY=value',
+      argument: 'KEY=VALUE',
       shorthand: 'p',
       type: [String],
       deprecated: false,
@@ -33,7 +33,7 @@ export const listCommand = {
     {
       name: 'environment',
       description: '',
-      argument: 'production|preview',
+      argument: 'TARGET',
       shorthand: null,
       type: String,
       deprecated: false,

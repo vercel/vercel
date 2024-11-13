@@ -58,7 +58,7 @@ export const listSubcommand = {
   options: [
     {
       name: 'integration',
-      description: 'limits the resources listed to a designated integration',
+      description: 'Limits the resources listed to a designated integration',
       shorthand: 'i',
       type: String,
       deprecated: false,
@@ -66,7 +66,7 @@ export const listSubcommand = {
     },
     {
       name: 'all',
-      description: 'lists all resources regardless of project',
+      description: 'Lists all resources regardless of project',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
