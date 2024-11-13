@@ -6,7 +6,7 @@
 import { GetAllChecksFCP } from "@vercel/sdk/models/operations/getallchecks.js";
 
 let value: GetAllChecksFCP = {
-  value: 9767.61,
+  value: 8379.45,
   source: "web-vitals",
 };
 ```

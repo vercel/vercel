@@ -800,11 +800,12 @@ export type GetProjectsResourceConfig = {
   functionDefaultTimeout?: number | undefined;
   functionDefaultMemoryType?: GetProjectsFunctionDefaultMemoryType | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 export const GetProjectsDeploymentType = {
-  All: "all",
   Preview: "preview",
+  All: "all",
   ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type GetProjectsDeploymentType = ClosedEnum<
@@ -1178,10 +1179,10 @@ export type GetProjectsProtectionBypass = {
 };
 
 export const GetProjectsTrustedIpsProjectsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type GetProjectsTrustedIpsProjectsDeploymentType = ClosedEnum<
   typeof GetProjectsTrustedIpsProjectsDeploymentType
@@ -1192,10 +1193,10 @@ export type GetProjectsTrustedIps2 = {
 };
 
 export const GetProjectsTrustedIpsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type GetProjectsTrustedIpsDeploymentType = ClosedEnum<
   typeof GetProjectsTrustedIpsDeploymentType
@@ -4595,6 +4596,7 @@ export const GetProjectsResourceConfig$inboundSchema: z.ZodType<
   functionDefaultMemoryType: GetProjectsFunctionDefaultMemoryType$inboundSchema
     .optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /** @internal */
@@ -4602,6 +4604,7 @@ export type GetProjectsResourceConfig$Outbound = {
   functionDefaultTimeout?: number | undefined;
   functionDefaultMemoryType?: string | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 /** @internal */
@@ -4614,6 +4617,7 @@ export const GetProjectsResourceConfig$outboundSchema: z.ZodType<
   functionDefaultMemoryType: GetProjectsFunctionDefaultMemoryType$outboundSchema
     .optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /**

@@ -79,6 +79,9 @@ export async function authenticationGetAuthToken(
   const context = {
     operationID: "getAuthToken",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

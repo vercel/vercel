@@ -8,9 +8,9 @@ import { CreateConfigurableLogDrainRequest } from "@vercel/sdk/models/operations
 let value: CreateConfigurableLogDrainRequest = {
   requestBody: {
     deliveryFormat: "json",
-    url: "https://pointed-tenement.biz/",
+    url: "https://dependent-account.com",
     sources: [
-      "firewall",
+      "edge",
     ],
   },
 };

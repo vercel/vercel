@@ -16,8 +16,8 @@ let value: UpdateFirewallConfigRequestBody2 = {
       {
         conditions: [
           {
-            type: "geo_as_number",
-            op: "gt",
+            type: "region",
+            op: "re",
           },
         ],
       },

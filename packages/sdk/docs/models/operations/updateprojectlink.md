@@ -12,7 +12,7 @@ const value: operations.UpdateProjectLink1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://unwritten-rawhide.net/",
+      url: "https://good-eyeliner.info",
     },
   ],
 };
@@ -27,7 +27,7 @@ const value: operations.UpdateProjectLink2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://orderly-saw.net/",
+      url: "https://harmful-toaster.net/",
     },
   ],
 };
@@ -42,7 +42,7 @@ const value: operations.UpdateProjectLink3 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://somber-receptor.com/",
+      url: "https://forsaken-minority.net",
     },
   ],
 };

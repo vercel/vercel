@@ -84,6 +84,9 @@ export async function domainsGetDomain(
   const context = {
     operationID: "getDomain",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

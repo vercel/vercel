@@ -83,6 +83,9 @@ export async function integrationsDeleteConfiguration(
   const context = {
     operationID: "deleteConfiguration",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

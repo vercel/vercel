@@ -15,7 +15,7 @@ const value: operations.GetDeploymentRoutes1 = {
 
 ```typescript
 const value: operations.GetDeploymentRoutes2 = {
-  handle: "resource",
+  handle: "miss",
 };
 ```
 
@@ -25,7 +25,7 @@ const value: operations.GetDeploymentRoutes2 = {
 const value: operations.GetDeploymentRoutes3 = {
   src: "<value>",
   continue: false,
-  middleware: 8668.61,
+  middleware: 4230.54,
 };
 ```
 

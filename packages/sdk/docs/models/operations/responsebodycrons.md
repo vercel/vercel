@@ -7,7 +7,7 @@ import { ResponseBodyCrons } from "@vercel/sdk/models/operations/getdeployment.j
 
 let value: ResponseBodyCrons = {
   schedule: "<value>",
-  path: "/var/mail",
+  path: "/private/var",
 };
 ```
 

@@ -8,7 +8,7 @@ import { GetFirewallConfigCrs } from "@vercel/sdk/models/operations/getfirewallc
 let value: GetFirewallConfigCrs = {
   sd: {
     active: false,
-    action: "log",
+    action: "deny",
   },
   ma: {
     active: false,
@@ -16,11 +16,11 @@ let value: GetFirewallConfigCrs = {
   },
   lfi: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   rfi: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   rce: {
     active: false,
@@ -28,11 +28,11 @@ let value: GetFirewallConfigCrs = {
   },
   php: {
     active: false,
-    action: "log",
+    action: "deny",
   },
   gen: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   xss: {
     active: false,
@@ -40,7 +40,7 @@ let value: GetFirewallConfigCrs = {
   },
   sqli: {
     active: false,
-    action: "deny",
+    action: "log",
   },
   sf: {
     active: false,
@@ -48,7 +48,7 @@ let value: GetFirewallConfigCrs = {
   },
   java: {
     active: false,
-    action: "deny",
+    action: "log",
   },
 };
 ```

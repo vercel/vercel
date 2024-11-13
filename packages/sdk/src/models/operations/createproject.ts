@@ -332,10 +332,10 @@ export type CreateProjectProjectsTarget = Array<string> | CreateProjectTarget2;
 
 export const CreateProjectProjectsResponseType = {
   System: "system",
-  Secret: "secret",
   Encrypted: "encrypted",
   Plain: "plain",
   Sensitive: "sensitive",
+  Secret: "secret",
 } as const;
 export type CreateProjectProjectsResponseType = ClosedEnum<
   typeof CreateProjectProjectsResponseType
@@ -982,11 +982,12 @@ export type CreateProjectResourceConfig = {
     | CreateProjectFunctionDefaultMemoryType
     | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 export const CreateProjectDeploymentType = {
-  All: "all",
   Preview: "preview",
+  All: "all",
   ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type CreateProjectDeploymentType = ClosedEnum<
@@ -1326,11 +1327,11 @@ export type CreateProjectPermissions = {
 export type CreateProjectLastRollbackTarget = {};
 
 export const CreateProjectJobStatus = {
+  Pending: "pending",
+  InProgress: "in-progress",
   Succeeded: "succeeded",
   Failed: "failed",
   Skipped: "skipped",
-  Pending: "pending",
-  InProgress: "in-progress",
 } as const;
 export type CreateProjectJobStatus = ClosedEnum<typeof CreateProjectJobStatus>;
 
@@ -1363,10 +1364,10 @@ export type CreateProjectProtectionBypass = {
 };
 
 export const CreateProjectTrustedIpsProjectsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type CreateProjectTrustedIpsProjectsDeploymentType = ClosedEnum<
   typeof CreateProjectTrustedIpsProjectsDeploymentType
@@ -1377,10 +1378,10 @@ export type CreateProjectTrustedIps2 = {
 };
 
 export const CreateProjectTrustedIpsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type CreateProjectTrustedIpsDeploymentType = ClosedEnum<
   typeof CreateProjectTrustedIpsDeploymentType
@@ -5080,6 +5081,7 @@ export const CreateProjectResourceConfig$inboundSchema: z.ZodType<
   functionDefaultMemoryType:
     CreateProjectFunctionDefaultMemoryType$inboundSchema.optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /** @internal */
@@ -5087,6 +5089,7 @@ export type CreateProjectResourceConfig$Outbound = {
   functionDefaultTimeout?: number | undefined;
   functionDefaultMemoryType?: string | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 /** @internal */
@@ -5099,6 +5102,7 @@ export const CreateProjectResourceConfig$outboundSchema: z.ZodType<
   functionDefaultMemoryType:
     CreateProjectFunctionDefaultMemoryType$outboundSchema.optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /**

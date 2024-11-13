@@ -6,7 +6,7 @@
 import { PutFirewallConfigMitigate } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: PutFirewallConfigMitigate = {
-  action: "log",
+  action: "rate_limit",
 };
 ```
 

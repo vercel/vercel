@@ -10,7 +10,7 @@ let value: PutFirewallConfigResponseBody = {
     ownerId: "<id>",
     projectKey: "<value>",
     id: "<id>",
-    version: 413.46,
+    version: 9895.25,
     updatedAt: "<value>",
     firewallEnabled: false,
     crs: {
@@ -20,11 +20,11 @@ let value: PutFirewallConfigResponseBody = {
       },
       ma: {
         active: false,
-        action: "log",
+        action: "deny",
       },
       lfi: {
         active: false,
-        action: "log",
+        action: "deny",
       },
       rfi: {
         active: false,
@@ -32,15 +32,15 @@ let value: PutFirewallConfigResponseBody = {
       },
       rce: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       php: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       gen: {
         active: false,
-        action: "log",
+        action: "deny",
       },
       xss: {
         active: false,
@@ -48,7 +48,7 @@ let value: PutFirewallConfigResponseBody = {
       },
       sqli: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       sf: {
         active: false,
@@ -68,8 +68,8 @@ let value: PutFirewallConfigResponseBody = {
           {
             conditions: [
               {
-                type: "method",
-                op: "sub",
+                type: "target_path",
+                op: "nex",
               },
             ],
           },
@@ -80,8 +80,8 @@ let value: PutFirewallConfigResponseBody = {
     ips: [
       {
         id: "<id>",
-        hostname: "upright-pigsty.com",
-        ip: "70.92.198.247",
+        hostname: "natural-arcade.info",
+        ip: "bc4c:cff9:d00c:6567:acbc:c99e:e1b7:f0df",
         action: "log",
       },
     ],

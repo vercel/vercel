@@ -87,6 +87,9 @@ export async function teamsRemoveTeamMember(
   const context = {
     operationID: "removeTeamMember",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

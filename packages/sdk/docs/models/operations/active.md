@@ -9,17 +9,17 @@ let value: Active = {
   ownerId: "<id>",
   projectKey: "<value>",
   id: "<id>",
-  version: 6121.81,
+  version: 5955.85,
   updatedAt: "<value>",
   firewallEnabled: false,
   crs: {
     sd: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     ma: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     lfi: {
       active: false,
@@ -27,15 +27,15 @@ let value: Active = {
     },
     rfi: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     rce: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     php: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     gen: {
       active: false,
@@ -43,7 +43,7 @@ let value: Active = {
     },
     xss: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     sqli: {
       active: false,
@@ -55,7 +55,7 @@ let value: Active = {
     },
     java: {
       active: false,
-      action: "log",
+      action: "deny",
     },
   },
   rules: [
@@ -67,8 +67,8 @@ let value: Active = {
         {
           conditions: [
             {
-              type: "method",
-              op: "gt",
+              type: "geo_country",
+              op: "suf",
             },
           ],
         },
@@ -79,9 +79,9 @@ let value: Active = {
   ips: [
     {
       id: "<id>",
-      hostname: "prestigious-valuable.name",
-      ip: "feba:d022:a7ed:8bee:cd1e:bb19:55bd:90ff",
-      action: "deny",
+      hostname: "immense-defendant.info",
+      ip: "65c5:ac59:dcfe:af97:0454:abec:57f8:09d8",
+      action: "log",
     },
   ],
   changes: [

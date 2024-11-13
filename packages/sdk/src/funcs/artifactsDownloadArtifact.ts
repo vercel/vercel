@@ -93,6 +93,9 @@ export async function artifactsDownloadArtifact(
   const context = {
     operationID: "downloadArtifact",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

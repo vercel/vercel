@@ -6,10 +6,10 @@
 import { Members } from "@vercel/sdk/models/operations/listaccessgroupmembers.js";
 
 let value: Members = {
-  email: "Hunter.Windler@yahoo.com",
+  email: "Leda43@hotmail.com",
   uid: "<id>",
-  username: "Kenyon2",
-  teamRole: "VIEWER",
+  username: "Vincenzo56",
+  teamRole: "OWNER",
 };
 ```
 

@@ -5,7 +5,6 @@
 import { secretsCreateSecret } from "../funcs/secretsCreateSecret.js";
 import { secretsDeleteSecret } from "../funcs/secretsDeleteSecret.js";
 import { secretsGetSecret } from "../funcs/secretsGetSecret.js";
-import { secretsGetSecrets } from "../funcs/secretsGetSecrets.js";
 import { secretsRenameSecret } from "../funcs/secretsRenameSecret.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import {
@@ -21,33 +20,12 @@ import {
   GetSecretResponseBody,
 } from "../models/operations/getsecret.js";
 import {
-  GetSecretsRequest,
-  GetSecretsResponseBody,
-} from "../models/operations/getsecrets.js";
-import {
   RenameSecretRequest,
   RenameSecretResponseBody,
 } from "../models/operations/renamesecret.js";
 import { unwrapAsync } from "../types/fp.js";
 
 export class Secrets extends ClientSDK {
-  /**
-   * List secrets
-   *
-   * @remarks
-   * Retrieves the active Vercel secrets for the authenticated user or team. By default it returns 20 secrets. The rest can be retrieved using the pagination options. The body will contain an entry for each secret.
-   */
-  async getSecrets(
-    request: GetSecretsRequest,
-    options?: RequestOptions,
-  ): Promise<GetSecretsResponseBody> {
-    return unwrapAsync(secretsGetSecrets(
-      this,
-      request,
-      options,
-    ));
-  }
-
   /**
    * Create a new secret
    *

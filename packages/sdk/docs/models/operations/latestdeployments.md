@@ -7,21 +7,21 @@ import { LatestDeployments } from "@vercel/sdk/models/operations/updateprojectda
 
 let value: LatestDeployments = {
   id: "<id>",
-  createdAt: 8681.26,
+  createdAt: 9194.83,
   createdIn: "<value>",
   creator: {
-    email: "Levi_Stanton@gmail.com",
+    email: "Zoila.Stroman61@hotmail.com",
     uid: "<id>",
-    username: "Annie86",
+    username: "Rosendo6",
   },
   deploymentHostname: "<value>",
   name: "<value>",
-  plan: "hobby",
+  plan: "enterprise",
   previewCommentsEnabled: false,
   private: false,
-  readyState: "BUILDING",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "https://shady-commodity.name/",
+  url: "https://witty-stock.com",
   userId: "<id>",
 };
 ```
