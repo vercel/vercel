@@ -809,7 +809,7 @@ async function writeGoWork(
   contents += `use (\n${Array.from(workspaces)
     .map(w => `  ${w}\n`)
     .join('')})\n`;
-
+  // console.log(contents);
   await writeFile(join(destDir, 'go.work'), contents, 'utf-8');
 }
 
