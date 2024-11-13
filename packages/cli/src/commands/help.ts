@@ -34,6 +34,7 @@ export interface Command {
   readonly aliases: ReadonlyArray<string>;
   readonly description: string;
   readonly default?: true;
+  readonly hidden?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
@@ -225,6 +226,9 @@ export function buildSubcommandLines(
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
   for (const command of subcommands) {
+    if (command.hidden) {
+      continue;
+    }
     const nameCell = `${INDENT}${command.name}`;
     let argsCell = INDENT;
 

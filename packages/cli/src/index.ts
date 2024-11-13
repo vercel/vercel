@@ -74,6 +74,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -262,6 +263,10 @@ const main = async () => {
     config: config.telemetry,
   });
 
+  checkTelemetryStatus({
+    config,
+  });
+
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -363,7 +368,14 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'build',
+    'telemetry',
+  ];
 
   // Prompt for login if there is no current token
   if (
@@ -786,8 +798,10 @@ const main = async () => {
     return 1;
   }
 
-  // specifically don't await this, we want to fire and forget
-  telemetryEventStore.save();
+  // The telemetry flush event is called by `telemetryEventStore.save`, and it reinvokes the `main` function
+  if (subSubCommand !== 'flush') {
+    await telemetryEventStore.save();
+  }
   return exitCode;
 };
 

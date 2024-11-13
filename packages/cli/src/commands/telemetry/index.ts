@@ -5,11 +5,13 @@ import { type Command, help } from '../help';
 import status from './status';
 import enable from './enable';
 import disable from './disable';
+import flush from './flush';
 import {
   disableSubcommand,
   enableSubcommand,
   statusSubcommand,
   telemetryCommand,
+  flushSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
@@ -22,6 +24,7 @@ const COMMAND_CONFIG = {
   status: getCommandAliases(statusSubcommand),
   enable: getCommandAliases(enableSubcommand),
   disable: getCommandAliases(disableSubcommand),
+  flush: getCommandAliases(flushSubcommand),
 };
 
 export default async function telemetry(client: Client) {
@@ -41,7 +44,7 @@ export default async function telemetry(client: Client) {
     return 1;
   }
 
-  const { subcommand, subcommandOriginal } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
@@ -72,6 +75,8 @@ export default async function telemetry(client: Client) {
       }
       telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
       return status(client);
+    case 'flush':
+      return flush(client, args);
     case 'enable':
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);

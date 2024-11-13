@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import type { GlobalConfig } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 const LogLabel = `['telemetry']:`;
@@ -18,6 +19,7 @@ interface Options {
 interface Event {
   teamId?: string;
   sessionId?: string;
+  eventTime: number;
   id: string;
   key: string;
   value: string;
@@ -57,6 +59,7 @@ export class TelemetryClient {
 
     const event: Event = {
       id: randomUUID(),
+      eventTime: Date.now(),
       ...eventData,
     };
 
@@ -214,7 +217,7 @@ export class TelemetryEventStore {
     return this.config?.enabled ?? true;
   }
 
-  save() {
+  async save() {
     if (this.isDebug) {
       // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
@@ -227,7 +230,80 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      // send events to the server
+      const sessionId = this.events[0].sessionId;
+      if (!sessionId) {
+        output.debug('Unable to send metrics: no session ID');
+        return;
+      }
+      const events = this.events.map(event => {
+        delete event.sessionId;
+        const { eventTime, teamId, ...rest } = event;
+        return { event_time: eventTime, team_id: teamId, ...rest };
+      });
+      const payload = {
+        headers: {
+          'Client-id': 'vercel-cli',
+          'x-vercel-cli-topic-id': 'generic',
+          'x-vercel-cli-session-id': sessionId,
+        },
+        body: events,
+      };
+      await this.sendToSubprocess(payload, output.debugEnabled);
+    }
+  }
+
+  /**
+   * Send the telemetry events to a subprocess, this invokes the `telemetry flush` command
+   * and passes a stringified payload to the subprocess, there's a risk that if the event payload
+   * increases in size, it may exceed the maximum buffer size for the subprocess, in which case the
+   * child process will error and not send anything.
+   * FIXME: handle max buffer size
+   */
+  async sendToSubprocess(payload: object, outputDebugEnabled: boolean) {
+    const args = [process.execPath, process.argv[0], process.argv[1]];
+    if (args[0] === args[1]) {
+      args.shift();
+    }
+    const nodeBinaryPath = args[0];
+    const script = [
+      ...args.slice(1),
+      'telemetry',
+      'flush',
+      JSON.stringify(payload),
+    ];
+    // When debugging, we want to know about the response from the server, so we can't exit early
+    if (outputDebugEnabled) {
+      return new Promise<void>(resolve => {
+        const childProcess = spawn(nodeBinaryPath, script, {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        childProcess.stderr.on('data', data => output.debug(data.toString()));
+        childProcess.stdout.on('data', data => output.debug(data.toString()));
+        childProcess.on('error', d => {
+          output.debug(d);
+        });
+
+        setTimeout(() => {
+          // If the subprocess doesn't respond within 2 seconds, kill it so the process can exit
+          childProcess.kill();
+        }, 2000);
+
+        childProcess.on('exit', () => {
+          output.debug('Telemetry subprocess exited');
+          childProcess.unref();
+          // An error in the subprocess should not trigger a bad exit code, so don't reject under any circumstances
+          resolve();
+        });
+      });
+    } else {
+      const childProcess = spawn(nodeBinaryPath, script, {
+        stdio: 'ignore',
+        windowsHide: true,
+        detached: true,
+      });
+
+      childProcess.unref();
     }
   }
 }

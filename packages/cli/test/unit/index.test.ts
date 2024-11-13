@@ -14,7 +14,11 @@ import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
 
-import './test/mocks/matchers';
+import './test/mocks/matchers/index';
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('main', () => {
   describe('telemetry', () => {
@@ -149,6 +153,64 @@ describe('main', () => {
         });
 
         expect(telemetryEventStore.enabled).toBe(false);
+      });
+    });
+
+    describe('save', () => {
+      describe('when VERCEL_TELEMETRY_DEBUG is disabled', () => {
+        describe('when output debug is disabled', () => {
+          beforeEach(() => {
+            output.initialize({
+              debug: false,
+            });
+            vi.stubEnv('VERCEL_TELEMETRY_DISABLED', undefined);
+          });
+          afterEach(() => {
+            output.initialize({
+              debug: true,
+            });
+          });
+          it('sends the event to the subprocess with the expected payload', async () => {
+            const telemetryEventStore = new TelemetryEventStore({
+              isDebug: false,
+              config: {},
+            });
+            const spy = vi
+              .spyOn(telemetryEventStore, 'sendToSubprocess')
+              .mockImplementation(async () => {
+                // Prevent the actual call to the subprocess from happening
+              });
+
+            const telemetry = new RootTelemetryClient({
+              opts: {
+                store: telemetryEventStore,
+              },
+            });
+            telemetry.trackPlatform();
+            telemetry.trackArch();
+
+            await telemetryEventStore.save();
+
+            expect(spy).toHaveBeenCalledWith(
+              expect.objectContaining({
+                headers: expect.objectContaining({
+                  'x-vercel-cli-topic-id': 'generic',
+                  'x-vercel-cli-session-id': expect.any(String),
+                }),
+                body: expect.arrayContaining([
+                  expect.objectContaining({
+                    event_time: expect.any(Number),
+                    id: expect.any(String),
+                    key: expect.any(String),
+                    value: expect.any(String),
+                    team_id: expect.any(String),
+                  }),
+                ]),
+              }),
+              expect.any(Boolean)
+            );
+          });
+        });
       });
     });
 
