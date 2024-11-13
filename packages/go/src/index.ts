@@ -746,34 +746,17 @@ async function writeGoWork(
 ) {
   const workspaces = new Set(['.']);
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
-
-  // Get version and toolchain from go.mod as default
-  let goVersion = '1.18'; // default
-  let toolchain: string | undefined;
-
-  if (modulePath) {
-    const goModPath = join(modulePath, 'go.mod');
-    if (await pathExists(goModPath)) {
-      const modContents = await readFile(goModPath, 'utf-8');
-      const goVersionMatch = /^go (\d+\.\d+(?:\.\d+)?)/m.exec(modContents);
-      const toolchainMatch = /^toolchain ([^\s]+)/m.exec(modContents);
-
-      if (goVersionMatch) {
-        goVersion = goVersionMatch[1];
-      }
-      if (toolchainMatch) {
-        toolchain = toolchainMatch[1];
-      }
-    }
-  }
-
-  let contents = `go ${goVersion}\n`;
-  if (toolchain) {
-    contents += `toolchain ${toolchain}\n`;
-  }
-  contents += '\n';
+  let goVersion: string | undefined;
 
   if (goWorkPath) {
+    const contents = await readFile(goWorkPath, 'utf-8');
+
+    // Extract go version if present
+    const goVersionMatch = contents.match(/^go\s+(\d+\.\d+(\.\d+)?)/m);
+    if (goVersionMatch) {
+      goVersion = goVersionMatch[1];
+    }
+
     const addPath = (path: string) => {
       if (path) {
         if (path.startsWith('.')) {
@@ -784,28 +767,43 @@ async function writeGoWork(
       }
     };
 
-    const existingContents = await readFile(goWorkPath, 'utf-8');
     // find grouped paths
     const multiRE = /use\s*\(([^)]+)/g;
-    let match = multiRE.exec(existingContents);
+    let match = multiRE.exec(contents);
     while (match) {
       if (match[1]) {
         for (const line of match[1].split(/\r?\n/)) {
           addPath(line.trim());
         }
       }
-      match = multiRE.exec(existingContents);
+      match = multiRE.exec(contents);
     }
 
     // find single paths
     const singleRE = /use\s+(?!\()(.+)/g;
-    match = singleRE.exec(existingContents);
+    match = singleRE.exec(contents);
     while (match) {
       addPath(match[1].trim());
-      match = singleRE.exec(existingContents);
+      match = singleRE.exec(contents);
     }
   } else if (modulePath) {
     workspaces.add(relative(destDir, modulePath));
+
+    // If no existing go.work, try to get version from go.mod
+    const goModPath = join(modulePath, 'go.mod');
+    if (await pathExists(goModPath)) {
+      const goModContents = await readFile(goModPath, 'utf-8');
+      const goVersionMatch = goModContents.match(/^go\s+(\d+\.\d+(\.\d+)?)/m);
+      if (goVersionMatch) {
+        goVersion = goVersionMatch[1];
+      }
+    }
+  }
+
+  // Construct go.work contents with version directive if available
+  let contents = '';
+  if (goVersion) {
+    contents += `go ${goVersion}\n\n`;
   }
 
   contents += `use (\n${Array.from(workspaces)
