@@ -1,7 +1,7 @@
-overlay: 1.0.0
+overlay: 1.0.2
 info:
-  title: Fix https://openapi.vercel.sh/ with lint issues
-  version: 0.0.0
+  title: Fix https://openapi.vercel.sh/ from lint and testing
+  version: 0.0.2
 # The fixes below from the errors found with speakeasy openapi lint and testing the usage of the SDK and endpoints
 actions:
   # Removing these paths as they return errors at the source (by calling the endpoint directly)
@@ -11,10 +11,18 @@ actions:
     remove: true
   - target: $["paths"]["/certs"]
     remove: true
+  - target: $["paths"]["/v1/projects/{projectId}"].pause
+    remove: true
+  - target: $["paths"]["/v1/projects/{projectId}"].unpause
+    remove: true
   # Removing these paths as they are deprecated but kept for legacy
-  - target: $["paths"]["/v2/secrets"]
+  - target: $["paths"]["/v2/secrets/{name}"]
+    remove: true
+  - target: $["paths"]["/v2/secrets/{idOrName}"]
     remove: true
   - target: $["paths"]["/v3/secrets"]
+    remove: true
+  - target: $["paths"]["/v3/secrets/{idOrName}"]
     remove: true
   # End of remove paths
   # Marking endpoints to show up in Example Usage section of readme
@@ -578,30 +586,6 @@ actions:
   - target: $.paths['/v4/aliases'].get.responses['200'].content['application/json'].schema.properties['aliases'].items.properties.deletedAt
     update:
       nullable: true
-  - target: $.paths['/v1/projects/{projectId}/pause'].post.responses['200']
-    update:
-      description: Project successfully paused
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-              type: boolean
-              description: Whether the project was successfully paused
-              example: true
-  - target: $.paths['/v1/projects/{projectId}/unpause'].post.responses['200']
-    update:
-      description: Project successfully unpaused
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-              type: boolean
-              description: Whether the project was successfully unpaused
-              example: true
   - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.type
     remove: true
   - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.items
