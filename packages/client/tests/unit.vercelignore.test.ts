@@ -17,9 +17,11 @@ describe('Test `getVercelIgnore()`', () => {
     try {
       await getVercelIgnore(fixture);
     } catch (_err) {
-      if (_err instanceof Error) {
-        err = _err;
-      }
+      if (!(_err instanceof Error)) {
+        throw new Error(`Error "${_err}" not instanceof Error`);
+      } 
+      
+      err = _err;
     }
     assert(err);
     assert.equal(
