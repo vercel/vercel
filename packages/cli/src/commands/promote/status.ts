@@ -242,7 +242,7 @@ async function renderJobSucceeded({
   try {
     const deployment = await getDeployment(client, contextName, toDeploymentId);
     deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     output.debug(
       `Failed to get deployment url for ${toDeploymentId}: ${
         err?.toString() || err
