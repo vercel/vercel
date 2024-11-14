@@ -16,7 +16,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import type Client from '../../util/client';
-import { Alias, Deployment, Project } from '@vercel-internals/types';
+import type { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
