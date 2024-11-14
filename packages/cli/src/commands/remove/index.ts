@@ -173,12 +173,11 @@ export default async function remove(client: Client) {
   });
 
   if (deployments.length === 0 && projects.length === 0) {
+    const safeUnaliased = parsedArgs.flags['--safe'] ? 'unaliased' : 'any';
+    const stylizedIds = ids.map(id => chalk.bold(`"${id}"`)).join(', ');
+    const commandName = getCommandName('projects ls');
     log(
-      `Could not find ${parsedArgs.flags['--safe'] ? 'unaliased' : 'any'} deployments ` +
-        `or projects matching ` +
-        `${ids
-          .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('projects ls')} to list.`
+      `Could not find ${safeUnaliased} deployments or projects matching ${stylizedIds}. Run ${commandName} to list.`
     );
     return 1;
   }
