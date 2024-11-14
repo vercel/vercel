@@ -4,7 +4,7 @@ import {
   writeToAuthConfigFile,
 } from '../../util/config/files';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString } from '@vercel/error-utils';
