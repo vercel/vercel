@@ -37,10 +37,3 @@ async function buildNextjsWrapper() {
 }
 
 module.exports = buildNextjsWrapper;
-
-if (!module.parent) {
-  buildNextjsWrapper().catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
-}
