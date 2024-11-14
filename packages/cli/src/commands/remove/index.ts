@@ -23,6 +23,7 @@ import { removeCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { RemoveTelemetryClient } from '../../util/telemetry/commands/remove';
 import output from '../../output-manager';
+import type { ProjectNotFound } from '../../util/errors-ts';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
@@ -211,7 +212,7 @@ export default async function remove(client: Client) {
   });
   const start = Date.now();
 
-  await Promise.all<any>([
+  await Promise.all<boolean | ProjectNotFound | undefined>([
     ...deployments.map(depl => now.remove(depl.id, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
