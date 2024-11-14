@@ -25,7 +25,11 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
-import type { Deployment, Project } from '@vercel-internals/types';
+import type {
+  Deployment,
+  PaginationOptions,
+  Project,
+} from '@vercel-internals/types';
 import output from '../../output-manager';
 
 function toDate(timestamp: number): string {
@@ -94,7 +98,7 @@ export default async function list(client: Client) {
   });
 
   let project: Project;
-  let pagination;
+  let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
   let deployments: Deployment[] = [];
