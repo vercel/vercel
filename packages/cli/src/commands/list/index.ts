@@ -284,7 +284,7 @@ export default async function list(client: Client) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(
-        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+        `ls${app ? ` ${app}` : ''}${flags} --next ${pagination.next}`
       )}`
     );
   }
