@@ -1,4 +1,4 @@
-overlay: 1.0.2
+overlay: 1.0.0
 info:
   title: Fix https://openapi.vercel.sh/ from lint and testing
   version: 0.0.2
