@@ -101,7 +101,7 @@ export default async function list(client: Client) {
   let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
-  let deployments: Deployment[] = [];
+  const deployments: Deployment[] = [];
   let singleDeployment = false;
 
   if (app) {
