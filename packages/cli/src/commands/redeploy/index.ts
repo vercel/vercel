@@ -122,18 +122,21 @@ export default async function redeploy(client: Client): Promise<number> {
     const deployStamp = stamp();
     output.spinner(`Redeploying project ${fromDeployment.id}`, 0);
 
-    let deployment = await client.fetch<any>(`/v13/deployments?forceNew=1`, {
-      body: {
-        deploymentId: fromDeployment.id,
-        meta: {
-          action: 'redeploy',
+    let deployment = await client.fetch<Deployment>(
+      '/v13/deployments?forceNew=1',
+      {
+        body: {
+          deploymentId: fromDeployment.id,
+          meta: {
+            action: 'redeploy',
+          },
+          name: fromDeployment.name,
+          target,
+          customEnvironmentSlugOrId,
         },
-        name: fromDeployment.name,
-        target,
-        customEnvironmentSlugOrId,
-      },
-      method: 'POST',
-    });
+        method: 'POST',
+      }
+    );
 
     output.stopSpinner();
 
