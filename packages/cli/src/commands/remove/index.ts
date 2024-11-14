@@ -190,8 +190,7 @@ export default async function remove(client: Client) {
 
   if (deployments.length > 200) {
     output.warn(
-      `Only 200 deployments can get deleted at once. ` +
-        `Please continue 10 minutes after deletion to remove the rest.`
+      'Only 200 deployments can get deleted at once. Please continue 10 minutes after deletion to remove the rest.'
     );
   }
 
