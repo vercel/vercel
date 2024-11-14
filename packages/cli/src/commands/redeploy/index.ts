@@ -155,12 +155,12 @@ export default async function redeploy(client: Client): Promise<number> {
     );
 
     output.print(
-      prependEmoji(
+      `${prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
         )} ${deployStamp()}`,
         emoji('success')
-      ) + `\n`
+      )}\n`
     );
 
     if (!client.stdout.isTTY) {
