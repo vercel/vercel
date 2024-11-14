@@ -9,7 +9,7 @@ export default async function status(client: Client) {
   output.print('\n');
   output.log(`${chalk.bold('Telemetry status')}: ${status}\n`);
 
-  const learnMoreMessage = `\n\nLearn more: ${chalk.cyan(`https://vercel.com/docs/cli/about-telemetry`)}`;
+  const learnMoreMessage = `\n\nLearn more: ${chalk.cyan('https://vercel.com/docs/cli/about-telemetry')}`;
 
   if (enabled) {
     output.log(`You have opted in to Vercel CLI telemetry${learnMoreMessage}`);

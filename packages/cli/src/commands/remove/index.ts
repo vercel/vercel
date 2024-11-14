@@ -16,7 +16,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import type Client from '../../util/client';
-import { Alias, Deployment, Project } from '@vercel-internals/types';
+import type { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
@@ -172,12 +172,11 @@ export default async function remove(client: Client) {
   });
 
   if (deployments.length === 0 && projects.length === 0) {
+    const safeUnaliased = parsedArgs.flags['--safe'] ? 'unaliased' : 'any';
+    const stylizedIds = ids.map(id => chalk.bold(`"${id}"`)).join(', ');
+    const commandName = getCommandName('projects ls');
     log(
-      `Could not find ${parsedArgs.flags['--safe'] ? 'unaliased' : 'any'} deployments ` +
-        `or projects matching ` +
-        `${ids
-          .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('projects ls')} to list.`
+      `Could not find ${safeUnaliased} deployments or projects matching ${stylizedIds}. Run ${commandName} to list.`
     );
     return 1;
   }
@@ -189,8 +188,7 @@ export default async function remove(client: Client) {
 
   if (deployments.length > 200) {
     output.warn(
-      `Only 200 deployments can get deleted at once. ` +
-        `Please continue 10 minutes after deletion to remove the rest.`
+      'Only 200 deployments can get deleted at once. Please continue 10 minutes after deletion to remove the rest.'
     );
   }
 
@@ -211,7 +209,7 @@ export default async function remove(client: Client) {
   });
   const start = Date.now();
 
-  await Promise.all<any>([
+  await Promise.all([
     ...deployments.map(depl => now.remove(depl.id, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
