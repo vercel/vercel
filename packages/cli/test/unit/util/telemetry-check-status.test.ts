@@ -11,10 +11,12 @@ describe('checkTelemetryStatus', () => {
 
   afterEach(() => {
     fileWriterSpy.mockClear();
+    vi.unstubAllEnvs();
   });
 
   describe('first invocation', () => {
     beforeEach(() => {
+      vi.stubEnv('VERCEL_TELEMETRY_DISABLED', undefined);
       checkTelemetryStatus({
         config: {},
       });
