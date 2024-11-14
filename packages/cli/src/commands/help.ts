@@ -312,8 +312,8 @@ function buildDescriptionLine(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  let wrapingText = wordWrap(command.description, options.columns);
-  return `${wrapingText}${NEWLINE}`;
+  const wrappingText = wordWrap(command.description, options.columns);
+  return `${wrappingText}${NEWLINE}`;
 }
 
 interface BuildHelpOutputOptions {
