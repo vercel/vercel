@@ -39,7 +39,7 @@ export const rollbackCommand = {
     {
       name: 'timeout',
       description: 'Time to wait for rollback completion [3m]',
-      argument: 'timeout',
+      argument: 'TIME',
       shorthand: null,
       type: String,
       deprecated: false,

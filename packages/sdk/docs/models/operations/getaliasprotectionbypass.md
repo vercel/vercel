@@ -7,7 +7,7 @@
 
 ```typescript
 const value: operations.ProtectionBypass1 = {
-  createdAt: 4671.09,
+  createdAt: 9428.39,
   createdBy: "<value>",
   scope: "shareable-link",
 };
@@ -17,8 +17,8 @@ const value: operations.ProtectionBypass1 = {
 
 ```typescript
 const value: operations.ProtectionBypass2 = {
-  createdAt: 7530.42,
-  lastUpdatedAt: 59.39,
+  createdAt: 5341.56,
+  lastUpdatedAt: 8021.48,
   lastUpdatedBy: "<value>",
   access: "requested",
   scope: "user",
@@ -29,7 +29,7 @@ const value: operations.ProtectionBypass2 = {
 
 ```typescript
 const value: operations.ProtectionBypass3 = {
-  createdAt: 3375.81,
+  createdAt: 3457.46,
   createdBy: "<value>",
   scope: "alias-protection-override",
 };
@@ -39,8 +39,8 @@ const value: operations.ProtectionBypass3 = {
 
 ```typescript
 const value: operations.ProtectionBypass4 = {
-  createdAt: 6091.64,
-  lastUpdatedAt: 7759.58,
+  createdAt: 4005.10,
+  lastUpdatedAt: 4109.16,
   lastUpdatedBy: "<value>",
   scope: "email_invite",
 };

@@ -6,7 +6,7 @@
 ### `operations.Action1`
 
 ```typescript
-const value: operations.Action1 = "deny";
+const value: operations.Action1 = "challenge";
 ```
 
 ### `any`

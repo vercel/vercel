@@ -10,8 +10,8 @@ import { Scopes2 } from "@vercel/sdk/models/components/authtoken.js";
 let value: Scopes2 = {
   type: "team",
   teamId: "<id>",
-  origin: "gitlab",
-  createdAt: 8818.27,
+  origin: "github",
+  createdAt: 3125.63,
 };
 ```
 
@@ -19,7 +19,7 @@ let value: Scopes2 = {
 
 | Field                                                                                | Type                                                                                 | Required                                                                             | Description                                                                          |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `type`                                                                               | [components.AuthTokenScopesType](../../models/components/authtokenscopestype.md)     | :heavy_check_mark:                                                                   | N/A                                                                                  |
+| `type`                                                                               | [components.ScopesType](../../models/components/scopestype.md)                       | :heavy_check_mark:                                                                   | N/A                                                                                  |
 | `teamId`                                                                             | *string*                                                                             | :heavy_check_mark:                                                                   | N/A                                                                                  |
 | `origin`                                                                             | [components.AuthTokenScopesOrigin](../../models/components/authtokenscopesorigin.md) | :heavy_check_mark:                                                                   | N/A                                                                                  |
 | `createdAt`                                                                          | *number*                                                                             | :heavy_check_mark:                                                                   | N/A                                                                                  |

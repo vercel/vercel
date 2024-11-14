@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectFunctionDefaultMemoryType } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectFunctionDefaultMemoryType = "performance";
+let value: CreateProjectFunctionDefaultMemoryType = "standard";
 ```
 
 ## Values

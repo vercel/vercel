@@ -6,7 +6,7 @@
 import { UpdateProjectDataCacheMitigate } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: UpdateProjectDataCacheMitigate = {
-  action: "rate_limit",
+  action: "redirect",
   ruleId: "<id>",
 };
 ```

@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GitSource1 = {
   type: "github",
-  repoId: 2942.66,
+  repoId: "<id>",
 };
 ```
 
@@ -27,7 +27,7 @@ const value: operations.GitSource2 = {
 ```typescript
 const value: operations.GitSource3 = {
   type: "gitlab",
-  projectId: "<id>",
+  projectId: 6605.36,
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.CreateDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://remarkable-tuber.name",
+  gitUrl: "https://yummy-breastplate.org/",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.CreateDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 978.10,
+  repoId: 2942.66,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.CreateDeploymentGitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 8843.60,
+  projectId: 4353.53,
 };
 ```
 

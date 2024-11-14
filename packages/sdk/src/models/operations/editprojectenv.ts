@@ -91,10 +91,10 @@ export type EditProjectEnvResponseBodyTarget =
 
 export const EditProjectEnvResponseBodyType = {
   System: "system",
-  Secret: "secret",
   Encrypted: "encrypted",
   Plain: "plain",
   Sensitive: "sensitive",
+  Secret: "secret",
 } as const;
 export type EditProjectEnvResponseBodyType = ClosedEnum<
   typeof EditProjectEnvResponseBodyType

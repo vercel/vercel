@@ -9,7 +9,7 @@ The environment variable was successfully edited
 
 ```typescript
 const value: operations.EditProjectEnvResponseBody1 = {
-  type: "secret",
+  type: "sensitive",
   key: "<key>",
   value: "<value>",
 };

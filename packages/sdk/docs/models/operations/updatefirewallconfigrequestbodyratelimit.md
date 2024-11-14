@@ -7,9 +7,9 @@
 
 ```typescript
 const value: operations.UpdateFirewallConfigRateLimitSecurity1 = {
-  algo: "fixed_window",
-  window: 4785.76,
-  limit: 5751.11,
+  algo: "token_bucket",
+  window: 1127.88,
+  limit: 9904.53,
   keys: [
     "<value>",
   ],

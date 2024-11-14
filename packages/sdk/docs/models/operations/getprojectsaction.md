@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsAction } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsAction = "deny";
+let value: GetProjectsAction = "rate_limit";
 ```
 
 ## Values

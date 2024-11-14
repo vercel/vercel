@@ -91,6 +91,9 @@ export async function projectsUpdateProjectDomain(
   const context = {
     operationID: "updateProjectDomain",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

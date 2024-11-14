@@ -12,8 +12,8 @@ let value: UpdateFirewallConfigRequestBodyValue = {
     {
       conditions: [
         {
-          type: "query",
-          op: "nex",
+          type: "environment",
+          op: "inc",
         },
       ],
     },

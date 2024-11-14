@@ -6,7 +6,7 @@
 ### `operations.Items1`
 
 ```typescript
-const value: operations.Items1 = false;
+const value: operations.Items1 = "<value>";
 ```
 
 ### `operations.Items2[]`

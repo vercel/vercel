@@ -89,6 +89,9 @@ export async function projectsRequestPromote(
   const context = {
     operationID: "requestPromote",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

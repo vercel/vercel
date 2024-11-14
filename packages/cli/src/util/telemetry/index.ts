@@ -276,6 +276,7 @@ export class TelemetryEventStore {
     const env = cloneEnv(process.env, {
       VERCEL_TELEMETRY_DISABLED: '1',
     });
+
     // When debugging, we want to know about the response from the server, so we can't exit early
     if (outputDebugEnabled) {
       return new Promise<void>(resolve => {

@@ -6,8 +6,8 @@
 import { GetEdgeConfigsResponseBody } from "@vercel/sdk/models/operations/getedgeconfigs.js";
 
 let value: GetEdgeConfigsResponseBody = {
-  sizeInBytes: 7203.19,
-  itemCount: 9790.11,
+  sizeInBytes: 196.92,
+  itemCount: 408.75,
 };
 ```
 

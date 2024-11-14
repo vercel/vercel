@@ -8,10 +8,10 @@
 ```typescript
 const value: operations.CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 4896.85,
+  projectId: 4087.74,
   type: "gitlab",
-  url: "https://impassioned-presume.biz/",
-  path: "/etc/defaults",
+  url: "https://magnificent-pepper.info/",
+  path: "/var/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
@@ -25,14 +25,14 @@ const value: operations.CancelDeploymentGitRepo1 = {
 const value: operations.CancelDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 7090.51,
+  repoId: 7019.78,
   type: "github",
-  repoOwnerId: 6152.76,
-  path: "/usr/local/bin",
+  repoOwnerId: 4896.85,
+  path: "/etc/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -45,11 +45,11 @@ const value: operations.CancelDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/private/var",
+  path: "/usr/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 

@@ -28,7 +28,7 @@ def format_headers(headers, decode=False):
     return keyToList
 
 if 'VERCEL_IPC_FD' in os.environ:
-    from http.server import HTTPServer
+    from http.server import ThreadingHTTPServer
     import http
     import time
     import contextvars
@@ -312,7 +312,7 @@ if 'VERCEL_IPC_FD' in os.environ:
                     asyncio.run(app(scope, receive, send))
 
     if 'Handler' in locals():
-        server = HTTPServer(('127.0.0.1', 0), Handler)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         send_message({
             "type": "server-started",
             "payload": {

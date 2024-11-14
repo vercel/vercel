@@ -6,9 +6,9 @@
 import { CreateWebhookRequestBody } from "@vercel/sdk/models/operations/createwebhook.js";
 
 let value: CreateWebhookRequestBody = {
-  url: "https://informal-councilman.name",
+  url: "https://small-wilderness.name/",
   events: [
-    "edge-config.deleted",
+    "integration-configuration.removed",
   ],
 };
 ```

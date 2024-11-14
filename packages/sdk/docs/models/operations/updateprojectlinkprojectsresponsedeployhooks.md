@@ -9,7 +9,7 @@ let value: UpdateProjectLinkProjectsResponseDeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://usable-programme.biz",
+  url: "https://milky-tackle.net/",
 };
 ```
 

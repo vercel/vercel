@@ -6,7 +6,7 @@
 import { BranchMatcher } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: BranchMatcher = {
-  type: "endsWith",
+  type: "startsWith",
   pattern: "<value>",
 };
 ```

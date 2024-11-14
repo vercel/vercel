@@ -79,6 +79,9 @@ export async function authenticationDeleteAuthToken(
   const context = {
     operationID: "deleteAuthToken",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -80,6 +80,9 @@ export async function teamsJoinTeam(
   const context = {
     operationID: "joinTeam",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

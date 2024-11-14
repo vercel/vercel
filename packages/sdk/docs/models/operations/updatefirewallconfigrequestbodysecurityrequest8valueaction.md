@@ -5,8 +5,7 @@
 ```typescript
 import { UpdateFirewallConfigRequestBodySecurityRequest8ValueAction } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
-let value: UpdateFirewallConfigRequestBodySecurityRequest8ValueAction =
-  "challenge";
+let value: UpdateFirewallConfigRequestBodySecurityRequest8ValueAction = "deny";
 ```
 
 ## Values

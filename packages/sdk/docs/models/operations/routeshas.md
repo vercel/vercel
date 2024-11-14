@@ -16,7 +16,7 @@ const value: operations.Has1 = {
 
 ```typescript
 const value: operations.Has2 = {
-  type: "cookie",
+  type: "query",
   key: "<key>",
 };
 ```
