@@ -216,13 +216,13 @@ export default async function list(client: Client) {
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
-      log(`No deployments found.`);
+      log('No deployments found.');
       return 0;
     }
 
     log(
       `${
-        target === 'production' ? `Production deployments` : `Deployments`
+        target === 'production' ? 'Production deployments' : 'Deployments'
       } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
     );
   }
