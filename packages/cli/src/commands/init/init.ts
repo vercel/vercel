@@ -128,7 +128,7 @@ async function extractExample(
   name: string,
   dir: string,
   force?: boolean,
-  ver: string = 'v2'
+  ver = 'v2'
 ) {
   const folder = prepareFolder(client.cwd, dir || name, force);
   output.spinner(`Fetching ${name}`);
