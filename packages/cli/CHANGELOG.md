@@ -1,5 +1,13 @@
 # vercel
 
+## 39.0.2
+
+### Patch Changes
+
+- [cli] disable telemetry first run message if VERCEL_TELEMETRY_DISABLED is set ([#12584](https://github.com/vercel/vercel/pull/12584))
+
+- [cli] use string literal in telemetry status ([#12582](https://github.com/vercel/vercel/pull/12582))
+
 ## 39.0.1
 
 ### Patch Changes
