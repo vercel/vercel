@@ -58,7 +58,7 @@ export default async function redeploy(client: Client): Promise<number> {
   if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
-        `redeploy <deployment-id-or-url>`
+        'redeploy <deployment-id-or-url>'
       )}`
     );
     return 1;
