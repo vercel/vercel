@@ -195,7 +195,7 @@ async function renderJobFailed({
 
   // aliases are paginated, so continuously loop until all of them have been
   // fetched
-  let nextTimestamp;
+  let nextTimestamp: number | undefined;
   for (;;) {
     let url = `/v9/projects/${project.id}/promote/aliases?failedOnly=true&limit=20`;
     if (nextTimestamp) {
