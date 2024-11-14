@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "public",
+  "build": {
+    "env": {
+      "VERCEL_ALLOW_NODEJS22": "1"
+    }
+  },
   "rewrites": [
     {
       "source": "/",
