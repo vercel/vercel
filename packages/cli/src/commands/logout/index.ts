@@ -52,7 +52,7 @@ export default async function main(client: Client): Promise<number> {
   let exitCode = 0;
 
   try {
-    await client.fetch(`/v3/user/tokens/current`, {
+    await client.fetch('/v3/user/tokens/current', {
       method: 'DELETE',
       useCurrentTeam: false,
     });
