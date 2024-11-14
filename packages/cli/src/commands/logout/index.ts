@@ -89,7 +89,7 @@ export default async function main(client: Client): Promise<number> {
   if (exitCode === 0) {
     output.log('Logged out!');
   } else {
-    output.error(`Failed during logout`);
+    output.error('Failed during logout');
   }
 
   return exitCode;
