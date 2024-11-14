@@ -41,14 +41,14 @@ export default async function init(
   const examples = await fetchExampleList(client);
 
   if (!examples) {
-    throw new Error(`Could not fetch example list.`);
+    throw new Error('Could not fetch example list.');
   }
 
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
     if (client.stdin.isTTY !== true) {
-      output.print(`No framework provided`);
+      output.print('No framework provided');
       return 0;
     }
     const chosen = await chooseFromDropdown(
@@ -213,7 +213,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
-      `init`
+      'init'
     )} to see the list of available examples.`
   );
 
