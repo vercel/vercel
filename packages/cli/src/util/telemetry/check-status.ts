@@ -10,6 +10,12 @@ export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
     return;
   }
 
+  if (process.env.VERCEL_TELEMETRY_DISABLED) {
+    // disabling telemetry with the environment variable
+    // implies the user has already been informed
+    return;
+  }
+
   output.note(
     'The Vercel CLI now collects telemetry regarding usage of the CLI.'
   );
