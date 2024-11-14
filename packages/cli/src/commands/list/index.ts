@@ -11,7 +11,7 @@ import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
