@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GetDeploymentGitSourceDeployments1 = {
   type: "github",
-  repoId: 7510.32,
+  repoId: "<id>",
 };
 ```
 
@@ -27,7 +27,7 @@ const value: operations.GetDeploymentGitSourceDeployments2 = {
 ```typescript
 const value: operations.GetDeploymentGitSourceDeployments3 = {
   type: "gitlab",
-  projectId: "<id>",
+  projectId: 1035.78,
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.GetDeploymentGitSourceDeployments6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://unkempt-brook.com/",
+  gitUrl: "https://overdue-hubris.net/",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.GetDeploymentGitSourceDeployments7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 5905.85,
+  repoId: 9234.56,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.GetDeploymentGitSourceDeployments8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 4355.32,
+  projectId: 2991.54,
 };
 ```
 

@@ -14,6 +14,7 @@ const value: operations.FilterProjectEnvsTargetProjects1[] = [
 ### `operations.FilterProjectEnvsTargetProjectsResponse2`
 
 ```typescript
-const value: operations.FilterProjectEnvsTargetProjectsResponse2 = "production";
+const value: operations.FilterProjectEnvsTargetProjectsResponse2 =
+  "development";
 ```
 

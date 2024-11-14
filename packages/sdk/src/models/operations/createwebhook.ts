@@ -50,7 +50,8 @@ export const Events = {
   MarketplaceInvoicePaid: "marketplace.invoice.paid",
   MarketplaceInvoiceNotpaid: "marketplace.invoice.notpaid",
   MarketplaceInvoiceRefunded: "marketplace.invoice.refunded",
-  TestWebhook: "test-webhook",
+  TestWebhook: "observability.anomaly",
+  undefined: "test-webhook",
 } as const;
 export type Events = ClosedEnum<typeof Events>;
 
@@ -119,7 +120,8 @@ export const CreateWebhookEvents = {
   MarketplaceInvoicePaid: "marketplace.invoice.paid",
   MarketplaceInvoiceNotpaid: "marketplace.invoice.notpaid",
   MarketplaceInvoiceRefunded: "marketplace.invoice.refunded",
-  TestWebhook: "test-webhook",
+  TestWebhook: "observability.anomaly",
+  undefined: "test-webhook",
 } as const;
 /**
  * The webhooks events

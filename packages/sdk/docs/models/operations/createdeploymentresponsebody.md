@@ -16,13 +16,13 @@ let value: CreateDeploymentResponseBody = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://orderly-beret.com",
+  inspectorUrl: "https://blue-bidet.info",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 3712.87,
-  buildingAt: 7665.91,
+  bootedAt: 7665.91,
+  buildingAt: 6886.83,
   buildSkipped: false,
   creator: {
     uid: "<id>",
@@ -30,26 +30,28 @@ let value: CreateDeploymentResponseBody = {
   public: false,
   status: "INITIALIZING",
   type: "LAMBDAS",
-  createdAt: 7079.82,
+  createdAt: 7672.10,
   name: "<value>",
   id: "<id>",
-  version: 7672.10,
+  version: 2871.53,
   meta: {
     "key": "<value>",
   },
-  readyState: "ERROR",
+  readyState: "BUILDING",
   regions: [
     "<value>",
   ],
-  url: "https://neat-redesign.org",
+  url: "https://showy-vanadyl.biz",
   projectId: "<id>",
   ownerId: "<id>",
   routes: [
     {
       src: "<value>",
+      continue: false,
+      middleware: 6599.71,
     },
   ],
-  plan: "hobby",
+  plan: "enterprise",
   createdIn: "<value>",
 };
 ```

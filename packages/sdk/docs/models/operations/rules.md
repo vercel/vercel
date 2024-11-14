@@ -12,8 +12,8 @@ let value: Rules = {
     {
       conditions: [
         {
-          type: "target_path",
-          op: "suf",
+          type: "cookie",
+          op: "gt",
         },
       ],
     },

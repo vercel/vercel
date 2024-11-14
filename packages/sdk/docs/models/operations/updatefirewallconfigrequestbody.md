@@ -25,7 +25,7 @@ const value: operations.UpdateFirewallConfigRequestBody2 = {
         conditions: [
           {
             type: "path",
-            op: "ex",
+            op: "ninc",
           },
         ],
       },
@@ -48,8 +48,8 @@ const value: operations.UpdateFirewallConfigRequestBody3 = {
       {
         conditions: [
           {
-            type: "scheme",
-            op: "ex",
+            type: "host",
+            op: "gte",
           },
         ],
       },
@@ -74,7 +74,7 @@ const value: operations.UpdateFirewallConfigRequestBody4 = {
 const value: operations.UpdateFirewallConfigRequestBody5 = {
   action: "rules.priority",
   id: "<id>",
-  value: 8766.82,
+  value: 9504.86,
 };
 ```
 
@@ -83,7 +83,7 @@ const value: operations.UpdateFirewallConfigRequestBody5 = {
 ```typescript
 const value: operations.RequestBody6 = {
   action: "crs.update",
-  id: "rfi",
+  id: "sd",
   value: {
     active: false,
     action: "log",
@@ -105,9 +105,9 @@ const value: operations.RequestBody7 = {
 const value: operations.RequestBody8 = {
   action: "ip.insert",
   value: {
-    hostname: "wise-hyphenation.biz",
-    ip: "198.69.97.122",
-    action: "log",
+    hostname: "sore-formula.org",
+    ip: "104.24.168.7",
+    action: "challenge",
   },
 };
 ```
@@ -119,8 +119,8 @@ const value: operations.RequestBody9 = {
   action: "ip.update",
   id: "<id>",
   value: {
-    hostname: "yummy-department.info",
-    ip: "92.25.92.227",
+    hostname: "rich-slime.com",
+    ip: "fcc2:d8d6:c9d5:1a9c:0edd:08fe:3afb:0d52",
     action: "challenge",
   },
 };

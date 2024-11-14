@@ -9,7 +9,7 @@ import { VerifyProjectDomainVerification } from "@vercel/sdk/models/operations/v
 
 let value: VerifyProjectDomainVerification = {
   type: "<value>",
-  domain: "celebrated-eggplant.info",
+  domain: "lasting-agreement.info",
   value: "<value>",
   reason: "<value>",
 };

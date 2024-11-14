@@ -17,7 +17,6 @@ import { Integrations } from "./integrations.js";
 import { LogDrains } from "./logdrains.js";
 import { ProjectMembers } from "./projectmembers.js";
 import { Projects } from "./projects.js";
-import { Secrets } from "./secrets.js";
 import { Security } from "./security.js";
 import { Teams } from "./teams.js";
 import { User } from "./user.js";
@@ -112,10 +111,5 @@ export class Vercel extends ClientSDK {
   private _certs?: Certs;
   get certs(): Certs {
     return (this._certs ??= new Certs(this._options));
-  }
-
-  private _secrets?: Secrets;
-  get secrets(): Secrets {
-    return (this._secrets ??= new Secrets(this._options));
   }
 }

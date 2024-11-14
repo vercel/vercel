@@ -256,10 +256,10 @@ export type CreateProjectEnvCreatedTarget =
 
 export const CreateProjectEnvCreatedType = {
   System: "system",
+  Secret: "secret",
   Encrypted: "encrypted",
   Plain: "plain",
   Sensitive: "sensitive",
-  Secret: "secret",
 } as const;
 export type CreateProjectEnvCreatedType = ClosedEnum<
   typeof CreateProjectEnvCreatedType
@@ -605,10 +605,10 @@ export type CreatedTarget =
 
 export const CreatedType = {
   System: "system",
+  Secret: "secret",
   Encrypted: "encrypted",
   Plain: "plain",
   Sensitive: "sensitive",
-  Secret: "secret",
 } as const;
 export type CreatedType = ClosedEnum<typeof CreatedType>;
 

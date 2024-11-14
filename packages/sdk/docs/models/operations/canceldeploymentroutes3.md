@@ -8,7 +8,7 @@ import { CancelDeploymentRoutes3 } from "@vercel/sdk/models/operations/canceldep
 let value: CancelDeploymentRoutes3 = {
   src: "<value>",
   continue: false,
-  middleware: 9121.51,
+  middleware: 5371.70,
 };
 ```
 

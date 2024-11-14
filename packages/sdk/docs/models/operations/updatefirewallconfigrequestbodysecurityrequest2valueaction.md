@@ -6,7 +6,7 @@
 import { UpdateFirewallConfigRequestBodySecurityRequest2ValueAction } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequest2ValueAction =
-  "bypass";
+  "rate_limit";
 ```
 
 ## Values

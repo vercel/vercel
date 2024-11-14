@@ -6,7 +6,7 @@
 import { Options } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Options = {
-  value: 3558.89,
+  value: 8103.02,
 };
 ```
 

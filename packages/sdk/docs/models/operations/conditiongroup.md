@@ -8,8 +8,8 @@ import { ConditionGroup } from "@vercel/sdk/models/operations/putfirewallconfig.
 let value: ConditionGroup = {
   conditions: [
     {
-      type: "host",
-      op: "sub",
+      type: "user_agent",
+      op: "re",
     },
   ],
 };

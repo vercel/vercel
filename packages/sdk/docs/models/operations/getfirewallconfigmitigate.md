@@ -6,7 +6,7 @@
 import { GetFirewallConfigMitigate } from "@vercel/sdk/models/operations/getfirewallconfig.js";
 
 let value: GetFirewallConfigMitigate = {
-  action: "redirect",
+  action: "challenge",
 };
 ```
 

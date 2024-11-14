@@ -8,8 +8,8 @@ import { RequestBodyConditionGroup } from "@vercel/sdk/models/operations/updatef
 let value: RequestBodyConditionGroup = {
   conditions: [
     {
-      type: "header",
-      op: "lte",
+      type: "path",
+      op: "suf",
     },
   ],
 };

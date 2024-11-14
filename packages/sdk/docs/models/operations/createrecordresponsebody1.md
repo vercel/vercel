@@ -7,7 +7,7 @@ import { CreateRecordResponseBody1 } from "@vercel/sdk/models/operations/creater
 
 let value: CreateRecordResponseBody1 = {
   uid: "<id>",
-  updated: 9983.55,
+  updated: 8406.41,
 };
 ```
 

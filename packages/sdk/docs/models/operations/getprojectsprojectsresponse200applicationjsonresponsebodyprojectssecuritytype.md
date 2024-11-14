@@ -7,7 +7,7 @@ import { GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsSecuri
 
 let value:
   GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsSecurityType =
-    "query";
+    "region";
 ```
 
 ## Values

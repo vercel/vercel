@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectDataCacheAlgo } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheAlgo = "fixed_window";
+let value: UpdateProjectDataCacheAlgo = "token_bucket";
 ```
 
 ## Values

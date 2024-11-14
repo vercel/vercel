@@ -10,7 +10,7 @@ import { GetDeploymentResponseBodyLambdas } from "@vercel/sdk/models/operations/
 let value: GetDeploymentResponseBodyLambdas = {
   output: [
     {
-      path: "/home/user/dir",
+      path: "/lost+found",
       functionName: "<value>",
     },
   ],

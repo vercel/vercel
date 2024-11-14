@@ -17,7 +17,7 @@ let value: UpdateFirewallConfigRequestBody3 = {
       {
         conditions: [
           {
-            type: "target_path",
+            type: "host",
             op: "pre",
           },
         ],

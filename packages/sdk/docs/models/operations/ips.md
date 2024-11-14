@@ -6,9 +6,9 @@
 import { Ips } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Ips = {
-  hostname: "curly-heating.info",
-  ip: "33.10.6.69",
-  action: "challenge",
+  hostname: "fake-request.name",
+  ip: "100.96.145.171",
+  action: "bypass",
 };
 ```
 

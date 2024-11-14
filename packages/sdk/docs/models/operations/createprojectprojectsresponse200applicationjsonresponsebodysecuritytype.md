@@ -7,7 +7,7 @@ import { CreateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType
 
 let value:
   CreateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType =
-    "query";
+    "cookie";
 ```
 
 ## Values

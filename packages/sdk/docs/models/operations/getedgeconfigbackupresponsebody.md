@@ -8,12 +8,12 @@
 ```typescript
 const value: operations.GetEdgeConfigBackupResponseBody1 = {
   id: "<id>",
-  lastModified: 4518.07,
+  lastModified: 665.96,
   backup: {
     digest: "<value>",
     items: {},
     slug: "<value>",
-    updatedAt: 7998.30,
+    updatedAt: 2359.70,
   },
   metadata: {},
 };
@@ -25,16 +25,16 @@ const value: operations.GetEdgeConfigBackupResponseBody1 = {
 const value: operations.GetEdgeConfigBackupResponseBody2 = {
   user: {
     id: "<id>",
-    username: "Vicky_Blick6",
-    email: "Clint.Osinski95@gmail.com",
+    username: "Candice47",
+    email: "Norberto.MacGyver@gmail.com",
   },
   id: "<id>",
-  lastModified: 7631.40,
+  lastModified: 5551.94,
   backup: {
     digest: "<value>",
     items: {},
     slug: "<value>",
-    updatedAt: 8701.82,
+    updatedAt: 4169.34,
   },
   metadata: {},
 };

@@ -7,14 +7,14 @@ import { GetDeploymentGitRepo1 } from "@vercel/sdk/models/operations/getdeployme
 
 let value: GetDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 3695.24,
+  projectId: 6682.18,
   type: "gitlab",
-  url: "https://noteworthy-pigsty.biz/",
-  path: "/bin",
+  url: "https://agreeable-guard.biz/",
+  path: "/var/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

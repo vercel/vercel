@@ -6,9 +6,9 @@
 import { CreateProjectErl } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectErl = {
-  algo: "token_bucket",
-  window: 1173.80,
-  limit: 1598.45,
+  algo: "fixed_window",
+  window: 468.06,
+  limit: 9707.31,
   keys: [
     "<value>",
   ],

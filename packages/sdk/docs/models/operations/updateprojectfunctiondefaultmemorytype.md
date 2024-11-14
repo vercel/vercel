@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectFunctionDefaultMemoryType } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectFunctionDefaultMemoryType = "standard";
+let value: UpdateProjectFunctionDefaultMemoryType = "standard_legacy";
 ```
 
 ## Values

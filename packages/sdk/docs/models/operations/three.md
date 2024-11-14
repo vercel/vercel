@@ -6,7 +6,7 @@
 import { Three } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Three = {
-  projectId: 5736.10,
+  projectId: "<id>",
   ref: "<value>",
   type: "gitlab",
 };

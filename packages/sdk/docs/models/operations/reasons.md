@@ -9,7 +9,8 @@ import { Reasons } from "@vercel/sdk/models/operations/deleteteam.js";
 
 let value: Reasons = {
   slug: "<value>",
-  description: "that what massive gah newsstand truly queasily switch",
+  description:
+    "opposite wisely red middle accurate repeatedly supposing ferociously",
 };
 ```
 

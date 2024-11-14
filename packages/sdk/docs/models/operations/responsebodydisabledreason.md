@@ -5,7 +5,7 @@
 ```typescript
 import { ResponseBodyDisabledReason } from "@vercel/sdk/models/operations/getconfigurations.js";
 
-let value: ResponseBodyDisabledReason = "feature-not-available";
+let value: ResponseBodyDisabledReason = "account-plan-downgrade";
 ```
 
 ## Values

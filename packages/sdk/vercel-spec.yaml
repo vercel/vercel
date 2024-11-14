@@ -2929,6 +2929,38 @@ paths:
                         required:
                           - "deployHooks"
                         type: "object"
+                  "microfrontends":
+                    properties:
+                      "updatedAt":
+                        type: "number"
+                        description: "Timestamp when the microfrontends settings were last updated."
+                      "group":
+                        properties:
+                          "id":
+                            type: "string"
+                            description: "A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB"
+                          "slug":
+                            type: "string"
+                            description: "A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI."
+                        required:
+                          - "id"
+                          - "slug"
+                        type: "object"
+                        description: "The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together."
+                      "enabled":
+                        type: "boolean"
+                        description: "Whether microfrontends are enabled for this project."
+                      "isDefaultApp":
+                        type: "boolean"
+                        description: "Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends."
+                      "defaultRoute":
+                        type: "string"
+                        description: "A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI."
+                    required:
+                      - "updatedAt"
+                      - "group"
+                      - "enabled"
+                    type: "object"
                   "name":
                     type: "string"
                   "nodeVersion":
@@ -14507,6 +14539,38 @@ paths:
                               required:
                                 - "deployHooks"
                               type: "object"
+                        "microfrontends":
+                          properties:
+                            "updatedAt":
+                              type: "number"
+                              description: "Timestamp when the microfrontends settings were last updated."
+                            "group":
+                              properties:
+                                "id":
+                                  type: "string"
+                                  description: "A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB"
+                                "slug":
+                                  type: "string"
+                                  description: "A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI."
+                              required:
+                                - "id"
+                                - "slug"
+                              type: "object"
+                              description: "The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together."
+                            "enabled":
+                              type: "boolean"
+                              description: "Whether microfrontends are enabled for this project."
+                            "isDefaultApp":
+                              type: "boolean"
+                              description: "Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends."
+                            "defaultRoute":
+                              type: "string"
+                              description: "A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI."
+                          required:
+                            - "updatedAt"
+                            - "group"
+                            - "enabled"
+                          type: "object"
                         "name":
                           type: "string"
                         "nodeVersion":
@@ -15988,10 +16052,10 @@ paths:
                           type: "string"
                           enum:
                             - "system"
+                            - "secret"
                             - "encrypted"
                             - "plain"
                             - "sensitive"
-                            - "secret"
                         "sunsetSecretId":
                           type: "string"
                           description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -16656,6 +16720,38 @@ paths:
                         required:
                           - "deployHooks"
                         type: "object"
+                  "microfrontends":
+                    properties:
+                      "updatedAt":
+                        type: "number"
+                        description: "Timestamp when the microfrontends settings were last updated."
+                      "group":
+                        properties:
+                          "id":
+                            type: "string"
+                            description: "A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB"
+                          "slug":
+                            type: "string"
+                            description: "A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI."
+                        required:
+                          - "id"
+                          - "slug"
+                        type: "object"
+                        description: "The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together."
+                      "enabled":
+                        type: "boolean"
+                        description: "Whether microfrontends are enabled for this project."
+                      "isDefaultApp":
+                        type: "boolean"
+                        description: "Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends."
+                      "defaultRoute":
+                        type: "string"
+                        description: "A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI."
+                    required:
+                      - "updatedAt"
+                      - "group"
+                      - "enabled"
+                    type: "object"
                   "name":
                     type: "string"
                   "nodeVersion":
@@ -17516,11 +17612,11 @@ paths:
                       "jobStatus":
                         type: "string"
                         enum:
-                          - "pending"
-                          - "in-progress"
                           - "succeeded"
                           - "failed"
                           - "skipped"
+                          - "pending"
+                          - "in-progress"
                       "requestedAt":
                         type: "number"
                       "type":
@@ -18927,6 +19023,38 @@ paths:
                         required:
                           - "deployHooks"
                         type: "object"
+                  "microfrontends":
+                    properties:
+                      "updatedAt":
+                        type: "number"
+                        description: "Timestamp when the microfrontends settings were last updated."
+                      "group":
+                        properties:
+                          "id":
+                            type: "string"
+                            description: "A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB"
+                          "slug":
+                            type: "string"
+                            description: "A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI."
+                        required:
+                          - "id"
+                          - "slug"
+                        type: "object"
+                        description: "The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together."
+                      "enabled":
+                        type: "boolean"
+                        description: "Whether microfrontends are enabled for this project."
+                      "isDefaultApp":
+                        type: "boolean"
+                        description: "Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends."
+                      "defaultRoute":
+                        type: "string"
+                        description: "A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI."
+                    required:
+                      - "updatedAt"
+                      - "group"
+                      - "enabled"
+                    type: "object"
                   "name":
                     type: "string"
                   "nodeVersion":
@@ -20340,10 +20468,10 @@ paths:
                           type: "string"
                           enum:
                             - "system"
+                            - "secret"
                             - "encrypted"
                             - "plain"
                             - "sensitive"
-                            - "secret"
                         "sunsetSecretId":
                           type: "string"
                           description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -21008,6 +21136,38 @@ paths:
                         required:
                           - "deployHooks"
                         type: "object"
+                  "microfrontends":
+                    properties:
+                      "updatedAt":
+                        type: "number"
+                        description: "Timestamp when the microfrontends settings were last updated."
+                      "group":
+                        properties:
+                          "id":
+                            type: "string"
+                            description: "A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB"
+                          "slug":
+                            type: "string"
+                            description: "A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI."
+                        required:
+                          - "id"
+                          - "slug"
+                        type: "object"
+                        description: "The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together."
+                      "enabled":
+                        type: "boolean"
+                        description: "Whether microfrontends are enabled for this project."
+                      "isDefaultApp":
+                        type: "boolean"
+                        description: "Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends."
+                      "defaultRoute":
+                        type: "string"
+                        description: "A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI."
+                    required:
+                      - "updatedAt"
+                      - "group"
+                      - "enabled"
+                    type: "object"
                   "name":
                     type: "string"
                   "nodeVersion":
@@ -21868,11 +22028,11 @@ paths:
                       "jobStatus":
                         type: "string"
                         enum:
+                          - "pending"
+                          - "in-progress"
                           - "succeeded"
                           - "failed"
                           - "skipped"
-                          - "pending"
-                          - "in-progress"
                       "requestedAt":
                         type: "number"
                       "type":
@@ -25001,10 +25161,10 @@ paths:
                             type: "string"
                             enum:
                               - "system"
+                              - "secret"
                               - "encrypted"
                               - "plain"
                               - "sensitive"
-                              - "secret"
                           "sunsetSecretId":
                             type: "string"
                             description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -25257,10 +25417,10 @@ paths:
                               type: "string"
                               enum:
                                 - "system"
+                                - "secret"
                                 - "encrypted"
                                 - "plain"
                                 - "sensitive"
-                                - "secret"
                             "sunsetSecretId":
                               type: "string"
                               description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -25738,10 +25898,10 @@ paths:
                           type: "string"
                           enum:
                             - "system"
+                            - "secret"
                             - "encrypted"
                             - "plain"
                             - "sensitive"
-                            - "secret"
                         "sunsetSecretId":
                           type: "string"
                           description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -26004,10 +26164,10 @@ paths:
                         type: "string"
                         enum:
                           - "system"
+                          - "secret"
                           - "encrypted"
                           - "plain"
                           - "sensitive"
-                          - "secret"
                       "sunsetSecretId":
                         type: "string"
                         description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -26267,10 +26427,10 @@ paths:
                         type: "string"
                         enum:
                           - "system"
+                          - "secret"
                           - "encrypted"
                           - "plain"
                           - "sensitive"
-                          - "secret"
                       "sunsetSecretId":
                         type: "string"
                         description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -26574,10 +26734,10 @@ paths:
                         type: "string"
                         enum:
                           - "system"
+                          - "secret"
                           - "encrypted"
                           - "plain"
                           - "sensitive"
-                          - "secret"
                       "sunsetSecretId":
                         type: "string"
                         description: "This is used to identiy variables that have been migrated from type secret to sensitive."
@@ -27124,17 +27284,7 @@ paths:
       tags:
         - "projects"
       responses:
-        "200":
-          description: "Project successfully paused"
-          content:
-            "application/json":
-              schema:
-                type: "object"
-                properties:
-                  "success": {}
-                  "type": {}
-                  "description": {}
-                  "example": {}
+        "200": {}
         "400":
           description: "One of the provided values in the request query is invalid."
         "401": {}
@@ -27171,17 +27321,7 @@ paths:
       tags:
         - "projects"
       responses:
-        "200":
-          description: "Project successfully unpaused"
-          content:
-            "application/json":
-              schema:
-                type: "object"
-                properties:
-                  "success": {}
-                  "type": {}
-                  "description": {}
-                  "example": {}
+        "200": {}
         "400":
           description: "One of the provided values in the request query is invalid."
         "401": {}
@@ -30807,6 +30947,7 @@ paths:
                         - "marketplace.invoice.paid"
                         - "marketplace.invoice.notpaid"
                         - "marketplace.invoice.refunded"
+                        - "observability.anomaly"
                         - "test-webhook"
                       description: "The webhooks events"
                       example: "deployment.created"
@@ -30924,6 +31065,7 @@ paths:
                       - "marketplace.invoice.paid"
                       - "marketplace.invoice.notpaid"
                       - "marketplace.invoice.refunded"
+                      - "observability.anomaly"
                       - "test-webhook"
                     x-speakeasy-enums: ["budget.reached,", "budget.reset,", "domain.created,", "deployment.created,", "deployment.error,", "deployment.canceled,", "deployment.succeeded,", "deployment.ready,", "deployment.check-rerequested,", "deployment.promoted,", "deployment.integration.action.start,", "deployment.integration.action.cancel,", "deployment.integration.action.cleanup,", "edge-config.created,", "edge-config.deleted,", "edge-config.items.updated,", "firewall.attack,", "integration-configuration.permission-upgraded,", "integration-configuration.removed,", "integration-configuration.scope-change-confirmed,", "project.created,", "project.removed,", "deployment-checks-completed-legacy,", "deployment-ready-legacy,", "deployment-prepared-legacy,", "deployment-error-legacy,", "deployment-check-rerequested-legacy,", "deployment-canceled-legacy,", "project-created-legacy,", "project-removed-legacy,", "domain-created-legacy,", "deployment-legacy,", "integration-configuration-permission-updated-legacy,", "integration-configuration-removed-legacy,", "integration-configuration-scope-change-confirmed-legacy,", "marketplace.invoice.created,", "marketplace.invoice.paid,", "marketplace.invoice.notpaid,", "marketplace.invoice.refunded,", "test-webhook"]
                 "projectIds":
@@ -31056,6 +31198,7 @@ paths:
                               - "marketplace.invoice.paid"
                               - "marketplace.invoice.notpaid"
                               - "marketplace.invoice.refunded"
+                              - "observability.anomaly"
                               - "test-webhook"
                             description: "The webhooks events"
                             example: "deployment.created"
@@ -31144,6 +31287,7 @@ paths:
                               - "marketplace.invoice.paid"
                               - "marketplace.invoice.notpaid"
                               - "marketplace.invoice.refunded"
+                              - "observability.anomaly"
                               - "test-webhook"
                             description: "The webhooks events"
                             example: "deployment.created"
@@ -31265,6 +31409,7 @@ paths:
                         - "marketplace.invoice.paid"
                         - "marketplace.invoice.notpaid"
                         - "marketplace.invoice.refunded"
+                        - "observability.anomaly"
                         - "test-webhook"
                       description: "The webhooks events"
                       example: "deployment.created"
@@ -33009,341 +33154,6 @@ paths:
             description: "A Deployment or Alias URL. In case it is passed, the ID will be ignored"
             example: "https://files-orcin-xi.vercel.app/"
             type: "string"
-        - description: "The Team identifier to perform the request on behalf of."
-          in: "query"
-          name: "teamId"
-          schema:
-            type: "string"
-        - description: "The Team slug to perform the request on behalf of."
-          in: "query"
-          name: "slug"
-          schema:
-            type: "string"
-  "/v2/secrets/{name}":
-    post:
-      description: "Allows to create a new secret."
-      operationId: "createSecret"
-      security:
-        - bearerToken: []
-      summary: "Create a new secret"
-      tags:
-        - "secrets"
-      responses:
-        "200":
-          description: "Successful response showing the created secret."
-          content:
-            "application/json":
-              schema:
-                properties:
-                  "value":
-                    type: "object"
-                    properties:
-                      "type":
-                        type: "string"
-                        enum:
-                          - "Buffer"
-                      "data":
-                        type: "array"
-                        items:
-                          type: "number"
-                  "created":
-                    type: "string"
-                    format: "date-time"
-                    description: "The date when the secret was created."
-                    example: "2021-02-10T13:11:49.180Z"
-                  "name":
-                    type: "string"
-                    description: "The name of the secret."
-                    example: "my-api-key"
-                  "teamId":
-                    nullable: true
-                    type: "string"
-                    description: "The unique identifier of the team the secret was created for."
-                    example: "team_LLHUOMOoDlqOp8wPE4kFo9pE"
-                  "uid":
-                    type: "string"
-                    description: "The unique identifier of the secret."
-                    example: "sec_XCG7t7AIHuO2SBA8667zNUiM"
-                  "userId":
-                    type: "string"
-                    description: "The unique identifier of the user who created the secret."
-                    example: "2qDDuGFTWXBLDNnqZfWPDp1A"
-                  "createdAt":
-                    type: "number"
-                    description: "Timestamp for when the secret was created."
-                    example: 1609492210000
-                  "projectId":
-                    type: "string"
-                    description: "The unique identifier of the project which the secret belongs to."
-                    example: "prj_2WjyKQmM8ZnGcJsPWMrHRHrE"
-                  "decryptable":
-                    type: "boolean"
-                    description: "Indicates whether the secret value can be decrypted after it has been created."
-                    example: true
-                required:
-                  - "value"
-                  - "created"
-                  - "name"
-                  - "uid"
-                type: "object"
-        "400":
-          description: "One of the provided values in the request body is invalid."
-        "401": {}
-        "402":
-          description: "The account was soft-blocked for an unhandled reason.\nThe account is missing a payment so payment method must be updated"
-        "403":
-          description: "You do not have permission to access this resource."
-        "410": {}
-      parameters:
-        - description: "The Team identifier to perform the request on behalf of."
-          in: "query"
-          name: "teamId"
-          schema:
-            type: "string"
-        - description: "The Team slug to perform the request on behalf of."
-          in: "query"
-          name: "slug"
-          schema:
-            type: "string"
-      requestBody:
-        content:
-          "application/json":
-            schema:
-              additionalProperties: false
-              type: "object"
-              required:
-                - "name"
-                - "value"
-              properties:
-                "name":
-                  description: "The name of the secret (max 100 characters)."
-                  type: "string"
-                  example: "my-api-key"
-                  maximum: 100
-                "value":
-                  description: "The value of the new secret."
-                  type: "string"
-                  example: "some secret value"
-                "decryptable":
-                  description: "Whether the secret value can be decrypted after it has been created."
-                  type: "boolean"
-                  example: true
-                "projectId":
-                  description: "Associate a secret to a project."
-                  type: "string"
-                  example: "prj_2WjyKQmM8ZnGcJsPWMrHRHrE"
-                  deprecated: true
-    patch:
-      description: "Enables to edit the name of a secret. The name has to be unique to the user or team’s secrets."
-      operationId: "renameSecret"
-      security:
-        - bearerToken: []
-      summary: "Change secret name"
-      tags:
-        - "secrets"
-      responses:
-        "200":
-          content:
-            "application/json":
-              schema:
-                properties:
-                  "uid":
-                    type: "string"
-                  "name":
-                    type: "string"
-                  "created":
-                    type: "string"
-                    format: "date-time"
-                  "oldName":
-                    type: "string"
-                required:
-                  - "uid"
-                  - "name"
-                  - "created"
-                  - "oldName"
-                type: "object"
-        "400":
-          description: "One of the provided values in the request body is invalid.\nOne of the provided values in the request query is invalid."
-        "401": {}
-        "403":
-          description: "You do not have permission to access this resource."
-        "410": {}
-      parameters:
-        - name: "name"
-          description: "The name of the secret."
-          in: "path"
-          required: true
-          schema:
-            description: "The name of the secret."
-            type: "string"
-            example: "my-api-key"
-        - description: "The Team identifier to perform the request on behalf of."
-          in: "query"
-          name: "teamId"
-          schema:
-            type: "string"
-        - description: "The Team slug to perform the request on behalf of."
-          in: "query"
-          name: "slug"
-          schema:
-            type: "string"
-      requestBody:
-        content:
-          "application/json":
-            schema:
-              additionalProperties: false
-              type: "object"
-              required:
-                - "name"
-              properties:
-                "name":
-                  description: "The name of the new secret."
-                  type: "string"
-                  example: "my-api-key"
-                  maximum: 100
-  "/v3/secrets/{idOrName}":
-    get:
-      description: "Retrieves the information for a specific secret by passing either the secret id or name in the URL."
-      operationId: "getSecret"
-      security:
-        - bearerToken: []
-      summary: "Get a single secret"
-      tags:
-        - "secrets"
-      responses:
-        "200":
-          description: "Successful response retrieving a secret."
-          content:
-            "application/json":
-              schema:
-                properties:
-                  "created":
-                    type: "string"
-                    format: "date-time"
-                    description: "The date when the secret was created."
-                    example: "2021-02-10T13:11:49.180Z"
-                  "name":
-                    type: "string"
-                    description: "The name of the secret."
-                    example: "my-api-key"
-                  "teamId":
-                    nullable: true
-                    type: "string"
-                    description: "The unique identifier of the team the secret was created for."
-                    example: "team_LLHUOMOoDlqOp8wPE4kFo9pE"
-                  "uid":
-                    type: "string"
-                    description: "The unique identifier of the secret."
-                    example: "sec_XCG7t7AIHuO2SBA8667zNUiM"
-                  "userId":
-                    type: "string"
-                    description: "The unique identifier of the user who created the secret."
-                    example: "2qDDuGFTWXBLDNnqZfWPDp1A"
-                  "value":
-                    type: "string"
-                    description: "The value of the secret."
-                  "createdAt":
-                    type: "number"
-                    description: "Timestamp for when the secret was created."
-                    example: 1609492210000
-                  "projectId":
-                    type: "string"
-                    description: "The unique identifier of the project which the secret belongs to."
-                    example: "prj_2WjyKQmM8ZnGcJsPWMrHRHrE"
-                  "decryptable":
-                    type: "boolean"
-                    description: "Indicates whether the secret value can be decrypted after it has been created."
-                    example: true
-                required:
-                  - "created"
-                  - "name"
-                  - "uid"
-                type: "object"
-                description: "Data representing a secret."
-        "400":
-          description: "One of the provided values in the request query is invalid."
-        "401": {}
-        "403":
-          description: "You do not have permission to access this resource."
-        "404": {}
-        "410": {}
-      parameters:
-        - name: "idOrName"
-          description: "The name or the unique identifier to which the secret belongs to."
-          in: "path"
-          required: true
-          schema:
-            description: "The name or the unique identifier to which the secret belongs to."
-            type: "string"
-            example: "sec_RKc5iV0rV3ZSrFrHiruRno7k"
-        - name: "decrypt"
-          description: "Whether to try to decrypt the value of the secret. Only works if `decryptable` has been set to `true` when the secret was created."
-          in: "query"
-          required: false
-          schema:
-            description: "Whether to try to decrypt the value of the secret. Only works if `decryptable` has been set to `true` when the secret was created."
-            type: "string"
-            enum:
-              - "true"
-              - "false"
-            example: "true"
-        - description: "The Team identifier to perform the request on behalf of."
-          in: "query"
-          name: "teamId"
-          schema:
-            type: "string"
-        - description: "The Team slug to perform the request on behalf of."
-          in: "query"
-          name: "slug"
-          schema:
-            type: "string"
-  "/v2/secrets/{idOrName}":
-    delete:
-      description: "This deletes the user or team’s secret defined in the URL."
-      operationId: "deleteSecret"
-      security:
-        - bearerToken: []
-      summary: "Delete a secret"
-      tags:
-        - "secrets"
-      responses:
-        "200":
-          content:
-            "application/json":
-              schema:
-                properties:
-                  "uid":
-                    type: "string"
-                    description: "The unique identifier of the deleted secret."
-                    example: "sec_XCG7t7AIHuO2SBA8667zNUiM"
-                  "name":
-                    type: "string"
-                    description: "The name of the deleted secret."
-                    example: "my-api-key"
-                  "created":
-                    type: "number"
-                    description: "The date when the secret was created."
-                    example: "2021-02-10T13:11:49.180Z"
-                required:
-                  - "uid"
-                  - "name"
-                  - "created"
-                type: "object"
-        "400":
-          description: "One of the provided values in the request query is invalid."
-        "401": {}
-        "403":
-          description: "You do not have permission to access this resource."
-        "410": {}
-      parameters:
-        - name: "idOrName"
-          description: "The name or the unique identifier to which the secret belongs to."
-          in: "path"
-          required: true
-          schema:
-            description: "The name or the unique identifier to which the secret belongs to."
-            type: "string"
-            example: "sec_RKc5iV0rV3ZSrFrHiruRno7k"
         - description: "The Team identifier to perform the request on behalf of."
           in: "query"
           name: "teamId"

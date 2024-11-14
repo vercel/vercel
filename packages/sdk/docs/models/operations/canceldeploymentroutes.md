@@ -25,7 +25,7 @@ const value: operations.CancelDeploymentRoutes2 = {
 const value: operations.CancelDeploymentRoutes3 = {
   src: "<value>",
   continue: false,
-  middleware: 600.78,
+  middleware: 6854.67,
 };
 ```
 

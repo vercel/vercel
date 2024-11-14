@@ -7,15 +7,15 @@ import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operatio
 
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",
-  deliveryFormat: "json",
-  url: "https://gifted-mixture.net/",
+  deliveryFormat: "syslog",
+  url: "https://dazzling-marketplace.info",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 2687.49,
-  deletedAt: 1297.63,
-  updatedAt: 588.09,
+  createdAt: 1514.86,
+  deletedAt: 1620.73,
+  updatedAt: 9634.70,
   environments: [
-    "preview",
+    "production",
   ],
   secret: "<value>",
 };

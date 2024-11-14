@@ -15,7 +15,7 @@ const value: operations.Routes1 = {
 
 ```typescript
 const value: operations.Routes2 = {
-  handle: "rewrite",
+  handle: "resource",
 };
 ```
 
@@ -25,7 +25,7 @@ const value: operations.Routes2 = {
 const value: operations.Routes3 = {
   src: "<value>",
   continue: false,
-  middleware: 9942.33,
+  middleware: 6147.70,
 };
 ```
 

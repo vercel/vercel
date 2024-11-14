@@ -5,7 +5,7 @@
 ```typescript
 import { GetConfigurationResponseBodyScope } from "@vercel/sdk/models/operations/getconfiguration.js";
 
-let value: GetConfigurationResponseBodyScope = "resource";
+let value: GetConfigurationResponseBodyScope = "installation";
 ```
 
 ## Values

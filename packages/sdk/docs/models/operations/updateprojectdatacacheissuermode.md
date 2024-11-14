@@ -7,7 +7,7 @@
 ```typescript
 import { UpdateProjectDataCacheIssuerMode } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
-let value: UpdateProjectDataCacheIssuerMode = "team";
+let value: UpdateProjectDataCacheIssuerMode = "global";
 ```
 
 ## Values

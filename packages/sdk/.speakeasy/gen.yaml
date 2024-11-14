@@ -16,7 +16,7 @@ generation:
     oAuth2ClientCredentialsEnabled: false
     oAuth2PasswordEnabled: false
 typescript:
-  version: 14.0.0-canary.5
+  version: 14.0.0-canary.6
   additionalDependencies:
     dependencies: {}
     devDependencies: {}
