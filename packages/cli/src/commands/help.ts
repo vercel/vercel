@@ -144,7 +144,7 @@ export function buildCommandSynopsisLine(command: Command, parent?: Command) {
 export function buildCommandOptionLines(
   commandOptions: ReadonlyArray<CommandOption>,
   options: BuildHelpOutputOptions,
-  sectionTitle: String
+  sectionTitle: string
 ) {
   // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
