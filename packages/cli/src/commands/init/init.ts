@@ -8,12 +8,12 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { InitTelemetryClient } from '../../util/telemetry/commands/init';
+import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 type Options = {
   '--debug': boolean;
