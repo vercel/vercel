@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
-import Table, { CellOptions } from 'cli-table3';
+import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
 import { globalCommandOptions } from '../util/arg-common';
 
