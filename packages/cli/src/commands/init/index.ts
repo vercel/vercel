@@ -15,7 +15,7 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let parsedArgs = null;
+  let parsedArgs;
 
   const flagsSpecification = getFlagsSpecification(initCommand.options);
 
