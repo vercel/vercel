@@ -159,7 +159,11 @@ test('should show prompts to set up project during first deploy', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const now = execCli(binaryPath, [dir]);
+  const now = execCli(binaryPath, [dir], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(now, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
