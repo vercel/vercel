@@ -10,7 +10,7 @@ export default async function issueCert(client: Client, cns: string[]) {
   return retry(
     async bail => {
       try {
-        return await client.fetch<Cert>('/v3/now/certs', {
+        return await client.fetch<Cert>('/v3/certs', {
           method: 'POST',
           body: { domains: cns },
         });

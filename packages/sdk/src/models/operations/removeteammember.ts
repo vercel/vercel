@@ -5,8 +5,15 @@
 import * as z from "zod";
 
 export type RemoveTeamMemberRequest = {
-  teamId: string;
+  /**
+   * The user ID of the member.
+   */
   uid: string;
+  /**
+   * The ID of the team to set as the new default team for the Northstar user.
+   */
+  newDefaultTeamId?: string | undefined;
+  teamId: string;
 };
 
 /**
@@ -25,14 +32,16 @@ export const RemoveTeamMemberRequest$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  teamId: z.string(),
   uid: z.string(),
+  newDefaultTeamId: z.string().optional(),
+  teamId: z.string(),
 });
 
 /** @internal */
 export type RemoveTeamMemberRequest$Outbound = {
-  teamId: string;
   uid: string;
+  newDefaultTeamId?: string | undefined;
+  teamId: string;
 };
 
 /** @internal */
@@ -41,8 +50,9 @@ export const RemoveTeamMemberRequest$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   RemoveTeamMemberRequest
 > = z.object({
-  teamId: z.string(),
   uid: z.string(),
+  newDefaultTeamId: z.string().optional(),
+  teamId: z.string(),
 });
 
 /**

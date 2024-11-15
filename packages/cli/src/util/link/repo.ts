@@ -23,6 +23,7 @@ import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { isAPIError } from '../errors-ts';
 import { isGitWorktreeOrSubmodule } from '../git-helpers';
+import output from '../../output-manager';
 
 const home = homedir();
 
@@ -85,8 +86,6 @@ export async function ensureRepoLink(
   cwd: string,
   { yes, overwrite }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
-  const { output } = client;
-
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
     output.debug(`Found Git repository root directory: ${repoLink.rootPath}`);
@@ -126,10 +125,7 @@ export async function ensureRepoLink(
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    const remoteUrls = await getRemoteUrls(
-      join(rootPath, '.git/config'),
-      output
-    );
+    const remoteUrls = await getRemoteUrls(join(rootPath, '.git/config'));
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
@@ -358,7 +354,7 @@ export async function findRepoRoot(
   client: Client,
   start: string
 ): Promise<string | undefined> {
-  const { debug } = client.output;
+  const { debug } = output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
   /**
    * If the current repo is a git submodule or git worktree '.git' is a file

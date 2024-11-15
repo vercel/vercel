@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 import type { TmpDir } from './types';
 

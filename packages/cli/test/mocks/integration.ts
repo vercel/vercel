@@ -1,7 +1,9 @@
-import {
+import type {
+  Configuration,
   Integration,
   MetadataSchema,
-} from '../../src/commands/integration/types';
+} from '../../src/util/integration/types';
+import type { Resource } from '../../src/util/integration-resource/types';
 import { client } from './client';
 
 const metadataSchema1: MetadataSchema = {
@@ -142,6 +144,40 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataUnsupported: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Primary Region',
+      default: 'us-east-1',
+      description: 'Primary region where your database will be hosted',
+      'ui:placeholder': 'Choose your region',
+      type: 'string',
+      'ui:options': [
+        {
+          value: 'us-west-1',
+          label: 'West US (North California)',
+        },
+        {
+          value: 'us-east-1',
+          label: 'East US (North Virginia)',
+        },
+      ],
+    },
+    storage: {
+      type: 'number',
+      'ui:control': 'input',
+      'ui:hidden': { expr: "Region == 'us-east-1" },
+      'ui:label': 'Storage',
+      description: 'Disk space in GiB',
+      minimum: 1,
+      maximum: 256,
+    },
+  },
+  required: ['region'],
+};
+
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
@@ -192,6 +228,93 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-unsupported': {
+    id: 'acme',
+    name: 'Acme Integration',
+    slug: 'acme',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataUnsupported,
+      },
+    ],
+  },
+};
+
+const configurations: Record<string, Configuration[]> = {
+  acme: [
+    {
+      id: 'acme-1',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
+  'acme-two-configurations': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-two-configurations',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+    {
+      id: 'acme-second',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-two-configurations',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
+  'acme-two-projects': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-two-projects',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-1', 'acme-2'],
+    },
+  ],
+  'acme-no-projects': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-no-projects',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+  ],
+  'acme-no-results': [],
 };
 
 const integrationPlans: Record<string, unknown> = {
@@ -266,12 +389,120 @@ const integrationPlans: Record<string, unknown> = {
   },
 };
 
+const resources: { stores: Resource[] } = {
+  stores: [
+    {
+      id: 'store_not_marketplace',
+      type: 'postgres',
+      name: 'foobar',
+      status: 'available',
+      product: {},
+    },
+    {
+      id: 'store_1',
+      type: 'integration',
+      name: 'store-acme-connected-project',
+      status: null,
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_1',
+          projectId: 'prj_connected',
+          name: 'connected-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_2',
+      type: 'integration',
+      name: 'store-acme-other-project',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [
+        {
+          id: 'spc_2',
+          projectId: 'prj_otherProject',
+          name: 'other-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_3',
+      type: 'integration',
+      name: 'store-foo-bar-both-projects',
+      status: 'initializing',
+      product: { name: 'Foo Bar', slug: 'foo-bar' },
+      projectsMetadata: [
+        {
+          id: 'spc_3',
+          projectId: 'prj_connected',
+          name: 'connected-project',
+          environments: ['production', 'preview', 'development'],
+        },
+        {
+          id: 'spc_4',
+          projectId: 'prj_otherProject',
+          name: 'other-project',
+          environments: ['production', 'preview', 'development'],
+        },
+      ],
+    },
+    {
+      id: 'store_4',
+      type: 'integration',
+      name: 'store-acme-no-projects',
+      status: 'available',
+      product: { name: 'Acme', slug: 'acme' },
+      projectsMetadata: [],
+    },
+  ],
+};
+
+export function useResources(returnError?: number) {
+  client.scenario.get('/:version/storage/stores', (req, res) => {
+    if (returnError) {
+      res.status(returnError);
+      res.end();
+      return;
+    }
+
+    const { teamId } = req.query;
+
+    if (!teamId) {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    res.json(resources);
+  });
+}
+
+export function useConfiguration() {
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { integrationIdOrSlug } = req.query;
+
+    if (integrationIdOrSlug === 'error') {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    const foundConfigs =
+      configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
+
+    res.json(foundConfigs);
+  });
+}
+
 export function useIntegration({
   withInstallation,
 }: {
   withInstallation: boolean;
 }) {
-  let storeId = 'store_123';
+  const storeId = 'store_123';
 
   client.scenario.get(
     '/:version/integrations/integration/:slug',
@@ -290,7 +521,7 @@ export function useIntegration({
   );
 
   client.scenario.get(
-    `/:version/integrations/integration/:integrationId/installed`,
+    '/:version/integrations/integration/:integrationId/installed',
     (req, res) => {
       const { integrationId } = req.params;
       const { teamId, source } = req.query;

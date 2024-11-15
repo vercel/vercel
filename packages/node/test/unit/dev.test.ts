@@ -68,11 +68,11 @@ async function withDevServer(
         console.log('Shutdown error:', error);
         try {
           child.kill(9);
-        } catch (error) {
+        } catch (killError) {
           // In Node 22, there's a bug where attempting to kill a child process
           // results in an EPERM error. Ignore the error in that case.
           // See: https://github.com/nodejs/node/issues/51766
-          console.log('Ignoring kill error:', error);
+          console.log('Ignoring kill error:', killError);
         }
       }
     });
@@ -117,18 +117,17 @@ async function withDevServer(
         { runningTimeout: 300 }
       ));
 
-    // eslint-disable-next-line jest/no-disabled-tests
-    test.skip('with `waitUntil` from context rejecting a promise ', () =>
+    test('with `waitUntil` from context rejecting a promise ', () =>
       withDevServer(
         './wait-until-ctx-node-rejected.js',
         async (url: string) => {
           const response = await fetch(
             `${url}/api/wait-until-ctx-node-rejected`
           );
-          await setTimeout(100); // wait a bit for waitUntil resolution
+          await setTimeout(50); // wait a bit for waitUntil resolution
           expect(response.status).toBe(200);
         },
-        { runningTimeout: 100 }
+        { runningTimeout: 75 }
       ));
 
     test('exporting GET', () =>

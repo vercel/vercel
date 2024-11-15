@@ -25,6 +25,7 @@ import {
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
+import json5 from 'json5';
 
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
@@ -439,28 +440,47 @@ export async function scanParentDirs(
   };
 }
 
-type TurboJson = {
-  globalPassThroughEnv?: string[];
-};
-
 async function checkTurboSupportsCorepack(
   turboVersionRange: string,
   rootDir: string
 ) {
-  if (turboRangeSupportsCorepack(turboVersionRange)) {
+  if (turboVersionSpecifierSupportsCorepack(turboVersionRange)) {
     return true;
   }
   const turboJsonPath = path.join(rootDir, 'turbo.json');
   const turboJsonExists = await fs.pathExists(turboJsonPath);
-  const turboJson = turboJsonExists
-    ? (JSON.parse(await fs.readFile(turboJsonPath, 'utf8')) as TurboJson)
-    : undefined;
-  return turboJson?.globalPassThroughEnv?.includes('COREPACK_HOME') || false;
+
+  let turboJson: null | unknown = null;
+  if (turboJsonExists) {
+    try {
+      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+    } catch (err) {
+      console.warn(`WARNING: Failed to parse turbo.json`);
+    }
+  }
+
+  const turboJsonIncludesCorepackHome =
+    turboJson !== null &&
+    typeof turboJson === 'object' &&
+    'globalPassThroughEnv' in turboJson &&
+    Array.isArray(turboJson.globalPassThroughEnv) &&
+    turboJson.globalPassThroughEnv.includes('COREPACK_HOME');
+
+  return turboJsonIncludesCorepackHome;
 }
 
-function turboRangeSupportsCorepack(turboVersionRange: string) {
+export function turboVersionSpecifierSupportsCorepack(
+  turboVersionSpecifier: string
+) {
+  if (!validRange(turboVersionSpecifier)) {
+    // Version specifiers can be things that aren't version ranges
+    //   ex: "latest", "catalog:", tarball or git URLs
+    // In these cases we can't easily determine if that version
+    // supports corepack, so we assume it doesn't.
+    return false;
+  }
   const versionSupportingCorepack = '2.1.3';
-  const minTurboBeingUsed = minVersion(turboVersionRange);
+  const minTurboBeingUsed = minVersion(turboVersionSpecifier);
   if (!minTurboBeingUsed) {
     return false;
   }

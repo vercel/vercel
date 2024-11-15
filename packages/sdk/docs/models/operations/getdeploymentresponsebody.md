@@ -18,31 +18,32 @@ const value: operations.GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://hateful-t-shirt.name",
+  inspectorUrl: "https://accomplished-hippodrome.name/",
   isInConcurrentBuildsQueue: false,
+  isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 4299.97,
-  buildingAt: 357.43,
+  bootedAt: 4016.88,
+  buildingAt: 857.95,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "READY",
+  status: "QUEUED",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 5021.06,
+  createdAt: 2781.17,
   name: "<value>",
-  readyState: "READY",
+  readyState: "BUILDING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://staid-eternity.net",
-  version: 5488.46,
+  url: "https://critical-shark.name",
+  version: 5692.87,
   projectId: "<id>",
   plan: "enterprise",
   createdIn: "<value>",
@@ -51,7 +52,7 @@ const value: operations.GetDeploymentResponseBody1 = {
     {
       src: "<value>",
       continue: false,
-      middleware: 213.59,
+      middleware: 3638.45,
     },
   ],
 };
@@ -62,27 +63,27 @@ const value: operations.GetDeploymentResponseBody1 = {
 ```typescript
 const value: operations.GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 1023.17,
-  buildingAt: 2921.77,
+  bootedAt: 7879.16,
+  buildingAt: 5552.94,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "CANCELED",
+  status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 1397.46,
+  createdAt: 9554.66,
   name: "<value>",
-  readyState: "BUILDING",
+  readyState: "INITIALIZING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://grandiose-fax.org/",
-  version: 8451.54,
+  url: "https://inferior-scale.net/",
+  version: 9163.40,
 };
 ```
 

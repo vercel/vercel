@@ -50,6 +50,37 @@ A command like `vercel joke list [humor-level] --random [randomness seed] --kid-
 
 Although the structure is quite verbose, it is the pattern established earlier by other teams and the methodology approved by the Security team.
 
+### What to Track in Clients
+
+We want to track usage of every:
+
+- command
+- subcommand
+- option
+- flag
+
+For arguments to commands, subcommands, and options we track any data that is:
+
+- not sensitive
+- not personally identifiable
+
+Typically that is data is finite and/or represented by constants in code.
+
+So, the following types of data would _not_ be tracked:
+
+- a deployment id
+- a project name
+- a url
+- a git branch name or SHA
+- an environment variable value or name
+- a custom environment's name or "target"
+
+But we would track:
+
+- the fact that a deployment id was passed instead of a URL (where we might pass `"dpl_"` or `"https://"` as values)
+- the fact that a custom environment was passed (as `"CUSTOM"`)
+- know system constants like a target (`"preview"`) or the name of an integration (`"redis"`)
+
 ### Telemetry Event Store
 
 A single instance of a `TelemetryEventStore` is created and stored on the CLI `client` object passed to every command and subcommand. When initializing a new telemetry client pass this object in:
@@ -77,8 +108,8 @@ import joke from '../../../../src/commands/joke';
 
 it('tracks humor level', async () => {
   client.setArgv('joke', 'list', '10'); // build up the simulated command line segments
-  const exitCodePromise = joke(client); // call the command function
-  await expect(exitCodePromise).resolves.toEqual(0); // ensure the command reaches completion with success
+  const exitCode = await joke(client); // call the command function
+  expect(exitCode, 'exit code for "joke"').toEqual(0); // ensure the command reaches completion with success
 
   // ensure the store has the items you expect
   expect(client.telemetryEventStore).toHaveTelemetryEvents([

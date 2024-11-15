@@ -7,7 +7,7 @@ import { CreateConfigurableLogDrainRequestBody } from "@vercel/sdk/models/operat
 
 let value: CreateConfigurableLogDrainRequestBody = {
   deliveryFormat: "json",
-  url: "https://flickering-management.biz",
+  url: "https://pointed-tenement.biz/",
   sources: [
     "firewall",
   ],

@@ -1,5 +1,45 @@
 # @vercel/build-utils
 
+## 8.4.12
+
+### Patch Changes
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
+## 8.4.11
+
+### Patch Changes
+
+- Improve parsing of `turbo.json` ([#12266](https://github.com/vercel/vercel/pull/12266))
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 8.4.10
+
+### Patch Changes
+
+- Parse `turbo.json` as json5 ([#12259](https://github.com/vercel/vercel/pull/12259))
+
+## 8.4.9
+
+### Patch Changes
+
+- Fix special version specifier handling for `turbo` ([#12249](https://github.com/vercel/vercel/pull/12249))
+
+## 8.4.8
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 8.4.7
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
 ## 8.4.6
 
 ### Patch Changes

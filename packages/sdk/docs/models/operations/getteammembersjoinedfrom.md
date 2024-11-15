@@ -8,7 +8,7 @@ Map with information about the members origin if they joined by requesting acces
 import { GetTeamMembersJoinedFrom } from "@vercel/sdk/models/operations/getteammembers.js";
 
 let value: GetTeamMembersJoinedFrom = {
-  origin: "organization-teams",
+  origin: "github",
 };
 ```
 

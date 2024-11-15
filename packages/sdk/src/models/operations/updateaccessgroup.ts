@@ -59,6 +59,45 @@ export type UpdateAccessGroupRequest = {
   requestBody?: UpdateAccessGroupRequestBody | undefined;
 };
 
+export const UpdateAccessGroupEntitlements = {
+  V0: "v0",
+} as const;
+export type UpdateAccessGroupEntitlements = ClosedEnum<
+  typeof UpdateAccessGroupEntitlements
+>;
+
+export type UpdateAccessGroupResponseBody = {
+  entitlements?: Array<UpdateAccessGroupEntitlements> | undefined;
+  /**
+   * The name of this access group.
+   */
+  name: string;
+  /**
+   * Timestamp in milliseconds when the access group was created.
+   */
+  createdAt: string;
+  /**
+   * ID of the team that this access group belongs to.
+   */
+  teamId: string;
+  /**
+   * Timestamp in milliseconds when the access group was last updated.
+   */
+  updatedAt: string;
+  /**
+   * ID of the access group.
+   */
+  accessGroupId: string;
+  /**
+   * Number of members in the access group.
+   */
+  membersCount: number;
+  /**
+   * Number of projects in the access group.
+   */
+  projectsCount: number;
+};
+
 /** @internal */
 export const Role$inboundSchema: z.ZodNativeEnum<typeof Role> = z.nativeEnum(
   Role,
@@ -216,4 +255,83 @@ export namespace UpdateAccessGroupRequest$ {
   export const outboundSchema = UpdateAccessGroupRequest$outboundSchema;
   /** @deprecated use `UpdateAccessGroupRequest$Outbound` instead. */
   export type Outbound = UpdateAccessGroupRequest$Outbound;
+}
+
+/** @internal */
+export const UpdateAccessGroupEntitlements$inboundSchema: z.ZodNativeEnum<
+  typeof UpdateAccessGroupEntitlements
+> = z.nativeEnum(UpdateAccessGroupEntitlements);
+
+/** @internal */
+export const UpdateAccessGroupEntitlements$outboundSchema: z.ZodNativeEnum<
+  typeof UpdateAccessGroupEntitlements
+> = UpdateAccessGroupEntitlements$inboundSchema;
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace UpdateAccessGroupEntitlements$ {
+  /** @deprecated use `UpdateAccessGroupEntitlements$inboundSchema` instead. */
+  export const inboundSchema = UpdateAccessGroupEntitlements$inboundSchema;
+  /** @deprecated use `UpdateAccessGroupEntitlements$outboundSchema` instead. */
+  export const outboundSchema = UpdateAccessGroupEntitlements$outboundSchema;
+}
+
+/** @internal */
+export const UpdateAccessGroupResponseBody$inboundSchema: z.ZodType<
+  UpdateAccessGroupResponseBody,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  entitlements: z.array(UpdateAccessGroupEntitlements$inboundSchema).optional(),
+  name: z.string(),
+  createdAt: z.string(),
+  teamId: z.string(),
+  updatedAt: z.string(),
+  accessGroupId: z.string(),
+  membersCount: z.number(),
+  projectsCount: z.number(),
+});
+
+/** @internal */
+export type UpdateAccessGroupResponseBody$Outbound = {
+  entitlements?: Array<string> | undefined;
+  name: string;
+  createdAt: string;
+  teamId: string;
+  updatedAt: string;
+  accessGroupId: string;
+  membersCount: number;
+  projectsCount: number;
+};
+
+/** @internal */
+export const UpdateAccessGroupResponseBody$outboundSchema: z.ZodType<
+  UpdateAccessGroupResponseBody$Outbound,
+  z.ZodTypeDef,
+  UpdateAccessGroupResponseBody
+> = z.object({
+  entitlements: z.array(UpdateAccessGroupEntitlements$outboundSchema)
+    .optional(),
+  name: z.string(),
+  createdAt: z.string(),
+  teamId: z.string(),
+  updatedAt: z.string(),
+  accessGroupId: z.string(),
+  membersCount: z.number(),
+  projectsCount: z.number(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace UpdateAccessGroupResponseBody$ {
+  /** @deprecated use `UpdateAccessGroupResponseBody$inboundSchema` instead. */
+  export const inboundSchema = UpdateAccessGroupResponseBody$inboundSchema;
+  /** @deprecated use `UpdateAccessGroupResponseBody$outboundSchema` instead. */
+  export const outboundSchema = UpdateAccessGroupResponseBody$outboundSchema;
+  /** @deprecated use `UpdateAccessGroupResponseBody$Outbound` instead. */
+  export type Outbound = UpdateAccessGroupResponseBody$Outbound;
 }

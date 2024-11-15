@@ -43,14 +43,24 @@ const logsFixtures = [
 ];
 
 describe('logs', () => {
-  describe('[url|deploymentId]', () => {
-    describe.todo('--json');
-    describe.todo('--follow');
-    describe.todo('--limit');
-    describe.todo('--since');
-    describe.todo('--until');
-    describe.todo('--output');
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'logs';
 
+      client.setArgv(command, '--help');
+      const exitCodePromise = logs(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
+  describe('[url|deploymentId]', () => {
     let user: ReturnType<typeof useUser>;
     let deployment: Deployment;
     const runtimeEndpointSpy = vi.fn();
@@ -82,7 +92,7 @@ describe('logs', () => {
 
           Options:
 
-          -j,  --json  print each log line as a JSON object (compatible with JQ)        
+          -j,  --json  Print each log line as a JSON object (compatible with JQ)        
 
 
           Global Options:
@@ -214,6 +224,28 @@ describe('logs', () => {
       expect(output).toContain(
         `The "--output" option was ignored because it is now deprecated. Please remove it`
       );
+    });
+
+    it('should track redacted deployment ID/URL positional argument', async () => {
+      useRuntimeLogs({
+        spy: runtimeEndpointSpy,
+        deployment,
+        logProducer: async function* () {
+          for (const log of logsFixtures) {
+            yield log;
+          }
+        },
+      });
+      client.setArgv('logs', deployment.url);
+      const exitCode = await logs(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:urlOrDeploymentId',
+          value: '[REDACTED]',
+        },
+      ]);
     });
 
     it('pretty prints log lines', async () => {
@@ -458,5 +490,209 @@ describe('logs', () => {
         expect(spy).toHaveBeenCalledTimes(2);
       }
     );
+
+    describe('--json', () => {
+      it('should track usage of `--json` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--json');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:json',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    describe('--follow', () => {
+      it('should track usage of `--follow` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--follow');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:follow',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    describe('--limit', () => {
+      it('should track redacted usage of `--limit` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--limit', '10');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:limit',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--since', () => {
+      it('should track redacted usage of `--since` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv(
+          'logs',
+          deployment.url,
+          '--since',
+          '2024-10-25T19:51:14.304Z'
+        );
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:since',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--until', () => {
+      it('should track redacted usage of `--until` flag', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv(
+          'logs',
+          deployment.url,
+          '--until',
+          '2024-10-25T19:51:14.304Z'
+        );
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:until',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--output', () => {
+      it('should track usage of `--output` flag with known value', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--output', 'raw');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:output',
+            value: 'raw',
+          },
+        ]);
+      });
+
+      it('should track redacted usage of `--output` flag with unknown value', async () => {
+        useRuntimeLogs({
+          spy: runtimeEndpointSpy,
+          deployment,
+          logProducer: async function* () {
+            for (const log of logsFixtures) {
+              yield log;
+            }
+          },
+        });
+        client.setArgv('logs', deployment.url, '--output', 'other');
+        const exitCode = await logs(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:output',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
   });
 });

@@ -1,15 +1,40 @@
 import os from 'node:os';
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import './test/mocks/matchers';
-
-import { Output } from '../../src/util/output';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
+import output from '../../src/output-manager';
 
-import './test/mocks/matchers';
+import './test/mocks/matchers/index';
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('main', () => {
   describe('telemetry', () => {
+    beforeAll(() => {
+      output.initialize({
+        debug: true,
+      });
+    });
+
+    afterAll(() => {
+      output.initialize({
+        debug: false,
+      });
+      vi.restoreAllMocks();
+    });
+
     it('tracks number of cpus', () => {
       vi.spyOn(os, 'cpus').mockImplementation(() => [
         {
@@ -24,20 +49,14 @@ describe('main', () => {
           },
         },
       ]);
-      const output = new Output(process.stderr, {
-        debug: true,
-        noColor: false,
-      });
-
       const telemetryEventStore = new TelemetryEventStore({
         isDebug: true,
-        output,
+        config: {},
       });
 
       const telemetry = new RootTelemetryClient({
         opts: {
           store: telemetryEventStore,
-          output,
         },
       });
       telemetry.trackCPUs();
@@ -48,20 +67,15 @@ describe('main', () => {
 
     it('tracks platform', () => {
       vi.spyOn(os, 'platform').mockImplementation(() => 'linux');
-      const output = new Output(process.stderr, {
-        debug: true,
-        noColor: false,
-      });
 
       const telemetryEventStore = new TelemetryEventStore({
         isDebug: true,
-        output,
+        config: {},
       });
 
       const telemetry = new RootTelemetryClient({
         opts: {
           store: telemetryEventStore,
-          output,
         },
       });
       telemetry.trackPlatform();
@@ -72,20 +86,15 @@ describe('main', () => {
 
     it('tracks arch', () => {
       vi.spyOn(os, 'arch').mockImplementation(() => 'x86');
-      const output = new Output(process.stderr, {
-        debug: true,
-        noColor: false,
-      });
 
       const telemetryEventStore = new TelemetryEventStore({
         isDebug: true,
-        output,
+        config: {},
       });
 
       const telemetry = new RootTelemetryClient({
         opts: {
           store: telemetryEventStore,
-          output,
         },
       });
       telemetry.trackArch();
@@ -96,20 +105,14 @@ describe('main', () => {
 
     describe('version', () => {
       it('tracks nothing when version is empty', () => {
-        const output = new Output(process.stderr, {
-          debug: true,
-          noColor: false,
-        });
-
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: true,
-          output,
+          config: {},
         });
 
         const telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
-            output,
           },
         });
 
@@ -118,20 +121,14 @@ describe('main', () => {
       });
 
       it('tracks version', () => {
-        const output = new Output(process.stderr, {
-          debug: true,
-          noColor: false,
-        });
-
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: true,
-          output,
+          config: {},
         });
 
         const telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
-            output,
           },
         });
 
@@ -149,18 +146,71 @@ describe('main', () => {
         };
 
         vi.stubEnv('VERCEL_TELEMETRY_DISABLED', '1');
-        const output = new Output(process.stderr, {
-          debug: true,
-          noColor: false,
-        });
 
         const telemetryEventStore = new TelemetryEventStore({
           isDebug: true,
-          output,
           config: configThatWillBeIgnoredAnyway,
         });
 
         expect(telemetryEventStore.enabled).toBe(false);
+      });
+    });
+
+    describe('save', () => {
+      describe('when VERCEL_TELEMETRY_DEBUG is disabled', () => {
+        describe('when output debug is disabled', () => {
+          beforeEach(() => {
+            output.initialize({
+              debug: false,
+            });
+            vi.stubEnv('VERCEL_TELEMETRY_DISABLED', undefined);
+          });
+          afterEach(() => {
+            output.initialize({
+              debug: true,
+            });
+          });
+          it('sends the event to the subprocess with the expected payload', async () => {
+            const telemetryEventStore = new TelemetryEventStore({
+              isDebug: false,
+              config: {},
+            });
+            const spy = vi
+              .spyOn(telemetryEventStore, 'sendToSubprocess')
+              .mockImplementation(async () => {
+                // Prevent the actual call to the subprocess from happening
+              });
+
+            const telemetry = new RootTelemetryClient({
+              opts: {
+                store: telemetryEventStore,
+              },
+            });
+            telemetry.trackPlatform();
+            telemetry.trackArch();
+
+            await telemetryEventStore.save();
+
+            expect(spy).toHaveBeenCalledWith(
+              expect.objectContaining({
+                headers: expect.objectContaining({
+                  'x-vercel-cli-topic-id': 'generic',
+                  'x-vercel-cli-session-id': expect.any(String),
+                }),
+                body: expect.arrayContaining([
+                  expect.objectContaining({
+                    event_time: expect.any(Number),
+                    id: expect.any(String),
+                    key: expect.any(String),
+                    value: expect.any(String),
+                    team_id: expect.any(String),
+                  }),
+                ]),
+              }),
+              expect.any(Boolean)
+            );
+          });
+        });
       });
     });
 
@@ -170,14 +220,9 @@ describe('main', () => {
       beforeEach(() => {
         // stubbing so that when we run this in Github Actions these tests can work
         vi.stubEnv('GITHUB_ACTIONS', '');
-        const output = new Output(process.stderr, {
-          debug: true,
-          noColor: false,
-        });
 
         telemetryEventStore = new TelemetryEventStore({
           isDebug: true,
-          output,
           config: {
             enabled: true,
           },
@@ -186,7 +231,6 @@ describe('main', () => {
         telemetry = new RootTelemetryClient({
           opts: {
             store: telemetryEventStore,
-            output,
           },
         });
       });

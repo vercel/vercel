@@ -7,13 +7,13 @@ import { CreateConfigurableLogDrainResponseBody } from "@vercel/sdk/models/opera
 
 let value: CreateConfigurableLogDrainResponseBody = {
   id: "<id>",
-  deliveryFormat: "syslog",
-  url: "https://lucky-adult.name",
+  deliveryFormat: "ndjson",
+  url: "https://pessimistic-euphonium.name/",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 9890.88,
-  deletedAt: 8181.01,
-  updatedAt: 3406.05,
+  createdAt: 1696.78,
+  deletedAt: 1594.69,
+  updatedAt: 4170.30,
   environments: [
     "production",
   ],
@@ -46,5 +46,5 @@ let value: CreateConfigurableLogDrainResponseBody = {
 | `disabledBy`                                                                                                                                 | *string*                                                                                                                                     | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |
 | `firstErrorTimestamp`                                                                                                                        | *number*                                                                                                                                     | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |
 | `samplingRate`                                                                                                                               | *number*                                                                                                                                     | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |
-| `compression`                                                                                                                                | [operations.CreateConfigurableLogDrainCompression](../../models/operations/createconfigurablelogdraincompression.md)                         | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |
+| `hideIpAddresses`                                                                                                                            | *boolean*                                                                                                                                    | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |
 | `createdFrom`                                                                                                                                | [operations.CreateConfigurableLogDrainCreatedFrom](../../models/operations/createconfigurablelogdraincreatedfrom.md)                         | :heavy_minus_sign:                                                                                                                           | N/A                                                                                                                                          |

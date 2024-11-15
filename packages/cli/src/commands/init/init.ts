@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
@@ -8,10 +8,12 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 type Options = {
   '--debug': boolean;
@@ -30,23 +32,23 @@ const EXAMPLE_API = 'https://now-example-files.zeit.sh';
 export default async function init(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: InitTelemetryClient
 ) {
-  const { output } = client;
   const [name, dir] = args;
   const force = opts['--force'];
 
   const examples = await fetchExampleList(client);
 
   if (!examples) {
-    throw new Error(`Could not fetch example list.`);
+    throw new Error('Could not fetch example list.');
   }
 
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
     if (client.stdin.isTTY !== true) {
-      client.output.print(`No framework provided`);
+      output.print('No framework provided');
       return 0;
     }
     const chosen = await chooseFromDropdown(
@@ -64,13 +66,17 @@ export default async function init(
   }
 
   if (exampleList.includes(name)) {
+    telemetry.trackCliArgumentExample(name, true);
     return extractExample(client, name, dir, force);
   }
 
   const oldExample = examples.find(x => !x.visible && x.name === name);
   if (oldExample) {
+    telemetry.trackCliArgumentExample(name, true);
     return extractExample(client, name, dir, force, 'v1');
   }
+
+  telemetry.trackCliArgumentExample(name, false);
 
   const found = await guess(client, exampleList, name);
 
@@ -86,11 +92,11 @@ export default async function init(
  * Fetch example list json
  */
 async function fetchExampleList(client: Client) {
-  client.output.spinner('Fetching examples');
+  output.spinner('Fetching examples');
   const url = `${EXAMPLE_API}/v2/list.json`;
 
   const body = await client.fetch<Example[]>(url);
-  client.output.stopSpinner();
+  output.stopSpinner();
   return body;
 }
 
@@ -122,9 +128,8 @@ async function extractExample(
   name: string,
   dir: string,
   force?: boolean,
-  ver: string = 'v2'
+  ver = 'v2'
 ) {
-  const { output } = client;
   const folder = prepareFolder(client.cwd, dir || name, force);
   output.spinner(`Fetching ${name}`);
 
@@ -208,7 +213,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
-      `init`
+      'init'
     )} to see the list of available examples.`
   );
 

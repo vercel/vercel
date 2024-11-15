@@ -3,6 +3,7 @@ import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const devCommand = {
   name: 'dev',
+  aliases: ['develop'],
   description: `Starts the \`${packageName} dev\` server.`,
   arguments: [
     {
@@ -14,14 +15,14 @@ export const devCommand = {
     {
       name: 'listen',
       description: 'Specify a URI endpoint on which to listen [0.0.0.0:3000]',
-      argument: 'uri',
+      argument: 'URI',
       shorthand: 'l',
       type: String,
       deprecated: false,
     },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

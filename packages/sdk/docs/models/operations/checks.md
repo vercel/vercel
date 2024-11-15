@@ -6,13 +6,13 @@
 import { Checks } from "@vercel/sdk/models/operations/getallchecks.js";
 
 let value: Checks = {
-  createdAt: 5759.46,
+  createdAt: 2961.40,
   id: "<id>",
   integrationId: "<id>",
   name: "<value>",
   rerequestable: false,
-  status: "completed",
-  updatedAt: 3185.69,
+  status: "registered",
+  updatedAt: 3179.83,
 };
 ```
 

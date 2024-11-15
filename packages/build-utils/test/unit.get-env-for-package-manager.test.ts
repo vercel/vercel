@@ -1,17 +1,26 @@
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  MockInstance,
+} from 'vitest';
 import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
-  let consoleLogSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
+  let consoleLogSpy: MockInstance<typeof console.log>;
+  let consoleWarnSpy: MockInstance<typeof console.warn>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log');
-    consoleWarnSpy = jest.spyOn(console, 'warn');
+    consoleLogSpy = vi.spyOn(console, 'log');
+    consoleWarnSpy = vi.spyOn(console, 'warn');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('with "npm"', () => {

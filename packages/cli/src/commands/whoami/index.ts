@@ -3,16 +3,22 @@ import { whoamiCommand } from './command';
 
 import getScope from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
+import output from '../../output-manager';
+import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 
 export default async function whoami(client: Client): Promise<number> {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(whoamiCommand.options);
+
+  const telemetry = new WhoamiTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   // Parse CLI args
   try {
@@ -23,6 +29,7 @@ export default async function whoami(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('whoami');
     output.print(help(whoamiCommand, { columns: client.stderr.columns }));
     return 2;
   }

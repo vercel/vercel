@@ -11,5 +11,5 @@ let value: AuthTokenScopesOrigin = "bitbucket";
 ## Values
 
 ```typescript
-"saml" | "github" | "gitlab" | "bitbucket" | "email" | "manual" | "passkey"
+"saml" | "github" | "gitlab" | "bitbucket" | "email" | "manual" | "passkey" | "otp" | "sms"
 ```

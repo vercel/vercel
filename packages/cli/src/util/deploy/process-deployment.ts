@@ -11,13 +11,11 @@ import type { Agent } from 'http';
 import Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs } from '../logs';
-import { Output } from '../output';
 import { progress } from '../output/progress';
-import { linkFolderToProject } from '../projects/link';
 import ua from '../ua';
+import output from '../../output-manager';
 
 function printInspectUrl(
-  output: Output,
   inspectorUrl: string | null | undefined,
   deployStamp: () => string
 ) {
@@ -35,7 +33,6 @@ function printInspectUrl(
 
 export default async function processDeployment({
   org,
-  cwd,
   projectName,
   isSettingUpProject,
   archive,
@@ -60,7 +57,6 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
   withLogs?: boolean;
@@ -80,7 +76,7 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
-  const { output } = client;
+
   const { env = {} } = requestBody;
   const token = now._token;
   if (!token) {
@@ -91,7 +87,7 @@ export default async function processDeployment({
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token,
-    debug: client.output.isDebugEnabled(),
+    debug: output.isDebugEnabled(),
     userAgent: ua,
     path,
     force,
@@ -181,22 +177,11 @@ export default async function processDeployment({
       if (event.type === 'created') {
         const deployment: Deployment = event.payload;
 
-        await linkFolderToProject(
-          client,
-          cwd,
-          {
-            orgId: org.id,
-            projectId: deployment.projectId!,
-          },
-          projectName,
-          org.slug
-        );
-
         now.url = deployment.url;
 
         stopSpinner();
 
-        printInspectUrl(output, deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl, deployStamp);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
@@ -210,7 +195,7 @@ export default async function processDeployment({
           ) + `\n`
         );
 
-        if (quiet) {
+        if (quiet || process.env.FORCE_TTY === '1') {
           process.stdout.write(`https://${event.payload.url}`);
         }
 

@@ -19,14 +19,19 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings, {
-  PartialProjectSettings,
+import {
+  editProjectSettings,
+  type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
 import createDeploy from '../deploy/create-deploy';
 import Now, { CreateOptions } from '../index';
 import { isAPIError } from '../errors-ts';
+import output from '../../output-manager';
+import { getPrettyError } from '@vercel/build-utils';
+import { SchemaValidationFailed } from '../errors';
+import { fileNameSymbol } from '@vercel/client';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -49,7 +54,7 @@ export default async function setupAndLink(
     projectName,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const { localConfig, output, config } = client;
+  const { localConfig, config } = client;
 
   const isFile = !isDirectory(path);
   if (isFile) {
@@ -151,10 +156,7 @@ export default async function setupAndLink(
       ? join(path, rootDirectory)
       : path;
 
-  if (
-    rootDirectory &&
-    !(await validateRootDirectory(output, path, sourcePath, ''))
-  ) {
+  if (rootDirectory && !(await validateRootDirectory(path, sourcePath, ''))) {
     return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
   }
 
@@ -263,6 +265,14 @@ export default async function setupAndLink(
 
     return { status: 'linked', org, project };
   } catch (err) {
+    if (err instanceof SchemaValidationFailed) {
+      const niceError = getPrettyError(err.meta);
+      const fileName = localConfig?.[fileNameSymbol] || 'vercel.json';
+      niceError.message = `Invalid ${fileName} - ${niceError.message}`;
+      output.prettyError(niceError);
+      return { status: 'error', exitCode: 1 };
+    }
+
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };

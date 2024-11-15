@@ -11,7 +11,7 @@ export default async function getCerts(
   next?: number,
   limit = 20
 ) {
-  let certsUrl = `/v4/now/certs?limit=${limit}`;
+  let certsUrl = `/v4/certs?limit=${limit}`;
 
   if (next) {
     certsUrl += `&until=${next}`;

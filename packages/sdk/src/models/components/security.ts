@@ -5,7 +5,7 @@
 import * as z from "zod";
 
 export type Security = {
-  bearerToken?: string | undefined;
+  bearerToken: string;
 };
 
 /** @internal */
@@ -14,12 +14,12 @@ export const Security$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  bearerToken: z.string().optional(),
+  bearerToken: z.string(),
 });
 
 /** @internal */
 export type Security$Outbound = {
-  bearerToken?: string | undefined;
+  bearerToken: string;
 };
 
 /** @internal */
@@ -28,7 +28,7 @@ export const Security$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   Security
 > = z.object({
-  bearerToken: z.string().optional(),
+  bearerToken: z.string(),
 });
 
 /**

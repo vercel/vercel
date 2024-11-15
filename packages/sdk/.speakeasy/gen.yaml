@@ -14,8 +14,9 @@ generation:
     requestResponseComponentNamesFeb2024: true
   auth:
     oAuth2ClientCredentialsEnabled: false
+    oAuth2PasswordEnabled: false
 typescript:
-  version: 14.0.0-canary.3
+  version: 14.0.0-canary.6
   additionalDependencies:
     dependencies: {}
     devDependencies: {}
@@ -28,8 +29,10 @@ typescript:
     - install
     - --filter
     - '@vercel/sdk'
+  defaultErrorName: SDKError
   enumFormat: union
   flattenGlobalSecurity: true
+  flatteningOrder: body-first
   imports:
     option: openapi
     paths:
@@ -41,7 +44,7 @@ typescript:
   inputModelSuffix: input
   maxMethodParams: 0
   methodArguments: require-security-and-request
-  moduleFormat: dual
+  moduleFormat: esm
   outputModelSuffix: output
   packageName: '@vercel/sdk'
   responseFormat: flat

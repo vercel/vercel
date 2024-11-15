@@ -5,7 +5,7 @@
 ```typescript
 import { Plan } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: Plan = "hobby";
+let value: Plan = "pro";
 ```
 
 ## Values

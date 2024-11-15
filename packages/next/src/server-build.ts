@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -54,6 +54,7 @@ import {
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   RenderingMode,
   getPostponeResumeOutput,
+  Redirect,
 } from './utils';
 import {
   nodeFileTrace,
@@ -64,6 +65,7 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import { convertRedirects } from '@vercel/routing-utils/dist/superstatic';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -118,7 +120,6 @@ export async function serverBuild({
   dynamicPrefix,
   entryDirectory,
   outputDirectory,
-  redirects,
   beforeFilesRewrites,
   afterFilesRewrites,
   fallbackRewrites,
@@ -139,7 +140,6 @@ export async function serverBuild({
   prerenderManifest,
   appPathRoutesManifest,
   omittedPrerenderRoutes,
-  trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
   requiredServerFilesManifest,
   variantsManifest,
@@ -173,12 +173,10 @@ export async function serverBuild({
   beforeFilesRewrites: Route[];
   afterFilesRewrites: Route[];
   fallbackRewrites: Route[];
-  redirects: Route[];
   dataRoutes: Route[];
   nextVersion: string;
   hasIsr404Page: boolean;
   hasIsr500Page: boolean;
-  trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
@@ -1078,6 +1076,7 @@ export async function serverBuild({
         for (const manifest of [
           'routes-manifest.json',
           'server/pages-manifest.json',
+          ...(appPathRoutesManifest ? ['server/app-paths-manifest.json'] : []),
         ] as const) {
           const fsPath = path.join(entryPath, outputDirectory, manifest);
 
@@ -1107,6 +1106,21 @@ export async function serverBuild({
             case 'server/pages-manifest.json': {
               for (const key of Object.keys(manifestData)) {
                 if (isDynamicRoute(key) && !normalizedPages.has(key)) {
+                  delete manifestData[key];
+                }
+              }
+              break;
+            }
+            case 'server/app-paths-manifest.json': {
+              for (const key of Object.keys(manifestData)) {
+                const normalizedKey =
+                  appPathRoutesManifest?.[key] ||
+                  key.replace(/(^|\/)(page|route)$/, '');
+
+                if (
+                  isDynamicRoute(normalizedKey) &&
+                  !normalizedPages.has(normalizedKey)
+                ) {
                   delete manifestData[key];
                 }
               }
@@ -1244,50 +1258,54 @@ export async function serverBuild({
           // perform the initial static shell render.
           lambdas[outputName] = lambda;
 
-          // If this isn't an omitted page, then we should add the link from the
-          // page to the postpone resume lambda.
-          if (!omittedPrerenderRoutes.has(pagePathname)) {
-            const output = getPostponeResumeOutput(entryDirectory, pageName);
-            lambdas[output] = lambda;
+          // If we're using the new chain feature, then we don't need to create
+          // any resume paths as the pathname is the same as the output name.
+          if (typeof routesManifest?.ppr?.chain?.headers === 'undefined') {
+            // If this isn't an omitted page, then we should add the link from the
+            // page to the postpone resume lambda.
+            if (!omittedPrerenderRoutes.has(pagePathname)) {
+              const output = getPostponeResumeOutput(entryDirectory, pageName);
+              lambdas[output] = lambda;
 
-            // We want to add the `experimentalStreamingLambdaPath` to this
-            // output.
-            experimentalStreamingLambdaPaths.set(outputName, {
-              pathname: getPostponeResumePathname(pageName),
-              output,
-            });
+              // We want to add the `experimentalStreamingLambdaPath` to this
+              // output.
+              experimentalStreamingLambdaPaths.set(outputName, {
+                pathname: getPostponeResumePathname(pageName),
+                output,
+              });
+            }
+
+            // For each static route that was generated, we should generate a
+            // specific partial prerendering resume route. This is because any
+            // static route that is matched will not hit the rewrite rules.
+            for (const [
+              routePathname,
+              { srcRoute, renderingMode },
+            ] of Object.entries(prerenderManifest.staticRoutes)) {
+              // If the srcRoute doesn't match or this doesn't support
+              // experimental partial prerendering, then we can skip this route.
+              if (
+                srcRoute !== pagePathname ||
+                renderingMode !== RenderingMode.PARTIALLY_STATIC
+              )
+                continue;
+
+              // If this route is the same as the page route, then we can skip
+              // it, because we've already added the lambda to the output.
+              if (routePathname === pagePathname) continue;
+
+              const output = getPostponeResumePathname(routePathname);
+              lambdas[output] = lambda;
+
+              outputName = path.posix.join(entryDirectory, routePathname);
+              experimentalStreamingLambdaPaths.set(outputName, {
+                pathname: getPostponeResumePathname(routePathname),
+                output,
+              });
+            }
+
+            continue;
           }
-
-          // For each static route that was generated, we should generate a
-          // specific partial prerendering resume route. This is because any
-          // static route that is matched will not hit the rewrite rules.
-          for (const [
-            routePathname,
-            { srcRoute, renderingMode },
-          ] of Object.entries(prerenderManifest.staticRoutes)) {
-            // If the srcRoute doesn't match or this doesn't support
-            // experimental partial prerendering, then we can skip this route.
-            if (
-              srcRoute !== pagePathname ||
-              renderingMode !== RenderingMode.PARTIALLY_STATIC
-            )
-              continue;
-
-            // If this route is the same as the page route, then we can skip
-            // it, because we've already added the lambda to the output.
-            if (routePathname === pagePathname) continue;
-
-            const output = getPostponeResumePathname(routePathname);
-            lambdas[output] = lambda;
-
-            outputName = path.posix.join(entryDirectory, routePathname);
-            experimentalStreamingLambdaPaths.set(outputName, {
-              pathname: getPostponeResumePathname(routePathname),
-              output,
-            });
-          }
-
-          continue;
         }
 
         if (!group.isAppRouter && !group.isAppRouteHandler) {
@@ -1675,6 +1693,27 @@ export async function serverBuild({
     }
   }
 
+  const internalRedirects: Redirect[] = [];
+  const userRedirects: Redirect[] = [];
+
+  for (const redirect of routesManifest.redirects || []) {
+    if ((redirect as any).internal) {
+      internalRedirects.push(redirect);
+    } else {
+      userRedirects.push(redirect);
+    }
+  }
+  const internalRedirectRoutes = convertRedirects(internalRedirects).map(
+    item => {
+      // we set continue here to prevent the redirect from
+      // moving underneath i18n routes
+      (item as RouteWithSrc).continue = true;
+
+      return item;
+    }
+  );
+  const userRedirectRoutes = convertRedirects(userRedirects);
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -1710,7 +1749,7 @@ export async function serverBuild({
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
-      ...trailingSlashRedirects,
+      ...internalRedirectRoutes,
 
       ...privateOutputs.routes,
 
@@ -1854,7 +1893,7 @@ export async function serverBuild({
 
       ...headers,
 
-      ...redirects,
+      ...userRedirectRoutes,
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
@@ -2347,7 +2386,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,
@@ -2392,7 +2438,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,

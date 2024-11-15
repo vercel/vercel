@@ -3,22 +3,19 @@
 
 ## Overview
 
-Deployments
-
 ### Available Operations
 
-* [getEvents](#getevents) - Get deployment events
-* [get](#get) - Get a deployment by ID or URL
-* [create](#create) - Create a new deployment
-* [cancel](#cancel) - Cancel a deployment
+* [getDeploymentEvents](#getdeploymentevents) - Get deployment events
+* [getDeployment](#getdeployment) - Get a deployment by ID or URL
+* [createDeployment](#createdeployment) - Create a new deployment
+* [cancelDeployment](#canceldeployment) - Cancel a deployment
 * [uploadFile](#uploadfile) - Upload Deployment Files
-* [listAliases](#listaliases) - List Deployment Aliases
-* [listFiles](#listfiles) - List Deployment Files
-* [getFileContents](#getfilecontents) - Get Deployment File Contents
-* [list](#list) - List deployments
-* [delete](#delete) - Delete a Deployment
+* [listDeploymentFiles](#listdeploymentfiles) - List Deployment Files
+* [getDeploymentFileContents](#getdeploymentfilecontents) - Get Deployment File Contents
+* [getDeployments](#getdeployments) - List deployments
+* [deleteDeployment](#deletedeployment) - Delete a Deployment
 
-## getEvents
+## getDeploymentEvents
 
 Get the build logs of a deployment by deployment ID and build ID. It can work as an infinite stream of logs or as a JSON endpoint depending on the input parameters.
 
@@ -32,7 +29,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.getEvents({
+  await vercel.deployments.getDeploymentEvents({
     idOrUrl: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
     direction: "backward",
     follow: 1,
@@ -45,8 +42,7 @@ async function run() {
     builds: 1,
   });
 
-  // Handle the result
-  console.log(result);
+
 }
 
 run();
@@ -58,7 +54,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsGetEvents } from "@vercel/sdk/funcs/deploymentsGetEvents.js";
+import { deploymentsGetDeploymentEvents } from "@vercel/sdk/funcs/deploymentsGetDeploymentEvents.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -67,7 +63,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsGetEvents(vercel, {
+  const res = await deploymentsGetDeploymentEvents(vercel, {
     idOrUrl: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
     direction: "backward",
     follow: 1,
@@ -86,8 +82,7 @@ async function run() {
 
   const { value: result } = res;
 
-  // Handle the result
-  console.log(result);
+  
 }
 
 run();
@@ -104,16 +99,15 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetDeploymentEventsResponse](../../models/operations/getdeploymenteventsresponse.md)\>**
+**Promise\<void\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getDeployment
 
 Retrieves information for a deployment either by supplying its ID (`id` property) or Hostname (`url` property). Additional details will be included when the authenticated user or team is an owner of the deployment.
 
@@ -127,7 +121,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.get({
+  const result = await vercel.deployments.getDeployment({
     idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
     withGitRepoInfo: "true",
   });
@@ -145,7 +139,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsGet } from "@vercel/sdk/funcs/deploymentsGet.js";
+import { deploymentsGetDeployment } from "@vercel/sdk/funcs/deploymentsGetDeployment.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -154,7 +148,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsGet(vercel, {
+  const res = await deploymentsGetDeployment(vercel, {
     idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
     withGitRepoInfo: "true",
   });
@@ -187,12 +181,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## create
+## createDeployment
 
 Create a new deployment with all the required and intended data. If the deployment is not a git deployment, all files must be provided with the request, either referenced or inlined. Additionally, a deployment id can be specified to redeploy a previous deployment.
 
@@ -206,11 +199,10 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.create({
+  const result = await vercel.deployments.createDeployment({
     requestBody: {
       files: [
         {
-          data: "<value>",
           file: "folder/file.js",
         },
       ],
@@ -243,7 +235,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsCreate } from "@vercel/sdk/funcs/deploymentsCreate.js";
+import { deploymentsCreateDeployment } from "@vercel/sdk/funcs/deploymentsCreateDeployment.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -252,11 +244,10 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsCreate(vercel, {
+  const res = await deploymentsCreateDeployment(vercel, {
     requestBody: {
       files: [
         {
-          data: "<value>",
           file: "folder/file.js",
         },
       ],
@@ -304,12 +295,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## cancel
+## cancelDeployment
 
 This endpoint allows you to cancel a deployment which is currently building, by supplying its `id` in the URL.
 
@@ -323,7 +313,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.cancel({
+  const result = await vercel.deployments.cancelDeployment({
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
   });
 
@@ -340,7 +330,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsCancel } from "@vercel/sdk/funcs/deploymentsCancel.js";
+import { deploymentsCancelDeployment } from "@vercel/sdk/funcs/deploymentsCancelDeployment.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -349,7 +339,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsCancel(vercel, {
+  const res = await deploymentsCancelDeployment(vercel, {
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
   });
 
@@ -381,10 +371,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## uploadFile
 
@@ -454,89 +443,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## listAliases
-
-Retrieves all Aliases for the Deployment with the given ID. The authenticated user or team must own the deployment.
-
-### Example Usage
-
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const result = await vercel.deployments.listAliases({
-    id: "dpl_FjvFJncQHQcZMznrUm9EoB8sFuPa",
-  });
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Standalone function
-
-The standalone function version of this method:
-
-```typescript
-import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsListAliases } from "@vercel/sdk/funcs/deploymentsListAliases.js";
-
-// Use `VercelCore` for best tree-shaking performance.
-// You can create one instance of it to use across an application.
-const vercel = new VercelCore({
-  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
-});
-
-async function run() {
-  const res = await deploymentsListAliases(vercel, {
-    id: "dpl_FjvFJncQHQcZMznrUm9EoB8sFuPa",
-  });
-
-  if (!res.ok) {
-    throw res.error;
-  }
-
-  const { value: result } = res;
-
-  // Handle the result
-  console.log(result);
-}
-
-run();
-```
-
-### Parameters
-
-| Parameter                                                                                                                                                                      | Type                                                                                                                                                                           | Required                                                                                                                                                                       | Description                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `request`                                                                                                                                                                      | [operations.ListDeploymentAliasesRequest](../../models/operations/listdeploymentaliasesrequest.md)                                                                             | :heavy_check_mark:                                                                                                                                                             | The request object to use for the request.                                                                                                                                     |
-| `options`                                                                                                                                                                      | RequestOptions                                                                                                                                                                 | :heavy_minus_sign:                                                                                                                                                             | Used to set various options for making HTTP requests.                                                                                                                          |
-| `options.fetchOptions`                                                                                                                                                         | [RequestInit](https://developer.mozilla.org/en-US/docs/Web/API/Request/Request#options)                                                                                        | :heavy_minus_sign:                                                                                                                                                             | Options that are passed to the underlying HTTP request. This can be used to inject extra headers for examples. All `Request` options, except `method` and `body`, are allowed. |
-| `options.retries`                                                                                                                                                              | [RetryConfig](../../lib/utils/retryconfig.md)                                                                                                                                  | :heavy_minus_sign:                                                                                                                                                             | Enables retrying HTTP requests under certain failure conditions.                                                                                                               |
-
-### Response
-
-**Promise\<[operations.ListDeploymentAliasesResponseBody](../../models/operations/listdeploymentaliasesresponsebody.md)\>**
-
-### Errors
-
-| Error Object    | Status Code     | Content Type    |
-| --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
-
-## listFiles
+## listDeploymentFiles
 
 Allows to retrieve the file structure of a deployment by supplying the deployment unique identifier.
 
@@ -550,7 +461,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.listFiles({
+  const result = await vercel.deployments.listDeploymentFiles({
     id: "<id>",
   });
 
@@ -567,7 +478,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsListFiles } from "@vercel/sdk/funcs/deploymentsListFiles.js";
+import { deploymentsListDeploymentFiles } from "@vercel/sdk/funcs/deploymentsListDeploymentFiles.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -576,7 +487,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsListFiles(vercel, {
+  const res = await deploymentsListDeploymentFiles(vercel, {
     id: "<id>",
   });
 
@@ -608,12 +519,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getFileContents
+## getDeploymentFileContents
 
 Allows to retrieve the content of a file by supplying the file identifier and the deployment unique identifier. The response body will contain a JSON response containing the contents of the file encoded as base64.
 
@@ -627,7 +537,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.deployments.getFileContents({
+  await vercel.deployments.getDeploymentFileContents({
     id: "<id>",
     fileId: "<value>",
   });
@@ -644,7 +554,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsGetFileContents } from "@vercel/sdk/funcs/deploymentsGetFileContents.js";
+import { deploymentsGetDeploymentFileContents } from "@vercel/sdk/funcs/deploymentsGetDeploymentFileContents.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -653,7 +563,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsGetFileContents(vercel, {
+  const res = await deploymentsGetDeploymentFileContents(vercel, {
     id: "<id>",
     fileId: "<value>",
   });
@@ -685,12 +595,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## getDeployments
 
 List deployments under the authenticated user or team. If a deployment hasn't finished uploading (is incomplete), the `url` property will have a value of `null`.
 
@@ -704,7 +613,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.list({
+  const result = await vercel.deployments.getDeployments({
     app: "docs",
     from: 1612948664566,
     limit: 10,
@@ -717,10 +626,8 @@ async function run() {
     state: "BUILDING,READY",
   });
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -732,7 +639,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsList } from "@vercel/sdk/funcs/deploymentsList.js";
+import { deploymentsGetDeployments } from "@vercel/sdk/funcs/deploymentsGetDeployments.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -741,7 +648,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsList(vercel, {
+  const res = await deploymentsGetDeployments(vercel, {
     app: "docs",
     from: 1612948664566,
     limit: 10,
@@ -760,10 +667,8 @@ async function run() {
 
   const { value: result } = res;
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -780,16 +685,15 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetDeploymentsResponse](../../models/operations/getdeploymentsresponse.md)\>**
+**Promise\<[operations.GetDeploymentsResponseBody](../../models/operations/getdeploymentsresponsebody.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteDeployment
 
 This API allows you to delete a deployment, either by supplying its `id` in the URL or the `url` of the deployment as a query parameter. You can obtain the ID, for example, by listing all deployments.
 
@@ -803,7 +707,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.delete({
+  const result = await vercel.deployments.deleteDeployment({
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
     url: "https://files-orcin-xi.vercel.app/",
   });
@@ -821,7 +725,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsDelete } from "@vercel/sdk/funcs/deploymentsDelete.js";
+import { deploymentsDeleteDeployment } from "@vercel/sdk/funcs/deploymentsDeleteDeployment.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -830,7 +734,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsDelete(vercel, {
+  const res = await deploymentsDeleteDeployment(vercel, {
     id: "dpl_5WJWYSyB7BpgTj3EuwF37WMRBXBtPQ2iTMJHJBJyRfd",
     url: "https://files-orcin-xi.vercel.app/",
   });
@@ -863,6 +767,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

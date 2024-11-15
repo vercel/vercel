@@ -1,5 +1,17 @@
 # @vercel/functions
 
+## 1.5.0
+
+### Minor Changes
+
+- ipAddress: accept headers as input ([#12429](https://github.com/vercel/vercel/pull/12429))
+
+## 1.4.2
+
+### Patch Changes
+
+- [functions] decode city name ([#12234](https://github.com/vercel/vercel/pull/12234))
+
 ## 1.4.1
 
 ### Patch Changes

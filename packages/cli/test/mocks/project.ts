@@ -119,8 +119,13 @@ const latestProductionDeployment: Deployment = {
   private: true,
   readyState: 'READY',
   target: 'production',
-  type: undefined,
+  type: 'LAMBDAS',
   url: 'a-project-name-rjtr4pz3f.vercel.app',
+  name: 'a-project-name',
+  regions: ['sfo1'],
+  public: false,
+  status: 'READY',
+  version: 2,
 };
 export const defaultProject: Project = {
   id: 'foo',
@@ -358,7 +363,7 @@ export function useProject(
   client.scenario.get(`/v9/projects`, (req, res) => {
     res.json({
       projects: [project],
-      pagination: null,
+      pagination: {},
     });
   });
   client.scenario.post(`/v1/projects`, (req, res) => {
