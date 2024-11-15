@@ -17,8 +17,8 @@ let value: UpdateFirewallConfigRequestBody3 = {
       {
         conditions: [
           {
-            type: "cookie",
-            op: "inc",
+            type: "host",
+            op: "pre",
           },
         ],
       },

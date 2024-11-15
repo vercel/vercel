@@ -4,7 +4,7 @@ import {
   writeToAuthConfigFile,
 } from '../../util/config/files';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString } from '@vercel/error-utils';
@@ -52,7 +52,7 @@ export default async function main(client: Client): Promise<number> {
   let exitCode = 0;
 
   try {
-    await client.fetch(`/v3/user/tokens/current`, {
+    await client.fetch('/v3/user/tokens/current', {
       method: 'DELETE',
       useCurrentTeam: false,
     });
@@ -89,7 +89,7 @@ export default async function main(client: Client): Promise<number> {
   if (exitCode === 0) {
     output.log('Logged out!');
   } else {
-    output.error(`Failed during logout`);
+    output.error('Failed during logout');
   }
 
   return exitCode;

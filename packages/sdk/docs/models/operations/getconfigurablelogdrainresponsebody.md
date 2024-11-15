@@ -8,14 +8,14 @@ import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operatio
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",
   deliveryFormat: "syslog",
-  url: "https://friendly-deduction.com",
+  url: "https://dazzling-marketplace.info",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 9642.10,
-  deletedAt: 7808.85,
-  updatedAt: 1663.25,
+  createdAt: 1514.86,
+  deletedAt: 1620.73,
+  updatedAt: 9634.70,
   environments: [
-    "preview",
+    "production",
   ],
   secret: "<value>",
 };

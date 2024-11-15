@@ -10,9 +10,9 @@ import { RequestBody8 } from "@vercel/sdk/models/operations/updatefirewallconfig
 let value: RequestBody8 = {
   action: "ip.insert",
   value: {
-    hostname: "wry-midwife.net",
-    ip: "93.228.21.42",
-    action: "log",
+    hostname: "unkempt-blossom.com",
+    ip: "dce3:5901:4a5d:7ef9:46b6:8acf:5757:27d6",
+    action: "challenge",
   },
 };
 ```

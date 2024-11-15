@@ -6,7 +6,7 @@
 import { CreateProjectHas } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectHas = {
-  type: "header",
+  type: "method",
 };
 ```
 

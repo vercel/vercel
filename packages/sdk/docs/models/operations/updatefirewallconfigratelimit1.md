@@ -7,8 +7,8 @@ import { UpdateFirewallConfigRateLimit1 } from "@vercel/sdk/models/operations/up
 
 let value: UpdateFirewallConfigRateLimit1 = {
   algo: "fixed_window",
-  window: 2336.18,
-  limit: 1418.67,
+  window: 2478.39,
+  limit: 1928.81,
   keys: [
     "<value>",
   ],

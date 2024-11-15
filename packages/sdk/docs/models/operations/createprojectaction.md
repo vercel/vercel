@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectAction } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectAction = "deny";
+let value: CreateProjectAction = "bypass";
 ```
 
 ## Values

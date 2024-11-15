@@ -6,7 +6,7 @@
 import { Missing2 } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Missing2 = {
-  type: "header",
+  type: "query",
   key: "<key>",
 };
 ```

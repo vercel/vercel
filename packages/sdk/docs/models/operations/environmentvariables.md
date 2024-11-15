@@ -7,7 +7,9 @@ import { EnvironmentVariables } from "@vercel/sdk/models/operations/createprojec
 
 let value: EnvironmentVariables = {
   key: "<key>",
-  target: "production",
+  target: [
+    "preview",
+  ],
   value: "<value>",
 };
 ```

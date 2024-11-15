@@ -90,6 +90,9 @@ export async function projectsRemoveProjectDomain(
   const context = {
     operationID: "removeProjectDomain",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

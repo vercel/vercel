@@ -9,7 +9,7 @@ let value: LastAliasRequest = {
   fromDeploymentId: "<id>",
   toDeploymentId: "<id>",
   jobStatus: "in-progress",
-  requestedAt: 834.22,
+  requestedAt: 7653.25,
   type: "rollback",
 };
 ```

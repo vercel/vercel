@@ -88,6 +88,9 @@ export async function projectMembersRemoveProjectMember(
   const context = {
     operationID: "removeProjectMember",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

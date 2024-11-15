@@ -7,7 +7,7 @@ import { GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyRulesAct
 
 let value:
   GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyRulesActionAction =
-    "log";
+    "deny";
 ```
 
 ## Values

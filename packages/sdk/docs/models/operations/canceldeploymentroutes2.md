@@ -6,7 +6,7 @@
 import { CancelDeploymentRoutes2 } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentRoutes2 = {
-  handle: "error",
+  handle: "rewrite",
 };
 ```
 

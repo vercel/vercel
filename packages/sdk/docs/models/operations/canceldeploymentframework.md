@@ -5,7 +5,7 @@
 ```typescript
 import { CancelDeploymentFramework } from "@vercel/sdk/models/operations/canceldeployment.js";
 
-let value: CancelDeploymentFramework = "remix";
+let value: CancelDeploymentFramework = "sanity-v3";
 ```
 
 ## Values

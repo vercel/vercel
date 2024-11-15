@@ -24,7 +24,7 @@ const value: operations.UpdateFirewallConfigRequestBody2 = {
       {
         conditions: [
           {
-            type: "target_path",
+            type: "path",
             op: "ninc",
           },
         ],
@@ -48,8 +48,8 @@ const value: operations.UpdateFirewallConfigRequestBody3 = {
       {
         conditions: [
           {
-            type: "header",
-            op: "neq",
+            type: "host",
+            op: "gte",
           },
         ],
       },
@@ -74,7 +74,7 @@ const value: operations.UpdateFirewallConfigRequestBody4 = {
 const value: operations.UpdateFirewallConfigRequestBody5 = {
   action: "rules.priority",
   id: "<id>",
-  value: 4358.41,
+  value: 9504.86,
 };
 ```
 
@@ -83,7 +83,7 @@ const value: operations.UpdateFirewallConfigRequestBody5 = {
 ```typescript
 const value: operations.RequestBody6 = {
   action: "crs.update",
-  id: "sqli",
+  id: "sd",
   value: {
     active: false,
     action: "log",
@@ -105,8 +105,8 @@ const value: operations.RequestBody7 = {
 const value: operations.RequestBody8 = {
   action: "ip.insert",
   value: {
-    hostname: "unfortunate-sonar.com",
-    ip: "df0b:41ca:b080:5447:6f7d:3a1a:0be0:eb7d",
+    hostname: "sore-formula.org",
+    ip: "104.24.168.7",
     action: "challenge",
   },
 };
@@ -119,9 +119,9 @@ const value: operations.RequestBody9 = {
   action: "ip.update",
   id: "<id>",
   value: {
-    hostname: "incomparable-boyfriend.name",
-    ip: "124.174.210.38",
-    action: "bypass",
+    hostname: "rich-slime.com",
+    ip: "fcc2:d8d6:c9d5:1a9c:0edd:08fe:3afb:0d52",
+    action: "challenge",
   },
 };
 ```

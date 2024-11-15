@@ -6,7 +6,7 @@
 import { GetConfigurationResponseBodyIntegrationsDisabledReason } from "@vercel/sdk/models/operations/getconfiguration.js";
 
 let value: GetConfigurationResponseBodyIntegrationsDisabledReason =
-  "original-owner-left-the-team";
+  "disabled-by-owner";
 ```
 
 ## Values

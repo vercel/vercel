@@ -64,7 +64,8 @@ export const GetWebhooksResponseBodyEvents = {
   MarketplaceInvoicePaid: "marketplace.invoice.paid",
   MarketplaceInvoiceNotpaid: "marketplace.invoice.notpaid",
   MarketplaceInvoiceRefunded: "marketplace.invoice.refunded",
-  TestWebhook: "test-webhook",
+  TestWebhook: "observability.anomaly",
+  undefined: "test-webhook",
 } as const;
 /**
  * The webhooks events
@@ -209,7 +210,8 @@ export const ResponseBodyEvents = {
   MarketplaceInvoicePaid: "marketplace.invoice.paid",
   MarketplaceInvoiceNotpaid: "marketplace.invoice.notpaid",
   MarketplaceInvoiceRefunded: "marketplace.invoice.refunded",
-  TestWebhook: "test-webhook",
+  TestWebhook: "observability.anomaly",
+  undefined: "test-webhook",
 } as const;
 /**
  * The webhooks events

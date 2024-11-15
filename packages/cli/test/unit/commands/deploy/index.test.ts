@@ -715,8 +715,8 @@ describe('deploy', () => {
 
     await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
-    // remove first 4 lines which contains randomized data
-    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+    // remove first 3 lines which contains randomized data
+    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "Building
         2024-06-03T15:01:10.339Z  Hello, world!
@@ -1148,14 +1148,33 @@ describe('deploy', () => {
   describe('first deploy', () => {
     describe('project setup', () => {
       const directoryName = 'unlinked';
+      let missingProjectSettings = false;
+
       beforeEach(() => {
+        missingProjectSettings = true;
+
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});
         });
 
+        client.scenario.post(`/v1/projects`, (req, res) => {
+          return res.status(200).json(req.body);
+        });
+
         const createdDeploymentId = 'dpl_1';
         client.scenario.post(`/v13/deployments`, (req, res) => {
+          if (missingProjectSettings) {
+            res.status(400).json({
+              error: {
+                code: 'missing_project_settings',
+                framework: null,
+                projectSettings: {},
+              },
+            });
+            missingProjectSettings = false;
+            return;
+          }
           res.json({
             creator: {
               uid: user.id,
@@ -1201,7 +1220,7 @@ describe('deploy', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          '? Which scope do you want to deploy to?'
+          '? Which scope should contain your project?'
         );
         client.stdin.write('\n');
 
@@ -1233,7 +1252,7 @@ describe('deploy', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          '? Which scope do you want to deploy to?'
+          '? Which scope should contain your project?'
         );
         client.stdin.write('\n');
 

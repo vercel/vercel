@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectType } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectType = "plain";
+let value: UpdateProjectType = "sensitive";
 ```
 
 ## Values

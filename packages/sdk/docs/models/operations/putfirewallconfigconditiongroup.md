@@ -8,7 +8,7 @@ import { PutFirewallConfigConditionGroup } from "@vercel/sdk/models/operations/p
 let value: PutFirewallConfigConditionGroup = {
   conditions: [
     {
-      type: "target_path",
+      type: "environment",
       op: "neq",
     },
   ],

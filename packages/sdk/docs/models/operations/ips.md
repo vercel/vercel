@@ -6,9 +6,9 @@
 import { Ips } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Ips = {
-  hostname: "authorized-tributary.biz",
-  ip: "05ab:288c:eca8:3bf8:be30:6daf:ca2c:caff",
-  action: "challenge",
+  hostname: "fake-request.name",
+  ip: "100.96.145.171",
+  action: "bypass",
 };
 ```
 

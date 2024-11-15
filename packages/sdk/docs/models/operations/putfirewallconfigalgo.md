@@ -5,7 +5,7 @@
 ```typescript
 import { PutFirewallConfigAlgo } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
-let value: PutFirewallConfigAlgo = "fixed_window";
+let value: PutFirewallConfigAlgo = "token_bucket";
 ```
 
 ## Values

@@ -5,7 +5,7 @@
 ```typescript
 import { GetTeamMembersOrigin } from "@vercel/sdk/models/operations/getteammembers.js";
 
-let value: GetTeamMembersOrigin = "organization-teams";
+let value: GetTeamMembersOrigin = "gitlab";
 ```
 
 ## Values

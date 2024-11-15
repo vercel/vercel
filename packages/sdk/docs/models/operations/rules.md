@@ -12,8 +12,8 @@ let value: Rules = {
     {
       conditions: [
         {
-          type: "geo_city",
-          op: "eq",
+          type: "cookie",
+          op: "gt",
         },
       ],
     },

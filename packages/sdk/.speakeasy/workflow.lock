@@ -1,9 +1,9 @@
-speakeasyVersion: 1.431.0
+speakeasyVersion: 1.439.0
 sources:
     vercel-OAS:
         sourceNamespace: vercel-oas
-        sourceRevisionDigest: sha256:2c9d55fc4785e22790d79c061783cd27347bc6b7d6aeba486c07ab946271402b
-        sourceBlobDigest: sha256:03c89ddb78858bb2c457cbe6df035ad39c03bfb8e6dbbc6b9bcff9e6e275d076
+        sourceRevisionDigest: sha256:e659ebaa57a713aacf009f8b8308ccd910832c0c26466bd83226b8aa24e4e8b6
+        sourceBlobDigest: sha256:8ff9e147f98133101287efc21696517a8f23c2ed654a3bdf589bb660f737fd9e
         tags:
             - latest
             - main
@@ -11,10 +11,10 @@ targets:
     vercel:
         source: vercel-OAS
         sourceNamespace: vercel-oas
-        sourceRevisionDigest: sha256:2c9d55fc4785e22790d79c061783cd27347bc6b7d6aeba486c07ab946271402b
-        sourceBlobDigest: sha256:03c89ddb78858bb2c457cbe6df035ad39c03bfb8e6dbbc6b9bcff9e6e275d076
+        sourceRevisionDigest: sha256:e659ebaa57a713aacf009f8b8308ccd910832c0c26466bd83226b8aa24e4e8b6
+        sourceBlobDigest: sha256:8ff9e147f98133101287efc21696517a8f23c2ed654a3bdf589bb660f737fd9e
         codeSamplesNamespace: vercel-oas-code-samples
-        codeSamplesRevisionDigest: sha256:cee3820de6a83c4d18117a1f545f8f435592acdee6ce406930c19c44a6e1b639
+        codeSamplesRevisionDigest: sha256:9490e46d78703972f57da14970f70d5dd4a570087134aa37d2b1a1fc102b35df
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: latest
@@ -24,6 +24,7 @@ workflow:
                 - location: https://openapi.vercel.sh/
             overlays:
                 - location: overlay.yaml
+            output: vercel-spec.yaml
             ruleset: vercelRestAPIRuleset
             registry:
                 location: registry.speakeasyapi.dev/vercel/vercel-docs/vercel-oas

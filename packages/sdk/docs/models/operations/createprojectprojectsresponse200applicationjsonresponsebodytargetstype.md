@@ -7,7 +7,7 @@ import { CreateProjectProjectsResponse200ApplicationJSONResponseBodyTargetsType 
 
 let value:
   CreateProjectProjectsResponse200ApplicationJSONResponseBodyTargetsType =
-    "startsWith";
+    "equals";
 ```
 
 ## Values

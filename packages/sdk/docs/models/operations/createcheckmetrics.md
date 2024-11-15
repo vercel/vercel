@@ -7,19 +7,19 @@ import { CreateCheckMetrics } from "@vercel/sdk/models/operations/createcheck.js
 
 let value: CreateCheckMetrics = {
   fcp: {
-    value: 1965.82,
+    value: 1589.70,
     source: "web-vitals",
   },
   lcp: {
-    value: 3687.25,
+    value: 1103.75,
     source: "web-vitals",
   },
   cls: {
-    value: 8209.93,
+    value: 6563.30,
     source: "web-vitals",
   },
   tbt: {
-    value: 971.01,
+    value: 1381.83,
     source: "web-vitals",
   },
 };

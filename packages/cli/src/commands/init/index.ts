@@ -15,9 +15,7 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let args;
-
-  let parsedArgs = null;
+  let parsedArgs;
 
   const flagsSpecification = getFlagsSpecification(initCommand.options);
 
@@ -41,7 +39,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
+  const args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
   if (parsedArgs.args.length > 3) {
     output.error('Too many arguments.');

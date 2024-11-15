@@ -6,13 +6,13 @@
 import { TrustedIps1 } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: TrustedIps1 = {
-  deploymentType: "all",
+  deploymentType: "preview",
   addresses: [
     {
       value: "<value>",
     },
   ],
-  protectionMode: "exclusive",
+  protectionMode: "additional",
 };
 ```
 

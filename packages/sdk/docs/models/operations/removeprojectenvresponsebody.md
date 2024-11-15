@@ -10,7 +10,7 @@ The environment variable was successfully removed
 ```typescript
 const value: operations.RemoveProjectEnvResponseBody1[] = [
   {
-    type: "plain",
+    type: "encrypted",
     key: "<key>",
     value: "<value>",
   },
@@ -21,7 +21,7 @@ const value: operations.RemoveProjectEnvResponseBody1[] = [
 
 ```typescript
 const value: operations.RemoveProjectEnvResponseBody2 = {
-  type: "sensitive",
+  type: "secret",
   key: "<key>",
   value: "<value>",
 };

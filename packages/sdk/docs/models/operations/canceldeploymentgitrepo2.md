@@ -8,14 +8,14 @@ import { CancelDeploymentGitRepo2 } from "@vercel/sdk/models/operations/cancelde
 let value: CancelDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 5339.78,
+  repoId: 2987.50,
   type: "github",
-  repoOwnerId: 9442.03,
-  path: "/opt/include",
+  repoOwnerId: 2550.64,
+  path: "/usr/libdata",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

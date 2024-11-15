@@ -83,6 +83,9 @@ export async function userListUserEvents(
   const context = {
     operationID: "listUserEvents",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

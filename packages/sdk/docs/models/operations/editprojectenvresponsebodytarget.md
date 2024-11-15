@@ -14,6 +14,6 @@ const value: string[] = [
 ### `operations.EditProjectEnvTarget2`
 
 ```typescript
-const value: operations.EditProjectEnvTarget2 = "development";
+const value: operations.EditProjectEnvTarget2 = "production";
 ```
 

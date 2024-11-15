@@ -7,21 +7,21 @@ import { Targets } from "@vercel/sdk/models/operations/updateprojectdatacache.js
 
 let value: Targets = {
   id: "<id>",
-  createdAt: 5182.01,
+  createdAt: 7308.56,
   createdIn: "<value>",
   creator: {
-    email: "Corbin.Hintz@gmail.com",
+    email: "Creola.Balistreri@gmail.com",
     uid: "<id>",
-    username: "Salvador.Larson",
+    username: "Jamaal_McGlynn",
   },
   deploymentHostname: "<value>",
   name: "<value>",
-  plan: "enterprise",
+  plan: "pro",
   previewCommentsEnabled: false,
   private: false,
-  readyState: "ERROR",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "https://lumbering-fork.org/",
+  url: "https://oblong-contractor.com/",
   userId: "<id>",
 };
 ```

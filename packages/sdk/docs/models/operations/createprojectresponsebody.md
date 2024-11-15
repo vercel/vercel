@@ -10,9 +10,9 @@ import { CreateProjectResponseBody } from "@vercel/sdk/models/operations/createp
 let value: CreateProjectResponseBody = {
   accountId: "<id>",
   crons: {
-    enabledAt: 9663.90,
-    disabledAt: 5076.36,
-    updatedAt: 3004.04,
+    enabledAt: 813.70,
+    disabledAt: 8818.97,
+    updatedAt: 7196.20,
     deploymentId: "<id>",
     definitions: [
       {
@@ -27,44 +27,44 @@ let value: CreateProjectResponseBody = {
   latestDeployments: [
     {
       id: "<id>",
-      createdAt: 5495.01,
+      createdAt: 9663.90,
       createdIn: "<value>",
       creator: {
-        email: "Jovan.Thiel0@hotmail.com",
+        email: "Elisa26@yahoo.com",
         uid: "<id>",
-        username: "Emilio33",
+        username: "Gabrielle.Franey",
+      },
+      deploymentHostname: "<value>",
+      name: "<value>",
+      plan: "enterprise",
+      previewCommentsEnabled: false,
+      private: false,
+      readyState: "INITIALIZING",
+      type: "LAMBDAS",
+      url: "https://weary-worth.info",
+      userId: "<id>",
+    },
+  ],
+  name: "<value>",
+  nodeVersion: "8.10.x",
+  targets: {
+    "key": {
+      id: "<id>",
+      createdAt: 7918.80,
+      createdIn: "<value>",
+      creator: {
+        email: "Deja_Cummerata@hotmail.com",
+        uid: "<id>",
+        username: "Jermain42",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       plan: "hobby",
       previewCommentsEnabled: false,
       private: false,
-      readyState: "CANCELED",
-      type: "LAMBDAS",
-      url: "https://wide-scratch.net/",
-      userId: "<id>",
-    },
-  ],
-  name: "<value>",
-  nodeVersion: "20.x",
-  targets: {
-    "key": {
-      id: "<id>",
-      createdAt: 2164.57,
-      createdIn: "<value>",
-      creator: {
-        email: "Theresa77@gmail.com",
-        uid: "<id>",
-        username: "Brock_Spinka10",
-      },
-      deploymentHostname: "<value>",
-      name: "<value>",
-      plan: "pro",
-      previewCommentsEnabled: false,
-      private: false,
       readyState: "BUILDING",
       type: "LAMBDAS",
-      url: "https://celebrated-metabolite.biz/",
+      url: "https://frugal-beret.info/",
       userId: "<id>",
     },
   },
@@ -102,6 +102,7 @@ let value: CreateProjectResponseBody = {
 | `ipBuckets`                                                                                                          | [operations.CreateProjectIpBuckets](../../models/operations/createprojectipbuckets.md)[]                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `latestDeployments`                                                                                                  | [operations.CreateProjectLatestDeployments](../../models/operations/createprojectlatestdeployments.md)[]             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `link`                                                                                                               | *operations.CreateProjectLink*                                                                                       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `microfrontends`                                                                                                     | [operations.CreateProjectMicrofrontends](../../models/operations/createprojectmicrofrontends.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `name`                                                                                                               | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `nodeVersion`                                                                                                        | [operations.CreateProjectNodeVersion](../../models/operations/createprojectnodeversion.md)                           | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `optionsAllowlist`                                                                                                   | [operations.CreateProjectOptionsAllowlist](../../models/operations/createprojectoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

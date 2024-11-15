@@ -9,7 +9,7 @@ import {
 
 let value:
   PutFirewallConfigSecurityResponse200ApplicationJSONResponseBodyActiveRulesActionAction =
-    "deny";
+    "rate_limit";
 ```
 
 ## Values

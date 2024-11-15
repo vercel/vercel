@@ -5,7 +5,7 @@
 ```typescript
 import { GetWebhooksResponseBodyFramework } from "@vercel/sdk/models/operations/getwebhooks.js";
 
-let value: GetWebhooksResponseBodyFramework = "zola";
+let value: GetWebhooksResponseBodyFramework = "hydrogen";
 ```
 
 ## Values

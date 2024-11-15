@@ -16,22 +16,22 @@ let value: GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://worst-wriggler.com",
+  inspectorUrl: "https://sore-merit.org/",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 9382.56,
-  buildingAt: 2445.70,
+  bootedAt: 9822.48,
+  buildingAt: 9926.67,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "ERROR",
+  status: "QUEUED",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 7574.07,
+  createdAt: 9382.56,
   name: "<value>",
   readyState: "BUILDING",
   meta: {
@@ -40,15 +40,15 @@ let value: GetDeploymentResponseBody1 = {
   regions: [
     "<value>",
   ],
-  url: "https://dependent-brush.com",
-  version: 3576.39,
+  url: "https://small-creator.name/",
+  version: 1858.17,
   projectId: "<id>",
   plan: "pro",
   createdIn: "<value>",
   ownerId: "<id>",
   routes: [
     {
-      handle: "miss",
+      src: "<value>",
     },
   ],
 };

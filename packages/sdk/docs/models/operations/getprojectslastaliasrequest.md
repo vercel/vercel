@@ -8,8 +8,8 @@ import { GetProjectsLastAliasRequest } from "@vercel/sdk/models/operations/getpr
 let value: GetProjectsLastAliasRequest = {
   fromDeploymentId: "<id>",
   toDeploymentId: "<id>",
-  jobStatus: "failed",
-  requestedAt: 7487.88,
+  jobStatus: "pending",
+  requestedAt: 8817.20,
   type: "promote",
 };
 ```

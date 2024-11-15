@@ -730,6 +730,43 @@ export type Link1 = {
 
 export type Link = Link1 | Link3 | Link2;
 
+/**
+ * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+ */
+export type Group = {
+  /**
+   * A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
+   */
+  id: string;
+  /**
+   * A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI.
+   */
+  slug: string;
+};
+
+export type Microfrontends = {
+  /**
+   * Timestamp when the microfrontends settings were last updated.
+   */
+  updatedAt: number;
+  /**
+   * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+   */
+  group: Group;
+  /**
+   * Whether microfrontends are enabled for this project.
+   */
+  enabled: boolean;
+  /**
+   * Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends.
+   */
+  isDefaultApp?: boolean | undefined;
+  /**
+   * A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI.
+   */
+  defaultRoute?: string | undefined;
+};
+
 export const UpdateProjectDataCacheNodeVersion = {
   TwentyTwoX: "22.x",
   TwentyX: "20.x",
@@ -767,11 +804,12 @@ export type ResourceConfig = {
   functionDefaultTimeout?: number | undefined;
   functionDefaultMemoryType?: FunctionDefaultMemoryType | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 export const UpdateProjectDataCacheDeploymentType = {
-  All: "all",
   Preview: "preview",
+  All: "all",
   ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type UpdateProjectDataCacheDeploymentType = ClosedEnum<
@@ -1148,10 +1186,10 @@ export type ProtectionBypass = {
 };
 
 export const UpdateProjectDataCacheTrustedIpsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type UpdateProjectDataCacheTrustedIpsDeploymentType = ClosedEnum<
   typeof UpdateProjectDataCacheTrustedIpsDeploymentType
@@ -1162,10 +1200,10 @@ export type TrustedIps2 = {
 };
 
 export const TrustedIpsDeploymentType = {
-  All: "all",
-  Preview: "preview",
-  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
   Production: "production",
+  Preview: "preview",
+  All: "all",
+  ProdDeploymentUrlsAndAllPreviews: "prod_deployment_urls_and_all_previews",
 } as const;
 export type TrustedIpsDeploymentType = ClosedEnum<
   typeof TrustedIpsDeploymentType
@@ -1433,6 +1471,7 @@ export type UpdateProjectDataCacheResponseBody = {
   ipBuckets?: Array<IpBuckets> | undefined;
   latestDeployments?: Array<LatestDeployments> | undefined;
   link?: Link1 | Link3 | Link2 | undefined;
+  microfrontends?: Microfrontends | undefined;
   name: string;
   nodeVersion: UpdateProjectDataCacheNodeVersion;
   optionsAllowlist?: UpdateProjectDataCacheOptionsAllowlist | null | undefined;
@@ -4404,6 +4443,90 @@ export namespace Link$ {
 }
 
 /** @internal */
+export const Group$inboundSchema: z.ZodType<Group, z.ZodTypeDef, unknown> = z
+  .object({
+    id: z.string(),
+    slug: z.string(),
+  });
+
+/** @internal */
+export type Group$Outbound = {
+  id: string;
+  slug: string;
+};
+
+/** @internal */
+export const Group$outboundSchema: z.ZodType<
+  Group$Outbound,
+  z.ZodTypeDef,
+  Group
+> = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Group$ {
+  /** @deprecated use `Group$inboundSchema` instead. */
+  export const inboundSchema = Group$inboundSchema;
+  /** @deprecated use `Group$outboundSchema` instead. */
+  export const outboundSchema = Group$outboundSchema;
+  /** @deprecated use `Group$Outbound` instead. */
+  export type Outbound = Group$Outbound;
+}
+
+/** @internal */
+export const Microfrontends$inboundSchema: z.ZodType<
+  Microfrontends,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => Group$inboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/** @internal */
+export type Microfrontends$Outbound = {
+  updatedAt: number;
+  group: Group$Outbound;
+  enabled: boolean;
+  isDefaultApp?: boolean | undefined;
+  defaultRoute?: string | undefined;
+};
+
+/** @internal */
+export const Microfrontends$outboundSchema: z.ZodType<
+  Microfrontends$Outbound,
+  z.ZodTypeDef,
+  Microfrontends
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => Group$outboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Microfrontends$ {
+  /** @deprecated use `Microfrontends$inboundSchema` instead. */
+  export const inboundSchema = Microfrontends$inboundSchema;
+  /** @deprecated use `Microfrontends$outboundSchema` instead. */
+  export const outboundSchema = Microfrontends$outboundSchema;
+  /** @deprecated use `Microfrontends$Outbound` instead. */
+  export type Outbound = Microfrontends$Outbound;
+}
+
+/** @internal */
 export const UpdateProjectDataCacheNodeVersion$inboundSchema: z.ZodNativeEnum<
   typeof UpdateProjectDataCacheNodeVersion
 > = z.nativeEnum(UpdateProjectDataCacheNodeVersion);
@@ -4561,6 +4684,7 @@ export const ResourceConfig$inboundSchema: z.ZodType<
   functionDefaultTimeout: z.number().optional(),
   functionDefaultMemoryType: FunctionDefaultMemoryType$inboundSchema.optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /** @internal */
@@ -4568,6 +4692,7 @@ export type ResourceConfig$Outbound = {
   functionDefaultTimeout?: number | undefined;
   functionDefaultMemoryType?: string | undefined;
   allowServerlessConcurrency?: boolean | undefined;
+  elasticConcurrencyEnabled?: boolean | undefined;
 };
 
 /** @internal */
@@ -4580,6 +4705,7 @@ export const ResourceConfig$outboundSchema: z.ZodType<
   functionDefaultMemoryType: FunctionDefaultMemoryType$outboundSchema
     .optional(),
   allowServerlessConcurrency: z.boolean().optional(),
+  elasticConcurrencyEnabled: z.boolean().optional(),
 });
 
 /**
@@ -7178,6 +7304,7 @@ export const UpdateProjectDataCacheResponseBody$inboundSchema: z.ZodType<
     z.lazy(() => Link3$inboundSchema),
     z.lazy(() => Link2$inboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => Microfrontends$inboundSchema).optional(),
   name: z.string(),
   nodeVersion: UpdateProjectDataCacheNodeVersion$inboundSchema,
   optionsAllowlist: z.nullable(
@@ -7266,6 +7393,7 @@ export type UpdateProjectDataCacheResponseBody$Outbound = {
   ipBuckets?: Array<IpBuckets$Outbound> | undefined;
   latestDeployments?: Array<LatestDeployments$Outbound> | undefined;
   link?: Link1$Outbound | Link3$Outbound | Link2$Outbound | undefined;
+  microfrontends?: Microfrontends$Outbound | undefined;
   name: string;
   nodeVersion: string;
   optionsAllowlist?:
@@ -7360,6 +7488,7 @@ export const UpdateProjectDataCacheResponseBody$outboundSchema: z.ZodType<
     z.lazy(() => Link3$outboundSchema),
     z.lazy(() => Link2$outboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => Microfrontends$outboundSchema).optional(),
   name: z.string(),
   nodeVersion: UpdateProjectDataCacheNodeVersion$outboundSchema,
   optionsAllowlist: z.nullable(

@@ -14,7 +14,7 @@ let value: TrustedIps = {
       value: "<value>",
     },
   ],
-  protectionMode: "additional",
+  protectionMode: "exclusive",
 };
 ```
 

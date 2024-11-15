@@ -18,13 +18,13 @@ const value: operations.GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://brave-barge.biz/",
+  inspectorUrl: "https://accomplished-hippodrome.name/",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 1693.13,
-  buildingAt: 9650.95,
+  bootedAt: 4016.88,
+  buildingAt: 857.95,
   buildSkipped: false,
   creator: {
     uid: "<id>",
@@ -33,24 +33,26 @@ const value: operations.GetDeploymentResponseBody1 = {
   status: "QUEUED",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 8054.62,
+  createdAt: 2781.17,
   name: "<value>",
-  readyState: "INITIALIZING",
+  readyState: "BUILDING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://messy-vista.info",
-  version: 7879.16,
+  url: "https://critical-shark.name",
+  version: 5692.87,
   projectId: "<id>",
   plan: "enterprise",
   createdIn: "<value>",
   ownerId: "<id>",
   routes: [
     {
-      handle: "resource",
+      src: "<value>",
+      continue: false,
+      middleware: 3638.45,
     },
   ],
 };
@@ -61,8 +63,8 @@ const value: operations.GetDeploymentResponseBody1 = {
 ```typescript
 const value: operations.GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 5983.16,
-  buildingAt: 1189.17,
+  bootedAt: 7879.16,
+  buildingAt: 5552.94,
   buildSkipped: false,
   creator: {
     uid: "<id>",
@@ -71,17 +73,17 @@ const value: operations.GetDeploymentResponseBody2 = {
   status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 7815.82,
+  createdAt: 9554.66,
   name: "<value>",
-  readyState: "READY",
+  readyState: "INITIALIZING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://far-off-reward.info",
-  version: 5736.10,
+  url: "https://inferior-scale.net/",
+  version: 9163.40,
 };
 ```
 

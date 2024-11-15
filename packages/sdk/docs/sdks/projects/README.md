@@ -1520,12 +1520,11 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.projects.pauseProject({
+  await vercel.projects.pauseProject({
     projectId: "<value>",
   });
 
-  // Handle the result
-  console.log(result);
+
 }
 
 run();
@@ -1556,8 +1555,7 @@ async function run() {
 
   const { value: result } = res;
 
-  // Handle the result
-  console.log(result);
+  
 }
 
 run();
@@ -1574,7 +1572,7 @@ run();
 
 ### Response
 
-**Promise\<[operations.PauseProjectResponseBody](../../models/operations/pauseprojectresponsebody.md)\>**
+**Promise\<void\>**
 
 ### Errors
 
@@ -1596,12 +1594,11 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.projects.unpauseProject({
+  await vercel.projects.unpauseProject({
     projectId: "<value>",
   });
 
-  // Handle the result
-  console.log(result);
+
 }
 
 run();
@@ -1632,8 +1629,7 @@ async function run() {
 
   const { value: result } = res;
 
-  // Handle the result
-  console.log(result);
+  
 }
 
 run();
@@ -1650,7 +1646,7 @@ run();
 
 ### Response
 
-**Promise\<[operations.UnpauseProjectResponseBody](../../models/operations/unpauseprojectresponsebody.md)\>**
+**Promise\<void\>**
 
 ### Errors
 

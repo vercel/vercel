@@ -8,14 +8,14 @@ import { GetAllLogDrainsResponseBody } from "@vercel/sdk/models/operations/getal
 let value: GetAllLogDrainsResponseBody = {
   id: "<id>",
   deliveryFormat: "json",
-  url: "https://common-accelerator.name/",
+  url: "https://rundown-compromise.org",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 1138.94,
-  deletedAt: 7220.25,
-  updatedAt: 6981.16,
+  createdAt: 7210.43,
+  deletedAt: 2979.70,
+  updatedAt: 7092.34,
   environments: [
-    "production",
+    "preview",
   ],
 };
 ```

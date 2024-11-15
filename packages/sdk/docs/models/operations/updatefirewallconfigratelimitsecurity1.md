@@ -7,8 +7,8 @@ import { UpdateFirewallConfigRateLimitSecurity1 } from "@vercel/sdk/models/opera
 
 let value: UpdateFirewallConfigRateLimitSecurity1 = {
   algo: "fixed_window",
-  window: 7763.34,
-  limit: 2733.50,
+  window: 4949.72,
+  limit: 1862.12,
   keys: [
     "<value>",
   ],

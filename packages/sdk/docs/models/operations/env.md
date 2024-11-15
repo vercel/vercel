@@ -6,7 +6,7 @@
 import { Env } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Env = {
-  type: "plain",
+  type: "encrypted",
   key: "<key>",
   value: "<value>",
 };

@@ -8,8 +8,8 @@ import { UpdateFirewallConfigRequestBodyConditionGroup } from "@vercel/sdk/model
 let value: UpdateFirewallConfigRequestBodyConditionGroup = {
   conditions: [
     {
-      type: "ja4_digest",
-      op: "nex",
+      type: "ja3_digest",
+      op: "ex",
     },
   ],
 };

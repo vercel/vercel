@@ -5,7 +5,7 @@
 ```typescript
 import { FilterProjectEnvsResponseBodyProjectsResponse200Type } from "@vercel/sdk/models/operations/filterprojectenvs.js";
 
-let value: FilterProjectEnvsResponseBodyProjectsResponse200Type = "secret";
+let value: FilterProjectEnvsResponseBodyProjectsResponse200Type = "encrypted";
 ```
 
 ## Values

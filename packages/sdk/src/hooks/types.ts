@@ -4,12 +4,14 @@
 
 import { HTTPClient, RequestInput } from "../lib/http.js";
 import { RetryConfig } from "../lib/retries.js";
+import { SecurityState } from "../lib/security.js";
 
 export type HookContext = {
   operationID: string;
   oAuth2Scopes?: string[];
   securitySource?: any | (() => Promise<any>);
   retryConfig: RetryConfig;
+  resolvedSecurity: SecurityState | null;
 };
 
 export type Awaitable<T> = T | Promise<T>;

@@ -62,13 +62,15 @@ export default async function disconnect(client: Client, argv: string[]) {
     output.print(
       `Your Vercel project will no longer create deployments when you push to this repository.\n`
     );
-    const confirmDisconnect = await confirm(
-      client,
-      `Are you sure you want to disconnect ${chalk.cyan(
-        `${linkOrg}/${repo}`
-      )} from your project?`,
-      false
-    );
+    const confirmDisconnect =
+      autoConfirm ||
+      (await confirm(
+        client,
+        `Are you sure you want to disconnect ${chalk.cyan(
+          `${linkOrg}/${repo}`
+        )} from your project?`,
+        false
+      ));
 
     if (confirmDisconnect) {
       await disconnectGitProvider(client, org, project.id);

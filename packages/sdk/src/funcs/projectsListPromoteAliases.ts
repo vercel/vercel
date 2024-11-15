@@ -90,6 +90,9 @@ export async function projectsListPromoteAliases(
   const context = {
     operationID: "listPromoteAliases",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig
