@@ -290,8 +290,8 @@ export class TelemetryEventStore {
           childProcess.kill();
         }, 2000);
 
-        childProcess.on('exit', () => {
-          output.debug('Telemetry subprocess exited');
+        childProcess.on('exit', code => {
+          output.debug(`Telemetry subprocess exited with code ${code}`);
           childProcess.unref();
           timeout.unref();
           // An error in the subprocess should not trigger a bad exit code, so don't reject under any circumstances
