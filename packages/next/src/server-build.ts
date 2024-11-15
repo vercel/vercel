@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -54,6 +54,7 @@ import {
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   RenderingMode,
   getPostponeResumeOutput,
+  Redirect,
 } from './utils';
 import {
   nodeFileTrace,
@@ -64,6 +65,7 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import { convertRedirects } from '@vercel/routing-utils/dist/superstatic';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -118,7 +120,6 @@ export async function serverBuild({
   dynamicPrefix,
   entryDirectory,
   outputDirectory,
-  redirects,
   beforeFilesRewrites,
   afterFilesRewrites,
   fallbackRewrites,
@@ -139,7 +140,6 @@ export async function serverBuild({
   prerenderManifest,
   appPathRoutesManifest,
   omittedPrerenderRoutes,
-  trailingSlashRedirects,
   isCorrectLocaleAPIRoutes,
   requiredServerFilesManifest,
   variantsManifest,
@@ -173,12 +173,10 @@ export async function serverBuild({
   beforeFilesRewrites: Route[];
   afterFilesRewrites: Route[];
   fallbackRewrites: Route[];
-  redirects: Route[];
   dataRoutes: Route[];
   nextVersion: string;
   hasIsr404Page: boolean;
   hasIsr500Page: boolean;
-  trailingSlashRedirects: Route[];
   routesManifest: RoutesManifest;
   isCorrectLocaleAPIRoutes: boolean;
   imagesManifest?: NextImagesManifest;
@@ -1695,6 +1693,27 @@ export async function serverBuild({
     }
   }
 
+  const internalRedirects: Redirect[] = [];
+  const userRedirects: Redirect[] = [];
+
+  for (const redirect of routesManifest.redirects || []) {
+    if ((redirect as any).internal) {
+      internalRedirects.push(redirect);
+    } else {
+      userRedirects.push(redirect);
+    }
+  }
+  const internalRedirectRoutes = convertRedirects(internalRedirects).map(
+    item => {
+      // we set continue here to prevent the redirect from
+      // moving underneath i18n routes
+      (item as RouteWithSrc).continue = true;
+
+      return item;
+    }
+  );
+  const userRedirectRoutes = convertRedirects(userRedirects);
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -1730,7 +1749,7 @@ export async function serverBuild({
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
-      ...trailingSlashRedirects,
+      ...internalRedirectRoutes,
 
       ...privateOutputs.routes,
 
@@ -1874,7 +1893,7 @@ export async function serverBuild({
 
       ...headers,
 
-      ...redirects,
+      ...userRedirectRoutes,
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
