@@ -225,8 +225,20 @@ it('should build using server build', async () => {
 
   const {
     workPath,
-    buildResult: { output },
+    buildResult: { output, routes },
   } = await runBuildLambda(path.join(__dirname, 'server-build'));
+
+  const privateTraceRouteIndex = routes.findIndex(route =>
+    route.src.includes('_next/__private')
+  );
+  const legacyRoutesIndex = routes.findIndex(
+    route => route.src.includes('legacy') && !route.continue
+  );
+
+  // ensure our internal redirect sorting is correct
+  expect(legacyRoutesIndex).toBeGreaterThan(-1);
+  expect(privateTraceRouteIndex).toBeGreaterThan(-1);
+  expect(privateTraceRouteIndex).toBeLessThan(legacyRoutesIndex);
 
   console.log = origLog;
   console.error = origError;
