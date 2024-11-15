@@ -715,7 +715,7 @@ describe('deploy', () => {
 
     await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
-    // remove first 4 lines which contains randomized data
+    // remove first 3 lines which contains randomized data
     expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "Building
