@@ -7,8 +7,8 @@ import { GetProjectsErl } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsErl = {
   algo: "token_bucket",
-  window: 9944.01,
-  limit: 4518.22,
+  window: 4518.22,
+  limit: 708.70,
   keys: [
     "<value>",
   ],

@@ -12,8 +12,8 @@ let value: UpdateFirewallConfigRequestBodyValue = {
     {
       conditions: [
         {
-          type: "environment",
-          op: "inc",
+          type: "ja4_digest",
+          op: "gte",
         },
       ],
     },

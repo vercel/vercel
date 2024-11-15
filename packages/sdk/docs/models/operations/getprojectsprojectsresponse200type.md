@@ -5,7 +5,7 @@
 ```typescript
 import { GetProjectsProjectsResponse200Type } from "@vercel/sdk/models/operations/getprojects.js";
 
-let value: GetProjectsProjectsResponse200Type = "rollback";
+let value: GetProjectsProjectsResponse200Type = "promote";
 ```
 
 ## Values

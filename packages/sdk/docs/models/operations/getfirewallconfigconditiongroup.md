@@ -8,8 +8,8 @@ import { GetFirewallConfigConditionGroup } from "@vercel/sdk/models/operations/g
 let value: GetFirewallConfigConditionGroup = {
   conditions: [
     {
-      type: "host",
-      op: "suf",
+      type: "scheme",
+      op: "inc",
     },
   ],
 };

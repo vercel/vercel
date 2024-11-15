@@ -8,14 +8,14 @@
 ```typescript
 const value: operations.CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 4087.74,
+  projectId: 4610.50,
   type: "gitlab",
-  url: "https://magnificent-pepper.info/",
-  path: "/var/mail",
+  url: "https://unfinished-premise.info",
+  path: "/etc/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -25,14 +25,14 @@ const value: operations.CancelDeploymentGitRepo1 = {
 const value: operations.CancelDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 7019.78,
+  repoId: 7044.02,
   type: "github",
-  repoOwnerId: 4896.85,
-  path: "/etc/mail",
+  repoOwnerId: 2848.86,
+  path: "/etc/defaults",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 
@@ -49,7 +49,7 @@ const value: operations.CancelDeploymentGitRepo3 = {
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 

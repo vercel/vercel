@@ -9,7 +9,7 @@ let value: GetConfigurationResponseBodyBillingPlan = {
   id: "<id>",
   type: "prepayment",
   name: "<value>",
-  description: "now nephew equally cleverly",
+  description: "longingly true amongst ick notwithstanding aboard",
 };
 ```
 

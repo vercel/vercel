@@ -8,8 +8,8 @@
 ```typescript
 const value: operations.RateLimit1 = {
   algo: "fixed_window",
-  window: 5231.56,
-  limit: 2505.21,
+  window: 9747.74,
+  limit: 492.85,
   keys: [
     "<value>",
   ],

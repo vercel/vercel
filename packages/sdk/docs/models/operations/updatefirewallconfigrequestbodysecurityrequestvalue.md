@@ -6,9 +6,9 @@
 import { UpdateFirewallConfigRequestBodySecurityRequestValue } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequestValue = {
-  hostname: "glossy-tinderbox.biz",
-  ip: "f8bb:fb2b:8f65:7cd3:6c99:ceaf:bb6e:cd1e",
-  action: "log",
+  hostname: "reckless-hexagon.com",
+  ip: "d9eb:dcc2:f5fb:a5f2:fcb9:6bd6:b574:fca2",
+  action: "challenge",
 };
 ```
 

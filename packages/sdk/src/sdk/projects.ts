@@ -60,10 +60,7 @@ import {
   ListPromoteAliasesRequest,
   ListPromoteAliasesResponseBody,
 } from "../models/operations/listpromotealiases.js";
-import {
-  PauseProjectRequest,
-  PauseProjectResponseBody,
-} from "../models/operations/pauseproject.js";
+import { PauseProjectRequest } from "../models/operations/pauseproject.js";
 import {
   RemoveProjectDomainRequest,
   RemoveProjectDomainResponseBody,
@@ -73,10 +70,7 @@ import {
   RemoveProjectEnvResponseBody,
 } from "../models/operations/removeprojectenv.js";
 import { RequestPromoteRequest } from "../models/operations/requestpromote.js";
-import {
-  UnpauseProjectRequest,
-  UnpauseProjectResponseBody,
-} from "../models/operations/unpauseproject.js";
+import { UnpauseProjectRequest } from "../models/operations/unpauseproject.js";
 import {
   UpdateProjectRequest,
   UpdateProjectResponseBody,
@@ -415,7 +409,7 @@ export class Projects extends ClientSDK {
   async pauseProject(
     request: PauseProjectRequest,
     options?: RequestOptions,
-  ): Promise<PauseProjectResponseBody> {
+  ): Promise<void> {
     return unwrapAsync(projectsPauseProject(
       this,
       request,
@@ -432,7 +426,7 @@ export class Projects extends ClientSDK {
   async unpauseProject(
     request: UnpauseProjectRequest,
     options?: RequestOptions,
-  ): Promise<UnpauseProjectResponseBody> {
+  ): Promise<void> {
     return unwrapAsync(projectsUnpauseProject(
       this,
       request,

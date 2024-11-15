@@ -339,13 +339,6 @@ run();
 * [pauseProject](docs/sdks/projects/README.md#pauseproject) - Pause a project
 * [unpauseProject](docs/sdks/projects/README.md#unpauseproject) - Unpause a project
 
-### [secrets](docs/sdks/secrets/README.md)
-
-* [createSecret](docs/sdks/secrets/README.md#createsecret) - Create a new secret
-* [renameSecret](docs/sdks/secrets/README.md#renamesecret) - Change secret name
-* [getSecret](docs/sdks/secrets/README.md#getsecret) - Get a single secret
-* [deleteSecret](docs/sdks/secrets/README.md#deletesecret) - Delete a secret
-
 ### [security](docs/sdks/security/README.md)
 
 * [updateAttackChallengeMode](docs/sdks/security/README.md#updateattackchallengemode) - Update Attack Challenge mode
@@ -506,10 +499,6 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`projectsUpdateProjectDomain`](docs/sdks/projects/README.md#updateprojectdomain) - Update a project domain
 - [`projectsUpdateProjectProtectionBypass`](docs/sdks/projects/README.md#updateprojectprotectionbypass) - Update Protection Bypass for Automation
 - [`projectsVerifyProjectDomain`](docs/sdks/projects/README.md#verifyprojectdomain) - Verify project domain
-- [`secretsCreateSecret`](docs/sdks/secrets/README.md#createsecret) - Create a new secret
-- [`secretsDeleteSecret`](docs/sdks/secrets/README.md#deletesecret) - Delete a secret
-- [`secretsGetSecret`](docs/sdks/secrets/README.md#getsecret) - Get a single secret
-- [`secretsRenameSecret`](docs/sdks/secrets/README.md#renamesecret) - Change secret name
 - [`securityGetFirewallConfig`](docs/sdks/security/README.md#getfirewallconfig) - Read Firewall Configuration
 - [`securityPutFirewallConfig`](docs/sdks/security/README.md#putfirewallconfig) - Put Firewall Configuration
 - [`securityUpdateAttackChallengeMode`](docs/sdks/security/README.md#updateattackchallengemode) - Update Attack Challenge mode

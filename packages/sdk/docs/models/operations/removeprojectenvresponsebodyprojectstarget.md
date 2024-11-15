@@ -7,7 +7,7 @@
 
 ```typescript
 const value: operations.RemoveProjectEnvTargetProjects1[] = [
-  "development",
+  "preview",
 ];
 ```
 

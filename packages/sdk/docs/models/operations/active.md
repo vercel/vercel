@@ -9,7 +9,7 @@ let value: Active = {
   ownerId: "<id>",
   projectKey: "<value>",
   id: "<id>",
-  version: 5955.85,
+  version: 9082.73,
   updatedAt: "<value>",
   firewallEnabled: false,
   crs: {
@@ -19,7 +19,7 @@ let value: Active = {
     },
     ma: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     lfi: {
       active: false,
@@ -27,7 +27,7 @@ let value: Active = {
     },
     rfi: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     rce: {
       active: false,
@@ -35,7 +35,7 @@ let value: Active = {
     },
     php: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     gen: {
       active: false,
@@ -51,7 +51,7 @@ let value: Active = {
     },
     sf: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     java: {
       active: false,
@@ -67,8 +67,8 @@ let value: Active = {
         {
           conditions: [
             {
-              type: "geo_country",
-              op: "suf",
+              type: "geo_country_region",
+              op: "ex",
             },
           ],
         },
@@ -79,9 +79,9 @@ let value: Active = {
   ips: [
     {
       id: "<id>",
-      hostname: "immense-defendant.info",
-      ip: "65c5:ac59:dcfe:af97:0454:abec:57f8:09d8",
-      action: "log",
+      hostname: "deficient-fat.net",
+      ip: "1afb:c4cc:ff9d:00c6:567a:cbcc:99ee:1b7f",
+      action: "deny",
     },
   ],
   changes: [

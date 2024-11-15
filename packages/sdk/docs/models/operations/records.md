@@ -9,13 +9,13 @@ let value: Records = {
   id: "<id>",
   slug: "<value>",
   name: "<value>",
-  type: "ALIAS",
+  type: "CNAME",
   value: "<value>",
   creator: "<value>",
-  created: 4467.93,
-  updated: 8369.90,
-  createdAt: 2218.24,
-  updatedAt: 4939.45,
+  created: 9296.19,
+  updated: 6672.15,
+  createdAt: 7980.79,
+  updatedAt: 5509.94,
 };
 ```
 

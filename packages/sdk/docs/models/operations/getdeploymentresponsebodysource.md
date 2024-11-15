@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentResponseBodySource } from "@vercel/sdk/models/operations/getdeployment.js";
 
-let value: GetDeploymentResponseBodySource = "api-trigger-git-deploy";
+let value: GetDeploymentResponseBodySource = "import";
 ```
 
 ## Values

@@ -10,9 +10,9 @@ import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updatep
 let value: UpdateProjectResponseBody = {
   accountId: "<id>",
   crons: {
-    enabledAt: 8536.06,
-    disabledAt: 8894.48,
-    updatedAt: 2201.04,
+    enabledAt: 2201.04,
+    disabledAt: 6228.94,
+    updatedAt: 1114.96,
     deploymentId: "<id>",
     definitions: [
       {
@@ -27,44 +27,44 @@ let value: UpdateProjectResponseBody = {
   latestDeployments: [
     {
       id: "<id>",
-      createdAt: 6228.94,
+      createdAt: 4589.70,
       createdIn: "<value>",
       creator: {
-        email: "Jadyn.Halvorson72@gmail.com",
+        email: "Emil87@gmail.com",
         uid: "<id>",
-        username: "Shana50",
+        username: "Charles_Lakin",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       plan: "pro",
       previewCommentsEnabled: false,
       private: false,
-      readyState: "QUEUED",
+      readyState: "ERROR",
       type: "LAMBDAS",
-      url: "https://frugal-mousse.org/",
+      url: "https://utilized-shark.net",
       userId: "<id>",
     },
   ],
   name: "<value>",
-  nodeVersion: "10.x",
+  nodeVersion: "14.x",
   targets: {
     "key": {
       id: "<id>",
-      createdAt: 7239.41,
+      createdAt: 9222.99,
       createdIn: "<value>",
       creator: {
-        email: "Theodore21@yahoo.com",
+        email: "Scot_Emard1@yahoo.com",
         uid: "<id>",
-        username: "Adolfo_Fay73",
+        username: "Daphnee51",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      plan: "enterprise",
+      plan: "pro",
       previewCommentsEnabled: false,
       private: false,
-      readyState: "CANCELED",
+      readyState: "READY",
       type: "LAMBDAS",
-      url: "https://remarkable-mozzarella.com/",
+      url: "https://adolescent-interchange.net",
       userId: "<id>",
     },
   },
@@ -102,6 +102,7 @@ let value: UpdateProjectResponseBody = {
 | `ipBuckets`                                                                                                          | [operations.UpdateProjectIpBuckets](../../models/operations/updateprojectipbuckets.md)[]                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `latestDeployments`                                                                                                  | [operations.UpdateProjectLatestDeployments](../../models/operations/updateprojectlatestdeployments.md)[]             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `link`                                                                                                               | *operations.UpdateProjectLink*                                                                                       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `microfrontends`                                                                                                     | [operations.UpdateProjectMicrofrontends](../../models/operations/updateprojectmicrofrontends.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `name`                                                                                                               | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `nodeVersion`                                                                                                        | [operations.UpdateProjectProjectsNodeVersion](../../models/operations/updateprojectprojectsnodeversion.md)           | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `optionsAllowlist`                                                                                                   | [operations.UpdateProjectOptionsAllowlist](../../models/operations/updateprojectoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

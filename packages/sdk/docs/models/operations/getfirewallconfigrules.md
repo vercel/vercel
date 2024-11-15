@@ -13,8 +13,8 @@ let value: GetFirewallConfigRules = {
     {
       conditions: [
         {
-          type: "ip_address",
-          op: "ninc",
+          type: "ja3_digest",
+          op: "inc",
         },
       ],
     },

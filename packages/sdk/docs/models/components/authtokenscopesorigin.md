@@ -5,7 +5,7 @@
 ```typescript
 import { AuthTokenScopesOrigin } from "@vercel/sdk/models/components/authtoken.js";
 
-let value: AuthTokenScopesOrigin = "sms";
+let value: AuthTokenScopesOrigin = "bitbucket";
 ```
 
 ## Values

@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GitSource1 = {
   type: "github",
-  repoId: "<id>",
+  repoId: 6605.36,
 };
 ```
 
@@ -27,7 +27,7 @@ const value: operations.GitSource2 = {
 ```typescript
 const value: operations.GitSource3 = {
   type: "gitlab",
-  projectId: 6605.36,
+  projectId: "<id>",
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.CreateDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://yummy-breastplate.org/",
+  gitUrl: "https://calculating-suitcase.biz",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.CreateDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 2942.66,
+  repoId: 4353.53,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.CreateDeploymentGitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 4353.53,
+  projectId: 7954.57,
 };
 ```
 

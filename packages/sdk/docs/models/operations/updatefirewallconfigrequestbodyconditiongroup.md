@@ -8,8 +8,8 @@ import { UpdateFirewallConfigRequestBodyConditionGroup } from "@vercel/sdk/model
 let value: UpdateFirewallConfigRequestBodyConditionGroup = {
   conditions: [
     {
-      type: "geo_as_number",
-      op: "pre",
+      type: "ja3_digest",
+      op: "ex",
     },
   ],
 };

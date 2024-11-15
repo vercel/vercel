@@ -6,7 +6,7 @@
 import { Missing } from "@vercel/sdk/models/operations/updateprojectdatacache.js";
 
 let value: Missing = {
-  type: "header",
+  type: "ip_address",
 };
 ```
 

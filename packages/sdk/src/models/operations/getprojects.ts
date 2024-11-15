@@ -765,6 +765,43 @@ export type GetProjectsLink =
   | GetProjectsLink3
   | GetProjectsLink2;
 
+/**
+ * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+ */
+export type GetProjectsGroup = {
+  /**
+   * A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
+   */
+  id: string;
+  /**
+   * A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI.
+   */
+  slug: string;
+};
+
+export type GetProjectsMicrofrontends = {
+  /**
+   * Timestamp when the microfrontends settings were last updated.
+   */
+  updatedAt: number;
+  /**
+   * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+   */
+  group: GetProjectsGroup;
+  /**
+   * Whether microfrontends are enabled for this project.
+   */
+  enabled: boolean;
+  /**
+   * Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends.
+   */
+  isDefaultApp?: boolean | undefined;
+  /**
+   * A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI.
+   */
+  defaultRoute?: string | undefined;
+};
+
 export const GetProjectsNodeVersion = {
   TwentyTwoX: "22.x",
   TwentyX: "20.x",
@@ -1458,6 +1495,7 @@ export type GetProjectsProjects = {
   ipBuckets?: Array<GetProjectsIpBuckets> | undefined;
   latestDeployments?: Array<GetProjectsLatestDeployments> | undefined;
   link?: GetProjectsLink1 | GetProjectsLink3 | GetProjectsLink2 | undefined;
+  microfrontends?: GetProjectsMicrofrontends | undefined;
   name: string;
   nodeVersion: GetProjectsNodeVersion;
   optionsAllowlist?: GetProjectsOptionsAllowlist | null | undefined;
@@ -4440,6 +4478,93 @@ export namespace GetProjectsLink$ {
 }
 
 /** @internal */
+export const GetProjectsGroup$inboundSchema: z.ZodType<
+  GetProjectsGroup,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
+/** @internal */
+export type GetProjectsGroup$Outbound = {
+  id: string;
+  slug: string;
+};
+
+/** @internal */
+export const GetProjectsGroup$outboundSchema: z.ZodType<
+  GetProjectsGroup$Outbound,
+  z.ZodTypeDef,
+  GetProjectsGroup
+> = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace GetProjectsGroup$ {
+  /** @deprecated use `GetProjectsGroup$inboundSchema` instead. */
+  export const inboundSchema = GetProjectsGroup$inboundSchema;
+  /** @deprecated use `GetProjectsGroup$outboundSchema` instead. */
+  export const outboundSchema = GetProjectsGroup$outboundSchema;
+  /** @deprecated use `GetProjectsGroup$Outbound` instead. */
+  export type Outbound = GetProjectsGroup$Outbound;
+}
+
+/** @internal */
+export const GetProjectsMicrofrontends$inboundSchema: z.ZodType<
+  GetProjectsMicrofrontends,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => GetProjectsGroup$inboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/** @internal */
+export type GetProjectsMicrofrontends$Outbound = {
+  updatedAt: number;
+  group: GetProjectsGroup$Outbound;
+  enabled: boolean;
+  isDefaultApp?: boolean | undefined;
+  defaultRoute?: string | undefined;
+};
+
+/** @internal */
+export const GetProjectsMicrofrontends$outboundSchema: z.ZodType<
+  GetProjectsMicrofrontends$Outbound,
+  z.ZodTypeDef,
+  GetProjectsMicrofrontends
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => GetProjectsGroup$outboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace GetProjectsMicrofrontends$ {
+  /** @deprecated use `GetProjectsMicrofrontends$inboundSchema` instead. */
+  export const inboundSchema = GetProjectsMicrofrontends$inboundSchema;
+  /** @deprecated use `GetProjectsMicrofrontends$outboundSchema` instead. */
+  export const outboundSchema = GetProjectsMicrofrontends$outboundSchema;
+  /** @deprecated use `GetProjectsMicrofrontends$Outbound` instead. */
+  export type Outbound = GetProjectsMicrofrontends$Outbound;
+}
+
+/** @internal */
 export const GetProjectsNodeVersion$inboundSchema: z.ZodNativeEnum<
   typeof GetProjectsNodeVersion
 > = z.nativeEnum(GetProjectsNodeVersion);
@@ -7207,6 +7332,8 @@ export const GetProjectsProjects$inboundSchema: z.ZodType<
     z.lazy(() => GetProjectsLink3$inboundSchema),
     z.lazy(() => GetProjectsLink2$inboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => GetProjectsMicrofrontends$inboundSchema)
+    .optional(),
   name: z.string(),
   nodeVersion: GetProjectsNodeVersion$inboundSchema,
   optionsAllowlist: z.nullable(
@@ -7307,6 +7434,7 @@ export type GetProjectsProjects$Outbound = {
     | GetProjectsLink3$Outbound
     | GetProjectsLink2$Outbound
     | undefined;
+  microfrontends?: GetProjectsMicrofrontends$Outbound | undefined;
   name: string;
   nodeVersion: string;
   optionsAllowlist?: GetProjectsOptionsAllowlist$Outbound | null | undefined;
@@ -7407,6 +7535,8 @@ export const GetProjectsProjects$outboundSchema: z.ZodType<
     z.lazy(() => GetProjectsLink3$outboundSchema),
     z.lazy(() => GetProjectsLink2$outboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => GetProjectsMicrofrontends$outboundSchema)
+    .optional(),
   name: z.string(),
   nodeVersion: GetProjectsNodeVersion$outboundSchema,
   optionsAllowlist: z.nullable(

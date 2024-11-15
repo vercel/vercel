@@ -8,8 +8,8 @@ import { PutFirewallConfigConditionGroup } from "@vercel/sdk/models/operations/p
 let value: PutFirewallConfigConditionGroup = {
   conditions: [
     {
-      type: "host",
-      op: "inc",
+      type: "environment",
+      op: "neq",
     },
   ],
 };

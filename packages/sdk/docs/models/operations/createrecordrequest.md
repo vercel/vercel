@@ -9,9 +9,9 @@ let value: CreateRecordRequest = {
   domain: "example.com",
   requestBody: {
     name: "subdomain",
-    type: "TXT",
+    type: "AAAA",
     ttl: 60,
-    value: "ns1.example.com",
+    value: "cname.vercel-dns.com",
     comment: "used to verify ownership of domain",
   },
 };

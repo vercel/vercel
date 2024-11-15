@@ -5,7 +5,7 @@
 ```typescript
 import { PutFirewallConfigSecurityType } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
-let value: PutFirewallConfigSecurityType = "rate_limit_api_id";
+let value: PutFirewallConfigSecurityType = "region";
 ```
 
 ## Values

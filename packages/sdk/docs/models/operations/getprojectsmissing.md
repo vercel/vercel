@@ -6,7 +6,7 @@
 import { GetProjectsMissing } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsMissing = {
-  type: "environment",
+  type: "region",
 };
 ```
 

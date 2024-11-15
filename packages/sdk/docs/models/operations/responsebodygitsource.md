@@ -8,7 +8,7 @@
 ```typescript
 const value: operations.GetDeploymentGitSource1 = {
   type: "github",
-  repoId: "<id>",
+  repoId: 351.60,
 };
 ```
 
@@ -27,7 +27,7 @@ const value: operations.GetDeploymentGitSource2 = {
 ```typescript
 const value: operations.GetDeploymentGitSource3 = {
   type: "gitlab",
-  projectId: "<id>",
+  projectId: 8163.64,
 };
 ```
 
@@ -57,7 +57,7 @@ const value: operations.GetDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://another-testing.net",
+  gitUrl: "https://thorough-vestment.com",
 };
 ```
 
@@ -68,7 +68,7 @@ const value: operations.GetDeploymentGitSource7 = {
   type: "github",
   ref: "<value>",
   sha: "<value>",
-  repoId: 5525.81,
+  repoId: 6308.32,
 };
 ```
 
@@ -79,7 +79,7 @@ const value: operations.GetDeploymentGitSource8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 8518.09,
+  projectId: 9979.94,
 };
 ```
 

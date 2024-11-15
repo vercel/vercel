@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateProjectProjectsResponse200ApplicationJSONType } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectProjectsResponse200ApplicationJSONType = "equals";
+let value: UpdateProjectProjectsResponse200ApplicationJSONType = "startsWith";
 ```
 
 ## Values

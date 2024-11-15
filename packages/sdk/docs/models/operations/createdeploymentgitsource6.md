@@ -9,7 +9,7 @@ let value: CreateDeploymentGitSource6 = {
   type: "custom",
   ref: "<value>",
   sha: "<value>",
-  gitUrl: "https://cool-final.com",
+  gitUrl: "https://gracious-atrium.biz/",
 };
 ```
 

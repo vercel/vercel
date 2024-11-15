@@ -7,13 +7,13 @@
 
 ```typescript
 const value: operations.CreateProjectEnvTargetProjects1[] = [
-  "production",
+  "development",
 ];
 ```
 
 ### `operations.CreateProjectEnvTargetProjectsResponse2`
 
 ```typescript
-const value: operations.CreateProjectEnvTargetProjectsResponse2 = "development";
+const value: operations.CreateProjectEnvTargetProjectsResponse2 = "production";
 ```
 

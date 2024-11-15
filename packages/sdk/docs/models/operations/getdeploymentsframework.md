@@ -5,7 +5,7 @@
 ```typescript
 import { GetDeploymentsFramework } from "@vercel/sdk/models/operations/getdeployments.js";
 
-let value: GetDeploymentsFramework = "docusaurus";
+let value: GetDeploymentsFramework = "stencil";
 ```
 
 ## Values

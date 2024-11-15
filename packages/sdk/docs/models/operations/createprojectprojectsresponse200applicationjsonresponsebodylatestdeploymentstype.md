@@ -7,7 +7,7 @@ import { CreateProjectProjectsResponse200ApplicationJSONResponseBodyLatestDeploy
 
 let value:
   CreateProjectProjectsResponse200ApplicationJSONResponseBodyLatestDeploymentsType =
-    "startsWith";
+    "endsWith";
 ```
 
 ## Values

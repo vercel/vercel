@@ -24,7 +24,7 @@ let value: PutFirewallConfigCrs = {
   },
   rce: {
     active: false,
-    action: "log",
+    action: "deny",
   },
   php: {
     active: false,
@@ -36,7 +36,7 @@ let value: PutFirewallConfigCrs = {
   },
   xss: {
     active: false,
-    action: "log",
+    action: "deny",
   },
   sqli: {
     active: false,

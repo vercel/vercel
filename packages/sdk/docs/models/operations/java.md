@@ -7,7 +7,7 @@ import { Java } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
 let value: Java = {
   active: false,
-  action: "deny",
+  action: "log",
 };
 ```
 

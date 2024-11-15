@@ -9,13 +9,13 @@ let value: GetFirewallConfigResponseBody = {
   ownerId: "<id>",
   projectKey: "<value>",
   id: "<id>",
-  version: 3588.62,
+  version: 896.42,
   updatedAt: "<value>",
   firewallEnabled: false,
   crs: {
     sd: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     ma: {
       active: false,
@@ -35,7 +35,7 @@ let value: GetFirewallConfigResponseBody = {
     },
     php: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     gen: {
       active: false,
@@ -47,15 +47,15 @@ let value: GetFirewallConfigResponseBody = {
     },
     sqli: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     sf: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     java: {
       active: false,
-      action: "log",
+      action: "deny",
     },
   },
   rules: [
@@ -67,8 +67,8 @@ let value: GetFirewallConfigResponseBody = {
         {
           conditions: [
             {
-              type: "geo_country_region",
-              op: "gt",
+              type: "ip_address",
+              op: "lte",
             },
           ],
         },
@@ -79,9 +79,9 @@ let value: GetFirewallConfigResponseBody = {
   ips: [
     {
       id: "<id>",
-      hostname: "outlandish-bookend.name",
-      ip: "222.80.147.109",
-      action: "bypass",
+      hostname: "insistent-shipper.net",
+      ip: "bb77:892b:2d19:63bf:3dbb:2ffc:bafb:c7ca",
+      action: "deny",
     },
   ],
   changes: [

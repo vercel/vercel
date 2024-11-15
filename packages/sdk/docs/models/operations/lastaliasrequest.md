@@ -8,8 +8,8 @@ import { LastAliasRequest } from "@vercel/sdk/models/operations/updateprojectdat
 let value: LastAliasRequest = {
   fromDeploymentId: "<id>",
   toDeploymentId: "<id>",
-  jobStatus: "failed",
-  requestedAt: 9404.32,
+  jobStatus: "in-progress",
+  requestedAt: 7653.25,
   type: "rollback",
 };
 ```

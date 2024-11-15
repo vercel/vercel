@@ -6,7 +6,7 @@
 import { UpdateProjectHas } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectHas = {
-  type: "protocol",
+  type: "scheme",
 };
 ```
 

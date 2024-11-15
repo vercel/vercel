@@ -10,7 +10,7 @@ let value: PutFirewallConfigResponseBody = {
     ownerId: "<id>",
     projectKey: "<value>",
     id: "<id>",
-    version: 9895.25,
+    version: 6121.81,
     updatedAt: "<value>",
     firewallEnabled: false,
     crs: {
@@ -24,7 +24,7 @@ let value: PutFirewallConfigResponseBody = {
       },
       lfi: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       rfi: {
         active: false,
@@ -36,11 +36,11 @@ let value: PutFirewallConfigResponseBody = {
       },
       php: {
         active: false,
-        action: "log",
+        action: "deny",
       },
       gen: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       xss: {
         active: false,
@@ -52,11 +52,11 @@ let value: PutFirewallConfigResponseBody = {
       },
       sf: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       java: {
         active: false,
-        action: "deny",
+        action: "log",
       },
     },
     rules: [
@@ -68,8 +68,8 @@ let value: PutFirewallConfigResponseBody = {
           {
             conditions: [
               {
-                type: "target_path",
-                op: "nex",
+                type: "method",
+                op: "gt",
               },
             ],
           },
@@ -80,9 +80,9 @@ let value: PutFirewallConfigResponseBody = {
     ips: [
       {
         id: "<id>",
-        hostname: "natural-arcade.info",
-        ip: "bc4c:cff9:d00c:6567:acbc:c99e:e1b7:f0df",
-        action: "log",
+        hostname: "prestigious-valuable.name",
+        ip: "feba:d022:a7ed:8bee:cd1e:bb19:55bd:90ff",
+        action: "deny",
       },
     ],
     changes: [

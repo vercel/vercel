@@ -1,6 +1,6 @@
 {
   "name": "@vercel/sdk",
-  "version": "14.0.0-canary.5",
+  "version": "14.0.0-canary.6",
   "author": "Speakeasy",
   "type": "module",
   "main": "./esm/index.js",

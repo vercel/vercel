@@ -18,39 +18,41 @@ const value: operations.GetDeploymentResponseBody1 = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://clear-formation.com/",
+  inspectorUrl: "https://accomplished-hippodrome.name/",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 4248.54,
-  buildingAt: 6641.97,
+  bootedAt: 4016.88,
+  buildingAt: 857.95,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "ERROR",
+  status: "QUEUED",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 857.95,
+  createdAt: 2781.17,
   name: "<value>",
-  readyState: "QUEUED",
+  readyState: "BUILDING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://deafening-vibraphone.com/",
-  version: 8054.62,
+  url: "https://critical-shark.name",
+  version: 5692.87,
   projectId: "<id>",
   plan: "enterprise",
   createdIn: "<value>",
   ownerId: "<id>",
   routes: [
     {
-      handle: "miss",
+      src: "<value>",
+      continue: false,
+      middleware: 3638.45,
     },
   ],
 };
@@ -61,27 +63,27 @@ const value: operations.GetDeploymentResponseBody1 = {
 ```typescript
 const value: operations.GetDeploymentResponseBody2 = {
   aliasAssigned: false,
-  bootedAt: 9717.63,
-  buildingAt: 3638.45,
+  bootedAt: 7879.16,
+  buildingAt: 5552.94,
   buildSkipped: false,
   creator: {
     uid: "<id>",
   },
   public: false,
-  status: "READY",
+  status: "ERROR",
   id: "<id>",
   type: "LAMBDAS",
-  createdAt: 5552.94,
+  createdAt: 9554.66,
   name: "<value>",
-  readyState: "ERROR",
+  readyState: "INITIALIZING",
   meta: {
     "key": "<value>",
   },
   regions: [
     "<value>",
   ],
-  url: "https://pastel-cardboard.info",
-  version: 7815.82,
+  url: "https://inferior-scale.net/",
+  version: 9163.40,
 };
 ```
 

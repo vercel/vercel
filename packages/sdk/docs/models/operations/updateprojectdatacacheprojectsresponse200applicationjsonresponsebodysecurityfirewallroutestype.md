@@ -9,7 +9,7 @@ import {
 
 let value:
   UpdateProjectDataCacheProjectsResponse200ApplicationJSONResponseBodySecurityFirewallRoutesType =
-    "scheme";
+    "header";
 ```
 
 ## Values

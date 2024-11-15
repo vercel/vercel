@@ -9,7 +9,7 @@ let value: GetDeploymentGitSourceDeployments8 = {
   type: "gitlab",
   ref: "<value>",
   sha: "<value>",
-  projectId: 5063.43,
+  projectId: 6339.87,
 };
 ```
 

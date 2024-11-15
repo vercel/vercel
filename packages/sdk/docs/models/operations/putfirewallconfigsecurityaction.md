@@ -5,7 +5,7 @@
 ```typescript
 import { PutFirewallConfigSecurityAction } from "@vercel/sdk/models/operations/putfirewallconfig.js";
 
-let value: PutFirewallConfigSecurityAction = "deny";
+let value: PutFirewallConfigSecurityAction = "log";
 ```
 
 ## Values

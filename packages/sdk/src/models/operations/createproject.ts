@@ -332,10 +332,10 @@ export type CreateProjectProjectsTarget = Array<string> | CreateProjectTarget2;
 
 export const CreateProjectProjectsResponseType = {
   System: "system",
+  Secret: "secret",
   Encrypted: "encrypted",
   Plain: "plain",
   Sensitive: "sensitive",
-  Secret: "secret",
 } as const;
 export type CreateProjectProjectsResponseType = ClosedEnum<
   typeof CreateProjectProjectsResponseType
@@ -943,6 +943,43 @@ export type CreateProjectLink =
   | CreateProjectLink3
   | CreateProjectLink2;
 
+/**
+ * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+ */
+export type CreateProjectGroup = {
+  /**
+   * A unique identifier for the group of microfrontends. All related microfrontend projects will share this group ID. Example: mfe_12HKQaOmR5t5Uy6vdcQsNIiZgHGB
+   */
+  id: string;
+  /**
+   * A human readable name for the microfrontends group. This will be used to display the microfrontends group in the UI.
+   */
+  slug: string;
+};
+
+export type CreateProjectMicrofrontends = {
+  /**
+   * Timestamp when the microfrontends settings were last updated.
+   */
+  updatedAt: number;
+  /**
+   * The group of microfrontends that this project belongs to. Each microfrontend project must belong to a microfrontends group that is the set of microfrontends that are used together.
+   */
+  group: CreateProjectGroup;
+  /**
+   * Whether microfrontends are enabled for this project.
+   */
+  enabled: boolean;
+  /**
+   * Whether this project is the default application for the microfrontends group. The default application is the one that is used as the top level shell for the microfrontends group and hosts the other microfrontends.
+   */
+  isDefaultApp?: boolean | undefined;
+  /**
+   * A path that is used to take screenshots and as the default path in preview links when a domain for this microfrontend is shown in the UI.
+   */
+  defaultRoute?: string | undefined;
+};
+
 export const CreateProjectNodeVersion = {
   TwentyTwoX: "22.x",
   TwentyX: "20.x",
@@ -1327,11 +1364,11 @@ export type CreateProjectPermissions = {
 export type CreateProjectLastRollbackTarget = {};
 
 export const CreateProjectJobStatus = {
-  Pending: "pending",
-  InProgress: "in-progress",
   Succeeded: "succeeded",
   Failed: "failed",
   Skipped: "skipped",
+  Pending: "pending",
+  InProgress: "in-progress",
 } as const;
 export type CreateProjectJobStatus = ClosedEnum<typeof CreateProjectJobStatus>;
 
@@ -1651,6 +1688,7 @@ export type CreateProjectResponseBody = {
     | CreateProjectLink3
     | CreateProjectLink2
     | undefined;
+  microfrontends?: CreateProjectMicrofrontends | undefined;
   name: string;
   nodeVersion: CreateProjectNodeVersion;
   optionsAllowlist?: CreateProjectOptionsAllowlist | null | undefined;
@@ -4925,6 +4963,93 @@ export namespace CreateProjectLink$ {
 }
 
 /** @internal */
+export const CreateProjectGroup$inboundSchema: z.ZodType<
+  CreateProjectGroup,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
+/** @internal */
+export type CreateProjectGroup$Outbound = {
+  id: string;
+  slug: string;
+};
+
+/** @internal */
+export const CreateProjectGroup$outboundSchema: z.ZodType<
+  CreateProjectGroup$Outbound,
+  z.ZodTypeDef,
+  CreateProjectGroup
+> = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace CreateProjectGroup$ {
+  /** @deprecated use `CreateProjectGroup$inboundSchema` instead. */
+  export const inboundSchema = CreateProjectGroup$inboundSchema;
+  /** @deprecated use `CreateProjectGroup$outboundSchema` instead. */
+  export const outboundSchema = CreateProjectGroup$outboundSchema;
+  /** @deprecated use `CreateProjectGroup$Outbound` instead. */
+  export type Outbound = CreateProjectGroup$Outbound;
+}
+
+/** @internal */
+export const CreateProjectMicrofrontends$inboundSchema: z.ZodType<
+  CreateProjectMicrofrontends,
+  z.ZodTypeDef,
+  unknown
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => CreateProjectGroup$inboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/** @internal */
+export type CreateProjectMicrofrontends$Outbound = {
+  updatedAt: number;
+  group: CreateProjectGroup$Outbound;
+  enabled: boolean;
+  isDefaultApp?: boolean | undefined;
+  defaultRoute?: string | undefined;
+};
+
+/** @internal */
+export const CreateProjectMicrofrontends$outboundSchema: z.ZodType<
+  CreateProjectMicrofrontends$Outbound,
+  z.ZodTypeDef,
+  CreateProjectMicrofrontends
+> = z.object({
+  updatedAt: z.number(),
+  group: z.lazy(() => CreateProjectGroup$outboundSchema),
+  enabled: z.boolean(),
+  isDefaultApp: z.boolean().optional(),
+  defaultRoute: z.string().optional(),
+});
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace CreateProjectMicrofrontends$ {
+  /** @deprecated use `CreateProjectMicrofrontends$inboundSchema` instead. */
+  export const inboundSchema = CreateProjectMicrofrontends$inboundSchema;
+  /** @deprecated use `CreateProjectMicrofrontends$outboundSchema` instead. */
+  export const outboundSchema = CreateProjectMicrofrontends$outboundSchema;
+  /** @deprecated use `CreateProjectMicrofrontends$Outbound` instead. */
+  export type Outbound = CreateProjectMicrofrontends$Outbound;
+}
+
+/** @internal */
 export const CreateProjectNodeVersion$inboundSchema: z.ZodNativeEnum<
   typeof CreateProjectNodeVersion
 > = z.nativeEnum(CreateProjectNodeVersion);
@@ -7714,6 +7839,8 @@ export const CreateProjectResponseBody$inboundSchema: z.ZodType<
     z.lazy(() => CreateProjectLink3$inboundSchema),
     z.lazy(() => CreateProjectLink2$inboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => CreateProjectMicrofrontends$inboundSchema)
+    .optional(),
   name: z.string(),
   nodeVersion: CreateProjectNodeVersion$inboundSchema,
   optionsAllowlist: z.nullable(
@@ -7818,6 +7945,7 @@ export type CreateProjectResponseBody$Outbound = {
     | CreateProjectLink3$Outbound
     | CreateProjectLink2$Outbound
     | undefined;
+  microfrontends?: CreateProjectMicrofrontends$Outbound | undefined;
   name: string;
   nodeVersion: string;
   optionsAllowlist?: CreateProjectOptionsAllowlist$Outbound | null | undefined;
@@ -7919,6 +8047,8 @@ export const CreateProjectResponseBody$outboundSchema: z.ZodType<
     z.lazy(() => CreateProjectLink3$outboundSchema),
     z.lazy(() => CreateProjectLink2$outboundSchema),
   ]).optional(),
+  microfrontends: z.lazy(() => CreateProjectMicrofrontends$outboundSchema)
+    .optional(),
   name: z.string(),
   nodeVersion: CreateProjectNodeVersion$outboundSchema,
   optionsAllowlist: z.nullable(

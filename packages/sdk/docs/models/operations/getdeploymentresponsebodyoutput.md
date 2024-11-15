@@ -6,7 +6,7 @@
 import { GetDeploymentResponseBodyOutput } from "@vercel/sdk/models/operations/getdeployment.js";
 
 let value: GetDeploymentResponseBodyOutput = {
-  path: "/sys",
+  path: "/media",
   functionName: "<value>",
 };
 ```

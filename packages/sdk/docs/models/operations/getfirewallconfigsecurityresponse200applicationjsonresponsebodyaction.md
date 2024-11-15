@@ -6,8 +6,7 @@
 import { GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyAction } from "@vercel/sdk/models/operations/getfirewallconfig.js";
 
 let value:
-  GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyAction =
-    "deny";
+  GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyAction = "log";
 ```
 
 ## Values

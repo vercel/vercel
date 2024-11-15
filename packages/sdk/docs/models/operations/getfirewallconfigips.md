@@ -7,9 +7,9 @@ import { GetFirewallConfigIps } from "@vercel/sdk/models/operations/getfirewallc
 
 let value: GetFirewallConfigIps = {
   id: "<id>",
-  hostname: "snarling-bar.info",
-  ip: "207.243.8.239",
-  action: "bypass",
+  hostname: "awful-cork.name",
+  ip: "cdfa:ac2f:b3f7:ddb2:c7fd:c7af:ba0f:c56b",
+  action: "deny",
 };
 ```
 

@@ -7,13 +7,13 @@
 
 ```typescript
 const value: operations.UpdateProjectTrustedIps1 = {
-  deploymentType: "production",
+  deploymentType: "preview",
   addresses: [
     {
       value: "<value>",
     },
   ],
-  protectionMode: "exclusive",
+  protectionMode: "additional",
 };
 ```
 
@@ -21,7 +21,7 @@ const value: operations.UpdateProjectTrustedIps1 = {
 
 ```typescript
 const value: operations.UpdateProjectTrustedIps2 = {
-  deploymentType: "preview",
+  deploymentType: "all",
 };
 ```
 

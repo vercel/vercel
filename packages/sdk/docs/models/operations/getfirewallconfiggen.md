@@ -7,7 +7,7 @@ import { GetFirewallConfigGen } from "@vercel/sdk/models/operations/getfirewallc
 
 let value: GetFirewallConfigGen = {
   active: false,
-  action: "deny",
+  action: "log",
 };
 ```
 

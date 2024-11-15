@@ -12,8 +12,8 @@ let value: RequestBodyValue = {
     {
       conditions: [
         {
-          type: "method",
-          op: "ex",
+          type: "ip_address",
+          op: "lt",
         },
       ],
     },

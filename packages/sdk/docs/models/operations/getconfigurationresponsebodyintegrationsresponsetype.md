@@ -5,8 +5,7 @@
 ```typescript
 import { GetConfigurationResponseBodyIntegrationsResponseType } from "@vercel/sdk/models/operations/getconfiguration.js";
 
-let value: GetConfigurationResponseBodyIntegrationsResponseType =
-  "subscription";
+let value: GetConfigurationResponseBodyIntegrationsResponseType = "prepayment";
 ```
 
 ## Values
