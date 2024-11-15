@@ -50,7 +50,7 @@ import {
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import editProjectSettings from '../../util/input/edit-project-settings';
+import getProjectName from '../../util/get-project-name';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
@@ -222,7 +222,13 @@ export default async (client: Client): Promise<number> => {
   // Retrieve `project` and `org` from linked Project.
   // If not linked, prompt user to set up a new Project.
   const link = await ensureLink('deploy', client, cwd, {
+    autoConfirm,
     setupMsg: 'Set up and deploy',
+    projectName: getProjectName({
+      nameParam: parsedArguments.flags['--name'],
+      nowConfig: localConfig,
+      paths,
+    }),
   });
   if (typeof link === 'number') {
     return link;
@@ -231,7 +237,7 @@ export default async (client: Client): Promise<number> => {
   const { org, project } = link;
   const rootDirectory = project.rootDirectory;
   const sourceFilesOutsideRootDirectory =
-    project.sourceFilesOutsideRootDirectory;
+    project.sourceFilesOutsideRootDirectory ?? true;
 
   // For repo-style linking, reset the path to the root of the repository
   if (link.repoRoot) {
@@ -537,41 +543,41 @@ export default async (client: Client): Promise<number> => {
       archive
     );
 
-    if (deployment.code === 'missing_project_settings') {
-      let { projectSettings, framework } = deployment;
-      if (rootDirectory) {
-        projectSettings.rootDirectory = rootDirectory;
-      }
+    //if (deployment.code === 'missing_project_settings') {
+    //  let { projectSettings, framework } = deployment;
+    //  if (rootDirectory) {
+    //    projectSettings.rootDirectory = rootDirectory;
+    //  }
 
-      if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
-        projectSettings.sourceFilesOutsideRootDirectory =
-          sourceFilesOutsideRootDirectory;
-      }
+    //  if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
+    //    projectSettings.sourceFilesOutsideRootDirectory =
+    //      sourceFilesOutsideRootDirectory;
+    //  }
 
-      const settings = await editProjectSettings(
-        client,
-        projectSettings,
-        framework,
-        false,
-        localConfigurationOverrides
-      );
+    //  const settings = await editProjectSettings(
+    //    client,
+    //    projectSettings,
+    //    framework,
+    //    false,
+    //    localConfigurationOverrides
+    //  );
 
-      // deploy again, but send projectSettings this time
-      createArgs.projectSettings = settings;
+    //  // deploy again, but send projectSettings this time
+    //  createArgs.projectSettings = settings;
 
-      deployStamp = stamp();
-      createArgs.deployStamp = deployStamp;
-      deployment = await createDeploy(
-        client,
-        now,
-        contextName,
-        sourcePath,
-        createArgs,
-        org,
-        false,
-        cwd
-      );
-    }
+    //  deployStamp = stamp();
+    //  createArgs.deployStamp = deployStamp;
+    //  deployment = await createDeploy(
+    //    client,
+    //    now,
+    //    contextName,
+    //    sourcePath,
+    //    createArgs,
+    //    org,
+    //    false,
+    //    cwd
+    //  );
+    //}
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment.message);

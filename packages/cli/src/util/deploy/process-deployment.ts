@@ -12,7 +12,6 @@ import Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
-import { linkFolderToProject } from '../projects/link';
 import ua from '../ua';
 import output from '../../output-manager';
 
@@ -34,7 +33,6 @@ function printInspectUrl(
 
 export default async function processDeployment({
   org,
-  cwd,
   projectName,
   isSettingUpProject,
   archive,
@@ -59,7 +57,6 @@ export default async function processDeployment({
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
   withLogs?: boolean;
@@ -179,17 +176,6 @@ export default async function processDeployment({
 
       if (event.type === 'created') {
         const deployment: Deployment = event.payload;
-
-        await linkFolderToProject(
-          client,
-          cwd,
-          {
-            orgId: org.id,
-            projectId: deployment.projectId!,
-          },
-          projectName,
-          org.slug
-        );
 
         now.url = deployment.url;
 

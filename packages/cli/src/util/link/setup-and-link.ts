@@ -19,8 +19,9 @@ import selectOrg from '../input/select-org';
 import inputProject from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
-import editProjectSettings, {
-  PartialProjectSettings,
+import {
+  editProjectSettings,
+  type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';

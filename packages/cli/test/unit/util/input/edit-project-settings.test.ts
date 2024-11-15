@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { Framework, frameworks } from '@vercel/frameworks';
-import editProjectSettings from '../../../../src/util/input/edit-project-settings';
+import { editProjectSettings } from '../../../../src/util/input/edit-project-settings';
 import { client } from '../../../mocks/client';
 
 const otherFramework = frameworks.find(
