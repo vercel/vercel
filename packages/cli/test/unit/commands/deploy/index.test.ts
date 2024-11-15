@@ -716,9 +716,10 @@ describe('deploy', () => {
     await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
     // remove first 4 lines which contains randomized data
-    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
-        "2024-06-03T15:01:10.339Z  Hello, world!
+        "Building
+        2024-06-03T15:01:10.339Z  Hello, world!
         2024-06-03T15:01:10.439Z  slow...
         2024-06-03T15:01:10.540Z  Bye...
         "
