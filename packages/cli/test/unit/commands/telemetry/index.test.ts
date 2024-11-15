@@ -61,7 +61,9 @@ describe('telemetry', () => {
         "
         > Telemetry status: Enabled
 
-        > You have opted in to Vercel CLI telemetry.
+        > You have opted in to Vercel CLI telemetry
+
+        Learn more: https://vercel.com/docs/cli/about-telemetry
         "
       `);
       expect(exitCode).toBe(0);
@@ -82,7 +84,9 @@ describe('telemetry', () => {
         "
         > Telemetry status: Enabled
 
-        > You have opted in to Vercel CLI telemetry.
+        > You have opted in to Vercel CLI telemetry
+
+        Learn more: https://vercel.com/docs/cli/about-telemetry
         "
       `);
       expect(exitCode).toBe(0);
@@ -98,8 +102,10 @@ describe('telemetry', () => {
         "
         > Telemetry status: Disabled
 
-        > You have opted out of Vercel CLI telemetry.
-        > No data will be collected from your machine.
+        > You have opted out of Vercel CLI telemetry
+        > No data will be collected from your machine
+
+        Learn more: https://vercel.com/docs/cli/about-telemetry
         "
       `);
       expect(exitCode).toBe(0);

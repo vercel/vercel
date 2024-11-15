@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.4.1
+
+### Patch Changes
+
+- Use a ThreadingHTTPServer to handle concurrent requests ([#12578](https://github.com/vercel/vercel/pull/12578))
+
 ## 4.4.0
 
 ### Minor Changes

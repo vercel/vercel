@@ -28,7 +28,7 @@ def format_headers(headers, decode=False):
     return keyToList
 
 if 'VERCEL_IPC_FD' in os.environ:
-    from http.server import HTTPServer
+    from http.server import ThreadingHTTPServer
     import http
     import time
     import contextvars
@@ -42,6 +42,49 @@ if 'VERCEL_IPC_FD' in os.environ:
 
     send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
     storage = contextvars.ContextVar('storage', default=None)
+
+    # Override urlopen from urllib3 (& requests) to send Request Metrics
+    try:
+        import urllib3
+        from urllib.parse import urlparse
+
+        def timed_request(func):
+            fetchId = 0
+            @functools.wraps(func)
+            def wrapper(self, method, url, *args, **kwargs):
+                nonlocal fetchId
+                fetchId += 1
+                start_time = int(time.time() * 1000)
+                result = func(self, method, url, *args, **kwargs)
+                elapsed_time = int(time.time() * 1000) - start_time
+                parsed_url = urlparse(url)
+                context = storage.get()
+                if context is not None:
+                    send_message({
+                        "type": "metric",
+                        "payload": {
+                            "context": {
+                                "invocationId": context['invocationId'],
+                                "requestId": context['requestId'],
+                            },
+                            "type": "fetch-metric",
+                            "payload": {
+                                "pathname": parsed_url.path,
+                                "search": parsed_url.query,
+                                "start": start_time,
+                                "duration": elapsed_time,
+                                "host": parsed_url.hostname or self.host,
+                                "statusCode": result.status,
+                                "method": method,
+                                "id": fetchId
+                            }
+                        }
+                    })
+                return result
+            return wrapper
+        urllib3.connectionpool.HTTPConnectionPool.urlopen = timed_request(urllib3.connectionpool.HTTPConnectionPool.urlopen)
+    except:
+        pass
 
     # Override sys.stdout and sys.stderr to map logs to the correct request
     class StreamWrapper:
@@ -312,7 +355,7 @@ if 'VERCEL_IPC_FD' in os.environ:
                     asyncio.run(app(scope, receive, send))
 
     if 'Handler' in locals():
-        server = HTTPServer(('127.0.0.1', 0), Handler)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         send_message({
             "type": "server-started",
             "payload": {
