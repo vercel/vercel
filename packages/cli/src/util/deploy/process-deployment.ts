@@ -195,7 +195,7 @@ export default async function processDeployment({
           ) + `\n`
         );
 
-        if (quiet) {
+        if (quiet || process.env.FORCE_TTY === '1') {
           process.stdout.write(`https://${event.payload.url}`);
         }
 

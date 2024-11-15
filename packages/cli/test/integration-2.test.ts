@@ -360,7 +360,11 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
     })
   );
 
-  const now = execCli(binaryPath, [directory]);
+  const now = execCli(binaryPath, [directory], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let detectedNotice = false;
 
@@ -1185,13 +1189,17 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   }`;
   const parent = path.join(directory, '..');
   const newDirectory = path.join(parent, randomDirectoryName);
-  await fs.renameSync(directory, newDirectory);
+  fs.renameSync(directory, newDirectory);
   directory = newDirectory;
 
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const vc = execCli(binaryPath, [directory]);
+  const vc = execCli(binaryPath, [directory], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin?.write('y\n');
