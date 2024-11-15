@@ -194,7 +194,7 @@ async function renderJobFailed({
 
   // aliases are paginated, so continuously loop until all of them have been
   // fetched
-  let nextTimestamp;
+  let nextTimestamp: number | undefined;
   for (;;) {
     let url = `/v9/projects/${project.id}/rollback/aliases?failedOnly=true&limit=20`;
     if (nextTimestamp) {
@@ -242,7 +242,7 @@ async function renderJobSucceeded({
   try {
     const deployment = await getDeployment(client, contextName, toDeploymentId);
     deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
-  } catch (err: any) {
+  } catch (err: unknown) {
     output.debug(
       `Failed to get deployment url for ${toDeploymentId}: ${
         err?.toString() || err
