@@ -45,7 +45,7 @@ export default async (client: Client): Promise<number> => {
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   // validate the timeout
-  let timeout = parsedArgs.flags['--timeout'];
+  const timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
     output.error(`Invalid timeout "${timeout}"`);
     return 1;
