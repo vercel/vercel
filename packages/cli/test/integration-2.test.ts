@@ -258,7 +258,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   await waitForPrompt(now, /Set up and deploy[^?]+\?/);
   now.stdin?.write('yes\n');
 
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
+  await waitForPrompt(now, 'Which scope should contain your project?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');

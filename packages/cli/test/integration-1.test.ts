@@ -457,12 +457,15 @@ test('deploy from a nested directory', async () => {
 
   const vc = execCli(binaryPath, ['deploy', `--name=${projectName}`], {
     cwd: root,
+    env: {
+      FORCE_TTY: '1',
+    },
   });
 
   await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
   vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope do you want to deploy to?');
+  await waitForPrompt(vc, 'Which scope should contain your project?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Link to existing project?');
