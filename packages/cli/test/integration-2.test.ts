@@ -159,7 +159,11 @@ test('should show prompts to set up project during first deploy', async () => {
   // remove previously linked project if it exists
   await remove(path.join(dir, '.vercel'));
 
-  const now = execCli(binaryPath, [dir]);
+  const now = execCli(binaryPath, [dir], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await setupProject(now, projectName, {
     buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
@@ -258,7 +262,7 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
   await waitForPrompt(now, /Set up and deploy[^?]+\?/);
   now.stdin?.write('yes\n');
 
-  await waitForPrompt(now, 'Which scope do you want to deploy to?');
+  await waitForPrompt(now, 'Which scope should contain your project?');
   now.stdin?.write('\n');
 
   await waitForPrompt(now, 'Link to existing project?');
@@ -356,7 +360,11 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
     })
   );
 
-  const now = execCli(binaryPath, [directory]);
+  const now = execCli(binaryPath, [directory], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   let detectedNotice = false;
 
@@ -1181,13 +1189,17 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   }`;
   const parent = path.join(directory, '..');
   const newDirectory = path.join(parent, randomDirectoryName);
-  await fs.renameSync(directory, newDirectory);
+  fs.renameSync(directory, newDirectory);
   directory = newDirectory;
 
   // remove previously linked project if it exists
   await remove(path.join(directory, '.vercel'));
 
-  const vc = execCli(binaryPath, [directory]);
+  const vc = execCli(binaryPath, [directory], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
   await waitForPrompt(vc, 'Set up and deploy');
   vc.stdin?.write('y\n');

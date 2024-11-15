@@ -171,7 +171,6 @@ export default class Now {
       isSettingUpProject,
       archive,
       skipAutoDetectionConfirmation,
-      cwd,
       prebuilt,
       vercelOutputDir,
       rootDirectory,

@@ -21,7 +21,7 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
 
-export default async function editProjectSettings(
+export async function editProjectSettings(
   client: Client,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
