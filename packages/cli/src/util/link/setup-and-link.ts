@@ -31,6 +31,7 @@ import { isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { getPrettyError } from '@vercel/build-utils';
 import { SchemaValidationFailed } from '../errors';
+import { fileNameSymbol } from '@vercel/client';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -266,8 +267,7 @@ export default async function setupAndLink(
   } catch (err) {
     if (err instanceof SchemaValidationFailed) {
       const niceError = getPrettyError(err.meta);
-      //const fileName = localConfig[fileNameSymbol] || 'vercel.json';
-      const fileName = 'vercel.json';
+      const fileName = localConfig?.[fileNameSymbol] || 'vercel.json';
       niceError.message = `Invalid ${fileName} - ${niceError.message}`;
       output.prettyError(niceError);
       return { status: 'error', exitCode: 1 };

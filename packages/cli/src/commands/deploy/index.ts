@@ -150,6 +150,7 @@ export default async (client: Client): Promise<number> => {
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
 
   if (localConfig) {
+    client.localConfig = localConfig;
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]!);
     const prop = code('version');
