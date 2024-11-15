@@ -483,6 +483,44 @@ test('deploy from a nested directory', async () => {
   vc.kill();
 });
 
+test('deploy from a nested directory with `--archive=tgz` option', async () => {
+  const root = await setupE2EFixture('zero-config-next-js-nested');
+  const projectName = `project-link-dev-${
+    Math.random().toString(36).split('.')[1]
+  }`;
+
+  const vc = execCli(
+    binaryPath,
+    ['deploy', '--archive=tgz', `--name=${projectName}`],
+    {
+      cwd: root,
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
+
+  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
+  vc.stdin?.write('yes\n');
+
+  await waitForPrompt(vc, 'Which scope should contain your project?');
+  vc.stdin?.write('\n');
+
+  await waitForPrompt(vc, 'Link to existing project?');
+  vc.stdin?.write('no\n');
+
+  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  vc.stdin?.write(`\n`);
+
+  await waitForPrompt(vc, 'In which directory is your code located?');
+  vc.stdin?.write('app\n');
+
+  // This means the framework detection worked!
+  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+
+  vc.kill();
+});
+
 test('deploy using --local-config flag above target', async () => {
   const root = await setupE2EFixture('local-config-above-target');
   const target = path.join(root, 'dir');
