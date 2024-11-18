@@ -1,5 +1,34 @@
 # vercel
 
+## 39.0.3
+
+### Patch Changes
+
+- [cli] fix minor issues vercel promote ([#12593](https://github.com/vercel/vercel/pull/12593))
+
+- [cli] fix minor issues vercel list ([#12595](https://github.com/vercel/vercel/pull/12595))
+
+- Prevent confirmation prompt for `vercel disconnect --yes` ([#12589](https://github.com/vercel/vercel/pull/12589))
+
+- Ensure --debug mode doesn't cause telemetry send process to hang ([#12602](https://github.com/vercel/vercel/pull/12602))
+
+- [cli] fix minor issues vercel help ([#12597](https://github.com/vercel/vercel/pull/12597))
+
+- [cli] fix minor issues vercel remove ([#12588](https://github.com/vercel/vercel/pull/12588))
+
+- [cli] fix minor issues vercel init ([#12596](https://github.com/vercel/vercel/pull/12596))
+
+- Fix framework detection for `vc deploy` when using `--archive` and/or ([#12598](https://github.com/vercel/vercel/pull/12598))
+  `--prebuilt`
+
+- Invoke the telemetry flush command with telemetry disabled ([#12583](https://github.com/vercel/vercel/pull/12583))
+
+- [cli] fix minor issues vercel logout ([#12594](https://github.com/vercel/vercel/pull/12594))
+
+- Updated dependencies [[`b5f4b14d5a5784dd63a0a640e7ec97bd4c09eb63`](https://github.com/vercel/vercel/commit/b5f4b14d5a5784dd63a0a640e7ec97bd4c09eb63), [`da13575953486d6dabecec3c81eae12b03d595ec`](https://github.com/vercel/vercel/commit/da13575953486d6dabecec3c81eae12b03d595ec)]:
+  - @vercel/python@4.5.0
+  - @vercel/next@4.3.20
+
 ## 39.0.2
 
 ### Patch Changes

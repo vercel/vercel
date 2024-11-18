@@ -83,18 +83,7 @@ describe('checkTelemetryStatus', () => {
       });
 
       it('does not inform the user', async () => {
-        await expect(client.stderr).not.toOutput(
-          'The Vercel CLI now collects telemetry regarding usage.'
-        );
-        await expect(client.stderr).not.toOutput(
-          'This information is used to shape the CLI roadmap and prioritize features.'
-        );
-        await expect(client.stderr).not.toOutput(
-          "You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:"
-        );
-        await expect(client.stderr).not.toOutput(
-          'https://vercel.com/docs/cli/about-telemetry'
-        );
+        expect(client.getFullOutput()).toEqual('');
       });
 
       it('does not change opt out status the customer in', async () => {
@@ -114,18 +103,7 @@ describe('checkTelemetryStatus', () => {
       });
 
       it('does not inform the user', async () => {
-        await expect(client.stderr).not.toOutput(
-          'The Vercel CLI now collects telemetry regarding usage.'
-        );
-        await expect(client.stderr).not.toOutput(
-          'This information is used to shape the CLI roadmap and prioritize features.'
-        );
-        await expect(client.stderr).not.toOutput(
-          "You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:"
-        );
-        await expect(client.stderr).not.toOutput(
-          'https://vercel.com/docs/cli/about-telemetry'
-        );
+        expect(client.getFullOutput()).toEqual('');
       });
 
       it('does not change opt out status the customer in', async () => {
