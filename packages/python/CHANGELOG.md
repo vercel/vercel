@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.5.0
+
+### Minor Changes
+
+- Report Request Metrics when using urllib3/requests ([#12580](https://github.com/vercel/vercel/pull/12580))
+
 ## 4.4.1
 
 ### Patch Changes
