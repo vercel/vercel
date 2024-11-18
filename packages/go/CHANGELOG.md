@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.2.1
+
+### Patch Changes
+
+- fix bug on go.work in dev missing go version declaration ([#12574](https://github.com/vercel/vercel/pull/12574))
+
 ## 3.2.0
 
 ### Minor Changes
