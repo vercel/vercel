@@ -289,8 +289,67 @@ if 'VERCEL_IPC_FD' in os.environ:
             from urllib.parse import urlparse
             from io import BytesIO
             import asyncio
+            import enum
 
             app = __vc_module.app
+
+            class ASGICycleState(enum.Enum):
+                REQUEST = enum.auto()
+                RESPONSE = enum.auto()
+
+            class ASGICycle:
+                def __init__(self, response, scope):
+                    self.response = response
+                    self.scope = scope
+                    self.state = ASGICycleState.REQUEST
+                    self.app_queue = None
+
+                def __call__(self, app, body):
+                    self.app_queue = asyncio.Queue()
+                    self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
+
+                    asgi_instance = app(self.scope, self.receive, self.send)
+
+                    asyncio.run(asgi_instance)
+
+                def put_message(self, message):
+                    self.app_queue.put_nowait(message)
+
+                async def receive(self):
+                    message = await self.app_queue.get()
+                    return message
+
+                async def send(self, message):
+                    message_type = message['type']
+
+                    if self.state is ASGICycleState.REQUEST:
+                        if message_type != 'http.response.start':
+                            raise RuntimeError(
+                                f"Expected 'http.response.start', received: {message_type}"
+                            )
+
+                        status_code = message['status']
+                        self.response.send_response(status_code)
+                        if 'headers' in message:
+                            for name, value in message['headers']:
+                                sys.stdout.write(f"{name.decode()}: {value.decode()}\\n")
+                                sys.stdout.flush()
+                                self.response.send_header(name.decode(), value.decode())
+                        self.response.end_headers()
+                        self.state = ASGICycleState.RESPONSE
+
+                    elif self.state is ASGICycleState.RESPONSE:
+                        if message_type != 'http.response.body':
+                            raise RuntimeError(
+                                f"Expected 'http.response.body', received: {message_type}"
+                            )
+
+                        body = message.get('body', b'')
+                        more_body = message.get('more_body', False)
+
+                        self.response.wfile.write(body)
+                        if not more_body:
+                            self.response.wfile.flush()
 
             class Handler(BaseHandler):
                 def handle_request(self):
@@ -319,40 +378,14 @@ if 'VERCEL_IPC_FD' in os.environ:
                         'raw_path': url.path.encode(),
                     }
 
-                    # Prepare ASGI receive function
-                    async def receive():
-                        if 'content-length' in self.headers:
-                            content_length = int(self.headers['content-length'])
-                            body = self.rfile.read(content_length)
-                            return {
-                                'type': 'http.request',
-                                'body': body,
-                                'more_body': False,
-                            }
-                        return {
-                            'type': 'http.request',
-                            'body': b'',
-                            'more_body': False,
-                        }
+                    if 'content-length' in self.headers:
+                        content_length = int(self.headers['content-length'])
+                        body = self.rfile.read(content_length)
+                    else:
+                        body = b''
 
-                    # Prepare ASGI send function
-                    response_started = False
-                    async def send(event):
-                        nonlocal response_started
-                        if event['type'] == 'http.response.start':
-                            self.send_response(event['status'])
-                            if 'headers' in event:
-                                for name, value in event['headers']:
-                                    self.send_header(name.decode(), value.decode())
-                            self.end_headers()
-                            response_started = True
-                        elif event['type'] == 'http.response.body':
-                            self.wfile.write(event['body'])
-                            if not event.get('more_body', False):
-                                self.wfile.flush()
-
-                    # Run the ASGI application
-                    asyncio.run(app(scope, receive, send))
+                    asgi_cycle = ASGICycle(self, scope)
+                    asgi_cycle(app, body)
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
