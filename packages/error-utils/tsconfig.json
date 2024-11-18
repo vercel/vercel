@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "sourceMap": true,
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],
