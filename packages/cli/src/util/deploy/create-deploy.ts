@@ -16,18 +16,10 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd: string,
   archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
-    return await now.create(
-      path,
-      createArgs,
-      org,
-      isSettingUpProject,
-      cwd,
-      archive
-    );
+    return await now.create(path, createArgs, org, isSettingUpProject, archive);
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
       if (err.code === 'rate_limited') {
@@ -112,8 +104,7 @@ export default async function createDeploy(
           path,
           createArgs,
           org,
-          isSettingUpProject,
-          cwd
+          isSettingUpProject
         );
       }
 
