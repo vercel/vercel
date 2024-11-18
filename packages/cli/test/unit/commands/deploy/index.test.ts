@@ -779,7 +779,6 @@ describe('deploy', () => {
       createArgs: expect.any(Object),
       org: expect.any(Object),
       isSettingUpProject: expect.any(Boolean),
-      cwd: expect.any(String),
       archive: undefined,
     };
 
