@@ -131,7 +131,7 @@ export class TelemetryClient {
     });
   }
 
-  protected trackCI(ciVendorName?: string) {
+  protected trackCI(ciVendorName: string | null) {
     if (ciVendorName) {
       this.track({
         key: 'ci',

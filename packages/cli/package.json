@@ -111,6 +111,7 @@
     "bytes": "3.0.0",
     "chalk": "4.1.0",
     "chance": "1.1.7",
+    "ci-info": "4.1.0",
     "cli-table3": "0.6.3",
     "codecov": "3.8.2",
     "date-fns": "1.29.0",
