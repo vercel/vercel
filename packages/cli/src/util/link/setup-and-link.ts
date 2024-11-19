@@ -31,7 +31,7 @@ import { getPrettyError } from '@vercel/build-utils';
 import { SchemaValidationFailed } from '../errors';
 import { fileNameSymbol } from '@vercel/client';
 import readConfig from '../config/read-config';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
