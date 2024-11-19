@@ -1,16 +1,16 @@
 import open from 'open';
 import execa from 'execa';
 import plural from 'pluralize';
-import chalk, { Chalk } from 'chalk';
 import { resolve } from 'node:path';
+import chalk, { type Chalk } from 'chalk';
 import { URLSearchParams, parse } from 'node:url';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
 import link from '../../util/output/link';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
-import { Deployment } from '@vercel-internals/types';
+import type Client from '../../util/client';
+import type { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
 import getScope from '../../util/get-scope';
 import getDeployment from '../../util/get-deployment';
