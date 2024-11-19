@@ -89,7 +89,7 @@ export default async function main(client: Client) {
   const [passedDir] = args;
   telemetry.trackCliArgumentDir(passedDir);
 
-  const dir = passedDir || '.';
+  const dir = passedDir || process.cwd();
 
   const vercelConfig = await readConfig(dir);
 
