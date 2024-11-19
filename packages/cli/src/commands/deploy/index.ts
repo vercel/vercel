@@ -310,18 +310,11 @@ export default async (client: Client): Promise<number> => {
   const contextName = org.slug;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
-  // and upload the entire directory.
-  const sourcePath =
-    rootDirectory && !sourceFilesOutsideRootDirectory
-      ? join(cwd, rootDirectory)
-      : cwd;
-
   if (
     rootDirectory &&
     (await validateRootDirectory(
       cwd,
-      sourcePath,
+      join(cwd, rootDirectory),
       project
         ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
         : ''
@@ -536,11 +529,10 @@ export default async (client: Client): Promise<number> => {
       client,
       now,
       contextName,
-      sourcePath,
+      cwd,
       createArgs,
       org,
       !project,
-      cwd,
       archive
     );
 

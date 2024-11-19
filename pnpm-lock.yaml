@@ -148,7 +148,7 @@ importers:
         specifier: 8.4.12
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.3.0
+        specifier: 3.3.1
         version: link:../packages/frameworks
 
   internals/constants:
@@ -266,7 +266,7 @@ importers:
         specifier: 2.4.2
         version: 2.4.2
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       aggregate-error:
         specifier: 3.0.1
@@ -341,7 +341,7 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       '@vercel/go':
-        specifier: 3.2.0
+        specifier: 3.2.1
         version: link:../go
       '@vercel/hydrogen':
         specifier: 1.0.9
@@ -350,16 +350,16 @@ importers:
         specifier: 4.3.20
         version: link:../next
       '@vercel/node':
-        specifier: 3.2.24
+        specifier: 3.2.25
         version: link:../node
       '@vercel/python':
-        specifier: 4.5.0
+        specifier: 4.5.1
         version: link:../python
       '@vercel/redwood':
         specifier: 2.1.8
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 2.2.13
+        specifier: 2.2.14
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.1.0
@@ -510,16 +510,16 @@ importers:
         specifier: 2.0.16
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.4.16
+        specifier: 13.4.17
         version: link:../client
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.3.0
+        specifier: 3.3.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.10
+        specifier: 5.2.11
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -765,7 +765,7 @@ importers:
         specifier: 8.4.12
         version: link:../build-utils
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -919,7 +919,7 @@ importers:
         specifier: 2.2.3
         version: 2.2.3
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       js-yaml:
         specifier: 3.13.1
@@ -953,10 +953,10 @@ importers:
   packages/fs-detectors:
     dependencies:
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.3.0
+        specifier: 3.3.1
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 3.1.0
@@ -1318,7 +1318,7 @@ importers:
         specifier: 8.4.12
         version: link:../build-utils
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/nft':
         specifier: 0.27.3
@@ -1506,7 +1506,7 @@ importers:
   packages/remix:
     dependencies:
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/nft':
         specifier: 0.27.3
@@ -1672,13 +1672,13 @@ importers:
         specifier: 8.4.12
         version: link:../build-utils
       '@vercel/error-utils':
-        specifier: 2.0.2
+        specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.3.0
+        specifier: 3.3.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.2.10
+        specifier: 5.2.11
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 3.1.0

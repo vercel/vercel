@@ -1,5 +1,23 @@
 # vercel
 
+## 39.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`3c69318aa97864752b3019ce63393904d76f6855`](https://github.com/vercel/vercel/commit/3c69318aa97864752b3019ce63393904d76f6855)]:
+  - @vercel/python@4.5.1
+
+## 39.0.4
+
+### Patch Changes
+
+- Fix file uploading in `vc deploy` when `sourceFilesOutsideRootDirectory` setting is `false` ([#12608](https://github.com/vercel/vercel/pull/12608))
+
+- Updated dependencies [[`56f525724428856f717b4f3fb12fd45b98f7f561`](https://github.com/vercel/vercel/commit/56f525724428856f717b4f3fb12fd45b98f7f561)]:
+  - @vercel/go@3.2.1
+  - @vercel/node@3.2.25
+  - @vercel/remix-builder@2.2.14
+
 ## 39.0.3
 
 ### Patch Changes

@@ -319,21 +319,23 @@ if 'VERCEL_IPC_FD' in os.environ:
                         'raw_path': url.path.encode(),
                     }
 
+                    if 'content-length' in self.headers:
+                        content_length = int(self.headers['content-length'])
+                        body = self.rfile.read(content_length)
+                    else:
+                        body = b''
+
+                    if _use_legacy_asyncio:
+                        loop = asyncio.new_event_loop()
+                        app_queue = asyncio.Queue(loop=loop)
+                    else:
+                        app_queue = asyncio.Queue()
+                    app_queue.put_nowait({'type': 'http.request', 'body': body, 'more_body': False})
+
                     # Prepare ASGI receive function
                     async def receive():
-                        if 'content-length' in self.headers:
-                            content_length = int(self.headers['content-length'])
-                            body = self.rfile.read(content_length)
-                            return {
-                                'type': 'http.request',
-                                'body': body,
-                                'more_body': False,
-                            }
-                        return {
-                            'type': 'http.request',
-                            'body': b'',
-                            'more_body': False,
-                        }
+                        message = await app_queue.get()
+                        return message
 
                     # Prepare ASGI send function
                     response_started = False
@@ -352,7 +354,12 @@ if 'VERCEL_IPC_FD' in os.environ:
                                 self.wfile.flush()
 
                     # Run the ASGI application
-                    asyncio.run(app(scope, receive, send))
+                    asgi_instance = app(scope, receive, send)
+                    if _use_legacy_asyncio:
+                        asgi_task = loop.create_task(asgi_instance)
+                        loop.run_until_complete(asgi_task)
+                    else:
+                        asyncio.run(asgi_instance)
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
