@@ -180,7 +180,8 @@ export default async function setupAndLink(
         pathWithRootDirectory
       );
 
-      // Select the first framework detected the "Other" preset if none was detected.
+      // Select the first framework detected, or use
+      // the "Other" preset if none was detected.
       const detectedProjects = detectedProjectsForWorkspace.get('') || [];
       const framework =
         detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
