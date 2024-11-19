@@ -7,6 +7,7 @@ import {
   beforeAll,
   beforeEach,
   afterAll,
+  afterEach,
 } from 'vitest';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
