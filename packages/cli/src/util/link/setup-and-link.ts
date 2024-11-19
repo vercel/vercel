@@ -211,8 +211,7 @@ export default async function setupAndLink(
         sourcePath,
         createArgs,
         org,
-        true,
-        path
+        true
       );
 
       if (
