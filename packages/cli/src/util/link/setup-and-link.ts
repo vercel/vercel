@@ -24,12 +24,14 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import { EmojiLabel } from '../emoji';
-import { isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import { getPrettyError } from '@vercel/build-utils';
 import { SchemaValidationFailed } from '../errors';
 import { fileNameSymbol } from '@vercel/client';
+import readConfig from '../config/read-config';
+import frameworkList from '@vercel/frameworks';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -52,7 +54,7 @@ export default async function setupAndLink(
     projectName = basename(path),
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const { localConfig, config } = client;
+  const { config } = client;
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
@@ -150,6 +152,16 @@ export default async function setupAndLink(
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  const pathWithRootDirectory = rootDirectory
+    ? join(path, rootDirectory)
+    : path;
+  const localConfig = await readConfig(pathWithRootDirectory);
+  if (localConfig instanceof CantParseJSONFile) {
+    output.prettyError(localConfig);
+    return { status: 'error', exitCode: 1 };
+  }
+
   const isZeroConfig =
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
@@ -167,13 +179,14 @@ export default async function setupAndLink(
       };
 
       // Run the framework detection logic against the local filesystem.
-      const detectedProjectsForWorkspace = await detectProjects(path);
+      const detectedProjectsForWorkspace = await detectProjects(
+        pathWithRootDirectory
+      );
 
-      // Select the first framework detected for the given root directory,
-      // or `null` if none were detected.
-      const detectedProjects =
-        detectedProjectsForWorkspace.get(rootDirectory ?? '') || [];
-      const framework = detectedProjects[0] ?? null;
+      // Select the first framework detected the "Other" preset if none was detected.
+      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+      const framework =
+        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
 
       settings = await editProjectSettings(
         client,
