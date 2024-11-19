@@ -1,5 +1,11 @@
 # @vercel/error-utils
 
+## 2.0.3
+
+### Patch Changes
+
+- Move `@vercel/error-utils` to `vitest` ([#12541](https://github.com/vercel/vercel/pull/12541))
+
 ## 2.0.2
 
 ### Patch Changes

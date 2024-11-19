@@ -1,5 +1,12 @@
 # @vercel/remix-builder
 
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
 ## 2.2.13
 
 ### Patch Changes

@@ -130,7 +130,6 @@ export default class Now {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    cwd: string,
     archive?: ArchiveFormat
   ) {
     let hashes: any = {};
