@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.3.21
+
+### Patch Changes
+
+- Revert "Fix edge cases with internal redirect sorting" ([#12615](https://github.com/vercel/vercel/pull/12615))
+
 ## 4.3.20
 
 ### Patch Changes
