@@ -45,7 +45,7 @@
     "@vercel/remix-builder": "2.2.14",
     "@vercel/ruby": "2.1.0",
     "@vercel/static-build": "2.5.34",
-    "chokidar": "3.3.1"
+    "chokidar": "4.0.0"
   },
   "devDependencies": {
     "@alex_neo/jest-expect-message": "1.0.5",
