@@ -509,7 +509,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '20.x',
+        nodeVersion: '22.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -607,7 +607,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '20.x',
+        nodeVersion: '22.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -651,7 +651,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
+      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(0);
