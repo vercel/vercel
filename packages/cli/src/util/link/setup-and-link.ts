@@ -1,6 +1,6 @@
-import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
+import { join, basename } from 'path';
 import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -27,9 +27,6 @@ import { EmojiLabel } from '../emoji';
 import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
-import { getPrettyError } from '@vercel/build-utils';
-import { SchemaValidationFailed } from '../errors';
-import { fileNameSymbol } from '@vercel/client';
 import readConfig from '../config/read-config';
 import { frameworkList } from '@vercel/frameworks';
 
@@ -220,15 +217,6 @@ export default async function setupAndLink(
 
     return { status: 'linked', org, project };
   } catch (err) {
-    if (err instanceof SchemaValidationFailed) {
-      // TODO: I think this is dead code now? The validation should only happen in `vc deploy`
-      const niceError = getPrettyError(err.meta);
-      const fileName = localConfig?.[fileNameSymbol] || 'vercel.json';
-      niceError.message = `Invalid ${fileName} - ${niceError.message}`;
-      output.prettyError(niceError);
-      return { status: 'error', exitCode: 1 };
-    }
-
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };

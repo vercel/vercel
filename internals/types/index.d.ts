@@ -446,7 +446,6 @@ export type ProjectLinkedError = {
     | 'TEAM_DELETED'
     | 'PATH_IS_FILE'
     | 'INVALID_ROOT_DIRECTORY'
-    | 'MISSING_PROJECT_SETTINGS'
     | 'TOO_MANY_PROJECTS';
 };
 
