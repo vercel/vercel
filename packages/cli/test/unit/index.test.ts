@@ -1,6 +1,13 @@
 import os from 'node:os';
-import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
-// import './test/mocks/matchers';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterAll,
+} from 'vitest';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import { RootTelemetryClient } from '../../src/util/telemetry/root';
 import output from '../../src/output-manager';
