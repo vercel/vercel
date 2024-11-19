@@ -1,9 +1,9 @@
 import open from 'open';
 import execa from 'execa';
 import plural from 'pluralize';
-import { resolve } from 'path';
 import chalk, { Chalk } from 'chalk';
-import { URLSearchParams, parse } from 'url';
+import { resolve } from 'node:path';
+import { URLSearchParams, parse } from 'node:url';
 
 import box from '../../util/output/box';
 import formatDate from '../../util/format-date';
