@@ -1,6 +1,6 @@
-import { join, basename } from 'path';
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
+import { join, basename } from 'path';
 import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -23,15 +23,12 @@ import {
   editProjectSettings,
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
-import stamp from '../output/stamp';
 import { EmojiLabel } from '../emoji';
-import createDeploy from '../deploy/create-deploy';
-import Now, { CreateOptions } from '../index';
-import { isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
-import { getPrettyError } from '@vercel/build-utils';
-import { SchemaValidationFailed } from '../errors';
-import { fileNameSymbol } from '@vercel/client';
+import { detectProjects } from '../projects/detect-projects';
+import readConfig from '../config/read-config';
+import { frameworkList } from '@vercel/frameworks';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -51,13 +48,12 @@ export default async function setupAndLink(
     link,
     successEmoji = 'link',
     setupMsg = 'Set up',
-    projectName,
+    projectName = basename(path),
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
-  const { localConfig, config } = client;
+  const { config } = client;
 
-  const isFile = !isDirectory(path);
-  if (isFile) {
+  if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
@@ -65,9 +61,7 @@ export default async function setupAndLink(
     link = await getLinkedProject(client, path);
   }
   const isTTY = client.stdin.isTTY;
-  const quiet = !isTTY;
   let rootDirectory: string | null = null;
-  let sourceFilesOutsideRootDirectory = true;
   let newProjectName: string;
   let org;
 
@@ -120,12 +114,10 @@ export default async function setupAndLink(
     throw err;
   }
 
-  const detectedProjectName = projectName || basename(path);
-
   const projectOrNewProjectName = await inputProject(
     client,
     org,
-    detectedProjectName,
+    projectName,
     autoConfirm
   );
 
@@ -149,18 +141,24 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
-  // and upload the entire directory.
-  const sourcePath =
-    rootDirectory && !sourceFilesOutsideRootDirectory
-      ? join(path, rootDirectory)
-      : path;
-
-  if (rootDirectory && !(await validateRootDirectory(path, sourcePath, ''))) {
+  if (
+    rootDirectory &&
+    !(await validateRootDirectory(path, join(path, rootDirectory)))
+  ) {
     return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  const pathWithRootDirectory = rootDirectory
+    ? join(path, rootDirectory)
+    : path;
+  const localConfig = await readConfig(pathWithRootDirectory);
+  if (localConfig instanceof CantParseJSONFile) {
+    output.prettyError(localConfig);
+    return { status: 'error', exitCode: 1 };
+  }
+
   const isZeroConfig =
     !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
@@ -168,11 +166,6 @@ export default async function setupAndLink(
     let settings: ProjectSettings = {};
 
     if (isZeroConfig) {
-      const now = new Now({
-        client,
-        currentTeam: config.currentTeam,
-      });
-
       const localConfigurationOverrides: PartialProjectSettings = {
         buildCommand: localConfig?.buildCommand,
         devCommand: localConfig?.devCommand,
@@ -182,59 +175,20 @@ export default async function setupAndLink(
         outputDirectory: localConfig?.outputDirectory,
       };
 
-      const createArgs: CreateOptions = {
-        name: newProjectName,
-        env: {},
-        build: { env: {} },
-        forceNew: undefined,
-        withCache: undefined,
-        quiet,
-        wantsPublic: localConfig?.public || false,
-        nowConfig: localConfig,
-        regions: undefined,
-        meta: {},
-        deployStamp: stamp(),
-        target: undefined,
-        skipAutoDetectionConfirmation: false,
-        projectSettings: {
-          ...localConfigurationOverrides,
-          sourceFilesOutsideRootDirectory,
-          rootDirectory,
-        },
-        autoAssignCustomDomains: true,
-      };
-
-      const deployment = await createDeploy(
-        client,
-        now,
-        config.currentTeam || 'current user',
-        sourcePath,
-        createArgs,
-        org,
-        true
+      // Run the framework detection logic against the local filesystem.
+      const detectedProjectsForWorkspace = await detectProjects(
+        pathWithRootDirectory
       );
 
-      if (
-        !deployment ||
-        !('code' in deployment) ||
-        deployment.code !== 'missing_project_settings'
-      ) {
-        output.error('Failed to detect project settings. Please try again.');
-
-        output.debug(deployment);
-
-        return {
-          status: 'error',
-          exitCode: 1,
-          reason: 'MISSING_PROJECT_SETTINGS',
-        };
-      }
-
-      const { projectSettings, framework } = deployment;
+      // Select the first framework detected, or use
+      // the "Other" preset if none was detected.
+      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+      const framework =
+        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
 
       settings = await editProjectSettings(
         client,
-        projectSettings,
+        {},
         framework,
         autoConfirm,
         localConfigurationOverrides
@@ -264,14 +218,6 @@ export default async function setupAndLink(
 
     return { status: 'linked', org, project };
   } catch (err) {
-    if (err instanceof SchemaValidationFailed) {
-      const niceError = getPrettyError(err.meta);
-      const fileName = localConfig?.[fileNameSymbol] || 'vercel.json';
-      niceError.message = `Invalid ${fileName} - ${niceError.message}`;
-      output.prettyError(niceError);
-      return { status: 'error', exitCode: 1 };
-    }
-
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
