@@ -12,7 +12,7 @@ import output from '../output-manager';
 export async function validateRootDirectory(
   cwd: string,
   path: string,
-  errorSuffix: string
+  errorSuffix = ''
 ) {
   const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
