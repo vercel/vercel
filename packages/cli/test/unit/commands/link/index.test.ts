@@ -2,7 +2,7 @@ import { EOL } from 'node:os';
 import { describe, it, expect } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
-import { readJSON, mkdirp, writeFile, pathExists } from 'fs-extra';
+import { readJSON, mkdirp, writeFile, pathExists, remove } from 'fs-extra';
 import link from '../../../../src/commands/link';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -12,7 +12,10 @@ import {
   useProject,
   useUnknownProject,
 } from '../../../mocks/project';
-import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('link', () => {
   describe('--help', () => {
@@ -315,6 +318,49 @@ describe('link', () => {
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(project.id);
+  });
+
+  it('should create new Project', async () => {
+    const user = useUser();
+    const cwd = setupUnitFixture('commands/build/monorepo');
+    await remove(join(cwd, '.vercel'));
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('awesome-app\n');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('apps/nextjs\n');
+
+    await expect(client.stderr).toOutput(
+      'Auto-detected Project Settings (Next.js)'
+    );
+    await expect(client.stderr).toOutput('Want to modify these settings?');
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
   });
 
   it('should allow overwriting existing link', async () => {
