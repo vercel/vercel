@@ -798,10 +798,8 @@ const main = async () => {
     return 1;
   }
 
-  // The telemetry flush event is called by `telemetryEventStore.save`, and it reinvokes the `main` function
-  if (subSubCommand !== 'flush') {
-    await telemetryEventStore.save();
-  }
+  await telemetryEventStore.save();
+
   return exitCode;
 };
 
