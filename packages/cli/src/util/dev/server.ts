@@ -936,7 +936,6 @@ export default class DevServer {
     this.watcher = watch(this.cwd, {
       ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
-      useFsEvents: false,
       usePolling: false,
       persistent: true,
     });
@@ -1004,7 +1003,10 @@ export default class DevServer {
 
     if (this.watcher) {
       debug(`Closing file watcher`);
-      ops.push(this.watcher.close());
+      const closePromise = this.watcher.close();
+      if (closePromise) {
+        ops.push(closePromise);
+      }
     }
 
     for (const pid of this.shutdownCallbacks.keys()) {
