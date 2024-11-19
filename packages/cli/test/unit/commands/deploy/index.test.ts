@@ -1147,11 +1147,8 @@ describe('deploy', () => {
   describe('first deploy', () => {
     describe('project setup', () => {
       const directoryName = 'unlinked';
-      let missingProjectSettings = false;
 
       beforeEach(() => {
-        missingProjectSettings = true;
-
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});
@@ -1163,17 +1160,6 @@ describe('deploy', () => {
 
         const createdDeploymentId = 'dpl_1';
         client.scenario.post(`/v13/deployments`, (req, res) => {
-          if (missingProjectSettings) {
-            res.status(400).json({
-              error: {
-                code: 'missing_project_settings',
-                framework: null,
-                projectSettings: {},
-              },
-            });
-            missingProjectSettings = false;
-            return;
-          }
           res.json({
             creator: {
               uid: user.id,
