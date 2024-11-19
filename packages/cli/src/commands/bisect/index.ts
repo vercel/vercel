@@ -60,13 +60,13 @@ export default async function bisect(client: Client): Promise<number> {
   let bad =
     parsedArgs.flags['--bad'] ||
     (await client.input.text({
-      message: `Specify a URL where the bug occurs:`,
+      message: 'Specify a URL where the bug occurs:',
       validate: val => (val ? true : 'A URL must be provided'),
     }));
   let good =
     parsedArgs.flags['--good'] ||
     (await client.input.text({
-      message: `Specify a URL where the bug does not occur:`,
+      message: 'Specify a URL where the bug does not occur:',
       validate: val => (val ? true : 'A URL must be provided'),
     }));
   let subpath = parsedArgs.flags['--path'] || '';
@@ -118,7 +118,7 @@ export default async function bisect(client: Client): Promise<number> {
 
   if (!subpath) {
     subpath = await client.input.text({
-      message: `Specify the URL subpath where the bug occurs:`,
+      message: 'Specify the URL subpath where the bug occurs:',
       validate: val => (val ? true : 'A subpath must be provided'),
     });
   }
@@ -168,12 +168,12 @@ export default async function bisect(client: Client): Promise<number> {
   const { projectId } = badDeployment;
 
   if (projectId !== goodDeployment.projectId) {
-    output.error(`Good and Bad deployments must be from the same Project`);
+    output.error('Good and Bad deployments must be from the same Project');
     return 1;
   }
 
   if (badDeployment.createdAt < goodDeployment.createdAt) {
-    output.error(`Good deployment must be older than the Bad deployment`);
+    output.error('Good deployment must be older than the Bad deployment');
     return 1;
   }
 
