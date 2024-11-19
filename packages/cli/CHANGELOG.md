@@ -1,5 +1,12 @@
 # vercel
 
+## 39.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`3c69318aa97864752b3019ce63393904d76f6855`](https://github.com/vercel/vercel/commit/3c69318aa97864752b3019ce63393904d76f6855)]:
+  - @vercel/python@4.5.1
+
 ## 39.0.4
 
 ### Patch Changes
