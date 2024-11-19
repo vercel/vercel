@@ -1,5 +1,20 @@
 # vercel
 
+## 39.1.0
+
+### Minor Changes
+
+- Run framework detection locally when setting up a new Project ([#12609](https://github.com/vercel/vercel/pull/12609))
+
+- [cli] Swap out custom CI code for `ci-info` package ([#12569](https://github.com/vercel/vercel/pull/12569))
+
+### Patch Changes
+
+- [cli] bump chokidar to v4 ([#12613](https://github.com/vercel/vercel/pull/12613))
+
+- Updated dependencies [[`27eaa58a73634c6d8a2602e10b6109349d36bc89`](https://github.com/vercel/vercel/commit/27eaa58a73634c6d8a2602e10b6109349d36bc89)]:
+  - @vercel/next@4.3.21
+
 ## 39.0.5
 
 ### Patch Changes
