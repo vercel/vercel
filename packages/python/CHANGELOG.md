@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.5.1
+
+### Patch Changes
+
+- Fix ASGI response streaming ([#12610](https://github.com/vercel/vercel/pull/12610))
+
 ## 4.5.0
 
 ### Minor Changes
