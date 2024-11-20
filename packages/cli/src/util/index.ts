@@ -7,7 +7,6 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
-import highlight from './output/highlight';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
@@ -254,24 +253,13 @@ export default class Now {
     if (error.status >= 400 && error.status < 500) {
       const err = new Error();
 
-      const { code, unreferencedBuildSpecs } = error;
+      const { code } = error;
 
       if (code === 'env_value_invalid_type') {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
           'Please supply a String or a Number (https://err.sh/vercel/env-value-invalid-type)';
-      } else if (code === 'unreferenced_build_specifications') {
-        const count = unreferencedBuildSpecs.length;
-        const prefix = count === 1 ? 'build' : 'builds';
-
-        err.message =
-          `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.vercelignore'
-          )}):` +
-          `\n- ${unreferencedBuildSpecs
-            .map((item: any) => JSON.stringify(item))
-            .join('\n- ')}`;
       } else {
         Object.assign(err, error);
       }
