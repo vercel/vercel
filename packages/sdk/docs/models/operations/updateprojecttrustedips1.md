@@ -6,7 +6,7 @@
 import { UpdateProjectTrustedIps1 } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: UpdateProjectTrustedIps1 = {
-  deploymentType: "all",
+  deploymentType: "production",
   addresses: [
     {
       value: "<value>",

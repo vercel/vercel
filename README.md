@@ -23,7 +23,7 @@ Vercel’s Frontend Cloud provides the developer experience and infrastructure t
 
 ## Deploy
 
-Get started by [importing a project](https://vercel.com/new) or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
+Get started by [importing a project](https://vercel.com/new), [choosing a template](https://vercel.com/templates), or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
 
 ## Documentation
 
@@ -33,7 +33,7 @@ For details on how to use Vercel, check out our [documentation](https://vercel.c
 
 This project uses [pnpm](https://pnpm.io/) to install dependencies and run scripts.
 
-You can use the `dev` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `pnpm dev deploy --cwd=/path/to/project`.
+You can use the `vercel` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `pnpm vercel deploy --cwd=/path/to/project`.
 
 When contributing to this repository, please first discuss the change you wish to make via [GitHub Discussions](https://github.com/vercel/vercel/discussions/new) with the owners of this repository before submitting a Pull Request.
 
@@ -59,11 +59,11 @@ Make sure all the tests pass before making changes.
 
 #### Running Vercel CLI Changes
 
-You can use `pnpm dev` from the `cli` package to invoke Vercel CLI with local changes:
+You can use `pnpm vercel` from the `cli` package to invoke Vercel CLI with local changes:
 
 ```
 cd ./packages/cli
-pnpm dev <cli-commands...>
+pnpm vercel <cli-commands...>
 ```
 
 See [CLI Local Development](../packages/cli#local-development) for more details.

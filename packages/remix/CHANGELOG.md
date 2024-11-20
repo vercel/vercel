@@ -1,5 +1,24 @@
 # @vercel/remix-builder
 
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
+## 2.2.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.13.1 ([#12334](https://github.com/vercel/vercel/pull/12334))
+
+## 2.2.12
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
 ## 2.2.11
 
 ### Patch Changes

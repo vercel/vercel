@@ -1,16 +1,21 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { transferInSubcommand } from '../../../../commands/domains/command';
 
-export class DomainsTransferInTelemetryClient extends TelemetryClient {
+export class DomainsTransferInTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof transferInSubcommand>
+{
   trackCliOptionCode(code: string | undefined) {
     if (code) {
       this.trackCliOption({
-        flag: 'code',
+        option: 'code',
         value: this.redactedValue,
       });
     }
   }
 
-  trackCliArgumentDomainName(domainName: string) {
+  trackCliArgumentDomain(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({
         arg: 'domain',

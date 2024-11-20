@@ -1,3 +1,4 @@
+import assert from 'assert';
 import chance from 'chance';
 import { client } from './client';
 
@@ -22,6 +23,7 @@ export function useAlias() {
   }
 
   client.scenario.get('/v3/now/aliases', (_req, res) => {
+    assert(typeof _req.query.limit === 'string');
     const limit = parseInt(_req.query.limit);
     const aliases = Array.from({ length: limit }, (v, i) => create(`${i}`));
     res.json({

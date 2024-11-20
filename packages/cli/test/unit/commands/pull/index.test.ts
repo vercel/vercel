@@ -10,10 +10,21 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('pull', () => {
-  describe('[project-path]', () => {
-    describe.todo('--environment');
-    describe.todo('--git-branch');
-    describe.todo('--yes');
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'pull';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = pull(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
   });
 
   it('should handle pulling', async () => {
@@ -37,7 +48,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.development.local')
@@ -58,11 +70,18 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       'Command `vercel pull` requires confirmation. Use option "--yes" to confirm.'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(1);
   });
 
   it('should fail without message to pull without a link and with --env', async () => {
-    const cwd = setupUnitFixture('vercel-pull-next');
+    const fixtureName = 'vercel-pull-next';
+    const cwd = setupUnitFixture(fixtureName);
+
+    client.scenario.get(`/v9/projects/${fixtureName}`, (req, res) => {
+      return res.status(404).json({});
+    });
+
     useUser();
     useTeams('team_dummy');
 
@@ -71,7 +90,8 @@ describe('pull', () => {
     await expect(client.stderr).not.toOutput(
       'Command `vercel pull` requires confirmation. Use option "--yes" to confirm.'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(1);
   });
 
   it('should handle pulling with env vars (headless mode)', async () => {
@@ -105,7 +125,8 @@ describe('pull', () => {
       await expect(client.stderr).toOutput(
         `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
       );
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "pull"').toEqual(0);
 
       const config = await fs.readJSON(path.join(cwd, '.vercel/project.json'));
       expect(config).toMatchInlineSnapshot(`
@@ -144,7 +165,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawPreviewEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.preview.local')
@@ -153,6 +175,17 @@ describe('pull', () => {
       .toString()
       .includes('REDIS_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: 'preview',
+      },
+    ]);
   });
 
   it('should handle --environment=production flag', async () => {
@@ -177,7 +210,8 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}.vercel${path.sep}project.json`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
 
     const rawProdEnv = await fs.readFile(
       path.join(cwd, '.vercel', '.env.production.local')
@@ -190,6 +224,17 @@ describe('pull', () => {
       .toString()
       .includes('SQL_CONNECTION_STRING');
     expect(previewFileHasPreviewEnv2).toBeTruthy();
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: 'production',
+      },
+    ]);
   });
 
   it('should work with repo link', async () => {
@@ -216,6 +261,127 @@ describe('pull', () => {
     await expect(client.stderr).toOutput(
       `Downloaded project settings to ${cwd}${path.sep}dashboard${path.sep}.vercel${path.sep}project.json`
     );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "pull"').toEqual(0);
+  });
+
+  it('should track --yes', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', cwd);
+    const exitCodePromise = pull(client);
+
     await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+    ]);
+  });
+
+  it('should track --environment', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--environment=preview', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'option:environment',
+        value: 'preview',
+      },
+    ]);
+  });
+
+  it('should track custom --prod', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--prod', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'flag:prod',
+        value: 'TRUE',
+      },
+    ]);
+  });
+
+  it('should track --git-branch', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+    client.setArgv('pull', '--yes', '--git-branch=custom', cwd);
+    const exitCodePromise = pull(client);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'argument:projectPath',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
+        key: 'option:git-branch',
+        value: '[REDACTED]',
+      },
+    ]);
   });
 });

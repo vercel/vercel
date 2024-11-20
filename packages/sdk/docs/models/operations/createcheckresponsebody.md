@@ -8,12 +8,12 @@ import { CreateCheckResponseBody } from "@vercel/sdk/models/operations/createche
 let value: CreateCheckResponseBody = {
   id: "<id>",
   name: "<value>",
-  status: "completed",
+  status: "registered",
   blocking: false,
   integrationId: "<id>",
   deploymentId: "<id>",
-  createdAt: 391.88,
-  updatedAt: 2828.07,
+  createdAt: 3687.25,
+  updatedAt: 8209.93,
 };
 ```
 

@@ -6,9 +6,9 @@
 import { CreateWebhookRequestBody } from "@vercel/sdk/models/operations/createwebhook.js";
 
 let value: CreateWebhookRequestBody = {
-  url: "https://sore-halt.org/",
+  url: "https://entire-jump.info",
   events: [
-    "deployment.ready",
+    "integration-configuration.removed",
   ],
 };
 ```

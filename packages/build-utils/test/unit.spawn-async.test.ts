@@ -1,3 +1,4 @@
+import { expect, it } from 'vitest';
 import { spawnAsync, NowBuildError } from '../src';
 
 it('should execute a command', async () => {

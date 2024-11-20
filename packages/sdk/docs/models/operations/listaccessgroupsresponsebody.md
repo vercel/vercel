@@ -26,7 +26,7 @@ const value: operations.ListAccessGroupsResponseBody2 = {
     },
   ],
   pagination: {
-    count: 602.25,
+    count: 5684.34,
     next: "<value>",
   },
 };

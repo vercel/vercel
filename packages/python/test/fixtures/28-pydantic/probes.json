@@ -10,6 +10,11 @@
       "responseHeaders": {
         "content-type": "application/json"
       }
+    },
+    {
+      "path": "/api/hello",
+      "method": "GET",
+      "mustContain": "Hello, World!"
     }
   ]
 }

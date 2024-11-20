@@ -5,11 +5,11 @@
 ```typescript
 import { UpdateProjectType } from "@vercel/sdk/models/operations/updateproject.js";
 
-let value: UpdateProjectType = "secret";
+let value: UpdateProjectType = "sensitive";
 ```
 
 ## Values
 
 ```typescript
-"system" | "encrypted" | "plain" | "sensitive" | "secret"
+"system" | "secret" | "encrypted" | "plain" | "sensitive"
 ```

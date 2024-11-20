@@ -1,13 +1,25 @@
 {
   "name": "@vercel/sdk",
-  "version": "14.0.0-canary.3",
+  "version": "14.0.0-canary.6",
   "author": "Speakeasy",
-  "tshy": {
-    "exports": {
-      ".": "./src/index.ts",
-      "./package.json": "./package.json",
-      "./*.js": "./src/*.ts",
-      "./*": "./src/*.ts"
+  "type": "module",
+  "main": "./esm/index.js",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./esm/index.d.ts",
+      "default": "./esm/index.js"
+    },
+    "./package.json": "./package.json",
+    "./*.js": {
+      "source": "./src/*.ts",
+      "types": "./esm/*.d.ts",
+      "default": "./esm/*.js"
+    },
+    "./*": {
+      "source": "./src/*.ts",
+      "types": "./esm/*.d.ts",
+      "default": "./esm/*.js"
     }
   },
   "sideEffects": false,
@@ -18,7 +30,7 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 src",
-    "build": "tshy",
+    "build": "tsc",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
@@ -30,7 +42,6 @@
     "eslint": "^8.57.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
-    "tshy": "^1.16.2",
     "typescript": "^5.4.5",
     "zod": "^3.23.4"
   },

@@ -1,4 +1,8 @@
 <!-- Start SDK Example Usage [usage] -->
+### List deployments
+
+List deployments under the authenticated user or team.
+
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
@@ -7,9 +11,17 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.get({
-    idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
-    withGitRepoInfo: "true",
+  const result = await vercel.deployments.getDeployments({
+    app: "docs",
+    from: 1612948664566,
+    limit: 10,
+    projectId: "QmXGTs7mvAMMC7WW5ebrM33qKG32QK3h4vmQMjmY",
+    target: "production",
+    to: 1612948664566,
+    users: "kr1PsOIzqEL5Xg6M4VZcZosf,K4amb7K9dAt5R2vBJWF32bmY",
+    since: 1540095775941,
+    until: 1540095775951,
+    state: "BUILDING,READY",
   });
 
   // Handle the result
@@ -20,6 +32,10 @@ run();
 
 ```
 
+### Update an existing project
+
+Update the fields of a project using either its name or id.
+
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
@@ -28,28 +44,10 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.deployments.create({
+  const result = await vercel.projects.updateProject({
+    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
     requestBody: {
-      files: [
-        {
-          data: "<value>",
-          file: "folder/file.js",
-        },
-      ],
-      gitMetadata: {
-        remoteUrl: "https://github.com/vercel/next.js",
-        commitAuthorName: "kyliau",
-        commitMessage:
-          "add method to measure Interaction to Next Paint (INP) (#36490)",
-        commitRef: "main",
-        commitSha: "dc36199b2234c6586ebe05ec94078a895c707e29",
-        dirty: true,
-      },
-      meta: {
-        "foo": "bar",
-      },
-      name: "my-instant-deployment",
-      project: "my-deployment-project",
+      name: "a-project-name",
     },
   });
 

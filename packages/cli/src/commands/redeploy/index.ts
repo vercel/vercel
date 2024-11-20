@@ -16,6 +16,13 @@ import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
+import type { CustomEnvironment } from '@vercel-internals/types';
+import {
+  getCustomEnvironments,
+  pickCustomEnvironment,
+} from '../../util/target/get-custom-environments';
 
 /**
  * `vc redeploy` command
@@ -23,8 +30,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async function redeploy(client: Client): Promise<number> {
-  const { output } = client;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(redeployCommand.options);
@@ -37,7 +42,14 @@ export default async function redeploy(client: Client): Promise<number> {
     return 1;
   }
 
+  const telemetry = new RedeployTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('redeploy');
     output.print(help(redeployCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -52,8 +64,13 @@ export default async function redeploy(client: Client): Promise<number> {
     return 1;
   }
 
+  telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
+  telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
+  telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
+
   const { contextName } = await getScope(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
+  const targetArgument = parsedArgs.flags['--target'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({
@@ -61,6 +78,46 @@ export default async function redeploy(client: Client): Promise<number> {
       contextName,
       deployIdOrUrl,
     });
+
+    let target: 'production' | 'staging' | string | null | undefined;
+    let customEnvironmentSlugOrId: string | undefined;
+
+    if (!targetArgument) {
+      target = fromDeployment.target ?? undefined;
+      customEnvironmentSlugOrId = fromDeployment.customEnvironment?.id;
+    } else if (
+      targetArgument === 'staging' ||
+      targetArgument === 'production'
+    ) {
+      target = targetArgument;
+    } else if (targetArgument === 'preview') {
+      target = undefined;
+    } else if (targetArgument) {
+      // custom environment
+      customEnvironmentSlugOrId = targetArgument;
+      target = undefined;
+    } else {
+      target = fromDeployment.target;
+    }
+
+    let customEnvironment: CustomEnvironment | undefined;
+    if (fromDeployment?.projectId && customEnvironmentSlugOrId) {
+      const customEnvironments = await getCustomEnvironments(
+        client,
+        fromDeployment.projectId
+      );
+      customEnvironment = pickCustomEnvironment(
+        customEnvironments,
+        customEnvironmentSlugOrId
+      );
+    }
+
+    if (customEnvironmentSlugOrId && !customEnvironment) {
+      output.error(
+        `The provided argument "${targetArgument}" is not a valid target environment.`
+      );
+      return 1;
+    }
 
     const deployStamp = stamp();
     output.spinner(`Redeploying project ${fromDeployment.id}`, 0);
@@ -72,21 +129,28 @@ export default async function redeploy(client: Client): Promise<number> {
           action: 'redeploy',
         },
         name: fromDeployment.name,
-        target: fromDeployment.target ?? undefined,
+        target,
+        customEnvironmentSlugOrId,
       },
       method: 'POST',
     });
 
     output.stopSpinner();
 
-    const isProdDeployment = deployment.target === 'production';
     const previewUrl = `https://${deployment.url}`;
+    let isProdDeployment: boolean = target === 'production';
+
+    if (customEnvironmentSlugOrId && customEnvironment) {
+      isProdDeployment = customEnvironment.type === 'production';
+    }
+
     output.print(
       `${prependEmoji(
         `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
         emoji('inspect')
       )}\n`
     );
+
     output.print(
       prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
@@ -113,7 +177,7 @@ export default async function redeploy(client: Client): Promise<number> {
           const clientOptions: VercelClientOptions = {
             agent: client.agent,
             apiUrl: client.apiUrl,
-            debug: client.output.debugEnabled,
+            debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()
             teamId: fromDeployment.team?.id,
             token: client.authConfig.token!,
@@ -166,7 +230,7 @@ export default async function redeploy(client: Client): Promise<number> {
       }
     }
 
-    return printDeploymentStatus(client, deployment, deployStamp, noWait);
+    return printDeploymentStatus(deployment, deployStamp, noWait);
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {

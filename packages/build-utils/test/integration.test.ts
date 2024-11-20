@@ -4,8 +4,9 @@ import {
   testDeployment,
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
+import { expect, it, vi } from 'vitest';
 
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
@@ -22,6 +23,7 @@ const skipFixtures: string[] = [
   '23-pnpm-workspaces',
   '41-turborepo-supporting-corepack-home',
   '42-turborepo-not-supporting-corepack-home',
+  '43-turborepo-with-comments-in-turbo-json',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

@@ -12,7 +12,7 @@ const value: operations.CreateProjectLink1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://boring-blowgun.biz/",
+      url: "https://wordy-hierarchy.org/",
     },
   ],
 };
@@ -27,7 +27,7 @@ const value: operations.CreateProjectLink2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://favorite-basket.com/",
+      url: "https://firm-gymnast.info/",
     },
   ],
 };
@@ -42,7 +42,7 @@ const value: operations.CreateProjectLink3 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://damp-meadow.net",
+      url: "https://grown-pronoun.name",
     },
   ],
 };

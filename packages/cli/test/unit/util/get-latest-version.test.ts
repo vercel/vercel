@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
+// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';
@@ -138,7 +139,7 @@ describe('get latest version', () => {
     //    with an out-of-date latest version
     await fs.mkdirs(join(cacheDir, 'package-updates'));
     await fs.writeJSON(cacheFile, {
-      expireAt: Date.now(),
+      expireAt: Date.now() - 10000,
       notifyAt: Date.now() - 60000,
       version: '28.0.0',
     });

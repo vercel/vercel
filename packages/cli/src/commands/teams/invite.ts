@@ -12,6 +12,12 @@ import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '@vercel/error-utils';
+import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -35,11 +41,26 @@ const domains = Array.from(
 
 export default async function invite(
   client: Client,
-  emails: string[] = [],
+  argv: string[],
   { introMsg = '', noopMsg = 'No changes made' } = {}
 ): Promise<number> {
-  const { config, output } = client;
+  const { config, telemetryEventStore } = client;
   const { currentTeam: currentTeamId } = config;
+  const telemetry = new TeamsInviteTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(inviteSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args: emails } = parsedArgs;
 
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
@@ -64,6 +85,8 @@ export default async function invite(
   output.log(
     introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
   );
+
+  telemetry.trackCliArgumentEmail(emails);
 
   if (emails.length > 0) {
     for (const email of emails) {

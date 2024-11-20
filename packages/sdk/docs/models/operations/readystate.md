@@ -1,17 +1,15 @@
 # ReadyState
 
-The state of the deployment depending on the process of deploying, or if it is ready or in an error state
-
 ## Example Usage
 
 ```typescript
-import { ReadyState } from "@vercel/sdk/models/operations/listdeploymentbuilds.js";
+import { ReadyState } from "@vercel/sdk/models/operations/createdeployment.js";
 
-let value: ReadyState = "READY";
+let value: ReadyState = "INITIALIZING";
 ```
 
 ## Values
 
 ```typescript
-"INITIALIZING" | "BUILDING" | "UPLOADING" | "DEPLOYING" | "READY" | "ARCHIVED" | "ERROR" | "QUEUED" | "CANCELED"
+"CANCELED" | "ERROR" | "QUEUED" | "BUILDING" | "INITIALIZING" | "READY"
 ```

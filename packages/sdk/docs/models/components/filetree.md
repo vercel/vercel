@@ -13,7 +13,7 @@ let value: FileTree = {
   uid: "2d4aad419917f15b1146e9e03ddc9bb31747e4d0",
   children: [],
   contentType: "application/json",
-  mode: 6208.42,
+  mode: 7711.46,
 };
 ```
 

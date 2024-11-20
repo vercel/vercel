@@ -10,9 +10,9 @@ import { CreateProjectResponseBody } from "@vercel/sdk/models/operations/createp
 let value: CreateProjectResponseBody = {
   accountId: "<id>",
   crons: {
-    enabledAt: 8428.55,
-    disabledAt: 8180.33,
-    updatedAt: 1024.14,
+    enabledAt: 813.70,
+    disabledAt: 8818.97,
+    updatedAt: 7196.20,
     deploymentId: "<id>",
     definitions: [
       {
@@ -26,46 +26,46 @@ let value: CreateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 1563.83,
+      id: "<id>",
+      createdAt: 9663.90,
       createdIn: "<value>",
       creator: {
-        email: "Arch_Breitenberg@gmail.com",
+        email: "Elisa26@yahoo.com",
         uid: "<id>",
-        username: "Bill.Watsica-Huel",
+        username: "Gabrielle.Franey",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "QUEUED",
-      type: "LAMBDAS",
-      url: "https://humble-sideboard.net/",
-      userId: "<id>",
+      plan: "enterprise",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "INITIALIZING",
+      type: "LAMBDAS",
+      url: "https://weary-worth.info",
+      userId: "<id>",
     },
   ],
   name: "<value>",
   nodeVersion: "8.10.x",
   targets: {
     "key": {
-      createdAt: 3519.36,
+      id: "<id>",
+      createdAt: 7918.80,
       createdIn: "<value>",
       creator: {
-        email: "Okey.Mueller87@hotmail.com",
+        email: "Deja_Cummerata@hotmail.com",
         uid: "<id>",
-        username: "Coy_Jacobson",
+        username: "Jermain42",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "INITIALIZING",
-      type: "LAMBDAS",
-      url: "https://dual-tribe.biz/",
-      userId: "<id>",
+      plan: "hobby",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "BUILDING",
+      type: "LAMBDAS",
+      url: "https://frugal-beret.info/",
+      userId: "<id>",
     },
   },
 };
@@ -94,12 +94,15 @@ let value: CreateProjectResponseBody = {
 | `directoryListing`                                                                                                   | *boolean*                                                                                                            | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `installCommand`                                                                                                     | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `env`                                                                                                                | [operations.CreateProjectEnv](../../models/operations/createprojectenv.md)[]                                         | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `customEnvironments`                                                                                                 | [operations.CreateProjectCustomEnvironments](../../models/operations/createprojectcustomenvironments.md)[]           | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `framework`                                                                                                          | [operations.CreateProjectProjectsFramework](../../models/operations/createprojectprojectsframework.md)               | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitForkProtection`                                                                                                  | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitLFS`                                                                                                             | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `id`                                                                                                                 | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
+| `ipBuckets`                                                                                                          | [operations.CreateProjectIpBuckets](../../models/operations/createprojectipbuckets.md)[]                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `latestDeployments`                                                                                                  | [operations.CreateProjectLatestDeployments](../../models/operations/createprojectlatestdeployments.md)[]             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `link`                                                                                                               | *operations.CreateProjectLink*                                                                                       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `microfrontends`                                                                                                     | [operations.CreateProjectMicrofrontends](../../models/operations/createprojectmicrofrontends.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `name`                                                                                                               | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `nodeVersion`                                                                                                        | [operations.CreateProjectNodeVersion](../../models/operations/createprojectnodeversion.md)                           | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `optionsAllowlist`                                                                                                   | [operations.CreateProjectOptionsAllowlist](../../models/operations/createprojectoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
@@ -108,6 +111,7 @@ let value: CreateProjectResponseBody = {
 | `passwordProtection`                                                                                                 | [operations.CreateProjectPasswordProtection](../../models/operations/createprojectpasswordprotection.md)             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `productionDeploymentsFastLane`                                                                                      | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `publicSource`                                                                                                       | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `resourceConfig`                                                                                                     | [operations.CreateProjectResourceConfig](../../models/operations/createprojectresourceconfig.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `rootDirectory`                                                                                                      | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionRegion`                                                                                           | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionZeroConfigFailover`                                                                               | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

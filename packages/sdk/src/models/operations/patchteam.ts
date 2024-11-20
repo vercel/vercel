@@ -90,6 +90,10 @@ export type PatchTeamRequestBody = {
    * Display or hide IP addresses in Monitoring queries.
    */
   hideIpAddresses?: boolean | undefined;
+  /**
+   * Display or hide IP addresses in Log Drains.
+   */
+  hideIpAddressesInLogDrains?: boolean | undefined;
 };
 
 export type PatchTeamRequest = {
@@ -275,6 +279,7 @@ export const PatchTeamRequestBody$inboundSchema: z.ZodType<
   sensitiveEnvironmentVariablePolicy: z.string().optional(),
   remoteCaching: z.lazy(() => RemoteCaching$inboundSchema).optional(),
   hideIpAddresses: z.boolean().optional(),
+  hideIpAddressesInLogDrains: z.boolean().optional(),
 });
 
 /** @internal */
@@ -292,6 +297,7 @@ export type PatchTeamRequestBody$Outbound = {
   sensitiveEnvironmentVariablePolicy?: string | undefined;
   remoteCaching?: RemoteCaching$Outbound | undefined;
   hideIpAddresses?: boolean | undefined;
+  hideIpAddressesInLogDrains?: boolean | undefined;
 };
 
 /** @internal */
@@ -313,6 +319,7 @@ export const PatchTeamRequestBody$outboundSchema: z.ZodType<
   sensitiveEnvironmentVariablePolicy: z.string().optional(),
   remoteCaching: z.lazy(() => RemoteCaching$outboundSchema).optional(),
   hideIpAddresses: z.boolean().optional(),
+  hideIpAddressesInLogDrains: z.boolean().optional(),
 });
 
 /**

@@ -3,6 +3,7 @@
  */
 
 import * as z from "zod";
+import { ClosedEnum } from "../../types/enums.js";
 
 export type ReadAccessGroupRequest = {
   idOrName: string;
@@ -16,7 +17,13 @@ export type ReadAccessGroupRequest = {
   slug?: string | undefined;
 };
 
+export const Entitlements = {
+  V0: "v0",
+} as const;
+export type Entitlements = ClosedEnum<typeof Entitlements>;
+
 export type ReadAccessGroupResponseBody = {
+  entitlements?: Array<Entitlements> | undefined;
   isDsyncManaged: boolean;
   /**
    * The name of this access group.
@@ -91,11 +98,31 @@ export namespace ReadAccessGroupRequest$ {
 }
 
 /** @internal */
+export const Entitlements$inboundSchema: z.ZodNativeEnum<typeof Entitlements> =
+  z.nativeEnum(Entitlements);
+
+/** @internal */
+export const Entitlements$outboundSchema: z.ZodNativeEnum<typeof Entitlements> =
+  Entitlements$inboundSchema;
+
+/**
+ * @internal
+ * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
+ */
+export namespace Entitlements$ {
+  /** @deprecated use `Entitlements$inboundSchema` instead. */
+  export const inboundSchema = Entitlements$inboundSchema;
+  /** @deprecated use `Entitlements$outboundSchema` instead. */
+  export const outboundSchema = Entitlements$outboundSchema;
+}
+
+/** @internal */
 export const ReadAccessGroupResponseBody$inboundSchema: z.ZodType<
   ReadAccessGroupResponseBody,
   z.ZodTypeDef,
   unknown
 > = z.object({
+  entitlements: z.array(Entitlements$inboundSchema).optional(),
   isDsyncManaged: z.boolean(),
   name: z.string(),
   createdAt: z.string(),
@@ -108,6 +135,7 @@ export const ReadAccessGroupResponseBody$inboundSchema: z.ZodType<
 
 /** @internal */
 export type ReadAccessGroupResponseBody$Outbound = {
+  entitlements?: Array<string> | undefined;
   isDsyncManaged: boolean;
   name: string;
   createdAt: string;
@@ -124,6 +152,7 @@ export const ReadAccessGroupResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   ReadAccessGroupResponseBody
 > = z.object({
+  entitlements: z.array(Entitlements$outboundSchema).optional(),
   isDsyncManaged: z.boolean(),
   name: z.string(),
   createdAt: z.string(),

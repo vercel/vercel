@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 4.3.21
+
+### Patch Changes
+
+- Revert "Fix edge cases with internal redirect sorting" ([#12615](https://github.com/vercel/vercel/pull/12615))
+
+## 4.3.20
+
+### Patch Changes
+
+- Fix edge cases with internal redirect sorting ([#12599](https://github.com/vercel/vercel/pull/12599))
+
+## 4.3.19
+
+### Patch Changes
+
+- Fix basePath root matching for error pages ([#12559](https://github.com/vercel/vercel/pull/12559))
+
+- Stabilize Chained Prerenders ([#12507](https://github.com/vercel/vercel/pull/12507))
+
+## 4.3.18
+
+### Patch Changes
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
+## 4.3.17
+
+### Patch Changes
+
+- Fix caching issue with prerenders while Partial Prerendering is enabled ([#12325](https://github.com/vercel/vercel/pull/12325))
+
+- Revert disabling generation of route shells ([#12323](https://github.com/vercel/vercel/pull/12323))
+
+## 4.3.16
+
+### Patch Changes
+
+- Partial Prerendering Fallback Shells now respect the revalidate config and now do not produce route shells on-demand. ([#12268](https://github.com/vercel/vercel/pull/12268))
+
+- Ensure app-paths-manifest is filtered properly ([#12284](https://github.com/vercel/vercel/pull/12284))
+
+## 4.3.15
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
 ## 4.3.14
 
 ### Patch Changes

@@ -11,6 +11,8 @@ import { ClosedEnum } from "../../types/enums.js";
 export const QueryParamType = {
   New: "new",
   Renewal: "renewal",
+  Transfer: "transfer",
+  Redemption: "redemption",
 } as const;
 /**
  * In which status of the domain the price needs to be checked.
@@ -39,16 +41,7 @@ export type CheckDomainPriceRequest = {
 /**
  * Successful response which returns the price of the domain and the period.
  */
-export type CheckDomainPriceResponseBody = {
-  /**
-   * The domain price in USD.
-   */
-  price: number;
-  /**
-   * The number of years the domain could be held before paying again.
-   */
-  period: number;
-};
+export type CheckDomainPriceResponseBody = {};
 
 /** @internal */
 export const QueryParamType$inboundSchema: z.ZodNativeEnum<
@@ -121,26 +114,17 @@ export const CheckDomainPriceResponseBody$inboundSchema: z.ZodType<
   CheckDomainPriceResponseBody,
   z.ZodTypeDef,
   unknown
-> = z.object({
-  price: z.number(),
-  period: z.number(),
-});
+> = z.object({});
 
 /** @internal */
-export type CheckDomainPriceResponseBody$Outbound = {
-  price: number;
-  period: number;
-};
+export type CheckDomainPriceResponseBody$Outbound = {};
 
 /** @internal */
 export const CheckDomainPriceResponseBody$outboundSchema: z.ZodType<
   CheckDomainPriceResponseBody$Outbound,
   z.ZodTypeDef,
   CheckDomainPriceResponseBody
-> = z.object({
-  price: z.number(),
-  period: z.number(),
-});
+> = z.object({});
 
 /**
  * @internal

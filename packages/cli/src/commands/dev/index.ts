@@ -18,6 +18,8 @@ import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
 import { devCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 
 const COMMAND_CONFIG = {
   dev: ['dev'],
@@ -25,14 +27,14 @@ const COMMAND_CONFIG = {
 
 export default async function main(client: Client) {
   if (process.env.__VERCEL_DEV_RUNNING) {
-    client.output.error(
+    output.error(
       `${cmd(
         `${packageName} dev`
       )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
         'dev'
       )} script in ${cmd('package.json')}`
     );
-    client.output.error(
+    output.error(
       `Learn More: https://vercel.link/recursive-invocation-of-commands`
     );
     return 1;
@@ -41,7 +43,13 @@ export default async function main(client: Client) {
   }
 
   let args;
-  const { output } = client;
+
+  const { telemetryEventStore } = client;
+  const telemetry = new DevTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
 
   let parsedArgs = null;
 
@@ -55,7 +63,13 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliOptionPort(parsedArgs.flags['--port']);
+  telemetry.trackCliOptionListen(parsedArgs.flags['--listen']);
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('dev');
     output.print(help(devCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -72,7 +86,10 @@ export default async function main(client: Client) {
     parsedArgs.flags['--listen'] = parsedArgs.flags['--port'];
   }
 
-  const [dir = '.'] = args;
+  const [passedDir] = args;
+  telemetry.trackCliArgumentDir(passedDir);
+
+  const dir = passedDir || process.cwd();
 
   const vercelConfig = await readConfig(dir);
 
@@ -86,19 +103,19 @@ export default async function main(client: Client) {
     const pkg = await readJSONFile<PackageJson>(path.join(dir, 'package.json'));
 
     if (pkg instanceof CantParseJSONFile) {
-      client.output.error(pkg.message);
+      output.error(pkg.message);
       return 1;
     }
 
     if (/\b(now|vercel)\b\W+\bdev\b/.test(pkg?.scripts?.dev || '')) {
-      client.output.error(
+      output.error(
         `${cmd(
           `${packageName} dev`
         )} must not recursively invoke itself. Check the Development Command in the Project Settings or the ${cmd(
           'dev'
         )} script in ${cmd('package.json')}`
       );
-      client.output.error(
+      output.error(
         `Learn More: https://vercel.link/recursive-invocation-of-commands`
       );
       return 1;

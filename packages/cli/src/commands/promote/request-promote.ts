@@ -5,6 +5,7 @@ import getProjectByDeployment from '../../util/projects/get-project-by-deploymen
 import ms from 'ms';
 import promoteStatus from './status';
 import confirm from '../../util/input/confirm';
+import output from '../../output-manager';
 
 interface DeploymentCreateResponsePartial {
   inspectorUrl: string;
@@ -28,12 +29,9 @@ export default async function requestPromote({
   timeout?: string;
   yes: boolean;
 }): Promise<number> {
-  const { output } = client;
-
   const { contextName, deployment, project } = await getProjectByDeployment({
     client,
     deployId,
-    output: client.output,
   });
 
   let promoteByCreation = false;
@@ -72,13 +70,12 @@ export default async function requestPromote({
       `Successfully created new deployment of ${chalk.bold(project.name)} at ${newDeployment.inspectorUrl}`
     );
     return 0;
-  } else {
-    await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
-      body: {}, // required
-      json: false,
-      method: 'POST',
-    });
   }
+  await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
+    body: {}, // required
+    json: false,
+    method: 'POST',
+  });
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(

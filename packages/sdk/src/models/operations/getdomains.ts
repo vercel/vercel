@@ -3,7 +3,6 @@
  */
 
 import * as z from "zod";
-import { remap as remap$ } from "../../lib/primitives.js";
 import { ClosedEnum } from "../../types/enums.js";
 import {
   Pagination,
@@ -133,10 +132,6 @@ export type GetDomainsResponseBody = {
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
   pagination: Pagination;
-};
-
-export type GetDomainsResponse = {
-  result: GetDomainsResponseBody;
 };
 
 /** @internal */
@@ -374,48 +369,4 @@ export namespace GetDomainsResponseBody$ {
   export const outboundSchema = GetDomainsResponseBody$outboundSchema;
   /** @deprecated use `GetDomainsResponseBody$Outbound` instead. */
   export type Outbound = GetDomainsResponseBody$Outbound;
-}
-
-/** @internal */
-export const GetDomainsResponse$inboundSchema: z.ZodType<
-  GetDomainsResponse,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  Result: z.lazy(() => GetDomainsResponseBody$inboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    "Result": "result",
-  });
-});
-
-/** @internal */
-export type GetDomainsResponse$Outbound = {
-  Result: GetDomainsResponseBody$Outbound;
-};
-
-/** @internal */
-export const GetDomainsResponse$outboundSchema: z.ZodType<
-  GetDomainsResponse$Outbound,
-  z.ZodTypeDef,
-  GetDomainsResponse
-> = z.object({
-  result: z.lazy(() => GetDomainsResponseBody$outboundSchema),
-}).transform((v) => {
-  return remap$(v, {
-    result: "Result",
-  });
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace GetDomainsResponse$ {
-  /** @deprecated use `GetDomainsResponse$inboundSchema` instead. */
-  export const inboundSchema = GetDomainsResponse$inboundSchema;
-  /** @deprecated use `GetDomainsResponse$outboundSchema` instead. */
-  export const outboundSchema = GetDomainsResponse$outboundSchema;
-  /** @deprecated use `GetDomainsResponse$Outbound` instead. */
-  export type Outbound = GetDomainsResponse$Outbound;
 }

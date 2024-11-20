@@ -8,10 +8,10 @@
 ```typescript
 const value: operations.CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 9565.44,
+  projectId: 4610.50,
   type: "gitlab",
-  url: "https://whopping-longboat.net",
-  path: "/opt/bin",
+  url: "https://unfinished-premise.info",
+  path: "/etc/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
@@ -25,14 +25,14 @@ const value: operations.CancelDeploymentGitRepo1 = {
 const value: operations.CancelDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 3782.68,
+  repoId: 7044.02,
   type: "github",
-  repoOwnerId: "<id>",
-  path: "/Users",
+  repoOwnerId: 2848.86,
+  path: "/etc/defaults",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "team",
+  ownerType: "user",
 };
 ```
 
@@ -45,7 +45,7 @@ const value: operations.CancelDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/var",
+  path: "/usr/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

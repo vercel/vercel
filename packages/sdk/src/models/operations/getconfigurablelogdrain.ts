@@ -63,13 +63,6 @@ export const DisabledReason = {
 } as const;
 export type DisabledReason = ClosedEnum<typeof DisabledReason>;
 
-export const Compression = {
-  Gzip: "gzip",
-  Zstd: "zstd",
-  None: "none",
-} as const;
-export type Compression = ClosedEnum<typeof Compression>;
-
 export const GetConfigurableLogDrainCreatedFrom = {
   SelfServed: "self-served",
 } as const;
@@ -99,7 +92,7 @@ export type GetConfigurableLogDrainResponseBody = {
   disabledBy?: string | undefined;
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
-  compression?: Compression | undefined;
+  hideIpAddresses?: boolean | undefined;
   secret: string;
   createdFrom?: GetConfigurableLogDrainCreatedFrom | undefined;
 };
@@ -257,25 +250,6 @@ export namespace DisabledReason$ {
 }
 
 /** @internal */
-export const Compression$inboundSchema: z.ZodNativeEnum<typeof Compression> = z
-  .nativeEnum(Compression);
-
-/** @internal */
-export const Compression$outboundSchema: z.ZodNativeEnum<typeof Compression> =
-  Compression$inboundSchema;
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace Compression$ {
-  /** @deprecated use `Compression$inboundSchema` instead. */
-  export const inboundSchema = Compression$inboundSchema;
-  /** @deprecated use `Compression$outboundSchema` instead. */
-  export const outboundSchema = Compression$outboundSchema;
-}
-
-/** @internal */
 export const GetConfigurableLogDrainCreatedFrom$inboundSchema: z.ZodNativeEnum<
   typeof GetConfigurableLogDrainCreatedFrom
 > = z.nativeEnum(GetConfigurableLogDrainCreatedFrom);
@@ -324,7 +298,7 @@ export const GetConfigurableLogDrainResponseBody$inboundSchema: z.ZodType<
   disabledBy: z.string().optional(),
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
-  compression: Compression$inboundSchema.optional(),
+  hideIpAddresses: z.boolean().optional(),
   secret: z.string(),
   createdFrom: GetConfigurableLogDrainCreatedFrom$inboundSchema.optional(),
 });
@@ -352,7 +326,7 @@ export type GetConfigurableLogDrainResponseBody$Outbound = {
   disabledBy?: string | undefined;
   firstErrorTimestamp?: number | undefined;
   samplingRate?: number | undefined;
-  compression?: string | undefined;
+  hideIpAddresses?: boolean | undefined;
   secret: string;
   createdFrom?: string | undefined;
 };
@@ -384,7 +358,7 @@ export const GetConfigurableLogDrainResponseBody$outboundSchema: z.ZodType<
   disabledBy: z.string().optional(),
   firstErrorTimestamp: z.number().optional(),
   samplingRate: z.number().optional(),
-  compression: Compression$outboundSchema.optional(),
+  hideIpAddresses: z.boolean().optional(),
   secret: z.string(),
   createdFrom: GetConfigurableLogDrainCreatedFrom$outboundSchema.optional(),
 });

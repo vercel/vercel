@@ -3,9 +3,9 @@ import info from './output/info';
 import errorOutput from './output/error';
 import { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
-import { type Output } from './output/create-output';
+import output from '../output-manager';
 
-export function printError(error: unknown, output: Output) {
+export function printError(error: unknown) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
     error = new Error(error);
@@ -51,7 +51,7 @@ export default function handleError(error: unknown, { debug = false } = {}) {
   const apiError = error as APIError;
   const { message, stack, status, code, sizeLimit } = apiError;
 
-  // consider changing API of handleError to include `client.output`
+  // consider changing API of handleError to include `output`
   // to use `output.debug`
   if (debug) {
     // eslint-disable-next-line no-console

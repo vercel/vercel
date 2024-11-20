@@ -440,10 +440,6 @@ export async function scanParentDirs(
   };
 }
 
-type TurboJson = {
-  globalPassThroughEnv?: string[];
-};
-
 async function checkTurboSupportsCorepack(
   turboVersionRange: string,
   rootDir: string
@@ -453,10 +449,24 @@ async function checkTurboSupportsCorepack(
   }
   const turboJsonPath = path.join(rootDir, 'turbo.json');
   const turboJsonExists = await fs.pathExists(turboJsonPath);
-  const turboJson = turboJsonExists
-    ? (json5.parse(await fs.readFile(turboJsonPath, 'utf8')) as TurboJson)
-    : undefined;
-  return turboJson?.globalPassThroughEnv?.includes('COREPACK_HOME') || false;
+
+  let turboJson: null | unknown = null;
+  if (turboJsonExists) {
+    try {
+      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+    } catch (err) {
+      console.warn(`WARNING: Failed to parse turbo.json`);
+    }
+  }
+
+  const turboJsonIncludesCorepackHome =
+    turboJson !== null &&
+    typeof turboJson === 'object' &&
+    'globalPassThroughEnv' in turboJson &&
+    Array.isArray(turboJson.globalPassThroughEnv) &&
+    turboJson.globalPassThroughEnv.includes('COREPACK_HOME');
+
+  return turboJsonIncludesCorepackHome;
 }
 
 export function turboVersionSpecifierSupportsCorepack(

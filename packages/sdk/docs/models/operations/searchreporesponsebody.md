@@ -1,39 +1,40 @@
 # SearchRepoResponseBody
 
-## Example Usage
+
+## Supported Types
+
+### `operations.SearchRepoResponseBody1`
 
 ```typescript
-import { SearchRepoResponseBody } from "@vercel/sdk/models/operations/searchrepo.js";
+const value: operations.SearchRepoResponseBody1 = {};
+```
 
-let value: SearchRepoResponseBody = {
+### `operations.SearchRepoResponseBody2`
+
+```typescript
+const value: operations.SearchRepoResponseBody2 = {
   gitAccount: {
     provider: "github",
-    namespaceId: "<id>",
+    namespaceId: 9444.04,
   },
   repos: [
     {
-      id: 3842.73,
+      id: "<id>",
       provider: "gitlab",
-      url: "https://cruel-extension.org/",
+      url: "https://dependent-account.com",
       name: "<value>",
       slug: "<value>",
       namespace: "<value>",
       owner: {
-        id: 2075.13,
+        id: 9427.79,
         name: "<value>",
       },
       ownerType: "team",
       private: false,
       defaultBranch: "<value>",
-      updatedAt: 2733.49,
+      updatedAt: 7143.00,
     },
   ],
 };
 ```
 
-## Fields
-
-| Field                                                          | Type                                                           | Required                                                       | Description                                                    |
-| -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
-| `gitAccount`                                                   | [operations.GitAccount](../../models/operations/gitaccount.md) | :heavy_check_mark:                                             | N/A                                                            |
-| `repos`                                                        | [operations.Repos](../../models/operations/repos.md)[]         | :heavy_check_mark:                                             | N/A                                                            |

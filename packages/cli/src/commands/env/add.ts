@@ -14,24 +14,39 @@ import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import type { ProjectLinked } from '@vercel-internals/types';
+import output from '../../output-manager';
+import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { addSubcommand } from './command';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {
-  '--debug': boolean;
-  '--sensitive': boolean;
-  '--force': boolean;
-};
+export default async function add(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    handleError(err);
+    return 1;
+  }
 
-export default async function add(
-  client: Client,
-  link: ProjectLinked,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { output } = client;
-  const { project } = link;
+  const { args, flags: opts } = parsedArgs;
+
   const stdInput = await readStandardInput(client.stdin);
   let [envName, envTargetArg, envGitBranch] = args;
+
+  const telemetryClient = new EnvAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTargetArg);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagForce(opts['--force']);
 
   if (args.length > 3) {
     output.error(
@@ -63,6 +78,20 @@ export default async function add(
     });
   }
 
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+  const { project } = link;
   const [{ envs }, customEnvironments] = await Promise.all([
     getEnvRecords(client, project.id, 'vercel-cli:env:add'),
     getCustomEnvironments(client, project.id),
@@ -144,7 +173,6 @@ export default async function add(
   try {
     output.spinner('Saving');
     await addEnvRecord(
-      output,
       client,
       project.id,
       upsert,

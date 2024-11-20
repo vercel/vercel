@@ -7,11 +7,11 @@ import { GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsType }
 
 let value:
   GetProjectsProjectsResponse200ApplicationJSONResponseBodyProjectsType =
-    "ip_address";
+    "flags-secret";
 ```
 
 ## Values
 
 ```typescript
-"host" | "method" | "path" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
+"flags-secret"
 ```

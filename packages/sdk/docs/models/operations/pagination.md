@@ -6,7 +6,7 @@
 import { Pagination } from "@vercel/sdk/models/operations/listaccessgroupmembers.js";
 
 let value: Pagination = {
-  count: 6399.21,
+  count: 871.29,
   next: "<value>",
 };
 ```

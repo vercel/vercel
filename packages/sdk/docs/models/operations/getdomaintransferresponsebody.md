@@ -7,7 +7,7 @@ import { GetDomainTransferResponseBody } from "@vercel/sdk/models/operations/get
 
 let value: GetDomainTransferResponseBody = {
   transferable: false,
-  transferPolicy: "new-term",
+  transferPolicy: "no-charge-no-change",
   reason: "<value>",
   status: "pending_owner",
 };
