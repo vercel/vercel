@@ -1,0 +1,4 @@
+---
+---
+
+Remove unused error handling
