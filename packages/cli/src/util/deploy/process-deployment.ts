@@ -14,6 +14,7 @@ import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
+import type EventEmitter from 'node:events';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -110,10 +111,12 @@ export default async function processDeployment({
   const indications = [];
 
   let abortController: AbortController | undefined;
+  let uploadEmitters: EventEmitter[] | undefined;
 
   function stopSpinner(): void {
     abortController?.abort();
     output.stopSpinner();
+    uploadEmitters?.forEach(emitter => emitter.removeAllListeners());
   }
 
   try {
@@ -162,7 +165,8 @@ export default async function processDeployment({
           }
         };
 
-        uploads.forEach((e: any) => e.on('progress', updateProgress));
+        uploads.forEach((e: EventEmitter) => e.on('progress', updateProgress));
+        uploadEmitters = uploads;
         updateProgress();
       }
 
