@@ -353,7 +353,6 @@ async function checkExistsAndConnect({
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -391,7 +390,6 @@ async function checkExistsAndConnect({
     await disconnectGitProvider(client, org, project.id);
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath

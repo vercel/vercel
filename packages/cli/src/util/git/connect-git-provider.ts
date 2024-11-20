@@ -30,7 +30,6 @@ export async function disconnectGitProvider(
 
 export async function connectGitProvider(
   client: Client,
-  org: Org,
   projectId: string,
   type: string,
   repo: string

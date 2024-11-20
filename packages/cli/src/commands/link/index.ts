@@ -61,7 +61,12 @@ export default async function link(client: Client) {
 
   if (parsedArgs.flags['--repo']) {
     output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
-    await ensureRepoLink(client, cwd, { yes, overwrite: true });
+    try {
+      await ensureRepoLink(client, cwd, { yes, overwrite: true });
+    } catch (err) {
+      output.prettyError(err);
+      return 1;
+    }
   } else {
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
