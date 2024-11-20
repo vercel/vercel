@@ -1,5 +1,5 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 
 export default async function removeDomainByName(
   now: Client,

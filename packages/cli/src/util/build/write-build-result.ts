@@ -10,21 +10,21 @@ import {
   posix,
 } from 'path';
 import {
-  Builder,
-  BuildResultV2,
-  BuildResultV3,
-  File,
-  Files,
+  type Builder,
+  type BuildResultV2,
+  type BuildResultV3,
+  type File,
+  type Files,
   FileFsRef,
-  BuilderV2,
-  BuilderV3,
-  Lambda,
-  PackageJson,
-  Prerender,
+  type BuilderV2,
+  type BuilderV3,
+  type Lambda,
+  type PackageJson,
+  type Prerender,
   download,
   downloadFile,
-  EdgeFunction,
-  BuildResultBuildOutput,
+  type EdgeFunction,
+  type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
 } from '@vercel/build-utils';
@@ -32,7 +32,7 @@ import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
 import { VERCEL_DIR } from '../projects/link';
-import { fileNameSymbol, VercelConfig } from '@vercel/client';
+import { fileNameSymbol, type VercelConfig } from '@vercel/client';
 
 const { normalize } = posix;
 export const OUTPUT_DIR = join(VERCEL_DIR, 'output');

@@ -1,14 +1,14 @@
 import type { Deployment, Org } from '@vercel-internals/types';
 import {
-  ArchiveFormat,
-  DeploymentOptions,
-  VercelClientOptions,
+  type ArchiveFormat,
+  type DeploymentOptions,
+  type VercelClientOptions,
   createDeployment,
 } from '@vercel/client';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
-import Now from '../../util';
+import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';

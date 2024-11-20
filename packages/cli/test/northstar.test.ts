@@ -7,7 +7,7 @@ import waitForPrompt from './helpers/wait-for-prompt';
 import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import formatOutput from './helpers/format-output';
-import { User } from '@vercel-internals/types';
+import type { User } from '@vercel-internals/types';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 

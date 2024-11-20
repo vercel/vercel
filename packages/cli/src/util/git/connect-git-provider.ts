@@ -1,9 +1,9 @@
 import { URL } from 'url';
-import Client from '../client';
+import type Client from '../client';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
 import output from '../../output-manager';
 

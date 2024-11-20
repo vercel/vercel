@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../client';
+import type Client from '../client';
 import eraseLines from '../output/erase-lines';
 import getDomainPrice from './get-domain-price';
 import getDomainStatus from './get-domain-status';

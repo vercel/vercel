@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';

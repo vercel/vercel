@@ -11,10 +11,11 @@ import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '@vercel-internals/types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
-import { ArchiveFormat, Dictionary } from '@vercel/client';
+import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { VercelConfig } from './dev/types';
+import type Client from './client';
+import { type FetchOptions, isJSONObject } from './client';
+import type { ArchiveFormat, Dictionary } from '@vercel/client';
 import output from '../output-manager';
 
 export interface NowOptions {
