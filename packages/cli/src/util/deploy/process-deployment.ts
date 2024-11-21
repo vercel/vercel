@@ -254,6 +254,10 @@ export default async function processDeployment({
       if (event.type === 'error') {
         stopSpinner();
 
+        if (!archive) {
+          handleErrorSolvableWithArchive(event.payload);
+        }
+
         const error = await now.handleDeploymentError(event.payload, {
           env,
         });
@@ -279,5 +283,25 @@ export default async function processDeployment({
   } catch (err) {
     stopSpinner();
     throw err;
+  }
+}
+
+export const archiveSuggestionText =
+  'Try using `--archive=tgz` to limit the amount of files you upload.\nLearn more: https://vercel.com/docs/cli/deploy#archive';
+
+export function handleErrorSolvableWithArchive(error: unknown) {
+  const errorIsObject = typeof error === 'object' && error !== null;
+  if (errorIsObject && 'message' in error) {
+    const isUploadRateLimit =
+      'code' in error &&
+      error.code === 'rate_limited' &&
+      typeof error.message === 'string' &&
+      error.message.includes('api-upload');
+    const isTooManyFilesLimit =
+      'code' in error && error.code === 'too_many_files';
+
+    if (isUploadRateLimit || isTooManyFilesLimit) {
+      throw new Error(`${error.message}\n${archiveSuggestionText}`);
+    }
   }
 }
