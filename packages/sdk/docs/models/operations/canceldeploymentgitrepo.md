@@ -8,14 +8,14 @@
 ```typescript
 const value: operations.CancelDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 4896.85,
+  projectId: 4610.50,
   type: "gitlab",
-  url: "https://impassioned-presume.biz/",
-  path: "/etc/defaults",
+  url: "https://unfinished-premise.info",
+  path: "/etc/mail",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -25,10 +25,10 @@ const value: operations.CancelDeploymentGitRepo1 = {
 const value: operations.CancelDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 7090.51,
+  repoId: 7044.02,
   type: "github",
-  repoOwnerId: 6152.76,
-  path: "/usr/local/bin",
+  repoOwnerId: 2848.86,
+  path: "/etc/defaults",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
@@ -45,7 +45,7 @@ const value: operations.CancelDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/private/var",
+  path: "/usr/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

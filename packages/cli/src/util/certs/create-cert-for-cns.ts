@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import issueCert from './issue-cert';
 import mapCertError from './map-cert-error';
 import output from '../../output-manager';

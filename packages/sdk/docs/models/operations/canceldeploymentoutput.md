@@ -6,7 +6,7 @@
 import { CancelDeploymentOutput } from "@vercel/sdk/models/operations/canceldeployment.js";
 
 let value: CancelDeploymentOutput = {
-  path: "/bin",
+  path: "/proc",
   functionName: "<value>",
 };
 ```

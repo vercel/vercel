@@ -5,8 +5,8 @@ import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('selectOrg', () => {
-  let user;
-  let team;
+  let user: ReturnType<typeof useUser>;
+  let team: ReturnType<typeof createTeam>;
 
   beforeEach(() => {
     team = useTeam();
@@ -96,7 +96,7 @@ describe('selectOrg', () => {
   });
 
   describe('without current team', () => {
-    let team2;
+    let team2: ReturnType<typeof createTeam>;
 
     beforeEach(() => {
       team2 = createTeam();

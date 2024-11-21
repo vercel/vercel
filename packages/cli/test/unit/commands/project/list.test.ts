@@ -7,6 +7,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
 
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
+import assert from 'node:assert';
 
 describe('list', () => {
   describe('invalid argument', () => {
@@ -125,11 +126,12 @@ describe('list', () => {
   it('should list projects when there is no production deployment', async () => {
     const user = useUser();
     useTeams('team_dummy');
+    assert(defaultProject.targets?.production);
     const project = useProject({
       ...defaultProject,
       targets: {
         production: {
-          ...defaultProject!.targets!.production,
+          ...defaultProject.targets.production,
           alias: [],
         },
       },

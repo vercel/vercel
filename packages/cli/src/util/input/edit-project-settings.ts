@@ -1,7 +1,7 @@
 import confirm from './confirm';
 import chalk from 'chalk';
-import { frameworkList, Framework } from '@vercel/frameworks';
-import Client from '../client';
+import { frameworkList, type Framework } from '@vercel/frameworks';
+import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -21,7 +21,7 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
 
-export default async function editProjectSettings(
+export async function editProjectSettings(
   client: Client,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,

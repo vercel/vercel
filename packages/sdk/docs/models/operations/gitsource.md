@@ -10,7 +10,7 @@ Defines the Git Repository source to be deployed. This property can not be used 
 ```typescript
 const value: operations.One = {
   ref: "<value>",
-  repoId: "<id>",
+  repoId: 8877.01,
   type: "github",
 };
 ```

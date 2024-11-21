@@ -7,7 +7,7 @@ import { GetFirewallConfigJava } from "@vercel/sdk/models/operations/getfirewall
 
 let value: GetFirewallConfigJava = {
   active: false,
-  action: "deny",
+  action: "log",
 };
 ```
 

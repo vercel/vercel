@@ -7,7 +7,7 @@ import { GetDeploymentGitSource1 } from "@vercel/sdk/models/operations/getdeploy
 
 let value: GetDeploymentGitSource1 = {
   type: "github",
-  repoId: 5525.81,
+  repoId: "<id>",
 };
 ```
 

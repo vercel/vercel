@@ -16,6 +16,16 @@ export const enableSubcommand = {
   examples: [],
 } as const;
 
+export const flushSubcommand = {
+  name: 'flush',
+  aliases: [],
+  description: 'Internal command to flush telemetry events',
+  hidden: true,
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
 export const disableSubcommand = {
   name: 'disable',
   aliases: [],
@@ -30,7 +40,12 @@ export const telemetryCommand = {
   aliases: [],
   description: 'Allows you to enable or disable telemetry collection',
   arguments: [],
-  subcommands: [enableSubcommand, disableSubcommand, statusSubcommand],
+  subcommands: [
+    enableSubcommand,
+    disableSubcommand,
+    statusSubcommand,
+    flushSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;

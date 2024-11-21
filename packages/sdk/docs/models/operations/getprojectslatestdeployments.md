@@ -7,21 +7,21 @@ import { GetProjectsLatestDeployments } from "@vercel/sdk/models/operations/getp
 
 let value: GetProjectsLatestDeployments = {
   id: "<id>",
-  createdAt: 3926.76,
+  createdAt: 5361.77,
   createdIn: "<value>",
   creator: {
-    email: "Cicero.Little@hotmail.com",
+    email: "Drew18@hotmail.com",
     uid: "<id>",
-    username: "Modesta_Turner69",
+    username: "Karine.Tillman",
   },
   deploymentHostname: "<value>",
   name: "<value>",
   plan: "hobby",
   previewCommentsEnabled: false,
   private: false,
-  readyState: "QUEUED",
+  readyState: "READY",
   type: "LAMBDAS",
-  url: "https://cute-secrecy.org/",
+  url: "https://good-natured-retention.name",
   userId: "<id>",
 };
 ```

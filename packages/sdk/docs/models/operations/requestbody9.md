@@ -11,9 +11,9 @@ let value: RequestBody9 = {
   action: "ip.update",
   id: "<id>",
   value: {
-    hostname: "helpless-loaf.name",
-    ip: "b2b8:f657:cd36:c99c:eafb:b6ec:d1eb:07fa",
-    action: "bypass",
+    hostname: "complicated-saloon.info",
+    ip: "657c:d36c:99ce:afbb:6ecd:1eb0:7faf:97cc",
+    action: "log",
   },
 };
 ```

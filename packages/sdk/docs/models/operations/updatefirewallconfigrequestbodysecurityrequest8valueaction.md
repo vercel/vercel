@@ -6,7 +6,7 @@
 import { UpdateFirewallConfigRequestBodySecurityRequest8ValueAction } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequest8ValueAction =
-  "challenge";
+  "bypass";
 ```
 
 ## Values

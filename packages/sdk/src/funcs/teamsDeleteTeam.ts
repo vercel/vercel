@@ -85,6 +85,9 @@ export async function teamsDeleteTeam(
   const context = {
     operationID: "deleteTeam",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

@@ -1,10 +1,10 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@vercel/build-utils';
+import type { PackageJson } from '@vercel/build-utils';
 
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import cmd from '../../util/output/cmd';
@@ -89,7 +89,7 @@ export default async function main(client: Client) {
   const [passedDir] = args;
   telemetry.trackCliArgumentDir(passedDir);
 
-  const dir = passedDir || '.';
+  const dir = passedDir || process.cwd();
 
   const vercelConfig = await readConfig(dir);
 

@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
@@ -699,7 +700,7 @@ describe('deploy', () => {
       },
     });
 
-    let exitCode: number;
+    let exitCode: number | undefined;
     const runCommand = async () => {
       const repoRoot = setupUnitFixture('commands/deploy/node');
       client.cwd = repoRoot;
@@ -715,8 +716,8 @@ describe('deploy', () => {
 
     await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
-    // remove first 4 lines which contains randomized data
-    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+    // remove first 3 lines which contains randomized data
+    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "Building
         2024-06-03T15:01:10.339Z  Hello, world!
@@ -779,7 +780,6 @@ describe('deploy', () => {
       createArgs: expect.any(Object),
       org: expect.any(Object),
       isSettingUpProject: expect.any(Boolean),
-      cwd: expect.any(String),
       archive: undefined,
     };
 
@@ -1148,10 +1148,15 @@ describe('deploy', () => {
   describe('first deploy', () => {
     describe('project setup', () => {
       const directoryName = 'unlinked';
+
       beforeEach(() => {
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});
+        });
+
+        client.scenario.post(`/v1/projects`, (req, res) => {
+          return res.status(200).json(req.body);
         });
 
         const createdDeploymentId = 'dpl_1';
@@ -1201,7 +1206,7 @@ describe('deploy', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          '? Which scope do you want to deploy to?'
+          '? Which scope should contain your project?'
         );
         client.stdin.write('\n');
 
@@ -1219,6 +1224,9 @@ describe('deploy', () => {
         );
         client.stdin.write('\n');
 
+        await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
@@ -1233,7 +1241,7 @@ describe('deploy', () => {
         client.stdin.write('y\n');
 
         await expect(client.stderr).toOutput(
-          '? Which scope do you want to deploy to?'
+          '? Which scope should contain your project?'
         );
         client.stdin.write('\n');
 
@@ -1249,6 +1257,9 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput(
           '? In which directory is your code located?'
         );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Want to modify these settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;

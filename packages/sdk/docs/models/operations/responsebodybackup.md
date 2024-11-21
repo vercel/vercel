@@ -9,7 +9,7 @@ let value: ResponseBodyBackup = {
   digest: "<value>",
   items: {},
   slug: "<value>",
-  updatedAt: 9290.66,
+  updatedAt: 3931.22,
 };
 ```
 

@@ -6,9 +6,9 @@
 import { UpdateFirewallConfigRequestBodySecurityRequestValue } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequestValue = {
-  hostname: "good-slime.name",
-  ip: "be92:cd9e:bdcc:2f5f:ba5f:2fcb:96bd:6b57",
-  action: "deny",
+  hostname: "reckless-hexagon.com",
+  ip: "d9eb:dcc2:f5fb:a5f2:fcb9:6bd6:b574:fca2",
+  action: "challenge",
 };
 ```
 

@@ -86,6 +86,9 @@ export async function accessGroupsListAccessGroupProjects(
   const context = {
     operationID: "listAccessGroupProjects",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

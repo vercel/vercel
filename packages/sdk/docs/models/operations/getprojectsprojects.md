@@ -8,9 +8,9 @@ import { GetProjectsProjects } from "@vercel/sdk/models/operations/getprojects.j
 let value: GetProjectsProjects = {
   accountId: "<id>",
   crons: {
-    enabledAt: 9677.95,
-    disabledAt: 5468.85,
-    updatedAt: 2748.24,
+    enabledAt: 1312.89,
+    disabledAt: 6041.18,
+    updatedAt: 3828.08,
     deploymentId: "<id>",
     definitions: [
       {
@@ -25,44 +25,44 @@ let value: GetProjectsProjects = {
   latestDeployments: [
     {
       id: "<id>",
-      createdAt: 5922.30,
+      createdAt: 8953.86,
       createdIn: "<value>",
       creator: {
-        email: "Gwen.Goldner40@hotmail.com",
+        email: "Kasey_Medhurst@hotmail.com",
         uid: "<id>",
-        username: "Jodie_Hintz",
-      },
-      deploymentHostname: "<value>",
-      name: "<value>",
-      plan: "hobby",
-      previewCommentsEnabled: false,
-      private: false,
-      readyState: "CANCELED",
-      type: "LAMBDAS",
-      url: "https://fair-hydrolyze.com/",
-      userId: "<id>",
-    },
-  ],
-  name: "<value>",
-  nodeVersion: "18.x",
-  targets: {
-    "key": {
-      id: "<id>",
-      createdAt: 7400.98,
-      createdIn: "<value>",
-      creator: {
-        email: "Lilyan67@hotmail.com",
-        uid: "<id>",
-        username: "Karina_Bartell",
+        username: "Donna.Jacobson50",
       },
       deploymentHostname: "<value>",
       name: "<value>",
       plan: "enterprise",
       previewCommentsEnabled: false,
       private: false,
-      readyState: "CANCELED",
+      readyState: "QUEUED",
       type: "LAMBDAS",
-      url: "https://impressive-airmail.info/",
+      url: "https://grave-traffic.org",
+      userId: "<id>",
+    },
+  ],
+  name: "<value>",
+  nodeVersion: "22.x",
+  targets: {
+    "key": {
+      id: "<id>",
+      createdAt: 2536.43,
+      createdIn: "<value>",
+      creator: {
+        email: "Bella62@yahoo.com",
+        uid: "<id>",
+        username: "Conor_Padberg54",
+      },
+      deploymentHostname: "<value>",
+      name: "<value>",
+      plan: "pro",
+      previewCommentsEnabled: false,
+      private: false,
+      readyState: "READY",
+      type: "LAMBDAS",
+      url: "https://honored-lobster.org/",
       userId: "<id>",
     },
   },
@@ -100,6 +100,7 @@ let value: GetProjectsProjects = {
 | `ipBuckets`                                                                                                      | [operations.GetProjectsIpBuckets](../../models/operations/getprojectsipbuckets.md)[]                             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `latestDeployments`                                                                                              | [operations.GetProjectsLatestDeployments](../../models/operations/getprojectslatestdeployments.md)[]             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `link`                                                                                                           | *operations.GetProjectsLink*                                                                                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `microfrontends`                                                                                                 | [operations.GetProjectsMicrofrontends](../../models/operations/getprojectsmicrofrontends.md)                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `name`                                                                                                           | *string*                                                                                                         | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `nodeVersion`                                                                                                    | [operations.GetProjectsNodeVersion](../../models/operations/getprojectsnodeversion.md)                           | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `optionsAllowlist`                                                                                               | [operations.GetProjectsOptionsAllowlist](../../models/operations/getprojectsoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |

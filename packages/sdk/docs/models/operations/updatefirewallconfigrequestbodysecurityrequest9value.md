@@ -6,8 +6,8 @@
 import { UpdateFirewallConfigRequestBodySecurityRequest9Value } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
 let value: UpdateFirewallConfigRequestBodySecurityRequest9Value = {
-  hostname: "young-replacement.name",
-  ip: "82.233.51.215",
+  hostname: "muffled-utilization.org",
+  ip: "67da:2562:aee1:067b:f8ff:ad17:e4cf:8bbf",
   action: "log",
 };
 ```

@@ -23,6 +23,16 @@ const runnersMap = new Map([
     },
   ],
   [
+    'vitest-e2e-node-20',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest'],
+      nodeVersions: ['20'],
+    },
+  ],
+  [
     'test-unit',
     {
       min: 1,

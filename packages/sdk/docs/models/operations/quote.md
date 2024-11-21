@@ -7,7 +7,7 @@ import { Quote } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: Quote = {
   line: "<value>",
-  amount: "904.99",
+  amount: "836.55",
 };
 ```
 

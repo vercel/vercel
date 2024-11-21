@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 import { isAPIError } from '../errors-ts';
 import type { Project } from '@vercel-internals/types';
 

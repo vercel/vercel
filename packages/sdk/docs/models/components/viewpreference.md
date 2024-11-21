@@ -5,7 +5,7 @@
 ```typescript
 import { ViewPreference } from "@vercel/sdk/models/components/authuser.js";
 
-let value: ViewPreference = "list";
+let value: ViewPreference = "cards";
 ```
 
 ## Values

@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { displayBuildLogs } from '../../util/logs';
 import { handleError } from '../../util/error';

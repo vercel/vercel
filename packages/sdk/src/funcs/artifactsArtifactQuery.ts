@@ -79,6 +79,9 @@ export async function artifactsArtifactQuery(
   const context = {
     operationID: "artifactQuery",
     oAuth2Scopes: [],
+
+    resolvedSecurity: requestSecurity,
+
     securitySource: client._options.bearerToken,
     retryConfig: options?.retries
       || client._options.retryConfig

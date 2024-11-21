@@ -2,10 +2,10 @@ import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
-import DevServer from './server';
+import type DevServer from './server';
 
-import { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
-import { isHandler, Route, HandleValue } from '@vercel/routing-utils';
+import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
+import { isHandler, type Route, type HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
 
 export function resolveRouteParameters(

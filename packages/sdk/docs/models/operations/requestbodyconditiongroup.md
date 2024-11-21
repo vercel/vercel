@@ -8,8 +8,8 @@ import { RequestBodyConditionGroup } from "@vercel/sdk/models/operations/updatef
 let value: RequestBodyConditionGroup = {
   conditions: [
     {
-      type: "ja3_digest",
-      op: "gt",
+      type: "path",
+      op: "suf",
     },
   ],
 };

@@ -11,8 +11,8 @@ let value: RecordEventsRequest = {
   requestBody: [
     {
       sessionId: "<id>",
-      source: "LOCAL",
-      event: "MISS",
+      source: "REMOTE",
+      event: "HIT",
       hash: "12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
       duration: 400,
     },

@@ -7,7 +7,7 @@ Type of the ENV variable
 ```typescript
 import { CreateProjectType } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectType = "plain";
+let value: CreateProjectType = "system";
 ```
 
 ## Values

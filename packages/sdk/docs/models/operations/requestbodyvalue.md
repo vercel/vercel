@@ -12,8 +12,8 @@ let value: RequestBodyValue = {
     {
       conditions: [
         {
-          type: "protocol",
-          op: "gte",
+          type: "ip_address",
+          op: "lt",
         },
       ],
     },

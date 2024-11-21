@@ -4,9 +4,10 @@ import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
 import type { Org } from '@vercel-internals/types';
-import Now, { CreateOptions } from '..';
-import Client from '../client';
-import { ArchiveFormat, DeploymentError } from '@vercel/client';
+import type Now from '..';
+import type { CreateOptions } from '..';
+import type Client from '../client';
+import type { ArchiveFormat, DeploymentError } from '@vercel/client';
 
 export default async function createDeploy(
   client: Client,
@@ -16,18 +17,10 @@ export default async function createDeploy(
   createArgs: CreateOptions,
   org: Org,
   isSettingUpProject: boolean,
-  cwd: string,
   archive?: ArchiveFormat
 ): Promise<any | DeploymentError> {
   try {
-    return await now.create(
-      path,
-      createArgs,
-      org,
-      isSettingUpProject,
-      cwd,
-      archive
-    );
+    return await now.create(path, createArgs, org, isSettingUpProject, archive);
   } catch (err: unknown) {
     if (ERRORS_TS.isAPIError(err)) {
       if (err.code === 'rate_limited') {
@@ -112,8 +105,7 @@ export default async function createDeploy(
           path,
           createArgs,
           org,
-          isSettingUpProject,
-          cwd
+          isSettingUpProject
         );
       }
 

@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
+import type { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
 import execa from 'execa';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';

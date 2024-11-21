@@ -9,21 +9,21 @@ let value: GetFirewallConfigResponseBody = {
   ownerId: "<id>",
   projectKey: "<value>",
   id: "<id>",
-  version: 5809.96,
+  version: 896.42,
   updatedAt: "<value>",
   firewallEnabled: false,
   crs: {
     sd: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     ma: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     lfi: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     rfi: {
       active: false,
@@ -35,11 +35,11 @@ let value: GetFirewallConfigResponseBody = {
     },
     php: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     gen: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     xss: {
       active: false,
@@ -67,8 +67,8 @@ let value: GetFirewallConfigResponseBody = {
         {
           conditions: [
             {
-              type: "user_agent",
-              op: "ninc",
+              type: "ip_address",
+              op: "lte",
             },
           ],
         },
@@ -79,9 +79,9 @@ let value: GetFirewallConfigResponseBody = {
   ips: [
     {
       id: "<id>",
-      hostname: "meaty-captain.net",
-      ip: "251.226.218.91",
-      action: "bypass",
+      hostname: "insistent-shipper.net",
+      ip: "bb77:892b:2d19:63bf:3dbb:2ffc:bafb:c7ca",
+      action: "deny",
     },
   ],
   changes: [

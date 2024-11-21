@@ -71,7 +71,8 @@ yarn add @vercel/sdk zod
 ```
 
 > [!NOTE]
-> This package is published with CommonJS and ES Modules (ESM) support.
+> This package is published as an ES Module (ESM) only. For applications using
+> CommonJS, use `await import("@vercel/sdk")` to import and use this package.
 <!-- End SDK Installation [installation] -->
 
 <!-- Start Requirements [requirements] -->
@@ -95,9 +96,9 @@ If you face permission (403) errors when you are already sending a token, it can
 
 This SDK supports the following security scheme globally:
 
-| Name          | Type          | Scheme        |
-| ------------- | ------------- | ------------- |
-| `bearerToken` | http          | HTTP Bearer   |
+| Name          | Type | Scheme      |
+| ------------- | ---- | ----------- |
+| `bearerToken` | http | HTTP Bearer |
 
 To authenticate with the API the `bearerToken` parameter must be set when initializing the SDK client instance. For example:
 ```typescript
@@ -108,9 +109,12 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
+  const result = await vercel.accessGroups.readAccessGroup({
+    idOrName: "<value>",
   });
+
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -121,17 +125,60 @@ run();
 <!-- Start SDK Example Usage [usage] -->
 ## SDK Example Usage
 
-### Example
+### List deployments
+
+List deployments under the authenticated user or team.
 
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
-const vercel = new Vercel();
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
+  const result = await vercel.deployments.getDeployments({
+    app: "docs",
+    from: 1612948664566,
+    limit: 10,
+    projectId: "QmXGTs7mvAMMC7WW5ebrM33qKG32QK3h4vmQMjmY",
+    target: "production",
+    to: 1612948664566,
+    users: "kr1PsOIzqEL5Xg6M4VZcZosf,K4amb7K9dAt5R2vBJWF32bmY",
+    since: 1540095775941,
+    until: 1540095775951,
+    state: "BUILDING,READY",
   });
+
+  // Handle the result
+  console.log(result);
+}
+
+run();
+
+```
+
+### Update an existing project
+
+Update the fields of a project using either its name or id.
+
+```typescript
+import { Vercel } from "@vercel/sdk";
+
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
+
+async function run() {
+  const result = await vercel.projects.updateProject({
+    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
+    requestBody: {
+      name: "a-project-name",
+    },
+  });
+
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -292,14 +339,6 @@ run();
 * [pauseProject](docs/sdks/projects/README.md#pauseproject) - Pause a project
 * [unpauseProject](docs/sdks/projects/README.md#unpauseproject) - Unpause a project
 
-### [secrets](docs/sdks/secrets/README.md)
-
-* [getSecrets](docs/sdks/secrets/README.md#getsecrets) - List secrets
-* [createSecret](docs/sdks/secrets/README.md#createsecret) - Create a new secret
-* [renameSecret](docs/sdks/secrets/README.md#renamesecret) - Change secret name
-* [getSecret](docs/sdks/secrets/README.md#getsecret) - Get a single secret
-* [deleteSecret](docs/sdks/secrets/README.md#deletesecret) - Delete a secret
-
 ### [security](docs/sdks/security/README.md)
 
 * [updateAttackChallengeMode](docs/sdks/security/README.md#updateattackchallengemode) - Update Attack Challenge mode
@@ -329,11 +368,6 @@ run();
 * [getAuthUser](docs/sdks/user/README.md#getauthuser) - Get the User
 * [requestDelete](docs/sdks/user/README.md#requestdelete) - Delete User Account
 
-### [Vercel SDK](docs/sdks/vercel/README.md)
-
-* [datacachePurgeall](docs/sdks/vercel/README.md#datacachepurgeall)
-* [dataCacheBillingSettings](docs/sdks/vercel/README.md#datacachebillingsettings)
-* [getCerts](docs/sdks/vercel/README.md#getcerts)
 
 ### [webhooks](docs/sdks/webhooks/README.md)
 
@@ -391,8 +425,6 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`checksGetCheck`](docs/sdks/checks/README.md#getcheck) - Get a single check
 - [`checksRerequestCheck`](docs/sdks/checks/README.md#rerequestcheck) - Rerequest a check
 - [`checksUpdateCheck`](docs/sdks/checks/README.md#updatecheck) - Update a check
-- [`dataCacheBillingSettings`](docs/sdks/vercel/README.md#datacachebillingsettings)
-- [`datacachePurgeall`](docs/sdks/vercel/README.md#datacachepurgeall)
 - [`deploymentsCancelDeployment`](docs/sdks/deployments/README.md#canceldeployment) - Cancel a deployment
 - [`deploymentsCreateDeployment`](docs/sdks/deployments/README.md#createdeployment) - Create a new deployment
 - [`deploymentsDeleteDeployment`](docs/sdks/deployments/README.md#deletedeployment) - Delete a Deployment
@@ -432,7 +464,6 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`edgeConfigGetEdgeConfigTokens`](docs/sdks/edgeconfig/README.md#getedgeconfigtokens) - Get all tokens of an Edge Config
 - [`edgeConfigPatchEdgeConfigSchema`](docs/sdks/edgeconfig/README.md#patchedgeconfigschema) - Update Edge Config schema
 - [`edgeConfigUpdateEdgeConfig`](docs/sdks/edgeconfig/README.md#updateedgeconfig) - Update an Edge Config
-- [`getCerts`](docs/sdks/vercel/README.md#getcerts)
 - [`integrationsDeleteConfiguration`](docs/sdks/integrations/README.md#deleteconfiguration) - Delete an integration configuration
 - [`integrationsGetConfiguration`](docs/sdks/integrations/README.md#getconfiguration) - Retrieve an integration configuration
 - [`integrationsGetConfigurations`](docs/sdks/integrations/README.md#getconfigurations) - Get configurations for the authenticated user or team
@@ -468,11 +499,6 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`projectsUpdateProjectDomain`](docs/sdks/projects/README.md#updateprojectdomain) - Update a project domain
 - [`projectsUpdateProjectProtectionBypass`](docs/sdks/projects/README.md#updateprojectprotectionbypass) - Update Protection Bypass for Automation
 - [`projectsVerifyProjectDomain`](docs/sdks/projects/README.md#verifyprojectdomain) - Verify project domain
-- [`secretsCreateSecret`](docs/sdks/secrets/README.md#createsecret) - Create a new secret
-- [`secretsDeleteSecret`](docs/sdks/secrets/README.md#deletesecret) - Delete a secret
-- [`secretsGetSecret`](docs/sdks/secrets/README.md#getsecret) - Get a single secret
-- [`secretsGetSecrets`](docs/sdks/secrets/README.md#getsecrets) - List secrets
-- [`secretsRenameSecret`](docs/sdks/secrets/README.md#renamesecret) - Change secret name
 - [`securityGetFirewallConfig`](docs/sdks/security/README.md#getfirewallconfig) - Read Firewall Configuration
 - [`securityPutFirewallConfig`](docs/sdks/security/README.md#putfirewallconfig) - Put Firewall Configuration
 - [`securityUpdateAttackChallengeMode`](docs/sdks/security/README.md#updateattackchallengemode) - Update Attack Challenge mode
@@ -550,11 +576,13 @@ To change the default retry strategy for a single API call, simply provide a ret
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
-const vercel = new Vercel();
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
+  const result = await vercel.accessGroups.readAccessGroup({
+    idOrName: "<value>",
   }, {
     retries: {
       strategy: "backoff",
@@ -567,6 +595,9 @@ async function run() {
       retryConnectionErrors: false,
     },
   });
+
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -588,12 +619,16 @@ const vercel = new Vercel({
     },
     retryConnectionErrors: false,
   },
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
 });
 
 async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
+  const result = await vercel.accessGroups.readAccessGroup({
+    idOrName: "<value>",
   });
+
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -616,23 +651,29 @@ If a HTTP request fails, an operation my also throw an error from the `models/er
 | InvalidRequestError                                  | Any input used to create a request is invalid        |
 | UnexpectedClientError                                | Unrecognised or unexpected error                     |
 
-In addition, when custom error responses are specified for an operation, the SDK may throw their associated Error type. You can refer to respective *Errors* tables in SDK docs for more details on possible error types for each operation. For example, the `datacachePurgeall` method may throw the following errors:
+In addition, when custom error responses are specified for an operation, the SDK may throw their associated Error type. You can refer to respective *Errors* tables in SDK docs for more details on possible error types for each operation. For example, the `readAccessGroup` method may throw the following errors:
 
-| Error Type      | Status Code     | Content Type    |
-| --------------- | --------------- | --------------- |
-| errors.SDKError | 4XX, 5XX        | \*/\*           |
+| Error Type      | Status Code | Content Type |
+| --------------- | ----------- | ------------ |
+| errors.SDKError | 4XX, 5XX    | \*/\*        |
 
 ```typescript
 import { Vercel } from "@vercel/sdk";
 import { SDKValidationError } from "@vercel/sdk/models/errors/sdkvalidationerror.js";
 
-const vercel = new Vercel();
+const vercel = new Vercel({
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
+});
 
 async function run() {
+  let result;
   try {
-    await vercel.datacachePurgeall({
-      projectIdOrName: "<value>",
+    result = await vercel.accessGroups.readAccessGroup({
+      idOrName: "<value>",
     });
+
+    // Handle the result
+    console.log(result);
   } catch (err) {
     switch (true) {
       case (err instanceof SDKValidationError): {
@@ -659,47 +700,24 @@ Validation errors can also occur when either method arguments or data returned f
 <!-- Start Server Selection [server] -->
 ## Server Selection
 
-### Select Server by Index
-
-You can override the default server globally by passing a server index to the `serverIdx` optional parameter when initializing the SDK client instance. The selected server will then be used as the default on the operations that use it. This table lists the indexes associated with the available servers:
-
-| # | Server | Variables |
-| - | ------ | --------- |
-| 0 | `https://api.vercel.com` | None |
-
-```typescript
-import { Vercel } from "@vercel/sdk";
-
-const vercel = new Vercel({
-  serverIdx: 0,
-});
-
-async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
-  });
-}
-
-run();
-
-```
-
-
 ### Override Server URL Per-Client
 
-The default server can also be overridden globally by passing a URL to the `serverURL` optional parameter when initializing the SDK client instance. For example:
-
+The default server can also be overridden globally by passing a URL to the `serverURL: string` optional parameter when initializing the SDK client instance. For example:
 ```typescript
 import { Vercel } from "@vercel/sdk";
 
 const vercel = new Vercel({
   serverURL: "https://api.vercel.com",
+  bearerToken: "<YOUR_BEARER_TOKEN_HERE>",
 });
 
 async function run() {
-  await vercel.datacachePurgeall({
-    projectIdOrName: "<value>",
+  const result = await vercel.accessGroups.readAccessGroup({
+    idOrName: "<value>",
   });
+
+  // Handle the result
+  console.log(result);
 }
 
 run();

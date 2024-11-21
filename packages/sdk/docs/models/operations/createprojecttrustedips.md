@@ -13,7 +13,7 @@ const value: operations.CreateProjectTrustedIps1 = {
       value: "<value>",
     },
   ],
-  protectionMode: "additional",
+  protectionMode: "exclusive",
 };
 ```
 

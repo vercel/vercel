@@ -11,7 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
-import { watch, FSWatcher } from 'chokidar';
+import { watch, type FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
@@ -27,17 +27,17 @@ import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
   appendRoutesToPhase,
-  HandleValue,
-  Route,
+  type HandleValue,
+  type Route,
 } from '@vercel/routing-utils';
 import {
-  Builder,
+  type Builder,
   cloneEnv,
-  Env,
+  type Env,
   getNodeBinPaths,
-  StartDevServerResult,
+  type StartDevServerResult,
   FileFsRef,
-  PackageJson,
+  type PackageJson,
   spawnCommand,
 } from '@vercel/build-utils';
 import {
@@ -70,7 +70,7 @@ import errorTemplate404 from './templates/error_404';
 import errorTemplate502 from './templates/error_502';
 import redirectTemplate from './templates/redirect';
 
-import {
+import type {
   VercelConfig,
   DevServerOptions,
   BuildMatch,
@@ -936,7 +936,6 @@ export default class DevServer {
     this.watcher = watch(this.cwd, {
       ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
-      useFsEvents: false,
       usePolling: false,
       persistent: true,
     });
@@ -1004,7 +1003,10 @@ export default class DevServer {
 
     if (this.watcher) {
       debug(`Closing file watcher`);
-      ops.push(this.watcher.close());
+      const closePromise = this.watcher.close();
+      if (closePromise) {
+        ops.push(closePromise);
+      }
     }
 
     for (const pid of this.shutdownCallbacks.keys()) {

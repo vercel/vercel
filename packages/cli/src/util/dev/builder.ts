@@ -3,13 +3,13 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
-import { fork, ChildProcess } from 'child_process';
+import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
 import {
-  Builder,
-  BuildOptions,
-  Env,
-  File,
+  type Builder,
+  type BuildOptions,
+  type Env,
+  type File,
   Lambda,
   FileBlob,
   FileFsRef,
@@ -24,8 +24,8 @@ import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
-import DevServer from './server';
-import {
+import type DevServer from './server';
+import type {
   VercelConfig,
   BuildMatch,
   BuildResult,

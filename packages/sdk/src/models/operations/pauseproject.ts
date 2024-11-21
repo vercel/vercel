@@ -19,16 +19,6 @@ export type PauseProjectRequest = {
   slug?: string | undefined;
 };
 
-/**
- * Project successfully paused
- */
-export type PauseProjectResponseBody = {
-  success?: any | undefined;
-  type?: any | undefined;
-  description?: any | undefined;
-  example?: any | undefined;
-};
-
 /** @internal */
 export const PauseProjectRequest$inboundSchema: z.ZodType<
   PauseProjectRequest,
@@ -69,49 +59,4 @@ export namespace PauseProjectRequest$ {
   export const outboundSchema = PauseProjectRequest$outboundSchema;
   /** @deprecated use `PauseProjectRequest$Outbound` instead. */
   export type Outbound = PauseProjectRequest$Outbound;
-}
-
-/** @internal */
-export const PauseProjectResponseBody$inboundSchema: z.ZodType<
-  PauseProjectResponseBody,
-  z.ZodTypeDef,
-  unknown
-> = z.object({
-  success: z.any().optional(),
-  type: z.any().optional(),
-  description: z.any().optional(),
-  example: z.any().optional(),
-});
-
-/** @internal */
-export type PauseProjectResponseBody$Outbound = {
-  success?: any | undefined;
-  type?: any | undefined;
-  description?: any | undefined;
-  example?: any | undefined;
-};
-
-/** @internal */
-export const PauseProjectResponseBody$outboundSchema: z.ZodType<
-  PauseProjectResponseBody$Outbound,
-  z.ZodTypeDef,
-  PauseProjectResponseBody
-> = z.object({
-  success: z.any().optional(),
-  type: z.any().optional(),
-  description: z.any().optional(),
-  example: z.any().optional(),
-});
-
-/**
- * @internal
- * @deprecated This namespace will be removed in future versions. Use schemas and types that are exported directly from this module.
- */
-export namespace PauseProjectResponseBody$ {
-  /** @deprecated use `PauseProjectResponseBody$inboundSchema` instead. */
-  export const inboundSchema = PauseProjectResponseBody$inboundSchema;
-  /** @deprecated use `PauseProjectResponseBody$outboundSchema` instead. */
-  export const outboundSchema = PauseProjectResponseBody$outboundSchema;
-  /** @deprecated use `PauseProjectResponseBody$Outbound` instead. */
-  export type Outbound = PauseProjectResponseBody$Outbound;
 }

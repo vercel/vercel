@@ -7,7 +7,7 @@ import { GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyCrsJavaA
 
 let value:
   GetFirewallConfigSecurityResponse200ApplicationJSONResponseBodyCrsJavaAction =
-    "deny";
+    "log";
 ```
 
 ## Values

@@ -1,4 +1,4 @@
-import { Deployment } from '@vercel-internals/types';
+import type { Deployment } from '@vercel-internals/types';
 
 export const deploymentInProgressStates: Deployment['readyState'][] = [
   'QUEUED',

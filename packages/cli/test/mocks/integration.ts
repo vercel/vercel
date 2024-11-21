@@ -2,8 +2,8 @@ import type {
   Configuration,
   Integration,
   MetadataSchema,
-  Resource,
-} from '../../src/commands/integration/types';
+} from '../../src/util/integration/types';
+import type { Resource } from '../../src/util/integration-resource/types';
 import { client } from './client';
 
 const metadataSchema1: MetadataSchema = {

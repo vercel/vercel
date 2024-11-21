@@ -10,7 +10,7 @@ let value: PutFirewallConfigResponseBody = {
     ownerId: "<id>",
     projectKey: "<value>",
     id: "<id>",
-    version: 413.46,
+    version: 6121.81,
     updatedAt: "<value>",
     firewallEnabled: false,
     crs: {
@@ -20,7 +20,7 @@ let value: PutFirewallConfigResponseBody = {
       },
       ma: {
         active: false,
-        action: "log",
+        action: "deny",
       },
       lfi: {
         active: false,
@@ -32,7 +32,7 @@ let value: PutFirewallConfigResponseBody = {
       },
       rce: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       php: {
         active: false,
@@ -48,15 +48,15 @@ let value: PutFirewallConfigResponseBody = {
       },
       sqli: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       sf: {
         active: false,
-        action: "deny",
+        action: "log",
       },
       java: {
         active: false,
-        action: "deny",
+        action: "log",
       },
     },
     rules: [
@@ -69,7 +69,7 @@ let value: PutFirewallConfigResponseBody = {
             conditions: [
               {
                 type: "method",
-                op: "sub",
+                op: "gt",
               },
             ],
           },
@@ -80,9 +80,9 @@ let value: PutFirewallConfigResponseBody = {
     ips: [
       {
         id: "<id>",
-        hostname: "upright-pigsty.com",
-        ip: "70.92.198.247",
-        action: "log",
+        hostname: "prestigious-valuable.name",
+        ip: "feba:d022:a7ed:8bee:cd1e:bb19:55bd:90ff",
+        action: "deny",
       },
     ],
     changes: [

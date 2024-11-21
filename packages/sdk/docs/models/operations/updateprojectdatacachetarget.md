@@ -14,6 +14,6 @@ const value: operations.UpdateProjectDataCacheTarget1[] = [
 ### `operations.UpdateProjectDataCacheTarget2`
 
 ```typescript
-const value: operations.UpdateProjectDataCacheTarget2 = "production";
+const value: operations.UpdateProjectDataCacheTarget2 = "development";
 ```
 

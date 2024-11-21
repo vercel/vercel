@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 2b328f77-299a-476f-8aa9-59080c9107fe
 management:
-  docChecksum: 86ddb097159c11ac094d69be920ee422
+  docChecksum: 2c6359e652ecebfa10a7a90138617165
   docVersion: 0.0.1
-  speakeasyVersion: 1.431.0
-  generationVersion: 2.451.0
-  releaseVersion: 14.0.0-canary.4
-  configChecksum: 8b29555243606173805dec1c9bfa941f
+  speakeasyVersion: 1.439.0
+  generationVersion: 2.457.9
+  releaseVersion: 14.0.0-canary.6
+  configChecksum: 7ae9d51f6a04d29da998b83eb446891b
   repoURL: https://github.com/vercel/vercel.git
   repoSubDirectory: packages/sdk
   installationURL: https://gitpkg.now.sh/vercel/vercel/packages/sdk
@@ -15,7 +15,7 @@ features:
   typescript:
     additionalDependencies: 0.1.0
     constsAndDefaults: 0.1.11
-    core: 3.18.3
+    core: 3.18.4
     defaultEnabledRetries: 0.1.0
     deprecations: 2.81.1
     devContainers: 2.90.0
@@ -23,6 +23,7 @@ features:
     enumUnions: 0.1.0
     enums: 2.82.1
     envVarSecurityUsage: 0.1.2
+    examples: 2.81.4
     globalSecurity: 2.82.11
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -64,7 +65,6 @@ generatedFiles:
   - docs/models/components/edgeconfigitem.md
   - docs/models/components/edgeconfigitemvalue.md
   - docs/models/components/edgeconfigtoken.md
-  - docs/models/components/entities.md
   - docs/models/components/entitlements.md
   - docs/models/components/favoriteprojectsandspaces.md
   - docs/models/components/favoritesviewpreference.md
@@ -99,9 +99,7 @@ generatedFiles:
   - docs/models/components/teamlimited.md
   - docs/models/components/two.md
   - docs/models/components/type.md
-  - docs/models/components/user.md
   - docs/models/components/userevent.md
-  - docs/models/components/usereventtype.md
   - docs/models/components/version.md
   - docs/models/components/viewpreference.md
   - docs/models/components/webanalytics.md
@@ -234,7 +232,6 @@ generatedFiles:
   - docs/models/operations/canceldeploymentteam.md
   - docs/models/operations/canceldeploymenttype.md
   - docs/models/operations/canceldeploymentwebanalytics.md
-  - docs/models/operations/certs.md
   - docs/models/operations/changes.md
   - docs/models/operations/checkdomainpricerequest.md
   - docs/models/operations/checkdomainpriceresponsebody.md
@@ -508,6 +505,7 @@ generatedFiles:
   - docs/models/operations/createprojectframework.md
   - docs/models/operations/createprojectfunctiondefaultmemorytype.md
   - docs/models/operations/createprojectgitcomments.md
+  - docs/models/operations/createprojectgroup.md
   - docs/models/operations/createprojecthandle.md
   - docs/models/operations/createprojecthas.md
   - docs/models/operations/createprojectinternalcontenthint.md
@@ -527,6 +525,7 @@ generatedFiles:
   - docs/models/operations/createprojectlinkprojectsresponsetype.md
   - docs/models/operations/createprojectlinkprojectstype.md
   - docs/models/operations/createprojectlinktype.md
+  - docs/models/operations/createprojectmicrofrontends.md
   - docs/models/operations/createprojectmissing.md
   - docs/models/operations/createprojectmitigate.md
   - docs/models/operations/createprojectnodeversion.md
@@ -602,11 +601,6 @@ generatedFiles:
   - docs/models/operations/createrecordresponsebody.md
   - docs/models/operations/createrecordresponsebody1.md
   - docs/models/operations/createrecordresponsebody2.md
-  - docs/models/operations/createsecretrequest.md
-  - docs/models/operations/createsecretrequestbody.md
-  - docs/models/operations/createsecretresponsebody.md
-  - docs/models/operations/createsecrettype.md
-  - docs/models/operations/createsecretvalue.md
   - docs/models/operations/createteamrequestbody.md
   - docs/models/operations/createteamresponsebody.md
   - docs/models/operations/createwebhookevents.md
@@ -621,9 +615,6 @@ generatedFiles:
   - docs/models/operations/customenvironment2.md
   - docs/models/operations/customenvironments.md
   - docs/models/operations/datacache.md
-  - docs/models/operations/datacachebillingsettingsrequestbody.md
-  - docs/models/operations/datacachebillingsettingsresponsebody.md
-  - docs/models/operations/datacachepurgeallrequest.md
   - docs/models/operations/decrypt.md
   - docs/models/operations/definitions.md
   - docs/models/operations/deleteaccessgrouprequest.md
@@ -644,8 +635,6 @@ generatedFiles:
   - docs/models/operations/deleteedgeconfigtokensrequestbody.md
   - docs/models/operations/deleteintegrationlogdrainrequest.md
   - docs/models/operations/deleteprojectrequest.md
-  - docs/models/operations/deletesecretrequest.md
-  - docs/models/operations/deletesecretresponsebody.md
   - docs/models/operations/deleteteaminvitecoderequest.md
   - docs/models/operations/deleteteaminvitecoderesponsebody.md
   - docs/models/operations/deleteteamrequest.md
@@ -888,7 +877,6 @@ generatedFiles:
   - docs/models/operations/getauthuserresponsebody.md
   - docs/models/operations/getcertbyidrequest.md
   - docs/models/operations/getcertbyidresponsebody.md
-  - docs/models/operations/getcertsresponsebody.md
   - docs/models/operations/getcheckchecksresponse200applicationjsonsource.md
   - docs/models/operations/getcheckchecksresponse200source.md
   - docs/models/operations/getcheckchecksresponsesource.md
@@ -1323,6 +1311,7 @@ generatedFiles:
   - docs/models/operations/getprojectsframework.md
   - docs/models/operations/getprojectsfunctiondefaultmemorytype.md
   - docs/models/operations/getprojectsgitcomments.md
+  - docs/models/operations/getprojectsgroup.md
   - docs/models/operations/getprojectshandle.md
   - docs/models/operations/getprojectshas.md
   - docs/models/operations/getprojectsinternalcontenthint.md
@@ -1342,6 +1331,7 @@ generatedFiles:
   - docs/models/operations/getprojectslinkprojectsresponsetype.md
   - docs/models/operations/getprojectslinkprojectstype.md
   - docs/models/operations/getprojectslinktype.md
+  - docs/models/operations/getprojectsmicrofrontends.md
   - docs/models/operations/getprojectsmissing.md
   - docs/models/operations/getprojectsmitigate.md
   - docs/models/operations/getprojectsnodeversion.md
@@ -1407,10 +1397,6 @@ generatedFiles:
   - docs/models/operations/getrecordsresponsebody2.md
   - docs/models/operations/getrecordsresponsebodydnstype.md
   - docs/models/operations/getrecordsresponsebodytype.md
-  - docs/models/operations/getsecretrequest.md
-  - docs/models/operations/getsecretresponsebody.md
-  - docs/models/operations/getsecretsrequest.md
-  - docs/models/operations/getsecretsresponsebody.md
   - docs/models/operations/getteamaccessrequestbitbucket.md
   - docs/models/operations/getteamaccessrequestgithub.md
   - docs/models/operations/getteamaccessrequestgitlab.md
@@ -1476,6 +1462,7 @@ generatedFiles:
   - docs/models/operations/gitsourcerepoid.md
   - docs/models/operations/gitsourcetype.md
   - docs/models/operations/gituserid.md
+  - docs/models/operations/group.md
   - docs/models/operations/handle.md
   - docs/models/operations/has.md
   - docs/models/operations/has1.md
@@ -1577,6 +1564,7 @@ generatedFiles:
   - docs/models/operations/members.md
   - docs/models/operations/metadata.md
   - docs/models/operations/metrics.md
+  - docs/models/operations/microfrontends.md
   - docs/models/operations/missing.md
   - docs/models/operations/missing1.md
   - docs/models/operations/missing2.md
@@ -1616,7 +1604,6 @@ generatedFiles:
   - docs/models/operations/patchteamrequestbody.md
   - docs/models/operations/paths.md
   - docs/models/operations/pauseprojectrequest.md
-  - docs/models/operations/pauseprojectresponsebody.md
   - docs/models/operations/permissions.md
   - docs/models/operations/php.md
   - docs/models/operations/plan.md
@@ -1696,7 +1683,6 @@ generatedFiles:
   - docs/models/operations/putfirewallconfigvalue.md
   - docs/models/operations/putfirewallconfigverifiedbotsbypass.md
   - docs/models/operations/putfirewallconfigxss.md
-  - docs/models/operations/queryparamdecrypt.md
   - docs/models/operations/queryparamprovider.md
   - docs/models/operations/queryparamrole.md
   - docs/models/operations/queryparamtype.md
@@ -1844,9 +1830,6 @@ generatedFiles:
   - docs/models/operations/removerecordresponsebody.md
   - docs/models/operations/removeteammemberrequest.md
   - docs/models/operations/removeteammemberresponsebody.md
-  - docs/models/operations/renamesecretrequest.md
-  - docs/models/operations/renamesecretrequestbody.md
-  - docs/models/operations/renamesecretresponsebody.md
   - docs/models/operations/repoid.md
   - docs/models/operations/repos.md
   - docs/models/operations/requestaccesstoteamgituserid.md
@@ -1972,7 +1955,6 @@ generatedFiles:
   - docs/models/operations/searchreporesponsebody2.md
   - docs/models/operations/searchreporesponsebodyid.md
   - docs/models/operations/searchreporesponsebodyprovider.md
-  - docs/models/operations/secrets.md
   - docs/models/operations/security.md
   - docs/models/operations/servicetype.md
   - docs/models/operations/seven.md
@@ -2023,7 +2005,6 @@ generatedFiles:
   - docs/models/operations/twotype.md
   - docs/models/operations/type.md
   - docs/models/operations/unpauseprojectrequest.md
-  - docs/models/operations/unpauseprojectresponsebody.md
   - docs/models/operations/updateaccessgroupentitlements.md
   - docs/models/operations/updateaccessgrouprequest.md
   - docs/models/operations/updateaccessgrouprequestbody.md
@@ -2239,6 +2220,7 @@ generatedFiles:
   - docs/models/operations/updateprojectframework.md
   - docs/models/operations/updateprojectfunctiondefaultmemorytype.md
   - docs/models/operations/updateprojectgitcomments.md
+  - docs/models/operations/updateprojectgroup.md
   - docs/models/operations/updateprojecthandle.md
   - docs/models/operations/updateprojecthas.md
   - docs/models/operations/updateprojectinternalcontenthint.md
@@ -2258,6 +2240,7 @@ generatedFiles:
   - docs/models/operations/updateprojectlinkprojectsresponsetype.md
   - docs/models/operations/updateprojectlinkprojectstype.md
   - docs/models/operations/updateprojectlinktype.md
+  - docs/models/operations/updateprojectmicrofrontends.md
   - docs/models/operations/updateprojectmissing.md
   - docs/models/operations/updateprojectmitigate.md
   - docs/models/operations/updateprojectnodeversion.md
@@ -2374,7 +2357,6 @@ generatedFiles:
   - docs/sdks/logdrains/README.md
   - docs/sdks/projectmembers/README.md
   - docs/sdks/projects/README.md
-  - docs/sdks/secrets/README.md
   - docs/sdks/security/README.md
   - docs/sdks/teams/README.md
   - docs/sdks/user/README.md
@@ -2414,8 +2396,6 @@ generatedFiles:
   - src/funcs/checksGetCheck.ts
   - src/funcs/checksRerequestCheck.ts
   - src/funcs/checksUpdateCheck.ts
-  - src/funcs/dataCacheBillingSettings.ts
-  - src/funcs/datacachePurgeall.ts
   - src/funcs/deploymentsCancelDeployment.ts
   - src/funcs/deploymentsCreateDeployment.ts
   - src/funcs/deploymentsDeleteDeployment.ts
@@ -2455,7 +2435,6 @@ generatedFiles:
   - src/funcs/edgeConfigGetEdgeConfigs.ts
   - src/funcs/edgeConfigPatchEdgeConfigSchema.ts
   - src/funcs/edgeConfigUpdateEdgeConfig.ts
-  - src/funcs/getCerts.ts
   - src/funcs/integrationsDeleteConfiguration.ts
   - src/funcs/integrationsGetConfiguration.ts
   - src/funcs/integrationsGetConfigurations.ts
@@ -2491,11 +2470,6 @@ generatedFiles:
   - src/funcs/projectsUpdateProjectDomain.ts
   - src/funcs/projectsUpdateProjectProtectionBypass.ts
   - src/funcs/projectsVerifyProjectDomain.ts
-  - src/funcs/secretsCreateSecret.ts
-  - src/funcs/secretsDeleteSecret.ts
-  - src/funcs/secretsGetSecret.ts
-  - src/funcs/secretsGetSecrets.ts
-  - src/funcs/secretsRenameSecret.ts
   - src/funcs/securityGetFirewallConfig.ts
   - src/funcs/securityPutFirewallConfig.ts
   - src/funcs/securityUpdateAttackChallengeMode.ts
@@ -2575,11 +2549,8 @@ generatedFiles:
   - src/models/operations/createproject.ts
   - src/models/operations/createprojectenv.ts
   - src/models/operations/createrecord.ts
-  - src/models/operations/createsecret.ts
   - src/models/operations/createteam.ts
   - src/models/operations/createwebhook.ts
-  - src/models/operations/datacachebillingsettings.ts
-  - src/models/operations/datacachepurgeall.ts
   - src/models/operations/deleteaccessgroup.ts
   - src/models/operations/deletealias.ts
   - src/models/operations/deleteauthtoken.ts
@@ -2592,7 +2563,6 @@ generatedFiles:
   - src/models/operations/deleteedgeconfigtokens.ts
   - src/models/operations/deleteintegrationlogdrain.ts
   - src/models/operations/deleteproject.ts
-  - src/models/operations/deletesecret.ts
   - src/models/operations/deleteteam.ts
   - src/models/operations/deleteteaminvitecode.ts
   - src/models/operations/deletewebhook.ts
@@ -2605,7 +2575,6 @@ generatedFiles:
   - src/models/operations/getauthtoken.ts
   - src/models/operations/getauthuser.ts
   - src/models/operations/getcertbyid.ts
-  - src/models/operations/getcerts.ts
   - src/models/operations/getcheck.ts
   - src/models/operations/getconfigurablelogdrain.ts
   - src/models/operations/getconfiguration.ts
@@ -2634,8 +2603,6 @@ generatedFiles:
   - src/models/operations/getprojectmembers.ts
   - src/models/operations/getprojects.ts
   - src/models/operations/getrecords.ts
-  - src/models/operations/getsecret.ts
-  - src/models/operations/getsecrets.ts
   - src/models/operations/getteam.ts
   - src/models/operations/getteamaccessrequest.ts
   - src/models/operations/getteammembers.ts
@@ -2668,7 +2635,6 @@ generatedFiles:
   - src/models/operations/removeprojectmember.ts
   - src/models/operations/removerecord.ts
   - src/models/operations/removeteammember.ts
-  - src/models/operations/renamesecret.ts
   - src/models/operations/requestaccesstoteam.ts
   - src/models/operations/requestdelete.ts
   - src/models/operations/requestpromote.ts
@@ -2706,7 +2672,6 @@ generatedFiles:
   - src/sdk/projectmembers.ts
   - src/sdk/projects.ts
   - src/sdk/sdk.ts
-  - src/sdk/secrets.ts
   - src/sdk/security.ts
   - src/sdk/teams.ts
   - src/sdk/user.ts

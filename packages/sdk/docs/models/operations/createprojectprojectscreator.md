@@ -6,9 +6,9 @@
 import { CreateProjectProjectsCreator } from "@vercel/sdk/models/operations/createproject.js";
 
 let value: CreateProjectProjectsCreator = {
-  email: "Lemuel10@gmail.com",
+  email: "Emmie60@yahoo.com",
   uid: "<id>",
-  username: "Alessia_Jakubowski36",
+  username: "Lori.Brakus-Stroman",
 };
 ```
 

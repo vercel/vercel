@@ -5,7 +5,7 @@
 ```typescript
 import { UpdateFirewallConfigRequestBodySecurityType } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
 
-let value: UpdateFirewallConfigRequestBodySecurityType = "host";
+let value: UpdateFirewallConfigRequestBodySecurityType = "method";
 ```
 
 ## Values

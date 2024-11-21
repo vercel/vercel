@@ -5,7 +5,7 @@
 ```typescript
 import { CreateProjectJobStatus } from "@vercel/sdk/models/operations/createproject.js";
 
-let value: CreateProjectJobStatus = "pending";
+let value: CreateProjectJobStatus = "skipped";
 ```
 
 ## Values

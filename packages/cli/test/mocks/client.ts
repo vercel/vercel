@@ -6,10 +6,13 @@ import './matchers';
 
 import chalk from 'chalk';
 import { PassThrough } from 'stream';
-import { createServer, Server } from 'http';
-import express, { Express, Router } from 'express';
+import type { Server } from 'http';
+import { createServer } from 'http';
+import type { Express } from 'express';
+import express, { Router } from 'express';
 import { listen } from 'async-listen';
-import Client, { FetchOptions } from '../../src/util/client';
+import type { FetchOptions } from '../../src/util/client';
+import Client from '../../src/util/client';
 import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
@@ -137,7 +140,7 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
 }
 
 class MockTelemetryEventStore extends TelemetryEventStore {
-  save(): void {
+  async save(): Promise<void> {
     return;
   }
 }

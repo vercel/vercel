@@ -151,10 +151,10 @@ export const pullSubcommand = {
   options: [
     {
       name: 'environment',
-      description:
-        'Set the Environment (development, preview, production) when pulling Environment Variables',
+      description: 'Set the Environment when pulling Environment Variables',
       shorthand: null,
       type: String,
+      argument: 'TARGET',
       deprecated: false,
     },
     {
@@ -163,6 +163,7 @@ export const pullSubcommand = {
         'Specify the Git branch to pull specific Environment Variables for',
       shorthand: null,
       type: String,
+      argument: 'NAME',
       deprecated: false,
     },
     {

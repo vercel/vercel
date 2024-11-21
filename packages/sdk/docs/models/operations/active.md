@@ -9,13 +9,13 @@ let value: Active = {
   ownerId: "<id>",
   projectKey: "<value>",
   id: "<id>",
-  version: 6121.81,
+  version: 9082.73,
   updatedAt: "<value>",
   firewallEnabled: false,
   crs: {
     sd: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     ma: {
       active: false,
@@ -31,7 +31,7 @@ let value: Active = {
     },
     rce: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     php: {
       active: false,
@@ -43,7 +43,7 @@ let value: Active = {
     },
     xss: {
       active: false,
-      action: "deny",
+      action: "log",
     },
     sqli: {
       active: false,
@@ -51,11 +51,11 @@ let value: Active = {
     },
     sf: {
       active: false,
-      action: "log",
+      action: "deny",
     },
     java: {
       active: false,
-      action: "log",
+      action: "deny",
     },
   },
   rules: [
@@ -67,8 +67,8 @@ let value: Active = {
         {
           conditions: [
             {
-              type: "method",
-              op: "gt",
+              type: "geo_country_region",
+              op: "ex",
             },
           ],
         },
@@ -79,8 +79,8 @@ let value: Active = {
   ips: [
     {
       id: "<id>",
-      hostname: "prestigious-valuable.name",
-      ip: "feba:d022:a7ed:8bee:cd1e:bb19:55bd:90ff",
+      hostname: "deficient-fat.net",
+      ip: "1afb:c4cc:ff9d:00c6:567a:cbcc:99ee:1b7f",
       action: "deny",
     },
   ],

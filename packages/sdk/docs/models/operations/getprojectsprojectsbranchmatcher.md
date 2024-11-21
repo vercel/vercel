@@ -6,7 +6,7 @@
 import { GetProjectsProjectsBranchMatcher } from "@vercel/sdk/models/operations/getprojects.js";
 
 let value: GetProjectsProjectsBranchMatcher = {
-  type: "equals",
+  type: "endsWith",
   pattern: "<value>",
 };
 ```

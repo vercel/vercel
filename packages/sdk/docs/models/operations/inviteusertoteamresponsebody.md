@@ -21,7 +21,7 @@ const value: operations.InviteUserToTeamResponseBody1 = {
 ```typescript
 const value: operations.InviteUserToTeamResponseBody2 = {
   uid: "<id>",
-  username: "Brody_Block",
+  username: "Magnus.Lindgren40",
   role: "VIEWER",
 };
 ```

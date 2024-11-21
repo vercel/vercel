@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import { join, resolve } from 'path';
-import _execa, { ExecaChildProcess, type Options } from 'execa';
+import type { ExecaChildProcess } from 'execa';
+import _execa, { type Options } from 'execa';
 import fetch, { type RequestInit, type Response } from 'node-fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
@@ -332,7 +333,7 @@ export async function testFixture(
     readyResolver.resolve(null);
   });
 
-  // @ts-ignore
+  // @ts-expect-error
   dev.kill = async () => {
     // kill the entire process tree for the child as some tests will spawn
     // child processes that either become defunct or assigned a new parent
@@ -347,7 +348,9 @@ export async function testFixture(
   };
 
   return {
-    dev,
+    dev: dev as any as Omit<typeof dev, 'kill'> & {
+      kill: () => Promise<{ stdout: string; stderr: string }>;
+    },
     port,
     readyResolver,
   };
@@ -659,7 +662,7 @@ async function nukeProcessTree(pid: number, signal?: string) {
 
   // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
-  await Promise.all(Object.keys(pids).map(pid => nukePID(pid, signal)));
+  await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
 
 beforeEach(() => {

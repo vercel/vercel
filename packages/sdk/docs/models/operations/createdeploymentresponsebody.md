@@ -16,13 +16,13 @@ let value: CreateDeploymentResponseBody = {
   env: [
     "<value>",
   ],
-  inspectorUrl: "https://sardonic-ruin.biz",
+  inspectorUrl: "https://blue-bidet.info",
   isInConcurrentBuildsQueue: false,
   isInSystemBuildsQueue: false,
   projectSettings: {},
   aliasAssigned: false,
-  bootedAt: 5482.56,
-  buildingAt: 5433.53,
+  bootedAt: 7665.91,
+  buildingAt: 6886.83,
   buildSkipped: false,
   creator: {
     uid: "<id>",
@@ -30,26 +30,28 @@ let value: CreateDeploymentResponseBody = {
   public: false,
   status: "INITIALIZING",
   type: "LAMBDAS",
-  createdAt: 9568.71,
+  createdAt: 7672.10,
   name: "<value>",
   id: "<id>",
-  version: 2779.90,
+  version: 2871.53,
   meta: {
     "key": "<value>",
   },
-  readyState: "INITIALIZING",
+  readyState: "BUILDING",
   regions: [
     "<value>",
   ],
-  url: "https://ornery-sand.org",
+  url: "https://showy-vanadyl.biz",
   projectId: "<id>",
   ownerId: "<id>",
   routes: [
     {
       src: "<value>",
+      continue: false,
+      middleware: 6599.71,
     },
   ],
-  plan: "pro",
+  plan: "enterprise",
   createdIn: "<value>",
 };
 ```
