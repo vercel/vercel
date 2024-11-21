@@ -3,13 +3,13 @@ import open from 'open';
 import { URL } from 'url';
 import { listen } from 'async-listen';
 import isDocker from 'is-docker';
-import Client from '../client';
+import type Client from '../client';
 import prompt, { readInput } from './prompt';
 import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
 import eraseLines from '../output/erase-lines';
-import { LoginResult } from './types';
+import type { LoginResult } from './types';
 import output from '../../output-manager';
 
 export default async function doOauthLogin(

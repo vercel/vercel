@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
-import Client from './client';
+import type Client from './client';
 import output from '../output-manager';
 
 /**

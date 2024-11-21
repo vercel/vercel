@@ -4,9 +4,10 @@ import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
 import type { Org } from '@vercel-internals/types';
-import Now, { CreateOptions } from '..';
-import Client from '../client';
-import { ArchiveFormat, DeploymentError } from '@vercel/client';
+import type Now from '..';
+import type { CreateOptions } from '..';
+import type Client from '../client';
+import type { ArchiveFormat, DeploymentError } from '@vercel/client';
 
 export default async function createDeploy(
   client: Client,

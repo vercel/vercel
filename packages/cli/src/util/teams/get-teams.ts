@@ -1,5 +1,5 @@
 import { URLSearchParams } from 'url';
-import Client from '../client';
+import type Client from '../client';
 import type { Team } from '@vercel-internals/types';
 import { APIError, InvalidToken } from '../errors-ts';
 

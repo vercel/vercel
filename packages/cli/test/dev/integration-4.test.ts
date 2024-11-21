@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import { join } from 'path';
-import { Response } from 'node-fetch';
+import type { Response } from 'node-fetch';
 import {
   fetch,
   fixture,

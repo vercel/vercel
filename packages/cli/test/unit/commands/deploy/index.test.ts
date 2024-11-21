@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';

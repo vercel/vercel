@@ -1,7 +1,10 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
-import { ProjectLinkResult, ProjectSettings } from '@vercel-internals/types';
+import type {
+  ProjectLinkResult,
+  ProjectSettings,
+} from '@vercel-internals/types';
 import {
   getLinkedProject,
   linkFolderToProject,
@@ -10,7 +13,7 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../projects/link';
 import createProject from '../projects/create-project';
-import Client from '../client';
+import type Client from '../client';
 import handleError from '../handle-error';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
@@ -23,7 +26,7 @@ import {
   editProjectSettings,
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
-import { EmojiLabel } from '../emoji';
+import type { EmojiLabel } from '../emoji';
 import { CantParseJSONFile, isAPIError } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';

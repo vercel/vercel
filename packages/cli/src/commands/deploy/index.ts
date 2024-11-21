@@ -4,10 +4,10 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import {
-  Dictionary,
+  type Dictionary,
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
-  VercelConfig,
+  type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
@@ -15,8 +15,8 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
-import Now, { CreateOptions } from '../../util';
-import Client from '../../util/client';
+import Now, { type CreateOptions } from '../../util';
+import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';

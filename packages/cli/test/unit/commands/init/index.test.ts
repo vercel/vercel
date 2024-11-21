@@ -1,7 +1,7 @@
 import init from '../../../../src/commands/init';
 import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import { FetchOptions } from '../../../../src/util/client';
+import type { FetchOptions } from '../../../../src/util/client';
 import fs from 'fs-extra';
 import { Response } from 'node-fetch';
 import { join } from 'path';

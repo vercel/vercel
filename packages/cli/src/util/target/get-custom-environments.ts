@@ -1,6 +1,6 @@
-import Client from '../client';
+import type Client from '../client';
 import { isObject } from '@vercel/error-utils';
-import { CustomEnvironment } from '@vercel-internals/types';
+import type { CustomEnvironment } from '@vercel-internals/types';
 
 export async function getCustomEnvironments(client: Client, projectId: string) {
   try {

@@ -10,7 +10,7 @@ import {
   switchSubcommand,
   teamsCommand,
 } from './command';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
