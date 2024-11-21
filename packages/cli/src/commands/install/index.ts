@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { help } from '../help';
 import { add } from '../integration/add';

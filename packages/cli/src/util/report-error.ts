@@ -1,10 +1,11 @@
-import Client from './client';
+import type Client from './client';
 import getScope from './get-scope';
 import getArgs from './get-args';
 import { isError } from '@vercel/error-utils';
 import type { Team, User } from '@vercel-internals/types';
 
 export default async function reportError(
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   sentry: typeof import('@sentry/node'),
   client: Client,
   error: unknown

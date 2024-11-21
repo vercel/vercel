@@ -1,4 +1,4 @@
-import { GlobalConfig } from '@vercel-internals/types';
+import type { GlobalConfig } from '@vercel-internals/types';
 import * as configFiles from '../config/files';
 
 import output from '../../output-manager';

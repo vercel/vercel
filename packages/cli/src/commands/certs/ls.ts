@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';

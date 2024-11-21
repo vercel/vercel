@@ -12,7 +12,7 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';

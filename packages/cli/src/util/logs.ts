@@ -5,7 +5,7 @@ import ms from 'ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';
 import { URLSearchParams } from 'url';
-import Client from '../util/client';
+import type Client from '../util/client';
 import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
 import output from '../output-manager';

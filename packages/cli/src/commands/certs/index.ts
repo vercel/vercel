@@ -12,8 +12,8 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { Command, help } from '../help';
-import Client from '../../util/client';
+import { type Command, help } from '../help';
+import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';

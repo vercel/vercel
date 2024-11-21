@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';

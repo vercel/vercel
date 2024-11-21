@@ -1,5 +1,5 @@
 import { NowError } from '../now-error';
-import Client from '../client';
+import type Client from '../client';
 import createCertForCns from './create-cert-for-cns';
 import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
 import joinWords from '../output/join-words';

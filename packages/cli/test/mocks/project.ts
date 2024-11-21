@@ -147,15 +147,20 @@ export const defaultProject: Project = {
  */
 export function useUnknownProject() {
   let project: Project;
-  client.scenario.get(`/:version/projects/:projectNameOrId`, (_req, res) => {
+  client.scenario.get(`/:version/projects/:projectNameOrId`, (req, res) => {
+    if (
+      project?.id === req.params.projectNameOrId ||
+      project?.name === req.params.projectNameOrId
+    ) {
+      return res.json(project);
+    }
     res.status(404).send();
   });
   client.scenario.post(`/:version/projects`, (req, res) => {
-    const { name } = req.body;
     project = {
       ...defaultProject,
-      name,
-      id: name,
+      ...req.body,
+      id: req.body.name,
     };
     res.json(project);
   });

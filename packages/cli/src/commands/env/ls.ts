@@ -5,7 +5,7 @@ import type {
   ProjectEnvVariable,
   ProjectLinked,
 } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';

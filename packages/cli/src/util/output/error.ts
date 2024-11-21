@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { APIError } from '../errors-ts';
+import type { APIError } from '../errors-ts';
 import renderLink from './link';
 
 export default function error(

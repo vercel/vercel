@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -18,7 +18,7 @@ import {
   removeSubcommand,
   transferInSubcommand,
 } from './command';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
 import output from '../../output-manager';
