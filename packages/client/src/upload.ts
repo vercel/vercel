@@ -1,7 +1,7 @@
 import http from 'http';
 import https from 'https';
 import { Readable } from 'stream';
-import { EventEmitter } from 'events';
+import events, { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
@@ -82,6 +82,9 @@ export async function* upload(
   const defaultAgent = apiUrl?.startsWith('https://')
     ? new https.Agent({ keepAlive: true })
     : new http.Agent({ keepAlive: true });
+  const abortController = new AbortController();
+  // default max is 10, but abort controller may have 50 connections at once
+  events.setMaxListeners(50);
 
   shas.forEach((sha, index) => {
     const uploadProgress = uploads[index];
@@ -144,6 +147,8 @@ export async function* upload(
               teamId,
               apiUrl,
               userAgent,
+              // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
+              signal: abortController.signal,
             },
             clientOptions.debug
           );
@@ -188,6 +193,7 @@ export async function* upload(
           } else {
             debug('Other error, bailing: ' + err.message);
             // Otherwise we bail
+            abortController.abort();
             return bail(err);
           }
         }
