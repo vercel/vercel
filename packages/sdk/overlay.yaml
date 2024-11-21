@@ -11,9 +11,9 @@ actions:
     remove: true
   - target: $["paths"]["/certs"]
     remove: true
-  - target: $["paths"]["/v1/projects/{projectId}"].pause
+  - target: $.paths['/v1/projects/{projectId}/pause']
     remove: true
-  - target: $["paths"]["/v1/projects/{projectId}"].unpause
+  - target: $.paths['/v1/projects/{projectId}/unpause']
     remove: true
   # Removing these paths as they are deprecated but kept for legacy
   - target: $["paths"]["/v2/secrets/{name}"]
