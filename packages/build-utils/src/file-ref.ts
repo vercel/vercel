@@ -45,13 +45,24 @@ export default class FileRef implements FileBase {
     this.mutable = mutable;
   }
 
-  private getMutableFilesCloudfrontUrl(): string {
+  /**
+   * Retrieves the URL of the CloudFront distribution for the S3
+   * bucket represented by {@link getNowFilesS3Url}.
+   *
+   * @returns The URL of the CloudFront distribution
+   */
+  private getNowFilesCloudfrontUrl(): string {
     return (
-      process.env.MUTABLE_FILES_CLOUDFRONT_URL ||
+      process.env.NOW_FILES_CLOUDFRONT_URL ||
       'https://dmmcy0pwk6bqi.cloudfront.net'
     );
   }
 
+  /**
+   * Retrieves the URL of the S3 bucket for storing ephemeral files.
+   *
+   * @returns The URL of the S3 bucket
+   */
   private getNowEphemeralFilesS3Url(): string {
     return (
       process.env.NOW_EPHEMERAL_FILES_S3_URL ||
@@ -59,6 +70,11 @@ export default class FileRef implements FileBase {
     );
   }
 
+  /**
+   * Retrieves the URL of the S3 bucket for storing files.
+   *
+   * @returns The URL of the S3 bucket
+   */
   private getNowFilesS3Url(): string {
     return process.env.NOW_FILES_S3_URL || 'https://now-files.s3.amazonaws.com';
   }
@@ -70,10 +86,9 @@ export default class FileRef implements FileBase {
     if (digestType === 'sha') {
       // This CloudFront URL edge caches the `now-files` S3 bucket to prevent
       // overloading it. Mutable files cannot be cached.
-      // `https://now-files.s3.amazonaws.com/${digestHash}`
       url = this.mutable
         ? `${this.getNowFilesS3Url()}/${digestHash}`
-        : `${this.getMutableFilesCloudfrontUrl()}/${digestHash}`;
+        : `${this.getNowFilesCloudfrontUrl()}/${digestHash}`;
     } else if (digestType === 'sha+ephemeral') {
       // This URL is currently only used for cache files that constantly
       // change. We shouldn't cache it on CloudFront because it'd always be a
