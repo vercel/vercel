@@ -297,15 +297,16 @@ export function handleErrorSolvableWithArchive(error: unknown) {
   const errorIsObject = typeof error === 'object' && error !== null;
   if (errorIsObject && 'message' in error) {
     const isUploadRateLimit =
-      'code' in error &&
-      error.code === 'rate_limited' &&
-      typeof error.message === 'string' &&
-      error.message.includes('api-upload');
+      'rateLimitName' in error &&
+      typeof error.rateLimitName === 'string' &&
+      ['api-upload-free', 'api-upload-paid', 'api-upload-extended'].includes(
+        error.rateLimitName
+      );
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
 
     if (isUploadRateLimit || isTooManyFilesLimit) {
-      throw new UploadMissingArchiveError(
+      throw new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );
     }
