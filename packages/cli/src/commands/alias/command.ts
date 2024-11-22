@@ -1,5 +1,5 @@
-import { packageName } from '../../util/pkg-name';
 import { limitOption, nextOption, yesOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const setSubcommand = {
   name: 'set',
