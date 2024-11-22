@@ -85,7 +85,7 @@ export default async function alias(client: Client) {
         printHelp(setSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandList(subcommandOriginal);
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
     default:
       if (needHelp) {
