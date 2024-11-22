@@ -45,6 +45,24 @@ export default class FileRef implements FileBase {
     this.mutable = mutable;
   }
 
+  private getMutableFilesCloudfrontUrl(): string {
+    return (
+      process.env.MUTABLE_FILES_CLOUDFRONT_URL ||
+      'https://dmmcy0pwk6bqi.cloudfront.net'
+    );
+  }
+
+  private getNowEphemeralFilesS3Url(): string {
+    return (
+      process.env.NOW_EPHEMERAL_FILES_S3_URL ||
+      'https://now-ephemeral-files.s3.amazonaws.com'
+    );
+  }
+
+  private getNowFilesS3Url(): string {
+    return process.env.NOW_FILES_S3_URL || 'https://now-files.s3.amazonaws.com';
+  }
+
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
     let url = '';
     // sha:24be087eef9fac01d61b30a725c1a10d7b45a256
@@ -54,13 +72,13 @@ export default class FileRef implements FileBase {
       // overloading it. Mutable files cannot be cached.
       // `https://now-files.s3.amazonaws.com/${digestHash}`
       url = this.mutable
-        ? `https://now-files.s3.amazonaws.com/${digestHash}`
-        : `https://dmmcy0pwk6bqi.cloudfront.net/${digestHash}`;
+        ? `${this.getNowFilesS3Url()}/${digestHash}`
+        : `${this.getMutableFilesCloudfrontUrl()}/${digestHash}`;
     } else if (digestType === 'sha+ephemeral') {
       // This URL is currently only used for cache files that constantly
       // change. We shouldn't cache it on CloudFront because it'd always be a
       // MISS.
-      url = `https://now-ephemeral-files.s3.amazonaws.com/${digestHash}`;
+      url = `${this.getNowEphemeralFilesS3Url()}/${digestHash}`;
     } else {
       throw new Error('Expected digest to be sha');
     }
