@@ -289,7 +289,7 @@ export default async function processDeployment({
 export const archiveSuggestionText =
   'Try using `--archive=tgz` to limit the amount of files you upload.';
 
-export class UploadMissingArchiveError extends Error {
+export class UploadErrorMissingArchive extends Error {
   link = 'https://vercel.com/docs/cli/deploy#archive';
 }
 
