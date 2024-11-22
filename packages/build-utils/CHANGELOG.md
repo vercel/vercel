@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.5.0
+
+### Minor Changes
+
+- Remove `VERCEL_ALLOW_NODEJS22` env var check ([#12614](https://github.com/vercel/vercel/pull/12614))
+
 ## 8.4.12
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @vercel/client
 
+## 13.4.18
+
+### Patch Changes
+
+- Cancel other uploads when one fails ([#12635](https://github.com/vercel/vercel/pull/12635))
+
+- Updated dependencies [[`a97f3f13ea3f27fd143e7692544bbd4919771a7a`](https://github.com/vercel/vercel/commit/a97f3f13ea3f27fd143e7692544bbd4919771a7a)]:
+  - @vercel/build-utils@8.5.0
+
 ## 13.4.17
 
 ### Patch Changes
