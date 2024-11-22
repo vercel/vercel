@@ -248,14 +248,18 @@ test(
   })
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] Middleware with error in function handler',
   testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
   })
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] Middleware with error at init',
   testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
     await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
