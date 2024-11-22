@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   handleErrorSolvableWithArchive,
   archiveSuggestionText,
+  UploadMissingArchiveError,
 } from '../../../../src/util/deploy/process-deployment';
 
 describe('processDeployment()', () => {
@@ -13,7 +14,11 @@ describe('processDeployment()', () => {
           code: 'too_many_files',
           message: originalMessage,
         })
-      ).toThrow(`${originalMessage}\n${archiveSuggestionText}`);
+      ).toThrow(
+        new UploadMissingArchiveError(
+          `${originalMessage}\n${archiveSuggestionText}`
+        )
+      );
     });
 
     it('should throw on upload rate limit error', () => {
@@ -24,7 +29,11 @@ describe('processDeployment()', () => {
           code: 'rate_limited',
           message: originalMessage,
         })
-      ).toThrow(`${originalMessage}\n${archiveSuggestionText}`);
+      ).toThrow(
+        new UploadMissingArchiveError(
+          `${originalMessage}\n${archiveSuggestionText}`
+        )
+      );
     });
 
     it('should not throw for wrong code', () => {

@@ -287,7 +287,11 @@ export default async function processDeployment({
 }
 
 export const archiveSuggestionText =
-  'Try using `--archive=tgz` to limit the amount of files you upload.\nLearn more: https://vercel.com/docs/cli/deploy#archive';
+  'Try using `--archive=tgz` to limit the amount of files you upload.';
+
+export class UploadMissingArchiveError extends Error {
+  link = 'https://vercel.com/docs/cli/deploy#archive';
+}
 
 export function handleErrorSolvableWithArchive(error: unknown) {
   const errorIsObject = typeof error === 'object' && error !== null;
@@ -301,7 +305,9 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       'code' in error && error.code === 'too_many_files';
 
     if (isUploadRateLimit || isTooManyFilesLimit) {
-      throw new Error(`${error.message}\n${archiveSuggestionText}`);
+      throw new UploadMissingArchiveError(
+        `${error.message}\n${archiveSuggestionText}`
+      );
     }
   }
 }
