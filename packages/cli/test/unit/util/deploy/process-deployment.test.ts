@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   handleErrorSolvableWithArchive,
   archiveSuggestionText,
-  UploadMissingArchiveError,
+  UploadErrorMissingArchive,
 } from '../../../../src/util/deploy/process-deployment';
 
 describe('processDeployment()', () => {
@@ -15,7 +15,7 @@ describe('processDeployment()', () => {
           message: originalMessage,
         })
       ).toThrow(
-        new UploadMissingArchiveError(
+        new UploadErrorMissingArchive(
           `${originalMessage}\n${archiveSuggestionText}`
         )
       );
@@ -28,19 +28,30 @@ describe('processDeployment()', () => {
         handleErrorSolvableWithArchive({
           code: 'rate_limited',
           message: originalMessage,
+          rateLimitName: 'api-upload-paid',
         })
       ).toThrow(
-        new UploadMissingArchiveError(
+        new UploadErrorMissingArchive(
           `${originalMessage}\n${archiveSuggestionText}`
         )
       );
     });
 
-    it('should not throw for wrong code', () => {
+    it('should not throw if missing `rateLimitName`', () => {
       expect(() =>
         handleErrorSolvableWithArchive({
-          code: 'other',
+          code: 'rate_limited',
           message: 'string containing api-upload',
+        })
+      ).not.toThrow();
+    });
+
+    it('should not throw for other rate limits', () => {
+      expect(() =>
+        handleErrorSolvableWithArchive({
+          code: 'rate_limited',
+          message: 'string containing api-upload',
+          rateLimitName: 'api-size-limit',
         })
       ).not.toThrow();
     });
