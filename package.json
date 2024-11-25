@@ -41,6 +41,7 @@
   },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
+    "watch": "node utils/gen.js && turbo --no-update-notifier watch build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
     "pre-commit": "lint-staged",
     "test": "jest --rootDir=\"test\" --testPathPattern=\"\\.test.js\"",
