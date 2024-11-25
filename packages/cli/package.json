@@ -18,8 +18,7 @@
     "test-dev": "pnpm test test/dev/",
     "coverage": "codecov",
     "build": "node scripts/build.mjs",
-    "dev": "echo \"'pnpm dev [command]' has been removed. Use 'pnpm vercel [command]' instead.\" && exit 1",
-    "vercel": "ts-node ./src/index.ts",
+    "vercel": "pnpm run build && node ./scripts/start.js",
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit"
   },
