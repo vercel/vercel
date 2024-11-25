@@ -586,11 +586,17 @@ export default class DevServer {
 
       let {
         builders,
+        // eslint-disable-next-line prefer-const
         warnings,
+        // eslint-disable-next-line prefer-const
         errors,
+        // eslint-disable-next-line prefer-const
         defaultRoutes,
+        // eslint-disable-next-line prefer-const
         redirectRoutes,
+        // eslint-disable-next-line prefer-const
         rewriteRoutes,
+        // eslint-disable-next-line prefer-const
         errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: 'latest',
@@ -901,7 +907,7 @@ export default class DevServer {
     const files = await getFiles(this.cwd, {});
     this.files = {};
     for (const fsPath of files) {
-      let path = relative(this.cwd, fsPath);
+      const path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
       this.files[path] = new FileFsRef({ mode, fsPath });
       const extensionless = this.getExtensionlessFile(path);
@@ -1280,7 +1286,7 @@ export default class DevServer {
   ) => {
     await this.startPromise;
 
-    let requestId = generateRequestId(this.podId);
+    const requestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -2261,7 +2267,7 @@ export default class DevServer {
 
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
-    let command = devCommand
+    const command = devCommand
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 

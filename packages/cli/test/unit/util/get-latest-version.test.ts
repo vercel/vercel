@@ -145,7 +145,7 @@ describe('get latest version', () => {
     });
 
     // 2. get the latest version
-    let latest = getLatestVersion({
+    const latest = getLatestVersion({
       cacheDir,
       pkg,
     });
@@ -167,7 +167,7 @@ describe('get latest version', () => {
       }
     }
 
-    let cache = await fs.readJSON(cacheFile);
+    const cache = await fs.readJSON(cacheFile);
     expect(cache.version).toEqual(expect.stringMatching(versionRE));
     expect(cache.version).not.toEqual('28.0.0');
     expect(cache.notifyAt).toEqual(undefined);

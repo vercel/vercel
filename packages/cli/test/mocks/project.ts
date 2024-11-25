@@ -413,7 +413,7 @@ function exposeSystemEnvs(
     }
   }
 
-  for (let env of projectEnvs) {
+  for (const env of projectEnvs) {
     if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
     } else {

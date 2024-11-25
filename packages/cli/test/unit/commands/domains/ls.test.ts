@@ -36,7 +36,7 @@ describe('domains ls', () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls');
-    let exitCode = await domains(client);
+    const exitCode = await domains(client);
     expect(exitCode, 'exit code for "domains"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([

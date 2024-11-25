@@ -219,7 +219,7 @@ export default (builds: Build[], times: Times) => {
   const final = [];
   let finalBuildsLength = path.length;
   let lengthWithoutRootPaths = path.length;
-  let hiddenBuildGroup: Build[] = [];
+  const hiddenBuildGroup: Build[] = [];
 
   // Ungroup the root files
   path = (() => {

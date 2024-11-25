@@ -114,7 +114,7 @@ export async function parseGitConfig(configPath: string) {
 export function pluckRemoteUrls(gitConfig: {
   [key: string]: any;
 }): { [key: string]: string } | undefined {
-  let remoteUrls: { [key: string]: string } = {};
+  const remoteUrls: { [key: string]: string } = {};
 
   for (const key of Object.keys(gitConfig)) {
     if (key.includes('remote')) {
@@ -154,7 +154,7 @@ export function pluckOriginUrl(gitConfig: {
 }
 
 export async function getOriginUrl(configPath: string): Promise<string | null> {
-  let gitConfig = await parseGitConfig(configPath);
+  const gitConfig = await parseGitConfig(configPath);
   if (!gitConfig) {
     return null;
   }

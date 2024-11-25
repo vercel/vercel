@@ -7,7 +7,7 @@ export async function findProjectsForDomain(
   domainName: string
 ): Promise<Project[] | Error> {
   try {
-    let result: Project[] = [];
+    const result: Project[] = [];
 
     for await (const chunk of client.fetchPaginated<{ projects: Project[] }>(
       '/v9/projects'

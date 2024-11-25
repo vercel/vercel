@@ -46,6 +46,7 @@ export default async function rm(client: Client, argv: string[]) {
     return 1;
   }
 
+  // eslint-disable-next-line prefer-const
   let [envName, envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTarget);
