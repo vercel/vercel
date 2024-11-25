@@ -9,68 +9,65 @@ describe('processDeployment()', () => {
   describe('handleErrorSolvableWithArchive()', () => {
     it('should throw on too many files error', () => {
       const originalMessage = `Invalid request: 'files' should NOT have more than 15000 items, received 15001.`;
-      expect(() =>
-        handleErrorSolvableWithArchive({
-          code: 'too_many_files',
-          message: originalMessage,
-        })
-      ).toThrow(
-        new UploadErrorMissingArchive(
-          `${originalMessage}\n${archiveSuggestionText}`
-        )
+      const result = handleErrorSolvableWithArchive({
+        code: 'too_many_files',
+        message: originalMessage,
+      });
+      expect(result).toBeInstanceOf(UploadErrorMissingArchive);
+      expect(result?.message).toEqual(
+        `${originalMessage}\n${archiveSuggestionText}`
       );
     });
 
     it('should throw on upload rate limit error', () => {
       const originalMessage =
         'Too many requests - try again in 22 hours (more than 5000, code: "api-upload-paid").';
-      expect(() =>
-        handleErrorSolvableWithArchive({
-          code: 'rate_limited',
-          message: originalMessage,
-          rateLimitName: 'api-upload-paid',
-        })
-      ).toThrow(
-        new UploadErrorMissingArchive(
-          `${originalMessage}\n${archiveSuggestionText}`
-        )
+
+      const result = handleErrorSolvableWithArchive({
+        code: 'rate_limited',
+        message: originalMessage,
+        rateLimitName: 'api-upload-paid',
+      });
+      expect(result).toBeInstanceOf(UploadErrorMissingArchive);
+      expect(result?.message).toEqual(
+        `${originalMessage}\n${archiveSuggestionText}`
       );
     });
 
     it('should not throw if missing `rateLimitName`', () => {
-      expect(() =>
+      expect(
         handleErrorSolvableWithArchive({
           code: 'rate_limited',
           message: 'string containing api-upload',
         })
-      ).not.toThrow();
+      ).not.toBeInstanceOf(UploadErrorMissingArchive);
     });
 
     it('should not throw for other rate limits', () => {
-      expect(() =>
+      expect(
         handleErrorSolvableWithArchive({
           code: 'rate_limited',
           message: 'string containing api-upload',
           rateLimitName: 'api-size-limit',
         })
-      ).not.toThrow();
+      ).not.toBeInstanceOf(UploadErrorMissingArchive);
     });
 
     it('should not throw if rate_limited message missing `api-upload`', () => {
-      expect(() =>
+      expect(
         handleErrorSolvableWithArchive({
           code: 'rate_limited',
           message: 'other message',
         })
-      ).not.toThrow();
+      ).not.toBeInstanceOf(UploadErrorMissingArchive);
     });
 
     it('should not throw if no message', () => {
-      expect(() =>
+      expect(
         handleErrorSolvableWithArchive({
           code: 'too_many_files',
         })
-      ).not.toThrow();
+      ).not.toBeInstanceOf(UploadErrorMissingArchive);
     });
   });
 });

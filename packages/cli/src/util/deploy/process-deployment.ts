@@ -5,6 +5,7 @@ import {
   type VercelClientOptions,
   createDeployment,
 } from '@vercel/client';
+import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
@@ -255,7 +256,10 @@ export default async function processDeployment({
         stopSpinner();
 
         if (!archive) {
-          handleErrorSolvableWithArchive(event.payload);
+          const maybeError = handleErrorSolvableWithArchive(event.payload);
+          if (maybeError) {
+            throw maybeError;
+          }
         }
 
         const error = await now.handleDeploymentError(event.payload, {
@@ -294,19 +298,16 @@ export class UploadErrorMissingArchive extends Error {
 }
 
 export function handleErrorSolvableWithArchive(error: unknown) {
-  const errorIsObject = typeof error === 'object' && error !== null;
-  if (errorIsObject && 'message' in error) {
+  if (isErrorLike(error)) {
     const isUploadRateLimit =
       'rateLimitName' in error &&
       typeof error.rateLimitName === 'string' &&
-      ['api-upload-free', 'api-upload-paid', 'api-upload-extended'].includes(
-        error.rateLimitName
-      );
+      error.rateLimitName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
 
     if (isUploadRateLimit || isTooManyFilesLimit) {
-      throw new UploadErrorMissingArchive(
+      return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );
     }
