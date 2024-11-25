@@ -300,9 +300,9 @@ export class UploadErrorMissingArchive extends Error {
 export function handleErrorSolvableWithArchive(error: unknown) {
   if (isErrorLike(error)) {
     const isUploadRateLimit =
-      'rateLimitName' in error &&
-      typeof error.rateLimitName === 'string' &&
-      error.rateLimitName.startsWith('api-upload-');
+      'errorName' in error &&
+      typeof error.errorName === 'string' &&
+      error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
 
