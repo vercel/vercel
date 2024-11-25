@@ -144,17 +144,17 @@ export default class FileRef implements FileBase {
 }
 
 /**
- * Get the value of the environment variable `key` as a valid URL string or `null` if unset.
+ * Get the value of the environment variable `key` as a valid URL string or `undefined` if unset.
  *
  * @param key The `process.env` member which holds the value to validate
- * @returns The valid URL string or `null` if `key` is not set on `process.env`
+ * @returns The valid URL string or `undefined` if `key` is not set on `process.env`
  */
 function getEnvAsUrlOrThrow(
   key: keyof (typeof process)['env']
-): ReturnType<URL['toString']> | null {
+): ReturnType<URL['toString']> | undefined {
   const value = process.env[key];
 
-  if (value === undefined) return null;
+  if (value === undefined) return undefined;
 
   try {
     new URL(value);
