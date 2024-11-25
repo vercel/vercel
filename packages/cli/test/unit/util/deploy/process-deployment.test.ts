@@ -7,7 +7,7 @@ import {
 
 describe('processDeployment()', () => {
   describe('handleErrorSolvableWithArchive()', () => {
-    it('should throw on too many files error', () => {
+    it('should return a too many files error', () => {
       const originalMessage = `Invalid request: 'files' should NOT have more than 15000 items, received 15001.`;
       const result = handleErrorSolvableWithArchive({
         code: 'too_many_files',
@@ -19,14 +19,14 @@ describe('processDeployment()', () => {
       );
     });
 
-    it('should throw on upload rate limit error', () => {
+    it('should return an upload rate limit error', () => {
       const originalMessage =
         'Too many requests - try again in 22 hours (more than 5000, code: "api-upload-paid").';
 
       const result = handleErrorSolvableWithArchive({
         code: 'rate_limited',
         message: originalMessage,
-        rateLimitName: 'api-upload-paid',
+        errorName: 'api-upload-paid',
       });
       expect(result).toBeInstanceOf(UploadErrorMissingArchive);
       expect(result?.message).toEqual(
