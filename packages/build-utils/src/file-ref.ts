@@ -53,7 +53,7 @@ export default class FileRef implements FileBase {
    */
   private getNowFilesCloudfrontUrl(): string {
     return (
-      process.env.NOW_FILES_CLOUDFRONT_URL ||
+      getEnvAsUrlOrThrow('NOW_FILES_CLOUDFRONT_URL') ||
       'https://dmmcy0pwk6bqi.cloudfront.net'
     );
   }
@@ -65,7 +65,7 @@ export default class FileRef implements FileBase {
    */
   private getNowEphemeralFilesS3Url(): string {
     return (
-      process.env.NOW_EPHEMERAL_FILES_S3_URL ||
+      getEnvAsUrlOrThrow('NOW_EPHEMERAL_FILES_S3_URL') ||
       'https://now-ephemeral-files.s3.amazonaws.com'
     );
   }
@@ -76,7 +76,10 @@ export default class FileRef implements FileBase {
    * @returns The URL of the S3 bucket
    */
   private getNowFilesS3Url(): string {
-    return process.env.NOW_FILES_S3_URL || 'https://now-files.s3.amazonaws.com';
+    return (
+      getEnvAsUrlOrThrow('NOW_FILES_S3_URL') ||
+      'https://now-files.s3.amazonaws.com'
+    );
   }
 
   async toStreamAsync(): Promise<NodeJS.ReadableStream> {
@@ -137,5 +140,32 @@ export default class FileRef implements FileBase {
           cb(error, null);
         });
     });
+  }
+}
+
+/**
+ * Get the value of the environment variable `key` as a valid URL string or `null` if unset.
+ *
+ * @param key The `process.env` member which holds the value to validate
+ * @returns The valid URL string or `null` if `key` is not set on `process.env`
+ */
+function getEnvAsUrlOrThrow(
+  key: keyof (typeof process)['env']
+): ReturnType<URL['toString']> | null {
+  const value = process.env[key];
+
+  if (value === undefined) return null;
+
+  try {
+    new URL(value);
+    return value;
+  } catch (e) {
+    if (e instanceof TypeError && 'code' in e && e.code === 'ERR_INVALID_URL') {
+      throw new Error(
+        `A non-URL value was supplied to the ${key} environment variable`
+      );
+    } else {
+      throw e;
+    }
   }
 }
