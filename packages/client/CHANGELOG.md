@@ -1,5 +1,14 @@
 # @vercel/client
 
+## 13.4.19
+
+### Patch Changes
+
+- Suggest archive flag during specific failed deployment errors ([#12636](https://github.com/vercel/vercel/pull/12636))
+
+- Updated dependencies [[`d5474ec05886abfb2fc5dd69c54072a7c34498b5`](https://github.com/vercel/vercel/commit/d5474ec05886abfb2fc5dd69c54072a7c34498b5)]:
+  - @vercel/build-utils@8.6.0
+
 ## 13.4.18
 
 ### Patch Changes
