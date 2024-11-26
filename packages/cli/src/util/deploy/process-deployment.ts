@@ -63,7 +63,7 @@ export default async function processDeployment({
   withLogs?: boolean;
   agent?: Agent;
 }) {
-  let {
+  const {
     now,
     path,
     requestBody,

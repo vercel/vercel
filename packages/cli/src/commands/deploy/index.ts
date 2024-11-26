@@ -444,7 +444,7 @@ export default async (client: Client): Promise<number> => {
     client,
     currentTeam,
   });
-  let deployStamp = stamp();
+  const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
 

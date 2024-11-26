@@ -42,8 +42,6 @@ export default async function main(client: Client) {
     process.env.__VERCEL_DEV_RUNNING = '1';
   }
 
-  let args;
-
   const { telemetryEventStore } = client;
   const telemetry = new DevTelemetryClient({
     opts: {
@@ -74,7 +72,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
+  const args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
   if ('--confirm' in parsedArgs.flags) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');

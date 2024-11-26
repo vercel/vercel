@@ -11,7 +11,7 @@ describe('getOpts', () => {
   });
 
   it('should throw an error if limit not valid', async () => {
-    for (let limit of ['abc', '101', '1.1', '-1']) {
+    for (const limit of ['abc', '101', '1.1', '-1']) {
       const args = getArgs([`--limit=${limit}`], { '--limit': Number });
       expect(() => {
         getPaginationOpts(args);

@@ -136,7 +136,8 @@
           "@typescript-eslint/no-explicit-any": 0,
           "@typescript-eslint/no-inferrable-types": 0,
           "no-console": 2,
-          "@typescript-eslint/consistent-type-imports": "error"
+          "@typescript-eslint/consistent-type-imports": "error",
+          "prefer-const": "error"
         }
       },
       {
