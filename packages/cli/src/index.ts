@@ -559,8 +559,6 @@ const main = async () => {
     }
   }
 
-  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
-
   let exitCode;
 
   try {
@@ -798,6 +796,7 @@ const main = async () => {
     return 1;
   }
 
+  telemetryEventStore.updateTeamId(client.config.currentTeam);
   await telemetryEventStore.save();
 
   return exitCode;
