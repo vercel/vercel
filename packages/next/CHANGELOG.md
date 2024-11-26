@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.4.0
+
+### Minor Changes
+
+- Provide `waitUntil` via `@next/request-context` ([#12286](https://github.com/vercel/vercel/pull/12286))
+
 ## 4.3.21
 
 ### Patch Changes
