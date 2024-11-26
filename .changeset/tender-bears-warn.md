@@ -2,4 +2,4 @@
 "vercel": patch
 ---
 
-[cli] fix issue that prevented teamId from being sent in some situations
+Ensure `teamId` metric is sent when `--token` option is used
