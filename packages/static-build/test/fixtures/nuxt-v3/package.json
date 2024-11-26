@@ -13,6 +13,6 @@
     "@nuxt/devtools": "latest",
     "nuxt": "^3.14.0",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.5"
+    "vue-router": "^4.5.0"
   }
 }
