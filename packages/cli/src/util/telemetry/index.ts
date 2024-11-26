@@ -218,27 +218,13 @@ export class TelemetryEventStore {
     return this.config?.enabled ?? true;
   }
 
-  private normalizeEvents(events: Event[]) {
-    return events.map(event => {
-      delete event.sessionId;
-      delete event.teamId;
-      const { eventTime, ...rest } = event;
-      return { event_time: eventTime, team_id: this.teamId, ...rest };
-    });
-  }
-
   async save() {
-    const sessionId = this.events[0].sessionId;
-    if (!sessionId) {
-      output.debug('Unable to send metrics: no session ID');
-      return;
-    }
     if (this.isDebug) {
       // Intentionally not using `output.debug` as it will
       // not write to stderr unless it is run with `--debug`
       output.log(`${LogLabel} Flushing Events`);
-      output.log(`${LogLabel} Session ID - ${sessionId}`);
-      for (const event of this.normalizeEvents(this.events)) {
+      for (const event of this.events) {
+        event.teamId = this.teamId;
         output.log(JSON.stringify(event));
       }
 
@@ -246,7 +232,17 @@ export class TelemetryEventStore {
     }
 
     if (this.enabled) {
-      const events = this.normalizeEvents(this.events);
+      const sessionId = this.events[0].sessionId;
+      if (!sessionId) {
+        output.debug('Unable to send metrics: no session ID');
+        return;
+      }
+      const events = this.events.map(event => {
+        delete event.sessionId;
+        delete event.teamId;
+        const { eventTime, ...rest } = event;
+        return { event_time: eventTime, team_id: this.teamId, ...rest };
+      });
       const payload = {
         headers: {
           'Client-id': 'vercel-cli',
