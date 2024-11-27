@@ -600,8 +600,9 @@ export function filesWithoutFsRefs(
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
-      //filePathMap[normalizePath(path)] = normalizePath(relative(repoRootPath, file.fsPath));
-      filePathMap[path] = relative(repoRootPath, file.fsPath);
+      filePathMap[normalizePath(path)] = normalizePath(
+        relative(repoRootPath, file.fsPath)
+      );
     } else {
       out[path] = file;
     }
