@@ -9,22 +9,31 @@ describe('filesWithoutFsRefs()', () => {
       __dirname,
       '../../../fixtures/unit/commands/build/monorepo'
     );
-    const files = {
+    const input = {
       ...(await glob('**', repoRootPath)),
       'blob-file.txt': new FileBlob({ data: 'blob file' }),
     };
-    const result = filesWithoutFsRefs(files, repoRootPath);
-    expect(Object.keys(result.filePathMap!)).not.contain('blob-file.txt');
-    expect(result.filePathMap).toMatchInlineSnapshot(`
-          {
-            ".vercel/project.json": ".vercel/project.json",
-            "apps/nextjs/.gitignore": "apps/nextjs/.gitignore",
-            "apps/nextjs/next.config.js": "apps/nextjs/next.config.js",
-            "apps/nextjs/package.json": "apps/nextjs/package.json",
-            "apps/nextjs/pages/index.jsx": "apps/nextjs/pages/index.jsx",
-            "package-lock.json": "package-lock.json",
-            "package.json": "package.json",
-          }
-        `);
+    const { files, filePathMap = {} } = filesWithoutFsRefs(input, repoRootPath);
+
+    // Only the "blob-file.txt" file should be in the `files` object
+    expect(Object.keys(files)).toHaveLength(1);
+    expect(files['blob-file.txt']).toEqual(input['blob-file.txt']);
+
+    // The `filePathMap` should have normalized POSIX paths, even on Windows
+    expect(Object.keys(filePathMap)).not.contain('blob-file.txt');
+    expect(filePathMap['apps/nextjs/.gitignore']).toEqual(
+      'apps/nextjs/.gitignore'
+    );
+    expect(filePathMap['apps/nextjs/next.config.js']).toEqual(
+      'apps/nextjs/next.config.js'
+    );
+    expect(filePathMap['apps/nextjs/package.json']).toEqual(
+      'apps/nextjs/package.json'
+    );
+    expect(filePathMap['apps/nextjs/pages/index.jsx']).toEqual(
+      'apps/nextjs/pages/index.jsx'
+    );
+    expect(filePathMap['package-lock.json']).toEqual('package-lock.json');
+    expect(filePathMap['package.json']).toEqual('package.json');
   });
 });
