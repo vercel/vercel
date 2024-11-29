@@ -6,8 +6,8 @@
 import { ResponseBody1 } from "@vercel/sdk/models/operations/artifactquery.js";
 
 let value: ResponseBody1 = {
-  size: 2444.26,
-  taskDurationMs: 1589.70,
+  size: 3637.11,
+  taskDurationMs: 5701.97,
 };
 ```
 

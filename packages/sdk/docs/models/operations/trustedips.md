@@ -8,7 +8,7 @@ Restricts access to deployments based on the incoming request IP address
 import { TrustedIps } from "@vercel/sdk/models/operations/updateproject.js";
 
 let value: TrustedIps = {
-  deploymentType: "prod_deployment_urls_and_all_previews",
+  deploymentType: "all",
   addresses: [
     {
       value: "<value>",

@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../client';
+import type Client from '../client';
 import output from '../../output-manager';
 
 export type CertificateChallenge = {
@@ -29,7 +29,7 @@ export default async function startCertOrder(
       cns.join(', ')
     )} under ${chalk.bold(contextName)}`
   );
-  const order = await client.fetch<CertificateOrder>('/v3/now/certs', {
+  const order = await client.fetch<CertificateOrder>('/v3/certs', {
     method: 'PATCH',
     body: {
       op: 'startOrder',

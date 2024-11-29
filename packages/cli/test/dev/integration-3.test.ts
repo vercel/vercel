@@ -1,4 +1,5 @@
 import { spawnAsync } from '@vercel/build-utils';
+import assert from 'assert';
 import { resolve, delimiter } from 'path';
 import {
   sleep,
@@ -23,6 +24,7 @@ test('[vercel dev] 02-angular-node', async () => {
   let stderr = '';
 
   try {
+    assert(dev.stderr);
     dev.stderr.on('data', async (data: any) => {
       stderr += data.toString();
     });

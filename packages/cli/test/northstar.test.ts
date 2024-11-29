@@ -7,7 +7,7 @@ import waitForPrompt from './helpers/wait-for-prompt';
 import getGlobalDir from './helpers/get-global-dir';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import formatOutput from './helpers/format-output';
-import { User } from '@vercel-internals/types';
+import type { User } from '@vercel-internals/types';
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 
@@ -42,7 +42,7 @@ afterEach(() => {
 function mockApi(user: Partial<User>) {
   return function (req: http.IncomingMessage, res: http.ServerResponse) {
     const { url = '/', method } = req;
-    let { pathname = '/', query = {} } = parseUrl(url, true);
+    const { pathname = '/', query = {} } = parseUrl(url, true);
     const securityCode = 'Bears Beets Battlestar Galactica';
     res.setHeader('content-type', 'application/json');
     if (
@@ -130,7 +130,7 @@ describe('CLI initialization', () => {
         email: 'test@example.com',
         version: 'northstar',
         defaultTeamId: 'test-default-team-id',
-      };
+      } as const;
       it('should set currentTeam to defaultTeamId', async () => {
         const loginApiUrl = await setupLocalApiServer(user);
         const vercel = execCli(

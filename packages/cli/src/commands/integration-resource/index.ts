@@ -46,12 +46,18 @@ export default async function main(client: Client) {
   }
 
   function printHelp(command: Command) {
-    output.print(help(command, { columns: client.stderr.columns }));
+    output.print(
+      help(command, {
+        columns: client.stderr.columns,
+        parent: integrationResourceCommand,
+      })
+    );
   }
 
   switch (subcommand) {
     case 'remove': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
@@ -60,6 +66,7 @@ export default async function main(client: Client) {
     }
     case 'disconnect': {
       if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(disconnectSubcommand);
         return 2;
       }

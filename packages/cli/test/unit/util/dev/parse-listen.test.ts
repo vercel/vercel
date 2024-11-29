@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { describe, expect, it, test } from 'vitest';
 import {
   parseListen,
@@ -70,6 +71,7 @@ describe('parseListen', () => {
       parseListen('bad://url');
       throw new Error('Should not happen');
     } catch (_err) {
+      assert(_err instanceof Error);
       err = _err;
     }
     expect(err.message).toEqual('Unknown `--listen` scheme (protocol): bad:');

@@ -1,8 +1,8 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import handleError from '../../util/handle-error';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import add from './add';
 import list from './list';
 import rm from './rm';
@@ -42,6 +42,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  // eslint-disable-next-line prefer-const
   let { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
@@ -69,21 +70,21 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'list':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('project', 'list');
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
     case 'add':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('project', 'add');
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(addSubcommand);
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     case 'remove':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('project', 'remove');
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);

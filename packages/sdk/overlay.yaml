@@ -1,18 +1,44 @@
 overlay: 1.0.0
 info:
-  title: Fix https://openapi.vercel.sh/ with lint issues
-  version: 0.0.0
-# The fixes below from the errors found with speakeasy openapi lint
+  title: Fix https://openapi.vercel.sh/ from lint and testing
+  version: 0.0.2
+# The fixes below from the errors found with speakeasy openapi lint and testing the usage of the SDK and endpoints
 actions:
-  - target: $["paths"]["/data-cache/purge-all"]["delete"]
+  # Removing these paths as they return errors at the source (by calling the endpoint directly)
+  - target: $["paths"]["/data-cache/purge-all"]
+    remove: true
+  - target: $["paths"]["/data-cache/billing-settings"]
+    remove: true
+  - target: $["paths"]["/certs"]
+    remove: true
+  - target: $["paths"]["/v1/projects/{projectId}"].pause
+    remove: true
+  - target: $["paths"]["/v1/projects/{projectId}"].unpause
+    remove: true
+  # Removing these paths as they are deprecated but kept for legacy
+  - target: $["paths"]["/v2/secrets/{name}"]
+    remove: true
+  - target: $["paths"]["/v2/secrets/{idOrName}"]
+    remove: true
+  - target: $["paths"]["/v3/secrets"]
+    remove: true
+  - target: $["paths"]["/v3/secrets/{idOrName}"]
+    remove: true
+  # End of remove paths
+  # Marking endpoints to show up in Example Usage section of readme
+  - target: $["paths"]["/v6/deployments"].get
     update:
-      operationId: datacachePurgeall
-  - target: $["paths"]["/data-cache/billing-settings"]["patch"]
+      x-speakeasy-usage-example:
+        title: List deployments
+        description: List deployments under the authenticated user or team.
+        position: 1
+  - target: $["paths"]["/v9/projects/{idOrName}"].patch
     update:
-      operationId: dataCacheBillingSettings
-  - target: $["paths"]["/certs"]["get"]
-    update:
-      operationId: getCerts
+      x-speakeasy-usage-example:
+        title: Update an existing project
+        description: Update the fields of a project using either its name or id.
+        position: 2
+  # Fixing lint and TS issues from source
   - target: $["paths"]["/v13/deployments"]["post"]["parameters"][0]
     remove: true
   - target: $["paths"]["/v13/deployments"]["post"]["parameters"][2]
@@ -111,16 +137,6 @@ actions:
           type: string
           description: The Team identifier to perform the request on behalf of.
           example: team_LLHUOMOoDlqOp8wPE4kFo9pE
-  - target: $["paths"]["/v2/secrets/{name}"]["post"]["parameters"]
-    update:
-      - name: name
-        description: The name of the secret.
-        in: path
-        required: true
-        schema:
-          description: The name of the secret.
-          type: string
-          example: my-api-key
   - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1].enum
     remove: true
   - target: $.paths['/v1/data-cache/projects/{projectId}'].patch.responses['200'].content['application/json'].schema.properties['env'].items.properties['target'].oneOf[1]
@@ -570,30 +586,6 @@ actions:
   - target: $.paths['/v4/aliases'].get.responses['200'].content['application/json'].schema.properties['aliases'].items.properties.deletedAt
     update:
       nullable: true
-  - target: $.paths['/v1/projects/{projectId}/pause'].post.responses['200']
-    update:
-      description: Project successfully paused
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-              type: boolean
-              description: Whether the project was successfully paused
-              example: true
-  - target: $.paths['/v1/projects/{projectId}/unpause'].post.responses['200']
-    update:
-      description: Project successfully unpaused
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              success:
-              type: boolean
-              description: Whether the project was successfully unpaused
-              example: true
   - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.type
     remove: true
   - target: $.paths['/v4/aliases/{idOrAlias}'].get.responses['200'].content['application/json'].schema.items
@@ -614,6 +606,7 @@ actions:
           type: number
           description: The date when the alias was created in milliseconds since the UNIX epoch
           example: 1540095775941
+          nullable: true
         creator:
           properties:
             uid:
@@ -638,6 +631,7 @@ actions:
           type: number
           description: The date when the alias was deleted in milliseconds since the UNIX epoch
           example: 1540095775941
+          nullable: true
         deployment:
           properties:
             id:
@@ -687,6 +681,7 @@ actions:
           type: number
           description: The date when the alias was updated in milliseconds since the UNIX epoch
           example: 1540095775941
+          nullable: true
         protectionBypass:
           additionalProperties:
             oneOf:

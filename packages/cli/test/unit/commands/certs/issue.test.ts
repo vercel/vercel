@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import certs from '../../../../src/commands/certs';
+import { useUser } from '../../../mocks/user';
 
 describe('certs issue', () => {
   describe('--help', () => {
@@ -9,8 +10,8 @@ describe('certs issue', () => {
       const subcommand = 'issue';
 
       client.setArgv(command, subcommand, '--help');
-      const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      const exitCode = await certs(client);
+      expect(exitCode).toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -27,7 +28,27 @@ describe('certs issue', () => {
     await expect(client.stderr).toOutput(
       'Invalid number of arguments to create a custom certificate entry. Usage:'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toEqual(1);
+  });
+
+  it('should issue cert', async () => {
+    useUser();
+    client.scenario.post('/v3/certs', (_, res) => {
+      return res.json({});
+    });
+    client.scenario.patch('/v3/certs', (_, res) => {
+      return res.json({ cns: ['acme.com'] });
+    });
+
+    client.setArgv('certs', 'issue', 'acme.com');
+    const exitCodePromise = certs(client);
+    await expect(client.stderr).toOutput('Issuing a certificate for acme.com');
+    await expect(client.stderr).toOutput(
+      'Success! Certificate entry for acme.com created'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toEqual(0);
   });
 
   it('should track subcommand usage', async () => {
@@ -58,6 +79,39 @@ describe('certs issue', () => {
         },
       ]);
     });
+
+    it('should handle challenges', async () => {
+      useUser();
+      client.scenario.post('/v3/certs', (_, res) => {
+        return res.json({});
+      });
+      client.scenario.patch('/v3/certs', (_, res) => {
+        return res.json({
+          cns: ['acme.com'],
+          challengesToResolve: [{ domain: 'acme.com', status: 'pending' }],
+        });
+      });
+
+      client.setArgv('certs', 'issue', 'acme.com', '--challenge-only');
+      const exitCodePromise = certs(client);
+      await expect(client.stderr).toOutput(
+        'A certificate issuance for acme.com has been started'
+      );
+      await expect(client.stderr).toOutput(
+        `Add the following TXT records with your registrar to be able to the solve the DNS challenge:`
+      );
+
+      const table = client.stdout.getFullOutput().split('\n');
+      expect(table.length).toEqual(3);
+      expect(table[0].split(/\s+/)).toEqual(['_acme-challenge', 'TXT', '']);
+
+      await expect(client.stderr).toOutput(
+        'To issue the certificate once the records are added, run'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
   });
 
   describe('--overwrite', () => {
@@ -65,7 +119,8 @@ describe('certs issue', () => {
       client.setArgv('certs', 'issue', '--overwrite');
       const exitCodePromise = certs(client);
       await expect(client.stderr).toOutput('Overwrite option is deprecated');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
     });
 
     it('should track usage of deprecated `--overwrite` flag', async () => {

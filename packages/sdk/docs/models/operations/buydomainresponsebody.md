@@ -1,7 +1,5 @@
 # BuyDomainResponseBody
 
-Successful response for purchasing a Domain.
-
 ## Example Usage
 
 ```typescript
@@ -14,7 +12,7 @@ let value: BuyDomainResponseBody = {
       "<value>",
     ],
     verified: false,
-    created: 7381.52,
+    created: 5147.67,
     pending: false,
   },
 };

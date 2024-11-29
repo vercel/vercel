@@ -3,10 +3,12 @@
 
 ## Supported Types
 
-### `components.Team`
+### `{ [k: string]: any }`
 
 ```typescript
-const value: components.Team = {};
+const value: { [k: string]: any } = {
+  "key": "<value>",
+};
 ```
 
 ### `components.TeamLimited`
@@ -34,7 +36,13 @@ const value: components.TeamLimited = {
   slug: "my-team",
   name: "My Team",
   avatar: "6eb07268bcfadd309905ffb1579354084c24655c",
-  membership: {},
+  membership: {
+    confirmed: false,
+    confirmedAt: 9640.20,
+    role: "BILLING",
+    createdAt: 687.78,
+    created: 107.78,
+  },
   created: "<value>",
   createdAt: 1630748523395,
 };

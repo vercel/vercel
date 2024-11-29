@@ -3,25 +3,23 @@
 
 ## Overview
 
-Teams
-
 ### Available Operations
 
-* [getMembers](#getmembers) - List team members
-* [inviteUser](#inviteuser) - Invite a user
-* [requestAccess](#requestaccess) - Request access to a team
-* [getAccessRequest](#getaccessrequest) - Get access request status
-* [join](#join) - Join a team
-* [updateMember](#updatemember) - Update a Team Member
-* [removeMember](#removemember) - Remove a Team Member
-* [get](#get) - Get a Team
-* [update](#update) - Update a Team
-* [list](#list) - List all teams
-* [create](#create) - Create a Team
-* [delete](#delete) - Delete a Team
-* [deleteInviteCode](#deleteinvitecode) - Delete a Team invite code
+* [getTeamMembers](#getteammembers) - List team members
+* [inviteUserToTeam](#inviteusertoteam) - Invite a user
+* [requestAccessToTeam](#requestaccesstoteam) - Request access to a team
+* [getTeamAccessRequest](#getteamaccessrequest) - Get access request status
+* [joinTeam](#jointeam) - Join a team
+* [updateTeamMember](#updateteammember) - Update a Team Member
+* [removeTeamMember](#removeteammember) - Remove a Team Member
+* [getTeam](#getteam) - Get a Team
+* [patchTeam](#patchteam) - Update a Team
+* [getTeams](#getteams) - List all teams
+* [createTeam](#createteam) - Create a Team
+* [deleteTeam](#deleteteam) - Delete a Team
+* [deleteTeamInviteCode](#deleteteaminvitecode) - Delete a Team invite code
 
-## getMembers
+## getTeamMembers
 
 Get a paginated list of team members for the provided team.
 
@@ -35,12 +33,12 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.getMembers({
-    teamId: "<value>",
+  const result = await vercel.teams.getTeamMembers({
     limit: 20,
     since: 1540095775951,
     until: 1540095775951,
     role: "OWNER",
+    teamId: "<value>",
   });
 
   // Handle the result
@@ -56,7 +54,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsGetMembers } from "@vercel/sdk/funcs/teamsGetMembers.js";
+import { teamsGetTeamMembers } from "@vercel/sdk/funcs/teamsGetTeamMembers.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -65,12 +63,12 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsGetMembers(vercel, {
-    teamId: "<value>",
+  const res = await teamsGetTeamMembers(vercel, {
     limit: 20,
     since: 1540095775951,
     until: 1540095775951,
     role: "OWNER",
+    teamId: "<value>",
   });
 
   if (!res.ok) {
@@ -101,12 +99,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## inviteUser
+## inviteUserToTeam
 
 Invite a user to join the team specified in the URL. The authenticated user needs to be an `OWNER` in order to successfully invoke this endpoint. The user can be specified with an email or an ID. If both email and ID are provided, ID will take priority.
 
@@ -120,12 +117,12 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.inviteUser({
+  const result = await vercel.teams.inviteUserToTeam({
     teamId: "<value>",
     requestBody: {
       uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
       email: "john@example.com",
-      role: "OWNER",
+      role: "VIEWER",
       projects: [
         {
           projectId: "prj_ndlgr43fadlPyCtREAqxxdyFK",
@@ -148,7 +145,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsInviteUser } from "@vercel/sdk/funcs/teamsInviteUser.js";
+import { teamsInviteUserToTeam } from "@vercel/sdk/funcs/teamsInviteUserToTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -157,12 +154,12 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsInviteUser(vercel, {
+  const res = await teamsInviteUserToTeam(vercel, {
     teamId: "<value>",
     requestBody: {
       uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
       email: "john@example.com",
-      role: "OWNER",
+      role: "VIEWER",
       projects: [
         {
           projectId: "prj_ndlgr43fadlPyCtREAqxxdyFK",
@@ -200,12 +197,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## requestAccess
+## requestAccessToTeam
 
 Request access to a team as a member. An owner has to approve the request. Only 10 users can request access to a team at the same time.
 
@@ -219,7 +215,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.requestAccess({
+  const result = await vercel.teams.requestAccessToTeam({
     teamId: "<value>",
     requestBody: {
       joinedFrom: {
@@ -246,7 +242,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsRequestAccess } from "@vercel/sdk/funcs/teamsRequestAccess.js";
+import { teamsRequestAccessToTeam } from "@vercel/sdk/funcs/teamsRequestAccessToTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -255,7 +251,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsRequestAccess(vercel, {
+  const res = await teamsRequestAccessToTeam(vercel, {
     teamId: "<value>",
     requestBody: {
       joinedFrom: {
@@ -297,12 +293,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## getAccessRequest
+## getTeamAccessRequest
 
 Check the status of a join request. It'll respond with a 404 if the request has been declined. If no `userId` path segment was provided, this endpoint will instead return the status of the authenticated user.
 
@@ -316,9 +311,9 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.getAccessRequest({
-    teamId: "<value>",
+  const result = await vercel.teams.getTeamAccessRequest({
     userId: "<value>",
+    teamId: "<value>",
   });
 
   // Handle the result
@@ -334,7 +329,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsGetAccessRequest } from "@vercel/sdk/funcs/teamsGetAccessRequest.js";
+import { teamsGetTeamAccessRequest } from "@vercel/sdk/funcs/teamsGetTeamAccessRequest.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -343,9 +338,9 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsGetAccessRequest(vercel, {
-    teamId: "<value>",
+  const res = await teamsGetTeamAccessRequest(vercel, {
     userId: "<value>",
+    teamId: "<value>",
   });
 
   if (!res.ok) {
@@ -376,12 +371,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## join
+## joinTeam
 
 Join a team with a provided invite code or team ID.
 
@@ -395,7 +389,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.join({
+  const result = await vercel.teams.joinTeam({
     teamId: "<value>",
     requestBody: {
       inviteCode: "fisdh38aejkeivn34nslfore9vjtn4ls",
@@ -415,7 +409,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsJoin } from "@vercel/sdk/funcs/teamsJoin.js";
+import { teamsJoinTeam } from "@vercel/sdk/funcs/teamsJoinTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -424,7 +418,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsJoin(vercel, {
+  const res = await teamsJoinTeam(vercel, {
     teamId: "<value>",
     requestBody: {
       inviteCode: "fisdh38aejkeivn34nslfore9vjtn4ls",
@@ -459,12 +453,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## updateMember
+## updateTeamMember
 
 Update the membership of a Team Member on the Team specified by `teamId`, such as changing the _role_ of the member, or confirming a request to join the Team for an unconfirmed member. The authenticated user must be an `OWNER` of the Team.
 
@@ -478,9 +471,9 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.updateMember({
+  const result = await vercel.teams.updateTeamMember({
+    uid: "ndfasllgPyCtREAqxxdyFKb",
     teamId: "<value>",
-    uid: "<value>",
     requestBody: {
       confirmed: true,
       role: "[\"MEMBER\",\"VIEWER\"]",
@@ -506,7 +499,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsUpdateMember } from "@vercel/sdk/funcs/teamsUpdateMember.js";
+import { teamsUpdateTeamMember } from "@vercel/sdk/funcs/teamsUpdateTeamMember.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -515,9 +508,9 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsUpdateMember(vercel, {
+  const res = await teamsUpdateTeamMember(vercel, {
+    uid: "ndfasllgPyCtREAqxxdyFKb",
     teamId: "<value>",
-    uid: "<value>",
     requestBody: {
       confirmed: true,
       role: "[\"MEMBER\",\"VIEWER\"]",
@@ -558,12 +551,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## removeMember
+## removeTeamMember
 
 Remove a Team Member from the Team, or dismiss a user that requested access, or leave a team.
 
@@ -577,9 +569,10 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.removeMember({
+  const result = await vercel.teams.removeTeamMember({
+    uid: "ndlgr43fadlPyCtREAqxxdyFK",
+    newDefaultTeamId: "team_nllPyCtREAqxxdyFKbbMDlxd",
     teamId: "<value>",
-    uid: "<value>",
   });
 
   // Handle the result
@@ -595,7 +588,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsRemoveMember } from "@vercel/sdk/funcs/teamsRemoveMember.js";
+import { teamsRemoveTeamMember } from "@vercel/sdk/funcs/teamsRemoveTeamMember.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -604,9 +597,10 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsRemoveMember(vercel, {
+  const res = await teamsRemoveTeamMember(vercel, {
+    uid: "ndlgr43fadlPyCtREAqxxdyFK",
+    newDefaultTeamId: "team_nllPyCtREAqxxdyFKbbMDlxd",
     teamId: "<value>",
-    uid: "<value>",
   });
 
   if (!res.ok) {
@@ -637,12 +631,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## get
+## getTeam
 
 Get information for the Team specified by the `teamId` parameter.
 
@@ -656,7 +649,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.get({
+  const result = await vercel.teams.getTeam({
     teamId: "<value>",
   });
 
@@ -673,7 +666,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsGet } from "@vercel/sdk/funcs/teamsGet.js";
+import { teamsGetTeam } from "@vercel/sdk/funcs/teamsGetTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -682,7 +675,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsGet(vercel, {
+  const res = await teamsGetTeam(vercel, {
     teamId: "<value>",
   });
 
@@ -710,16 +703,15 @@ run();
 
 ### Response
 
-**Promise\<[components.Team](../../models/components/team.md)\>**
+**Promise\<[{ [k: string]: any }](../../models/.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## update
+## patchTeam
 
 Update the information of a Team specified by the `teamId` parameter. The request body should contain the information that will be updated on the Team.
 
@@ -733,7 +725,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.update({
+  const result = await vercel.teams.patchTeam({
     teamId: "<value>",
     requestBody: {
       description: "Our mission is to make cloud computing accessible to everyone",
@@ -752,6 +744,7 @@ async function run() {
         enabled: true,
       },
       hideIpAddresses: false,
+      hideIpAddressesInLogDrains: false,
     },
   });
 
@@ -768,7 +761,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsUpdate } from "@vercel/sdk/funcs/teamsUpdate.js";
+import { teamsPatchTeam } from "@vercel/sdk/funcs/teamsPatchTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -777,7 +770,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsUpdate(vercel, {
+  const res = await teamsPatchTeam(vercel, {
     teamId: "<value>",
     requestBody: {
       description: "Our mission is to make cloud computing accessible to everyone",
@@ -796,6 +789,7 @@ async function run() {
         enabled: true,
       },
       hideIpAddresses: false,
+      hideIpAddressesInLogDrains: false,
     },
   });
 
@@ -823,16 +817,15 @@ run();
 
 ### Response
 
-**Promise\<[components.Team](../../models/components/team.md)\>**
+**Promise\<[{ [k: string]: any }](../../models/.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## list
+## getTeams
 
 Get a paginated list of all the Teams the authenticated User is a member of.
 
@@ -846,7 +839,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.list({
+  const result = await vercel.teams.getTeams({
     limit: 20,
     since: 1540095775951,
     until: 1540095775951,
@@ -865,7 +858,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsList } from "@vercel/sdk/funcs/teamsList.js";
+import { teamsGetTeams } from "@vercel/sdk/funcs/teamsGetTeams.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -874,7 +867,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsList(vercel, {
+  const res = await teamsGetTeams(vercel, {
     limit: 20,
     since: 1540095775951,
     until: 1540095775951,
@@ -908,12 +901,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## create
+## createTeam
 
 Create a new Team under your account. You need to send a POST request with the desired Team slug, and optionally the Team name.
 
@@ -927,7 +919,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.create({
+  const result = await vercel.teams.createTeam({
     slug: "a-random-team",
     name: "A Random Team",
   });
@@ -945,7 +937,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsCreate } from "@vercel/sdk/funcs/teamsCreate.js";
+import { teamsCreateTeam } from "@vercel/sdk/funcs/teamsCreateTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -954,7 +946,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsCreate(vercel, {
+  const res = await teamsCreateTeam(vercel, {
     slug: "a-random-team",
     name: "A Random Team",
   });
@@ -987,12 +979,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## delete
+## deleteTeam
 
 Delete a team under your account. You need to send a `DELETE` request with the desired team `id`. An optional array of reasons for deletion may also be sent.
 
@@ -1006,7 +997,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.delete({
+  const result = await vercel.teams.deleteTeam({
     newDefaultTeamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",
     teamId: "<value>",
   });
@@ -1024,7 +1015,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsDelete } from "@vercel/sdk/funcs/teamsDelete.js";
+import { teamsDeleteTeam } from "@vercel/sdk/funcs/teamsDeleteTeam.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -1033,7 +1024,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsDelete(vercel, {
+  const res = await teamsDeleteTeam(vercel, {
     newDefaultTeamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",
     teamId: "<value>",
   });
@@ -1066,12 +1057,11 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
-
-## deleteInviteCode
+## deleteTeamInviteCode
 
 Delete an active Team invite code.
 
@@ -1085,7 +1075,7 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.teams.deleteInviteCode({
+  const result = await vercel.teams.deleteTeamInviteCode({
     inviteId: "2wn2hudbr4chb1ecywo9dvzo7g9sscs6mzcz8htdde0txyom4l",
     teamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",
   });
@@ -1103,7 +1093,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { teamsDeleteInviteCode } from "@vercel/sdk/funcs/teamsDeleteInviteCode.js";
+import { teamsDeleteTeamInviteCode } from "@vercel/sdk/funcs/teamsDeleteTeamInviteCode.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -1112,7 +1102,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await teamsDeleteInviteCode(vercel, {
+  const res = await teamsDeleteTeamInviteCode(vercel, {
     inviteId: "2wn2hudbr4chb1ecywo9dvzo7g9sscs6mzcz8htdde0txyom4l",
     teamId: "team_LLHUOMOoDlqOp8wPE4kFo9pE",
   });
@@ -1145,6 +1135,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

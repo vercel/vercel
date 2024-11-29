@@ -7,15 +7,15 @@ import { GetConfigurableLogDrainResponseBody } from "@vercel/sdk/models/operatio
 
 let value: GetConfigurableLogDrainResponseBody = {
   id: "<id>",
-  deliveryFormat: "ndjson",
-  url: "https://smoggy-configuration.biz/",
+  deliveryFormat: "syslog",
+  url: "https://dazzling-marketplace.info",
   name: "<value>",
   ownerId: "<id>",
-  createdAt: 4318.43,
-  deletedAt: 3207.48,
-  updatedAt: 741.25,
+  createdAt: 1514.86,
+  deletedAt: 1620.73,
+  updatedAt: 9634.70,
   environments: [
-    "preview",
+    "production",
   ],
   secret: "<value>",
 };
@@ -46,6 +46,6 @@ let value: GetConfigurableLogDrainResponseBody = {
 | `disabledBy`                                                                                                         | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `firstErrorTimestamp`                                                                                                | *number*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `samplingRate`                                                                                                       | *number*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
-| `compression`                                                                                                        | [operations.Compression](../../models/operations/compression.md)                                                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `hideIpAddresses`                                                                                                    | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `secret`                                                                                                             | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `createdFrom`                                                                                                        | [operations.GetConfigurableLogDrainCreatedFrom](../../models/operations/getconfigurablelogdraincreatedfrom.md)       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

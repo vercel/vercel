@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 0.1.4
+
+### Patch Changes
+
+- Ensure firewall tests run ([#12551](https://github.com/vercel/vercel/pull/12551))
+
 ## 0.1.3
 
 ### Patch Changes

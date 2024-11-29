@@ -1,4 +1,4 @@
-import Client from './client';
+import type Client from './client';
 import type { User } from '@vercel-internals/types';
 import { APIError, InvalidToken, MissingUser } from './errors-ts';
 

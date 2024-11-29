@@ -65,7 +65,7 @@ export default async function alias(client: Client) {
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('alias', 'list');
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -73,15 +73,23 @@ export default async function alias(client: Client) {
       return ls(client, args);
     case 'rm':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('alias', 'remove');
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
     default:
       if (needHelp) {
-        telemetry.trackCliFlagHelp('alias', 'set');
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
         printHelp(setSubcommand);
         return 2;
       }

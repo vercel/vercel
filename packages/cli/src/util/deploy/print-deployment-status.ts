@@ -72,7 +72,7 @@ export async function printDeploymentStatus(
   }
 
   const newline = '\n';
-  for (let indication of indications) {
+  for (const indication of indications) {
     const message =
       prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
       newline;

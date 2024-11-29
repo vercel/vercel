@@ -10,9 +10,9 @@ import { UpdateProjectResponseBody } from "@vercel/sdk/models/operations/updatep
 let value: UpdateProjectResponseBody = {
   accountId: "<id>",
   crons: {
-    enabledAt: 2295.67,
-    disabledAt: 5068.63,
-    updatedAt: 7368.53,
+    enabledAt: 2201.04,
+    disabledAt: 6228.94,
+    updatedAt: 1114.96,
     deploymentId: "<id>",
     definitions: [
       {
@@ -26,46 +26,46 @@ let value: UpdateProjectResponseBody = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 976.76,
+      id: "<id>",
+      createdAt: 4589.70,
       createdIn: "<value>",
       creator: {
-        email: "Trever_Pagac@yahoo.com",
+        email: "Emil87@gmail.com",
         uid: "<id>",
-        username: "Melody_Thompson3",
+        username: "Charles_Lakin",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "hobby",
-      private: false,
-      readyState: "QUEUED",
-      type: "LAMBDAS",
-      url: "https://forceful-import.com/",
-      userId: "<id>",
+      plan: "pro",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "ERROR",
+      type: "LAMBDAS",
+      url: "https://utilized-shark.net",
+      userId: "<id>",
     },
   ],
   name: "<value>",
-  nodeVersion: "16.x",
+  nodeVersion: "14.x",
   targets: {
     "key": {
-      createdAt: 4894.59,
+      id: "<id>",
+      createdAt: 9222.99,
       createdIn: "<value>",
       creator: {
-        email: "Lafayette63@gmail.com",
+        email: "Scot_Emard1@yahoo.com",
         uid: "<id>",
-        username: "Orlando.Kuhn99",
+        username: "Daphnee51",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "enterprise",
-      private: false,
-      readyState: "BUILDING",
-      type: "LAMBDAS",
-      url: "https://whopping-pulse.info",
-      userId: "<id>",
+      plan: "pro",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "READY",
+      type: "LAMBDAS",
+      url: "https://adolescent-interchange.net",
+      userId: "<id>",
     },
   },
 };
@@ -94,12 +94,15 @@ let value: UpdateProjectResponseBody = {
 | `directoryListing`                                                                                                   | *boolean*                                                                                                            | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `installCommand`                                                                                                     | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `env`                                                                                                                | [operations.UpdateProjectEnv](../../models/operations/updateprojectenv.md)[]                                         | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `customEnvironments`                                                                                                 | [operations.UpdateProjectCustomEnvironments](../../models/operations/updateprojectcustomenvironments.md)[]           | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `framework`                                                                                                          | [operations.UpdateProjectProjectsFramework](../../models/operations/updateprojectprojectsframework.md)               | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitForkProtection`                                                                                                  | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `gitLFS`                                                                                                             | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `id`                                                                                                                 | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
+| `ipBuckets`                                                                                                          | [operations.UpdateProjectIpBuckets](../../models/operations/updateprojectipbuckets.md)[]                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `latestDeployments`                                                                                                  | [operations.UpdateProjectLatestDeployments](../../models/operations/updateprojectlatestdeployments.md)[]             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `link`                                                                                                               | *operations.UpdateProjectLink*                                                                                       | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `microfrontends`                                                                                                     | [operations.UpdateProjectMicrofrontends](../../models/operations/updateprojectmicrofrontends.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `name`                                                                                                               | *string*                                                                                                             | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `nodeVersion`                                                                                                        | [operations.UpdateProjectProjectsNodeVersion](../../models/operations/updateprojectprojectsnodeversion.md)           | :heavy_check_mark:                                                                                                   | N/A                                                                                                                  |
 | `optionsAllowlist`                                                                                                   | [operations.UpdateProjectOptionsAllowlist](../../models/operations/updateprojectoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
@@ -108,6 +111,7 @@ let value: UpdateProjectResponseBody = {
 | `passwordProtection`                                                                                                 | [operations.UpdateProjectPasswordProtection](../../models/operations/updateprojectpasswordprotection.md)             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `productionDeploymentsFastLane`                                                                                      | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `publicSource`                                                                                                       | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
+| `resourceConfig`                                                                                                     | [operations.UpdateProjectResourceConfig](../../models/operations/updateprojectresourceconfig.md)                     | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `rootDirectory`                                                                                                      | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionRegion`                                                                                           | *string*                                                                                                             | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |
 | `serverlessFunctionZeroConfigFailover`                                                                               | *boolean*                                                                                                            | :heavy_minus_sign:                                                                                                   | N/A                                                                                                                  |

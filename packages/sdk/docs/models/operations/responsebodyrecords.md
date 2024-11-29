@@ -12,10 +12,10 @@ let value: ResponseBodyRecords = {
   type: "CAA",
   value: "<value>",
   creator: "<value>",
-  created: 685.97,
-  updated: 2289.08,
-  createdAt: 3579.84,
-  updatedAt: 4351.42,
+  created: 9003.67,
+  updated: 9832.75,
+  createdAt: 304.27,
+  updatedAt: 1936.23,
 };
 ```
 

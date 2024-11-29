@@ -1,10 +1,10 @@
 import path from 'path';
 import chalk from 'chalk';
-import { PackageJson } from '@vercel/build-utils';
+import type { PackageJson } from '@vercel/build-utils';
 
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { NowError } from '../../util/now-error';
 import handleError from '../../util/handle-error';
 import cmd from '../../util/output/cmd';
@@ -42,8 +42,6 @@ export default async function main(client: Client) {
     process.env.__VERCEL_DEV_RUNNING = '1';
   }
 
-  let args;
-
   const { telemetryEventStore } = client;
   const telemetry = new DevTelemetryClient({
     opts: {
@@ -74,7 +72,7 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
+  const args = getSubcommand(parsedArgs.args.slice(1), COMMAND_CONFIG).args;
 
   if ('--confirm' in parsedArgs.flags) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -89,7 +87,7 @@ export default async function main(client: Client) {
   const [passedDir] = args;
   telemetry.trackCliArgumentDir(passedDir);
 
-  const dir = passedDir || '.';
+  const dir = passedDir || process.cwd();
 
   const vercelConfig = await readConfig(dir);
 

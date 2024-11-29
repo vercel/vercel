@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { getScriptName } from '../src';
+import { describe, it } from 'vitest';
 
 describe('Test `getScriptName()`', () => {
   it('should return "vercel-*"', () => {

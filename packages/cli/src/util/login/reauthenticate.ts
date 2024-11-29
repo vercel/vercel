@@ -1,9 +1,9 @@
 import { bold } from 'chalk';
 import doSamlLogin from './saml';
 import showLoginPrompt from './prompt';
-import { LoginResult, SAMLError } from './types';
+import type { LoginResult, SAMLError } from './types';
 import confirm from '../input/confirm';
-import Client from '../client';
+import type Client from '../client';
 import output from '../../output-manager';
 
 export default async function reauthenticate(

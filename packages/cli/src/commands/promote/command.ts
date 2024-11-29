@@ -44,7 +44,7 @@ export const promoteCommand = {
     {
       name: 'timeout',
       description: 'Time to wait for promotion completion [3m]',
-      argument: 'timeout',
+      argument: 'TIME',
       shorthand: null,
       type: String,
       deprecated: false,

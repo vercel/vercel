@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';

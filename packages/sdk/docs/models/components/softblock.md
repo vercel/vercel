@@ -8,7 +8,7 @@ When the User account has been "soft blocked", this property will contain the da
 import { SoftBlock } from "@vercel/sdk/models/components/authuser.js";
 
 let value: SoftBlock = {
-  blockedAt: 844.38,
+  blockedAt: 5146.26,
   reason: "SUBSCRIPTION_CANCELED",
 };
 ```

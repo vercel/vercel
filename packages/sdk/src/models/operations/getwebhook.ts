@@ -31,9 +31,13 @@ export const GetWebhookEvents = {
   DeploymentReady: "deployment.ready",
   DeploymentCheckRerequested: "deployment.check-rerequested",
   DeploymentPromoted: "deployment.promoted",
+  DeploymentIntegrationActionStart: "deployment.integration.action.start",
+  DeploymentIntegrationActionCancel: "deployment.integration.action.cancel",
+  DeploymentIntegrationActionCleanup: "deployment.integration.action.cleanup",
   EdgeConfigCreated: "edge-config.created",
   EdgeConfigDeleted: "edge-config.deleted",
-  EdgeConfigUpdated: "edge-config.updated",
+  EdgeConfigItemsUpdated: "edge-config.items.updated",
+  FirewallAttack: "firewall.attack",
   IntegrationConfigurationPermissionUpgraded:
     "integration-configuration.permission-upgraded",
   IntegrationConfigurationRemoved: "integration-configuration.removed",
@@ -41,15 +45,27 @@ export const GetWebhookEvents = {
     "integration-configuration.scope-change-confirmed",
   ProjectCreated: "project.created",
   ProjectRemoved: "project.removed",
-  DeploymentChecksCompleted: "deployment-checks-completed",
-  DeploymentPrepared: "deployment-prepared",
-  Deployment: "deployment",
-  IntegrationConfigurationPermissionUpdated:
+  DeploymentChecksCompletedLegacy: "deployment-checks-completed",
+  DeploymentReadyLegacy: "deployment-ready",
+  DeploymentPreparedLegacy: "deployment-prepared",
+  DeploymentErrorLegacy: "deployment-error",
+  DeploymentCheckRerequestedLegacy: "deployment-check-rerequested",
+  DeploymentCanceledLegacy: "deployment-canceled",
+  ProjectCreatedLegacy: "project-created",
+  ProjectRemovedLegacy: "project-removed",
+  DomainCreatedLegacy: "domain-created",
+  DeploymentLegacy: "deployment",
+  IntegrationConfigurationPermissionUpdatedLegacy:
     "integration-configuration-permission-updated",
+  IntegrationConfigurationRemovedLegacy: "integration-configuration-removed",
+  IntegrationConfigurationScopeChangeConfirmedLegacy:
+    "integration-configuration-scope-change-confirmed",
   MarketplaceInvoiceCreated: "marketplace.invoice.created",
   MarketplaceInvoicePaid: "marketplace.invoice.paid",
   MarketplaceInvoiceNotpaid: "marketplace.invoice.notpaid",
-  TestWebhook: "test-webhook",
+  MarketplaceInvoiceRefunded: "marketplace.invoice.refunded",
+  TestWebhook: "observability.anomaly",
+  undefined: "test-webhook",
 } as const;
 /**
  * The webhooks events

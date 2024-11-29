@@ -10,12 +10,6 @@ import {
   Pagination$outboundSchema,
 } from "../components/pagination.js";
 import {
-  Team,
-  Team$inboundSchema,
-  Team$Outbound,
-  Team$outboundSchema,
-} from "../components/team.js";
-import {
   TeamLimited,
   TeamLimited$inboundSchema,
   TeamLimited$Outbound,
@@ -37,13 +31,13 @@ export type GetTeamsRequest = {
   until?: number | undefined;
 };
 
-export type Teams = Team | TeamLimited;
+export type Teams = TeamLimited | { [k: string]: any };
 
 /**
  * A paginated list of teams.
  */
 export type GetTeamsResponseBody = {
-  teams: Array<Team | TeamLimited>;
+  teams: Array<TeamLimited | { [k: string]: any }>;
   /**
    * This object contains information related to the pagination of the current request, including the necessary parameters to get the next or previous page of data.
    */
@@ -94,17 +88,17 @@ export namespace GetTeamsRequest$ {
 
 /** @internal */
 export const Teams$inboundSchema: z.ZodType<Teams, z.ZodTypeDef, unknown> = z
-  .union([Team$inboundSchema, TeamLimited$inboundSchema]);
+  .union([TeamLimited$inboundSchema, z.record(z.any())]);
 
 /** @internal */
-export type Teams$Outbound = Team$Outbound | TeamLimited$Outbound;
+export type Teams$Outbound = TeamLimited$Outbound | { [k: string]: any };
 
 /** @internal */
 export const Teams$outboundSchema: z.ZodType<
   Teams$Outbound,
   z.ZodTypeDef,
   Teams
-> = z.union([Team$outboundSchema, TeamLimited$outboundSchema]);
+> = z.union([TeamLimited$outboundSchema, z.record(z.any())]);
 
 /**
  * @internal
@@ -125,13 +119,13 @@ export const GetTeamsResponseBody$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  teams: z.array(z.union([Team$inboundSchema, TeamLimited$inboundSchema])),
+  teams: z.array(z.union([TeamLimited$inboundSchema, z.record(z.any())])),
   pagination: Pagination$inboundSchema,
 });
 
 /** @internal */
 export type GetTeamsResponseBody$Outbound = {
-  teams: Array<Team$Outbound | TeamLimited$Outbound>;
+  teams: Array<TeamLimited$Outbound | { [k: string]: any }>;
   pagination: Pagination$Outbound;
 };
 
@@ -141,7 +135,7 @@ export const GetTeamsResponseBody$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   GetTeamsResponseBody
 > = z.object({
-  teams: z.array(z.union([Team$outboundSchema, TeamLimited$outboundSchema])),
+  teams: z.array(z.union([TeamLimited$outboundSchema, z.record(z.any())])),
   pagination: Pagination$outboundSchema,
 });
 

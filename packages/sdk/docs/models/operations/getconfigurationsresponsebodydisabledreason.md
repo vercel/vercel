@@ -6,7 +6,7 @@
 import { GetConfigurationsResponseBodyDisabledReason } from "@vercel/sdk/models/operations/getconfigurations.js";
 
 let value: GetConfigurationsResponseBodyDisabledReason =
-  "account-plan-downgrade";
+  "original-owner-left-the-team";
 ```
 
 ## Values

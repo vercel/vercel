@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.5.1
+
+### Patch Changes
+
+- [@vercel/functions] update headers doc ([#12649](https://github.com/vercel/vercel/pull/12649))
+
 ## 1.5.0
 
 ### Minor Changes

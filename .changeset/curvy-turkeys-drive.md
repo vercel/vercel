@@ -1,4 +1,0 @@
----
----
-
-Fix `useTeams()` TypeScript errors

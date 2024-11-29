@@ -10,7 +10,7 @@ let value: InviteUserToTeamRequest = {
   requestBody: {
     uid: "kr1PsOIzqEL5Xg6M4VZcZosf",
     email: "john@example.com",
-    role: "OWNER",
+    role: "CONTRIBUTOR",
     projects: [
       {
         projectId: "prj_ndlgr43fadlPyCtREAqxxdyFK",

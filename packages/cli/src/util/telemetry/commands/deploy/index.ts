@@ -1,6 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { deployCommand } from '../../../../commands/deploy/command';
+import { VALID_ARCHIVE_FORMATS } from '@vercel/client';
 
 export class DeployTelemetryClient
   extends TelemetryClient
@@ -16,9 +17,14 @@ export class DeployTelemetryClient
   }
   trackCliOptionArchive(format: string | undefined) {
     if (format) {
+      const allowedFormat = (
+        VALID_ARCHIVE_FORMATS as ReadonlyArray<string>
+      ).includes(format)
+        ? format
+        : this.redactedValue;
       this.trackCliOption({
         option: 'archive',
-        value: format,
+        value: allowedFormat,
       });
     }
   }
@@ -58,18 +64,16 @@ export class DeployTelemetryClient
     if (regions) {
       this.trackCliOption({
         option: 'regions',
-        value: regions,
+        // consider revisiting once we come up with a way to query the list of regions
+        value: this.redactedValue,
       });
     }
   }
   trackCliOptionTarget(target: string | undefined) {
     if (target) {
-      const value = ['production', 'preview'].includes(target)
-        ? target
-        : 'CUSTOM_ID_OR_SLUG';
       this.trackCliOption({
         option: 'target',
-        value,
+        value: this.redactedTargetName(target),
       });
     }
   }

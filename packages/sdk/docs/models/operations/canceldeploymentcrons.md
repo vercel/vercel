@@ -7,7 +7,7 @@ import { CancelDeploymentCrons } from "@vercel/sdk/models/operations/canceldeplo
 
 let value: CancelDeploymentCrons = {
   schedule: "<value>",
-  path: "/sys",
+  path: "/bin",
 };
 ```
 

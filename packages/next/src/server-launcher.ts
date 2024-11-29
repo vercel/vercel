@@ -1,4 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
+import { getContext as getVercelRequestContext } from './vercel-request-context';
+import { withNextRequestContext } from './next-request-context';
 // The Next.js builder can emit the project in a subdirectory depending on how
 // many folder levels of `node_modules` are traced. To ensure `process.cwd()`
 // returns the proper path, we change the directory to the folder with the
@@ -36,13 +38,19 @@ const nextServer = new NextServer({
   customServer: false,
 });
 
-// Returns a wrapped handler that will crash the lambda if an error isn't
-// caught.
+// Returns a wrapped handler that runs with "@next/request-context"
+// and will crash the lambda if an error isn't caught.
 const serve =
   (handler: any) => async (req: IncomingMessage, res: ServerResponse) => {
     try {
-      // @preserve entryDirectory handler
-      await handler(req, res);
+      const vercelContext = getVercelRequestContext();
+      await withNextRequestContext(
+        { waitUntil: vercelContext.waitUntil },
+        () => {
+          // @preserve entryDirectory handler
+          return handler(req, res);
+        }
+      );
     } catch (err) {
       console.error(err);
       // crash the lambda immediately to clean up any bad module state,

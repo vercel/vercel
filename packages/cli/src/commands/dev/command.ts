@@ -15,7 +15,7 @@ export const devCommand = {
     {
       name: 'listen',
       description: 'Specify a URI endpoint on which to listen [0.0.0.0:3000]',
-      argument: 'uri',
+      argument: 'URI',
       shorthand: 'l',
       type: String,
       deprecated: false,

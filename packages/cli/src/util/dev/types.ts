@@ -1,7 +1,7 @@
-import http from 'http';
-import { ChildProcess } from 'child_process';
-import { Lambda as FunLambda } from '@vercel/fun';
-import {
+import type http from 'http';
+import type { ChildProcess } from 'child_process';
+import type { Lambda as FunLambda } from '@vercel/fun';
+import type {
   Builder as BuildConfig,
   BuildOptions,
   PrepareCacheOptions,
@@ -14,9 +14,9 @@ import {
   Lambda,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
-import { HandleValue, Route } from '@vercel/routing-utils';
+import type { HandleValue, Route } from '@vercel/routing-utils';
 import type { ProjectSettings } from '@vercel-internals/types';
-import { BuilderWithPkg } from '../build/import-builders';
+import type { BuilderWithPkg } from '../build/import-builders';
 
 export { VercelConfig };
 

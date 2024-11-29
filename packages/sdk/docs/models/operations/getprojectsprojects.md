@@ -8,9 +8,9 @@ import { GetProjectsProjects } from "@vercel/sdk/models/operations/getprojects.j
 let value: GetProjectsProjects = {
   accountId: "<id>",
   crons: {
-    enabledAt: 1523.55,
-    disabledAt: 4174.86,
-    updatedAt: 1312.89,
+    enabledAt: 1312.89,
+    disabledAt: 6041.18,
+    updatedAt: 3828.08,
     deploymentId: "<id>",
     definitions: [
       {
@@ -24,46 +24,46 @@ let value: GetProjectsProjects = {
   id: "<id>",
   latestDeployments: [
     {
-      createdAt: 6041.18,
+      id: "<id>",
+      createdAt: 8953.86,
       createdIn: "<value>",
       creator: {
-        email: "Sonia_Lockman-Goodwin@yahoo.com",
+        email: "Kasey_Medhurst@hotmail.com",
         uid: "<id>",
-        username: "Katrina.Klocko",
+        username: "Donna.Jacobson50",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
-      plan: "pro",
-      private: false,
-      readyState: "INITIALIZING",
-      type: "LAMBDAS",
-      url: "https://sizzling-finger.org",
-      userId: "<id>",
+      plan: "enterprise",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "QUEUED",
+      type: "LAMBDAS",
+      url: "https://grave-traffic.org",
+      userId: "<id>",
     },
   ],
   name: "<value>",
-  nodeVersion: "8.10.x",
+  nodeVersion: "22.x",
   targets: {
     "key": {
-      createdAt: 486.90,
+      id: "<id>",
+      createdAt: 2536.43,
       createdIn: "<value>",
       creator: {
-        email: "Isabella_Heidenreich@gmail.com",
+        email: "Bella62@yahoo.com",
         uid: "<id>",
-        username: "Meredith_Heaney",
+        username: "Conor_Padberg54",
       },
       deploymentHostname: "<value>",
       name: "<value>",
-      id: "<id>",
       plan: "pro",
-      private: false,
-      readyState: "BUILDING",
-      type: "LAMBDAS",
-      url: "https://acidic-gastropod.name",
-      userId: "<id>",
       previewCommentsEnabled: false,
+      private: false,
+      readyState: "READY",
+      type: "LAMBDAS",
+      url: "https://honored-lobster.org/",
+      userId: "<id>",
     },
   },
 };
@@ -92,12 +92,15 @@ let value: GetProjectsProjects = {
 | `directoryListing`                                                                                               | *boolean*                                                                                                        | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `installCommand`                                                                                                 | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `env`                                                                                                            | [operations.GetProjectsEnv](../../models/operations/getprojectsenv.md)[]                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `customEnvironments`                                                                                             | [operations.GetProjectsCustomEnvironments](../../models/operations/getprojectscustomenvironments.md)[]           | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `framework`                                                                                                      | [operations.GetProjectsFramework](../../models/operations/getprojectsframework.md)                               | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `gitForkProtection`                                                                                              | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `gitLFS`                                                                                                         | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `id`                                                                                                             | *string*                                                                                                         | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
+| `ipBuckets`                                                                                                      | [operations.GetProjectsIpBuckets](../../models/operations/getprojectsipbuckets.md)[]                             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `latestDeployments`                                                                                              | [operations.GetProjectsLatestDeployments](../../models/operations/getprojectslatestdeployments.md)[]             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `link`                                                                                                           | *operations.GetProjectsLink*                                                                                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `microfrontends`                                                                                                 | [operations.GetProjectsMicrofrontends](../../models/operations/getprojectsmicrofrontends.md)                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `name`                                                                                                           | *string*                                                                                                         | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `nodeVersion`                                                                                                    | [operations.GetProjectsNodeVersion](../../models/operations/getprojectsnodeversion.md)                           | :heavy_check_mark:                                                                                               | N/A                                                                                                              |
 | `optionsAllowlist`                                                                                               | [operations.GetProjectsOptionsAllowlist](../../models/operations/getprojectsoptionsallowlist.md)                 | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
@@ -106,6 +109,7 @@ let value: GetProjectsProjects = {
 | `passwordProtection`                                                                                             | [operations.GetProjectsPasswordProtection](../../models/operations/getprojectspasswordprotection.md)             | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `productionDeploymentsFastLane`                                                                                  | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `publicSource`                                                                                                   | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
+| `resourceConfig`                                                                                                 | [operations.GetProjectsResourceConfig](../../models/operations/getprojectsresourceconfig.md)                     | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `rootDirectory`                                                                                                  | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `serverlessFunctionRegion`                                                                                       | *string*                                                                                                         | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |
 | `serverlessFunctionZeroConfigFailover`                                                                           | *boolean*                                                                                                        | :heavy_minus_sign:                                                                                               | N/A                                                                                                              |

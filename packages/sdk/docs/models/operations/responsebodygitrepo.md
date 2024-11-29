@@ -8,10 +8,10 @@
 ```typescript
 const value: operations.GetDeploymentGitRepo1 = {
   namespace: "<value>",
-  projectId: 6641.97,
+  projectId: 8603.11,
   type: "gitlab",
-  url: "https://brave-barge.biz/",
-  path: "/etc/ppp",
+  url: "https://grown-mantua.net",
+  path: "/etc",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
@@ -25,14 +25,14 @@ const value: operations.GetDeploymentGitRepo1 = {
 const value: operations.GetDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 1512.30,
+  repoId: 411.80,
   type: "github",
-  repoOwnerId: "<id>",
+  repoOwnerId: 8164.21,
   path: "/usr/local/src",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -45,7 +45,7 @@ const value: operations.GetDeploymentGitRepo3 = {
   slug: "<value>",
   type: "bitbucket",
   workspaceUuid: "<id>",
-  path: "/selinux",
+  path: "/System",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,

@@ -5,7 +5,7 @@
 ```typescript
 import { GetRecordsResponseBodyDnsType } from "@vercel/sdk/models/operations/getrecords.js";
 
-let value: GetRecordsResponseBodyDnsType = "HTTPS";
+let value: GetRecordsResponseBodyDnsType = "MX";
 ```
 
 ## Values

@@ -1,5 +1,5 @@
 import bytes from 'bytes';
-import { Response } from 'node-fetch';
+import type { Response } from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';

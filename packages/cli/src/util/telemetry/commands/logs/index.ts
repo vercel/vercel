@@ -54,11 +54,14 @@ export class LogsTelemetryClient
     }
   }
 
-  trackCliOptionOutput(n: string | undefined, known?: boolean) {
-    if (n) {
+  trackCliOptionOutput(outputMode: string | undefined) {
+    if (outputMode) {
+      const allowedOutputMode = ['raw', 'short'].includes(outputMode)
+        ? outputMode
+        : this.redactedValue;
       this.trackCliOption({
         option: 'output',
-        value: known ? n : this.redactedValue,
+        value: allowedOutputMode,
       });
     }
   }

@@ -6,7 +6,7 @@
 import { GetAllChecksCLS } from "@vercel/sdk/models/operations/getallchecks.js";
 
 let value: GetAllChecksCLS = {
-  value: 3179.83,
+  value: 9764.59,
   source: "web-vitals",
 };
 ```

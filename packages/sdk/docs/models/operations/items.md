@@ -6,14 +6,14 @@
 ### `operations.Items1`
 
 ```typescript
-const value: operations.Items1 = 5961.84;
+const value: operations.Items1 = "<value>";
 ```
 
 ### `operations.Items2[]`
 
 ```typescript
 const value: operations.Items2[] = [
-  5551.94,
+  {},
 ];
 ```
 

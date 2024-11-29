@@ -25,6 +25,7 @@ let value: PatchTeamRequest = {
       enabled: true,
     },
     hideIpAddresses: false,
+    hideIpAddressesInLogDrains: false,
   },
 };
 ```

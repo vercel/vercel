@@ -1,6 +1,6 @@
 import retry from 'async-retry';
 import type { Cert } from '@vercel-internals/types';
-import Client from '../client';
+import type Client from '../client';
 import { isAPIError } from '../errors-ts';
 import { isError } from '@vercel/error-utils';
 
@@ -10,7 +10,7 @@ export default async function issueCert(client: Client, cns: string[]) {
   return retry(
     async bail => {
       try {
-        return await client.fetch<Cert>('/v3/now/certs', {
+        return await client.fetch<Cert>('/v3/certs', {
           method: 'POST',
           body: { domains: cns },
         });

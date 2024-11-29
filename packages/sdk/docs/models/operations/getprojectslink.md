@@ -12,7 +12,7 @@ const value: operations.GetProjectsLink1 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://buzzing-underneath.org",
+      url: "https://dependent-guide.org/",
     },
   ],
 };
@@ -27,7 +27,7 @@ const value: operations.GetProjectsLink2 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://good-department.name/",
+      url: "https://weary-summer.info/",
     },
   ],
 };
@@ -42,7 +42,7 @@ const value: operations.GetProjectsLink3 = {
       id: "<id>",
       name: "<value>",
       ref: "<value>",
-      url: "https://aggravating-horde.com/",
+      url: "https://entire-obesity.com/",
     },
   ],
 };

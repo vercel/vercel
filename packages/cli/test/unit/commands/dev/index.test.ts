@@ -6,7 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { useProject } from '../../../mocks/project';
 
-vi.mock(import('../../../../src/util/dev/server'), () => {
+vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
     feed() {}

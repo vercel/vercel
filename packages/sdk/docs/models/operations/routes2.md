@@ -6,7 +6,7 @@
 import { Routes2 } from "@vercel/sdk/models/operations/createdeployment.js";
 
 let value: Routes2 = {
-  handle: "error",
+  handle: "hit",
 };
 ```
 

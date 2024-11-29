@@ -1,17 +1,15 @@
 # Id
 
-
-## Supported Types
-
-### `string`
+## Example Usage
 
 ```typescript
-const value: string = "<value>";
+import { Id } from "@vercel/sdk/models/operations/updatefirewallconfig.js";
+
+let value: Id = "java";
 ```
 
-### `number`
+## Values
 
 ```typescript
-const value: number = 1960.01;
+"sd" | "ma" | "lfi" | "rfi" | "rce" | "php" | "gen" | "xss" | "sqli" | "sf" | "java"
 ```
-

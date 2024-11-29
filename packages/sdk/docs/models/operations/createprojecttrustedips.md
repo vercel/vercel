@@ -21,7 +21,7 @@ const value: operations.CreateProjectTrustedIps1 = {
 
 ```typescript
 const value: operations.CreateProjectTrustedIps2 = {
-  deploymentType: "production",
+  deploymentType: "preview",
 };
 ```
 

@@ -8,14 +8,14 @@ import { GetDeploymentGitRepo2 } from "@vercel/sdk/models/operations/getdeployme
 let value: GetDeploymentGitRepo2 = {
   org: "<value>",
   repo: "<value>",
-  repoId: 2445.70,
+  repoId: 9114.51,
   type: "github",
-  repoOwnerId: "<id>",
-  path: "/private",
+  repoOwnerId: 2763.37,
+  path: "/opt/bin",
   defaultBranch: "<value>",
   name: "<value>",
   private: false,
-  ownerType: "user",
+  ownerType: "team",
 };
 ```
 
@@ -27,7 +27,7 @@ let value: GetDeploymentGitRepo2 = {
 | `repo`                                                                                                                                     | *string*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
 | `repoId`                                                                                                                                   | *number*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
 | `type`                                                                                                                                     | [operations.GetDeploymentGitRepoType](../../models/operations/getdeploymentgitrepotype.md)                                                 | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
-| `repoOwnerId`                                                                                                                              | *string*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
+| `repoOwnerId`                                                                                                                              | *number*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
 | `path`                                                                                                                                     | *string*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
 | `defaultBranch`                                                                                                                            | *string*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |
 | `name`                                                                                                                                     | *string*                                                                                                                                   | :heavy_check_mark:                                                                                                                         | N/A                                                                                                                                        |

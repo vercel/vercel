@@ -5,12 +5,12 @@
 
 ### Available Operations
 
-* [listRecords](#listrecords) - List existing DNS records
+* [getRecords](#getrecords) - List existing DNS records
 * [createRecord](#createrecord) - Create a DNS record
 * [updateRecord](#updaterecord) - Update an existing DNS record
 * [removeRecord](#removerecord) - Delete a DNS record
 
-## listRecords
+## getRecords
 
 Retrieves a list of DNS records created for a domain name. By default it returns 20 records if no limit is provided. The rest can be retrieved using the pagination options.
 
@@ -24,17 +24,15 @@ const vercel = new Vercel({
 });
 
 async function run() {
-  const result = await vercel.dns.listRecords({
+  const result = await vercel.dns.getRecords({
     domain: "example.com",
     limit: "20",
     since: "1609499532000",
     until: "1612264332000",
   });
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -46,7 +44,7 @@ The standalone function version of this method:
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { dnsListRecords } from "@vercel/sdk/funcs/dnsListRecords.js";
+import { dnsGetRecords } from "@vercel/sdk/funcs/dnsGetRecords.js";
 
 // Use `VercelCore` for best tree-shaking performance.
 // You can create one instance of it to use across an application.
@@ -55,7 +53,7 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await dnsListRecords(vercel, {
+  const res = await dnsGetRecords(vercel, {
     domain: "example.com",
     limit: "20",
     since: "1609499532000",
@@ -68,10 +66,8 @@ async function run() {
 
   const { value: result } = res;
 
-  for await (const page of result) {
-    // Handle the page
-    console.log(page);
-  }
+  // Handle the result
+  console.log(result);
 }
 
 run();
@@ -88,14 +84,13 @@ run();
 
 ### Response
 
-**Promise\<[operations.GetRecordsResponse](../../models/operations/getrecordsresponse.md)\>**
+**Promise\<[operations.GetRecordsResponseBody](../../models/operations/getrecordsresponsebody.md)\>**
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## createRecord
 
@@ -114,7 +109,6 @@ async function run() {
   const result = await vercel.dns.createRecord({
     domain: "example.com",
     requestBody: {
-      name: "<value>",
       type: "CNAME",
       ttl: 60,
       https: {
@@ -151,7 +145,6 @@ async function run() {
   const res = await dnsCreateRecord(vercel, {
     domain: "example.com",
     requestBody: {
-      name: "<value>",
       type: "CNAME",
       ttl: 60,
       https: {
@@ -191,10 +184,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## updateRecord
 
@@ -302,10 +294,9 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
-
+| errors.SDKError | 4XX, 5XX        | \*/\*           |
 
 ## removeRecord
 
@@ -381,6 +372,6 @@ run();
 
 ### Errors
 
-| Error Object    | Status Code     | Content Type    |
+| Error Type      | Status Code     | Content Type    |
 | --------------- | --------------- | --------------- |
-| errors.SDKError | 4xx-5xx         | */*             |
+| errors.SDKError | 4XX, 5XX        | \*/\*           |

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { homedir } from 'os';
 import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
-import Client from './client';
+import type Client from './client';
 import output from '../output-manager';
 
 /**
@@ -12,7 +12,7 @@ import output from '../output-manager';
 export async function validateRootDirectory(
   cwd: string,
   path: string,
-  errorSuffix: string
+  errorSuffix = ''
 ) {
   const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';

@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import Client from '../client';
+import type Client from '../client';
 import type { Cert } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import { isAPIError } from '../errors-ts';
@@ -19,7 +19,7 @@ export default async function createCertFromFile(
     const key = readFileSync(resolve(keyPath), 'utf8');
     const ca = readFileSync(resolve(caPath), 'utf8');
 
-    const certificate = await client.fetch<Cert>('/v3/now/certs', {
+    const certificate = await client.fetch<Cert>('/v3/certs', {
       method: 'PUT',
       body: {
         ca,

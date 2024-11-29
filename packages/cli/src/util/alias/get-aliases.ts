@@ -1,5 +1,5 @@
-import { Alias, PaginationOptions } from '@vercel-internals/types';
-import Client from '../client';
+import type { Alias, PaginationOptions } from '@vercel-internals/types';
+import type Client from '../client';
 
 type Response = {
   aliases: Alias[];

@@ -7,11 +7,11 @@ import { CreateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType
 
 let value:
   CreateProjectProjectsResponse200ApplicationJSONResponseBodySecurityType =
-    "protocol";
+    "cookie";
 ```
 
 ## Values
 
 ```typescript
-"host" | "method" | "path" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
+"path" | "host" | "method" | "header" | "cookie" | "query" | "ip_address" | "protocol" | "scheme" | "environment" | "region"
 ```

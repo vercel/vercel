@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "13.4.16",
+  "version": "13.4.19",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -30,7 +30,7 @@
     "@types/jest": "27.4.1",
     "@types/minimatch": "3.0.5",
     "@types/ms": "0.7.30",
-    "@types/node": "14.18.33",
+    "@types/node": "16.18.119",
     "@types/node-fetch": "2.5.4",
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
@@ -39,8 +39,8 @@
     "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "8.4.12",
-    "@vercel/error-utils": "2.0.2",
+    "@vercel/build-utils": "8.6.0",
+    "@vercel/error-utils": "2.0.3",
     "@vercel/routing-utils": "3.1.0",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",

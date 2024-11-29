@@ -20,7 +20,7 @@ specific category of applications.
 
 ```typescript
 import { VercelCore } from "@vercel/sdk/core.js";
-import { deploymentsGet } from "@vercel/sdk/funcs/deploymentsGet.js";
+import { projectsUpdateProject } from "@vercel/sdk/funcs/projectsUpdateProject.js";
 import { SDKValidationError } from "@vercel/sdk/models/errors/sdkvalidationerror.js";
 
 // Use `VercelCore` for best tree-shaking performance.
@@ -30,9 +30,11 @@ const vercel = new VercelCore({
 });
 
 async function run() {
-  const res = await deploymentsGet(vercel, {
-    idOrUrl: "dpl_89qyp1cskzkLrVicDaZoDbjyHuDJ",
-    withGitRepoInfo: "true",
+  const res = await projectsUpdateProject(vercel, {
+    idOrName: "prj_12HKQaOmR5t5Uy6vdcQsNIiZgHGB",
+    requestBody: {
+      name: "a-project-name",
+    },
   });
 
   switch (true) {

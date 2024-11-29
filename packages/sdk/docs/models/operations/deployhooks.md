@@ -9,7 +9,7 @@ let value: DeployHooks = {
   id: "<id>",
   name: "<value>",
   ref: "<value>",
-  url: "https://wealthy-redesign.info/",
+  url: "https://vivid-obedience.name/",
 };
 ```
 
