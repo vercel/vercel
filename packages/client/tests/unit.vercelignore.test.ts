@@ -19,8 +19,8 @@ describe('Test `getVercelIgnore()`', () => {
     } catch (_err) {
       if (!(_err instanceof Error)) {
         throw new Error(`Error "${_err}" not instanceof Error`);
-      } 
-      
+      }
+
       err = _err;
     }
     assert(err);
