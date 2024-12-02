@@ -76,7 +76,7 @@ export async function resolveBuilders(
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
 
-    let { name } = parsed;
+    const { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file

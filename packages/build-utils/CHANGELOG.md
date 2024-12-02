@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.6.0
+
+### Minor Changes
+
+- Add support for `NOW_EPHEMERAL_FILES_S3_URL`, `NOW_FILES_CLOUDFRONT_URL` and `NOW_FILES_S3_URL` environment variables ([#12643](https://github.com/vercel/vercel/pull/12643))
+
 ## 8.5.0
 
 ### Minor Changes

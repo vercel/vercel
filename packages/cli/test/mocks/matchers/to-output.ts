@@ -30,7 +30,7 @@ export async function toOutput(
   };
   return new Promise(resolve => {
     let output = '';
-    let timeoutId = setTimeout(onTimeout, timeout);
+    const timeoutId = setTimeout(onTimeout, timeout);
     const hint =
       matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
 

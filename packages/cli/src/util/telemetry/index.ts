@@ -224,6 +224,7 @@ export class TelemetryEventStore {
       // not write to stderr unless it is run with `--debug`
       output.log(`${LogLabel} Flushing Events`);
       for (const event of this.events) {
+        event.teamId = this.teamId;
         output.log(JSON.stringify(event));
       }
 
@@ -238,8 +239,9 @@ export class TelemetryEventStore {
       }
       const events = this.events.map(event => {
         delete event.sessionId;
-        const { eventTime, teamId, ...rest } = event;
-        return { event_time: eventTime, team_id: teamId, ...rest };
+        delete event.teamId;
+        const { eventTime, ...rest } = event;
+        return { event_time: eventTime, team_id: this.teamId, ...rest };
       });
       const payload = {
         headers: {

@@ -9,6 +9,7 @@ import { createGunzip } from 'zlib';
 // @ts-expect-error Missing types for package
 import tarStream from 'tar-stream';
 import { Readable } from 'stream';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;

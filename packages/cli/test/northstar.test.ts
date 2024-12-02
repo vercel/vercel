@@ -42,7 +42,7 @@ afterEach(() => {
 function mockApi(user: Partial<User>) {
   return function (req: http.IncomingMessage, res: http.ServerResponse) {
     const { url = '/', method } = req;
-    let { pathname = '/', query = {} } = parseUrl(url, true);
+    const { pathname = '/', query = {} } = parseUrl(url, true);
     const securityCode = 'Bears Beets Battlestar Galactica';
     res.setHeader('content-type', 'application/json');
     if (
