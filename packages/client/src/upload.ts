@@ -99,6 +99,10 @@ export async function* upload(
 
         await semaphore.acquire();
 
+        if (aborted) {
+          return bail(new Error('Upload aborted'));
+        }
+
         const { data } = file;
         if (typeof data === 'undefined') {
           // Directories don't need to be uploaded
@@ -130,9 +134,6 @@ export async function* upload(
         let result;
         const abortController = new AbortController();
         abortControllers.add(abortController);
-        if (aborted) {
-          abortController.abort();
-        }
 
         try {
           const res = await fetch(
