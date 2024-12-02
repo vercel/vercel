@@ -29,7 +29,7 @@ export default function streamToBuffer(
 
 export function streamToBufferChunks(
   stream: NodeJS.ReadableStream,
-  mbLimit = 0.001
+  mbLimit = 100
 ): Promise<Buffer[]> {
   return new Promise<Buffer[]>((resolve, reject) => {
     const byteLimit = 1024 * 1024 * mbLimit;

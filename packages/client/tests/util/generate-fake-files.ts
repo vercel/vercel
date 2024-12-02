@@ -4,12 +4,13 @@ import path from 'path';
 import fs from 'fs-extra';
 // @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
+import { afterAll } from 'vitest';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
 // So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
 tmp.setGracefulCleanup();
 
-export function generateFakeFiles(totalMB = 100, fileSizeInBytes = 5) {
+export async function generateFakeFiles(totalMB = 100, fileSizeInBytes = 5) {
   const totalFiles = Math.ceil((totalMB * 1024) / fileSizeInBytes);
   const filePaths: string[] = [];
   const tempDir = setupTmpDir();

@@ -1,3 +1,12 @@
+import {
+  it,
+  expect,
+  describe,
+  beforeEach,
+  vi,
+  beforeAll,
+  afterEach,
+} from 'vitest';
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
@@ -9,7 +18,7 @@ import { createGunzip } from 'zlib';
 // @ts-expect-error Missing types for package
 import tarStream from 'tar-stream';
 import { Readable } from 'stream';
-import { beforeEach, describe, expect, it } from 'vitest';
+import * as buildUtils from '@vercel/build-utils';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
@@ -83,51 +92,68 @@ describe('create v2 deployment', () => {
   });
 
   describe('using --archive=tgz', () => {
+    let path: string;
+
+    beforeAll(async () => {
+      path = await generateFakeFiles(1000, 100);
+    });
+
+    beforeEach(() => {
+      const originalStreamToBufferChunks = buildUtils.streamToBufferChunks;
+      vi.spyOn(buildUtils, 'streamToBufferChunks').mockImplementation(
+        async (...args) => {
+          // Limit the size of the chunks to 1KB instead of 100MB
+          // to keep the data set small
+          return originalStreamToBufferChunks(args[0], 0.001);
+        }
+      );
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    /**
+     * Since the tar process creates metadata which makes the output non-deterministic,
+     * we extract the filename and content from the tar into an object and compare that.
+     */
+    const extractGzippedTarWithoutMetadata = async (buffer: Buffer) => {
+      const gunzippedBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const gunzip = createGunzip();
+        const buffers: Buffer[] = [];
+        gunzip.on('data', buffers.push.bind(buffers));
+        gunzip.on('end', () => {
+          resolve(Buffer.concat(buffers));
+        });
+        gunzip.on('error', reject);
+        gunzip.end(buffer);
+      });
+
+      return new Promise<any>((resolve, reject) => {
+        const extract = tarStream.extract();
+        const fileMap: Record<string, string> = {};
+        extract.on('entry', (header: any, stream: any, next: any) => {
+          const chunks: any[] = [];
+          stream.on('data', (chunk: any) => chunks.push(chunk));
+          stream.on('end', () => {
+            const content = Buffer.concat(chunks).toString('utf8');
+            fileMap[header.name] = content;
+            next();
+          });
+
+          stream.resume(); // Ensure the stream ends
+        });
+        extract.on('error', reject);
+
+        extract.on('finish', () => {
+          resolve(fileMap);
+        });
+        Readable.from(gunzippedBuffer).pipe(extract);
+      });
+    };
+
     it('SPLIT_SOURCE_ARCHIVE will emit several buffers that when concatenated match the output of a single large buffer', async () => {
-      const oldEnv = process.env;
-      /**
-       * Since the tar process creates metadata which makes the output non-deterministic,
-       * we extract the filename and content from the tar into an object and compare that.
-       */
-      const extractGzippedTarWithoutMetadata = async (buffer: Buffer) => {
-        const gunzippedBuffer = await new Promise<Buffer>((resolve, reject) => {
-          const gunzip = createGunzip();
-          const buffers: Buffer[] = [];
-          gunzip.on('data', buffers.push.bind(buffers));
-          gunzip.on('end', () => {
-            resolve(Buffer.concat(buffers));
-          });
-          gunzip.on('error', reject);
-          gunzip.end(buffer);
-        });
-
-        return new Promise<any>((resolve, reject) => {
-          const extract = tarStream.extract();
-          const fileMap: Record<string, string> = {};
-          extract.on('entry', (header: any, stream: any, next: any) => {
-            const chunks: any[] = [];
-            stream.on('data', (chunk: any) => chunks.push(chunk));
-            stream.on('end', () => {
-              const content = Buffer.concat(chunks).toString('utf8');
-              fileMap[header.name] = content;
-              next();
-            });
-
-            stream.resume(); // Ensure the stream ends
-          });
-          extract.on('error', reject);
-
-          extract.on('finish', () => {
-            resolve(fileMap);
-          });
-          Readable.from(gunzippedBuffer).pipe(extract);
-        });
-      };
-
-      // TODO: the limit in packages/build-utils/src/fs/stream-to-buffer.ts
-      // is artificially low, so we need to spy on it to provide that low value
-      // so that the real value can be 100MB
-      const path = generateFakeFiles(1000, 100);
       const args: Parameters<typeof createDeployment> = [
         {
           token,
@@ -177,10 +203,9 @@ describe('create v2 deployment', () => {
         )
       );
 
-      process.env = {
-        ...oldEnv,
-        SPLIT_SOURCE_ARCHIVE: '1',
-      };
+      // Simulate the SPLIT_SOURCE_ARCHIVE environment variable being set
+      vi.stubEnv('SPLIT_SOURCE_ARCHIVE', '1');
+
       const buffersFromChunkArchiving: Buffer[] = [];
       for await (const event of createDeployment(...args)) {
         if (event.type === 'hashes-calculated') {
@@ -211,8 +236,6 @@ describe('create v2 deployment', () => {
           concatenatedBufferFromChunkArchiving
         )
       );
-
-      process.env = oldEnv;
     });
   });
 
