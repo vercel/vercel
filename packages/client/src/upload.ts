@@ -220,9 +220,7 @@ export async function* upload(
 
   while (Object.keys(uploadList).length > 0) {
     try {
-      const event = await Promise.race(
-        Object.keys(uploadList).map((key): Promise<any> => uploadList[key])
-      );
+      const event = await Promise.race(Object.values(uploadList));
 
       delete uploadList[event.payload.sha];
       yield event;
