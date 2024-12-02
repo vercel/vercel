@@ -15,9 +15,10 @@
   },
   "scripts": {
     "build": "node ../../utils/build.mjs",
-    "test-e2e": "pnpm test tests/create-deployment.test.ts tests/create-legacy-deployment.test.ts tests/paths.test.ts",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-unit": "pnpm test tests/unit.*test.*",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
+    "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "engines": {
@@ -34,6 +35,7 @@
     "@types/recursive-readdir": "2.2.0",
     "@types/tar-fs": "1.16.1",
     "jest-junit": "16.0.0",
+    "vitest": "2.0.1",
     "typescript": "4.9.5"
   },
   "dependencies": {

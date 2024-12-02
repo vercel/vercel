@@ -830,6 +830,9 @@ importers:
       typescript:
         specifier: 4.9.5
         version: 4.9.5
+      vitest:
+        specifier: 2.0.1
+        version: 2.0.1(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/edge:
     devDependencies:

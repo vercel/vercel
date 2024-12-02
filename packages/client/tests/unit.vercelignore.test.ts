@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { join } from 'path';
 import { getVercelIgnore } from '../src';
+import { describe, it } from 'vitest';
 
 describe('Test `getVercelIgnore()`', () => {
   it('Should read `.nowignore`', async () => {
@@ -16,6 +17,10 @@ describe('Test `getVercelIgnore()`', () => {
     try {
       await getVercelIgnore(fixture);
     } catch (_err) {
+      if (!(_err instanceof Error)) {
+        throw new Error(`Error "${_err}" not instanceof Error`);
+      }
+
       err = _err;
     }
     assert(err);
