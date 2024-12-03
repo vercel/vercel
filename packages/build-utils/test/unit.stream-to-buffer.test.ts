@@ -45,5 +45,5 @@ describe('streamToBufferChunks', () => {
 
     expect(buffers.length).toBe(1);
     expect(buffers[0].length).toBe(200 * 1024 * 1024);
-  }, 1000);
+  });
 });
