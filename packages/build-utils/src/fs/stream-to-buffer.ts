@@ -29,28 +29,36 @@ export default function streamToBuffer(
 
 export async function streamToBufferChunks(
   stream: NodeJS.ReadableStream,
-  mbLimit = 100
-) {
-  const byteLimit = 1024 * 1024 * mbLimit;
-
-  const buffers: Buffer[] = [];
-
-  let currentBuffer: Buffer | null = null;
+  chunkSize: number = 100 * 1024 * 1024 // 100MB default
+): Promise<Buffer[]> {
+  const chunks: Buffer[] = [];
+  let currentChunk: Buffer[] = [];
+  let currentSize = 0;
 
   for await (const chunk of stream) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    if (!currentBuffer) {
-      currentBuffer = buffer;
-    } else if (currentBuffer.length > byteLimit) {
-      buffers.push(currentBuffer);
-      currentBuffer = buffer;
-    } else {
-      currentBuffer = Buffer.concat([currentBuffer, buffer]);
+    let offset = 0;
+
+    while (offset < buffer.length) {
+      const remainingSpace = chunkSize - currentSize;
+      const sliceSize = Math.min(remainingSpace, buffer.length - offset);
+
+      currentChunk.push(buffer.slice(offset, offset + sliceSize));
+      currentSize += sliceSize;
+      offset += sliceSize;
+
+      if (currentSize >= chunkSize) {
+        chunks.push(Buffer.concat(currentChunk));
+        console.log('reset current chunk');
+        currentChunk = [];
+        currentSize = 0;
+      }
     }
   }
-  if (Buffer.isBuffer(currentBuffer)) {
-    buffers.push(currentBuffer);
+
+  if (currentChunk.length > 0) {
+    chunks.push(Buffer.concat(currentChunk));
   }
 
-  return buffers;
+  return chunks;
 }

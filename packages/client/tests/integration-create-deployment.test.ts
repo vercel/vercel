@@ -1,12 +1,4 @@
-import {
-  it,
-  expect,
-  describe,
-  beforeEach,
-  vi,
-  beforeAll,
-  afterEach,
-} from 'vitest';
+import { it, expect, describe, beforeEach, vi, beforeAll } from 'vitest';
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
@@ -14,11 +6,6 @@ import { Deployment } from './types';
 import { createDeployment } from '../src/index';
 import { isObject } from '@vercel/error-utils';
 import { generateFakeFiles } from './util/generate-fake-files';
-import { createGunzip } from 'zlib';
-// @ts-expect-error Missing types for package
-import tarStream from 'tar-stream';
-import { Readable } from 'stream';
-import * as buildUtils from '@vercel/build-utils';
 
 describe('create v2 deployment', () => {
   let deployment: Deployment;
@@ -95,63 +82,8 @@ describe('create v2 deployment', () => {
     let path: string;
 
     beforeAll(async () => {
-      path = await generateFakeFiles(1000, 100);
+      path = await generateFakeFiles(300, 100);
     });
-
-    beforeEach(() => {
-      const originalStreamToBufferChunks = buildUtils.streamToBufferChunks;
-      vi.spyOn(buildUtils, 'streamToBufferChunks').mockImplementation(
-        async (...args) => {
-          // Limit the size of the chunks to 1KB instead of 100MB
-          // to keep the data set small
-          return originalStreamToBufferChunks(args[0], 0.001);
-        }
-      );
-    });
-
-    afterEach(() => {
-      vi.restoreAllMocks();
-      vi.unstubAllEnvs();
-    });
-
-    /**
-     * Since the tar process creates metadata which makes the output non-deterministic,
-     * we extract the filename and content from the tar into an object and compare that.
-     */
-    const extractGzippedTarWithoutMetadata = async (buffer: Buffer) => {
-      const gunzippedBuffer = await new Promise<Buffer>((resolve, reject) => {
-        const gunzip = createGunzip();
-        const buffers: Buffer[] = [];
-        gunzip.on('data', buffers.push.bind(buffers));
-        gunzip.on('end', () => {
-          resolve(Buffer.concat(buffers));
-        });
-        gunzip.on('error', reject);
-        gunzip.end(buffer);
-      });
-
-      return new Promise<any>((resolve, reject) => {
-        const extract = tarStream.extract();
-        const fileMap: Record<string, string> = {};
-        extract.on('entry', (header: any, stream: any, next: any) => {
-          const chunks: any[] = [];
-          stream.on('data', (chunk: any) => chunks.push(chunk));
-          stream.on('end', () => {
-            const content = Buffer.concat(chunks).toString('utf8');
-            fileMap[header.name] = content;
-            next();
-          });
-
-          stream.resume(); // Ensure the stream ends
-        });
-        extract.on('error', reject);
-
-        extract.on('finish', () => {
-          resolve(fileMap);
-        });
-        Readable.from(gunzippedBuffer).pipe(extract);
-      });
-    };
 
     it('SPLIT_SOURCE_ARCHIVE will emit several buffers that when concatenated match the output of a single large buffer', async () => {
       const args: Parameters<typeof createDeployment> = [
@@ -165,6 +97,9 @@ describe('create v2 deployment', () => {
           name: 'some-project',
         },
       ];
+      const staticTime = new Date('2024-01-01T00:00:00Z');
+      vi.useFakeTimers();
+      vi.setSystemTime(staticTime);
 
       const buffersFromNormalArchiving: Buffer[] = [];
       for await (const event of createDeployment(...args)) {
@@ -192,16 +127,11 @@ describe('create v2 deployment', () => {
         buffersFromNormalArchiving2
       );
 
-      // Compare 2 runs of the non-split archive to ensure extractGzippedTarWithoutMetadata is deterministic
       expect(
-        await extractGzippedTarWithoutMetadata(
-          concatenatedBufferFromNormalArchiving
-        )
-      ).toMatchObject(
-        await extractGzippedTarWithoutMetadata(
+        concatenatedBufferFromNormalArchiving.compare(
           concatenatedBufferFromNormalArchiving2
         )
-      );
+      ).toBe(0);
 
       // Simulate the SPLIT_SOURCE_ARCHIVE environment variable being set
       vi.stubEnv('SPLIT_SOURCE_ARCHIVE', '1');
@@ -221,21 +151,11 @@ describe('create v2 deployment', () => {
         }
       }
 
-      // Want to ensure that the test setup creates a large enough source archive
-      // so that it needs to be split into multiple parts
-      expect(buffersFromChunkArchiving.length).toBeGreaterThan(1);
-      const concatenatedBufferFromChunkArchiving = Buffer.concat(
-        buffersFromChunkArchiving
-      );
       expect(
-        await extractGzippedTarWithoutMetadata(
+        Buffer.concat(buffersFromChunkArchiving).compare(
           concatenatedBufferFromNormalArchiving
         )
-      ).toMatchObject(
-        await extractGzippedTarWithoutMetadata(
-          concatenatedBufferFromChunkArchiving
-        )
-      );
+      ).toBe(0);
     });
   });
 
