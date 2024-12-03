@@ -106,7 +106,7 @@ export default function buildCreateDeployment() {
             chunkedTarBuffers.map((chunk, index) => [
               hash(chunk),
               {
-                names: [join(workPath, `.vercel/source.tgz.part${index+1}`)],
+                names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
                 data: chunk,
                 mode: 0o666,
               },
