@@ -27,36 +27,30 @@ export default function streamToBuffer(
   });
 }
 
-export function streamToBufferChunks(
+export async function streamToBufferChunks(
   stream: NodeJS.ReadableStream,
   mbLimit = 100
-): Promise<Buffer[]> {
-  return new Promise<Buffer[]>((resolve, reject) => {
-    const byteLimit = 1024 * 1024 * mbLimit;
+) {
+  const byteLimit = 1024 * 1024 * mbLimit;
 
-    const buffers: Buffer[] = [];
+  const buffers: Buffer[] = [];
 
-    let currentBuffer: Buffer;
-    stream.on('data', (chunk: Buffer) => {
-      if (!currentBuffer) {
-        currentBuffer = chunk;
-      } else if (currentBuffer.length > byteLimit) {
-        buffers.push(currentBuffer);
-        currentBuffer = chunk;
-      } else {
-        currentBuffer = Buffer.concat([currentBuffer, chunk]);
-      }
-    });
-    stream.on('end', () => {
+  let currentBuffer: Buffer | null = null;
+
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    if (!currentBuffer) {
+      currentBuffer = buffer;
+    } else if (currentBuffer.length > byteLimit) {
       buffers.push(currentBuffer);
-    });
+      currentBuffer = buffer;
+    } else {
+      currentBuffer = Buffer.concat([currentBuffer, buffer]);
+    }
+  }
+  if (Buffer.isBuffer(currentBuffer)) {
+    buffers.push(currentBuffer);
+  }
 
-    eos(stream, err => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(buffers);
-    });
-  });
+  return buffers;
 }
