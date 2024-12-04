@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
@@ -73,7 +73,7 @@ export default async function invite(
 
   if (!currentTeam) {
     // We specifically need a team scope here
-    let err = `You can't run this command under ${param(
+    const err = `You can't run this command under ${param(
       user.username || user.email
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`

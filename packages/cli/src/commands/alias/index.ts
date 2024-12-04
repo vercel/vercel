@@ -79,6 +79,14 @@ export default async function alias(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);

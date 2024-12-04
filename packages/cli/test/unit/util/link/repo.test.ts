@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
+import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,
   findRepoRoot,
-  RepoProjectConfig,
 } from '../../../../src/util/link/repo';
 import { client } from '../../../mocks/client';
 

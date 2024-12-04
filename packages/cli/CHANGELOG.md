@@ -1,5 +1,53 @@
 # vercel
 
+## 39.1.3
+
+### Patch Changes
+
+- Normalize POSIX paths in `filePathMap` for `vc build` ([#12666](https://github.com/vercel/vercel/pull/12666))
+
+- [cli] add eslint prefer-const rule and fixes ([#12654](https://github.com/vercel/vercel/pull/12654))
+
+- update "ip" to resolve vulnerability report ([#12687](https://github.com/vercel/vercel/pull/12687))
+
+- [cli] bump express version ([#12689](https://github.com/vercel/vercel/pull/12689))
+
+- Updated dependencies [[`37a806737cf030befd2eaefcf11d573a133ff9dc`](https://github.com/vercel/vercel/commit/37a806737cf030befd2eaefcf11d573a133ff9dc)]:
+  - @vercel/node@3.2.28
+
+## 39.1.2
+
+### Patch Changes
+
+- Use `client.stdout` when printing table for `vc cert issue` ([#12655](https://github.com/vercel/vercel/pull/12655))
+
+- [cli] Explicitly route to `vercel set` subcommand ([#12641](https://github.com/vercel/vercel/pull/12641))
+
+- [cli] refactor `vercel git` to use getSubcommand() utility function ([#12642](https://github.com/vercel/vercel/pull/12642))
+
+- Suggest archive flag during specific failed deployment errors ([#12636](https://github.com/vercel/vercel/pull/12636))
+
+- Ensure `teamId` metric is sent when `--token` option is used ([#12663](https://github.com/vercel/vercel/pull/12663))
+
+- Updated dependencies [[`d5474ec05886abfb2fc5dd69c54072a7c34498b5`](https://github.com/vercel/vercel/commit/d5474ec05886abfb2fc5dd69c54072a7c34498b5), [`ef2a4aa0c1c62299d059f9abc2d56e94ac0158a2`](https://github.com/vercel/vercel/commit/ef2a4aa0c1c62299d059f9abc2d56e94ac0158a2)]:
+  - @vercel/build-utils@8.6.0
+  - @vercel/next@4.4.0
+  - @vercel/node@3.2.27
+  - @vercel/static-build@2.5.36
+
+## 39.1.1
+
+### Patch Changes
+
+- Remove unused error handling code ([#12619](https://github.com/vercel/vercel/pull/12619))
+
+- Gracefully report error in `vercel link --repo` when a new Project fails to be created ([#12616](https://github.com/vercel/vercel/pull/12616))
+
+- Updated dependencies [[`a97f3f13ea3f27fd143e7692544bbd4919771a7a`](https://github.com/vercel/vercel/commit/a97f3f13ea3f27fd143e7692544bbd4919771a7a)]:
+  - @vercel/build-utils@8.5.0
+  - @vercel/node@3.2.26
+  - @vercel/static-build@2.5.35
+
 ## 39.1.0
 
 ### Minor Changes

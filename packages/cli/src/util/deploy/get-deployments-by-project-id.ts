@@ -1,6 +1,6 @@
 import { URLSearchParams } from 'url';
 import type { Deployment } from '@vercel-internals/types';
-import Client from '../client';
+import type Client from '../client';
 
 type LegacyDeployment = {
   aliasAssigned?: number | boolean | null;

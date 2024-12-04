@@ -4,10 +4,10 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import {
-  Dictionary,
+  type Dictionary,
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
-  VercelConfig,
+  type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
@@ -15,8 +15,8 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
-import Now, { CreateOptions } from '../../util';
-import Client from '../../util/client';
+import Now, { type CreateOptions } from '../../util';
+import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
@@ -68,6 +68,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -443,7 +444,7 @@ export default async (client: Client): Promise<number> => {
     client,
     currentTeam,
   });
-  let deployStamp = stamp();
+  const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
 
@@ -583,6 +584,11 @@ export default async (client: Client): Promise<number> => {
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
+    }
+
+    if (err instanceof UploadErrorMissingArchive) {
+      output.prettyError(err);
+      return 1;
     }
 
     if (err instanceof NotDomainOwner) {

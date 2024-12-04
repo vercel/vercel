@@ -1,6 +1,6 @@
 import { DomainPermissionDenied, DomainNotFound } from '../errors-ts';
 import getDomainByName from './get-domain-by-name';
-import Client from '../client';
+import type Client from '../client';
 
 export default async function maybeGetDomainByName(
   client: Client,

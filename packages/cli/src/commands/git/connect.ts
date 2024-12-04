@@ -1,18 +1,18 @@
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
+import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  RepoInfo,
+  type RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
@@ -428,7 +428,7 @@ async function selectRemoteUrl(
   client: Client,
   remoteUrls: Dictionary<string>
 ): Promise<string> {
-  let choices: ListChoice[] = [];
+  const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
       name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,

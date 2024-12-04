@@ -1,14 +1,15 @@
 import type { Deployment, Org } from '@vercel-internals/types';
 import {
-  ArchiveFormat,
-  DeploymentOptions,
-  VercelClientOptions,
+  type ArchiveFormat,
+  type DeploymentOptions,
+  type VercelClientOptions,
   createDeployment,
 } from '@vercel/client';
+import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import type { Agent } from 'http';
-import Now from '../../util';
+import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
@@ -62,7 +63,7 @@ export default async function processDeployment({
   withLogs?: boolean;
   agent?: Agent;
 }) {
-  let {
+  const {
     now,
     path,
     requestBody,
@@ -254,6 +255,13 @@ export default async function processDeployment({
       if (event.type === 'error') {
         stopSpinner();
 
+        if (!archive) {
+          const maybeError = handleErrorSolvableWithArchive(event.payload);
+          if (maybeError) {
+            throw maybeError;
+          }
+        }
+
         const error = await now.handleDeploymentError(event.payload, {
           env,
         });
@@ -279,5 +287,29 @@ export default async function processDeployment({
   } catch (err) {
     stopSpinner();
     throw err;
+  }
+}
+
+export const archiveSuggestionText =
+  'Try using `--archive=tgz` to limit the amount of files you upload.';
+
+export class UploadErrorMissingArchive extends Error {
+  link = 'https://vercel.com/docs/cli/deploy#archive';
+}
+
+export function handleErrorSolvableWithArchive(error: unknown) {
+  if (isErrorLike(error)) {
+    const isUploadRateLimit =
+      'errorName' in error &&
+      typeof error.errorName === 'string' &&
+      error.errorName.startsWith('api-upload-');
+    const isTooManyFilesLimit =
+      'code' in error && error.code === 'too_many_files';
+
+    if (isUploadRateLimit || isTooManyFilesLimit) {
+      return new UploadErrorMissingArchive(
+        `${error.message}\n${archiveSuggestionText}`
+      );
+    }
   }
 }

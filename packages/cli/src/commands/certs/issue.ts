@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
@@ -211,7 +211,7 @@ async function runStartOrder(
   ).split('\n');
 
   output.print(`${header}\n`);
-  process.stdout.write(`${rows.join('\n')}\n\n`);
+  client.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
     `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`

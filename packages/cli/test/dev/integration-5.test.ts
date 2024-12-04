@@ -164,7 +164,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
   try {
     dev.unref();
 
-    let stderr: any = [];
+    const stderr: any = [];
     const start = Date.now();
 
     assert(dev.stderr);
@@ -445,7 +445,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-js-edge-module',
       async (_testPath: any, port: any) => {
-        let res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');

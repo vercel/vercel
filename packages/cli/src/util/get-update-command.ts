@@ -83,6 +83,7 @@ export default async function getUpdateCommand(): Promise<string> {
   const pkgAndVersion = `${packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
+  // eslint-disable-next-line prefer-const
   let { cliType, lockfilePath } = await scanParentDirs(
     dirname(dirname(entrypoint))
   );

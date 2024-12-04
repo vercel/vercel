@@ -5,7 +5,7 @@ import chars from '../../util/output/chars';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';

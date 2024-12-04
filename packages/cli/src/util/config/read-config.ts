@@ -1,6 +1,6 @@
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
-import { VercelConfig } from '../dev/types';
+import type { VercelConfig } from '../dev/types';
 import getLocalConfigPath from './local-path';
 
 export default async function readConfig(dir: string) {

@@ -1,7 +1,7 @@
 import confirm from './confirm';
 import chalk from 'chalk';
-import { frameworkList, Framework } from '@vercel/frameworks';
-import Client from '../client';
+import { frameworkList, type Framework } from '@vercel/frameworks';
+import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -141,7 +141,7 @@ export async function editProjectSettings(
     choices,
   });
 
-  for (let setting of settingFields) {
+  for (const setting of settingFields) {
     const field = settingMap[setting];
     settings[setting] = await client.input.text({
       message: `What's your ${chalk.bold(field)}?`,

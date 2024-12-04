@@ -631,7 +631,7 @@ describe('telemetry submits data', () => {
   describe('when --debug is not enabled', () => {
     test('does not wait for the send process before exiting', async () => {
       let resolveBridgeEvent: () => void;
-      let bridgeEventPromise = new Promise<void>(resolve => {
+      const bridgeEventPromise = new Promise<void>(resolve => {
         resolveBridgeEvent = resolve;
       });
       const { mockTelemetryBridgeApp, directory, cleanup } =
@@ -1228,8 +1228,8 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  let page = await fetch(deployment.stdout);
-  let text = await page.text();
+  const page = await fetch(deployment.stdout);
+  const text = await page.text();
   expect(text).toBe('1\n');
   // Since this test asserts that we can create a new project based on the folder name, delete it after the test
   // to avoid polluting the project list.

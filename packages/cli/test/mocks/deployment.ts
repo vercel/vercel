@@ -2,7 +2,7 @@ import { type Mock, beforeEach } from 'vitest';
 import { URL } from 'url';
 import chance from 'chance';
 import { client } from './client';
-import { Build, Deployment, User } from '@vercel-internals/types';
+import type { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
 import { defaultProject } from './project';
 

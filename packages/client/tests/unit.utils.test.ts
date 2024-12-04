@@ -1,6 +1,7 @@
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
+import { describe, expect, it } from 'vitest';
 
 const fixture = (name: string) => resolve(__dirname, 'fixtures', name);
 const noop = () => {};

@@ -6,7 +6,7 @@ import getTeams from '../../util/teams/get-teams';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import handleError from '../../util/handle-error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';

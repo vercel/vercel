@@ -1,5 +1,5 @@
 import type { Cert } from '@vercel-internals/types';
-import Client from '../client';
+import type Client from '../client';
 import * as ERRORS from '../errors-ts';
 
 export default async function getCertById(client: Client, id: string) {

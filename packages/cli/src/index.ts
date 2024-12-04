@@ -66,7 +66,7 @@ import getUpdateCommand from './util/get-update-command';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { VercelConfig } from '@vercel/client';
+import type { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
@@ -559,8 +559,6 @@ const main = async () => {
     }
   }
 
-  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
-
   let exitCode;
 
   try {
@@ -798,6 +796,7 @@ const main = async () => {
     return 1;
   }
 
+  telemetryEventStore.updateTeamId(client.config.currentTeam);
   await telemetryEventStore.save();
 
   return exitCode;
