@@ -1,5 +1,20 @@
 # vercel
 
+## 39.1.3
+
+### Patch Changes
+
+- Normalize POSIX paths in `filePathMap` for `vc build` ([#12666](https://github.com/vercel/vercel/pull/12666))
+
+- [cli] add eslint prefer-const rule and fixes ([#12654](https://github.com/vercel/vercel/pull/12654))
+
+- update "ip" to resolve vulnerability report ([#12687](https://github.com/vercel/vercel/pull/12687))
+
+- [cli] bump express version ([#12689](https://github.com/vercel/vercel/pull/12689))
+
+- Updated dependencies [[`37a806737cf030befd2eaefcf11d573a133ff9dc`](https://github.com/vercel/vercel/commit/37a806737cf030befd2eaefcf11d573a133ff9dc)]:
+  - @vercel/node@3.2.28
+
 ## 39.1.2
 
 ### Patch Changes
