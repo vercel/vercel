@@ -49,7 +49,6 @@ export async function streamToBufferChunks(
 
       if (currentSize >= chunkSize) {
         chunks.push(Buffer.concat(currentChunk));
-        console.log('reset current chunk');
         currentChunk = [];
         currentSize = 0;
       }
