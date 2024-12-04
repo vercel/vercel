@@ -1,5 +1,13 @@
 # @vercel/client
 
+## 13.4.20
+
+### Patch Changes
+
+- Use `vitest` in client package ([#12530](https://github.com/vercel/vercel/pull/12530))
+
+- Refactor to avoid setting max listeners globally ([#12647](https://github.com/vercel/vercel/pull/12647))
+
 ## 13.4.19
 
 ### Patch Changes
