@@ -29,7 +29,7 @@ export async function generateFakeFiles(totalMB = 100, fileSizeInBytes = 5) {
 let tempRoot: ReturnType<typeof tmp.dirSync> | undefined;
 let tempNumber = 0;
 
-function setupTmpDir() {
+export function setupTmpDir() {
   if (!tempRoot) {
     tempRoot = tmp.dirSync({ unsafeCleanup: true }); // clean up even if files are left
   }
