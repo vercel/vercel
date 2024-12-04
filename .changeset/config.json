@@ -9,8 +9,5 @@
   "linked": [],
   "access": "public",
   "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": [
-    "@vercel/sdk"
-  ]
+  "updateInternalDependencies": "patch"
 }
