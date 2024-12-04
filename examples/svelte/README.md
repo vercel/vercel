@@ -11,10 +11,12 @@ _Live Example: https://svelte.vercel.app_
 ## Getting Started
 
 ```bash
-npx degit sveltejs/template my-svelte-project
+npm create vite@latest my-svelte-project
 cd my-svelte-project
 npm install
 npm run dev
 ```
 
-Navigate to [localhost:8080](http://localhost:8080). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
+## Need an official Svelte framework?
+
+Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploys seamlessly to Vercel, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
