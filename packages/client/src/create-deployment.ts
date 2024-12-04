@@ -92,14 +92,17 @@ export default function buildCreateDeployment() {
     let files;
 
     try {
-      if (clientOptions.archive === 'tgz') {
+      if (
+        clientOptions.archive === 'tgz' ||
+        clientOptions.archive === 'split-tgz'
+      ) {
         debug('Packing tarball');
         const tarStream = tar
           .pack(workPath, {
             entries: fileList.map(file => relative(workPath, file)),
           })
           .pipe(createGzip());
-        if (process.env.SPLIT_SOURCE_ARCHIVE) {
+        if (clientOptions.archive === 'split-tgz') {
           const chunkedTarBuffers = await streamToBufferChunks(tarStream);
           debug(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
           files = new Map(

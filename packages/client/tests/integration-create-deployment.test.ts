@@ -230,12 +230,11 @@ describe('create v2 deployment', () => {
           token,
           teamId: process.env.VERCEL_TEAM_ID,
           path: uploadFolder,
-          archive: 'tgz',
+          archive: 'split-tgz',
         },
         { name: 'archive-project' },
       ];
 
-      vi.stubEnv('SPLIT_SOURCE_ARCHIVE', '1');
       const buffersFromChunkArchiving = new Map<string, Buffer>();
       for await (const event of createDeployment(...args)) {
         if (event.type === 'hashes-calculated') {
