@@ -11,6 +11,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@vercel/sdk"
+    "api"
   ]
 }
