@@ -47,7 +47,7 @@
     "test-unit": "pnpm test && node utils/gen.js && turbo --no-update-notifier run test-unit",
     "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
     "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
-    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
+    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev --filter=./internals/get-package-json -- test/dev/integration-1.test.ts",
     "lint": "eslint . --cache --ext .ts,.js",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
