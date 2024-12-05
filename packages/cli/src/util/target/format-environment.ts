@@ -5,10 +5,10 @@ import output from '../../output-manager';
 export function formatEnvironment(
   orgSlug: string,
   projectSlug: string,
-  environment: Pick<CustomEnvironment, 'name' | 'id'>
+  environment: Pick<CustomEnvironment, 'slug' | 'id'>
 ) {
   const projectUrl = `https://vercel.com/${orgSlug}/${projectSlug}`;
-  const boldName = chalk.bold(environment.name);
+  const boldName = chalk.bold(environment.slug);
   return output.link(
     boldName,
     `${projectUrl}/settings/environments/${environment.id}`,
