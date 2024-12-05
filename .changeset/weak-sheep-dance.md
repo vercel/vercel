@@ -1,4 +1,6 @@
 ---
-"@vercel/build-utils": patch
-"@vercel/client": patch
+"@vercel/build-utils": minor
+"@vercel/client": minor
 ---
+
+Support splitting archive deployments in parts.
