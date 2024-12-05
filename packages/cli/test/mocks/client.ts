@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import { PassThrough } from 'stream';
 import type { Server } from 'http';
 import { createServer } from 'http';
-import type { Express } from 'express';
+import type { Express, ExpressRouter } from 'express';
 import express, { Router } from 'express';
 import { listen } from 'async-listen';
 import type { FetchOptions } from '../../src/util/client';
@@ -24,7 +24,7 @@ const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 // to worry about ANSI codes
 chalk.level = 0;
 
-export type Scenario = Router;
+export type Scenario = ExpressRouter;
 
 class MockStream extends PassThrough implements NodeJS.WriteStream {
   isTTY: boolean;
