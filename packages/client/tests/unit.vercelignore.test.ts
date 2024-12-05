@@ -1,4 +1,3 @@
-import { it, describe } from 'vitest';
 import assert from 'assert';
 import { join } from 'path';
 import { getVercelIgnore } from '../src';

@@ -1,4 +1,3 @@
-import { it, expect, describe } from 'vitest';
 import { join, resolve } from 'path';
 import fs from 'fs-extra';
 import { buildFileTree } from '../src/utils';
