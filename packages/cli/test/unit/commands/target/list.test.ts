@@ -94,7 +94,6 @@ describe('target ls', () => {
           updatedAt: 1717176548879,
           type: 'preview',
           description: '',
-          name: 'her',
           branchMatcher: {
             type: 'endsWith',
             pattern: 'her',
@@ -107,7 +106,6 @@ describe('target ls', () => {
           updatedAt: 1717176506341,
           type: 'preview',
           description: '',
-          name: 'ano',
           branchMatcher: {
             type: 'startsWith',
             pattern: 'ano',
