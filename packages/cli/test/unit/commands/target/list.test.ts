@@ -167,7 +167,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'her',
+      'Her',
       'her',
       'env_8DTiPYD33Rcvu2hQwYAdw0rwLquY',
       'Preview',
@@ -176,7 +176,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'ano',
+      'Ano',
       'ano',
       'env_ph1tjPP20xp8VAuiFsYt4rhRYGys',
       'Preview',
