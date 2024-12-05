@@ -8,6 +8,7 @@ import {
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
+  tryParseJsonResponse,
 } from './utils';
 import assert from 'assert';
 
@@ -447,7 +448,7 @@ describe('[vercel dev] ESM edge functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
@@ -461,7 +462,7 @@ describe('[vercel dev] ESM edge functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
@@ -475,7 +476,7 @@ describe('[vercel dev] ESM edge functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
@@ -489,7 +490,7 @@ describe('[vercel dev] ESM edge functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
@@ -505,7 +506,7 @@ describe('[vercel dev] ESM serverless functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
@@ -519,7 +520,7 @@ describe('[vercel dev] ESM serverless functions', () => {
       async (_testPath: any, port: any) => {
         const res = await fetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
-        const json = await res.json();
+        const json = await tryParseJsonResponse(res);
         expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }

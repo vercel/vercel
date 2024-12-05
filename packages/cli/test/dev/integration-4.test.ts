@@ -6,6 +6,7 @@ import {
   fixture,
   testFixture,
   testFixtureStdio,
+  tryJsonParse,
   validateResponseHeaders,
 } from './utils';
 
@@ -343,7 +344,7 @@ test(
         '/api/dump-headers',
         (actual: string, res: Response) => {
           // Headers sent to the API route.
-          const headers = JSON.parse(actual);
+          const headers = tryJsonParse(actual);
 
           // Preserved headers.
           expect(headers).toHaveProperty(
