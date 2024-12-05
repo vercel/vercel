@@ -12,7 +12,7 @@ on:
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
   NODE_VERSION: '18'
-  TURBO_REMOTE_ONLY: 'true'
+  TURBO_CACHE: 'remote:rw'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 

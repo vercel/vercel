@@ -1,0 +1,456 @@
+
+> vercel-monorepo@0.0.0 lint /Users/smassa/source/vercel/vercel
+> eslint . --cache --ext .ts,.js
+
+
+/Users/smassa/source/vercel/vercel/api/_lib/util/error-handler.ts
+  19:18  error  NODE_ENV is not listed as a dependency in root turbo.json    turbo/no-undeclared-env-vars
+  27:8   error  SENTRY_DSN is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/src/debug.ts
+  6:14  error  VERCEL_DEBUG_PREFIX is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  7:20  error  VERCEL_DEBUG_PREFIX is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/src/fs/run-user-scripts.ts
+  272:38  error  PATH is not listed as a dependency in root turbo.json                                  turbo/no-undeclared-env-vars
+  295:21  error  VERCEL_PROJECT_SETTINGS_NODE_VERSION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  705:9   error  NPM_ONLY_PRODUCTION is not listed as a dependency in root turbo.json                   turbo/no-undeclared-env-vars
+  713:9   error  HOME is not listed as a dependency in root turbo.json                                  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/test/unit.clone-env.test.ts
+  88:46  error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/test/unit.get-platform-env.test.ts
+  10:7   error  VERCEL_FOO is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  13:14  error  VERCEL_FOO is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  21:7   error  NOW_FOO is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  24:14  error  NOW_FOO is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  31:7   error  NOW_FOO is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  32:7   error  VERCEL_FOO is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  37:14  error  NOW_FOO is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  38:14  error  VERCEL_FOO is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/test/unit.get-spawn-options.test.ts
+    6:30  error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+    9:5   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   13:5   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  107:7   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/build-utils/test/unit.test.ts
+  850:5   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  860:12  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  866:5   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  879:12  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/commands/build/index.ts
+  129:7  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json         turbo/no-undeclared-env-vars
+  142:5  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json         turbo/no-undeclared-env-vars
+  291:7  error  VERCEL_ANALYTICS_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json            turbo/no-undeclared-env-vars
+  295:5  error  VERCEL is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                         turbo/no-undeclared-env-vars
+  296:5  error  NOW_BUILDER is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                    turbo/no-undeclared-env-vars
+  368:5  error  VERCEL_BUILD_MONOREPO_SUPPORT is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/commands/dev/dev.ts
+  33:40  error  __VERCEL_SKIP_DEV_CMD is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/commands/dev/index.ts
+  29:7  error  __VERCEL_DEV_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  42:5  error  __VERCEL_DEV_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/commands/domains/buy.ts
+  39:30  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/commands/telemetry/flush.ts
+  5:5  error  VERCEL_TELEMETRY_BRIDGE_URL is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/index.ts
+  109:7   error  FORCE_TTY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json               turbo/no-undeclared-env-vars
+  262:14  error  VERCEL_TELEMETRY_DEBUG is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  342:8   error  NOW_BUILDER is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json             turbo/no-undeclared-env-vars
+  841:19  error  NO_UPDATE_NOTIFIER is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/build/corepack.ts
+  14:7   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  40:5   error  COREPACK_HOME is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                 turbo/no-undeclared-env-vars
+  41:5   error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                          turbo/no-undeclared-env-vars
+  41:57  error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                          turbo/no-undeclared-env-vars
+  63:7   error  COREPACK_HOME is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                 turbo/no-undeclared-env-vars
+  64:12  error  COREPACK_HOME is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                 turbo/no-undeclared-env-vars
+  66:7   error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                          turbo/no-undeclared-env-vars
+  67:5   error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                          turbo/no-undeclared-env-vars
+  67:24  error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                          turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/deploy/process-deployment.ts
+  199:22  error  FORCE_TTY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/dev/builder.ts
+  65:59  error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/get-update-command.ts
+   8:5   error  npm_config_userconfig is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json    turbo/no-undeclared-env-vars
+   8:42  error  NPM_CONFIG_USERCONFIG is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json    turbo/no-undeclared-env-vars
+   9:10  error  HOME is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                     turbo/no-undeclared-env-vars
+  10:5   error  npm_config_globalconfig is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  10:44  error  NPM_CONFIG_GLOBALCONFIG is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  46:37  error  APPDATA is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                  turbo/no-undeclared-env-vars
+  65:7   error  PREFIX is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                   turbo/no-undeclared-env-vars
+  66:7   error  npm_config_prefix is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json        turbo/no-undeclared-env-vars
+  67:7   error  NPM_CONFIG_PREFIX is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json        turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/login/oauth.ts
+  202:18  error  SSH_CLIENT is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  202:44  error  SSH_TTY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/output/box.ts
+  55:8   error  COLUMNS is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  55:40  error  COLUMNS is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/output/create-output.ts
+   11:17  error  NODE_ENV is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  254:5   error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  255:5   error  NO_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/telemetry/check-status.ts
+  13:7  error  VERCEL_TELEMETRY_DISABLED is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/src/util/telemetry/index.ts
+  214:9  error  VERCEL_TELEMETRY_DISABLED is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/dev/integration-1.test.ts
+  966:9  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/dev/integration-3.test.ts
+  111:5   error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  111:53  error  PATH is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/dev/utils.ts
+   14:16  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                  turbo/no-undeclared-env-vars
+  153:7   error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  157:27  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  158:19  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  248:7   error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  258:11  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  259:23  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  383:17  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  384:29  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  404:15  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  405:30  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  427:17  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  428:29  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  431:17  error  VERCEL_CLI_VERSION is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  434:41  error  VERCEL_CLI_VERSION is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  487:11  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  501:15  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  502:27  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/helpers/api-fetch.ts
+   9:7   error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  10:36  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  14:32  error  VERCEL_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json    turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/helpers/exec.ts
+  21:53  error  VERCEL_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json    turbo/no-undeclared-env-vars
+  26:26  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  39:10  error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/helpers/get-account.ts
+  29:28  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/helpers/get-global-dir.ts
+  9:7  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/helpers/prepare.js
+  106:50  error  VERCEL_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json    turbo/no-undeclared-env-vars
+  106:86  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/integration-1.test.ts
+   76:10  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+   88:5   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  111:12  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  117:5   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  140:12  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  146:5   error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  169:12  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/integration-2.test.ts
+   98:10  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  101:8   error  VERCEL_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                  turbo/no-undeclared-env-vars
+  294:22  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                turbo/no-undeclared-env-vars
+  307:27  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                turbo/no-undeclared-env-vars
+  565:27  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                turbo/no-undeclared-env-vars
+  579:29  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                turbo/no-undeclared-env-vars
+  596:40  error  VERCEL_TELEMETRY_DISABLED is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  598:12  error  VERCEL_TELEMETRY_DISABLED is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  601:5   error  VERCEL_TELEMETRY_DISABLED is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  611:5   error  VERCEL_TELEMETRY_BRIDGE_URL is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json   turbo/no-undeclared-env-vars
+  618:31  error  VERCEL_TEAM_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json                turbo/no-undeclared-env-vars
+  623:14  error  VERCEL_TELEMETRY_BRIDGE_URL is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json   turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/integration-3.test.ts
+  84:10  error  ENABLE_EXPERIMENTAL_COREPACK is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/commands/build/index.test.ts
+    21:12  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+  1058:14  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+  1170:12  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+  1203:7   error  STORYBOOK_DISABLE_TELEMETRY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  1227:14  error  STORYBOOK_DISABLE_TELEMETRY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  1272:12  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+  1294:12  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+  1316:12  error  __VERCEL_BUILD_RUNNING is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/commands/domains/buy.test.ts
+  12:14  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  13:12  error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  17:5   error  CI is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/commands/login/index.test.ts
+  124:27  error  NO_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  125:9   error  NO_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  129:16  error  NO_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  131:11  error  NO_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json     turbo/no-undeclared-env-vars
+  168:30  error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  169:9   error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  173:16  error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  175:11  error  FORCE_COLOR is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/commands/logs/index.test.ts
+  69:7  error  TZ is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/commands/pull/index.test.ts
+   99:7   error  VERCEL_PROJECT_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  100:7   error  VERCEL_ORG_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+  142:14  error  VERCEL_PROJECT_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  143:14  error  VERCEL_ORG_ID is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json      turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/cli/test/unit/util/client.test.ts
+  10:14  error  HTTPS_PROXY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+  22:9   error  HTTPS_PROXY is not listed as a dependency in the root turbo.json or workspace (packages/cli) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/client/src/utils/index.ts
+  254:9  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/client/tests/integration-create-deployment.test.ts
+   20:17  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   42:17  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   64:17  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   84:17  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  123:17  error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/firewall/src/rate-limit.ts
+   49:5   error  NODE_ENV is not listed as a dependency in root turbo.json                         turbo/no-undeclared-env-vars
+   64:27  error  NEXT_RUNTIME is not listed as a dependency in root turbo.json                     turbo/no-undeclared-env-vars
+   78:7   error  NODE_ENV is not listed as a dependency in root turbo.json                         turbo/no-undeclared-env-vars
+  100:8   error  VERCEL_AUTOMATION_BYPASS_SECRET is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  101:8   error  RATE_LIMIT_SECRET is not listed as a dependency in root turbo.json                turbo/no-undeclared-env-vars
+  111:7   error  VERCEL_AUTOMATION_BYPASS_SECRET is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/fs-detectors/src/detect-file-system-api.ts
+   85:7  error  HUGO_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   93:7  error  ZOLA_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  101:7  error  GUTENBERG_VERSION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/fs-detectors/test/unit.detect-file-system-api.test.ts
+   59:5   error  HUGO_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   75:12  error  HUGO_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   79:5   error  ZOLA_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   95:12  error  ZOLA_VERSION is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   99:5   error  GUTENBERG_VERSION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  116:12  error  GUTENBERG_VERSION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/functions/get-context.js
+  27:22  error  'globalThis' is not defined  no-undef
+
+/Users/smassa/source/vercel/vercel/packages/functions/index.js
+  32:3  error  'geolocation' is not defined  no-undef
+  33:3  error  'getEnv' is not defined       no-undef
+  34:3  error  'ipAddress' is not defined    no-undef
+  35:3  error  'waitUntil' is not defined    no-undef
+
+/Users/smassa/source/vercel/vercel/packages/functions/oidc/aws-credentials-provider.js
+  20:5  error  '__toESM' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/smassa/source/vercel/vercel/packages/functions/oidc/get-vercel-oidc-token.js
+  26:7   error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+  27:12  error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/functions/oidc/index.js
+  29:3  error  'awsCredentialsProvider' is not defined  no-undef
+  30:3  error  'getVercelOidcToken' is not defined      no-undef
+
+/Users/smassa/source/vercel/vercel/packages/functions/src/oidc/get-vercel-oidc-token.ts
+  25:7   error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+  25:45  error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/functions/test/unit/oidc/get-vercel-oidc-token.test.ts
+  10:7   error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+  13:14  error  VERCEL_OIDC_TOKEN is not listed as a dependency in the root turbo.json or workspace (packages/functions) turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/scripts/build-edge-function-template.js
+  14:13  error  NODE_ENV is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/index.ts
+   334:7   error  NPM_AUTH_TOKEN is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   336:33  error  NPM_AUTH_TOKEN is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+   367:14  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  1012:7   error  NPM_AUTH_TOKEN is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/legacy-launcher.ts
+  5:6   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  6:18  error  VERCEL_REGION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  6:47  error  NOW_REGION is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  7:3   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/server-build.ts
+   201:5   error  NEXT_EXPERIMENTAL_FUNCTION_BUNDLING is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   400:7   error  VERCEL_NEXT_BUNDLED_SERVER is not listed as a dependency in root turbo.json           turbo/no-undeclared-env-vars
+  1149:11  error  VERCEL_NEXT_PRELOAD_COMMON is not listed as a dependency in root turbo.json           turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/server-launcher.ts
+  10:16  error  VERCEL_REGION is not listed as a dependency in root turbo.json                 turbo/no-undeclared-env-vars
+  10:45  error  NOW_REGION is not listed as a dependency in root turbo.json                    turbo/no-undeclared-env-vars
+  12:6   error  NODE_ENV is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  13:3   error  NODE_ENV is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  16:5   error  NODE_ENV is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  18:50  error  NODE_ENV is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  20:3   error  NODE_ENV is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  77:5   error  NEXT_PRIVATE_PRELOAD_ENTRIES is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/templated-launcher-shared.ts
+   7:16  error  VERCEL_REGION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   7:45  error  NOW_REGION is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+   9:6   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  10:3   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  13:5   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  15:50  error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  17:3   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/templated-launcher.ts
+  7:6   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+  8:18  error  VERCEL_REGION is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  8:47  error  NOW_REGION is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  9:3   error  NODE_ENV is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/src/utils.ts
+    60:10  error  MAX_UNCOMPRESSED_LAMBDA_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+    62:12  error  MAX_UNCOMPRESSED_LAMBDA_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  1896:7   error  NEXT_DEBUG_FUNCTION_SIZE is not listed as a dependency in root turbo.json      turbo/no-undeclared-env-vars
+  3011:34  error  VERCEL_FUNCTION_REGIONS is not listed as a dependency in root turbo.json       turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/initial-before-files-rewrite/pages/api/another.js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/initial-before-files-rewrite/pages/api/blog/[slug].js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/initial-before-files-rewrite/pages/api/index.js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/integration-1.test.js
+  1:1  error  NEXT_TELEMETRY_DISABLED is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/integration-2.test.js
+  1:1  error  NEXT_TELEMETRY_DISABLED is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/legacy/integration-legacy.test.js
+  1:1  error  NEXT_TELEMETRY_DISABLED is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/server-build/pages/api/another.js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/server-build/pages/api/blog/[slug].js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/integration/server-build/pages/api/index.js
+  6:13  error  AWS_LAMBDA_FUNCTION_MEMORY_SIZE is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/next/test/utils.ts
+  75:1  error  NEXT_TELEMETRY_DISABLED is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/node/src/fork-dev-server.ts
+  25:21  error  NODE_OPTIONS is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/node/src/index.ts
+  318:24  error  VERCEL_EDGE_NO_BABEL is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+  374:7   error  NODEJS_AWS_HANDLER_NAME is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  377:7   error  NODEJS_AWS_HANDLER_NAME is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  491:35  error  NODEJS_HELPERS is not listed as a dependency in root turbo.json           turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/python/src/index.ts
+  155:5   error  PYTHONPATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  217:11  error  SESSKEY is not listed as a dependency in root turbo.json     turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/python/src/install.ts
+  68:3  error  PIP_USER is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/python/test/unit.test.ts
+   13:18  error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   25:3   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   69:3   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  110:3   error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  110:57  error  PATH is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/ruby/src/index.ts
+   89:58  error  PATH is not listed as a dependency in root turbo.json      turbo/no-undeclared-env-vars
+  157:3   error  GEM_HOME is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/static-build/src/index.ts
+  370:13  error  HUGO_VERSION is not listed as a dependency in root turbo.json         turbo/no-undeclared-env-vars
+  370:13  error  ZOLA_VERSION is not listed as a dependency in root turbo.json         turbo/no-undeclared-env-vars
+  370:13  error  GUTENBERG_VERSION is not listed as a dependency in root turbo.json    turbo/no-undeclared-env-vars
+  384:9   error  PATH is not listed as a dependency in root turbo.json                 turbo/no-undeclared-env-vars
+  384:58  error  PATH is not listed as a dependency in root turbo.json                 turbo/no-undeclared-env-vars
+  429:9   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  432:16  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  442:11  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/static-build/src/utils/gatsby.ts
+  50:7   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json         turbo/no-undeclared-env-vars
+  51:5   error  GATSBY_VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  51:46  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json         turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/static-build/test/build.test.ts
+  46:9   error  NOW_BUILDER is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  64:16  error  NOW_BUILDER is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/static-build/test/builds.test.js
+  13:3  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/packages/static-build/test/gatsby.test.ts
+   45:12  error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   59:5   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   73:5   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+   92:5   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  167:5   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  244:5   error  VERCEL_ANALYTICS_ID is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/test/lib/deployment/log.js
+  5:35  error  WRITE_LOGS_TO_FILES is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/test/lib/deployment/now-deploy.js
+   11:17  error  CI is not listed as a dependency in root turbo.json                             turbo/no-undeclared-env-vars
+   34:9   error  FORCE_BUILD_IN_REGION is not listed as a dependency in root turbo.json          turbo/no-undeclared-env-vars
+   34:9   error  VERCEL_DEBUG is not listed as a dependency in root turbo.json                   turbo/no-undeclared-env-vars
+   34:9   error  VERCEL_CLI_VERSION is not listed as a dependency in root turbo.json             turbo/no-undeclared-env-vars
+   34:9   error  VERCEL_FORCE_PYTHON_STREAMING is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+  196:9   error  VERCEL_TEAM_ID is not listed as a dependency in root turbo.json                 turbo/no-undeclared-env-vars
+  219:9   error  NOW_TOKEN is not listed as a dependency in root turbo.json                      turbo/no-undeclared-env-vars
+  219:9   error  TEMP_TOKEN is not listed as a dependency in root turbo.json                     turbo/no-undeclared-env-vars
+  219:9   error  VERCEL_TOKEN is not listed as a dependency in root turbo.json                   turbo/no-undeclared-env-vars
+  219:9   error  VERCEL_TEST_TOKEN is not listed as a dependency in root turbo.json              turbo/no-undeclared-env-vars
+  219:9   error  VERCEL_TEST_REGISTRATION_URL is not listed as a dependency in root turbo.json   turbo/no-undeclared-env-vars
+  284:19  error  API_HOST is not listed as a dependency in root turbo.json                       turbo/no-undeclared-env-vars
+  289:7   error  VERBOSE is not listed as a dependency in root turbo.json                        turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/utils/pack.ts
+  36:39  error  VERCEL_URL is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/utils/run.js
+  39:7  error  GITHUB_HEAD_REF is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+/Users/smassa/source/vercel/vercel/utils/update-next.js
+  22:3  error  COREPACK_ENABLE_STRICT is not listed as a dependency in root turbo.json  turbo/no-undeclared-env-vars
+
+✖ 278 problems (278 errors, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.
