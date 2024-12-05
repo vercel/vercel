@@ -1,5 +1,5 @@
 ---
-"@vercel-internals/types": patch
+"@vercel-internals/types": major
 ---
 
 [cli] remove name from CustomEnvironment type
