@@ -178,6 +178,17 @@ if 'VERCEL_IPC_FD' in os.environ:
             del self.headers['x-vercel-internal-span-id']
             del self.headers['x-vercel-internal-trace-id']
 
+            send_message({
+                "type": "handler-started",
+                "payload": {
+                    "handlerStartedAt": int(time.time() * 1000),
+                    "context": {
+                        "invocationId": invocationId,
+                        "requestId": requestId,
+                    }
+                }
+            })
+
             token = storage.set({
                 "invocationId": invocationId,
                 "requestId": requestId,
