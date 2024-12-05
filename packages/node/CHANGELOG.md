@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 3.2.28
+
+### Patch Changes
+
+- [cli] bump express version ([#12689](https://github.com/vercel/vercel/pull/12689))
+
 ## 3.2.27
 
 ### Patch Changes
