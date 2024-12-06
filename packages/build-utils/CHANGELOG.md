@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.7.0
+
+### Minor Changes
+
+- Support splitting archive deployments in parts. ([#12671](https://github.com/vercel/vercel/pull/12671))
+
 ## 8.6.0
 
 ### Minor Changes

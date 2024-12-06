@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.4.0
+
+### Minor Changes
+
+- [frameworks] pass `$PORT` to dev command for newer svelte apps ([#12696](https://github.com/vercel/vercel/pull/12696))
+
 ## 3.3.1
 
 ### Patch Changes
