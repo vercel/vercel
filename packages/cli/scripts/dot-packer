@@ -3,7 +3,7 @@
 /* Continuation of https://github.com/Katahdin/dot-packer */
 
 var { program } = require('commander'),
-  dot = require('../');
+  dot = require('dot');
 
 program
 
