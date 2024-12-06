@@ -9,7 +9,7 @@ import {
 
 export async function detectProjects(cwd: string) {
   const fs = new LocalFileSystemDetector(cwd);
-  const workspaces = await getWorkspaces({ fs });
+  const workspaces = await getWorkspaces({ fs, cwd });
   const detectedProjects = new Map<string, Framework[]>();
   const packagePaths = (
     await Promise.all(
