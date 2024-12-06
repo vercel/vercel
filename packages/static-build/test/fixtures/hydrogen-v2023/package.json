@@ -7,7 +7,6 @@
     "build": "shopify hydrogen build",
     "dev": "shopify hydrogen dev",
     "preview": "npm run build && shopify hydrogen preview",
-    "lint": "eslint --no-error-on-unmatched-pattern --ext .js,.ts,.jsx,.tsx .",
     "codegen": "shopify hydrogen codegen-unstable"
   },
   "prettier": "@shopify/prettier-config",
@@ -27,8 +26,6 @@
     "@remix-run/dev": "1.19.1",
     "@shopify/prettier-config": "^1.1.2",
     "@total-typescript/ts-reset": "^0.4.2",
-    "eslint": "^8.20.0",
-    "eslint-plugin-hydrogen": "0.12.2",
     "prettier": "^2.8.4"
   },
   "engines": {
