@@ -22,7 +22,7 @@ import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
-import { addToGitIgnore } from '../link/add-to-gitignore';
+import { addToGitIgnore } from '../add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 
