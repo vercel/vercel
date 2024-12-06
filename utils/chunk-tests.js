@@ -8,7 +8,6 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['16', '18', '20', '22'],
     },
@@ -18,7 +17,6 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 7,
-      testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
     },
   ],
@@ -27,7 +25,6 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 7,
-      testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
       nodeVersions: ['20'],
     },
@@ -37,21 +34,16 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 1,
-      testScript: 'test',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
-  [
-    'test-e2e',
-    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
-  ],
+  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
   [
     'test-next-local',
     {
       min: 1,
       max: 5,
       runners: ['ubuntu-latest'],
-      testScript: 'test',
       nodeVersions: ['18'],
     },
   ],
@@ -61,8 +53,6 @@ const runnersMap = new Map([
       min: 1,
       max: 5,
       runners: ['ubuntu-latest'],
-
-      testScript: 'test',
       nodeVersions: ['16'],
     },
   ],
@@ -71,7 +61,6 @@ const runnersMap = new Map([
     {
       min: 1,
       max: 7,
-      testScript: 'test',
       runners: ['ubuntu-latest', 'macos-14'],
     },
   ],
@@ -151,13 +140,7 @@ async function getChunkedTests() {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         const runnerOptions = getRunnerOptions(scriptName, packageName);
-        const {
-          runners,
-          min,
-          max,
-          testScript,
-          nodeVersions = ['16'],
-        } = runnerOptions;
+        const { runners, min, max, nodeVersions = ['16'] } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
@@ -169,7 +152,6 @@ async function getChunkedTests() {
                   packagePath,
                   packageName,
                   scriptName,
-                  testScript,
                   nodeVersion,
                   testPaths: chunk.map(testFile =>
                     path.relative(

@@ -6,55 +6,144 @@
     "test/lib/**",
     "utils/build.mjs"
   ],
-  "pipeline": {
+  "globalEnv": [
+    "__VERCEL_BUILD_RUNNING",
+    "__VERCEL_DEV_RUNNING",
+    "__VERCEL_SKIP_DEV_CMD",
+    "API_HOST",
+    "APPDATA",
+    "AWS_LAMBDA_FUNCTION_MEMORY_SIZE",
+    "CI",
+    "COLUMNS",
+    "COREPACK_ENABLE_STRICT",
+    "COREPACK_HOME",
+    "ENABLE_EXPERIMENTAL_COREPACK",
+    "FORCE_BUILD_IN_REGION",
+    "FORCE_COLOR",
+    "FORCE_TTY",
+    "GATSBY_VERCEL_ANALYTICS_ID",
+    "GEM_HOME",
+    "GITHUB_HEAD_REF",
+    "GUTENBERG_VERSION",
+    "HOME",
+    "HTTPS_PROXY",
+    "HUGO_VERSION",
+    "MAX_UNCOMPRESSED_LAMBDA_SIZE",
+    "NEXT_DEBUG_FUNCTION_SIZE",
+    "NEXT_EXPERIMENTAL_FUNCTION_BUNDLING",
+    "NEXT_PRIVATE_PRELOAD_ENTRIES",
+    "NEXT_RUNTIME",
+    "NEXT_TELEMETRY_DISABLED",
+    "NO_COLOR",
+    "NO_UPDATE_NOTIFIER",
+    "NODE_ENV",
+    "NODE_OPTIONS",
+    "NODEJS_AWS_HANDLER_NAME",
+    "NODEJS_HELPERS",
+    "NOW_BUILDER",
+    "NOW_FOO",
+    "NOW_REGION",
+    "NOW_TOKEN",
+    "NPM_AUTH_TOKEN",
+    "npm_config_globalconfig",
+    "NPM_CONFIG_GLOBALCONFIG",
+    "npm_config_prefix",
+    "NPM_CONFIG_PREFIX",
+    "npm_config_userconfig",
+    "NPM_CONFIG_USERCONFIG",
+    "NPM_ONLY_PRODUCTION",
+    "PATH",
+    "PIP_USER",
+    "PREFIX",
+    "PYTHONPATH",
+    "RATE_LIMIT_SECRET",
+    "SENTRY_DSN",
+    "SESSKEY",
+    "SSH_CLIENT",
+    "SSH_TTY",
+    "STORYBOOK_DISABLE_TELEMETRY",
+    "TEMP_TOKEN",
+    "TZ",
+    "VERBOSE",
+    "VERCEL_ANALYTICS_ID",
+    "VERCEL_AUTOMATION_BYPASS_SECRET",
+    "VERCEL_BUILD_MONOREPO_SUPPORT",
+    "VERCEL_CLI_VERSION",
+    "VERCEL_DEBUG_PREFIX",
+    "VERCEL_DEBUG",
+    "VERCEL_EDGE_NO_BABEL",
+    "VERCEL_FOO",
+    "VERCEL_FORCE_PYTHON_STREAMING",
+    "VERCEL_FUNCTION_REGIONS",
+    "VERCEL_NEXT_BUNDLED_SERVER",
+    "VERCEL_NEXT_PRELOAD_COMMON",
+    "VERCEL_OIDC_TOKEN",
+    "VERCEL_ORG_ID",
+    "VERCEL_PROJECT_ID",
+    "VERCEL_PROJECT_SETTINGS_NODE_VERSION",
+    "VERCEL_REGION",
+    "VERCEL_SPLIT_ARCHIVE",
+    "VERCEL_TEAM_ID",
+    "VERCEL_TELEMETRY_BRIDGE_URL",
+    "VERCEL_TELEMETRY_DEBUG",
+    "VERCEL_TELEMETRY_DISABLED",
+    "VERCEL_TEST_REGISTRATION_URL",
+    "VERCEL_TEST_TOKEN",
+    "VERCEL_TOKEN",
+    "VERCEL_URL",
+    "VERCEL",
+    "WRITE_LOGS_TO_FILES",
+    "ZOLA_VERSION"
+  ],
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputMode": "new-only",
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
     },
     "vitest-unit": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-run": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-e2e": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-e2e-node-20": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-unit": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-dev": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-cli": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-e2e": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-next-local": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-next-local-legacy": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "type-check": {}
   }

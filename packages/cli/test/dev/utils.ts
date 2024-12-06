@@ -692,3 +692,16 @@ afterEach(async () => {
 });
 
 export { fetch };
+
+export function tryJsonParse(body: string) {
+  try {
+    return JSON.parse(body);
+  } catch (error) {
+    throw new Error(`Failed to JSON parse: ${body}`);
+  }
+}
+
+export async function tryParseJsonResponse(response: Response) {
+  const body = await response.text();
+  return tryJsonParse(body);
+}

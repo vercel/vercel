@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  TURBO_REMOTE_ONLY: 'true'
+  TURBO_CACHE: 'remote:rw'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 

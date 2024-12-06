@@ -1,6 +1,12 @@
 import assert from 'assert';
 import { isIP } from 'net';
-import { exec, fixture, testFixture, testFixtureStdio } from './utils';
+import {
+  exec,
+  fixture,
+  testFixture,
+  testFixtureStdio,
+  tryJsonParse,
+} from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -201,7 +207,7 @@ test(
 
     await testPath(200, `/api/dump`, (body: any, res: any, isDev: any) => {
       const { host } = new URL(res.url);
-      const { env, headers } = JSON.parse(body);
+      const { env, headers } = tryJsonParse(body);
 
       // Test that the API endpoint receives the Vercel proxy request headers
       expect(headers['x-forwarded-host']).toBe(host);

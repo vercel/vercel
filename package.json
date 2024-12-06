@@ -35,7 +35,7 @@
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.0",
-    "turbo": "1.13.3",
+    "turbo": "2.3.3",
     "typescript": "4.9.5",
     "vite": "5.1.6",
     "vitest": "2.0.3"
@@ -48,7 +48,7 @@
     "test-unit": "pnpm test && node utils/gen.js && turbo --no-update-notifier run test-unit",
     "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
     "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
-    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
+    "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev --filter=./internals/get-package-json -- test/dev/integration-1.test.ts",
     "lint": "eslint . --cache --ext .ts,.js",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
@@ -85,6 +85,7 @@
       "jest"
     ],
     "extends": [
+      "turbo",
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
       "plugin:@typescript-eslint/recommended",
@@ -152,5 +153,8 @@
         }
       }
     ]
+  },
+  "dependencies": {
+    "eslint-config-turbo": "2.3.3"
   }
 }
