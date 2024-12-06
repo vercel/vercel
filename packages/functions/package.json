@@ -43,7 +43,7 @@
   "scripts": {
     "pretest": "pnpm run build:code",
     "test": "vitest",
-    "build": "pnpm run build:code && pnpm run build:docs",
+    "build": "pnpm run build:code",
     "build:code": "node ../../utils/build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
