@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "13.4.19",
+  "version": "13.4.20",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -16,9 +16,9 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-run": "vitest -c ./vitest.config.mts",
     "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
-    "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
+    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "engines": {
