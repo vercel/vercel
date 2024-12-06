@@ -17,5 +17,8 @@
     "@types/node-fetch": "2.5.4",
     "@types/tar-fs": "1.16.1",
     "@vercel/node": "*"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
