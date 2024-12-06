@@ -14,6 +14,7 @@ export default defineConfig({
       FORCE_COLOR: '1',
     },
     hideSkippedTests: true,
+    watch: !process.env.CI && !process.env.VERCEL && process.stdout.isTTY,
     exclude: [
       // default
       '**/node_modules/**',
