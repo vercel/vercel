@@ -504,7 +504,7 @@ export const build: BuildV2 = async ({
       let hasPrintedInstall = false;
       const printInstall = () => {
         if (!hasPrintedInstall) {
-          console.log('Installing dependencies...');
+          console.log('Installing dependencies... (test 2)');
           hasPrintedInstall = true;
         }
       };
