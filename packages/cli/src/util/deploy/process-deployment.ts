@@ -97,7 +97,7 @@ export default async function processDeployment({
     vercelOutputDir,
     rootDirectory,
     skipAutoDetectionConfirmation,
-    archive: archive,
+    archive,
     agent,
   };
 
