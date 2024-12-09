@@ -10,7 +10,7 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { streamToBuffer } from '@vercel/build-utils';
+import { streamToBuffer, streamToBufferChunks } from '@vercel/build-utils';
 import tar from 'tar-fs';
 import { createGzip } from 'zlib';
 
@@ -92,25 +92,43 @@ export default function buildCreateDeployment() {
     let files;
 
     try {
-      if (clientOptions.archive === 'tgz') {
+      if (
+        clientOptions.archive === 'tgz' ||
+        clientOptions.archive === 'split-tgz'
+      ) {
         debug('Packing tarball');
         const tarStream = tar
           .pack(workPath, {
             entries: fileList.map(file => relative(workPath, file)),
           })
           .pipe(createGzip());
-        const tarBuffer = await streamToBuffer(tarStream);
-        debug('Packed tarball');
-        files = new Map([
-          [
-            hash(tarBuffer),
-            {
-              names: [join(workPath, '.vercel/source.tgz')],
-              data: tarBuffer,
-              mode: 0o666,
-            },
-          ],
-        ]);
+        if (clientOptions.archive === 'split-tgz') {
+          const chunkedTarBuffers = await streamToBufferChunks(tarStream);
+          debug(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
+          files = new Map(
+            chunkedTarBuffers.map((chunk, index) => [
+              hash(chunk),
+              {
+                names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
+                data: chunk,
+                mode: 0o666,
+              },
+            ])
+          );
+        } else {
+          const tarBuffer = await streamToBuffer(tarStream);
+          debug('Packed tarball');
+          files = new Map([
+            [
+              hash(tarBuffer),
+              {
+                names: [join(workPath, '.vercel/source.tgz')],
+                data: tarBuffer,
+                mode: 0o666,
+              },
+            ],
+          ]);
+        }
       } else {
         files = await hashes(fileList);
       }

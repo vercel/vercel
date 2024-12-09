@@ -5,15 +5,17 @@
 	import Header from './Header.svelte';
 	import '../app.css';
 
-	let { children } = $props();
+	let { data, children } = $props();
 
-	$: if (browser && data?.analyticsId) {
-		webVitals({
-			path: $page.url.pathname,
-			params: $page.params,
-			analyticsId: data.analyticsId
-		});
-	}
+	$effect(() => {
+		if (data?.analyticsId) {
+			webVitals({
+				path: $page.url.pathname,
+				params: $page.params,
+				analyticsId: data.analyticsId
+			});
+		}
+	});
 </script>
 
 <div class="app">
