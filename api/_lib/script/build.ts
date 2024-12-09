@@ -8,7 +8,7 @@ import { mapOldToNew } from '../examples/map-old-to-new';
 
 const repoRoot = join(__dirname, '..', '..', '..');
 const pubDir = join(repoRoot, 'public');
-const ignoredPackages = [];
+const ignoredPackages = ['sdk'];
 
 async function main() {
   console.log(`Building static frontend ${repoRoot}...`);
