@@ -9,18 +9,9 @@
     "start:development": "npm run -s dev",
     "build": "preact build",
     "serve": "preact build && preact serve",
-    "dev": "preact watch",
-    "lint": "eslint src"
+    "dev": "preact watch"
   },
-  "eslintConfig": {
-    "extends": "eslint-config-synacor"
-  },
-  "eslintIgnore": [
-    "build/*"
-  ],
   "devDependencies": {
-    "eslint": "^4.9.0",
-    "eslint-config-synacor": "^2.0.2",
     "identity-obj-proxy": "^3.0.0",
     "per-env": "^1.0.2",
     "preact-cli": "^2.1.0",
