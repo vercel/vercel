@@ -1,11 +1,6 @@
 name: Tests Node.js v18
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - '!*'
   pull_request:
   merge_group:
 
