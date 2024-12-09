@@ -1,4 +1,0 @@
----
----
-
-[examples] fix SvelteKit example

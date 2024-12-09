@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "13.4.20",
+  "version": "13.5.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -39,7 +39,7 @@
     "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "8.6.0",
+    "@vercel/build-utils": "8.7.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/routing-utils": "3.1.0",
     "async-retry": "1.2.3",
