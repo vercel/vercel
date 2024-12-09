@@ -138,7 +138,6 @@ type RouteOrMiddleware =
 
 export interface CustomEnvironment {
   id: string;
-  name: string;
   slug: string;
   type: CustomEnvironmentType;
   description?: string;
