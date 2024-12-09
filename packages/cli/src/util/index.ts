@@ -132,10 +132,10 @@ export default class Now {
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
-    let hashes: any = {};
+    const hashes: any = {};
     const uploadStamp = stamp();
 
-    let requestBody = {
+    const requestBody = {
       ...nowConfig,
       env,
       build,

@@ -591,7 +591,7 @@ export async function* findDirs(
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
  */
-function filesWithoutFsRefs(
+export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string
 ): { files: Files; filePathMap?: Record<string, string> } {
@@ -600,7 +600,9 @@ function filesWithoutFsRefs(
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
-      filePathMap[path] = relative(repoRootPath, file.fsPath);
+      filePathMap[normalizePath(path)] = normalizePath(
+        relative(repoRootPath, file.fsPath)
+      );
     } else {
       out[path] = file;
     }

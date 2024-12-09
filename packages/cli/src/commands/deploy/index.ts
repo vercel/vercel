@@ -68,6 +68,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -443,7 +444,7 @@ export default async (client: Client): Promise<number> => {
     client,
     currentTeam,
   });
-  let deployStamp = stamp();
+  const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
 
@@ -583,6 +584,11 @@ export default async (client: Client): Promise<number> => {
   } catch (err: unknown) {
     if (isError(err)) {
       debug(`Error: ${err}\n${err.stack}`);
+    }
+
+    if (err instanceof UploadErrorMissingArchive) {
+      output.prettyError(err);
+      return 1;
     }
 
     if (err instanceof NotDomainOwner) {

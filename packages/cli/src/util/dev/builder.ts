@@ -62,7 +62,7 @@ async function createBuildProcess(
   const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -405,6 +405,7 @@ export async function getBuildMatches(
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   for (const buildConfig of builds) {
+    // eslint-disable-next-line prefer-const
     let { src = '**', use, config = {} } = buildConfig;
 
     if (!use) {

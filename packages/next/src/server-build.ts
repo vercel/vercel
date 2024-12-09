@@ -691,7 +691,7 @@ export async function serverBuild({
     );
     let launcher = launcherData
       .replace(
-        'const conf = __NEXT_CONFIG__',
+        /(?:var|const) conf = __NEXT_CONFIG__/,
         `const conf = ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(

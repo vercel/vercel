@@ -28,7 +28,10 @@ function parseTsConfig(tsconfigPath) {
   return result;
 }
 
-export async function esbuild(opts = {}, cwd = process.cwd()) {
+export async function esbuild(
+  /** @type {import('esbuild').BuildOptions} */ opts = {},
+  cwd = process.cwd()
+) {
   const configPath = path.join(cwd, 'tsconfig.json');
   const tsconfig = parseTsConfig(configPath);
 

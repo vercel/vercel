@@ -419,7 +419,7 @@ export function testFixtureStdio(
         }
 
         // Run `vc deploy`
-        let deployResult = await execa(
+        const deployResult = await execa(
           binaryPath,
           [
             '-t',
@@ -593,7 +593,7 @@ async function ps(parentPid: number, pids: Record<string, Array<number>> = {}) {
       encoding: 'utf-8',
     });
     const possiblePids = buf.match(/\d+/g) || [];
-    for (let rawPid of possiblePids) {
+    for (const rawPid of possiblePids) {
       const pid = parseInt(rawPid);
       const recurse = Object.prototype.hasOwnProperty.call(pids, pid);
       pids[parentPid].push(pid);

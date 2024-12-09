@@ -428,7 +428,7 @@ async function selectRemoteUrl(
   client: Client,
   remoteUrls: Dictionary<string>
 ): Promise<string> {
-  let choices: ListChoice[] = [];
+  const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
       name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,

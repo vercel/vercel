@@ -320,7 +320,7 @@ export default async function bisect(client: Client): Promise<number> {
 
   output.print('\n');
 
-  let result = [
+  const result = [
     chalk.bold(
       `The first bad deployment is: ${link(`https://${lastBad.url}`)}`
     ),

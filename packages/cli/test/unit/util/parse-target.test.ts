@@ -13,7 +13,7 @@ describe('parseTarget', () => {
   });
 
   it('defaults to `undefined`', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: {},
     });
@@ -21,7 +21,7 @@ describe('parseTarget', () => {
   });
 
   it('parses "production" target', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: { '--target': 'production' },
     });
@@ -30,7 +30,7 @@ describe('parseTarget', () => {
   });
 
   it('parses "staging" target', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: { '--target': 'staging' },
     });
@@ -39,7 +39,7 @@ describe('parseTarget', () => {
   });
 
   it('prefers target over production argument', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: { '--target': 'staging', '--prod': true },
     });
@@ -50,7 +50,7 @@ describe('parseTarget', () => {
   });
 
   it('parses production argument when `true`', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: { '--prod': true },
     });
@@ -58,7 +58,7 @@ describe('parseTarget', () => {
   });
 
   it('parses production argument when `false`', () => {
-    let result = parseTarget({
+    const result = parseTarget({
       flagName: 'target',
       flags: { '--prod': false },
     });

@@ -35,6 +35,7 @@ export default async function add(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
 
   const stdInput = await readStandardInput(client.stdin);
+  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvAddTelemetryClient({
@@ -118,7 +119,7 @@ export default async function add(client: Client, argv: string[]) {
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
       .map(c => ({
-        name: c.name,
+        name: c.slug,
         value: c.id,
       })),
   ];

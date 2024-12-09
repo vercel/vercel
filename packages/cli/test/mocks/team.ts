@@ -34,7 +34,7 @@ export function useTeams(
 
   createTeam(teamId);
 
-  for (let team of teams) {
+  for (const team of teams) {
     client.scenario.get(`/teams/${team.id}`, (_req, res) => {
       if (options.failMissingToken) {
         res.statusCode = 403;
