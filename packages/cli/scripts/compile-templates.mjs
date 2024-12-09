@@ -7,7 +7,7 @@ export async function compileDevTemplates() {
   // Compile the `doT.js` template files for `vercel dev`
   const templatesDir = new URL('src/util/dev/templates/', dirRoot);
 
-  dot.process({});
+  dot.process({ path: templatesDir });
 
   const files = await readdir(templatesDir);
   const compiledFiles = files.filter(f => f.endsWith('.js'));
