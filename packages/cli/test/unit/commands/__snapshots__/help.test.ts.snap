@@ -721,8 +721,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 the     
                                 deploym…
                                 code    
-                                into a  
-                                file    
+                                into an 
+                                archive 
                                 before  
                                 uploadi…
                                 it      
@@ -913,8 +913,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Options:
 
-       --archive <FORMAT>       Compress the deployment code into a file before 
-                                uploading it                                    
+       --archive <FORMAT>       Compress the deployment code into an archive    
+                                before uploading it                             
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time 
                                 (e.g. \`-b KEY1=value1 -b KEY2=value2\`)          
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time   
@@ -989,7 +989,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Options:
 
-       --archive <FORMAT>       Compress the deployment code into a file before uploading it                            
+       --archive <FORMAT>       Compress the deployment code into an archive before uploading it                        
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
