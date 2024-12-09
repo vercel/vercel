@@ -35,4 +35,3 @@ packages/**/test/dev/fixtures
 packages/**/test/build-fixtures
 packages/**/test/cache-fixtures
 packages/cli/src/util/dev/templates/*.ts
-packages/sdk/**
