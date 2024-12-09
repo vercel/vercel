@@ -1,3 +1,5 @@
+import execa from 'execa';
+import { fileURLToPath } from 'node:url';
 import { readFile, writeFile, readdir, unlink } from 'node:fs/promises';
 import dot from 'dot';
 
@@ -5,9 +7,12 @@ export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);
 
   // Compile the `doT.js` template files for `vercel dev`
-  const templatesDir = new URL('src/util/dev/templates', dirRoot);
-
-  dot.process({ path: templatesDir });
+  const templatesDir = new URL('src/util/dev/templates/', dirRoot);
+  const dotPacker = fileURLToPath(new URL('./scripts/dot-packer', dirRoot));
+  await execa(process.execPath, [dotPacker], {
+    cwd: templatesDir,
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
 
   const files = await readdir(templatesDir);
   const compiledFiles = files.filter(f => f.endsWith('.js'));
