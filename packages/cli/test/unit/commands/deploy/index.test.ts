@@ -937,11 +937,27 @@ describe('deploy', () => {
       expect(mock).toHaveBeenCalledWith(
         ...Object.values({
           ...baseCreateDeployArgs,
-          archive: expect.anything(),
+          archive: 'tgz',
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'tgz' },
+      ]);
+    });
+    it('--archive=split-tgz', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--archive=split-tgz');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          archive: 'split-tgz',
+        })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:archive', value: 'split-tgz' },
       ]);
     });
     it('--no-wait', async () => {
