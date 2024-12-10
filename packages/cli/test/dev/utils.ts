@@ -359,7 +359,7 @@ export async function testFixture(
 export function testFixtureStdio(
   directory: string,
   fn: Function,
-  { skipDeploy = false, projectSettings = {}, readyTimeout = 0 } = {}
+  { skipDeploy = false, readyTimeout = 0 } = {}
 ) {
   return async () => {
     const cwd = fixtureAbsolute(directory);
@@ -395,28 +395,6 @@ export function testFixtureStdio(
           stdout: linkResult.stdout,
         });
         expect(linkResult.exitCode).toBe(0);
-
-        // Patch the project with any non-default properties
-        if (projectSettings) {
-          const { projectId } = await fs.readJson(projectJsonPath);
-          const res = await fetchWithRetry(
-            `https://api.vercel.com/v2/projects/${projectId}${
-              process.env.VERCEL_TEAM_ID
-                ? `?teamId=${process.env.VERCEL_TEAM_ID}`
-                : ''
-            }`,
-            {
-              method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(projectSettings),
-              retries: isCI ? 3 : 0,
-              status: 200,
-            }
-          );
-          expect(res.status).toBe(200);
-        }
 
         // Run `vc deploy`
         const deployResult = await execa(
