@@ -40,6 +40,7 @@ export const help = () => `
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment
+      open                 [url]       Opens the browser pointing to the deployment
       projects                         Manages your Projects
       rm | remove          [id]        Removes a deployment
       teams                            Manages your teams

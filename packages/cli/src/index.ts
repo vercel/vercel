@@ -711,6 +711,10 @@ const main = async () => {
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
           func = require('./commands/whoami').default;
           break;
+        case 'open':
+          telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
+          func = require('./commands/open').default;
+          break;
         default:
           func = null;
           break;
