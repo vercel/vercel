@@ -377,6 +377,8 @@ test(
   })
 );
 
+// n.b. this test requires the project 00-list-directory to have directory listing
+// enabled at 00-list-directory/settings/advanced
 test(
   '[vercel dev] 00-list-directory',
   testFixtureStdio('00-list-directory', async (testPath: any) => {
