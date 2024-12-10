@@ -646,7 +646,7 @@ export async function runNpmInstall(
     }
 
     const installTime = Date.now();
-    console.log('Installing dependencies...');
+    console.log('Installing dependencies... (test 1)');
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
