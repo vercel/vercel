@@ -1,5 +1,13 @@
 # vercel
 
+## 39.2.1
+
+### Patch Changes
+
+- Update to v2 endpoints for fetching integrations and installations ([#12721](https://github.com/vercel/vercel/pull/12721))
+
+- [cli] expand cache boundary ([#12726](https://github.com/vercel/vercel/pull/12726))
+
 ## 39.2.0
 
 ### Minor Changes
