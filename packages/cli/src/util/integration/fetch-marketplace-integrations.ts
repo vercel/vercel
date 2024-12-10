@@ -10,7 +10,7 @@ export async function fetchMarketplaceIntegrations(
   searchParams.set('installationType', 'marketplace');
   searchParams.set('integrationIdOrSlug', slug);
   return await client.fetch<Configuration[]>(
-    `/v1/integrations/configurations?${searchParams}`,
+    `/v2/integrations/configurations?${searchParams}`,
     {
       json: true,
     }

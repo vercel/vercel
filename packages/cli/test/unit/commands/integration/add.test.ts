@@ -168,7 +168,7 @@ describe('integration', () => {
 
       describe('with installation', () => {
         beforeEach(() => {
-          useIntegration({ withInstallation: true });
+          useIntegration({ withInstallation: true, ownerId: team.id });
         });
 
         it('should handle provisioning resource in project context', async () => {
@@ -373,7 +373,7 @@ describe('integration', () => {
         });
 
         it('should error when integration was not found', async () => {
-          useIntegration({ withInstallation: true });
+          useIntegration({ withInstallation: true, ownerId: team.id });
           client.setArgv('integration', 'add', 'does-not-exist');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
@@ -383,7 +383,7 @@ describe('integration', () => {
         });
 
         it('should track redacted [name] positional argument when integration is not found', async () => {
-          useIntegration({ withInstallation: true });
+          useIntegration({ withInstallation: true, ownerId: team.id });
           client.setArgv('integration', 'add', 'does-not-exist');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
@@ -401,7 +401,7 @@ describe('integration', () => {
         });
 
         it('should error when integration is an external integration', async () => {
-          useIntegration({ withInstallation: true });
+          useIntegration({ withInstallation: true, ownerId: team.id });
           client.setArgv('integration', 'add', 'acme-external');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
@@ -411,7 +411,7 @@ describe('integration', () => {
         });
 
         it('should error when integration has no products', async () => {
-          useIntegration({ withInstallation: true });
+          useIntegration({ withInstallation: true, ownerId: team.id });
           client.setArgv('integration', 'add', 'acme-no-products');
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);

@@ -6,10 +6,11 @@ export async function fetchInstallations(
   integration: Integration
 ) {
   const searchParams = new URLSearchParams();
-  searchParams.set('integrationIdOrSlug', integration.id);
+  searchParams.set('view', 'account');
   searchParams.set('installationType', 'marketplace');
+  searchParams.set('integrationIdOrSlug', integration.id);
   return client.fetch<IntegrationInstallation[]>(
-    `/v2/integrations/integration/?${searchParams}`,
+    `/v2/integrations/configurations?${searchParams}`,
     {
       json: true,
     }
