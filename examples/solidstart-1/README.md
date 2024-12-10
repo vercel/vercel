@@ -6,7 +6,7 @@ This directory is a brief example of a [SolidStart](https://github.com/ryansolid
 
 Deploy your own SolidStart project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/solidstart&template=solidstart)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/solidstart-1&template=solidstart-1)
 
 _Live Example: https://solid-start-template.vercel.app_
 
