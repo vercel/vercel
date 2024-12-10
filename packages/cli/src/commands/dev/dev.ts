@@ -30,7 +30,7 @@ export default async function dev(
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);
 
-  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
+  if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_LINKING) {
     link = await setupAndLink(client, cwd, {
       autoConfirm: opts['--yes'],
       link,
