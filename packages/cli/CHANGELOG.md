@@ -1,5 +1,20 @@
 # vercel
 
+## 39.2.0
+
+### Minor Changes
+
+- Prefer --archive=tgz-split over VERCEL_SPLIT_ARCHIVE ([#12718](https://github.com/vercel/vercel/pull/12718))
+
+### Patch Changes
+
+- update express even more ([#12703](https://github.com/vercel/vercel/pull/12703))
+
+- Updated dependencies [[`318b5dc77157fa0f6942296407e97251197467fa`](https://github.com/vercel/vercel/commit/318b5dc77157fa0f6942296407e97251197467fa), [`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/node@3.2.29
+  - @vercel/build-utils@8.7.0
+  - @vercel/static-build@2.5.37
+
 ## 39.1.3
 
 ### Patch Changes

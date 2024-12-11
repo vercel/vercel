@@ -359,7 +359,7 @@ export async function testFixture(
 export function testFixtureStdio(
   directory: string,
   fn: Function,
-  { skipDeploy = false, projectSettings = {}, readyTimeout = 0 } = {}
+  { skipDeploy = false } = {}
 ) {
   return async () => {
     const cwd = fixtureAbsolute(directory);
@@ -395,28 +395,6 @@ export function testFixtureStdio(
           stdout: linkResult.stdout,
         });
         expect(linkResult.exitCode).toBe(0);
-
-        // Patch the project with any non-default properties
-        if (projectSettings) {
-          const { projectId } = await fs.readJson(projectJsonPath);
-          const res = await fetchWithRetry(
-            `https://api.vercel.com/v2/projects/${projectId}${
-              process.env.VERCEL_TEAM_ID
-                ? `?teamId=${process.env.VERCEL_TEAM_ID}`
-                : ''
-            }`,
-            {
-              method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(projectSettings),
-              retries: isCI ? 3 : 0,
-              status: 200,
-            }
-          );
-          expect(res.status).toBe(200);
-        }
 
         // Run `vc deploy`
         const deployResult = await execa(
@@ -465,18 +443,6 @@ export function testFixtureStdio(
     let stderr = '';
     const readyResolver = createResolver();
     const exitResolver = createResolver();
-
-    // By default, tests will wait 6 minutes for the dev server to be ready and
-    // perform the tests, however a `readyTimeout` can be used to reduce the
-    // wait time if the dev server is expected to fail to start or hang
-    let readyTimer: NodeJS.Timeout;
-    if (readyTimeout > 0) {
-      readyTimer = setTimeout(() => {
-        readyResolver.reject(
-          new Error('Dev server timed out while waiting to be ready')
-        );
-      }, readyTimeout);
-    }
 
     try {
       let printedOutput = false;
@@ -530,7 +496,6 @@ export function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
-          clearTimeout(readyTimer);
           readyResolver.resolve(null);
         }
 

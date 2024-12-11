@@ -97,8 +97,7 @@ export default async function processDeployment({
     vercelOutputDir,
     rootDirectory,
     skipAutoDetectionConfirmation,
-    archive:
-      process.env.VERCEL_SPLIT_ARCHIVE && archive ? 'split-tgz' : archive,
+    archive,
     agent,
   };
 
