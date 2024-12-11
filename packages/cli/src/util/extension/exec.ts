@@ -6,6 +6,7 @@ import { scanParentDirs, walkParentDirs } from '@vercel/build-utils';
 import { createProxy } from './proxy';
 import type Client from '../client';
 import output from '../../output-manager';
+import { errorToString } from '@vercel/error-utils';
 
 /**
  * Attempts to execute a Vercel CLI Extension.
@@ -22,7 +23,7 @@ export async function execExtension(
   args: string[],
   cwd: string
 ): Promise<number> {
-  const { debug, log } = output;
+  const { debug, error } = output;
   const extensionCommand = `vercel-${name}`;
 
   const { packageJsonPath, lockfilePath } = await scanParentDirs(cwd);
@@ -60,27 +61,28 @@ export async function execExtension(
   const VERCEL_API = proxyUrl.href.replace(/\/$/, '');
   debug(`extension proxy server listening at ${VERCEL_API}`);
 
-  const result = await execa(extensionPath, args, {
-    cwd,
-    reject: false,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      VERCEL_API,
-      // TODO:
-      //   VERCEL_SCOPE
-      //   VERCEL_DEBUG
-      //   VERCEL_HELP
-    },
-  });
-
-  proxy.close();
-
-  if (result instanceof Error) {
-    log(`Error running extension ${extensionCommand}: ${result.message}`);
+  try {
+    const result = await execa(extensionPath, args, {
+      cwd,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        VERCEL_API,
+        // TODO:
+        //   VERCEL_SCOPE
+        //   VERCEL_DEBUG
+        //   VERCEL_HELP
+      },
+    });
+    return result.exitCode;
+  } catch (err: unknown) {
+    error(
+      `Vercel CLI extension ${JSON.stringify(extensionCommand)} failed:\n${errorToString(err)}`
+    );
+    return 1;
+  } finally {
+    proxy.close();
   }
-
-  return result.exitCode;
 }
 
 class ENOENT extends Error {
