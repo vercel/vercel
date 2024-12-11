@@ -359,7 +359,7 @@ export async function testFixture(
 export function testFixtureStdio(
   directory: string,
   fn: Function,
-  { skipDeploy = false, readyTimeout = 0 } = {}
+  { skipDeploy = false } = {}
 ) {
   return async () => {
     const cwd = fixtureAbsolute(directory);
@@ -444,18 +444,6 @@ export function testFixtureStdio(
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
-    // By default, tests will wait 6 minutes for the dev server to be ready and
-    // perform the tests, however a `readyTimeout` can be used to reduce the
-    // wait time if the dev server is expected to fail to start or hang
-    let readyTimer: NodeJS.Timeout;
-    if (readyTimeout > 0) {
-      readyTimer = setTimeout(() => {
-        readyResolver.reject(
-          new Error('Dev server timed out while waiting to be ready')
-        );
-      }, readyTimeout);
-    }
-
     try {
       let printedOutput = false;
 
@@ -508,7 +496,6 @@ export function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
-          clearTimeout(readyTimer);
           readyResolver.resolve(null);
         }
 
