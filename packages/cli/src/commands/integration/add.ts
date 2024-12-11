@@ -118,9 +118,11 @@ export async function add(client: Client, args: string[]) {
   // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
   // non-storage categories to the dashboard.
   // product.type is the old way of defining categories, while the protocols are the new way.
-  const isStorageProduct =
-    product.type === 'storage' ||
+  const isPreProtocolStorageProduct = product.type === 'storage';
+  const isPostProtocolStorageProduct =
     product.protocols?.storage?.status === 'enabled';
+  const isStorageProduct =
+    isPreProtocolStorageProduct || isPostProtocolStorageProduct;
 
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
