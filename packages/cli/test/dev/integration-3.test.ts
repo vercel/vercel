@@ -91,7 +91,7 @@ test('[vercel dev] 08-hugo', async () => {
     );
     process.env.PATH = `${hugoFixture}${delimiter}${process.env.PATH}`;
 
-    // 3. Rerun the test now that Hugo is in the PATH
+    // 2. Rerun the test now that Hugo is in the PATH
     const tester = testFixtureStdio(
       '08-hugo',
       async (testPath: any) => {
