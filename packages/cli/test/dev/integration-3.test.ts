@@ -80,7 +80,7 @@ test(
 
 test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
-    // 2. Download `hugo` and update PATH
+    // 1. Download `hugo` and update PATH
     const hugoFixture = resolve(fixture('08-hugo'));
     await spawnAsync(
       `curl -sSL https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz | tar -xz -C "${hugoFixture}"`,
@@ -92,7 +92,7 @@ test('[vercel dev] 08-hugo', async () => {
     process.env.PATH = `${hugoFixture}${delimiter}${process.env.PATH}`;
 
     // 3. Rerun the test now that Hugo is in the PATH
-    tester = testFixtureStdio(
+    const tester = testFixtureStdio(
       '08-hugo',
       async (testPath: any) => {
         await testPath(200, '/', /Hugo/m);
