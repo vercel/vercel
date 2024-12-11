@@ -1,6 +1,6 @@
 ---
-"@vercel/node": patch
-"@vercel/routing-utils": patch
+"@vercel/node": major
+"@vercel/routing-utils": major
 ---
 
-Smassa/update path to regexp with tests
+update path-to-regexp
