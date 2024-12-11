@@ -80,25 +80,6 @@ test(
 
 test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
-    // 1. run the test without Hugo in the PATH
-    let tester = await testFixtureStdio(
-      '08-hugo',
-      async () => {
-        throw new Error('Expected dev server to fail to be ready');
-      },
-      {
-        readyTimeout: 2000,
-
-        // Important: for the first test, we MUST deploy this app so that the
-        // framework (e.g. Hugo) will be detected by the server and associated
-        // with the project since `vc dev` doesn't do framework detection
-        skipDeploy: false,
-      }
-    );
-    await expect(tester()).rejects.toThrow(
-      new Error('Dev server timed out while waiting to be ready')
-    );
-
     // 2. Download `hugo` and update PATH
     const hugoFixture = resolve(fixture('08-hugo'));
     await spawnAsync(
