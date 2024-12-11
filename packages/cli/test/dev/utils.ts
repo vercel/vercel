@@ -496,7 +496,6 @@ export function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
-          clearTimeout(readyTimer);
           readyResolver.resolve(null);
         }
 
