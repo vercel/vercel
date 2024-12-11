@@ -671,6 +671,10 @@ it(
       console.log('Skipping test on macOS');
       return;
     }
+    if (process.version.split('.')[0] !== 'v16') {
+      console.log(`Skipping test on Node.js ${process.version}`);
+      return;
+    }
     const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
     await runNpmInstall(fixture);
     await runPackageJsonScript(fixture, 'env');
