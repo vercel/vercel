@@ -14,16 +14,38 @@ type ParsedArgs = {
 };
 
 function isFlag(input: string) {
-  return input.startsWith('--');
+  return input?.startsWith('--');
 }
 
-async function fromCurrent(
-  client: Client,
-  parsedArgs: ParsedArgs
-): Promise<string> {
-  const linkedProject = await ensureLink('open', client, client.cwd, {
-    autoConfirm: Boolean(parsedArgs.flags['--yes']),
-  });
+export function getArgsAndQuery(rawArgs: string[]) {
+  return rawArgs.reduce(
+    (result, arg, index) => {
+      if (isFlag(arg)) {
+        const [key, value] = arg.split('=');
+        const nextArg = rawArgs[index + 1];
+
+        if (value === undefined && nextArg && !isFlag(nextArg)) {
+          result.query[key.replace('--', '')] = nextArg;
+        } else {
+          result.query[key.replace('--', '')] = value ?? true;
+        }
+      } else {
+        const prevArg = rawArgs[index - 1];
+        if (!isFlag(prevArg)) {
+          result.args.push(arg);
+        }
+      }
+      return result;
+    },
+    {
+      args: [] as string[],
+      query: {} as Record<string, string | boolean>,
+    }
+  );
+}
+
+export async function fromCurrent(client: Client): Promise<string> {
+  const linkedProject = await ensureLink('open', client, client.cwd);
 
   if (typeof linkedProject === 'number') {
     const err: NodeJS.ErrnoException = new Error('Link project error');
@@ -39,15 +61,13 @@ async function fromCurrent(
   return `${slug}/${name}`;
 }
 
-async function getArgs(
+export async function getSlugAndSection(
   client: Client,
-  parsedArgs: ParsedArgs
+  args: string[]
 ): Promise<{ orgAndProject: string; section: string }> {
-  const args = parsedArgs.args;
-
   if (args.length === 0) {
     return {
-      orgAndProject: await fromCurrent(client, parsedArgs),
+      orgAndProject: await fromCurrent(client),
       section: '',
     };
   }
@@ -55,7 +75,7 @@ async function getArgs(
   if (args.length === 1) {
     if (!args[0].includes('/')) {
       return {
-        orgAndProject: await fromCurrent(client, parsedArgs),
+        orgAndProject: await fromCurrent(client),
         section: args[0],
       };
     } else {
@@ -94,26 +114,8 @@ export default async function open(client: Client): Promise<number> {
     return 2;
   }
 
-  const { args, query } = parsedArgs.args.reduce<{
-    args: string[];
-    query: Record<string, string>;
-  }>(
-    (acc, arg) => {
-      if (isFlag(arg)) {
-        const [key, value] = arg.split('=');
-        acc.query[key.replace('--', '')] = value;
-      } else {
-        acc.args.push(arg);
-      }
-      return acc;
-    },
-    { args: [], query: {} }
-  );
-
-  const { orgAndProject, section } = await getArgs(client, {
-    args,
-    flags: parsedArgs.flags,
-  });
+  const { args, query } = getArgsAndQuery(parsedArgs.args);
+  const { orgAndProject, section } = await getSlugAndSection(client, args);
 
   const url = new URL(`${orgAndProject}/${section}`, 'https://vercel.com/');
   url.search = new URLSearchParams(query).toString();
