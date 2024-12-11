@@ -37,7 +37,7 @@
     "aggregate-error": "3.0.1",
     "async-retry": "1.2.3",
     "async-sema": "2.1.4",
-    "cross-spawn": "6.0.5",
+    "cross-spawn": "6.0.6",
     "end-of-stream": "1.4.1",
     "execa": "3.2.0",
     "fs-extra": "10.0.0",
