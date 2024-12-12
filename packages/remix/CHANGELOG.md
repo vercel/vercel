@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 3.0.0
+
+### Major Changes
+
+- Bump path-to-regexp from 6.2.1 to 6.3.0 ([#12744](https://github.com/vercel/vercel/pull/12744))
+
 ## 2.2.14
 
 ### Patch Changes
