@@ -1133,11 +1133,13 @@ export function getPathForPackageManager({
   lockfileVersion,
   nodeVersion,
   env,
+  detectedLockfile,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
+  detectedLockfile: string;
 }): {
   /**
    * Which lockfile was detected.
@@ -1168,6 +1170,7 @@ export function getPathForPackageManager({
     lockfileVersion,
     corepackPackageManager: undefined,
     nodeVersion,
+    detectedLockfile,
   });
 
   if (corepackEnabled) {
