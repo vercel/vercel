@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 4.0.0
+
+### Major Changes
+
+- update path-to-regexp ([#12734](https://github.com/vercel/vercel/pull/12734))
+
+### Patch Changes
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d)]:
+  - @vercel/build-utils@8.8.0
+
 ## 3.2.29
 
 ### Patch Changes
