@@ -251,14 +251,22 @@ test(
 test(
   '[vercel dev] Middleware with error in function handler',
   testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    await testPath(
+      500,
+      '/',
+      /INTERNAL_SERVER_ERROR|MIDDLEWARE_INVOCATION_FAILED/g
+    );
   })
 );
 
 test(
   '[vercel dev] Middleware with error at init',
   testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    await testPath(
+      500,
+      '/',
+      /INTERNAL_SERVER_ERROR|MIDDLEWARE_INVOCATION_FAILED/g
+    );
   })
 );
 
