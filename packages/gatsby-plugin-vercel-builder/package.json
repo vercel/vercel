@@ -21,7 +21,7 @@
   "dependencies": {
     "@sinclair/typebox": "0.25.24",
     "@vercel/build-utils": "7.7.0",
-    "@vercel/routing-utils": "3.1.0",
+    "@vercel/routing-utils": "4.0.0",
     "esbuild": "0.14.47",
     "etag": "1.8.1",
     "fs-extra": "11.1.0"
