@@ -119,7 +119,7 @@ export default async function add(client: Client, argv: string[]) {
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
       .map(c => ({
-        name: c.name,
+        name: c.slug,
         value: c.id,
       })),
   ];

@@ -251,7 +251,6 @@ function initRedeployTest({
     name: 'vercel-redeploy',
     customEnvironments: [
       {
-        name: 'Custom',
         slug: 'custom',
         id: 'env_123123',
         type: 'preview',

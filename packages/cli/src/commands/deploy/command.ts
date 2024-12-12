@@ -88,7 +88,7 @@ export const deployCommand = {
       argument: 'FORMAT',
       deprecated: false,
       description:
-        'Compress the deployment code into a file before uploading it',
+        'Compress the deployment code into an archive before uploading it',
     },
     {
       name: 'no-wait',

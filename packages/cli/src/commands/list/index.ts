@@ -248,7 +248,7 @@ export default async function list(client: Client) {
             Date.now() - (dep?.undeletedAt ?? dep.createdAt)
           );
           const targetName =
-            dep.customEnvironment?.name ||
+            dep.customEnvironment?.slug ||
             (dep.target === 'production' ? 'Production' : 'Preview');
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
@@ -258,7 +258,7 @@ export default async function list(client: Client) {
             stateString(dep.readyState || ''),
             formatEnvironment(contextName, project.name, {
               id: targetSlug,
-              name: targetName,
+              slug: targetName,
             }),
             ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
             ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),

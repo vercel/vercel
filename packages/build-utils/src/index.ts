@@ -40,7 +40,7 @@ import {
   getDiscontinuedNodeVersions,
   getSupportedNodeVersion,
 } from './fs/node-version';
-import streamToBuffer from './fs/stream-to-buffer';
+import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -88,6 +88,7 @@ export {
   getPlatformEnv,
   getPrefixedEnvVars,
   streamToBuffer,
+  streamToBufferChunks,
   debug,
   isSymbolicLink,
   isDirectory,

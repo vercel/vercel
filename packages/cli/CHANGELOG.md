@@ -1,5 +1,35 @@
 # vercel
 
+## 39.2.0
+
+### Minor Changes
+
+- Prefer --archive=tgz-split over VERCEL_SPLIT_ARCHIVE ([#12718](https://github.com/vercel/vercel/pull/12718))
+
+### Patch Changes
+
+- update express even more ([#12703](https://github.com/vercel/vercel/pull/12703))
+
+- Updated dependencies [[`318b5dc77157fa0f6942296407e97251197467fa`](https://github.com/vercel/vercel/commit/318b5dc77157fa0f6942296407e97251197467fa), [`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/node@3.2.29
+  - @vercel/build-utils@8.7.0
+  - @vercel/static-build@2.5.37
+
+## 39.1.3
+
+### Patch Changes
+
+- Normalize POSIX paths in `filePathMap` for `vc build` ([#12666](https://github.com/vercel/vercel/pull/12666))
+
+- [cli] add eslint prefer-const rule and fixes ([#12654](https://github.com/vercel/vercel/pull/12654))
+
+- update "ip" to resolve vulnerability report ([#12687](https://github.com/vercel/vercel/pull/12687))
+
+- [cli] bump express version ([#12689](https://github.com/vercel/vercel/pull/12689))
+
+- Updated dependencies [[`37a806737cf030befd2eaefcf11d573a133ff9dc`](https://github.com/vercel/vercel/commit/37a806737cf030befd2eaefcf11d573a133ff9dc)]:
+  - @vercel/node@3.2.28
+
 ## 39.1.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "13.4.19",
+  "version": "13.5.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -16,9 +16,9 @@
   "scripts": {
     "build": "node ../../utils/build.mjs",
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-run": "vitest -c ./vitest.config.mts",
     "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
-    "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
+    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "engines": {
@@ -39,7 +39,7 @@
     "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "8.6.0",
+    "@vercel/build-utils": "8.7.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/routing-utils": "3.1.0",
     "async-retry": "1.2.3",

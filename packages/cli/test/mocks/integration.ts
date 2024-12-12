@@ -499,8 +499,10 @@ export function useConfiguration() {
 
 export function useIntegration({
   withInstallation,
+  ownerId,
 }: {
   withInstallation: boolean;
+  ownerId?: string;
 }) {
   const storeId = 'store_123';
 
@@ -520,37 +522,27 @@ export function useIntegration({
     }
   );
 
-  client.scenario.get(
-    '/:version/integrations/integration/:integrationId/installed',
-    (req, res) => {
-      const { integrationId } = req.params;
-      const { teamId, source } = req.query;
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { installationType, integrationIdOrSlug } = req.query;
 
-      if (!teamId) {
-        res.status(500);
-        res.end();
-        return;
-      }
-
-      if (source !== 'marketplace') {
-        res.status(500);
-        res.end();
-        return;
-      }
-
-      res.json(
-        withInstallation
-          ? [
-              {
-                id: `${integrationId}-install`,
-                installationType: 'marketplace',
-                ownerId: teamId,
-              },
-            ]
-          : []
-      );
+    if (installationType !== 'marketplace') {
+      res.status(500);
+      res.end();
+      return;
     }
-  );
+
+    res.json(
+      withInstallation
+        ? [
+            {
+              id: `${integrationIdOrSlug}-install`,
+              installationType: 'marketplace',
+              ownerId,
+            },
+          ]
+        : []
+    );
+  });
 
   client.scenario.get(
     '/:version/integrations/integration/:integrationIdOrSlug/products/:productIdOrSlug/plans',
