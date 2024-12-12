@@ -204,19 +204,21 @@ export async function testPath(
 
   // eslint-disable-next-line no-console
   console.log(msg);
-  expect(res.status).toBe(status);
+  expect(res.status, getEnvironmentMessage(isDev)).toBe(status);
   validateResponseHeaders(res);
 
   if (typeof expectedText === 'string') {
     const actualText = await res.text();
-    expect(actualText.trim()).toBe(expectedText.trim());
+    expect(actualText.trim(), getEnvironmentMessage(isDev)).toBe(
+      expectedText.trim()
+    );
   } else if (typeof expectedText === 'function') {
     const actualText = await res.text();
     await expectedText(actualText, res, isDev);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
-    expect(actualText).toMatch(expectedText);
+    expect(actualText, getEnvironmentMessage(isDev)).toMatch(expectedText);
   }
 
   if (expectedHeaders) {
@@ -228,9 +230,16 @@ export async function testPath(
         // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
         actualValue = '/';
       }
-      expect(actualValue).toBe(expectedValue);
+      expect(actualValue, getEnvironmentMessage(isDev)).toBe(expectedValue);
     });
   }
+}
+
+function getEnvironmentMessage(isDev: boolean): string {
+  if (isDev) {
+    return 'FROM DEV SERVER';
+  }
+  return `FROM DEPLOYMENT`;
 }
 
 export async function testFixture(
