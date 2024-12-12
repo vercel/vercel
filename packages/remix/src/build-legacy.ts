@@ -135,6 +135,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
+    detectedLockfile: basename(lockfilePath || ''),
   });
 
   if (typeof installCommand === 'string') {
