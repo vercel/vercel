@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 4.0.0
+
+### Major Changes
+
+- update path-to-regexp ([#12734](https://github.com/vercel/vercel/pull/12734))
+
 ## 3.1.0
 
 ### Minor Changes
