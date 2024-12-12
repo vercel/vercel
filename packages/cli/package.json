@@ -56,7 +56,7 @@
     "@inquirer/input": "2.1.2",
     "@inquirer/select": "2.2.2",
     "@next/env": "11.1.2",
-    "@sentry/node": "5.5.0",
+    "@sentry/node": "7.120.1",
     "@sindresorhus/slugify": "0.11.0",
     "@swc/core": "1.2.218",
     "@tootallnate/once": "1.1.2",

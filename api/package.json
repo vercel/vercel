@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {},
   "dependencies": {
-    "@sentry/node": "5.11.1",
+    "@sentry/node": "7.120.1",
     "got": "11.8.5",
     "node-fetch": "2.6.7",
     "parse-github-url": "1.0.2",
