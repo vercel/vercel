@@ -1,5 +1,26 @@
 # vercel
 
+## 39.2.1
+
+### Patch Changes
+
+- Fix hanging command when `spawn()` fails during CLI extension invocation ([#12735](https://github.com/vercel/vercel/pull/12735))
+
+- Update to v2 endpoints for fetching integrations and installations ([#12721](https://github.com/vercel/vercel/pull/12721))
+
+- Bug fix: new integrations using protocols for storage category can be created via the CLI wizard ([#12733](https://github.com/vercel/vercel/pull/12733))
+
+- [cli] expand cache boundary ([#12726](https://github.com/vercel/vercel/pull/12726))
+
+- bump cookie and sentry/node ([#12739](https://github.com/vercel/vercel/pull/12739))
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d), [`0c4ce9cfbf0c6d3108656584d56fa501e3efe15e`](https://github.com/vercel/vercel/commit/0c4ce9cfbf0c6d3108656584d56fa501e3efe15e), [`bcb9fbe059a017cf78ed2d7b15991d704beb4cf8`](https://github.com/vercel/vercel/commit/bcb9fbe059a017cf78ed2d7b15991d704beb4cf8)]:
+  - @vercel/build-utils@8.8.0
+  - @vercel/node@4.0.0
+  - @vercel/remix-builder@3.0.0
+  - @vercel/static-build@2.5.38
+  - @vercel/redwood@2.1.9
+
 ## 39.2.0
 
 ### Minor Changes
