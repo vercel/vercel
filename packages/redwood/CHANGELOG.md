@@ -1,5 +1,12 @@
 # @vercel/redwood
 
+## 2.1.10
+
+### Patch Changes
+
+- Updated dependencies [[`f031084df97745754da800a8c23a29ae2d58e1e8`](https://github.com/vercel/vercel/commit/f031084df97745754da800a8c23a29ae2d58e1e8)]:
+  - @vercel/routing-utils@5.0.0
+
 ## 2.1.9
 
 ### Patch Changes
