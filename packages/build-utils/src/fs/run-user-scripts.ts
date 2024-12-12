@@ -665,7 +665,7 @@ export async function runNpmInstall(
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
-      detectedLockfile: path.basename(lockfilePath || ''),
+      detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -762,7 +762,7 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
-  detectedLockfile: string;
+  detectedLockfile: string | undefined;
 }) {
   const corepackEnabled = usingCorepack(
     env,
@@ -1227,7 +1227,7 @@ export async function runCustomInstallCommand({
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
-    detectedLockfile: path.basename(lockfilePath || ''),
+    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1272,7 +1272,7 @@ export async function runPackageJsonScript(
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
-      detectedLockfile: path.basename(lockfilePath || ''),
+      detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
     }),
   };
 

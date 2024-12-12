@@ -276,7 +276,7 @@ export const build: BuildV2 = async buildOptions => {
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
-    detectedLockfile: path.basename(lockfilePath || ''),
+    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {

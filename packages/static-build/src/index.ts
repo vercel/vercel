@@ -497,7 +497,7 @@ export const build: BuildV2 = async ({
       nodeVersion,
       env: spawnOpts.env || {},
       turboSupportsCorepackHome,
-      detectedLockfile: path.basename(lockfilePath || ''),
+      detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
     });
 
     if (meta.isDev) {
