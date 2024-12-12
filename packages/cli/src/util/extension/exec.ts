@@ -60,11 +60,13 @@ export async function execExtension(
   const proxyUrl = await listen(proxy, { port: 0, host: '127.0.0.1' });
   const VERCEL_API = proxyUrl.href.replace(/\/$/, '');
   debug(`extension proxy server listening at ${VERCEL_API}`);
+  let exitCode = 0;
 
   try {
     const result = await execa(extensionPath, args, {
       cwd,
       stdio: 'inherit',
+      reject: false,
       env: {
         ...process.env,
         VERCEL_API,
@@ -74,15 +76,17 @@ export async function execExtension(
         //   VERCEL_HELP
       },
     });
-    return result.exitCode;
+    exitCode = result.exitCode;
   } catch (err: unknown) {
     error(
       `Vercel CLI extension ${JSON.stringify(extensionCommand)} failed:\n${errorToString(err)}`
     );
-    return 1;
+    exitCode = 1;
   } finally {
     proxy.close();
   }
+
+  return exitCode;
 }
 
 class ENOENT extends Error {
