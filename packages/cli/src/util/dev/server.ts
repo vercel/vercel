@@ -1583,7 +1583,7 @@ export default class DevServer {
           req,
           res,
           requestId,
-          'EDGE_FUNCTION_INVOCATION_FAILED',
+          'MIDDLEWARE_INVOCATION_FAILED',
           500
         );
         return;

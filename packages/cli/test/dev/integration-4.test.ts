@@ -248,21 +248,25 @@ test(
   })
 );
 
-// https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip(
+test(
   '[vercel dev] Middleware with error in function handler',
   testFixtureStdio('middleware-error-in-handler', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    await testPath(500, '/', /MIDDLEWARE_INVOCATION_FAILED/g);
   })
 );
 
-// https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip(
+test(
   '[vercel dev] Middleware with error at init',
   testFixtureStdio('middleware-error-at-init', async (testPath: any) => {
-    await testPath(500, '/', /EDGE_FUNCTION_INVOCATION_FAILED/);
+    /*
+      These assertions check two possible options because a deployed test
+      of this scenario produces one result that the dev server can't currently
+      replicate.
+    */
+    const devCode = 'MIDDLEWARE_INVOCATION_FAILED';
+    const deploymentCode = 'INTERNAL_SERVER_ERROR';
+
+    await testPath(500, '/', new RegExp(`${devCode}|${deploymentCode}`, 'g'));
   })
 );
 
