@@ -162,6 +162,7 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  *  "region": "iad1",
  *  "latitude": "40.7128",
  *  "longitude": "-74.0060"
+ *  "postalCode": "10001"
  * }
  * ```
  *

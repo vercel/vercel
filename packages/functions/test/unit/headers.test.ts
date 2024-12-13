@@ -33,6 +33,7 @@ describe('`geolocation`', () => {
       countryRegion: undefined,
       latitude: undefined,
       longitude: undefined,
+      postalCode: undefined,
       region: 'dev1',
     });
   });
