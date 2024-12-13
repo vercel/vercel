@@ -384,6 +384,7 @@ export function testFixtureStdio(
 
       try {
         const args = [];
+        args.push('deploy');
         args.push('--token', token);
         args.push('--debug');
 
