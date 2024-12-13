@@ -266,7 +266,7 @@ export const build: BuildV2 = async buildOptions => {
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    lockfilePath,
+    detectedLockfile,
   } = await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
@@ -276,7 +276,7 @@ export const build: BuildV2 = async buildOptions => {
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
-    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
+    detectedLockfile,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {

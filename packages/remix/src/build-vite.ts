@@ -92,7 +92,7 @@ export const build: BuildV2 = async ({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    lockfilePath,
+    detectedLockfile,
   } = await scanParentDirs(entrypointFsDirname, true);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -107,7 +107,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
-    detectedLockfile: lockfilePath ? basename(lockfilePath) : undefined,
+    detectedLockfile,
   });
 
   if (typeof installCommand === 'string') {

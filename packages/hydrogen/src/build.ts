@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import { basename, dirname, join, relative } from 'path';
+import { dirname, join, relative } from 'path';
 import {
   debug,
   download,
@@ -56,7 +56,7 @@ export const build: BuildV2 = async ({
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    lockfilePath,
+    detectedLockfile,
   } = await scanParentDirs(entrypointDir, true);
 
   spawnOpts.env = getEnvForPackageManager({
@@ -66,7 +66,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
-    detectedLockfile: lockfilePath ? basename(lockfilePath) : undefined,
+    detectedLockfile,
   });
 
   if (typeof installCommand === 'string') {

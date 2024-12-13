@@ -73,6 +73,11 @@ export interface ScanParentDirsResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
+  /**
+   * Name of the lockfile (`yarn.lock`, `package-lock.json`, ...) detected
+   * or `undefined` if no lockfile was detected.
+   */
+  detectedLockfile?: string;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -441,6 +446,7 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
     turboSupportsCorepackHome,
+    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
   };
 }
 
@@ -624,7 +630,7 @@ export async function runNpmInstall(
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
-      lockfilePath,
+      detectedLockfile,
     } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
@@ -665,7 +671,7 @@ export async function runNpmInstall(
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
-      detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
+      detectedLockfile,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -1217,7 +1223,7 @@ export async function runCustomInstallCommand({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    lockfilePath,
+    detectedLockfile,
   } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
@@ -1227,7 +1233,7 @@ export async function runCustomInstallCommand({
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
-    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
+    detectedLockfile,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1250,7 +1256,7 @@ export async function runPackageJsonScript(
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    lockfilePath,
+    detectedLockfile,
   } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
@@ -1272,7 +1278,7 @@ export async function runPackageJsonScript(
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
-      detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
+      detectedLockfile,
     }),
   };
 
