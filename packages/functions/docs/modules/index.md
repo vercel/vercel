@@ -53,7 +53,8 @@ The location information of the request, in this way:
   "countryRegion": "NY",
   "region": "iad1",
   "latitude": "40.7128",
-  "longitude": "-74.0060"
+  "longitude": "-74.0060",
+  "postalCode": "10001"
 }
 ```
 
