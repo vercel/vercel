@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.5.2
+
+### Patch Changes
+
+- [vercel/functions] add geolocation.postalCode ([#12753](https://github.com/vercel/vercel/pull/12753))
+
 ## 1.5.1
 
 ### Patch Changes
