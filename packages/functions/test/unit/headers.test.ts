@@ -11,6 +11,7 @@ import {
   LONGITUDE_HEADER_NAME,
   REGION_HEADER_NAME,
   REQUEST_ID_HEADER_NAME,
+  POSTAL_CODE_HEADER_NAME,
 } from '../../src/headers';
 
 test('`ipAddress` returns the value from the header', () => {
@@ -45,6 +46,7 @@ describe('`geolocation`', () => {
         [LONGITUDE_HEADER_NAME]: '34.855499',
         [REGION_HEADER_NAME]: 'TA', // https://en.wikipedia.org/wiki/ISO_3166-2:IL
         [REQUEST_ID_HEADER_NAME]: 'fra1::kpwjx-123455678-c0ffee',
+        [POSTAL_CODE_HEADER_NAME]: '12345',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
@@ -55,6 +57,7 @@ describe('`geolocation`', () => {
       longitude: '34.855499',
       region: 'fra1',
       countryRegion: 'TA',
+      postalCode: '12345',
     });
   });
 
@@ -67,6 +70,7 @@ describe('`geolocation`', () => {
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
         [REQUEST_ID_HEADER_NAME]: 'hnd1:iad1::kpwjx-123455678-c0ffee',
+        [POSTAL_CODE_HEADER_NAME]: '12345',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
@@ -77,6 +81,7 @@ describe('`geolocation`', () => {
       longitude: '30.733399',
       region: 'hnd1',
       countryRegion: '13',
+      postalCode: '12345',
     });
   });
 
@@ -88,6 +93,7 @@ describe('`geolocation`', () => {
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
+        [POSTAL_CODE_HEADER_NAME]: '12345',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
@@ -98,6 +104,7 @@ describe('`geolocation`', () => {
       longitude: '30.733399',
       region: 'dev1',
       countryRegion: '13',
+      postalCode: '12345',
     });
   });
 
@@ -109,6 +116,7 @@ describe('`geolocation`', () => {
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
+        [POSTAL_CODE_HEADER_NAME]: '12345',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
@@ -119,6 +127,7 @@ describe('`geolocation`', () => {
       longitude: '30.733399',
       region: 'dev1',
       countryRegion: '13',
+      postalCode: '12345',
     });
   });
 
@@ -132,6 +141,7 @@ describe('`geolocation`', () => {
         [LONGITUDE_HEADER_NAME]: '-46.6409',
         [REGION_HEADER_NAME]: 'SP',
         [REQUEST_ID_HEADER_NAME]: 'gru1::kpwjx-123455678-c0ffee',
+        [POSTAL_CODE_HEADER_NAME]: '12345',
       },
     });
     expect(geolocation(req)).toEqual<Geo>({
@@ -142,6 +152,7 @@ describe('`geolocation`', () => {
       longitude: '-46.6409',
       region: 'gru1',
       countryRegion: 'SP',
+      postalCode: '12345',
     });
   });
 });
