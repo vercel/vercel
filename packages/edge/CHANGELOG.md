@@ -1,5 +1,11 @@
 # @vercel/edge
 
+## 1.1.4
+
+### Patch Changes
+
+- [vercel/edge] add geolocation.postalCode ([#12755](https://github.com/vercel/vercel/pull/12755))
+
 ## 1.1.3
 
 ### Patch Changes
