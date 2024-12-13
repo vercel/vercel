@@ -402,6 +402,7 @@ export function testFixtureStdio(
 
         args.push('--public');
         args.push('--debug');
+        args.push('--yes');
 
         // Run `vc deploy`
         const deployResult = await execa(binaryPath, args, {
