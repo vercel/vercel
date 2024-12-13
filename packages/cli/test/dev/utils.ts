@@ -384,13 +384,14 @@ export function testFixtureStdio(
 
       try {
         const args = [];
-        args.push('deploy');
+
         args.push('--token', token);
-        args.push('--debug');
 
         if (process.env.VERCEL_TEAM_ID) {
           args.push('--scope', process.env.VERCEL_TEAM_ID);
         }
+
+        args.push('deploy');
 
         if (process.env.VERCEL_CLI_VERSION) {
           args.push(
@@ -398,6 +399,10 @@ export function testFixtureStdio(
             `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
           );
         }
+
+        args.push('--public');
+        args.push('--debug');
+
         // Run `vc deploy`
         const deployResult = await execa(binaryPath, args, {
           cwd,
