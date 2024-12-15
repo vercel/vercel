@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@vercel/nft": "0.26.4",
-    "@vercel/routing-utils": "3.1.0",
+    "@vercel/routing-utils": "4.0.0",
     "semver": "6.3.1"
   },
   "devDependencies": {
