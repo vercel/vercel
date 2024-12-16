@@ -400,7 +400,6 @@ export function testFixtureStdio(
           );
         }
 
-        args.push('--public');
         args.push('--debug');
         args.push('--yes');
 
