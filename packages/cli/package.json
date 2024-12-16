@@ -153,7 +153,7 @@
     "pcre-to-regexp": "1.0.0",
     "pluralize": "7.0.0",
     "promisepipe": "3.0.0",
-    "proxy": "2.0.0",
+    "proxy": "2.1.1",
     "proxy-agent": "6.4.0",
     "qr-image": "3.2.0",
     "raw-body": "2.4.1",

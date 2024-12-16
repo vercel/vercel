@@ -690,8 +690,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       proxy:
-        specifier: 2.0.0
-        version: 2.0.0
+        specifier: 2.1.1
+        version: 2.1.1
       proxy-agent:
         specifier: 6.4.0
         version: 6.4.0
@@ -15061,13 +15061,13 @@ packages:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
     dev: true
 
-  /proxy@2.0.0:
-    resolution: {integrity: sha512-miY/0MGcDYlY+qPmeDRkxPp3VeonR1+NhuWSYH4dFGzNGbW+3hVH9U0J5SeyJke53g24LbKixkI4jv8QUYU7GQ==}
+  /proxy@2.1.1:
+    resolution: {integrity: sha512-nLgd7zdUAOpB3ZO/xCkU8gy74UER7P0aihU8DkUsDS5ZoFwVCX7u8dy+cv5tVK8UaB/yminU1GiLWE26TKPYpg==}
     engines: {node: '>= 14'}
     dependencies:
       args: 5.0.3
       basic-auth-parser: 0.0.2-1
-      debug: 4.3.4
+      debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -17416,6 +17416,27 @@ packages:
 
   /vite-node@1.6.0(@types/node@14.18.33):
     resolution: {integrity: sha512-de6HJgzC+TFzOu0NTC4RAIsyf/DY/ibWDYQUcuEA84EMHhcefTUGkjFHKKEJhQN4A+6I0u++kr3l36ZF2d7XRw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7
+      pathe: 1.1.2
+      picocolors: 1.1.0
+      vite: 5.1.6(@types/node@14.18.33)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+    dev: true
+
+  /vite-node@2.0.1(@types/node@14.18.33):
+    resolution: {integrity: sha512-nVd6kyhPAql0s+xIVJzuF+RSRH8ZimNrm6U8ZvTA4MXv8CHI17TFaQwRaFiK75YX6XeFqZD4IoAaAfi9OR1XvQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     dependencies:
