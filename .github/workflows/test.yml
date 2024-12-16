@@ -17,7 +17,7 @@ concurrency:
 jobs:
   setup:
     name: Find Changes
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
