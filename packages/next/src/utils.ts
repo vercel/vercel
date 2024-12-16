@@ -955,6 +955,7 @@ export type NextPrerenderedRoutes = {
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
       fallbackRevalidate?: number | false;
+      fallbackRootParams?: string[];
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1197,6 +1198,7 @@ export async function getPrerenderManifest(
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
             fallbackRevalidate: number | false | undefined;
+            fallbackRootParams: string[] | undefined;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1343,6 +1345,7 @@ export async function getPrerenderManifest(
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
         let fallbackRevalidate: number | false | undefined;
+        let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
         if (manifest.version === 4) {
           experimentalBypassFor =
@@ -1362,6 +1365,8 @@ export async function getPrerenderManifest(
               : RenderingMode.STATIC);
           fallbackRevalidate =
             manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
+          fallbackRootParams =
+            manifest.dynamicRoutes[lazyRoute].fallbackRootParams;
           allowHeader = manifest.dynamicRoutes[lazyRoute].allowHeader;
         }
 
@@ -1377,6 +1382,7 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             fallbackRevalidate,
+            fallbackRootParams,
             renderingMode,
             allowHeader,
           };
@@ -2585,7 +2591,10 @@ export const onPrerenderRoute =
       // have a HIT for the fallback page.
       let htmlAllowQuery = allowQuery;
       if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-        htmlAllowQuery = [];
+        const { fallbackRootParams } =
+          prerenderManifest.fallbackRoutes[routeKey];
+
+        htmlAllowQuery = fallbackRootParams ?? [];
       }
 
       prerenders[outputPathPage] = new Prerender({
