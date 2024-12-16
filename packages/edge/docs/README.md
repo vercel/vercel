@@ -161,7 +161,7 @@ Always throws an error with a message to use the new import path.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:94](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L94)
+[packages/edge/src/edge-headers.ts:93](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L93)
 
 ---
 
@@ -186,7 +186,7 @@ Always throws an error with a message to use the alternative import.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:80](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L80)
+[packages/edge/src/edge-headers.ts:79](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L79)
 
 ---
 
