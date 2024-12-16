@@ -383,49 +383,32 @@ export function testFixtureStdio(
       const hasGitignore = await fs.pathExists(gitignore);
 
       try {
-        // Run `vc link`
-        const linkResult = await execa(
-          binaryPath,
-          [
-            '-t',
-            token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
-              : []),
-            'link',
-            '--yes',
-          ],
-          { cwd, stdio: 'pipe', reject: false }
-        );
+        const args = [];
 
-        // eslint-disable-next-line no-console
-        console.log({
-          stderr: linkResult.stderr,
-          stdout: linkResult.stdout,
-        });
-        expect(linkResult.exitCode).toBe(0);
+        args.push('--token', token);
+
+        if (process.env.VERCEL_TEAM_ID) {
+          args.push('--scope', process.env.VERCEL_TEAM_ID);
+        }
+
+        args.push('deploy');
+
+        if (process.env.VERCEL_CLI_VERSION) {
+          args.push(
+            '--build-env',
+            `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
+          );
+        }
+
+        args.push('--debug');
+        args.push('--yes');
 
         // Run `vc deploy`
-        const deployResult = await execa(
-          binaryPath,
-          [
-            '-t',
-            token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
-              : []),
-            'deploy',
-            ...(process.env.VERCEL_CLI_VERSION
-              ? [
-                  '--build-env',
-                  `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`,
-                ]
-              : []),
-            '--public',
-            '--debug',
-          ],
-          { cwd, stdio: 'pipe', reject: false }
-        );
+        const deployResult = await execa(binaryPath, args, {
+          cwd,
+          stdio: 'pipe',
+          reject: false,
+        });
 
         const errorDetails = JSON.stringify({
           exitCode: deployResult.exitCode,
