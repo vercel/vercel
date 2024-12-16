@@ -1522,8 +1522,8 @@ importers:
         version: 12.0.0
     devDependencies:
       '@remix-run/dev':
-        specifier: npm:@vercel/remix-run-dev@2.15.1
-        version: /@vercel/remix-run-dev@2.15.1(@remix-run/react@2.15.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6)
+        specifier: npm:@vercel/remix-run-dev@2.13.1
+        version: /@vercel/remix-run-dev@2.13.1(@remix-run/react@2.15.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6)
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -4572,8 +4572,8 @@ packages:
       tslib: 2.6.3
     dev: true
 
-  /@remix-run/node@2.15.1(typescript@4.9.5):
-    resolution: {integrity: sha512-23xWN3/yOohNUr27KS7hEcDMbtufMkniXfXkcLx8Dz2wUVNfJYGpICjeV48Ue/INtpiUCCzOYwkL9VRjIMEJbA==}
+  /@remix-run/node@2.13.1(typescript@4.9.5):
+    resolution: {integrity: sha512-2ly7bENj2n2FNBdEN60ZEbNCs5dAOex/QJoo6EZ8RNFfUQxVKAZkMwfQ4ETV2SLWDgkRLj3Jo5n/dx7O2ZGhGw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       typescript: ^5.1.0
@@ -4581,7 +4581,7 @@ packages:
       typescript:
         optional: true
     dependencies:
-      '@remix-run/server-runtime': 2.15.1(typescript@4.9.5)
+      '@remix-run/server-runtime': 2.13.1(typescript@4.9.5)
       '@remix-run/web-fetch': 4.4.2
       '@web3-storage/multipart-parser': 1.0.0
       cookie-signature: 1.2.1
@@ -4612,9 +4612,33 @@ packages:
       typescript: 4.9.5
     dev: true
 
+  /@remix-run/router@1.20.0:
+    resolution: {integrity: sha512-mUnk8rPJBI9loFDZ+YzPGdeniYK+FTmRD1TMCz7ev2SNIozyKKpnGgsxO34u6Z4z/t0ITuu7voi/AshfsGsgFg==}
+    engines: {node: '>=14.0.0'}
+    dev: true
+
   /@remix-run/router@1.21.0:
     resolution: {integrity: sha512-xfSkCAchbdG5PnbrKqFWwia4Bi61nH+wm8wLEqfHDyp7Y3dZzgqS2itV8i4gAq9pC2HsTpwyBC6Ds8VHZ96JlA==}
     engines: {node: '>=14.0.0'}
+    dev: true
+
+  /@remix-run/server-runtime@2.13.1(typescript@4.9.5):
+    resolution: {integrity: sha512-2DfBPRcHKVzE4bCNsNkKB50BhCCKF73x+jiS836OyxSIAL+x0tguV2AEjmGXefEXc5AGGzoxkus0AUUEYa29Vg==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      typescript: ^5.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+    dependencies:
+      '@remix-run/router': 1.20.0
+      '@types/cookie': 0.6.0
+      '@web3-storage/multipart-parser': 1.0.0
+      cookie: 0.6.0
+      set-cookie-parser: 2.6.0
+      source-map: 0.7.4
+      turbo-stream: 2.4.0
+      typescript: 4.9.5
     dev: true
 
   /@remix-run/server-runtime@2.15.1(typescript@4.9.5):
@@ -6932,13 +6956,13 @@ packages:
       - supports-color
     dev: false
 
-  /@vercel/remix-run-dev@2.15.1(@remix-run/react@2.15.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6):
-    resolution: {integrity: sha512-pBajZHacXLlA/I7JVZzW/6zuQhp65j+Mc2/1T3Dq0RCNdvlVW1oEjDBNFy+2jgJZCKgidD8faf9VjVolp+6VbQ==}
+  /@vercel/remix-run-dev@2.13.1(@remix-run/react@2.15.1)(@types/node@14.18.33)(typescript@4.9.5)(vite@5.1.6):
+    resolution: {integrity: sha512-hUOXI1oC0tySSAZ9VgTSMyu4IbFy14Xfh3+j0OLQ0caob3noUlHch707XQzIwAoMFcb0LSF+/QHcofRatgm7FA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@remix-run/react': ^2.15.1
-      '@remix-run/serve': ^2.15.1
+      '@remix-run/react': ^2.13.1
+      '@remix-run/serve': ^2.13.1
       typescript: ^5.1.0
       vite: ^5.1.0
       wrangler: ^3.28.2
@@ -6962,10 +6986,10 @@ packages:
       '@babel/types': 7.24.0
       '@mdx-js/mdx': 2.3.0
       '@npmcli/package-json': 4.0.1
-      '@remix-run/node': 2.15.1(typescript@4.9.5)
+      '@remix-run/node': 2.13.1(typescript@4.9.5)
       '@remix-run/react': 2.15.1(react-dom@18.3.1)(react@18.3.1)(typescript@4.9.5)
-      '@remix-run/router': 1.21.0
-      '@remix-run/server-runtime': 2.15.1(typescript@4.9.5)
+      '@remix-run/router': 1.20.0
+      '@remix-run/server-runtime': 2.13.1(typescript@4.9.5)
       '@types/mdx': 2.0.12
       '@vanilla-extract/integration': 6.5.0(@types/node@14.18.33)
       arg: 5.0.2
@@ -7006,9 +7030,7 @@ packages:
       tar-fs: 2.1.1
       tsconfig-paths: 4.2.0
       typescript: 4.9.5
-      valibot: 0.41.0(typescript@4.9.5)
       vite: 5.1.6(@types/node@14.18.33)
-      vite-node: 1.6.0(@types/node@14.18.33)
       ws: 7.5.10
     transitivePeerDependencies:
       - '@types/node'
@@ -17349,17 +17371,6 @@ packages:
       '@jridgewell/trace-mapping': 0.3.25
       '@types/istanbul-lib-coverage': 2.0.4
       convert-source-map: 1.8.0
-    dev: true
-
-  /valibot@0.41.0(typescript@4.9.5):
-    resolution: {integrity: sha512-igDBb8CTYr8YTQlOKgaN9nSS0Be7z+WRuaeYqGf3Cjz3aKmSnqEmYnkfVjzIuumGqfHpa3fLIvMEAfhrpqN8ng==}
-    peerDependencies:
-      typescript: '>=5'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-    dependencies:
-      typescript: 4.9.5
     dev: true
 
   /validate-npm-package-license@3.0.4:
