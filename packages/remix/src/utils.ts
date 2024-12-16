@@ -5,9 +5,8 @@ import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
-import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
-import type { RouteManifestEntry, RouteManifest } from './types';
+import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
 
 export const require_ = createRequire(__filename);
 
@@ -222,8 +221,7 @@ export async function chdirAndReadConfig(
   dir: string,
   packageJsonPath: string
 ) {
-  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
-    await import(join(remixRunDevPath, 'dist/config.js'));
+  const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
 
   const originalCwd = process.cwd();
 

@@ -35,3 +35,13 @@ export interface RouteManifestEntry {
 export interface RouteManifest {
   [routeId: string]: RouteManifestEntry;
 }
+
+export interface RemixConfig {
+  appDirectory: string;
+  assetsBuildDirectory: string;
+  cacheDirectory: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  routes: RouteManifest;
+  publicPath: string;
+}
