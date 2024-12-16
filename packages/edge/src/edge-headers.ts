@@ -68,12 +68,28 @@ export interface Geo {
   postalCode?: string;
 }
 
+/**
+ * @deprecated use `const { ipAddress } from '@vercel/functions'` instead.
+ *
+ * Throws an error indicating that the `ipAddress` function should be imported
+ * from '@vercel/functions' instead of using this function.
+ *
+ * @throws {Error} Always throws an error with a message to use the alternative import.
+ */
 export function ipAddress() {
   throw new Error(
     "use `const { ipAddress } from '@vercel/functions'` instead."
   );
 }
 
+/**
+ * @deprecated Use `const { geolocation } from '@vercel/functions'` instead.
+ *
+ * Throws an error indicating that the `geolocation` function should be imported
+ * from '@vercel/functions' instead.
+ *
+ * @throws {Error} Always throws an error with a message to use the new import path.
+ */
 export function geolocation() {
   throw new Error(
     "use `const { geolocation } from '@vercel/functions'` instead."

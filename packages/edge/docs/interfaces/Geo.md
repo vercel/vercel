@@ -25,7 +25,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:54](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L54)
+[packages/edge/src/edge-headers.ts:45](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L45)
 
 ---
 
@@ -37,7 +37,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:57](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L57)
+[packages/edge/src/edge-headers.ts:48](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L48)
 
 ---
 
@@ -50,7 +50,7 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:68](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L68)
+[packages/edge/src/edge-headers.ts:59](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L59)
 
 ---
 
@@ -62,7 +62,7 @@ The flag emoji for the country the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:60](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L60)
+[packages/edge/src/edge-headers.ts:51](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L51)
 
 ---
 
@@ -74,7 +74,7 @@ The latitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:71](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L71)
+[packages/edge/src/edge-headers.ts:62](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L62)
 
 ---
 
@@ -86,7 +86,7 @@ The longitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:74](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L74)
+[packages/edge/src/edge-headers.ts:65](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L65)
 
 ---
 
@@ -98,7 +98,7 @@ The postal code of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:77](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L77)
+[packages/edge/src/edge-headers.ts:68](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L68)
 
 ---
 
@@ -110,4 +110,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:63](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L63)
+[packages/edge/src/edge-headers.ts:54](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L54)
