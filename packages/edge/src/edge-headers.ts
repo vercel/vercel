@@ -36,15 +36,6 @@ export const REQUEST_ID_HEADER_NAME = 'x-vercel-id';
  * Unicode characters for emoji flags start at this number, and run up to 127469.
  */
 export const EMOJI_FLAG_UNICODE_STARTING_POSITION = 127397;
-/**
- * We define a new type so this function can be reused with
- * the global `Request`, `node-fetch` and other types.
- */
-interface Request {
-  headers: {
-    get(name: string): string | null;
-  };
-}
 
 /**
  * The location information of a given request.
@@ -77,78 +68,14 @@ export interface Geo {
   postalCode?: string;
 }
 
-function getHeader(request: Request, key: string): string | undefined {
-  return request.headers.get(key) ?? undefined;
-}
-
-/**
- * Converts the 2 digit countryCode into a flag emoji by adding the current character value to the emoji flag unicode starting position. See [Country Code to Flag Emoji](https://dev.to/jorik/country-code-to-flag-emoji-a21) by Jorik Tangelder.
- *
- * @param countryCode The country code returned by: `getHeader(request, COUNTRY_HEADER_NAME)`.
- * @returns A flag emoji or undefined.
- */
-function getFlag(countryCode: string | undefined): string | undefined {
-  const regex = new RegExp('^[A-Z]{2}$').test(countryCode!);
-  if (!countryCode || !regex) return undefined;
-  return String.fromCodePoint(
-    ...countryCode
-      .split('')
-      .map(char => EMOJI_FLAG_UNICODE_STARTING_POSITION + char.charCodeAt(0))
+export function ipAddress() {
+  throw new Error(
+    "use `const { ipAddress } from '@vercel/functions'` instead."
   );
 }
 
-/**
- * Returns the IP address of the request from the headers.
- *
- * @see {@link IP_HEADER_NAME}
- * @param request The incoming request object which provides the IP
- */
-export function ipAddress(request: Request): string | undefined {
-  console.warn(
-    'This method will be removed in the next major version. Use `import { ipAddress } from @vercel/functions` instead.'
+export function geolocation() {
+  throw new Error(
+    "use `const { geolocation } from '@vercel/functions'` instead."
   );
-  return getHeader(request, IP_HEADER_NAME);
-}
-
-/**
- * Extracts the Vercel Edge Network region name from the request ID.
- *
- * @param requestId The request ID (`x-vercel-id`).
- * @returns The first region received the client request.
- */
-function getRegionFromRequestId(requestId?: string): string | undefined {
-  if (!requestId) {
-    return 'dev1';
-  }
-
-  // The request ID is in the format of `region::id` or `region1:region2:...::id`.
-  return requestId.split(':')[0];
-}
-
-/**
- * Returns the location information for the incoming request.
- *
- * @see {@link CITY_HEADER_NAME}
- * @see {@link COUNTRY_HEADER_NAME}
- * @see {@link REGION_HEADER_NAME}
- * @see {@link LATITUDE_HEADER_NAME}
- * @see {@link LONGITUDE_HEADER_NAME}
- * @see {@link POSTAL_CODE_HEADER_NAME}
- * @param request The incoming request object which provides the geolocation data
- */
-export function geolocation(request: Request): Geo {
-  console.warn(
-    'This method will be removed in the next major version. Use `import { geolocation } from @vercel/functions` instead.'
-  );
-
-  return {
-    city: getHeader(request, CITY_HEADER_NAME),
-    country: getHeader(request, COUNTRY_HEADER_NAME),
-    flag: getFlag(getHeader(request, COUNTRY_HEADER_NAME)),
-    countryRegion: getHeader(request, REGION_HEADER_NAME),
-    region: getRegionFromRequestId(getHeader(request, REQUEST_ID_HEADER_NAME)),
-    latitude: getHeader(request, LATITUDE_HEADER_NAME),
-    longitude: getHeader(request, LONGITUDE_HEADER_NAME),
-    postalCode: getHeader(request, POSTAL_CODE_HEADER_NAME),
-  };
 }
