@@ -62,6 +62,9 @@
     "tracked-built-ins": "^3.3.0",
     "webpack": "^5.89.0"
   },
+  "resolutions": {
+    "@babel/traverse": "7.25.9"
+  },
   "engines": {
     "node": ">= 18"
   },
