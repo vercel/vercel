@@ -40,11 +40,6 @@
     "vite": "5.1.6",
     "vitest": "2.0.3"
   },
-  "pnpm": {
-    "overrides": {
-      "follow-redirects": "^1.15.6"
-    }
-  },
   "scripts": {
     "build": "node utils/gen.js && turbo --no-update-notifier run build",
     "vercel-build": "pnpm build && pnpm run pack && cd api && node -r ts-eager/register ./_lib/script/build.ts",
