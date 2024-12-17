@@ -25,7 +25,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:45](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L45)
+packages/functions/headers.d.ts:59
 
 ---
 
@@ -37,7 +37,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:48](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L48)
+packages/functions/headers.d.ts:61
 
 ---
 
@@ -50,7 +50,7 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:59](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L59)
+packages/functions/headers.d.ts:69
 
 ---
 
@@ -62,7 +62,7 @@ The flag emoji for the country the request originated from.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:51](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L51)
+packages/functions/headers.d.ts:63
 
 ---
 
@@ -74,7 +74,7 @@ The latitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:62](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L62)
+packages/functions/headers.d.ts:71
 
 ---
 
@@ -86,7 +86,7 @@ The longitude of the client.
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:65](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L65)
+packages/functions/headers.d.ts:73
 
 ---
 
@@ -94,11 +94,11 @@ The longitude of the client.
 
 • `Optional` **postalCode**: `string`
 
-The postal code of the client.
+The postal code of the client
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:68](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L68)
+packages/functions/headers.d.ts:75
 
 ---
 
@@ -110,4 +110,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[packages/edge/src/edge-headers.ts:54](https://github.com/vercel/vercel/blob/main/packages/edge/src/edge-headers.ts#L54)
+packages/functions/headers.d.ts:65
