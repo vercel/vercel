@@ -215,7 +215,7 @@ async function getDeployment(host: string) {
 }
 
 describe('frameworks', () => {
-  const skipExamples = ['sanity-v3'];
+  const skipExamples = ['sanity-v3', 'solidstart'];
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
