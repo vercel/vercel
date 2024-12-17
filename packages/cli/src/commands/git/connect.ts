@@ -1,23 +1,28 @@
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
+import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  RepoInfo,
+  type RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
 import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { connectSubcommand } from './command';
+import { ensureLink } from '../../util/link/ensure-link';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -50,22 +55,32 @@ interface PromptConnectArgParams {
   remoteUrls: Dictionary<string>;
 }
 
-export default async function connect(
-  client: Client,
-  argv: any,
-  args: string[],
-  project: Project | undefined,
-  org: Org | undefined
-) {
+export default async function connect(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(connectSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
   const { cwd } = client;
   const telemetry = new GitConnectTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+  telemetry.trackCliFlagConfirm(opts['--confirm']);
+  telemetry.trackCliFlagYes(opts['--yes']);
 
-  const confirm = Boolean(argv['--yes']);
-  const repoArg = args[0];
+  if ('--confirm' in opts) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    opts['--yes'] = opts['--confirm'];
+  }
+
+  const confirm = Boolean(opts['--yes']);
 
   if (args.length > 1) {
     output.error(
@@ -75,14 +90,17 @@ export default async function connect(
     );
     return 2;
   }
-  if (!project || !org) {
-    output.error(
-      `Can't find \`org\` or \`project\`. Make sure your current directory is linked to a Vercel project by running ${getCommandName(
-        'link'
-      )}.`
-    );
-    return 1;
+
+  const repoArg = args[0];
+  telemetry.trackCliArgumentGitUrl(repoArg);
+
+  const linkedProject = await ensureLink('git', client, client.cwd, {
+    autoConfirm: confirm,
+  });
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
   }
+  const { project, org } = linkedProject;
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -100,7 +118,6 @@ export default async function connect(
       );
       return 1;
     }
-    telemetry.trackCliArgumentGitUrl(repoArg);
     if (gitConfig) {
       return await connectArgWithLocalGit({
         client,
@@ -336,7 +353,6 @@ async function checkExistsAndConnect({
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -374,7 +390,6 @@ async function checkExistsAndConnect({
     await disconnectGitProvider(client, org, project.id);
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -413,7 +428,7 @@ async function selectRemoteUrl(
   client: Client,
   remoteUrls: Dictionary<string>
 ): Promise<string> {
-  let choices: ListChoice[] = [];
+  const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
       name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,

@@ -11,7 +11,7 @@ import minimatch from 'minimatch';
 import httpProxy from 'http-proxy';
 import { randomBytes } from 'crypto';
 import serveHandler from 'serve-handler';
-import { watch, FSWatcher } from 'chokidar';
+import { watch, type FSWatcher } from 'chokidar';
 import { parse as parseDotenv } from 'dotenv';
 import path, { isAbsolute, basename, dirname, extname, join } from 'path';
 import once from '@tootallnate/once';
@@ -27,17 +27,17 @@ import { getVercelIgnore, fileNameSymbol } from '@vercel/client';
 import {
   getTransformedRoutes,
   appendRoutesToPhase,
-  HandleValue,
-  Route,
+  type HandleValue,
+  type Route,
 } from '@vercel/routing-utils';
 import {
-  Builder,
+  type Builder,
   cloneEnv,
-  Env,
+  type Env,
   getNodeBinPaths,
-  StartDevServerResult,
+  type StartDevServerResult,
   FileFsRef,
-  PackageJson,
+  type PackageJson,
   spawnCommand,
 } from '@vercel/build-utils';
 import {
@@ -70,7 +70,7 @@ import errorTemplate404 from './templates/error_404';
 import errorTemplate502 from './templates/error_502';
 import redirectTemplate from './templates/redirect';
 
-import {
+import type {
   VercelConfig,
   DevServerOptions,
   BuildMatch,
@@ -586,11 +586,17 @@ export default class DevServer {
 
       let {
         builders,
+        // eslint-disable-next-line prefer-const
         warnings,
+        // eslint-disable-next-line prefer-const
         errors,
+        // eslint-disable-next-line prefer-const
         defaultRoutes,
+        // eslint-disable-next-line prefer-const
         redirectRoutes,
+        // eslint-disable-next-line prefer-const
         rewriteRoutes,
+        // eslint-disable-next-line prefer-const
         errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: 'latest',
@@ -901,7 +907,7 @@ export default class DevServer {
     const files = await getFiles(this.cwd, {});
     this.files = {};
     for (const fsPath of files) {
-      let path = relative(this.cwd, fsPath);
+      const path = relative(this.cwd, fsPath);
       const { mode } = await fs.stat(fsPath);
       this.files[path] = new FileFsRef({ mode, fsPath });
       const extensionless = this.getExtensionlessFile(path);
@@ -936,7 +942,6 @@ export default class DevServer {
     this.watcher = watch(this.cwd, {
       ignored: (path: string) => !this.filter(path),
       ignoreInitial: true,
-      useFsEvents: false,
       usePolling: false,
       persistent: true,
     });
@@ -1004,7 +1009,10 @@ export default class DevServer {
 
     if (this.watcher) {
       debug(`Closing file watcher`);
-      ops.push(this.watcher.close());
+      const closePromise = this.watcher.close();
+      if (closePromise) {
+        ops.push(closePromise);
+      }
     }
 
     for (const pid of this.shutdownCallbacks.keys()) {
@@ -1278,7 +1286,7 @@ export default class DevServer {
   ) => {
     await this.startPromise;
 
-    let requestId = generateRequestId(this.podId);
+    const requestId = generateRequestId(this.podId);
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
@@ -1575,7 +1583,7 @@ export default class DevServer {
           req,
           res,
           requestId,
-          'EDGE_FUNCTION_INVOCATION_FAILED',
+          'MIDDLEWARE_INVOCATION_FAILED',
           500
         );
         return;
@@ -2259,7 +2267,7 @@ export default class DevServer {
 
     // This is necesary so that the dev command in the Project
     // will work cross-platform (especially Windows).
-    let command = devCommand
+    const command = devCommand
       .replace(/\$PORT/g, `${port}`)
       .replace(/%PORT%/g, `${port}`);
 

@@ -1,5 +1,24 @@
 # @vercel/remix-builder
 
+## 4.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
+## 3.0.0
+
+### Major Changes
+
+- Bump path-to-regexp from 6.2.1 to 6.3.0 ([#12744](https://github.com/vercel/vercel/pull/12744))
+
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
 ## 2.2.13
 
 ### Patch Changes

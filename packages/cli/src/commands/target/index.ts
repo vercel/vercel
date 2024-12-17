@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { type Command, help } from '../help';
@@ -8,9 +8,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import handleError from '../../util/handle-error';
 import output from '../../output-manager';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  ls: ['ls', 'list'],
+  ls: getCommandAliases(listSubcommand),
 };
 
 export default async function main(client: Client) {

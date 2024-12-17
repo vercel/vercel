@@ -20,4 +20,13 @@ export class RedeployTelemetryClient
       this.trackCliFlag('no-wait');
     }
   }
+
+  trackCliOptionTarget(target: string | undefined) {
+    if (target) {
+      this.trackCliArgument({
+        arg: 'target',
+        value: this.redactedTargetName(target),
+      });
+    }
+  }
 }

@@ -1,21 +1,35 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';
 import confirm from '../../util/input/confirm';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/rm';
 import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
+import { removeSubcommand } from './command';
 
 const e = encodeURIComponent;
 
-export default async function rm(client: Client, args: string[]) {
+export default async function rm(client: Client, argv: string[]) {
   const telemetryClient = new ProjectRmTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args } = parsedArgs;
 
   if (args.length !== 1) {
     output.error(
@@ -68,7 +82,7 @@ async function readConfirmation(
   output.print(
     prependEmoji(
       `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
-        `It will also delete everything under the project including deployments.\n`,
+        'It will also delete everything under the project including deployments.\n',
       emoji('warning')
     )
   );

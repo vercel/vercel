@@ -47,19 +47,20 @@ The location information of the request, in this way:
 
 ```json
 {
-  "city": "New York",
-  "country": "US",
-  "flag": "🇺🇸",
-  "countryRegion": "NY",
-  "region": "dev1",
-  "latitude": "40.7128",
-  "longitude": "-74.0060"
+ "city": "New York",
+ "country": "US",
+ "flag": "🇺🇸",
+ "countryRegion": "NY",
+ "region": "iad1",
+ "latitude": "40.7128",
+ "longitude": "-74.0060"
+ "postalCode": "10001"
 }
 ```
 
 #### Defined in
 
-[packages/functions/src/headers.ts:172](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L172)
+[packages/functions/src/headers.ts:180](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L180)
 
 ---
 
@@ -144,7 +145,7 @@ The IP address of the request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:124](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L124)
+[packages/functions/src/headers.ts:131](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L131)
 
 ---
 

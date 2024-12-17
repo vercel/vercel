@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { displayBuildLogs } from '../../util/logs';
 import { handleError } from '../../util/error';
@@ -207,8 +207,8 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  const customEnvironmentName = deployment.customEnvironment?.name;
-  const target = customEnvironmentName ?? deployment.target ?? 'preview';
+  const customEnvironmentSlug = deployment.customEnvironment?.slug;
+  const target = customEnvironmentSlug ?? deployment.target ?? 'preview';
   print(`    ${chalk.cyan('target')}\t`);
   // TODO: once custom environments is shipped for all users,
   // make all deployments link to the environment settings page

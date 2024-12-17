@@ -356,7 +356,13 @@ export async function scanParentDirs(
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
   const {
-    paths: [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath],
+    paths: [
+      yarnLockPath,
+      npmLockPath,
+      pnpmLockPath,
+      bunLockTextPath,
+      bunLockBinPath,
+    ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
     base,
@@ -365,6 +371,7 @@ export async function scanParentDirs(
       'yarn.lock',
       'package-lock.json',
       'pnpm-lock.yaml',
+      'bun.lock',
       'bun.lockb',
     ],
   });
@@ -372,7 +379,8 @@ export async function scanParentDirs(
   let lockfileVersion: number | undefined;
   let cliType: CliType;
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
+  const bunLockPath = bunLockTextPath ?? bunLockBinPath;
+  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLock] =
     await Promise.all([
       Boolean(yarnLockPath),
       npmLockPath
@@ -381,7 +389,7 @@ export async function scanParentDirs(
       pnpmLockPath
         ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
         : null,
-      bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
+      bunLockPath ? fs.readFile(bunLockPath) : null,
     ]);
 
   const rootProjectInfo = readPackageJson
@@ -400,11 +408,10 @@ export async function scanParentDirs(
     : undefined;
 
   // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
-  if (bunLockBin && hasYarnLock) {
+  if (bunLock && hasYarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    // TODO: read "bun-lockfile-format-v0"
-    lockfileVersion = 0;
+    lockfileVersion = bunLockTextPath ? 1 : 0;
   } else if (hasYarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
@@ -416,11 +423,10 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
-  } else if (bunLockBin) {
+  } else if (bunLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    // TODO: read "bun-lockfile-format-v0"
-    lockfileVersion = 0;
+    lockfileVersion = bunLockTextPath ? 1 : 0;
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
@@ -1096,7 +1102,7 @@ export function detectPackageManager(
     case 'bun':
       return {
         path: '/bun1',
-        detectedLockfile: 'bun.lockb',
+        detectedLockfile: lockfileVersion === 0 ? 'bun.lockb' : 'bun.lock',
         detectedPackageManager: 'bun@1.x',
       };
     case 'yarn':

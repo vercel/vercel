@@ -19,6 +19,7 @@ async function buildTemplate(options) {
     // To see the latest stable chrome version: https://www.chromestatus.com/features/schedule
     target: 'esnext',
     write: options.write,
+    external: ['async_hooks'], // available in edge runtime
   });
 }
 
@@ -37,10 +38,3 @@ async function buildNextjsWrapper() {
 }
 
 module.exports = buildNextjsWrapper;
-
-if (!module.parent) {
-  buildNextjsWrapper().catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
-}

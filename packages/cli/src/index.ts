@@ -66,7 +66,7 @@ import getUpdateCommand from './util/get-update-command';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { VercelConfig } from '@vercel/client';
+import type { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
@@ -74,6 +74,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -262,6 +263,10 @@ const main = async () => {
     config: config.telemetry,
   });
 
+  checkTelemetryStatus({
+    config,
+  });
+
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -363,7 +368,14 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'build',
+    'telemetry',
+  ];
 
   // Prompt for login if there is no current token
   if (
@@ -547,8 +559,6 @@ const main = async () => {
     }
   }
 
-  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
-
   let exitCode;
 
   try {
@@ -564,7 +574,7 @@ const main = async () => {
           parsedArgs.args.slice(3),
           cwd
         );
-        telemetry.trackCliExtension(targetCommand);
+        telemetry.trackCliExtension();
       } catch (err: unknown) {
         if (isErrnoException(err) && err.code === 'ENOENT') {
           // Fall back to `vc deploy <dir>`
@@ -638,7 +648,7 @@ const main = async () => {
           func = require('./commands/integration').default;
           break;
         case 'integration-resource':
-          telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
+          telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
           func = require('./commands/integration-resource').default;
           break;
         case 'link':
@@ -786,8 +796,9 @@ const main = async () => {
     return 1;
   }
 
-  // specifically don't await this, we want to fire and forget
-  telemetryEventStore.save();
+  telemetryEventStore.updateTeamId(client.config.currentTeam);
+  await telemetryEventStore.save();
+
   return exitCode;
 };
 

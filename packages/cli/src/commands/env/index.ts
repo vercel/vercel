@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -18,13 +18,13 @@ import {
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { EnvTelemetryClient } from '../../util/telemetry/commands/env';
-import { getAliases } from '..';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  ls: getAliases(listSubcommand),
-  add: getAliases(addSubcommand),
-  rm: getAliases(removeSubcommand),
-  pull: getAliases(pullSubcommand),
+  ls: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  rm: getCommandAliases(removeSubcommand),
+  pull: getCommandAliases(pullSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -46,7 +46,10 @@ export default async function main(client: Client) {
   }
 
   const subArgs = parsedArgs.args.slice(1);
-  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    subArgs,
+    COMMAND_CONFIG
+  );
 
   const needHelp = parsedArgs.flags['--help'];
 
@@ -65,35 +68,35 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'list');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandList(subcommand);
+      telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
     case 'add':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'add');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandAdd(subcommand);
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     case 'rm':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'remove');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandRemove(subcommand);
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
     case 'pull':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('env', 'pull');
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(pullSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandPull(subcommand);
+      telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

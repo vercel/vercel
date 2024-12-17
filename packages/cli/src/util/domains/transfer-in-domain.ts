@@ -1,5 +1,5 @@
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import type { Domain } from '@vercel-internals/types';
 
 type Response = {

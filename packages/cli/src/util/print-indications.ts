@@ -1,7 +1,7 @@
 import chalk from 'chalk';
-import { Response } from 'node-fetch';
+import type { Response } from 'node-fetch';
 import linkStyle from './output/link';
-import { emoji, EmojiLabel, prependEmoji } from './emoji';
+import { emoji, type EmojiLabel, prependEmoji } from './emoji';
 import output from '../output-manager';
 
 export default function printIndications(res: Response) {

@@ -6,7 +6,7 @@ import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
 
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
-import Client from '../client';
+import type Client from '../client';
 import { InvalidToken, isAPIError, ProjectNotFound } from '../errors-ts';
 import getUser from '../get-user';
 import getTeamById from '../teams/get-team-by-id';
@@ -16,7 +16,7 @@ import type {
   Org,
   ProjectLink,
 } from '@vercel-internals/types';
-import { prependEmoji, emoji, EmojiLabel } from '../emoji';
+import { prependEmoji, emoji, type EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
 import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
 import outputCode from '../output/code';

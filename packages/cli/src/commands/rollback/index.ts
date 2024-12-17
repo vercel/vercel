@@ -7,7 +7,7 @@ import ms from 'ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
 import { help } from '../help';
-import { rollbackCommand } from './command';
+import { rollbackCommand, statusSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
 import output from '../../output-manager';
@@ -18,16 +18,8 @@ import output from '../../output-manager';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async (client: Client): Promise<number> => {
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
-  const telemetry = new RollbackTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
@@ -35,27 +27,44 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  const actionOrDeployId = parsedArgs.args[1] || 'status';
+  const telemetry = new RollbackTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
-  if (parsedArgs.flags['--help']) {
-    const subcommand = actionOrDeployId === 'status' ? 'status' : undefined;
-    telemetry.trackCliFlagHelp('rollback', subcommand);
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!parsedArgs.args[1] && needHelp) {
+    telemetry.trackCliFlagHelp('rollback');
     output.print(help(rollbackCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   // validate the timeout
-  let timeout = parsedArgs.flags['--timeout'];
+  const timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
     output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
+  const actionOrDeployId = parsedArgs.args[1] || 'status';
+
   try {
     if (actionOrDeployId === 'status') {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('promote', 'status');
+        output.print(
+          help(statusSubcommand, {
+            columns: client.stderr.columns,
+            parent: rollbackCommand,
+          })
+        );
+        return 2;
+      }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
         autoConfirm: Boolean(parsedArgs.flags['--yes']),

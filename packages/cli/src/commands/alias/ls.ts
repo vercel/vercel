@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
 import getScope from '../../util/get-scope';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
@@ -41,7 +41,7 @@ export default async function ls(client: Client, argv: string[]) {
 
   try {
     paginationOptions = getPaginationOpts(opts);
-    let [next, limit] = paginationOptions;
+    const [next, limit] = paginationOptions;
 
     telemetryClient.trackCliOptionNext(next);
     telemetryClient.trackCliOptionLimit(limit);
@@ -92,7 +92,7 @@ function printAliasTable(aliases: Alias[]) {
         // for legacy reasons, we might have situations
         // where the deployment was deleted and the alias
         // not collected appropriately, and we need to handle it
-        a.deployment && a.deployment.url ? a.deployment.url : chalk.gray('–'),
+        a.deployment?.url ? a.deployment.url : chalk.gray('–'),
         a.alias,
         ms(Date.now() - a.createdAt),
       ]),

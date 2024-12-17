@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { traverseUpDirectories } from '../src/fs/run-user-scripts';
 
 const isWindows = process.platform === 'win32';

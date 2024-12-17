@@ -74,6 +74,6 @@ Update \`@remix-run/dev\` fork to v${newVersion}
     owner,
     repo,
     issue_number: pr.data.number,
-    labels: ['area: remix', 'semver: patch', 'pr: automerge'],
+    labels: ['area: remix', 'semver: patch'],
   });
 };

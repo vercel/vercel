@@ -1,9 +1,9 @@
-import { Deployment } from '@vercel-internals/types';
+import type { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { handleError } from '../../util/error';
@@ -91,10 +91,7 @@ export default async function logs(client: Client) {
 
   // Note: only send literal values to telemetry for known values
   const outputMode = parsedArguments.flags['--output'];
-  telemetry.trackCliOptionOutput(
-    outputMode,
-    outputMode === 'raw' || outputMode === 'short'
-  );
+  telemetry.trackCliOptionOutput(outputMode);
 
   let contextName: string | null = null;
 

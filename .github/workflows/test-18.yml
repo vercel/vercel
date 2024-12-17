@@ -1,14 +1,11 @@
 name: Tests Node.js v18
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - '!*'
   pull_request:
+  merge_group:
 
 env:
+  VERCEL_TELEMETRY_DISABLED: '1'
   NODE_VERSION: '18'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
@@ -22,7 +19,7 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}

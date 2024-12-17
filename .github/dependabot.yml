@@ -8,7 +8,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -33,7 +32,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -58,7 +56,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -93,7 +90,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -123,7 +119,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -153,7 +148,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -193,7 +187,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -218,7 +211,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -243,7 +235,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -268,7 +259,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'
@@ -293,7 +283,6 @@ updates:
     reviewers:
       - 'zero-config-support'
     labels:
-      - 'pr: automerge'
       - 'dependencies'
     commit-message:
       prefix: '[framework-fixture-dependencies]'

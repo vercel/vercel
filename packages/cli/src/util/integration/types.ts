@@ -32,12 +32,27 @@ export interface MetadataSchema {
   required?: string[];
 }
 
+export type IntegrationProductProtocolBase = {
+  status: 'enabled' | 'disabled';
+};
+
+export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
+  repl?: {
+    enabled: boolean;
+    supportsReadOnlyMode: boolean;
+    welcomeMessage?: string;
+  };
+};
+
 export interface IntegrationProduct {
   id: string;
   slug: string;
   name: string;
   shortDescription: string;
-  type: 'storage' | string;
+  type?: 'storage' | string;
+  protocols?: {
+    storage?: StorageIntegrationProtocol;
+  };
   metadataSchema: MetadataSchema;
 }
 

@@ -1,8 +1,8 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import { yesOption } from '../../util/arg-common';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { parseArguments } from '../../util/get-args';
+import type { getFlagsSpecification } from '../../util/get-flags-specification';
+import type { parseArguments } from '../../util/get-args';
 
 export const pullCommand = {
   name: 'pull',
@@ -19,7 +19,7 @@ export const pullCommand = {
     {
       name: 'environment',
       description: 'Deployment environment [development]',
-      argument: 'environment',
+      argument: 'TARGET',
       shorthand: null,
       type: String,
       deprecated: false,
@@ -28,7 +28,7 @@ export const pullCommand = {
       name: 'git-branch',
       description:
         'Specify the Git branch to pull specific Environment Variables for',
-      argument: 'branch',
+      argument: 'NAME',
       shorthand: null,
       type: String,
       deprecated: false,

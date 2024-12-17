@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
-import { useTeams } from '../../mocks/team';
+import { useTeam } from '../../mocks/team';
 import getScope from '../../../src/util/get-scope';
 
 describe('getScope', () => {
-  let mockTeam: ReturnType<typeof useTeams>[0];
+  let mockTeam: ReturnType<typeof useTeam>;
   let mockUser: ReturnType<typeof useUser>;
   beforeEach(() => {
-    mockTeam = useTeams()[0];
+    mockTeam = useTeam();
   });
 
   describe('non-northstar', () => {

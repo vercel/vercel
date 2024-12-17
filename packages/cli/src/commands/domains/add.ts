@@ -15,23 +15,27 @@ import { removeDomainFromProject } from '../../util/projects/remove-domain-from-
 import code from '../../util/output/code';
 import output from '../../output-manager';
 import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains/add';
+import { addSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = {
-  '--debug': boolean;
-  '--force': boolean;
-};
-
-export default async function add(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { telemetryEventStore } = client;
+export default async function add(client: Client, argv: string[]) {
   const telemetry = new DomainsAddTelemetryClient({
     opts: {
-      store: telemetryEventStore,
+      store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   const force = opts['--force'];
   telemetry.trackCliFlagForce(force);
@@ -62,8 +66,8 @@ export default async function add(
 
   const domainName = String(args[0]);
   const projectName = project ? project.name : String(args[1]);
-  telemetry.trackCliArgumentDomainName(domainName);
-  telemetry.trackCliArgumentProjectName(args[1]);
+  telemetry.trackCliArgumentDomain(domainName);
+  telemetry.trackCliArgumentProject(args[1]);
 
   const addStamp = stamp();
 

@@ -32,7 +32,7 @@ interface GetLatestWorkerPayload {
  * detected version. The version could be stale, but still newer than the
  * current version.
  *
- * @returns {String|undefined} If a newer version is found, then the lastest
+ * @returns {String|undefined} If a newer version is found, then the latest
  * version, otherwise `undefined`.
  */
 export default function getLatestVersion({
@@ -67,7 +67,7 @@ export default function getLatestVersion({
     }
   }
 
-  if (!cache || !cache.expireAt || cache.expireAt < Date.now()) {
+  if (!cache || !cache.expireAt || cache.expireAt <= Date.now()) {
     spawnWorker({
       cacheFile,
       distTag,
@@ -77,7 +77,7 @@ export default function getLatestVersion({
   }
 
   if (cache) {
-    const shouldNotify = !cache.notifyAt || cache.notifyAt < Date.now();
+    const shouldNotify = !cache.notifyAt || cache.notifyAt <= Date.now();
 
     let updateAvailable = false;
     if (cache.version && pkg.version) {

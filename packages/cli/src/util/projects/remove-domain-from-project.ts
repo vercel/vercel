@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../client';
+import type Client from '../client';
 import type { ProjectAliasTarget } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
 import output from '../../output-manager';

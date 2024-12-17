@@ -691,7 +691,7 @@ export async function serverBuild({
     );
     let launcher = launcherData
       .replace(
-        'const conf = __NEXT_CONFIG__',
+        /(?:var|const) conf = __NEXT_CONFIG__/,
         `const conf = ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(
@@ -1260,50 +1260,54 @@ export async function serverBuild({
           // perform the initial static shell render.
           lambdas[outputName] = lambda;
 
-          // If this isn't an omitted page, then we should add the link from the
-          // page to the postpone resume lambda.
-          if (!omittedPrerenderRoutes.has(pagePathname)) {
-            const output = getPostponeResumeOutput(entryDirectory, pageName);
-            lambdas[output] = lambda;
+          // If we're using the new chain feature, then we don't need to create
+          // any resume paths as the pathname is the same as the output name.
+          if (typeof routesManifest?.ppr?.chain?.headers === 'undefined') {
+            // If this isn't an omitted page, then we should add the link from the
+            // page to the postpone resume lambda.
+            if (!omittedPrerenderRoutes.has(pagePathname)) {
+              const output = getPostponeResumeOutput(entryDirectory, pageName);
+              lambdas[output] = lambda;
 
-            // We want to add the `experimentalStreamingLambdaPath` to this
-            // output.
-            experimentalStreamingLambdaPaths.set(outputName, {
-              pathname: getPostponeResumePathname(pageName),
-              output,
-            });
+              // We want to add the `experimentalStreamingLambdaPath` to this
+              // output.
+              experimentalStreamingLambdaPaths.set(outputName, {
+                pathname: getPostponeResumePathname(pageName),
+                output,
+              });
+            }
+
+            // For each static route that was generated, we should generate a
+            // specific partial prerendering resume route. This is because any
+            // static route that is matched will not hit the rewrite rules.
+            for (const [
+              routePathname,
+              { srcRoute, renderingMode },
+            ] of Object.entries(prerenderManifest.staticRoutes)) {
+              // If the srcRoute doesn't match or this doesn't support
+              // experimental partial prerendering, then we can skip this route.
+              if (
+                srcRoute !== pagePathname ||
+                renderingMode !== RenderingMode.PARTIALLY_STATIC
+              )
+                continue;
+
+              // If this route is the same as the page route, then we can skip
+              // it, because we've already added the lambda to the output.
+              if (routePathname === pagePathname) continue;
+
+              const output = getPostponeResumePathname(routePathname);
+              lambdas[output] = lambda;
+
+              outputName = path.posix.join(entryDirectory, routePathname);
+              experimentalStreamingLambdaPaths.set(outputName, {
+                pathname: getPostponeResumePathname(routePathname),
+                output,
+              });
+            }
+
+            continue;
           }
-
-          // For each static route that was generated, we should generate a
-          // specific partial prerendering resume route. This is because any
-          // static route that is matched will not hit the rewrite rules.
-          for (const [
-            routePathname,
-            { srcRoute, renderingMode },
-          ] of Object.entries(prerenderManifest.staticRoutes)) {
-            // If the srcRoute doesn't match or this doesn't support
-            // experimental partial prerendering, then we can skip this route.
-            if (
-              srcRoute !== pagePathname ||
-              renderingMode !== RenderingMode.PARTIALLY_STATIC
-            )
-              continue;
-
-            // If this route is the same as the page route, then we can skip
-            // it, because we've already added the lambda to the output.
-            if (routePathname === pagePathname) continue;
-
-            const output = getPostponeResumePathname(routePathname);
-            lambdas[output] = lambda;
-
-            outputName = path.posix.join(entryDirectory, routePathname);
-            experimentalStreamingLambdaPaths.set(outputName, {
-              pathname: getPostponeResumePathname(routePathname),
-              output,
-            });
-          }
-
-          continue;
         }
 
         if (!group.isAppRouter && !group.isAppRouteHandler) {
@@ -2363,7 +2367,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,
@@ -2408,7 +2419,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,

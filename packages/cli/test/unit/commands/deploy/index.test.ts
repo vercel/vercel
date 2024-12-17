@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import bytes from 'bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
@@ -509,7 +510,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '20.x',
+        nodeVersion: '22.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -607,7 +608,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '20.x',
+        nodeVersion: '22.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
@@ -651,7 +652,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "20.x" } in your `package.json` file to use Node.js 20.'
+      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(0);
@@ -699,7 +700,7 @@ describe('deploy', () => {
       },
     });
 
-    let exitCode: number;
+    let exitCode: number | undefined;
     const runCommand = async () => {
       const repoRoot = setupUnitFixture('commands/deploy/node');
       client.cwd = repoRoot;
@@ -715,8 +716,8 @@ describe('deploy', () => {
 
     await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
-    // remove first 4 lines which contains randomized data
-    expect(client.getFullOutput().split('\n').slice(4).join('\n'))
+    // remove first 3 lines which contains randomized data
+    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
       .toMatchInlineSnapshot(`
         "Building
         2024-06-03T15:01:10.339Z  Hello, world!
@@ -736,7 +737,6 @@ describe('deploy', () => {
   describe('calls createDeploy with the appropriate arguments', () => {
     let mock: MockInstance;
     beforeEach(() => {
-      // mock = vi.spyOn(createDeployModule, 'createDeploy');
       mock = vi.spyOn(createDeployModule, 'default');
       const user = useUser();
       useTeams('team_dummy');
@@ -780,7 +780,6 @@ describe('deploy', () => {
       createArgs: expect.any(Object),
       org: expect.any(Object),
       isSettingUpProject: expect.any(Boolean),
-      cwd: expect.any(String),
       archive: undefined,
     };
 
@@ -907,7 +906,7 @@ describe('deploy', () => {
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:regions', value: 'us-east-1,us-east-2' },
+        { key: 'option:regions', value: '[REDACTED]' },
       ]);
     });
     it('--prebuilt', async () => {
@@ -938,11 +937,27 @@ describe('deploy', () => {
       expect(mock).toHaveBeenCalledWith(
         ...Object.values({
           ...baseCreateDeployArgs,
-          archive: expect.anything(),
+          archive: 'tgz',
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'option:archive', value: 'tgz' },
+      ]);
+    });
+    it('--archive=split-tgz', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--archive=split-tgz');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          archive: 'split-tgz',
+        })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:archive', value: 'split-tgz' },
       ]);
     });
     it('--no-wait', async () => {
@@ -1099,7 +1114,7 @@ describe('deploy', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:target',
-          value: 'CUSTOM_ID_OR_SLUG',
+          value: '[REDACTED]',
         },
       ]);
     });
@@ -1143,6 +1158,129 @@ describe('deploy', () => {
           value: 'TRUE',
         },
       ]);
+    });
+  });
+
+  describe('first deploy', () => {
+    describe('project setup', () => {
+      const directoryName = 'unlinked';
+
+      beforeEach(() => {
+        const user = useUser();
+        client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+          return res.status(404).json({});
+        });
+
+        client.scenario.post(`/v1/projects`, (req, res) => {
+          return res.status(200).json(req.body);
+        });
+
+        const createdDeploymentId = 'dpl_1';
+        client.scenario.post(`/v13/deployments`, (req, res) => {
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: createdDeploymentId,
+            readyState: 'READY',
+          });
+        });
+
+        client.scenario.get(
+          `/v13/deployments/${createdDeploymentId}`,
+          (req, res) => {
+            res.json({
+              creator: {
+                uid: user.id,
+                username: user.username,
+              },
+              id: createdDeploymentId,
+              readyState: 'READY',
+              aliasAssigned: true,
+              alias: [],
+            });
+          }
+        );
+
+        useTeams('team_dummy');
+        client.cwd = setupUnitFixture(`commands/deploy/${directoryName}`);
+      });
+
+      it('prefills "project name" prompt based on --name option', async () => {
+        const nameOption = 'a-distinct-name';
+        client.setArgv('deploy', '--name', nameOption);
+        const exitCodePromise = deploy(client);
+
+        await expect(client.stderr).toOutput(
+          'The "--name" option is deprecated'
+        );
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope should contain your project?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${nameOption})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
+
+      it('prefills "project name" prompt based on directory name', async () => {
+        client.setArgv('deploy');
+        const exitCodePromise = deploy(client);
+
+        // I'd like to include project path in this assertion, but it ends up containing
+        // a line break in a non-determinsitic location.
+        await expect(client.stderr).toOutput('? Set up and deploy');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          '? Which scope should contain your project?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Link to existing project?');
+        client.stdin.write('no\n');
+
+        // The one expecation that the test is actually about!
+        await expect(client.stderr).toOutput(
+          `What’s your project’s name? (${directoryName})`
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          '? In which directory is your code located?'
+        );
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+      });
     });
   });
 });

@@ -1,4 +1,4 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import handleError from '../../util/handle-error';
@@ -9,8 +9,16 @@ import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
-import { domainsCommand } from './command';
-import { help } from '../help';
+import {
+  addSubcommand,
+  buySubcommand,
+  domainsCommand,
+  inspectSubcommand,
+  moveSubcommand,
+  removeSubcommand,
+  transferInSubcommand,
+} from './command';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { DomainsTelemetryClient } from '../../util/telemetry/commands/domains';
 import output from '../../output-manager';
@@ -26,22 +34,20 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(domainsCommand.options);
-
-  // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
     handleError(error);
     return 1;
   }
 
-  const { telemetryEventStore } = client;
   const telemetry = new DomainsTelemetryClient({
     opts: {
-      store: telemetryEventStore,
+      store: client.telemetryEventStore,
     },
   });
 
@@ -50,33 +56,70 @@ export default async function main(client: Client) {
     COMMAND_CONFIG
   );
 
-  if (parsedArgs.flags['--help']) {
-    telemetry.trackCliFlagHelp('domains', subcommand);
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('domains');
     output.print(help(domainsCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: domainsCommand, columns: client.stderr.columns })
+    );
     return 2;
   }
 
   switch (subcommand) {
     case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(addSubcommand);
+      }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, parsedArgs.flags, args);
+      return add(client, args);
     case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(inspectSubcommand);
+      }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
-      return inspect(client, parsedArgs.flags, args);
+      return inspect(client, args);
     case 'move':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(moveSubcommand);
+      }
       telemetry.trackCliSubcommandMove(subcommandOriginal);
-      return move(client, parsedArgs.flags, args);
+      return move(client, args);
     case 'buy':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(buySubcommand);
+      }
       telemetry.trackCliSubcommandBuy(subcommandOriginal);
-      return buy(client, parsedArgs.flags, args);
+      return buy(client, args);
     case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(removeSubcommand);
+      }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, parsedArgs.flags, args);
+      return rm(client, args);
     case 'transferIn':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(transferInSubcommand);
+      }
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
-      return transferIn(client, parsedArgs.flags, args);
+      return transferIn(client, args);
     default:
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(transferInSubcommand);
+      }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, parsedArgs.flags, args);
+      return ls(client, args);
   }
 }

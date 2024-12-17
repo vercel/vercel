@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
@@ -113,7 +113,7 @@ export default async function issue(
     return runStartOrder(client, cns, contextName, addStamp);
   }
 
-  // If the user does not specify anything, we try to fullfill a pending order that may exist
+  // If the user does not specify anything, we try to fulfill a pending order that may exist
   // and if it doesn't exist we try to issue the cert solving from the server
   cert = await finishCertOrder(client, cns, contextName);
   if (cert instanceof ERRORS.CertOrderNotFound) {
@@ -199,7 +199,7 @@ async function runStartOrder(
   const [header, ...rows] = dnsTable(
     pendingChallenges.map(challenge => {
       const subdomain = getSubdomain(challenge.domain);
-      if (!subdomain) {
+      if (subdomain === null) {
         throw new ERRORS.InvalidDomain(challenge.domain);
       }
       return [
@@ -211,7 +211,7 @@ async function runStartOrder(
   ).split('\n');
 
   output.print(`${header}\n`);
-  process.stdout.write(`${rows.join('\n')}\n\n`);
+  client.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
     `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`

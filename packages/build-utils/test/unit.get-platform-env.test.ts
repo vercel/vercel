@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { getPlatformEnv } from '../src';
+import { describe, it } from 'vitest';
 
 describe('Test `getPlatformEnv()`', () => {
   it('should support `VERCEL_` prefix', () => {

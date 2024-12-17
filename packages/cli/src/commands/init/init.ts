@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import tar from 'tar-fs';
 import chalk from 'chalk';
 
@@ -8,12 +8,12 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/init/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { InitTelemetryClient } from '../../util/telemetry/commands/init';
+import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
 
 type Options = {
   '--debug': boolean;
@@ -41,14 +41,14 @@ export default async function init(
   const examples = await fetchExampleList(client);
 
   if (!examples) {
-    throw new Error(`Could not fetch example list.`);
+    throw new Error('Could not fetch example list.');
   }
 
   const exampleList = examples.filter(x => x.visible).map(x => x.name);
 
   if (!name) {
     if (client.stdin.isTTY !== true) {
-      output.print(`No framework provided`);
+      output.print('No framework provided');
       return 0;
     }
     const chosen = await chooseFromDropdown(
@@ -128,7 +128,7 @@ async function extractExample(
   name: string,
   dir: string,
   force?: boolean,
-  ver: string = 'v2'
+  ver = 'v2'
 ) {
   const folder = prepareFolder(client.cwd, dir || name, force);
   output.spinner(`Fetching ${name}`);
@@ -213,7 +213,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
 async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
     `No example found for ${chalk.bold(name)}, run ${getCommandName(
-      `init`
+      'init'
     )} to see the list of available examples.`
   );
 

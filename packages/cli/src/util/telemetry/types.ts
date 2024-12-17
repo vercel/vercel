@@ -45,10 +45,13 @@ type TelemetryOptionMethods<Opts extends readonly CommandOption[]> = {
   ) => void;
 };
 
+type TelemetryArgumentParam<Arg extends CommandArgument> =
+  Arg['multiple'] extends true ? string[] : string | undefined;
+
 // TelemetryArgumentMethods<[{ name: 'foo' }]> → { trackCliArgumentFoo: (value: string | undefined) => void; }
 type TelemetryArgumentMethods<Args extends readonly CommandArgument[]> = {
   [Arg in Args[number] as `trackCliArgument${ToTitleCase<Arg['name']>}`]: (
-    value: string | undefined
+    value: TelemetryArgumentParam<Arg>
   ) => void;
 };
 

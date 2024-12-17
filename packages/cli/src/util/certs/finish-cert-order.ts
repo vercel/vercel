@@ -2,7 +2,7 @@ import chalk from 'chalk';
 
 import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import mapCertError from './map-cert-error';
 import output from '../../output-manager';
 
@@ -13,7 +13,7 @@ export default async function startCertOrder(
 ) {
   output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {
-    const cert = await client.fetch<Cert>('/v3/now/certs', {
+    const cert = await client.fetch<Cert>('/v3/certs', {
       method: 'PATCH',
       body: {
         op: 'finalizeOrder',

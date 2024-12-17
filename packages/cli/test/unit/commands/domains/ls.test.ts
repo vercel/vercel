@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { client } from '../../../mocks/client';
 import domains from '../../../../src/commands/domains';
 import { useUser } from '../../../mocks/user';
@@ -37,7 +36,7 @@ describe('domains ls', () => {
     useUser();
     useDomains();
     client.setArgv('domains', 'ls');
-    let exitCode = await domains(client);
+    const exitCode = await domains(client);
     expect(exitCode, 'exit code for "domains"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([

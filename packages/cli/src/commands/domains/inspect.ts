@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
@@ -15,23 +15,29 @@ import code from '../../util/output/code';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import { DomainsInspectTelemetryClient } from '../../util/telemetry/commands/domains/inspect';
 import output from '../../output-manager';
+import { inspectSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-type Options = {};
-
-export default async function inspect(
-  client: Client,
-  opts: Options,
-  args: string[]
-) {
-  const { telemetryEventStore } = client;
+export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new DomainsInspectTelemetryClient({
     opts: {
-      store: telemetryEventStore,
+      store: client.telemetryEventStore,
     },
   });
-  const { contextName } = await getScope(client);
 
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(inspectSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args } = parsedArgs;
   const [domainName] = args;
+
   const inspectStamp = stamp();
 
   if (!domainName) {
@@ -41,7 +47,7 @@ export default async function inspect(
     return 1;
   }
 
-  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliArgumentDomain(domainName);
 
   if (args.length !== 1) {
     output.error(
@@ -54,6 +60,7 @@ export default async function inspect(
 
   output.debug(`Fetching domain info`);
 
+  const { contextName } = await getScope(client);
   output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );

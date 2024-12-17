@@ -1,7 +1,7 @@
 import bytes from 'bytes';
 import info from './output/info';
 import errorOutput from './output/error';
-import { APIError } from './errors-ts';
+import type { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
 import output from '../output-manager';
 

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],

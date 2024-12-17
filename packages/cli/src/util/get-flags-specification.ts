@@ -1,5 +1,5 @@
-import arg from 'arg';
-import { CommandOption } from '../commands/help';
+import type arg from 'arg';
+import type { CommandOption } from '../commands/help';
 import type { Prettify } from './types';
 
 // TS type that inputs a `CommandOption` and outputs a type that is compatible

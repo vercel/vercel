@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 
 describe('teams switch', () => {
   describe('non-northstar', () => {
     it('should let you switch to team and back', async () => {
       const user = useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       // ? Switch to:
       // ── Personal Account ──────────────
@@ -48,7 +48,7 @@ describe('teams switch', () => {
   describe('northstar', () => {
     it('should let you provide a slug to bypass prompt', async () => {
       useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       client.config.currentTeam = team.id;
       client.setArgv('teams', 'switch', team.slug);
@@ -63,7 +63,7 @@ describe('teams switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      const team = useTeams()[0];
+      const team = useTeam();
       client.config.currentTeam = team.id;
 
       // ? Switch to:
@@ -87,7 +87,7 @@ describe('teams switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      useTeams();
+      useTeam();
       client.setArgv('teams', 'switch', user.username);
       const exitCodePromise = teams(client);
       // Personal account should be hidden

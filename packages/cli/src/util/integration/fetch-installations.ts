@@ -5,8 +5,12 @@ export async function fetchInstallations(
   client: Client,
   integration: Integration
 ) {
+  const searchParams = new URLSearchParams();
+  searchParams.set('view', 'account');
+  searchParams.set('installationType', 'marketplace');
+  searchParams.set('integrationIdOrSlug', integration.id);
   return client.fetch<IntegrationInstallation[]>(
-    `/v1/integrations/integration/${integration.id}/installed?source=marketplace`,
+    `/v2/integrations/configurations?${searchParams}`,
     {
       json: true,
     }

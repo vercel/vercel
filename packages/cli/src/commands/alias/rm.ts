@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
@@ -98,7 +98,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
     { hsep: 4 }
   );
 
-  output.log(`The following alias will be removed permanently`);
+  output.log('The following alias will be removed permanently');
   output.print(`  ${tbl}\n`);
   return confirm(client, chalk.red('Are you sure?'), false);
 }

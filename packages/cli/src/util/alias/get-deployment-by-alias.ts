@@ -1,8 +1,8 @@
 import path from 'path';
 import chalk from 'chalk';
-import Client from '../client';
+import type Client from '../client';
 import type { User } from '@vercel-internals/types';
-import { VercelConfig } from '../dev/types';
+import type { VercelConfig } from '../dev/types';
 import getDeploymentsByAppName from '../deploy/get-deployments-by-appname';
 import getDeployment from '../get-deployment';
 import output from '../../output-manager';

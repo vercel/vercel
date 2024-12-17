@@ -6,7 +6,7 @@ import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
-import Client from './client';
+import type Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
 

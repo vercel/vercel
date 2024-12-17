@@ -298,7 +298,7 @@ describe('createGitMeta', () => {
 
       const lines = createLineIterator(client.stderr);
 
-      let line = await lines.next();
+      const line = await lines.next();
       expect(line.value).toContain(
         `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.`
       );

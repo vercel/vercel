@@ -1,3 +1,4 @@
+import { describe, test, expect } from 'vitest';
 import { detectPackageManager } from '../src/fs/run-user-scripts';
 
 describe('Test `detectPackageManager()`', () => {
@@ -135,10 +136,19 @@ describe('Test `detectPackageManager()`', () => {
     }>([
       {
         name: 'returns bun@1 path',
-        args: ['bun', 1],
+        args: ['bun', 0],
         want: {
           path: '/bun1',
           detectedLockfile: 'bun.lockb',
+          detectedPackageManager: 'bun@1.x',
+        },
+      },
+      {
+        name: 'returns bun@1 path',
+        args: ['bun', 1],
+        want: {
+          path: '/bun1',
+          detectedLockfile: 'bun.lock',
           detectedPackageManager: 'bun@1.x',
         },
       },

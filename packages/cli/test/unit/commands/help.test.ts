@@ -9,28 +9,26 @@ import * as alias from '../../../src/commands/alias/command';
 import { bisectCommand } from '../../../src/commands/bisect/command';
 import * as certs from '../../../src/commands/certs/command';
 import * as dns from '../../../src/commands/dns/command';
-import { domainsCommand } from '../../../src/commands/domains/command';
+import * as domains from '../../../src/commands/domains/command';
 import * as env from '../../../src/commands/env/command';
-import { gitCommand } from '../../../src/commands/git/command';
+import * as git from '../../../src/commands/git/command';
 import { initCommand } from '../../../src/commands/init/command';
 import { inspectCommand } from '../../../src/commands/inspect/command';
+import * as integration from '../../../src/commands/integration/command';
+import * as integrationResource from '../../../src/commands/integration-resource/command';
 import { linkCommand } from '../../../src/commands/link/command';
 import { listCommand } from '../../../src/commands/list/command';
 import { loginCommand } from '../../../src/commands/login/command';
-import { projectCommand } from '../../../src/commands/project/command';
+import * as project from '../../../src/commands/project/command';
 import * as promote from '../../../src/commands/promote/command';
 import { pullCommand } from '../../../src/commands/pull/command';
 import { redeployCommand } from '../../../src/commands/redeploy/command';
 import { removeCommand } from '../../../src/commands/remove/command';
-import { rollbackCommand } from '../../../src/commands/rollback/command';
+import * as rollback from '../../../src/commands/rollback/command';
 import * as target from '../../../src/commands/target/command';
-import { teamsCommand } from '../../../src/commands/teams/command';
+import * as teams from '../../../src/commands/teams/command';
 import * as telemetry from '../../../src/commands/telemetry/command';
 import { whoamiCommand } from '../../../src/commands/whoami/command';
-import {
-  integrationCommand,
-  listSubcommand as integrationListSubcommand,
-} from '../../../src/commands/integration/command';
 import dev from '../../../src/commands/dev';
 import { client } from '../../mocks/client';
 
@@ -244,13 +242,83 @@ describe('help command', () => {
 
   describe('domains help output snapshots', () => {
     it('domains help column width 40', () => {
-      expect(help(domainsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('domains help column width 80', () => {
-      expect(help(domainsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('domains help column width 120', () => {
-      expect(help(domainsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(domains.domainsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('domains add help output snapshots', () => {
+      it('domains add help column width 120', () => {
+        expect(
+          help(domains.addSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains buy help output snapshots', () => {
+      it('domains buy help column width 120', () => {
+        expect(
+          help(domains.buySubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains inspect help output snapshots', () => {
+      it('domains inspect help column width 120', () => {
+        expect(
+          help(domains.inspectSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains list help output snapshots', () => {
+      it('domains list help column width 120', () => {
+        expect(
+          help(domains.listSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains move help output snapshots', () => {
+      it('domains move help column width 120', () => {
+        expect(
+          help(domains.moveSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains remove help output snapshots', () => {
+      it('domains remove help column width 120', () => {
+        expect(
+          help(domains.removeSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('domains transfer-in help output snapshots', () => {
+      it('domains transfer-in help column width 120', () => {
+        expect(
+          help(domains.transferInSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -296,13 +364,30 @@ describe('help command', () => {
 
   describe('git help output snapshots', () => {
     it('git help column width 40', () => {
-      expect(help(gitCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('git help column width 80', () => {
-      expect(help(gitCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('git help column width 120', () => {
-      expect(help(gitCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(git.gitCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('git connect help output snapshots', () => {
+      it('git connect help column width 120', () => {
+        expect(
+          help(git.connectSubcommand, { columns: 120, parent: git.gitCommand })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('git disconnect help output snapshots', () => {
+      it('git disconnect help column width 120', () => {
+        expect(
+          help(git.disconnectSubcommand, {
+            columns: 120,
+            parent: git.gitCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -332,37 +417,64 @@ describe('help command', () => {
 
   describe('integration help output snapshots', () => {
     it('integration help column width 40', () => {
-      expect(help(integrationCommand, { columns: 40 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 40 })
+      ).toMatchSnapshot();
     });
     it('integration help column width 80', () => {
-      expect(help(integrationCommand, { columns: 80 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 80 })
+      ).toMatchSnapshot();
     });
     it('integration help column width 120', () => {
-      expect(help(integrationCommand, { columns: 120 })).toMatchSnapshot();
+      expect(
+        help(integration.integrationCommand, { columns: 120 })
+      ).toMatchSnapshot();
     });
-
     describe('integration list subcommand', () => {
-      it('integration list subcommand help column width 40', () => {
-        expect(
-          help(integrationListSubcommand, {
-            columns: 40,
-            parent: integrationCommand,
-          })
-        ).toMatchSnapshot();
-      });
-      it('integration list subcommand help column width 80', () => {
-        expect(
-          help(integrationListSubcommand, {
-            columns: 80,
-            parent: integrationCommand,
-          })
-        ).toMatchSnapshot();
-      });
       it('integration list subcommand help column width 120', () => {
         expect(
-          help(integrationListSubcommand, {
+          help(integration.listSubcommand, {
             columns: 120,
-            parent: integrationCommand,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+  });
+
+  describe('integration-resource help output snapshots', () => {
+    it('integration-resource help column width 40', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 40 })
+      ).toMatchSnapshot();
+    });
+    it('integration-resource help column width 80', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 80 })
+      ).toMatchSnapshot();
+    });
+    it('integration-resource help column width 120', () => {
+      expect(
+        help(integrationResource.integrationResourceCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('integration-resource disconnect subcommand', () => {
+      it('integration-resource disconnect subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.disconnectSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration-resource remove subcommand', () => {
+      it('integration-resource remove subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.removeSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
           })
         ).toMatchSnapshot();
       });
@@ -407,13 +519,43 @@ describe('help command', () => {
 
   describe('project help output snapshots', () => {
     it('project help column width 40', () => {
-      expect(help(projectCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('project help column width 80', () => {
-      expect(help(projectCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('project help column width 120', () => {
-      expect(help(projectCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(project.projectCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('project add help output snapshots', () => {
+      it('project add help column width 120', () => {
+        expect(
+          help(project.addSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project list help output snapshots', () => {
+      it('project list help column width 120', () => {
+        expect(
+          help(project.listSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('project remove help output snapshots', () => {
+      it('project remove help column width 120', () => {
+        expect(
+          help(project.removeSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -477,13 +619,22 @@ describe('help command', () => {
 
   describe('rollback help output snapshots', () => {
     it('rollback help column width 40', () => {
-      expect(help(rollbackCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(rollback.rollbackCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('rollback help column width 80', () => {
-      expect(help(rollbackCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(rollback.rollbackCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('rollback help column width 120', () => {
-      expect(help(rollbackCommand, { columns: 120 })).toMatchSnapshot();
+      expect(
+        help(rollback.rollbackCommand, { columns: 120 })
+      ).toMatchSnapshot();
+    });
+    describe('rollback status help output snapshots', () => {
+      it('rollback status help column width 120', () => {
+        expect(
+          help(rollback.rollbackCommand, { columns: 120 })
+        ).toMatchSnapshot();
+      });
     });
   });
 
@@ -511,13 +662,53 @@ describe('help command', () => {
 
   describe('teams help output snapshots', () => {
     it('teams help column width 40', () => {
-      expect(help(teamsCommand, { columns: 40 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 40 })).toMatchSnapshot();
     });
     it('teams help column width 80', () => {
-      expect(help(teamsCommand, { columns: 80 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 80 })).toMatchSnapshot();
     });
     it('teams help column width 120', () => {
-      expect(help(teamsCommand, { columns: 120 })).toMatchSnapshot();
+      expect(help(teams.teamsCommand, { columns: 120 })).toMatchSnapshot();
+    });
+    describe('teams add help output snapshots', () => {
+      it('teams add help column width 120', () => {
+        expect(
+          help(teams.addSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams list help output snapshots', () => {
+      it('teams list help column width 120', () => {
+        expect(
+          help(teams.listSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams invite help output snapshots', () => {
+      it('teams invite help column width 120', () => {
+        expect(
+          help(teams.inviteSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('teams switch help output snapshots', () => {
+      it('teams switch help column width 120', () => {
+        expect(
+          help(teams.switchSubcommand, {
+            columns: 120,
+            parent: teams.teamsCommand,
+          })
+        ).toMatchSnapshot();
+      });
     });
   });
 

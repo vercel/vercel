@@ -21,7 +21,6 @@ import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { isAPIError } from '../errors-ts';
 import { isGitWorktreeOrSubmodule } from '../git-helpers';
 import output from '../../output-manager';
 
@@ -92,6 +91,7 @@ export async function ensureRepoLink(
   } else {
     throw new Error('Could not determine Git repository root directory');
   }
+  // eslint-disable-next-line prefer-const
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (overwrite || !repoConfig) {
@@ -103,7 +103,7 @@ export async function ensureRepoLink(
     });
 
     // Not yet linked, so prompt user to begin linking
-    let shouldLink =
+    const shouldLink =
       yes ||
       (await confirm(
         client,
@@ -275,31 +275,23 @@ export async function ensureRepoLink(
       output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
       if (!selection.rootDirectory) delete selection.rootDirectory;
-      try {
-        const project = (selected[i] = await createProject(client, {
-          ...selection,
-          framework: selection.framework.slug,
-        }));
-        await connectGitProvider(
-          client,
-          org,
-          project.id,
-          parsedRepoUrl.provider,
-          `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
-        );
-        output.log(
-          `Created new Project: ${output.link(
-            orgAndName,
-            `https://vercel.com/${orgAndName}`,
-            { fallback: false }
-          )}`
-        );
-      } catch (err) {
-        if (isAPIError(err) && err.code === 'too_many_projects') {
-          output.prettyError(err);
-          return;
-        }
-      }
+      const project = (selected[i] = await createProject(client, {
+        ...selection,
+        framework: selection.framework.slug,
+      }));
+      await connectGitProvider(
+        client,
+        project.id,
+        parsedRepoUrl.provider,
+        `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
+      );
+      output.log(
+        `Created new Project: ${output.link(
+          orgAndName,
+          `https://vercel.com/${orgAndName}`,
+          { fallback: false }
+        )}`
+      );
     }
 
     repoConfig = {
