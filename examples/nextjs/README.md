@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+const { Client, LocalAuth } = require('whatsapp-web.js');
 
-## Getting Started
+const client = new Client({
+    authStrategy: new LocalAuth()
+});
 
-First, run the development server:
+const userLinkCount = {}; // Kuhifadhi idadi ya link zilizotumwa na kila mtumiaji
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+client.on('ready', () => {
+    console.log('Bot is ready!');
+});
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+client.on('message', async (msg) => {
+    try {
+        const chat = await msg.getChat();
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+        // Angalia kama ujumbe umetumwa kwenye group
+        if (chat.isGroup) {
+            const admins = await chat.getAdmins();
+            const me = await client.info.wid;
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+            // Angalia kama wewe ni admin wa group
+            const isAdmin = admins.some(admin => admin.id._serialized === me._serialized);
 
-## Learn More
+            if (isAdmin) {
+                // Regex ya kutambua link
+                const linkRegex = /(https?:\/\/[^\s]+)/g;
 
-To learn more about Next.js, take a look at the following resources:
+                if (linkRegex.test(msg.body)) {
+                    const userId = msg.author;
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+                    // Ongeza idadi ya link zilizotumwa na mtumiaji huyu
+                    userLinkCount[userId] = (userLinkCount[userId] || 0) + 1;
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+                    // Fuatilia link moja kwa moja
+                    console.log(`Link iliyotumwa: ${msg.body.match(linkRegex)[0]}`);
 
-## Deploy on Vercel
+                    if (userLinkCount[userId] >= 3) {
+                        // Mtoa mtumiaji kwenye group
+                        await chat.removeParticipants([userId]);
+                        await chat.sendMessage(`🚫 ${userId} ametolewa kwenye group kwa kutuma link mara 3.`);
+                        delete userLinkCount[userId]; // Ondoa rekodi ya mtumiaji baada ya kumtoa
+                    } else {
+                        // Toa onyo
+                        await chat.sendMessage(`⚠️ LINK HAZIRUHUSIWI HAPA! ${userId}, kama utatuma link mara 3, utatolewa.`);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+});
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+client.initialize();
