@@ -1734,6 +1734,12 @@ export async function serverBuild({
 
       ...privateOutputs.routes,
 
+      // When skipMiddlewareUrlNormalize is enabled we hoist this above
+      // any URL normalizing or user redirects so middleware gets original URL
+      ...(routesManifest?.skipMiddlewareUrlNormalize
+        ? middleware.staticRoutes
+        : []),
+
       // normalize _next/data URL before processing redirects
       ...normalizeNextDataRoute(true),
 
@@ -1876,16 +1882,9 @@ export async function serverBuild({
 
       ...redirects,
 
-      // middleware comes directly after redirects but before
-      // beforeFiles rewrites as middleware is not a "file" route
-      ...(routesManifest?.skipMiddlewareUrlNormalize
-        ? denormalizeNextDataRoute(true)
-        : []),
-
-      ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
-
-      ...(routesManifest?.skipMiddlewareUrlNormalize
-        ? normalizeNextDataRoute(true)
+      ...(!routesManifest?.skipMiddlewareUrlNormalize &&
+      isCorrectMiddlewareOrder
+        ? middleware.staticRoutes
         : []),
 
       ...beforeFilesRewrites,
