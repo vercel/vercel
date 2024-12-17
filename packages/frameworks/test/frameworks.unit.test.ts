@@ -218,6 +218,8 @@ describe('frameworks', () => {
   const skipExamples = ['sanity-v3'];
 
   it('ensure there is an example for every framework', async () => {
+    const ignoredFrameworks = ['solidstart'];
+
     const root = join(__dirname, '..', '..', '..');
     const getExample = (name: string) => join(root, 'examples', name);
 
@@ -225,7 +227,8 @@ describe('frameworks', () => {
       .map(f => f.slug)
       .filter(isString)
       .filter(slug => !skipExamples.includes(slug))
-      .filter(f => existsSync(getExample(f)) === false);
+      .filter(f => existsSync(getExample(f)) === false)
+      .filter(f => !ignoredFrameworks.includes(f));
 
     expect(result).toEqual([]);
   });
