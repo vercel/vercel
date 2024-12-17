@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
 ## 4.0.0
 
 ### Major Changes
