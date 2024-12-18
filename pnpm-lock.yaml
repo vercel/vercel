@@ -105,8 +105,8 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
       vite:
-        specifier: 5.1.6
-        version: 5.1.6(@types/node@14.18.33)
+        specifier: 5.1.8
+        version: 5.1.8(@types/node@14.18.33)
       vitest:
         specifier: 2.0.3
         version: 2.0.3(@types/node@14.18.33)
@@ -16944,7 +16944,7 @@ packages:
       debug: 4.3.7
       pathe: 1.1.2
       picocolors: 1.1.0
-      vite: 5.1.6(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@14.18.33)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -16965,7 +16965,7 @@ packages:
       debug: 4.3.7
       pathe: 1.1.2
       picocolors: 1.1.0
-      vite: 5.1.6(@types/node@16.18.11)
+      vite: 5.1.8(@types/node@16.18.11)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -16986,7 +16986,7 @@ packages:
       debug: 4.3.7
       pathe: 1.1.2
       picocolors: 1.1.0
-      vite: 5.1.6(@types/node@16.18.119)
+      vite: 5.1.8(@types/node@16.18.119)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -17007,7 +17007,7 @@ packages:
       debug: 4.3.7
       pathe: 1.1.2
       picocolors: 1.1.0
-      vite: 5.1.6(@types/node@22.5.0)
+      vite: 5.1.8(@types/node@22.5.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -17028,7 +17028,7 @@ packages:
       debug: 4.3.7
       pathe: 1.1.2
       tinyrainbow: 1.2.0
-      vite: 5.1.6(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@14.18.33)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -17048,7 +17048,7 @@ packages:
       cac: 6.7.14
       debug: 4.3.7
       pathe: 1.1.2
-      vite: 5.1.6(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@14.18.33)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -17068,7 +17068,7 @@ packages:
       cac: 6.7.14
       debug: 4.3.7
       pathe: 1.1.2
-      vite: 5.1.6(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@14.18.33)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -17190,6 +17190,150 @@ packages:
 
   /vite@5.1.6(@types/node@22.5.0):
     resolution: {integrity: sha512-yYIAZs9nVfRJ/AiOLCA91zzhjsHUgMjB+EigzFb6W2XTLO8JixBCKCjvhKZaye+NKYHCrkv3Oh50dH9EdLU2RA==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || >=20.0.0
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 22.5.0
+      esbuild: 0.19.12
+      postcss: 8.4.38
+      rollup: 4.13.2
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
+
+  /vite@5.1.8(@types/node@14.18.33):
+    resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || >=20.0.0
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 14.18.33
+      esbuild: 0.19.12
+      postcss: 8.4.38
+      rollup: 4.13.2
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
+
+  /vite@5.1.8(@types/node@16.18.11):
+    resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || >=20.0.0
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 16.18.11
+      esbuild: 0.19.12
+      postcss: 8.4.38
+      rollup: 4.13.2
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
+
+  /vite@5.1.8(@types/node@16.18.119):
+    resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || >=20.0.0
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 16.18.119
+      esbuild: 0.19.12
+      postcss: 8.4.38
+      rollup: 4.13.2
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
+
+  /vite@5.1.8(@types/node@22.5.0):
+    resolution: {integrity: sha512-mB8ToUuSmzODSpENgvpFk2fTiU/YQ1tmcVJJ4WZbq4fPdGJkFNVcmVL5k7iDug6xzWjjuGDKAuSievIsD6H7Xw==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     peerDependencies:
@@ -17483,7 +17627,7 @@ packages:
       tinybench: 2.8.0
       tinypool: 1.0.0
       tinyrainbow: 1.2.0
-      vite: 5.1.6(@types/node@14.18.33)
+      vite: 5.1.8(@types/node@14.18.33)
       vite-node: 2.0.3(@types/node@14.18.33)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
