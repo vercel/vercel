@@ -2,4 +2,4 @@
 "vercel": patch
 ---
 
-[cli] overrides "follow-redirects" to at least 1.15.6 to avoid securi…
+Update "follow-redirects" to v1.15.9 to avoid security vulnerability report
