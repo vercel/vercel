@@ -23,9 +23,9 @@ export default function parseTarget<FlagName extends string>({
   }
 
   if (typeof targetFlagValue === 'string') {
-    return targetFlagValue
+    return targetFlagValue;
   }
-  
+
   if (prodFlagValue) {
     output.debug('Setting target to production');
     return 'production';
