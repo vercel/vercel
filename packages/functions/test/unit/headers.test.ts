@@ -5,13 +5,13 @@ import {
   COUNTRY_HEADER_NAME,
   Geo,
   geolocation,
-  ipAddress,
   IP_HEADER_NAME,
+  ipAddress,
   LATITUDE_HEADER_NAME,
   LONGITUDE_HEADER_NAME,
+  POSTAL_CODE_HEADER_NAME,
   REGION_HEADER_NAME,
   REQUEST_ID_HEADER_NAME,
-  POSTAL_CODE_HEADER_NAME,
 } from '../../src/headers';
 
 test('`ipAddress` returns the value from the header', () => {
