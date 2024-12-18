@@ -1,8 +1,6 @@
-/**
- * @jest-environment @edge-runtime/jest-environment
- */
+import { describe, expect, test } from 'vitest';
 
-import { next, rewrite } from '../src';
+import { next, rewrite } from '../../src/middleware';
 
 describe('rewrite', () => {
   test('receives custom headers', () => {
