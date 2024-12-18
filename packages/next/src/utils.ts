@@ -955,6 +955,8 @@ export type NextPrerenderedRoutes = {
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
       fallbackRevalidate?: number | false;
+      fallbackRootParams?: string[];
+      fallbackSourceRoute?: string;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1197,6 +1199,8 @@ export async function getPrerenderManifest(
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
             fallbackRevalidate: number | false | undefined;
+            fallbackRootParams: string[] | undefined;
+            fallbackSourceRoute?: string;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1343,7 +1347,9 @@ export async function getPrerenderManifest(
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
         let fallbackRevalidate: number | false | undefined;
+        let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
+        let fallbackSourceRoute: undefined | string;
         if (manifest.version === 4) {
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
@@ -1362,7 +1368,11 @@ export async function getPrerenderManifest(
               : RenderingMode.STATIC);
           fallbackRevalidate =
             manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
+          fallbackRootParams =
+            manifest.dynamicRoutes[lazyRoute].fallbackRootParams;
           allowHeader = manifest.dynamicRoutes[lazyRoute].allowHeader;
+          fallbackSourceRoute =
+            manifest.dynamicRoutes[lazyRoute].fallbackSourceRoute;
         }
 
         if (typeof fallback === 'string') {
@@ -1377,6 +1387,8 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             fallbackRevalidate,
+            fallbackRootParams,
+            fallbackSourceRoute,
             renderingMode,
             allowHeader,
           };
@@ -2188,8 +2200,12 @@ export const onPrerenderRoute =
       // When the route has PPR enabled and has a fallback defined, we should
       // read the value from the manifest and use it as the value for the route.
       if (isFallback) {
-        const { fallbackStatus, fallbackHeaders, fallbackRevalidate } =
-          prerenderManifest.fallbackRoutes[routeKey];
+        const {
+          fallbackStatus,
+          fallbackHeaders,
+          fallbackRevalidate,
+          fallbackSourceRoute,
+        } = prerenderManifest.fallbackRoutes[routeKey];
 
         if (fallbackStatus) {
           initialStatus = fallbackStatus;
@@ -2197,6 +2213,10 @@ export const onPrerenderRoute =
 
         if (fallbackHeaders) {
           initialHeaders = fallbackHeaders;
+        }
+
+        if (fallbackSourceRoute) {
+          srcRoute = fallbackSourceRoute;
         }
 
         // If we're rendering with PPR and as this is a fallback, we should use
@@ -2585,7 +2605,10 @@ export const onPrerenderRoute =
       // have a HIT for the fallback page.
       let htmlAllowQuery = allowQuery;
       if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-        htmlAllowQuery = [];
+        const { fallbackRootParams } =
+          prerenderManifest.fallbackRoutes[routeKey];
+
+        htmlAllowQuery = fallbackRootParams ?? [];
       }
 
       prerenders[outputPathPage] = new Prerender({
