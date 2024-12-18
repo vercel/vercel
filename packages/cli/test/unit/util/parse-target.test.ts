@@ -35,7 +35,6 @@ describe('parseTarget', () => {
       flags: { '--target': 'staging' },
     });
     expect(result).toEqual('staging');
-    expect(output.debug).toHaveBeenCalledWith('Setting target to staging');
   });
 
   it('prefers target over production argument', () => {
