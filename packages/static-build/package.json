@@ -40,7 +40,7 @@
     "@vercel/frameworks": "3.4.0",
     "@vercel/fs-detectors": "5.3.1",
     "@vercel/routing-utils": "5.0.0",
-    "execa": "3.2.0",
+    "execa": "^3.2.0",
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",

@@ -121,7 +121,7 @@
     "epipebomb": "1.0.0",
     "escape-html": "1.0.3",
     "esm": "3.1.4",
-    "execa": "3.2.0",
+    "execa": "^3.2.0",
     "expect": "29.5.0",
     "express": "4.21.1",
     "fast-deep-equal": "3.1.3",
