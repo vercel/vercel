@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -1694,6 +1694,10 @@ export async function serverBuild({
       lambdas[dataPathname] = lambdas[srcPathname];
     }
   }
+  const addRouteOverride = (route: any) => {
+    (route as RouteWithSrc).override = true;
+    return route;
+  };
 
   return {
     wildcard: wildcardConfig,
@@ -1730,18 +1734,19 @@ export async function serverBuild({
       // force trailingSlashRedirect to the very top so it doesn't
       // conflict with i18n routes that don't have or don't have the
       // trailing slash
-      ...trailingSlashRedirects,
+      ...trailingSlashRedirects.map(addRouteOverride),
 
-      ...privateOutputs.routes,
+      ...privateOutputs.routes.map(addRouteOverride),
 
       // When skipMiddlewareUrlNormalize is enabled we hoist this above
       // any URL normalizing or user redirects so middleware gets original URL
       ...(routesManifest?.skipMiddlewareUrlNormalize
         ? middleware.staticRoutes
-        : []),
+        : []
+      ).map(addRouteOverride),
 
       // normalize _next/data URL before processing redirects
-      ...normalizeNextDataRoute(true),
+      ...normalizeNextDataRoute(true).map(addRouteOverride),
 
       ...(i18n
         ? [
@@ -1882,18 +1887,20 @@ export async function serverBuild({
               override: true,
             },
           ]
-        : []),
+        : []
+      ).map(addRouteOverride),
 
-      ...headers,
+      ...headers.map(addRouteOverride),
 
-      ...redirects,
+      ...redirects.map(addRouteOverride),
 
       ...(!routesManifest?.skipMiddlewareUrlNormalize &&
       isCorrectMiddlewareOrder
         ? middleware.staticRoutes
-        : []),
+        : []
+      ).map(addRouteOverride),
 
-      ...beforeFilesRewrites,
+      ...beforeFilesRewrites.map(addRouteOverride),
 
       // Make sure to 404 for the /404 path itself
       ...(i18n
@@ -1928,7 +1935,8 @@ export async function serverBuild({
                 },
               ],
             },
-          ]),
+          ]
+      ).map(addRouteOverride),
 
       // Make sure to 500 when visiting /500 directly for static 500
       ...(!hasStatic500
@@ -1953,15 +1961,18 @@ export async function serverBuild({
                 status: 500,
                 continue: true,
               },
-            ]),
+            ]
+      ).map(addRouteOverride),
 
       // we need to undo _next/data normalize before checking filesystem
-      ...denormalizeNextDataRoute(true),
+      ...denormalizeNextDataRoute(true).map(addRouteOverride),
 
       // while middleware was in beta the order came right before
       // handle: 'filesystem' we maintain this for older versions
       // to prevent a local/deploy mismatch
-      ...(!isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+      ...(!isCorrectMiddlewareOrder ? middleware.staticRoutes : []).map(
+        addRouteOverride
+      ),
 
       ...(appDir
         ? [
@@ -2038,7 +2049,8 @@ export async function serverBuild({
               override: true,
             },
           ]
-        : []),
+        : []
+      ).map(addRouteOverride),
 
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
