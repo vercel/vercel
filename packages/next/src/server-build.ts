@@ -1764,6 +1764,7 @@ export async function serverBuild({
                   : ''
               }$wildcard${trailingSlash ? '/' : ''}`,
               continue: true,
+              override: true,
             },
             {
               src: `^${path.posix.join(
@@ -1781,6 +1782,7 @@ export async function serverBuild({
                   : ''
               }$wildcard/$1`,
               continue: true,
+              override: true,
             },
 
             // Handle redirecting to locale specific domains
@@ -1816,6 +1818,7 @@ export async function serverBuild({
                       cookie: 'NEXT_LOCALE',
                     },
                     continue: true,
+                    override: true,
                   },
                 ]
               : []),
@@ -1841,6 +1844,7 @@ export async function serverBuild({
                       cookie: 'NEXT_LOCALE',
                     },
                     continue: true,
+                    override: true,
                   },
                 ]
               : []),
@@ -1853,6 +1857,7 @@ export async function serverBuild({
                 i18n.defaultLocale
               )}`,
               continue: true,
+              override: true,
             },
 
             // Auto-prefix non-locale path with default locale
@@ -1874,6 +1879,7 @@ export async function serverBuild({
                 i18n.defaultLocale
               )}/$1`,
               continue: true,
+              override: true,
             },
           ]
         : []),
