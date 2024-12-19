@@ -1,5 +1,16 @@
 # vercel
 
+## 39.2.4
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12764](https://github.com/vercel/vercel/pull/12764))
+
+- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12771](https://github.com/vercel/vercel/pull/12771))
+
+- Updated dependencies [[`79a7374cdd8e734f01ee1b9ad6662182b9090bc0`](https://github.com/vercel/vercel/commit/79a7374cdd8e734f01ee1b9ad6662182b9090bc0)]:
+  - @vercel/next@4.4.1
+
 ## 39.2.3
 
 ### Patch Changes
