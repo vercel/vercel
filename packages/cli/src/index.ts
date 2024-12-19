@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { isErrnoException, isError, errorToString } from '@vercel/error-utils';
 
 try {
