@@ -801,6 +801,13 @@ export const build: BuildV2 = async buildOptions => {
               'image-manifest.json "images.minimumCacheTTL" must be an integer. Contact support if this continues to happen.',
           });
         }
+        if (images.qualities && !Array.isArray(images.qualities)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_QUALITIES',
+            message:
+              'image-manifest.json "images.qualities" must be an array. Contact support if this continues to happen.',
+          });
+        }
         if (
           typeof images.dangerouslyAllowSVG !== 'undefined' &&
           typeof images.dangerouslyAllowSVG !== 'boolean'
