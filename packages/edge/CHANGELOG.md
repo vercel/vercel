@@ -1,5 +1,11 @@
 # @vercel/edge
 
+## 1.2.0
+
+### Minor Changes
+
+- moved methods to @vercel/functions ([#12758](https://github.com/vercel/vercel/pull/12758))
+
 ## 1.1.4
 
 ### Patch Changes
