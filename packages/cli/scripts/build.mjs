@@ -49,3 +49,21 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.js', repoRoot),
   new URL('get-latest-worker.js', distRoot)
 );
+
+writeFileSync(
+  new URL('vc.js', distRoot),
+  `#!/usr/bin/env node
+
+"use strict";
+// This shim defers loading the real module until the compile cache is enabled.
+// https://nodejs.org/api/module.html#moduleenablecompilecachecachedir
+try {
+  const { enableCompileCache } = require('node:module');
+  if (enableCompileCache) {
+    enableCompileCache();
+  }
+} catch {}
+require('./index.js');
+`,
+  'utf8'
+);
