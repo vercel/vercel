@@ -23,6 +23,7 @@ export default function parseTarget<FlagName extends string>({
   }
 
   if (typeof targetFlagValue === 'string') {
+    output.debug(`Setting target to ${targetFlagValue}`);
     return targetFlagValue;
   }
 
