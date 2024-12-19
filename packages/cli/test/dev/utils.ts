@@ -204,19 +204,21 @@ export async function testPath(
 
   // eslint-disable-next-line no-console
   console.log(msg);
-  expect(res.status).toBe(status);
+  expect(res.status, getEnvironmentMessage(isDev)).toBe(status);
   validateResponseHeaders(res);
 
   if (typeof expectedText === 'string') {
     const actualText = await res.text();
-    expect(actualText.trim()).toBe(expectedText.trim());
+    expect(actualText.trim(), getEnvironmentMessage(isDev)).toBe(
+      expectedText.trim()
+    );
   } else if (typeof expectedText === 'function') {
     const actualText = await res.text();
     await expectedText(actualText, res, isDev);
   } else if (expectedText instanceof RegExp) {
     const actualText = await res.text();
     expectedText.lastIndex = 0; // reset since we test twice
-    expect(actualText).toMatch(expectedText);
+    expect(actualText, getEnvironmentMessage(isDev)).toMatch(expectedText);
   }
 
   if (expectedHeaders) {
@@ -228,9 +230,16 @@ export async function testPath(
         // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
         actualValue = '/';
       }
-      expect(actualValue).toBe(expectedValue);
+      expect(actualValue, getEnvironmentMessage(isDev)).toBe(expectedValue);
     });
   }
+}
+
+function getEnvironmentMessage(isDev: boolean): string {
+  if (isDev) {
+    return 'FROM DEV SERVER';
+  }
+  return `FROM DEPLOYMENT`;
 }
 
 export async function testFixture(
@@ -359,7 +368,7 @@ export async function testFixture(
 export function testFixtureStdio(
   directory: string,
   fn: Function,
-  { skipDeploy = false, projectSettings = {}, readyTimeout = 0 } = {}
+  { skipDeploy = false } = {}
 ) {
   return async () => {
     const cwd = fixtureAbsolute(directory);
@@ -374,71 +383,32 @@ export function testFixtureStdio(
       const hasGitignore = await fs.pathExists(gitignore);
 
       try {
-        // Run `vc link`
-        const linkResult = await execa(
-          binaryPath,
-          [
-            '-t',
-            token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
-              : []),
-            'link',
-            '--yes',
-          ],
-          { cwd, stdio: 'pipe', reject: false }
-        );
+        const args = [];
 
-        // eslint-disable-next-line no-console
-        console.log({
-          stderr: linkResult.stderr,
-          stdout: linkResult.stdout,
-        });
-        expect(linkResult.exitCode).toBe(0);
+        args.push('--token', token);
 
-        // Patch the project with any non-default properties
-        if (projectSettings) {
-          const { projectId } = await fs.readJson(projectJsonPath);
-          const res = await fetchWithRetry(
-            `https://api.vercel.com/v2/projects/${projectId}${
-              process.env.VERCEL_TEAM_ID
-                ? `?teamId=${process.env.VERCEL_TEAM_ID}`
-                : ''
-            }`,
-            {
-              method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(projectSettings),
-              retries: isCI ? 3 : 0,
-              status: 200,
-            }
-          );
-          expect(res.status).toBe(200);
+        if (process.env.VERCEL_TEAM_ID) {
+          args.push('--scope', process.env.VERCEL_TEAM_ID);
         }
 
+        args.push('deploy');
+
+        if (process.env.VERCEL_CLI_VERSION) {
+          args.push(
+            '--build-env',
+            `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
+          );
+        }
+
+        args.push('--debug');
+        args.push('--yes');
+
         // Run `vc deploy`
-        const deployResult = await execa(
-          binaryPath,
-          [
-            '-t',
-            token,
-            ...(process.env.VERCEL_TEAM_ID
-              ? ['--scope', process.env.VERCEL_TEAM_ID]
-              : []),
-            'deploy',
-            ...(process.env.VERCEL_CLI_VERSION
-              ? [
-                  '--build-env',
-                  `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`,
-                ]
-              : []),
-            '--public',
-            '--debug',
-          ],
-          { cwd, stdio: 'pipe', reject: false }
-        );
+        const deployResult = await execa(binaryPath, args, {
+          cwd,
+          stdio: 'pipe',
+          reject: false,
+        });
 
         const errorDetails = JSON.stringify({
           exitCode: deployResult.exitCode,
@@ -465,18 +435,6 @@ export function testFixtureStdio(
     let stderr = '';
     const readyResolver = createResolver();
     const exitResolver = createResolver();
-
-    // By default, tests will wait 6 minutes for the dev server to be ready and
-    // perform the tests, however a `readyTimeout` can be used to reduce the
-    // wait time if the dev server is expected to fail to start or hang
-    let readyTimer: NodeJS.Timeout;
-    if (readyTimeout > 0) {
-      readyTimer = setTimeout(() => {
-        readyResolver.reject(
-          new Error('Dev server timed out while waiting to be ready')
-        );
-      }, readyTimeout);
-    }
 
     try {
       let printedOutput = false;
@@ -530,7 +488,6 @@ export function testFixtureStdio(
         stderr += data;
 
         if (stripAnsi(data).includes('Ready! Available at')) {
-          clearTimeout(readyTimer);
           readyResolver.resolve(null);
         }
 

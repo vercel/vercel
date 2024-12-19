@@ -571,4 +571,25 @@ describe('PPR', () => {
       'next-resume': '1',
     });
   });
+
+  describe('root params', () => {
+    it('should not generate a prerender for the missing root params route', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-root-params'));
+
+      expect(output['[lang]']).toBeDefined();
+      expect(output['[lang]'].type).toBe('Prerender');
+
+      // We want this to be a chainable prerender (supports Partial
+      // Prerendering).
+      expect(output['[lang]'].chain).toBeDefined();
+
+      // TODO: once we support revalidating this page, we should remove this
+      // We don't want to generate a fallback for this route. If this case fails
+      // it indicates that the fallback was generated, and we're at risk of
+      // cache posioning.
+      expect(output['[lang]'].fallback).toEqual(null);
+    });
+  });
 });

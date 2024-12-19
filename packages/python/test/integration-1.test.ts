@@ -10,7 +10,9 @@ const path = require('path');
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
-it('should match the probes against Python dev servers', async () => {
+// https://linear.app/vercel/issue/ZERO-3044/fix-python-on-github-actions
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('should match the probes against Python dev servers', async () => {
   const fixture = path.join(fixturesPath, '00-request-path');
 
   await execa(

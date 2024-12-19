@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 8.8.0
+
+### Minor Changes
+
+- Add bun detection using bun.lock ([#12740](https://github.com/vercel/vercel/pull/12740))
+
 ## 8.7.0
 
 ### Minor Changes

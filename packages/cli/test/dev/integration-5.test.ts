@@ -377,18 +377,16 @@ test(
   })
 );
 
+// n.b. this test requires the project 00-list-directory to have directory listing
+// enabled at 00-list-directory/settings/advanced
 test(
   '[vercel dev] 00-list-directory',
-  testFixtureStdio(
-    '00-list-directory',
-    async (testPath: any) => {
-      await testPath(200, '/', /Files within/m);
-      await testPath(200, '/', /test[0-3]\.txt/m);
-      await testPath(200, '/', /\.well-known/m);
-      await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
-    },
-    { projectSettings: { directoryListing: true } }
-  )
+  testFixtureStdio('00-list-directory', async (testPath: any) => {
+    await testPath(200, '/', /Files within/m);
+    await testPath(200, '/', /test[0-3]\.txt/m);
+    await testPath(200, '/', /\.well-known/m);
+    await testPath(200, '/.well-known/keybase.txt', 'proof goes here');
+  })
 );
 
 test(
