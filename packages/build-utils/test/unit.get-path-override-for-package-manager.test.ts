@@ -17,6 +17,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         lockfileVersion: 9.0,
         corepackPackageManager: undefined,
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        detectedLockfile: 'pnpm-lock.yaml',
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',
@@ -51,6 +52,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         corepackPackageManager: 'pnpm@9.5.0',
         nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
         corepackEnabled: false,
+        detectedLockfile: 'pnpm-lock.yaml',
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',

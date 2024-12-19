@@ -56,6 +56,7 @@ export const build: BuildV2 = async ({
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    detectedLockfile,
   } = await scanParentDirs(entrypointDir, true);
 
   spawnOpts.env = getEnvForPackageManager({
@@ -65,6 +66,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
+    detectedLockfile,
   });
 
   if (typeof installCommand === 'string') {
