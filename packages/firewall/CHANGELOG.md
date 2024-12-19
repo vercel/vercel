@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 0.1.5
+
+### Patch Changes
+
+- remove "next" in firewall to resolve vulnerability report ([#12688](https://github.com/vercel/vercel/pull/12688))
+
 ## 0.1.4
 
 ### Patch Changes

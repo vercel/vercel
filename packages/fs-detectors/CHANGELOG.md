@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.3.2
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+
 ## 5.3.1
 
 ### Patch Changes
