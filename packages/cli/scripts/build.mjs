@@ -50,7 +50,8 @@ copyFileSync(
   new URL('get-latest-worker.js', distRoot)
 );
 
-writeFileSync(new URL('vc.js', distRoot),
+writeFileSync(
+  new URL('vc.js', distRoot),
   `#!/usr/bin/env node
 
 "use strict";
