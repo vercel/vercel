@@ -1327,7 +1327,7 @@ export const build: BuildV2 = async buildOptions => {
 
                 // ensure root-most index data route doesn't end in index.json
                 if (dataRoute.page === '/') {
-                  route.src = route.src.replace(/\/index\.json/, '.json');
+                  route.src = route.src.replace(/\/index(\\)?\.json/, '.json');
                 }
 
                 // make sure to route to the correct prerender output
