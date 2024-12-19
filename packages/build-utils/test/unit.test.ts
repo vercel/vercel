@@ -704,6 +704,7 @@ it('should return cliType "npm" when no lockfile is present', async () => {
     expect(result.lockfileVersion).toEqual(undefined);
     expect(result.lockfilePath).toEqual(undefined);
     expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.detectedLockfile).toEqual(undefined);
   } finally {
     await fs.writeFile(originalRepoLockfilePath, originalRepoLockfileData);
   }
@@ -713,27 +714,30 @@ it('should return cliType bun and correct lock file for bun v1 with bun.lockb', 
   const fixture = path.join(__dirname, 'fixtures', '30-bun-v1-lockb');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('bun');
-  expect(result.lockfileVersion).toEqual(0);
+  expect(result.lockfileVersion).toEqual(undefined);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lockb'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('bun.lockb');
 });
 
 it('should return cliType bun and correct lock file for bun v1 with yarn.lock file', async () => {
   const fixture = path.join(__dirname, 'fixtures', '31-bun-v1-with-yarn-lock');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('bun');
-  expect(result.lockfileVersion).toEqual(0);
+  expect(result.lockfileVersion).toEqual(undefined);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lockb'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('bun.lockb');
 });
 
 it('should return cliType bun and correct lock file for bun v1 with bun.lock', async () => {
   const fixture = path.join(__dirname, 'fixtures', '32-bun-v1-lock');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('bun');
-  expect(result.lockfileVersion).toEqual(1);
+  expect(result.lockfileVersion).toEqual(undefined);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'bun.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('bun.lock');
 });
 
 it('should return lockfileVersion 2 with npm7', async () => {
@@ -743,6 +747,7 @@ it('should return lockfileVersion 2 with npm7', async () => {
   expect(result.lockfileVersion).toEqual(2);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('package-lock.json');
 });
 
 it('should not return lockfileVersion with yarn', async () => {
@@ -752,6 +757,7 @@ it('should not return lockfileVersion with yarn', async () => {
   expect(result.lockfileVersion).toEqual(undefined);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('yarn.lock');
 });
 
 it('should return lockfileVersion 1 with older versions of npm', async () => {
@@ -761,6 +767,7 @@ it('should return lockfileVersion 1 with older versions of npm', async () => {
   expect(result.lockfileVersion).toEqual(1);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'package-lock.json'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('package-lock.json');
 });
 
 it('should detect npm Workspaces', async () => {
@@ -772,6 +779,7 @@ it('should detect npm Workspaces', async () => {
     path.join(fixture, '..', 'package-lock.json')
   );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('package-lock.json');
 });
 
 it('should detect pnpm without workspace', async () => {
@@ -781,6 +789,7 @@ it('should detect pnpm without workspace', async () => {
   expect(result.lockfileVersion).toEqual(5.3);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'pnpm-lock.yaml'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('pnpm-lock.yaml');
 });
 
 it('should detect pnpm with workspaces', async () => {
@@ -792,6 +801,7 @@ it('should detect pnpm with workspaces', async () => {
     path.join(fixture, '..', 'pnpm-lock.yaml')
   );
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('pnpm-lock.yaml');
 });
 
 it('should detect package.json in nested backend', async () => {
@@ -804,6 +814,7 @@ it('should detect package.json in nested backend', async () => {
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
   expect(result.lockfileVersion).toEqual(6);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('pnpm-lock.yaml');
 });
 
 it('should detect package.json in nested frontend', async () => {
@@ -816,6 +827,7 @@ it('should detect package.json in nested frontend', async () => {
   // There is no lockfile but this test will pick up vercel/vercel/pnpm-lock.yaml
   expect(result.lockfileVersion).toEqual(6);
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+  expect(result.detectedLockfile).toEqual('pnpm-lock.yaml');
 });
 
 it('should detect turborepo project supporting corepack', async () => {
@@ -869,6 +881,7 @@ it('should detect `packageManager` in npm monorepo', async () => {
     expect(result.packageJsonPackageManager).toEqual('npm@10.7.0');
     expect(result.lockfileVersion).toEqual(undefined);
     expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.detectedLockfile).toEqual(undefined);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
@@ -888,6 +901,7 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
     expect(result.packageJsonPackageManager).toEqual('pnpm@8.3.1');
     expect(result.lockfileVersion).toEqual(undefined);
     expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.detectedLockfile).toEqual(undefined);
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
