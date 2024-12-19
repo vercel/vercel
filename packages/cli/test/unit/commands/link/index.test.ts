@@ -450,9 +450,20 @@ describe('link', () => {
     await expect(client.stderr).toOutput(
       'Which scope should contain your project?'
     );
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `debug stderr: 'Which scope should contain your project?'`,
+      client.stderr.getFullOutput()
+    );
+
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput('Link to it?');
+
+    // eslint-disable-next-line no-console
+    console.log(`debug stderr: 'Link to it?'`, client.stderr.getFullOutput());
+
     client.stdin.write('y\n');
 
     await expect(client.stderr).toOutput(
