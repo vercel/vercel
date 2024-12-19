@@ -178,6 +178,7 @@ function getImagesConfig(
     ? {
         domains: imagesManifest.images.domains,
         sizes: imagesManifest.images.sizes,
+        qualities: imagesManifest.images.qualities,
         remotePatterns: imagesManifest.images.remotePatterns,
         localPatterns: imagesManifest.images.localPatterns,
         minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
@@ -610,6 +611,7 @@ export type NextImagesManifest = {
     localPatterns: Images['localPatterns'];
     minimumCacheTTL?: Images['minimumCacheTTL'];
     formats?: Images['formats'];
+    qualities?: Images['qualities'];
     unoptimized?: boolean;
     dangerouslyAllowSVG?: Images['dangerouslyAllowSVG'];
     contentSecurityPolicy?: Images['contentSecurityPolicy'];

@@ -76,6 +76,16 @@ const imagesSchema = {
       minimum: 1,
       maximum: 315360000,
     },
+    qualities: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 20,
+      items: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 100,
+      },
+    },
     remotePatterns: {
       type: 'array',
       minItems: 0,

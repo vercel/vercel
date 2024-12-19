@@ -440,6 +440,7 @@ export interface Images {
   domains: string[];
   remotePatterns?: RemotePattern[];
   localPatterns?: LocalPattern[];
+  qualities?: number[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];

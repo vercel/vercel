@@ -53,6 +53,7 @@ describe('getImagesConfig', () => {
       loader: 'default',
       domains: ['example.com'],
       sizes: [512, 1024],
+      qualities: [25, 50, 75],
       remotePatterns: undefined,
       localPatterns: [{ search: '' }],
       formats: ['image/webp'],
@@ -65,6 +66,7 @@ describe('getImagesConfig', () => {
     expect(result).toEqual({
       domains: ['example.com'],
       sizes: [512, 1024],
+      qualities: [25, 50, 75],
       remotePatterns: undefined,
       localPatterns: [{ search: '' }],
       formats: ['image/webp'],
@@ -109,6 +111,7 @@ describe('getImagesConfig', () => {
       loader: 'default',
       domains: ['example.com'],
       sizes: [512, 1024],
+      qualities: [70, 80, 90],
       remotePatterns: undefined,
       localPatterns: [{ search: '' }],
       formats: ['image/webp'],
