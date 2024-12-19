@@ -161,7 +161,7 @@ export async function exec(directory: string, args: string[] = []) {
   return execa(binaryPath, ['dev', directory, '-t', token, ...scope, ...args], {
     reject: false,
     shell: true,
-    env: { __VERCEL_SKIP_DEV_CMD: '1' },
+    env: { __VERCEL_SKIP_LINKING: '1' },
   });
 }
 
@@ -276,7 +276,7 @@ export async function testFixture(
       shell: true,
       stdio: 'pipe',
       ...opts,
-      env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: '1' },
+      env: { ...opts.env, __VERCEL_SKIP_LINKING: '1' },
     }
   );
 
@@ -446,7 +446,7 @@ export function testFixtureStdio(
         } --debug`
       );
       const env = skipDeploy
-        ? { ...process.env, __VERCEL_SKIP_DEV_CMD: '1' }
+        ? { ...process.env, __VERCEL_SKIP_LINKING: '1' }
         : process.env;
       dev = execa(
         binaryPath,
