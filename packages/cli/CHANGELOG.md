@@ -1,5 +1,28 @@
 # vercel
 
+## 39.2.4
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12764](https://github.com/vercel/vercel/pull/12764))
+
+- Update `@vercel/fun` to v1.1.2 ([#12791](https://github.com/vercel/vercel/pull/12791))
+
+- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12771](https://github.com/vercel/vercel/pull/12771))
+
+- [deploy] make deploy --target case sensitive ([#12747](https://github.com/vercel/vercel/pull/12747))
+
+- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+
+- Updated dependencies [[`79a7374cdd8e734f01ee1b9ad6662182b9090bc0`](https://github.com/vercel/vercel/commit/79a7374cdd8e734f01ee1b9ad6662182b9090bc0), [`6150fbe18ef7fb4a6591a87a40c4452b2c9923ce`](https://github.com/vercel/vercel/commit/6150fbe18ef7fb4a6591a87a40c4452b2c9923ce), [`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`c31d0813fc9668859c81ec0002e502aa200eec95`](https://github.com/vercel/vercel/commit/c31d0813fc9668859c81ec0002e502aa200eec95)]:
+  - @vercel/next@4.4.1
+  - @vercel/static-build@2.5.40
+  - @vercel/build-utils@9.0.0
+  - @vercel/hydrogen@1.0.10
+  - @vercel/redwood@2.1.11
+  - @vercel/remix-builder@5.0.1
+  - @vercel/node@5.0.1
+
 ## 39.2.3
 
 ### Patch Changes
