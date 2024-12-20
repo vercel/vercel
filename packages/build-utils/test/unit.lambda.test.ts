@@ -9,6 +9,30 @@ const MODE_DIRECTORY = 16877; /* drwxr-xr-x */
 const MODE_FILE = 33188; /* -rw-r--r-- */
 
 describe('Lambda', () => {
+  it("should error if symbolic link target doesn't exist", async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+
+    // Create a broken symlink
+    await fs.symlink(
+      path.join(__dirname, 'symlinks-broken', 'does-not-exist.txt'),
+      path.join(__dirname, 'symlinks-broken', 'link-to-does-not-exist.txt')
+    );
+    const files = await glob('**', path.join(__dirname, 'symlinks-broken'));
+    const linkStat = await fs.lstat(
+      path.join(__dirname, 'symlinks-broken', 'link-to-does-not-exist.txt')
+    );
+    expect(linkStat.isSymbolicLink()).toEqual(true);
+
+    await expect(createZip(files)).rejects.toThrow();
+
+    // Cleanup
+    await fs.unlink(
+      path.join(__dirname, 'symlinks-broken', 'link-to-does-not-exist.txt')
+    );
+  });
   it('should create zip file with symlinks', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
