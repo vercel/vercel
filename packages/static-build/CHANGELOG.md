@@ -1,5 +1,14 @@
 # @vercel/static-build
 
+## 2.5.40
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.62
+
 ## 2.5.39
 
 ### Patch Changes
