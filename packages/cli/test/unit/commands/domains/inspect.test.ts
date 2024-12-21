@@ -34,7 +34,7 @@ describe('domains inspect', () => {
         res.json({});
       });
       client.setArgv('domains', 'inspect', domain.name);
-      let exitCodePromise = domains(client);
+      const exitCodePromise = domains(client);
       await expect(exitCodePromise).resolves.toEqual(null);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -43,7 +43,7 @@ describe('domains inspect', () => {
           value: 'inspect',
         },
         {
-          key: 'argument:domainName',
+          key: 'argument:domain',
           value: '[REDACTED]',
         },
       ]);

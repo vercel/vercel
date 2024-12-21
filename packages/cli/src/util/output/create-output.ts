@@ -1,8 +1,8 @@
-import chalk, { Chalk } from 'chalk';
+import chalk, { type Chalk } from 'chalk';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
-import wait, { StopSpinner } from './wait';
+import wait, { type StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';

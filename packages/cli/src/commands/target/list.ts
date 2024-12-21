@@ -1,7 +1,7 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { targetCommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';
@@ -59,27 +59,25 @@ export default async function list(client: Client, argv: string[]) {
       ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
         header => chalk.bold(chalk.cyan(header))
       ),
-      ...result
-        .map(target => {
-          const type =
-            target.type === 'production'
-              ? 'Production'
-              : target.type === 'development'
-                ? 'Development'
-                : 'Preview';
-          return [
-            [
-              formatEnvironment(link.org.slug, link.project.name, target),
-              target.slug,
-              target.id,
-              type,
-              chalk.gray(
-                target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
-              ),
-            ],
-          ];
-        })
-        .flat(),
+      ...result.flatMap(target => {
+        const type =
+          target.type === 'production'
+            ? 'Production'
+            : target.type === 'development'
+              ? 'Development'
+              : 'Preview';
+        return [
+          [
+            formatEnvironment(link.org.slug, link.project.name, target),
+            target.slug,
+            target.id,
+            type,
+            chalk.gray(
+              target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+            ),
+          ],
+        ];
+      }),
     ],
     { hsep: 3 }
   ).replace(/^/gm, '  ');
@@ -98,7 +96,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'production',
       description: '',
-      name: 'Production',
       domains: [],
     },
     {
@@ -108,7 +105,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'preview',
       description: '',
-      name: 'Preview',
       domains: [],
     },
     ...environments,
@@ -119,7 +115,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'development',
       description: '',
-      name: 'Development',
       domains: [],
     },
   ];

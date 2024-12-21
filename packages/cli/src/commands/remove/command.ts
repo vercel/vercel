@@ -9,6 +9,7 @@ export const removeCommand = {
     {
       name: 'name|deploymentId',
       required: true,
+      multiple: true,
     },
   ],
   options: [

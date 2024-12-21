@@ -1,6 +1,6 @@
 import type { DNSRecord } from '@vercel-internals/types';
 import { DomainNotFound } from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
 import chalk from 'chalk';

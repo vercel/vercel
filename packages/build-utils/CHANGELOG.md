@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 8.8.0
+
+### Minor Changes
+
+- Add bun detection using bun.lock ([#12740](https://github.com/vercel/vercel/pull/12740))
+
+## 8.7.0
+
+### Minor Changes
+
+- Support splitting archive deployments in parts. ([#12671](https://github.com/vercel/vercel/pull/12671))
+
+## 8.6.0
+
+### Minor Changes
+
+- Add support for `NOW_EPHEMERAL_FILES_S3_URL`, `NOW_FILES_CLOUDFRONT_URL` and `NOW_FILES_S3_URL` environment variables ([#12643](https://github.com/vercel/vercel/pull/12643))
+
+## 8.5.0
+
+### Minor Changes
+
+- Remove `VERCEL_ALLOW_NODEJS22` env var check ([#12614](https://github.com/vercel/vercel/pull/12614))
+
 ## 8.4.12
 
 ### Patch Changes

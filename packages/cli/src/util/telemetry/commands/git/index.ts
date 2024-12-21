@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { gitCommand } from '../../../../commands/git/command';
 
-export class GitTelemetryClient extends TelemetryClient {
+export class GitTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof gitCommand>
+{
   trackCliSubcommandConnect(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'connect',
@@ -13,17 +18,5 @@ export class GitTelemetryClient extends TelemetryClient {
       subcommand: 'disconnect',
       value: actual,
     });
-  }
-
-  trackCliFlagConfirm(confirm: boolean | undefined) {
-    if (confirm) {
-      this.trackCliFlag('confirm');
-    }
-  }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
-    }
   }
 }

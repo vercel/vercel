@@ -8,7 +8,7 @@ import { mapOldToNew } from '../examples/map-old-to-new';
 
 const repoRoot = join(__dirname, '..', '..', '..');
 const pubDir = join(repoRoot, 'public');
-const ignoredPackages = ['sdk'];
+const ignoredPackages = [];
 
 async function main() {
   console.log(`Building static frontend ${repoRoot}...`);
@@ -71,10 +71,16 @@ async function main() {
     }
 
     const fullDir = join(packagesDir, pkg);
-    const packageJsonRaw = await fs.readFile(
-      join(fullDir, 'package.json'),
-      'utf-8'
-    );
+    const packageJsonRaw = await fs
+      .readFile(join(fullDir, 'package.json'), 'utf-8')
+      .catch(() => null);
+    if (!packageJsonRaw) {
+      // `package.json` might not exist if this directory exists due to the
+      // Vercel deployment's build cache (even though the package has been
+      // deleted). So skip in that case.
+      continue;
+    }
+
     const packageJson = JSON.parse(packageJsonRaw);
     const files = await fs.readdir(fullDir);
     const tarballName = files.find(f => /^vercel-.+\.tgz$/.test(f));

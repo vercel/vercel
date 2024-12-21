@@ -1,6 +1,6 @@
 {
   "name": "@vercel/edge",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -22,11 +22,12 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@vercel/functions": "workspace:*",
     "@edge-runtime/jest-environment": "2.3.7",
     "@types/jest": "27.4.1",
     "jest-junit": "16.0.0",
     "ts-node": "8.9.1",
-    "tsup": "6.1.2",
+    "tsup": "7.2.0",
     "typedoc": "0.24.6",
     "typedoc-plugin-markdown": "3.15.2",
     "typedoc-plugin-mdn-links": "3.0.3",

@@ -266,6 +266,7 @@ export const build: BuildV2 = async buildOptions => {
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    detectedLockfile,
   } = await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
@@ -275,6 +276,7 @@ export const build: BuildV2 = async buildOptions => {
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
+    detectedLockfile,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
@@ -797,6 +799,13 @@ export const build: BuildV2 = async buildOptions => {
             code: 'NEXT_IMAGES_MINIMUMCACHETTL',
             message:
               'image-manifest.json "images.minimumCacheTTL" must be an integer. Contact support if this continues to happen.',
+          });
+        }
+        if (images.qualities && !Array.isArray(images.qualities)) {
+          throw new NowBuildError({
+            code: 'NEXT_IMAGES_QUALITIES',
+            message:
+              'image-manifest.json "images.qualities" must be an array. Contact support if this continues to happen.',
           });
         }
         if (
@@ -1327,7 +1336,7 @@ export const build: BuildV2 = async buildOptions => {
 
                 // ensure root-most index data route doesn't end in index.json
                 if (dataRoute.page === '/') {
-                  route.src = route.src.replace(/\/index\.json/, '.json');
+                  route.src = route.src.replace(/\/index(\\)?\.json/, '.json');
                 }
 
                 // make sure to route to the correct prerender output

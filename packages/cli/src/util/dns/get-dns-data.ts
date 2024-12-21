@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { DNSRecordData } from '@vercel-internals/types';
 import confirm from '../input/confirm';
-import Client from '../client';
+import type Client from '../client';
 import output from '../../output-manager';
 
 const RECORD_TYPES = ['A', 'AAAA', 'ALIAS', 'CAA', 'CNAME', 'MX', 'SRV', 'TXT'];

@@ -525,7 +525,7 @@ describe('PPR', () => {
     });
   });
 
-  it('should have the chain mirrored to the experimentalStreamingLambdaPath', async () => {
+  it('should have the chain added', async () => {
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'ppr'));
@@ -543,12 +543,6 @@ describe('PPR', () => {
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
     expect(output['index'].chain?.outputPath).toBe('index');
-
-    // TODO: remove the following once we have stabilized the chained responses
-    expect(output['index'].experimentalStreamingLambdaPath).toBe(
-      '_next/postponed/resume/index'
-    );
-    expect(output['_next/postponed/resume/index']).toBeDefined();
   });
 
   it('should support basePath', async () => {
@@ -573,20 +567,29 @@ describe('PPR', () => {
     expect(output['chat/index'].lambda.type).toBe('Lambda');
 
     expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
-
-    // TODO: remove the following once we have stabilized the chained responses
-    expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
-      'chat/_next/postponed/resume/index'
-    );
-    expect(output['chat/_next/postponed/resume/index']).toBeDefined();
-    expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
-    expect(output['chat/_next/postponed/resume/index']).toBe(
-      output['chat/index'].lambda
-    );
-
-    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
     expect(output['chat/index'].chain?.headers).toEqual({
       'next-resume': '1',
+    });
+  });
+
+  describe('root params', () => {
+    it('should not generate a prerender for the missing root params route', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-root-params'));
+
+      expect(output['[lang]']).toBeDefined();
+      expect(output['[lang]'].type).toBe('Prerender');
+
+      // We want this to be a chainable prerender (supports Partial
+      // Prerendering).
+      expect(output['[lang]'].chain).toBeDefined();
+
+      // TODO: once we support revalidating this page, we should remove this
+      // We don't want to generate a fallback for this route. If this case fails
+      // it indicates that the fallback was generated, and we're at risk of
+      // cache posioning.
+      expect(output['[lang]'].fallback).toEqual(null);
     });
   });
 });

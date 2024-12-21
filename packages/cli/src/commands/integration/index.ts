@@ -1,3 +1,4 @@
+import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -19,10 +20,10 @@ import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 
 const COMMAND_CONFIG = {
-  add: ['add'],
-  open: ['open'],
-  list: ['list', 'ls'],
-  remove: ['remove'],
+  add: getCommandAliases(addSubcommand),
+  open: getCommandAliases(openSubcommand),
+  list: getCommandAliases(listSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -44,8 +45,13 @@ export default async function main(client: Client) {
 
   const needHelp = flags['--help'];
 
-  function printHelp(command: Command, parent = integrationCommand) {
-    output.print(help(command, { columns: client.stderr.columns, parent }));
+  function printHelp(command: Command) {
+    output.print(
+      help(command, {
+        columns: client.stderr.columns,
+        parent: integrationCommand,
+      })
+    );
   }
 
   if (!subcommand && needHelp) {
@@ -53,7 +59,6 @@ export default async function main(client: Client) {
     output.print(
       help(integrationCommand, {
         columns: client.stderr.columns,
-        parent: undefined,
       })
     );
     return 2;
@@ -62,7 +67,7 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'add': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'add');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(addSubcommand);
         return 2;
       }
@@ -71,7 +76,7 @@ export default async function main(client: Client) {
     }
     case 'list': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'list');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(listSubcommand);
         return 2;
       }
@@ -80,7 +85,7 @@ export default async function main(client: Client) {
     }
     case 'open': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'open');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(openSubcommand);
         return 2;
       }
@@ -89,7 +94,7 @@ export default async function main(client: Client) {
     }
     case 'remove': {
       if (needHelp) {
-        telemetry.trackCliFlagHelp('integration', 'remove');
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(removeSubcommand);
         return 2;
       }

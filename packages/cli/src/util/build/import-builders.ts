@@ -6,7 +6,7 @@ import { dirname, join } from 'path';
 import { createRequire } from 'module';
 import { mkdirp, outputJSON, readJSON, symlink } from 'fs-extra';
 import { isStaticRuntime } from '@vercel/fs-detectors';
-import { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
+import type { BuilderV2, BuilderV3, PackageJson } from '@vercel/build-utils';
 import execa from 'execa';
 import * as staticBuilder from './static-builder';
 import { VERCEL_DIR } from '../projects/link';
@@ -76,7 +76,7 @@ export async function resolveBuilders(
     const resolvedSpec = resolvedSpecs?.get(spec) || spec;
     const parsed = npa(resolvedSpec);
 
-    let { name } = parsed;
+    const { name } = parsed;
     if (!name) {
       // A URL was specified - will need to install it and resolve the
       // proper package name from the written `package.json` file

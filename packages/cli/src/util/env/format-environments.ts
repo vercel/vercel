@@ -16,7 +16,7 @@ export default function formatEnvironments(
   ).map(t => {
     return formatEnvironment(link.org.slug, link.project.name, {
       id: t,
-      name: title(t),
+      slug: title(t),
     });
   });
   const customTargets = env.customEnvironmentIds

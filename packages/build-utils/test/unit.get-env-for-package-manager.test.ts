@@ -1,17 +1,26 @@
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  MockInstance,
+} from 'vitest';
 import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 
 describe('Test `getEnvForPackageManager()`', () => {
-  let consoleLogSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
+  let consoleLogSpy: MockInstance<typeof console.log>;
+  let consoleWarnSpy: MockInstance<typeof console.warn>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log');
-    consoleWarnSpy = jest.spyOn(console, 'warn');
+    consoleLogSpy = vi.spyOn(console, 'log');
+    consoleWarnSpy = vi.spyOn(console, 'warn');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('with "npm"', () => {
@@ -40,6 +49,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           env: {
             FOO: 'bar',
           },
+          detectedLockfile: 'package-lock.json',
         },
         want: {
           FOO: 'bar',
@@ -58,6 +68,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             ENABLE_EXPERIMENTAL_COREPACK: '1',
           },
+          detectedLockfile: 'package-lock.json',
         },
         want: {
           FOO: 'bar',
@@ -77,6 +88,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: `/node16/bin-npm7${delimiter}foo`,
           },
+          detectedLockfile: 'package-lock.json',
         },
         want: {
           FOO: 'bar',
@@ -96,6 +108,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: 'foo',
           },
+          detectedLockfile: 'package-lock.json',
         },
         want: {
           FOO: 'bar',
@@ -112,6 +125,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           packageJsonPackageManager: args.packageJsonPackageManager,
           nodeVersion: args.nodeVersion,
           env: args.env,
+          detectedLockfile: args.detectedLockfile,
         })
       ).toStrictEqual(want);
 
@@ -158,6 +172,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: 'foo',
           },
+          detectedLockfile: 'pnpm-lock.yaml',
         },
         want: {
           FOO: 'bar',
@@ -178,6 +193,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: 'foo',
           },
+          detectedLockfile: 'pnpm-lock.yaml',
         },
         want: {
           FOO: 'bar',
@@ -198,6 +214,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: 'foo',
           },
+          detectedLockfile: 'pnpm-lock.yaml',
         },
         want: {
           FOO: 'bar',
@@ -218,6 +235,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             ENABLE_EXPERIMENTAL_COREPACK: '1',
           },
+          detectedLockfile: 'pnpm-lock.yaml',
         },
         want: {
           FOO: 'bar',
@@ -237,6 +255,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
           },
+          detectedLockfile: 'pnpm-lock.yaml',
         },
         want: {
           FOO: 'bar',
@@ -253,6 +272,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           packageJsonPackageManager: args.packageJsonPackageManager,
           nodeVersion: args.nodeVersion,
           env: args.env,
+          detectedLockfile: args.detectedLockfile,
         })
       ).toStrictEqual(want);
 
@@ -298,6 +318,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           env: {
             FOO: 'bar',
           },
+          detectedLockfile: 'yarn.lock',
         },
         want: {
           FOO: 'bar',
@@ -317,6 +338,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             YARN_NODE_LINKER: 'exists',
           },
+          detectedLockfile: 'yarn.lock',
         },
         want: {
           FOO: 'bar',
@@ -333,6 +355,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           packageJsonPackageManager: args.packageJsonPackageManager,
           nodeVersion: args.nodeVersion,
           env: args.env,
+          detectedLockfile: args.detectedLockfile,
         })
       ).toStrictEqual(want);
 
@@ -379,6 +402,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: '/usr/local/bin',
           },
+          detectedLockfile: 'bun.lockb',
         },
         want: {
           FOO: 'bar',
@@ -396,6 +420,7 @@ describe('Test `getEnvForPackageManager()`', () => {
           packageJsonPackageManager: args.packageJsonPackageManager,
           nodeVersion: args.nodeVersion,
           env: args.env,
+          detectedLockfile: args.detectedLockfile,
         })
       ).toStrictEqual(want);
 

@@ -1,5 +1,64 @@
 # @vercel/client
 
+## 13.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`f031084df97745754da800a8c23a29ae2d58e1e8`](https://github.com/vercel/vercel/commit/f031084df97745754da800a8c23a29ae2d58e1e8)]:
+  - @vercel/routing-utils@5.0.0
+
+## 13.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d), [`0c4ce9cfbf0c6d3108656584d56fa501e3efe15e`](https://github.com/vercel/vercel/commit/0c4ce9cfbf0c6d3108656584d56fa501e3efe15e)]:
+  - @vercel/build-utils@8.8.0
+  - @vercel/routing-utils@4.0.0
+
+## 13.5.0
+
+### Minor Changes
+
+- Support splitting archive deployments in parts. ([#12671](https://github.com/vercel/vercel/pull/12671))
+
+### Patch Changes
+
+- Updated dependencies [[`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/build-utils@8.7.0
+
+## 13.4.20
+
+### Patch Changes
+
+- Use `vitest` in client package ([#12530](https://github.com/vercel/vercel/pull/12530))
+
+- Refactor to avoid setting max listeners globally ([#12647](https://github.com/vercel/vercel/pull/12647))
+
+## 13.4.19
+
+### Patch Changes
+
+- Suggest archive flag during specific failed deployment errors ([#12636](https://github.com/vercel/vercel/pull/12636))
+
+- Updated dependencies [[`d5474ec05886abfb2fc5dd69c54072a7c34498b5`](https://github.com/vercel/vercel/commit/d5474ec05886abfb2fc5dd69c54072a7c34498b5)]:
+  - @vercel/build-utils@8.6.0
+
+## 13.4.18
+
+### Patch Changes
+
+- Cancel other uploads when one fails ([#12635](https://github.com/vercel/vercel/pull/12635))
+
+- Updated dependencies [[`a97f3f13ea3f27fd143e7692544bbd4919771a7a`](https://github.com/vercel/vercel/commit/a97f3f13ea3f27fd143e7692544bbd4919771a7a)]:
+  - @vercel/build-utils@8.5.0
+
+## 13.4.17
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
 ## 13.4.16
 
 ### Patch Changes

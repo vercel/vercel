@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { removeSubcommand } from '../../../../commands/domains/command';
 
-export class DomainsRmTelemetryClient extends TelemetryClient {
+export class DomainsRmTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof removeSubcommand>
+{
   trackCliArgumentDomain(v: string | undefined) {
     if (v) {
       this.trackCliArgument({

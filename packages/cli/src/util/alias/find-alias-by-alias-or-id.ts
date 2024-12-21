@@ -1,5 +1,5 @@
 import type { Alias } from '@vercel-internals/types';
-import Client from '../client';
+import type Client from '../client';
 
 export default async function findAliasByAliasOrId(
   client: Client,

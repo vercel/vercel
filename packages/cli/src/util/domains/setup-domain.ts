@@ -3,7 +3,7 @@ import { NowError } from '../now-error';
 import type { Domain } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
 import addDomain from './add-domain';
-import Client from '../client';
+import type Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import extractDomain from '../alias/extract-domain';

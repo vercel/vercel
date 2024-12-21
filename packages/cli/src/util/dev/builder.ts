@@ -3,13 +3,13 @@
 import ms from 'ms';
 import bytes from 'bytes';
 import { delimiter, dirname, join } from 'path';
-import { fork, ChildProcess } from 'child_process';
+import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
 import {
-  Builder,
-  BuildOptions,
-  Env,
-  File,
+  type Builder,
+  type BuildOptions,
+  type Env,
+  type File,
   Lambda,
   FileBlob,
   FileFsRef,
@@ -24,8 +24,8 @@ import { treeKill } from '../tree-kill';
 import { relative } from '../path-helpers';
 import { LambdaSizeExceededError } from '../errors-ts';
 
-import DevServer from './server';
-import {
+import type DevServer from './server';
+import type {
   VercelConfig,
   BuildMatch,
   BuildResult,
@@ -62,7 +62,7 @@ async function createBuildProcess(
   const builderWorkerPath = join(__dirname, 'builder-worker.js');
 
   // Ensure that `node` is in the builder's `PATH`
-  let PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -405,6 +405,7 @@ export async function getBuildMatches(
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   for (const buildConfig of builds) {
+    // eslint-disable-next-line prefer-const
     let { src = '**', use, config = {} } = buildConfig;
 
     if (!use) {

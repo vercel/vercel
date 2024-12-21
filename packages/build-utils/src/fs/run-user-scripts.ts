@@ -73,6 +73,11 @@ export interface ScanParentDirsResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
+  /**
+   * Name of the lockfile (`yarn.lock`, `package-lock.json`, ...) detected
+   * or `undefined` if no lockfile was detected.
+   */
+  detectedLockfile?: string;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -356,7 +361,13 @@ export async function scanParentDirs(
       ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
       : undefined;
   const {
-    paths: [yarnLockPath, npmLockPath, pnpmLockPath, bunLockPath],
+    paths: [
+      yarnLockPath,
+      npmLockPath,
+      pnpmLockPath,
+      bunLockTextPath,
+      bunLockBinPath,
+    ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
     base,
@@ -365,6 +376,7 @@ export async function scanParentDirs(
       'yarn.lock',
       'package-lock.json',
       'pnpm-lock.yaml',
+      'bun.lock',
       'bun.lockb',
     ],
   });
@@ -372,7 +384,8 @@ export async function scanParentDirs(
   let lockfileVersion: number | undefined;
   let cliType: CliType;
 
-  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLockBin] =
+  const bunLockPath = bunLockTextPath ?? bunLockBinPath;
+  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLock] =
     await Promise.all([
       Boolean(yarnLockPath),
       npmLockPath
@@ -381,7 +394,7 @@ export async function scanParentDirs(
       pnpmLockPath
         ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
         : null,
-      bunLockPath ? fs.readFile(bunLockPath, 'utf8') : null,
+      bunLockPath ? fs.readFile(bunLockPath) : null,
     ]);
 
   const rootProjectInfo = readPackageJson
@@ -400,11 +413,9 @@ export async function scanParentDirs(
     : undefined;
 
   // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
-  if (bunLockBin && hasYarnLock) {
+  if (bunLock && hasYarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    // TODO: read "bun-lockfile-format-v0"
-    lockfileVersion = 0;
   } else if (hasYarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
@@ -416,11 +427,9 @@ export async function scanParentDirs(
     cliType = 'npm';
     lockfilePath = npmLockPath;
     lockfileVersion = packageLockJson.lockfileVersion;
-  } else if (bunLockBin) {
+  } else if (bunLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    // TODO: read "bun-lockfile-format-v0"
-    lockfileVersion = 0;
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
@@ -437,6 +446,7 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
     turboSupportsCorepackHome,
+    detectedLockfile: lockfilePath ? path.basename(lockfilePath) : undefined,
   };
 }
 
@@ -620,6 +630,7 @@ export async function runNpmInstall(
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
+      detectedLockfile,
     } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
@@ -660,6 +671,7 @@ export async function runNpmInstall(
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
+      detectedLockfile,
     });
     let commandArgs: string[];
     const isPotentiallyBrokenNpm =
@@ -747,6 +759,7 @@ export function getEnvForPackageManager({
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
+  detectedLockfile,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -755,6 +768,7 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
+  detectedLockfile: string | undefined;
 }) {
   const corepackEnabled = usingCorepack(
     env,
@@ -762,18 +776,16 @@ export function getEnvForPackageManager({
     turboSupportsCorepackHome
   );
 
-  const {
-    detectedLockfile,
-    detectedPackageManager,
-    path: newPath,
-  } = getPathOverrideForPackageManager({
-    cliType,
-    lockfileVersion,
-    corepackPackageManager: packageJsonPackageManager,
-    nodeVersion,
-    corepackEnabled,
-    packageJsonEngines,
-  });
+  const { detectedPackageManager, path: newPath } =
+    getPathOverrideForPackageManager({
+      cliType,
+      lockfileVersion,
+      corepackPackageManager: packageJsonPackageManager,
+      nodeVersion,
+      corepackEnabled,
+      packageJsonEngines,
+      detectedLockfile,
+    });
 
   if (corepackEnabled) {
     debug(
@@ -895,6 +907,7 @@ export function getPathOverrideForPackageManager({
   corepackPackageManager,
   corepackEnabled = true,
   packageJsonEngines,
+  detectedLockfile,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -902,6 +915,7 @@ export function getPathOverrideForPackageManager({
   nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
   packageJsonEngines?: PackageJson.Engines;
+  detectedLockfile?: string;
 }): {
   /**
    * Which lockfile was detected.
@@ -917,7 +931,11 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
+  const detectedPackageManger = detectPackageManager(
+    cliType,
+    lockfileVersion,
+    detectedLockfile
+  );
 
   if (!corepackPackageManager || !corepackEnabled) {
     if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
@@ -1047,7 +1065,8 @@ function validateVersionSpecifier(version?: string) {
 
 export function detectPackageManager(
   cliType: CliType,
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  detectedLockfile: string | undefined
 ) {
   switch (cliType) {
     case 'npm':
@@ -1062,7 +1081,7 @@ export function detectPackageManager(
           // pnpm 7
           return {
             path: '/pnpm7/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
+            detectedLockfile,
             detectedPackageManager: 'pnpm@7.x',
             pnpmVersionRange: '7.x',
           };
@@ -1070,7 +1089,7 @@ export function detectPackageManager(
           // pnpm 8
           return {
             path: '/pnpm8/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
+            detectedLockfile,
             detectedPackageManager: 'pnpm@8.x',
             pnpmVersionRange: '8.x',
           };
@@ -1078,7 +1097,7 @@ export function detectPackageManager(
           // pnpm 9
           return {
             path: '/pnpm9/node_modules/.bin',
-            detectedLockfile: 'pnpm-lock.yaml',
+            detectedLockfile,
             detectedPackageManager: 'pnpm@9.x',
             pnpmVersionRange: '9.x',
           };
@@ -1086,7 +1105,7 @@ export function detectPackageManager(
           return {
             // undefined because pnpm@6 is the current default in the build container
             path: undefined,
-            detectedLockfile: 'pnpm-lock.yaml',
+            detectedLockfile,
             detectedPackageManager: 'pnpm@6.x',
             pnpmVersionRange: '6.x',
           };
@@ -1096,7 +1115,7 @@ export function detectPackageManager(
     case 'bun':
       return {
         path: '/bun1',
-        detectedLockfile: 'bun.lockb',
+        detectedLockfile,
         detectedPackageManager: 'bun@1.x',
       };
     case 'yarn':
@@ -1104,7 +1123,7 @@ export function detectPackageManager(
       // which is why there's no `path` here
       return {
         path: undefined,
-        detectedLockfile: 'yarn.lock',
+        detectedLockfile,
         detectedPackageManager: 'yarn',
       };
   }
@@ -1120,11 +1139,13 @@ export function getPathForPackageManager({
   lockfileVersion,
   nodeVersion,
   env,
+  detectedLockfile,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
   nodeVersion: NodeVersion | undefined;
   env: { [x: string]: string | undefined };
+  detectedLockfile: string;
 }): {
   /**
    * Which lockfile was detected.
@@ -1155,6 +1176,7 @@ export function getPathForPackageManager({
     lockfileVersion,
     corepackPackageManager: undefined,
     nodeVersion,
+    detectedLockfile,
   });
 
   if (corepackEnabled) {
@@ -1201,6 +1223,7 @@ export async function runCustomInstallCommand({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    detectedLockfile,
   } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
@@ -1210,6 +1233,7 @@ export async function runCustomInstallCommand({
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
+    detectedLockfile,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1232,6 +1256,7 @@ export async function runPackageJsonScript(
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    detectedLockfile,
   } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
@@ -1253,6 +1278,7 @@ export async function runPackageJsonScript(
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
+      detectedLockfile,
     }),
   };
 

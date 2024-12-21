@@ -6,11 +6,11 @@ export class IntegrationResourceRemoveTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof removeSubcommand>
 {
-  trackCliArgumentResource(v: string | undefined, known?: boolean) {
+  trackCliArgumentResource(v: string | undefined) {
     if (v) {
       this.trackCliArgument({
         arg: 'resource',
-        value: known ? v : this.redactedValue,
+        value: this.redactedValue,
       });
     }
   }

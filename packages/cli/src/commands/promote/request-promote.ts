@@ -70,13 +70,12 @@ export default async function requestPromote({
       `Successfully created new deployment of ${chalk.bold(project.name)} at ${newDeployment.inspectorUrl}`
     );
     return 0;
-  } else {
-    await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
-      body: {}, // required
-      json: false,
-      method: 'POST',
-    });
   }
+  await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
+    body: {}, // required
+    json: false,
+    method: 'POST',
+  });
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(

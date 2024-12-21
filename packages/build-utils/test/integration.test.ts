@@ -4,8 +4,9 @@ import {
   testDeployment,
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
+import { expect, it, vi } from 'vitest';
 
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 

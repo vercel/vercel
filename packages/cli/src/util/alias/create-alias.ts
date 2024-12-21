@@ -1,6 +1,6 @@
 import type { Deployment } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
 import output from '../../output-manager';
 

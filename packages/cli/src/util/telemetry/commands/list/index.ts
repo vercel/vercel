@@ -26,15 +26,9 @@ export class ListTelemetryClient
 
   trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
-      const redactUnknownEnvironment = (environment: string) => {
-        if (environment !== 'production' && environment !== 'preview') {
-          return this.redactedValue;
-        }
-        return environment;
-      };
       this.trackCliOption({
         option: 'environment',
-        value: redactUnknownEnvironment(environment),
+        value: this.redactedTargetName(environment),
       });
     }
   }

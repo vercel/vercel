@@ -18,6 +18,14 @@ export const redeployCommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'target',
+      shorthand: null,
+      argument: 'TARGET',
+      description: 'Redeploy to a specific target environment',
+      type: String,
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -27,6 +35,10 @@ export const redeployCommand = {
     {
       name: 'Write Deployment URL to a file',
       value: `${packageName} redeploy my-deployment.vercel.app > deployment-url.txt`,
+    },
+    {
+      name: 'Rebuild and deploy an existing deployment to a specific target environment',
+      value: `${packageName} redeploy my-deployment.vercel.app --target preview`,
     },
   ],
 } as const;

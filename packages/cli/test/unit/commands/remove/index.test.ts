@@ -37,6 +37,10 @@ describe('remove', () => {
       );
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "remove"').toEqual(1);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:nameOrDeploymentId', value: 'NONE' },
+      ]);
     });
 
     it('should error without calling API for invalid names', async () => {
@@ -76,7 +80,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:hard', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -109,7 +113,7 @@ describe('remove', () => {
       await remove(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:safe', value: 'TRUE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
@@ -141,7 +145,7 @@ describe('remove', () => {
 
       expect(deleteAPIWasCalled);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'argument:nameOrDeploymentId', value: '[REDACTED]' },
+        { key: 'argument:nameOrDeploymentId', value: 'ONE' },
         { key: 'flag:yes', value: 'TRUE' },
       ]);
     });

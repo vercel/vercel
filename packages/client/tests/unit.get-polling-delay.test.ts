@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { getPollingDelay } from '../src/utils/get-polling-delay';
 
 describe('getPollingDelay()', () => {

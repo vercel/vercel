@@ -1,5 +1,5 @@
 import { URLSearchParams } from 'url';
-import Client from '../client';
+import type Client from '../client';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import output from '../../output-manager';
 

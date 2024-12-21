@@ -7,7 +7,7 @@ import {
   rewritesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
-import { VercelConfig } from './dev/types';
+import type { VercelConfig } from './dev/types';
 import {
   functionsSchema,
   buildsSchema,
@@ -75,6 +75,16 @@ const imagesSchema = {
       type: 'integer',
       minimum: 1,
       maximum: 315360000,
+    },
+    qualities: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 20,
+      items: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 100,
+      },
     },
     remotePatterns: {
       type: 'array',

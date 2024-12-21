@@ -1,6 +1,6 @@
-import Client from '../client';
+import type Client from '../client';
 import { isObject } from '@vercel/error-utils';
-import { CustomEnvironment } from '@vercel-internals/types';
+import type { CustomEnvironment } from '@vercel-internals/types';
 
 export async function getCustomEnvironments(client: Client, projectId: string) {
   try {
@@ -16,4 +16,15 @@ export async function getCustomEnvironments(client: Client, projectId: string) {
     }
     throw error;
   }
+}
+
+export function pickCustomEnvironment(
+  customEnvironments: CustomEnvironment[],
+  customEnvironmentSlugOrId?: string | undefined
+): CustomEnvironment | undefined {
+  if (!customEnvironmentSlugOrId) return undefined;
+  return customEnvironments.find(
+    ({ slug, id }) =>
+      slug === customEnvironmentSlugOrId || id === customEnvironmentSlugOrId
+  );
 }

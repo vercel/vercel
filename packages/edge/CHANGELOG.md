@@ -1,5 +1,17 @@
 # @vercel/edge
 
+## 1.1.4
+
+### Patch Changes
+
+- [vercel/edge] add geolocation.postalCode ([#12755](https://github.com/vercel/vercel/pull/12755))
+
+## 1.1.3
+
+### Patch Changes
+
+- update "rollup" to resolve vulnerability report ([#12686](https://github.com/vercel/vercel/pull/12686))
+
 ## 1.1.2
 
 ### Patch Changes

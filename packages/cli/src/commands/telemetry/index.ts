@@ -5,22 +5,26 @@ import { type Command, help } from '../help';
 import status from './status';
 import enable from './enable';
 import disable from './disable';
+import flush from './flush';
 import {
   disableSubcommand,
   enableSubcommand,
   statusSubcommand,
   telemetryCommand,
+  flushSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  status: ['status'],
-  enable: ['enable'],
-  disable: ['disable'],
+  status: getCommandAliases(statusSubcommand),
+  enable: getCommandAliases(enableSubcommand),
+  disable: getCommandAliases(disableSubcommand),
+  flush: getCommandAliases(flushSubcommand),
 };
 
 export default async function telemetry(client: Client) {
@@ -40,7 +44,7 @@ export default async function telemetry(client: Client) {
     return 1;
   }
 
-  const { subcommand } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
@@ -65,23 +69,25 @@ export default async function telemetry(client: Client) {
   switch (subcommand) {
     case 'status':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'status');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(statusSubcommand);
         return 2;
       }
-      telemetryClient.trackCliSubcommandStatus(subcommand);
+      telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
       return status(client);
+    case 'flush':
+      return flush(client, args);
     case 'enable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'enable');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(enableSubcommand);
         return 2;
       }
-      telemetryClient.trackCliSubcommandEnable(subcommand);
+      telemetryClient.trackCliSubcommandEnable(subcommandOriginal);
       return enable(client);
     case 'disable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', 'disable');
+        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(disableSubcommand);
         return 2;
       }

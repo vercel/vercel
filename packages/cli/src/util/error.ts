@@ -1,4 +1,4 @@
-import { Response } from 'node-fetch';
+import type { Response } from 'node-fetch';
 import errorOutput from './output/error';
 
 export { default as handleError } from './handle-error';

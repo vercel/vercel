@@ -1,7 +1,7 @@
 import init from '../../../../src/commands/init';
 import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
-import { FetchOptions } from '../../../../src/util/client';
+import type { FetchOptions } from '../../../../src/util/client';
 import fs from 'fs-extra';
 import { Response } from 'node-fetch';
 import { join } from 'path';
@@ -18,8 +18,7 @@ const mockPath = join(
 );
 
 let mock: MockInstance<
-  [url: string, opts?: FetchOptions | undefined],
-  Promise<unknown>
+  (url: string, options?: FetchOptions) => Promise<unknown>
 >;
 beforeEach(() => {
   // The examples list endpoint comes from an API that we don't typically mock

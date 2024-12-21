@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import rollback from '../../../../src/commands/rollback';
 import type { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -15,9 +15,6 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
-  describe.todo('--timeout');
-  describe.todo('--yes');
-
   describe('telemetry', () => {
     it('tracks usage', async () => {
       const { cwd, previousDeployment } = initRollbackTest();

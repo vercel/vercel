@@ -1,0 +1,3 @@
+.vercel
+!test/dev/fixtures/**/.now
+!test/dev/fixtures/**/.vercel

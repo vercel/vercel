@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
+// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';
@@ -90,8 +91,7 @@ describe('get latest version', () => {
     expect(latest).toEqual(undefined);
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should not check twice', async () => {
+  it('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({
       cacheDir,
@@ -145,7 +145,7 @@ describe('get latest version', () => {
     });
 
     // 2. get the latest version
-    let latest = getLatestVersion({
+    const latest = getLatestVersion({
       cacheDir,
       pkg,
     });
@@ -167,7 +167,7 @@ describe('get latest version', () => {
       }
     }
 
-    let cache = await fs.readJSON(cacheFile);
+    const cache = await fs.readJSON(cacheFile);
     expect(cache.version).toEqual(expect.stringMatching(versionRE));
     expect(cache.version).not.toEqual('28.0.0');
     expect(cache.notifyAt).toEqual(undefined);

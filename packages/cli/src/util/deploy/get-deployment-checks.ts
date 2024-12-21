@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 type CheckStatus = 'registered' | 'running' | 'completed';
 type CheckConclusion =

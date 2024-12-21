@@ -1,6 +1,6 @@
 {
   "name": "@vercel/remix-builder",
-  "version": "2.2.13",
+  "version": "5.0.0",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -23,21 +23,21 @@
     "defaults"
   ],
   "dependencies": {
-    "@vercel/error-utils": "2.0.2",
+    "@vercel/error-utils": "2.0.3",
     "@vercel/nft": "0.27.3",
     "@vercel/static-config": "3.0.0",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
-    "@remix-run/dev": "npm:@vercel/remix-run-dev@2.13.1",
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.13",
-    "@vercel/build-utils": "8.4.12",
+    "@vercel/build-utils": "8.8.0",
     "glob": "10.3.16",
     "jest-junit": "16.0.0",
     "path-to-regexp": "6.2.1",
     "semver": "7.5.2",
     "vitest": "2.0.1"
-  }
+  },
+  "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.15.1"
 }

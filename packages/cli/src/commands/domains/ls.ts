@@ -10,28 +10,33 @@ import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
-import {
-  type PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import output from '../../output-manager';
 import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import handleError from '../../util/handle-error';
 
-export default async function ls(
-  client: Client,
-  opts: Partial<PaginationOptions>,
-  args: string[]
-) {
-  const { telemetryEventStore } = client;
-
+export default async function ls(client: Client, argv: string[]) {
   const telemetry = new DomainsLsTelemetryClient({
     opts: {
-      store: telemetryEventStore,
+      store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    handleError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);

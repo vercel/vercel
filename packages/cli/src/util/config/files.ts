@@ -7,8 +7,8 @@ import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import highlight from '../output/highlight';
-import { VercelConfig } from '../dev/types';
-import { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import type { VercelConfig } from '../dev/types';
+import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
 
 import output from '../../output-manager';

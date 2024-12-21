@@ -1,6 +1,6 @@
 import { Output } from './util/output';
 
-let output = new Output(process.stderr, {
+const output = new Output(process.stderr, {
   debug: false,
 });
 
