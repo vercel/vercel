@@ -51,7 +51,7 @@ cd packages/cli
 
 ### `pnpm vercel <cli-commands...>`
 
-From within the `packages/cli` directory, you can use the "dev" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+From within the `packages/cli` directory, you can use the "vercel" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
 pnpm vercel deploy
