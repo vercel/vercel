@@ -199,7 +199,7 @@ export const build: BuildV3 = async ({
     ignore:
       config && typeof config.excludeFiles === 'string'
         ? config.excludeFiles
-        : 'node_modules/**',
+        : '{.next,.nuxt,.git,**/node_modules}/**',
   };
 
   const files: Files = await glob('**', globOptions);
