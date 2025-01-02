@@ -1,11 +1,5 @@
 # @vercel/redwood
 
-## 2.1.11
-
-### Patch Changes
-
-- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
-
 ## 2.1.10
 
 ### Patch Changes
