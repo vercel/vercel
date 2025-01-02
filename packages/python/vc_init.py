@@ -27,7 +27,7 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
-if 'VERCEL_IPC_FD' in os.environ:
+if 'VERCEL_IPC_FD' in os.environ or 'VERCEL_IPC_PATH' in os.environ:
     from http.server import ThreadingHTTPServer
     import http
     import time
@@ -36,9 +36,14 @@ if 'VERCEL_IPC_FD' in os.environ:
     import builtins
     import logging
 
-    ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
-    sock = socket.socket(fileno=ipc_fd)
     start_time = time.time()
+
+    if 'VERCEL_IPC_FD' in os.environ:
+        ipc_fd = int(os.getenv("VERCEL_IPC_FD", ""))
+        sock = socket.socket(fileno=ipc_fd)
+    else:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
 
     send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
     storage = contextvars.ContextVar('storage', default=None)
