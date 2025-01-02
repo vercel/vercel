@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 4.6.0
+
+### Minor Changes
+
+- Update default ignored folders from the zip output: ([#12807](https://github.com/vercel/vercel/pull/12807))
+
+  - nested `node_modules`
+  - nested `.next` & `.nuxt`
+  - `.git` & `.vercel`
+
+### Patch Changes
+
+- Support VERCEL_IPC_PATH along with VERCEL_IPC_FD ([#12800](https://github.com/vercel/vercel/pull/12800))
+
 ## 4.5.1
 
 ### Patch Changes

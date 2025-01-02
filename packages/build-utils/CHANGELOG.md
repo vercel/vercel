@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 9.0.0
+
+### Major Changes
+
+- Change getPathOverrideForPackageManager() to use detectedLockfile argument ([#12749](https://github.com/vercel/vercel/pull/12749))
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+
+- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+
 ## 8.8.0
 
 ### Minor Changes
