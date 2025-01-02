@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.4.1
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12764](https://github.com/vercel/vercel/pull/12764))
+
+- Fix next data route replacing ([#12782](https://github.com/vercel/vercel/pull/12782))
+
+- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+
+- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+
 ## 4.4.0
 
 ### Minor Changes
