@@ -2243,12 +2243,14 @@ export const onPrerenderRoute =
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
+    let didPostpone = false;
     if (renderingMode === RenderingMode.PARTIALLY_STATIC && appDir) {
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
         const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
         if ('postponed' in meta && typeof meta.postponed === 'string') {
+          didPostpone = true;
           postponedPrerender = meta.postponed;
 
           // Assign the headers Content-Type header to the prerendered type.
@@ -2706,7 +2708,7 @@ export const onPrerenderRoute =
                         'content-type': rscContentTypeHeader,
                       }
                     : {}),
-                  ...(postponedPrerender && rscDidPostponeHeader && !isFallback
+                  ...(didPostpone && rscDidPostponeHeader && !isFallback
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
                 },
