@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.0.10
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+
 ## 1.0.9
 
 ### Patch Changes
