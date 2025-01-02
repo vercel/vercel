@@ -2259,6 +2259,14 @@ export const onPrerenderRoute =
           // Read the HTML file and append it to the prerendered content.
           const html = await fs.readFileSync(htmlPath, 'utf8');
           postponedPrerender += html;
+        } else {
+          // Set the content type to text/html; charset=utf-8.
+          initialHeaders ??= {};
+          initialHeaders['content-type'] = 'text/html; charset=utf-8';
+
+          // Read the HTML file and set it to the prerendered content.
+          const html = await fs.readFileSync(htmlPath, 'utf8');
+          postponedPrerender = html;
         }
       }
 
