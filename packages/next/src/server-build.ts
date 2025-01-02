@@ -2182,7 +2182,7 @@ export async function serverBuild({
             // filter to only static data routes as dynamic routes will be handled
             // below
             const { pathname } = new URL(route.dest || '/', 'http://n');
-            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+            return !isDynamicRoute(pathname.replace(/(\\)?\.json$/, ''));
           })
         : []),
 

@@ -23,9 +23,8 @@ export default function parseTarget<FlagName extends string>({
   }
 
   if (typeof targetFlagValue === 'string') {
-    const lowerCaseTarget = targetFlagValue.toLowerCase();
-    output.debug(`Setting target to ${lowerCaseTarget}`);
-    return lowerCaseTarget;
+    output.debug(`Setting target to ${targetFlagValue}`);
+    return targetFlagValue;
   }
 
   if (prodFlagValue) {
