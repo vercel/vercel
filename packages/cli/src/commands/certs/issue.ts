@@ -17,7 +17,7 @@ import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/i
 import { issueSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 
 export default async function issue(
   client: Client,
@@ -32,7 +32,7 @@ export default async function issue(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

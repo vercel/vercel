@@ -26,7 +26,7 @@ import { printDeploymentStatus } from '../../util/deploy/print-deployment-status
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { SchemaValidationFailed } from '../../util/errors';
 import {
   AliasDomainConfigured,
@@ -113,7 +113,7 @@ export default async (client: Client): Promise<number> => {
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
@@ -662,7 +662,7 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    handleError(err);
+    printError(err);
     return 1;
   }
 

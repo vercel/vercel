@@ -14,7 +14,7 @@ import output from '../../output-manager';
 import type { Alias } from '@vercel-internals/types';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { removeSubcommand } from './command';
 
 export default async function rm(client: Client, argv: string[]) {
@@ -25,7 +25,7 @@ export default async function rm(client: Client, argv: string[]) {
   try {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

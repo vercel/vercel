@@ -15,7 +15,7 @@ import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domain
 import { moveSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import type Client from '../../util/client';
 import type { User, Team } from '@vercel-internals/types';
 
@@ -31,7 +31,7 @@ export default async function move(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

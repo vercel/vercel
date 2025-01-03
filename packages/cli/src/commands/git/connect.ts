@@ -20,7 +20,7 @@ import output from '../../output-manager';
 import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
 
@@ -61,7 +61,7 @@ export default async function connect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

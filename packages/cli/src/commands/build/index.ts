@@ -67,7 +67,7 @@ import {
 import { importBuilders } from '../../util/build/import-builders';
 import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
 import { sortBuilders } from '../../util/build/sort-builders';
-import { handleError, toEnumerableError } from '../../util/error';
+import { printError, toEnumerableError } from '../../util/error';
 import { validateConfig } from '../../util/validate-config';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { help } from '../help';
@@ -154,7 +154,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

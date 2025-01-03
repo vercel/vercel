@@ -3,7 +3,7 @@ import type { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
 import output from '../output-manager';
 
-export default function handleError(error: unknown) {
+export function printError(error: unknown) {
   // Coerce Strings to Error instances
   if (typeof error === 'string') {
     error = new Error(error);

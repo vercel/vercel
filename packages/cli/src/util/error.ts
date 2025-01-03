@@ -1,7 +1,7 @@
 import type { Response } from 'node-fetch';
 import errorOutput from './output/error';
 
-export { default as handleError } from './handle-error';
+export { printError } from './print-error';
 export const error = errorOutput;
 
 export interface ResponseError extends Error {

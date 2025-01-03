@@ -17,7 +17,7 @@ import getDeployment from '../../util/get-deployment';
 import { help } from '../help';
 import { bisectCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import output from '../../output-manager';
 import { BisectTelemetryClient } from '../../util/telemetry/commands/bisect';
 
@@ -32,7 +32,7 @@ export default async function bisect(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
