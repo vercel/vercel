@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 2.1.10
 

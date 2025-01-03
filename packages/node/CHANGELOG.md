@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Updated dependencies [[`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`c31d0813fc9668859c81ec0002e502aa200eec95`](https://github.com/vercel/vercel/commit/c31d0813fc9668859c81ec0002e502aa200eec95)]:
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
   - @vercel/build-utils@9.0.0
 
 ## 5.0.0

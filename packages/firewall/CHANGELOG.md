@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- remove "next" in firewall to resolve vulnerability report ([#12688](https://github.com/vercel/vercel/pull/12688))
+- remove "next" in firewall to resolve vulnerability report ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 0.1.4
 

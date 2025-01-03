@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Update default ignored folders from the zip output: ([#12807](https://github.com/vercel/vercel/pull/12807))
+- Update default ignored folders from the zip output: ([#12813](https://github.com/vercel/vercel/pull/12813))
 
   - nested `node_modules`
   - nested `.next` & `.nuxt`
@@ -12,7 +12,7 @@
 
 ### Patch Changes
 
-- Support VERCEL_IPC_PATH along with VERCEL_IPC_FD ([#12800](https://github.com/vercel/vercel/pull/12800))
+- Support VERCEL_IPC_PATH along with VERCEL_IPC_FD ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 4.5.1
 

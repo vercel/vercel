@@ -4,13 +4,13 @@
 
 ### Patch Changes
 
-- Added root params support for pages powered by partial prerendering ([#12764](https://github.com/vercel/vercel/pull/12764))
+- Added root params support for pages powered by partial prerendering ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- Fix next data route replacing ([#12782](https://github.com/vercel/vercel/pull/12782))
+- Fix next data route replacing ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 4.4.0
 

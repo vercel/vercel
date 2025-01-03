@@ -4,13 +4,13 @@
 
 ### Major Changes
 
-- Change getPathOverrideForPackageManager() to use detectedLockfile argument ([#12749](https://github.com/vercel/vercel/pull/12749))
+- Change getPathOverrideForPackageManager() to use detectedLockfile argument ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ### Patch Changes
 
-- Refactor build-util usage to reuse detected lockfile ([#12749](https://github.com/vercel/vercel/pull/12749))
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 8.8.0
 

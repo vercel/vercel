@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- moved methods to @vercel/functions ([#12758](https://github.com/vercel/vercel/pull/12758))
+- moved methods to @vercel/functions ([#12813](https://github.com/vercel/vercel/pull/12813))
 
 ## 1.1.4
 

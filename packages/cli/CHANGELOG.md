@@ -4,17 +4,17 @@
 
 ### Patch Changes
 
-- Added root params support for pages powered by partial prerendering ([#12764](https://github.com/vercel/vercel/pull/12764))
+- Added root params support for pages powered by partial prerendering ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- Update `@vercel/fun` to v1.1.2 ([#12791](https://github.com/vercel/vercel/pull/12791))
+- Update `@vercel/fun` to v1.1.2 ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12771](https://github.com/vercel/vercel/pull/12771))
+- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- [deploy] make deploy --target case sensitive ([#12747](https://github.com/vercel/vercel/pull/12747))
+- [deploy] make deploy --target case sensitive ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- add support for `images.qualities` ([#12792](https://github.com/vercel/vercel/pull/12792))
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
 
-- Updated dependencies [[`79a7374cdd8e734f01ee1b9ad6662182b9090bc0`](https://github.com/vercel/vercel/commit/79a7374cdd8e734f01ee1b9ad6662182b9090bc0), [`6150fbe18ef7fb4a6591a87a40c4452b2c9923ce`](https://github.com/vercel/vercel/commit/6150fbe18ef7fb4a6591a87a40c4452b2c9923ce), [`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`7adf5367054bdd86e7ecb9791290fffeb756fcfb`](https://github.com/vercel/vercel/commit/7adf5367054bdd86e7ecb9791290fffeb756fcfb), [`c11c3553f30bf00501f7136cfb5fda9f9c4b4fb1`](https://github.com/vercel/vercel/commit/c11c3553f30bf00501f7136cfb5fda9f9c4b4fb1), [`99a2899b9f3e1868752690f75bd1ca587f53ffdd`](https://github.com/vercel/vercel/commit/99a2899b9f3e1868752690f75bd1ca587f53ffdd), [`c31d0813fc9668859c81ec0002e502aa200eec95`](https://github.com/vercel/vercel/commit/c31d0813fc9668859c81ec0002e502aa200eec95)]:
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
   - @vercel/next@4.4.1
   - @vercel/static-build@2.5.40
   - @vercel/build-utils@9.0.0

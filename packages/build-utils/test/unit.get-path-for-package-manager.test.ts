@@ -17,7 +17,6 @@ describe('Test `getPathForPackageManager()`', () => {
         env: {
           FOO: 'bar',
         },
-        detectedLockfile: 'package-lock.json',
       },
       want: {
         detectedLockfile: undefined,
@@ -36,7 +35,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           ENABLE_EXPERIMENTAL_COREPACK: '1',
         },
-        detectedLockfile: 'package-lock.json',
       },
       want: {
         detectedLockfile: undefined,
@@ -55,7 +53,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           PATH: `/node16/bin-npm7${delimiter}foo`,
         },
-        detectedLockfile: 'package-lock.json',
       },
       want: {
         detectedLockfile: undefined,
@@ -74,7 +71,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           PATH: 'foo',
         },
-        detectedLockfile: 'package-lock.json',
       },
       want: {
         detectedLockfile: undefined,
@@ -92,7 +88,6 @@ describe('Test `getPathForPackageManager()`', () => {
         env: {
           FOO: 'bar',
         },
-        detectedLockfile: 'yarn.lock',
       },
       want: {
         detectedLockfile: 'yarn.lock',
@@ -111,7 +106,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           YARN_NODE_LINKER: 'exists',
         },
-        detectedLockfile: 'yarn.lock',
       },
       want: {
         detectedLockfile: undefined,
@@ -130,7 +124,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           PATH: 'foo',
         },
-        detectedLockfile: 'pnpm-lock.yaml',
       },
       want: {
         detectedLockfile: 'pnpm-lock.yaml',
@@ -150,7 +143,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           PATH: '/usr/local/bin',
         },
-        detectedLockfile: 'bun.lockb',
       },
       want: {
         detectedLockfile: 'bun.lockb',
@@ -169,7 +161,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           ENABLE_EXPERIMENTAL_COREPACK: '1',
         },
-        detectedLockfile: 'pnpm-lock.yaml',
       },
       want: {
         detectedLockfile: undefined,
@@ -188,7 +179,6 @@ describe('Test `getPathForPackageManager()`', () => {
           FOO: 'bar',
           PATH: `/pnpm7/node_modules/.bin${delimiter}foo`,
         },
-        detectedLockfile: 'pnpm-lock.yaml',
       },
       want: {
         detectedLockfile: undefined,
@@ -204,7 +194,6 @@ describe('Test `getPathForPackageManager()`', () => {
         lockfileVersion: args.lockfileVersion,
         nodeVersion: args.nodeVersion,
         env: args.env,
-        detectedLockfile: args.detectedLockfile,
       })
     ).toStrictEqual(want);
   });

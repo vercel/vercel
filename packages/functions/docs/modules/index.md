@@ -195,7 +195,7 @@ export default function middleware(_req: Request) {
 
 #### Defined in
 
-packages/functions/src/middleware.ts:145
+[packages/functions/src/middleware.ts:145](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L145)
 
 ---
 
@@ -257,7 +257,7 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Defined in
 
-packages/functions/src/middleware.ts:101
+[packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L101)
 
 ---
 
