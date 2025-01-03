@@ -16,7 +16,7 @@ import type Client from '../../util/client';
 import { buySubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({

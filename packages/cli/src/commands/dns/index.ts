@@ -1,6 +1,6 @@
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import add from './add';
 import importZone from './import';
 import ls from './ls';

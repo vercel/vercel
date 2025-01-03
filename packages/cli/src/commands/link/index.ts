@@ -6,7 +6,7 @@ import { ensureRepoLink } from '../../util/link/repo';
 import { help } from '../help';
 import { linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 

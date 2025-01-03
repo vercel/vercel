@@ -1,7 +1,7 @@
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import init from './init';
 import { isError } from '@vercel/error-utils';
 import { help } from '../help';

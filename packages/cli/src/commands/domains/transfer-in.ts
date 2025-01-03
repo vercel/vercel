@@ -16,7 +16,7 @@ import output from '../../output-manager';
 import { transferInSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 
 export default async function transferIn(client: Client, argv: string[]) {
   const telemetry = new DomainsTransferInTelemetryClient({

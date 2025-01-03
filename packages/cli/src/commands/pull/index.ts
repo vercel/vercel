@@ -19,7 +19,7 @@ import { help } from '../help';
 import { pullCommand, type PullCommandFlags } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 

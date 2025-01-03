@@ -10,7 +10,7 @@ import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/impo
 import { importSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 
 export default async function importZone(client: Client, argv: string[]) {
   let parsedArgs;

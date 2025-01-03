@@ -1,6 +1,6 @@
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import connect from './connect';
 import disconnect from './disconnect';
 import { help } from '../help';

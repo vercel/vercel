@@ -16,7 +16,7 @@ import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>

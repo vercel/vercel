@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import add from './add';
 import buy from './buy';
 import transferIn from './transfer-in';

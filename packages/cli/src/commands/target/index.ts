@@ -5,7 +5,7 @@ import { type Command, help } from '../help';
 import list from './list';
 import { listSubcommand, targetCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
 import { getCommandAliases } from '..';

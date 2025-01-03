@@ -11,7 +11,7 @@ import type Client from '../../util/client';
 import { switchSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {

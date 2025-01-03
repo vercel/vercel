@@ -5,7 +5,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import confirm from '../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../util/integration-resource/delete-resource';
 import { getResources } from '../../util/integration-resource/get-resources';
