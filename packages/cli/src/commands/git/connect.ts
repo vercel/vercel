@@ -20,7 +20,7 @@ import output from '../../output-manager';
 import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
 

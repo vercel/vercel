@@ -9,7 +9,7 @@ import { ProjectRmTelemetryClient } from '../../util/telemetry/commands/project/
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { removeSubcommand } from './command';
 
 const e = encodeURIComponent;

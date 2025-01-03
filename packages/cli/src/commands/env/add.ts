@@ -18,7 +18,7 @@ import output from '../../output-manager';
 import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 

@@ -6,7 +6,7 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
 import { NowError } from '../../util/now-error';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import cmd from '../../util/output/cmd';
 import highlight from '../../util/output/highlight';
 import dev from './dev';

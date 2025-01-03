@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
 import requestRollback from './request-rollback';

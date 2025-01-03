@@ -15,7 +15,7 @@ import { DomainsMoveTelemetryClient } from '../../util/telemetry/commands/domain
 import { moveSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import type Client from '../../util/client';
 import type { User, Team } from '@vercel-internals/types';
 

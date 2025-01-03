@@ -6,7 +6,7 @@ import { parseArguments } from '../../util/get-args';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';

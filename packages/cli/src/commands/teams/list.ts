@@ -8,7 +8,7 @@ import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import output from '../../output-manager';

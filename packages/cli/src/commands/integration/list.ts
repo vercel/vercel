@@ -7,7 +7,7 @@ import { getResources } from '../../util/integration-resource/get-resources';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import table from '../../util/output/table';
 import title from 'title';
 import type { Team } from '@vercel-internals/types';

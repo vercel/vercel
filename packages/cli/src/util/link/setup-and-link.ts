@@ -14,7 +14,7 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import type Client from '../client';
-import { printError } from '../print-error';
+import { printError } from '../error';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';

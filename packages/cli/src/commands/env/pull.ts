@@ -26,7 +26,7 @@ import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 import { pullSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
 

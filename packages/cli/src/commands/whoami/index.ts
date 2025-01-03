@@ -5,7 +5,7 @@ import getScope from '../../util/get-scope';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 

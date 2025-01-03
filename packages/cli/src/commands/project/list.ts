@@ -9,7 +9,7 @@ import output from '../../output-manager';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/print-error';
+import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
