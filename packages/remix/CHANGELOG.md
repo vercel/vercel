@@ -1,5 +1,15 @@
 # @vercel/remix-builder
 
+## 5.0.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+- Update `@remix-run/dev` fork to v2.15.2 ([#12796](https://github.com/vercel/vercel/pull/12796))
+
 ## 5.0.1
 
 ### Patch Changes

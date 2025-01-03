@@ -1,5 +1,13 @@
 # @vercel/redwood
 
+## 2.1.12
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
 ## 2.1.11
 
 ### Patch Changes
