@@ -27,7 +27,7 @@ import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { printError } from '../../util/error';
-import { SchemaValidationFailed } from '../../util/errors';
+import { SchemaValidationFailed } from '../../util/errors-ts';
 import {
   AliasDomainConfigured,
   BuildError,

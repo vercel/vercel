@@ -1,6 +1,6 @@
 import path from 'path';
 import { existsSync } from 'fs';
-import { InvalidLocalConfig } from '../errors';
+import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import getArgs from '../../util/get-args';
 
