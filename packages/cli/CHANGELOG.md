@@ -1,5 +1,22 @@
 # vercel
 
+## 39.2.5
+
+### Patch Changes
+
+- [cli] update handleError to use output utilities ([#12817](https://github.com/vercel/vercel/pull/12817))
+
+- Fix bug where when page doesn't postpone it still generates a correct fallback ([#12811](https://github.com/vercel/vercel/pull/12811))
+
+- Updated dependencies [[`4cb6143887f36060e9e4fa5866aa97a6af25b6ae`](https://github.com/vercel/vercel/commit/4cb6143887f36060e9e4fa5866aa97a6af25b6ae), [`e570a1660c2b18a41d8c3985e645a175a44a5ea4`](https://github.com/vercel/vercel/commit/e570a1660c2b18a41d8c3985e645a175a44a5ea4), [`2a59669c70b65fd01f755c8fd646e08619ebee3d`](https://github.com/vercel/vercel/commit/2a59669c70b65fd01f755c8fd646e08619ebee3d), [`9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4`](https://github.com/vercel/vercel/commit/9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4)]:
+  - @vercel/redwood@2.1.12
+  - @vercel/remix-builder@5.0.2
+  - @vercel/next@4.4.2
+  - @vercel/node@5.0.2
+  - @vercel/static-build@2.5.41
+  - @vercel/build-utils@9.0.1
+  - @vercel/hydrogen@1.0.11
+
 ## 39.2.4
 
 ### Patch Changes

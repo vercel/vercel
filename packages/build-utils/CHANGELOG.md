@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 9.0.1
+
+### Patch Changes
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
 ## 9.0.0
 
 ### Major Changes
