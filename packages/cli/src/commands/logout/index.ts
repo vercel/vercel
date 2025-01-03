@@ -1,4 +1,4 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import {
   writeToConfigFile,
   writeToAuthConfigFile,
@@ -31,7 +31,7 @@ export default async function main(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

@@ -6,7 +6,7 @@ import output from '../../output-manager';
 import { disconnectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
@@ -19,7 +19,7 @@ export default async function disconnect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

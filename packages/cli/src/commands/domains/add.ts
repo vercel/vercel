@@ -18,7 +18,7 @@ import { DomainsAddTelemetryClient } from '../../util/telemetry/commands/domains
 import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 
 export default async function add(client: Client, argv: string[]) {
   const telemetry = new DomainsAddTelemetryClient({
@@ -32,7 +32,7 @@ export default async function add(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

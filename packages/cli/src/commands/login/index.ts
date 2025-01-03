@@ -21,7 +21,7 @@ import { help } from '../help';
 import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
@@ -43,7 +43,7 @@ export default async function login(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

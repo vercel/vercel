@@ -1,7 +1,7 @@
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import init from './init';
 import { isError } from '@vercel/error-utils';
 import { help } from '../help';
@@ -23,7 +23,7 @@ export default async function main(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

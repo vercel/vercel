@@ -6,7 +6,7 @@ import { ensureRepoLink } from '../../util/link/repo';
 import { help } from '../help';
 import { linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 
@@ -19,7 +19,7 @@ export default async function link(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

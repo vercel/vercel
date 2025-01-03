@@ -1,4 +1,4 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
@@ -40,7 +40,7 @@ export default async function telemetry(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

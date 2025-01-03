@@ -12,7 +12,7 @@ import {
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
 import getSubcommand from '../../util/get-subcommand';
@@ -39,7 +39,7 @@ export default async function teams(client: Client) {
       permissive: true,
     });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

@@ -5,7 +5,7 @@ import { type Command, help } from '../help';
 import list from './list';
 import { listSubcommand, targetCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import output from '../../output-manager';
 import { TargetTelemetryClient } from '../../util/telemetry/commands/target';
 import { getCommandAliases } from '..';
@@ -20,7 +20,7 @@ export default async function main(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

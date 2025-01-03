@@ -1,6 +1,6 @@
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import connect from './connect';
 import disconnect from './disconnect';
 import { help } from '../help';
@@ -24,7 +24,7 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const telemetry = new GitTelemetryClient({

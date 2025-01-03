@@ -9,7 +9,7 @@ import { ProjectAddTelemetryClient } from '../../util/telemetry/commands/project
 import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import getScope from '../../util/get-scope';
 
 export default async function add(
@@ -27,7 +27,7 @@ export default async function add(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args } = parsedArgs;

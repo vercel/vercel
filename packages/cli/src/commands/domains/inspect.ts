@@ -18,7 +18,7 @@ import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 
 export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new DomainsInspectTelemetryClient({
@@ -32,7 +32,7 @@ export default async function inspect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args } = parsedArgs;

@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/print-error';
 import add from './add';
 import buy from './buy';
 import transferIn from './transfer-in';
@@ -41,7 +41,7 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
