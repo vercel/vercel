@@ -1,5 +1,17 @@
 # vercel
 
+## 39.2.6
+
+### Patch Changes
+
+- [cli] centralize printError import location ([#12823](https://github.com/vercel/vercel/pull/12823))
+
+- [cli] remove double export of printError by moving printError to error.ts ([#12824](https://github.com/vercel/vercel/pull/12824))
+
+- [cli] consolidate error constructors ([#12825](https://github.com/vercel/vercel/pull/12825))
+
+- [cli] rename handleError to printError and remove default ([#12821](https://github.com/vercel/vercel/pull/12821))
+
 ## 39.2.5
 
 ### Patch Changes
