@@ -38,6 +38,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  NowBuildError,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -497,6 +498,14 @@ export const build: BuildV3 = async ({
         ? true
         : undefined;
 
+    if (staticConfig?.regions && !Array.isArray(staticConfig.regions)) {
+      throw new NowBuildError({
+        code: 'NODEJS_FUNCTION_CONFIG_REGIONS',
+        message: 'Regions must be a string array when using the nodejs runtime',
+        link: 'https://vercel.com/docs/edge-network/regions#region-list',
+      });
+    }
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
@@ -505,6 +514,7 @@ export const build: BuildV3 = async ({
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
+      regions: staticConfig?.regions as string[],
       maxDuration: staticConfig?.maxDuration,
     });
   }
