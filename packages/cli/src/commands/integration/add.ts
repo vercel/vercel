@@ -143,7 +143,8 @@ export async function add(client: Client, args: string[]) {
       client,
       !installation
         ? 'Terms have not been accepted. Open Vercel Dashboard?'
-        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
+        : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
+      true
     );
 
     if (openInWeb) {
@@ -176,7 +177,8 @@ async function getOptionalLinkedProject(client: Client) {
 
   const shouldLinkToProject = await confirm(
     client,
-    'Do you want to link this resource to the current project?'
+    'Do you want to link this resource to the current project?',
+    true
   );
 
   if (!shouldLinkToProject) {
@@ -373,7 +375,7 @@ async function confirmProductSelection(
     `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
   );
 
-  return confirm(client, 'Confirm selection?');
+  return confirm(client, 'Confirm selection?', true);
 }
 
 async function provisionStorageProduct(
