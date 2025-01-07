@@ -1,5 +1,11 @@
 # @vercel/edge
 
+## 1.2.1
+
+### Patch Changes
+
+- fix missing reference to `@vercel/functions` by bundling ([#12831](https://github.com/vercel/vercel/pull/12831))
+
 ## 1.2.0
 
 ### Minor Changes
