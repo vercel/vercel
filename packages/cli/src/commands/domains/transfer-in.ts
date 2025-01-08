@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
@@ -16,7 +16,7 @@ import output from '../../output-manager';
 import { transferInSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function transferIn(client: Client, argv: string[]) {
   const telemetry = new DomainsTransferInTelemetryClient({
@@ -32,7 +32,7 @@ export default async function transferIn(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

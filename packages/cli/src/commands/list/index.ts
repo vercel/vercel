@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import title from 'title';
 import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
@@ -11,7 +11,7 @@ import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -25,7 +25,11 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
-import type { Deployment, Project } from '@vercel-internals/types';
+import type {
+  Deployment,
+  PaginationOptions,
+  Project,
+} from '@vercel-internals/types';
 import output from '../../output-manager';
 
 function toDate(timestamp: number): string {
@@ -50,7 +54,7 @@ export default async function list(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
@@ -94,10 +98,10 @@ export default async function list(client: Client) {
   });
 
   let project: Project;
-  let pagination;
+  let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
-  let deployments: Deployment[] = [];
+  const deployments: Deployment[] = [];
   let singleDeployment = false;
 
   if (app) {
@@ -212,13 +216,13 @@ export default async function list(client: Client) {
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
-      log(`No deployments found.`);
+      log('No deployments found.');
       return 0;
     }
 
     log(
       `${
-        target === 'production' ? `Production deployments` : `Deployments`
+        target === 'production' ? 'Production deployments' : 'Deployments'
       } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
     );
   }
@@ -244,7 +248,7 @@ export default async function list(client: Client) {
             Date.now() - (dep?.undeletedAt ?? dep.createdAt)
           );
           const targetName =
-            dep.customEnvironment?.name ||
+            dep.customEnvironment?.slug ||
             (dep.target === 'production' ? 'Production' : 'Preview');
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
@@ -254,7 +258,7 @@ export default async function list(client: Client) {
             stateString(dep.readyState || ''),
             formatEnvironment(contextName, project.name, {
               id: targetSlug,
-              name: targetName,
+              slug: targetName,
             }),
             ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
             ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
@@ -280,7 +284,7 @@ export default async function list(client: Client) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(
-        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+        `ls${app ? ` ${app}` : ''}${flags} --next ${pagination.next}`
       )}`
     );
   }

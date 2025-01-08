@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 4.4.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+- Fix bug where when page doesn't postpone it still generates a correct fallback ([#12811](https://github.com/vercel/vercel/pull/12811))
+
+## 4.4.1
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Fix next data route replacing ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 4.4.0
+
+### Minor Changes
+
+- Provide `waitUntil` via `@next/request-context` ([#12286](https://github.com/vercel/vercel/pull/12286))
+
+## 4.3.21
+
+### Patch Changes
+
+- Revert "Fix edge cases with internal redirect sorting" ([#12615](https://github.com/vercel/vercel/pull/12615))
+
+## 4.3.20
+
+### Patch Changes
+
+- Fix edge cases with internal redirect sorting ([#12599](https://github.com/vercel/vercel/pull/12599))
+
+## 4.3.19
+
+### Patch Changes
+
+- Fix basePath root matching for error pages ([#12559](https://github.com/vercel/vercel/pull/12559))
+
+- Stabilize Chained Prerenders ([#12507](https://github.com/vercel/vercel/pull/12507))
+
 ## 4.3.18
 
 ### Patch Changes

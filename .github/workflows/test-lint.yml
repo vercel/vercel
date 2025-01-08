@@ -1,11 +1,6 @@
 name: Lint
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - '!*'
   pull_request:
   merge_group:
 
@@ -55,6 +50,8 @@ jobs:
       - run: pnpm run prettier-check
       - run: pnpm run build
       - run: pnpm run type-check
+      - name: Ensure clean git workspace
+        run: git diff --name-only --exit-code
 
   summary:
     name: Summary (lint)

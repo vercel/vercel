@@ -2,10 +2,10 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
 import type { DNSRecord } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {
-  DomainRecordsItem,
+  type DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
@@ -18,7 +18,7 @@ import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;
@@ -26,7 +26,7 @@ export default async function ls(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

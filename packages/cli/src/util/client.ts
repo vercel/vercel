@@ -6,16 +6,24 @@ import input from '@inquirer/input';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
-import { VercelConfig } from '@vercel/client';
-import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
-import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import type { VercelConfig } from '@vercel/client';
+import retry, {
+  type RetryFunction,
+  type Options as RetryOptions,
+} from 'async-retry';
+import fetch, {
+  type BodyInit,
+  Headers,
+  type RequestInit,
+  type Response,
+} from 'node-fetch';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
+import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
-import { TelemetryEventStore } from './telemetry';
+import type { TelemetryEventStore } from './telemetry';
 import type {
   AuthConfig,
   GlobalConfig,

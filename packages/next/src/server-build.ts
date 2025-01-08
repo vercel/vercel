@@ -691,7 +691,7 @@ export async function serverBuild({
     );
     let launcher = launcherData
       .replace(
-        'const conf = __NEXT_CONFIG__',
+        /(?:var|const) conf = __NEXT_CONFIG__/,
         `const conf = ${JSON.stringify({
           ...requiredServerFilesManifest.config,
           distDir: path.relative(
@@ -2182,7 +2182,7 @@ export async function serverBuild({
             // filter to only static data routes as dynamic routes will be handled
             // below
             const { pathname } = new URL(route.dest || '/', 'http://n');
-            return !isDynamicRoute(pathname.replace(/\.json$/, ''));
+            return !isDynamicRoute(pathname.replace(/(\\)?\.json$/, ''));
           })
         : []),
 
@@ -2367,7 +2367,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,
@@ -2412,7 +2419,14 @@ export async function serverBuild({
           ]
         : [
             {
-              src: path.posix.join('/', entryDirectory, '.*'),
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                // if entryDirectory is populated we need to
+                // add optional handling for trailing slash so
+                // that the entryDirectory (basePath) itself matches
+                `${entryDirectory !== '.' ? '?' : ''}.*`
+              ),
               dest: path.posix.join(
                 '/',
                 entryDirectory,

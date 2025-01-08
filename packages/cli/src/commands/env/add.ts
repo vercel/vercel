@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
@@ -18,7 +18,7 @@ import output from '../../output-manager';
 import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 
@@ -28,13 +28,14 @@ export default async function add(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
   const { args, flags: opts } = parsedArgs;
 
   const stdInput = await readStandardInput(client.stdin);
+  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvAddTelemetryClient({
@@ -118,7 +119,7 @@ export default async function add(client: Client, argv: string[]) {
     ...customEnvironments
       .filter(c => !existingCustomEnvs.has(c.id))
       .map(c => ({
-        name: c.name,
+        name: c.slug,
         value: c.id,
       })),
   ];

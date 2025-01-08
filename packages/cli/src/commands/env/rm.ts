@@ -4,7 +4,7 @@ import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvironments from '../../util/env/format-environments';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -17,7 +17,7 @@ import output from '../../output-manager';
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 
 export default async function rm(client: Client, argv: string[]) {
@@ -32,7 +32,7 @@ export default async function rm(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
@@ -46,6 +46,7 @@ export default async function rm(client: Client, argv: string[]) {
     return 1;
   }
 
+  // eslint-disable-next-line prefer-const
   let [envName, envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentName(envName);
   telemetryClient.trackCliArgumentEnvironment(envTarget);

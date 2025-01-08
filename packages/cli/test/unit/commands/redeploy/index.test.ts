@@ -6,7 +6,7 @@ import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../../mocks/deployment';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
-import { Deployment } from '@vercel-internals/types';
+import type { Deployment } from '@vercel-internals/types';
 
 describe('redeploy', () => {
   describe('--help', () => {
@@ -251,7 +251,6 @@ function initRedeployTest({
     name: 'vercel-redeploy',
     customEnvironments: [
       {
-        name: 'Custom',
         slug: 'custom',
         id: 'env_123123',
         type: 'preview',

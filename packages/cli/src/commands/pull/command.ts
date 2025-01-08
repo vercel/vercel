@@ -19,7 +19,7 @@ export const pullCommand = {
     {
       name: 'environment',
       description: 'Deployment environment [development]',
-      argument: 'environment',
+      argument: 'TARGET',
       shorthand: null,
       type: String,
       deprecated: false,
@@ -28,7 +28,7 @@ export const pullCommand = {
       name: 'git-branch',
       description:
         'Specify the Git branch to pull specific Environment Variables for',
-      argument: 'branch',
+      argument: 'NAME',
       shorthand: null,
       type: String,
       deprecated: false,

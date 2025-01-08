@@ -31,7 +31,7 @@ describe('dns ls', () => {
   describe('[domain] missing', () => {
     it('should list up to 20 dns by default', async () => {
       client.setArgv('dns', 'ls');
-      let exitCodePromise = dns(client);
+      const exitCodePromise = dns(client);
       await expect(client.stderr).toOutput('example-19.com');
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "dns"').toEqual(0);
@@ -39,7 +39,7 @@ describe('dns ls', () => {
 
     it('track subcommand invocation', async () => {
       client.setArgv('dns', 'ls');
-      let exitCodePromise = dns(client);
+      const exitCodePromise = dns(client);
 
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -53,7 +53,7 @@ describe('dns ls', () => {
     describe('--limit', () => {
       it('should list up to 2 dns if limit set to 2', async () => {
         client.setArgv('dns', 'ls', '--limit', '2');
-        let exitCodePromise = dns(client);
+        const exitCodePromise = dns(client);
         await expect(client.stderr).toOutput('example-2.com');
         const exitCode = await exitCodePromise;
         expect(exitCode, 'exit code for "dns"').toEqual(0);
@@ -61,7 +61,7 @@ describe('dns ls', () => {
 
       it('track subcommand invocation', async () => {
         client.setArgv('dns', 'ls', '--limit', '2');
-        let exitCodePromise = dns(client);
+        const exitCodePromise = dns(client);
 
         await expect(exitCodePromise).resolves.toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -80,7 +80,7 @@ describe('dns ls', () => {
     describe('--next', () => {
       it('tracks the use of next option', async () => {
         client.setArgv('dns', 'ls', '--next', '1729878610745');
-        let exitCodePromise = dns(client);
+        const exitCodePromise = dns(client);
 
         await expect(exitCodePromise).resolves.toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -106,7 +106,7 @@ describe('dns ls', () => {
         });
       });
       client.setArgv('dns', 'ls', 'example-19.com');
-      let exitCodePromise = dns(client);
+      const exitCodePromise = dns(client);
 
       await expect(exitCodePromise).resolves.toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([

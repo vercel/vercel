@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
@@ -17,7 +17,7 @@ import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/i
 import { issueSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 
 export default async function issue(
   client: Client,
@@ -32,7 +32,7 @@ export default async function issue(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
@@ -211,7 +211,7 @@ async function runStartOrder(
   ).split('\n');
 
   output.print(`${header}\n`);
-  process.stdout.write(`${rows.join('\n')}\n\n`);
+  client.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
     `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`

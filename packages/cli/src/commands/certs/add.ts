@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
@@ -10,7 +10,7 @@ import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add
 import { addSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import type { Cert } from '@vercel-internals/types';
 
 async function add(client: Client, argv: string[]): Promise<number> {
@@ -22,7 +22,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

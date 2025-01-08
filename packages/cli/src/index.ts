@@ -50,7 +50,7 @@ import { parseArguments } from './util/get-args';
 import getUser from './util/get-user';
 import getTeams from './util/teams/get-teams';
 import Client from './util/client';
-import { handleError } from './util/error';
+import { printError } from './util/error';
 import reportError from './util/report-error';
 import getConfig from './util/get-config';
 import * as configFiles from './util/config/files';
@@ -66,7 +66,7 @@ import getUpdateCommand from './util/get-update-command';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import doLoginPrompt from './util/login/prompt';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
-import { VercelConfig } from '@vercel/client';
+import type { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
@@ -74,6 +74,7 @@ import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
+import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 
 const VERCEL_DIR = getGlobalPathConfig();
@@ -126,7 +127,7 @@ const main = async () => {
       noColor: isNoColor,
     });
   } catch (err: unknown) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
@@ -262,6 +263,10 @@ const main = async () => {
     config: config.telemetry,
   });
 
+  checkTelemetryStatus({
+    config,
+  });
+
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -363,7 +368,14 @@ const main = async () => {
     client.argv.push('-h');
   }
 
-  const subcommandsWithoutToken = ['login', 'logout', 'help', 'init', 'build'];
+  const subcommandsWithoutToken = [
+    'login',
+    'logout',
+    'help',
+    'init',
+    'build',
+    'telemetry',
+  ];
 
   // Prompt for login if there is no current token
   if (
@@ -546,8 +558,6 @@ const main = async () => {
       client.config.currentTeam = related.id;
     }
   }
-
-  client.telemetryEventStore.updateTeamId(client.config.currentTeam);
 
   let exitCode;
 
@@ -786,8 +796,9 @@ const main = async () => {
     return 1;
   }
 
-  // specifically don't await this, we want to fire and forget
-  telemetryEventStore.save();
+  telemetryEventStore.updateTeamId(client.config.currentTeam);
+  await telemetryEventStore.save();
+
   return exitCode;
 };
 

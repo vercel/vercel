@@ -1,18 +1,18 @@
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
 import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
+import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  RepoInfo,
+  type RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
@@ -20,7 +20,7 @@ import output from '../../output-manager';
 import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
 
@@ -61,7 +61,7 @@ export default async function connect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
@@ -353,7 +353,6 @@ async function checkExistsAndConnect({
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -391,7 +390,6 @@ async function checkExistsAndConnect({
     await disconnectGitProvider(client, org, project.id);
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -430,7 +428,7 @@ async function selectRemoteUrl(
   client: Client,
   remoteUrls: Dictionary<string>
 ): Promise<string> {
-  let choices: ListChoice[] = [];
+  const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
       name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,

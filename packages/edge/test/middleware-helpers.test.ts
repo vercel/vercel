@@ -2,7 +2,7 @@
  * @jest-environment @edge-runtime/jest-environment
  */
 
-import { next, rewrite } from '../src/middleware-helpers';
+import { next, rewrite } from '../src';
 
 describe('rewrite', () => {
   test('receives custom headers', () => {

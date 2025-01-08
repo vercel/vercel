@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
@@ -14,7 +14,7 @@ import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 
 async function ls(client: Client, argv: string[]): Promise<number> {
   const { telemetryEventStore } = client;
@@ -29,7 +29,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

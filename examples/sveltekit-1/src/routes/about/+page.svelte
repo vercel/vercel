@@ -7,11 +7,11 @@
 	<h1>About this app</h1>
 
 	<p>
-		This is a <a href="https://kit.svelte.dev">SvelteKit</a> app. You can make your own by typing the
-		following into your command line and following the prompts:
+		This is a <a href="https://svelte.dev/docs/kit">SvelteKit</a> app. You can make your own by typing
+		the following into your command line and following the prompts:
 	</p>
 
-	<pre>npm create svelte@latest</pre>
+	<pre>npx sv create</pre>
 
 	<p>
 		The page you're looking at is purely static HTML, with no client-side interactivity needed.

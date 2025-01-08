@@ -1,4 +1,4 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -39,7 +39,7 @@ export default async function alias(client: Client) {
       permissive: true,
     });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
@@ -79,6 +79,14 @@ export default async function alias(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('alias', subcommandOriginal);

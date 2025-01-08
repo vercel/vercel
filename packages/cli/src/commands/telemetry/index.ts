@@ -1,15 +1,17 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import status from './status';
 import enable from './enable';
 import disable from './disable';
+import flush from './flush';
 import {
   disableSubcommand,
   enableSubcommand,
   statusSubcommand,
   telemetryCommand,
+  flushSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
@@ -22,6 +24,7 @@ const COMMAND_CONFIG = {
   status: getCommandAliases(statusSubcommand),
   enable: getCommandAliases(enableSubcommand),
   disable: getCommandAliases(disableSubcommand),
+  flush: getCommandAliases(flushSubcommand),
 };
 
 export default async function telemetry(client: Client) {
@@ -37,11 +40,11 @@ export default async function telemetry(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
-  const { subcommand, subcommandOriginal } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArguments.args.slice(1),
     COMMAND_CONFIG
   );
@@ -72,6 +75,8 @@ export default async function telemetry(client: Client) {
       }
       telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
       return status(client);
+    case 'flush':
+      return flush(client, args);
     case 'enable':
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);

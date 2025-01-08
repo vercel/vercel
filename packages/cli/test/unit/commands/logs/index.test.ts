@@ -92,7 +92,7 @@ describe('logs', () => {
 
           Options:
 
-          -j,  --json  print each log line as a JSON object (compatible with JQ)        
+          -j,  --json  Print each log line as a JSON object (compatible with JQ)        
 
 
           Global Options:
@@ -145,15 +145,11 @@ describe('logs', () => {
     });
 
     it('prints error when argument parsing failed', async () => {
-      const stderr = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => void 0);
       client.setArgv('logs', '--unknown');
       expect(await logs(client)).toEqual(1);
-      expect(stderr).toHaveBeenCalledWith(
+      expect(client.stderr).toOutput(
         'Error: unknown or unexpected option: --unknown'
       );
-      expect(stderr).toHaveBeenCalledOnce();
     });
 
     it.each([

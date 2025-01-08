@@ -20,4 +20,4 @@ Represents the headers of a request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:48](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L48)
+[packages/functions/src/headers.ts:52](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L52)

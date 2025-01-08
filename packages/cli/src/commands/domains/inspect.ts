@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
@@ -18,7 +18,7 @@ import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function inspect(client: Client, argv: string[]) {
   const telemetry = new DomainsInspectTelemetryClient({
@@ -32,7 +32,7 @@ export default async function inspect(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args } = parsedArgs;

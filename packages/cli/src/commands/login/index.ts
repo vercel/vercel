@@ -15,13 +15,13 @@ import {
   writeToAuthConfigFile,
   writeToConfigFile,
 } from '../../util/config/files';
-import Client from '../../util/client';
-import { LoginResult } from '../../util/login/types';
+import type Client from '../../util/client';
+import type { LoginResult } from '../../util/login/types';
 import { help } from '../help';
 import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
@@ -43,7 +43,7 @@ export default async function login(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

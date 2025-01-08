@@ -1,12 +1,12 @@
-import { Deployment } from '@vercel-internals/types';
+import type { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -36,7 +36,7 @@ export default async function logs(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

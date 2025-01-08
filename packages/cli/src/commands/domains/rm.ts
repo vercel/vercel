@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import plural from 'pluralize';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import type { Domain } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
 import getScope from '../../util/get-scope';
@@ -20,7 +20,7 @@ import { DomainsRmTelemetryClient } from '../../util/telemetry/commands/domains/
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetry = new DomainsRmTelemetryClient({
@@ -34,7 +34,7 @@ export default async function rm(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

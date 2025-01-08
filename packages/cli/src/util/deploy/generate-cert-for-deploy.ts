@@ -1,6 +1,6 @@
 import { parse } from 'tldts';
 import { NowError } from '../now-error';
-import Client from '../client';
+import type Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';

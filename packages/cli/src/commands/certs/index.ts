@@ -1,4 +1,4 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import add from './add';
@@ -12,8 +12,8 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { Command, help } from '../help';
-import Client from '../../util/client';
+import { type Command, help } from '../help';
+import type Client from '../../util/client';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { CertsTelemetryClient } from '../../util/telemetry/commands/certs';
@@ -44,7 +44,7 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

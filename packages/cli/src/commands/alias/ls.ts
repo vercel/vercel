@@ -13,7 +13,7 @@ import output from '../../output-manager';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import type { Alias } from '@vercel-internals/types';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -24,7 +24,7 @@ export default async function ls(client: Client, argv: string[]) {
   try {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

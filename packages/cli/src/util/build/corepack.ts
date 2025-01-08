@@ -1,5 +1,5 @@
 import { delimiter, join } from 'path';
-import { PackageJson, spawnAsync } from '@vercel/build-utils';
+import { type PackageJson, spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';

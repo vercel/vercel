@@ -1,4 +1,4 @@
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import { readFile } from 'fs-extra';
 import { parseEnv } from '../parse-env';
 import chalk from 'chalk';

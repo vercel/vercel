@@ -5,9 +5,9 @@ import {
   MissingBuildPipeline,
   MissingBuildTarget,
 } from '@vercel/fs-detectors';
-import { ProjectLinkAndSettings } from '../projects/project-settings';
+import type { ProjectLinkAndSettings } from '../projects/project-settings';
 import title from 'title';
-import { PartialProjectSettings } from '../input/edit-project-settings';
+import type { PartialProjectSettings } from '../input/edit-project-settings';
 import { debug } from '@vercel/build-utils';
 import output from '../../output-manager';
 

@@ -1,5 +1,5 @@
 import type { Deployment } from '@vercel-internals/types';
-import Client from '../client';
+import type Client from '../client';
 import createAlias from './create-alias';
 import isDomainExternal from '../domains/is-domain-external';
 import setupDomain from '../domains/setup-domain';

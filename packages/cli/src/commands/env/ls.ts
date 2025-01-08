@@ -5,7 +5,7 @@ import type {
   ProjectEnvVariable,
   ProjectLinked,
 } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
@@ -20,7 +20,7 @@ import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -35,7 +35,7 @@ export default async function ls(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args } = parsedArgs;

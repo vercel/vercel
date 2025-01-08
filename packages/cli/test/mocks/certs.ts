@@ -1,3 +1,4 @@
+import assert from 'assert';
 import chance from 'chance';
 import { client } from './client';
 
@@ -14,6 +15,7 @@ function create(cert: string) {
 
 export function useCert() {
   client.scenario.get('/v4/certs', (req, res) => {
+    assert(typeof req.query.limit === 'string');
     const limit = parseInt(req.query.limit, 10);
     const certs = Array.from({ length: limit }, (v, i) => create(`${i}`));
     res.json({

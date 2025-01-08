@@ -96,7 +96,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'production',
       description: '',
-      name: 'Production',
       domains: [],
     },
     {
@@ -106,7 +105,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'preview',
       description: '',
-      name: 'Preview',
       domains: [],
     },
     ...environments,
@@ -117,7 +115,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'development',
       description: '',
-      name: 'Development',
       domains: [],
     },
   ];

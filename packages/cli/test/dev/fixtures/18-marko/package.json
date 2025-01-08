@@ -7,9 +7,6 @@
     "marko-starter": "^2.0.4"
   },
   "devDependencies": {
-    "eslint": "^5.9.0",
-    "eslint-config-prettier": "^3.3.0",
-    "eslint-plugin-prettier": "^3.0.0",
     "marko-prettyprint": "^1.5.2",
     "prettier": "^1.15.2"
   },
@@ -21,7 +18,6 @@
   "scripts": {
     "build": "NODE_ENV=production marko-starter build && rm -rf public && mv dist public",
     "format": "prettier src/**/*.{js,css,less} --write && marko-prettyprint src",
-    "lint": "eslint src",
     "serve": "NODE_ENV=production marko-starter serve-static",
     "start": "marko-starter server",
     "test": "npm run lint"

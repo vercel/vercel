@@ -1,6 +1,6 @@
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import add from './add';
 import importZone from './import';
 import ls from './ls';
@@ -12,7 +12,7 @@ import {
   listSubcommand,
   removeSubcommand,
 } from './command';
-import { Command, help } from '../help';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { DnsTelemetryClient } from '../../util/telemetry/commands/dns';
@@ -36,7 +36,7 @@ export default async function dns(client: Client) {
       permissive: true,
     });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

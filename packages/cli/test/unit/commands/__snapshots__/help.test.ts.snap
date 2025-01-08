@@ -717,16 +717,16 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Options:
 
-       --archive                Compress
+       --archive <FORMAT>       Compress
                                 the     
                                 deploym…
                                 code    
-                                into a  
-                                file    
+                                into an 
+                                archive 
                                 before  
                                 uploadi…
                                 it      
-  -b,  --build-env <key=value>  Specify 
+  -b,  --build-env <KEY=VALUE>  Specify 
                                 environ…
                                 variabl…
                                 during  
@@ -736,7 +736,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 KEY1=va…
                                 -b      
                                 KEY2=va…
-  -e,  --env <key=value>        Specify 
+  -e,  --env <KEY=VALUE>        Specify 
                                 environ…
                                 variabl…
                                 during  
@@ -757,7 +757,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 the     
                                 build   
                                 logs    
-  -m,  --meta <key=value>       Specify 
+  -m,  --meta <KEY=VALUE>       Specify 
                                 metadata
                                 for the 
                                 deploym…
@@ -792,7 +792,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (\`/_src…
                                 is      
                                 exposed)
-       --regions                Set     
+       --regions <REGION>       Set     
                                 default 
                                 regions 
                                 to      
@@ -820,7 +820,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 domain-…
                                 process 
                                 later   
-       --target                 Specify 
+       --target <TARGET>        Specify 
                                 the     
                                 target  
                                 deploym…
@@ -913,16 +913,16 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Options:
 
-       --archive                Compress the deployment code into a file before 
-                                uploading it                                    
-  -b,  --build-env <key=value>  Specify environment variables during build-time 
+       --archive <FORMAT>       Compress the deployment code into an archive    
+                                before uploading it                             
+  -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time 
                                 (e.g. \`-b KEY1=value1 -b KEY2=value2\`)          
-  -e,  --env <key=value>        Specify environment variables during run-time   
+  -e,  --env <KEY=VALUE>        Specify environment variables during run-time   
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
                                 changed                                         
   -l,  --logs                   Print the build logs                            
-  -m,  --meta <key=value>       Specify metadata for the deployment (e.g. \`-m   
+  -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m   
                                 KEY1=value1 -m KEY2=value2\`)                    
        --no-wait                Don't wait for the deployment to finish         
        --prebuilt               Use in combination with \`vc build\`. Deploy an   
@@ -930,12 +930,12 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --prod                   Create a production deployment (shorthand for   
                                 \`--target=production\`)                          
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
-       --regions                Set default regions to enable the deployment on 
+       --regions <REGION>       Set default regions to enable the deployment on 
        --skip-domain            Disable the automatic promotion (aliasing) of   
                                 the relevant domains to a new production        
                                 deployment. You can use \`vc promote\` to complete
                                 the domain-assignment process later             
-       --target                 Specify the target deployment environment       
+       --target <TARGET>        Specify the target deployment environment       
        --with-cache             Retain build cache when using "--force"         
   -y,  --yes                    Use default options to skip all prompts         
 
@@ -989,20 +989,20 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
   Options:
 
-       --archive                Compress the deployment code into a file before uploading it                            
-  -b,  --build-env <key=value>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
-  -e,  --env <key=value>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
+       --archive <FORMAT>       Compress the deployment code into an archive before uploading it                        
+  -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
+  -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
   -l,  --logs                   Print the build logs                                                                    
-  -m,  --meta <key=value>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
+  -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
        --prebuilt               Use in combination with \`vc build\`. Deploy an existing build                            
        --prod                   Create a production deployment (shorthand for \`--target=production\`)                    
   -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
-       --regions                Set default regions to enable the deployment on                                         
+       --regions <REGION>       Set default regions to enable the deployment on                                         
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    
-       --target                 Specify the target deployment environment                                               
+       --target <TARGET>        Specify the target deployment environment                                               
        --with-cache             Retain build cache when using "--force"                                                 
   -y,  --yes                    Use default options to skip all prompts                                                 
 
@@ -1054,7 +1054,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
 
   Options:
 
-  -l,  --listen <uri>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+  -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
 
 
   Global Options:
@@ -2019,9 +2019,9 @@ exports[`help command > env help output snapshots > env pull help output snapsho
 
   Options:
 
-       --environment  Set the Environment (development, preview, production) when pulling Environment Variables              
-       --git-branch   Specify the Git branch to pull specific Environment Variables for                                      
-  -y,  --yes          Skip the confirmation prompt when removing an environment variable                                     
+       --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
+       --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
+  -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
 
 
   Global Options:
@@ -2764,8 +2764,8 @@ exports[`help command > integration help output snapshots > integration list sub
 
   Options:
 
-  -a,  --all                 lists all resources regardless of project                                                  
-  -i,  --integration <NAME>  limits the resources listed to a designated integration                                    
+  -a,  --all                 Lists all resources regardless of project                                                  
+  -i,  --integration <NAME>  Limits the resources listed to a designated integration                                    
 
 
   Global Options:
@@ -2809,7 +2809,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --all  disconnects all projects from the specified resource                                                      
+  -a,  --all  Disconnects all projects from the specified resource                                                      
   -y,  --yes  Skip the confirmation prompt when disconnecting a resource                                                
 
 
@@ -2979,7 +2979,7 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --disconnect-all  disconnects all projects from the specified resource before deletion                           
+  -a,  --disconnect-all  Disconnects all projects from the specified resource before deletion                           
   -y,  --yes             Skip the confirmation prompt when deleting a resource                                          
 
 
@@ -3199,37 +3199,28 @@ exports[`help command > list help output snapshots > list help column width 40 1
 
   Options:
 
-       --environment <production|preview>    
-  -m,  --meta <KEY=value>                  F…
-                                           d…
-                                           by
-                                           m…
-                                           (…
-                                           \`…
-                                           K…
-                                           C…
-                                           a…
-                                           m…
-                                           t…
-  -N,  --next <MS>                         S…
-                                           n…
-                                           p…
-                                           of
-                                           r…
-  -p,  --policy <KEY=value>                S…
-                                           d…
-                                           w…
-                                           p…
-                                           D…
-                                           R…
-                                           p…
-                                           (…
-                                           \`…
-                                           K…
-                                           C…
-                                           a…
-                                           m…
-                                           t…
+       --environment <TARGET>             
+  -m,  --meta <KEY=VALUE>      Filter     
+                               deployments
+                               by metadata
+                               (e.g.: \`-m 
+                               KEY=value\`…
+                               Can appear 
+                               many times.
+  -N,  --next <MS>             Show next  
+                               page of    
+                               results    
+  -p,  --policy <KEY=VALUE>    See        
+                               deployments
+                               with       
+                               provided   
+                               Deployment 
+                               Retention  
+                               policies   
+                               (e.g.: \`-p 
+                               KEY=value\`…
+                               Can appear 
+                               many times.
 
 
   Global Options:
@@ -3299,13 +3290,13 @@ exports[`help command > list help output snapshots > list help column width 80 1
 
   Options:
 
-       --environment <production|preview>                                            
-  -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m 
-                                           KEY=value\`). Can appear many times.       
-  -N,  --next <MS>                         Show next page of results                 
-  -p,  --policy <KEY=value>                See deployments with provided Deployment  
-                                           Retention policies (e.g.: \`-p KEY=value\`).
-                                           Can appear many times.                    
+       --environment <TARGET>                                                     
+  -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
+                               KEY=value\`). Can appear many times.                
+  -N,  --next <MS>             Show next page of results                          
+  -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention 
+                               policies (e.g.: \`-p KEY=value\`). Can appear many   
+                               times.                                             
 
 
   Global Options:
@@ -3351,11 +3342,11 @@ exports[`help command > list help output snapshots > list help column width 120 
 
   Options:
 
-       --environment <production|preview>                                                                                    
-  -m,  --meta <KEY=value>                  Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.     
-  -N,  --next <MS>                         Show next page of results                                                         
-  -p,  --policy <KEY=value>                See deployments with provided Deployment Retention policies (e.g.: \`-p            
-                                           KEY=value\`). Can appear many times.                                               
+       --environment <TARGET>                                                                                             
+  -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
+  -N,  --next <MS>             Show next page of results                                                                  
+  -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
+                               appear many times.                                                                         
 
 
   Global Options:
@@ -3710,8 +3701,8 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
-  -N,  --next <MS>                          Show next page of results                                                        
-       --update-required <update-required>  A list of projects affected by an upcoming deprecation                           
+  -N,  --next <MS>        Show next page of results                                                                          
+       --update-required  A list of projects affected by an upcoming deprecation                                             
 
 
   Global Options:
@@ -3776,13 +3767,13 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-       --timeout <timeout>  Time to wait for 
-                            promotion        
-                            completion [3m]  
-  -y,  --yes                Skip the         
-                            confirmation     
-                            prompt when      
-                            linking a Project
+       --timeout <TIME>  Time to wait for    
+                         promotion completion
+                         [3m]                
+  -y,  --yes             Skip the            
+                         confirmation prompt 
+                         when linking a      
+                         Project             
 
 
   Global Options:
@@ -3845,8 +3836,8 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-       --timeout <timeout>  Time to wait for promotion completion [3m]               
-  -y,  --yes                Skip the confirmation prompt when linking a Project      
+       --timeout <TIME>  Time to wait for promotion completion [3m]                  
+  -y,  --yes             Skip the confirmation prompt when linking a Project         
 
 
   Global Options:
@@ -3885,8 +3876,8 @@ exports[`help command > promote help output snapshots > promote help column widt
 
   Options:
 
-       --timeout <timeout>  Time to wait for promotion completion [3m]                                                       
-  -y,  --yes                Skip the confirmation prompt when linking a Project                                              
+       --timeout <TIME>  Time to wait for promotion completion [3m]                                                          
+  -y,  --yes             Skip the confirmation prompt when linking a Project                                                 
 
 
   Global Options:
@@ -3955,27 +3946,20 @@ exports[`help command > pull help output snapshots > pull help column width 40 1
 
   Options:
 
-       --environment <environment>  Deployme…
-                                    environm…
-                                    [develop…
-       --git-branch <branch>        Specify  
-                                    the Git  
-                                    branch to
-                                    pull     
-                                    specific 
-                                    Environm…
-                                    Variables
-                                    for      
-  -y,  --yes                        Skip     
-                                    questions
-                                    when     
-                                    setting  
-                                    up new   
-                                    project  
-                                    using    
-                                    default  
-                                    scope and
-                                    settings 
+       --environment <TARGET>  Deployment    
+                               environment   
+                               [development] 
+       --git-branch <NAME>     Specify the   
+                               Git branch to 
+                               pull specific 
+                               Environment   
+                               Variables for 
+  -y,  --yes                   Skip questions
+                               when setting  
+                               up new project
+                               using default 
+                               scope and     
+                               settings      
 
 
   Global Options:
@@ -4049,11 +4033,11 @@ exports[`help command > pull help output snapshots > pull help column width 80 1
 
   Options:
 
-       --environment <environment>  Deployment environment [development]             
-       --git-branch <branch>        Specify the Git branch to pull specific          
-                                    Environment Variables for                        
-  -y,  --yes                        Skip questions when setting up new project using 
-                                    default scope and settings                       
+       --environment <TARGET>  Deployment environment [development]                  
+       --git-branch <NAME>     Specify the Git branch to pull specific Environment   
+                               Variables for                                         
+  -y,  --yes                   Skip questions when setting up new project using      
+                               default scope and settings                            
 
 
   Global Options:
@@ -4103,9 +4087,9 @@ exports[`help command > pull help output snapshots > pull help column width 120 
 
   Options:
 
-       --environment <environment>  Deployment environment [development]                                                     
-       --git-branch <branch>        Specify the Git branch to pull specific Environment Variables for                        
-  -y,  --yes                        Skip questions when setting up new project using default scope and settings              
+       --environment <TARGET>  Deployment environment [development]                                                          
+       --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
+  -y,  --yes                   Skip questions when setting up new project using default scope and settings                   
 
 
   Global Options:
@@ -4155,10 +4139,11 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
   Options:
 
-   --no-wait  Don't wait for the redeploy
-              to finish                  
-   --target   Redeploy to a specific     
-              target environment         
+   --no-wait          Don't wait for the 
+                      redeploy to finish 
+   --target <TARGET>  Redeploy to a      
+                      specific target    
+                      environment        
 
 
   Global Options:
@@ -4224,8 +4209,8 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
   Options:
 
-   --no-wait  Don't wait for the redeploy to finish                              
-   --target   Redeploy to a specific target environment                          
+   --no-wait          Don't wait for the redeploy to finish                      
+   --target <TARGET>  Redeploy to a specific target environment                  
 
 
   Global Options:
@@ -4267,8 +4252,8 @@ exports[`help command > redeploy help output snapshots > redeploy help column wi
 
   Options:
 
-   --no-wait  Don't wait for the redeploy to finish                                                                      
-   --target   Redeploy to a specific target environment                                                                  
+   --no-wait          Don't wait for the redeploy to finish                                                              
+   --target <TARGET>  Redeploy to a specific target environment                                                          
 
 
   Global Options:
@@ -4473,9 +4458,9 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <timeout>  Time to wait for 
-                        rollback         
-                        completion [3m]  
+   --timeout <TIME>  Time to wait for    
+                     rollback completion 
+                     [3m]                
 
 
   Global Options:
@@ -4538,7 +4523,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <timeout>  Time to wait for rollback completion [3m]                
+   --timeout <TIME>  Time to wait for rollback completion [3m]                   
 
 
   Global Options:
@@ -4577,7 +4562,7 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:
@@ -4615,7 +4600,7 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Options:
 
-   --timeout <timeout>  Time to wait for rollback completion [3m]                                                        
+   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
 
 
   Global Options:

@@ -7,6 +7,6 @@
     "generate": "node src/index.js && mmdc --input output/trace.mmd --output output/trace.svg --configFile mermaid-config.json"
   },
   "dependencies": {
-    "@mermaid-js/mermaid-cli": "10.0.2"
+    "@mermaid-js/mermaid-cli": "11.4.2"
   }
 }

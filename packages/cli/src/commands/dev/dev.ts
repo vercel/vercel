@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';

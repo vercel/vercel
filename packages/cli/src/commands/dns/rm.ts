@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
@@ -13,7 +13,7 @@ import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function rm(client: Client, argv: string[]) {
   let parsedArgs;
@@ -21,7 +21,7 @@ export default async function rm(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args } = parsedArgs;

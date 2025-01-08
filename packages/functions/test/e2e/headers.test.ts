@@ -10,6 +10,7 @@ import {
   LONGITUDE_HEADER_NAME,
   REGION_HEADER_NAME,
   REQUEST_ID_HEADER_NAME,
+  POSTAL_CODE_HEADER_NAME,
 } from '../../src/headers';
 
 const URL = 'https://vercel-functions-e2e.vercel.app/api';
@@ -28,6 +29,7 @@ test.each(['lambda', 'edge'])(
     expect(headers[COUNTRY_HEADER_NAME]).toBeDefined();
     expect(headers[LATITUDE_HEADER_NAME]).toBeDefined();
     expect(headers[LONGITUDE_HEADER_NAME]).toBeDefined();
+    expect(headers[POSTAL_CODE_HEADER_NAME]).toBeDefined();
   }
 );
 

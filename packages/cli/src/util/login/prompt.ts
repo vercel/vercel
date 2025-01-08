@@ -1,8 +1,8 @@
-import Client from '../client';
+import type Client from '../client';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginResult, SAMLError } from './types';
+import type { LoginResult, SAMLError } from './types';
 import doSamlLogin from './saml';
 import doEmailLogin from './email';
 import doGithubLogin from './github';

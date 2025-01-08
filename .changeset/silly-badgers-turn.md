@@ -1,4 +1,0 @@
----
----
-
-[cli] remove unused functions

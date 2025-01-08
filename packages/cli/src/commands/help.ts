@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
-import Table, { CellOptions } from 'cli-table3';
+import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
 import { globalCommandOptions } from '../util/arg-common';
 
@@ -34,6 +34,7 @@ export interface Command {
   readonly aliases: ReadonlyArray<string>;
   readonly description: string;
   readonly default?: true;
+  readonly hidden?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
@@ -143,7 +144,7 @@ export function buildCommandSynopsisLine(command: Command, parent?: Command) {
 export function buildCommandOptionLines(
   commandOptions: ReadonlyArray<CommandOption>,
   options: BuildHelpOutputOptions,
-  sectionTitle: String
+  sectionTitle: string
 ) {
   // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
@@ -225,6 +226,9 @@ export function buildSubcommandLines(
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
   for (const command of subcommands) {
+    if (command.hidden) {
+      continue;
+    }
     const nameCell = `${INDENT}${command.name}`;
     let argsCell = INDENT;
 
@@ -308,8 +312,8 @@ function buildDescriptionLine(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  let wrapingText = wordWrap(command.description, options.columns);
-  return `${wrapingText}${NEWLINE}`;
+  const wrappingText = wordWrap(command.description, options.columns);
+  return `${wrappingText}${NEWLINE}`;
 }
 
 interface BuildHelpOutputOptions {
