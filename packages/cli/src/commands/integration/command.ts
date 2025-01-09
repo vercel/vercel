@@ -1,7 +1,9 @@
+import { yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const addSubCommand = {
+export const addSubcommand = {
   name: 'add',
+  aliases: [],
   description: 'Installs a marketplace integration',
   arguments: [
     {
@@ -21,8 +23,9 @@ export const addSubCommand = {
   ],
 } as const;
 
-export const openSubCommand = {
+export const openSubcommand = {
   name: 'open',
+  aliases: [],
   description: "Opens a marketplace integration's dashboard",
   arguments: [
     {
@@ -44,6 +47,7 @@ export const openSubCommand = {
 
 export const listSubcommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'Lists all resources from marketplace integrations',
   arguments: [
     {
@@ -54,7 +58,7 @@ export const listSubcommand = {
   options: [
     {
       name: 'integration',
-      description: 'limits the resources listed to a designated integration',
+      description: 'Limits the resources listed to a designated integration',
       shorthand: 'i',
       type: String,
       deprecated: false,
@@ -62,7 +66,7 @@ export const listSubcommand = {
     },
     {
       name: 'all',
-      description: 'lists all resources regardless of project',
+      description: 'Lists all resources regardless of project',
       shorthand: 'a',
       type: Boolean,
       deprecated: false,
@@ -76,16 +80,44 @@ export const listSubcommand = {
     {
       name: 'Filter the resources to a single integration',
       value: [
-        `${packageName} integrations list --integration <integration>`,
-        `${packageName} integrations list --integration acme`,
-        `${packageName} integrations list -i acme`,
+        `${packageName} integration list --integration <integration>`,
+        `${packageName} integration list --integration acme`,
+        `${packageName} integration list -i acme`,
       ],
     },
     {
       name: 'List all marketplace resources for the current team',
       value: [
-        `${packageName} integrations list --all`,
-        `${packageName} integrations list -a`,
+        `${packageName} integration list --all`,
+        `${packageName} integration list -a`,
+      ],
+    },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: [],
+  description: 'Uninstalls a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when uninstalling an integration',
+    },
+  ],
+  examples: [
+    {
+      name: 'Uninstall an integration',
+      value: [
+        `${packageName} integration remove <inegration>`,
+        `${packageName} integration remove acme`,
       ],
     },
   ],
@@ -93,14 +125,15 @@ export const listSubcommand = {
 
 export const integrationCommand = {
   name: 'integration',
+  aliases: [],
   description: 'Manage marketplace integrations',
   options: [],
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
+  arguments: [],
+  subcommands: [
+    addSubcommand,
+    listSubcommand,
+    openSubcommand,
+    removeSubcommand,
   ],
-  subcommands: [addSubCommand, openSubCommand, listSubcommand],
   examples: [],
 } as const;

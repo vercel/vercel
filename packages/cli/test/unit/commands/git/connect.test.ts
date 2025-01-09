@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, beforeEach, afterEach, expect, it } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import { useUser } from '../../../mocks/user';
@@ -9,18 +9,30 @@ import git from '../../../../src/commands/git';
 import type { Project } from '@vercel-internals/types';
 
 describe('git connect', () => {
-  describe.todo('[git url]');
-  describe.todo('--yes');
-  describe.todo('--confirm');
-
   const fixture = (name: string) =>
     join(__dirname, '../../../fixtures/unit/commands/git/connect', name);
 
-  it('connects an unlinked project', async () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'git';
+      const subcommand = 'connect';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = git(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
+  describe('connecting an unlinked project', () => {
     const cwd = fixture('unlinked');
-    client.cwd = cwd;
-    try {
-      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+    beforeEach(async () => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -28,6 +40,118 @@ describe('git connect', () => {
         id: 'unlinked',
         name: 'unlinked',
       });
+
+      client.cwd = cwd;
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+    });
+
+    afterEach(async () => {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    });
+
+    describe('passing [git url]', () => {
+      it('tracks telemetry', async () => {
+        const remoteUrl = 'https://github.com/user2/repo2';
+        client.setArgv('git', 'connect', remoteUrl);
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Which scope should contain your project?'
+        );
+        client.stdin.write('\r');
+
+        await expect(client.stderr).toOutput('Found project');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Do you still want to connect https://github.com/user2/repo2?`
+        );
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user2/repo2`
+        );
+
+        const exitCode = await gitPromise;
+        await expect(client.stderr).toOutput(
+          'Connected GitHub repository user2/repo2!'
+        );
+
+        expect(exitCode).toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+          {
+            key: 'argument:gitUrl',
+            value: '[REDACTED]',
+          },
+        ]);
+      });
+    });
+
+    describe('--yes', () => {
+      it('tracks telemetry', async () => {
+        client.setArgv('git', 'connect', '--yes');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user/repo!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    describe('--confirm', () => {
+      it('tracks telemetry', async () => {
+        client.setArgv('git', 'connect', '--confirm');
+        const gitPromise = git(client);
+
+        await expect(client.stderr).toOutput(
+          `Connecting Git remote: https://github.com/user/repo`
+        );
+        await expect(client.stderr).toOutput(
+          `> Connected GitHub repository user/repo!\n`
+        );
+
+        const exitCode = await gitPromise;
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:connect',
+            value: 'connect',
+          },
+          {
+            key: 'flag:confirm',
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    it('connects an unlinked project', async () => {
+      const cwd = fixture('unlinked');
+      client.cwd = cwd;
       client.setArgv('git', 'connect');
       const gitPromise = git(client);
 
@@ -63,9 +187,7 @@ describe('git connect', () => {
         createdAt: 1656109539791,
         updatedAt: 1656109539791,
       });
-    } finally {
-      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
-    }
+    });
   });
 
   it('connects an unlinked project with a remote url', async () => {
@@ -399,6 +521,189 @@ describe('git connect', () => {
         createdAt: 1656109539791,
         updatedAt: 1656109539791,
       });
+    } finally {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    }
+  });
+
+  it('should connect a given repository', async () => {
+    const cwd = fixture('no-remote-url');
+    client.cwd = cwd;
+    try {
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'no-remote-url',
+        name: 'no-remote-url',
+      });
+
+      client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Connecting Git remote: https://github.com/user2/repo2`
+      );
+      await expect(client.stderr).toOutput(
+        `Connected GitHub repository user2/repo2!`
+      );
+
+      const newProjectData: Project = await client.fetch(
+        `/v8/projects/no-remote-url`
+      );
+      expect(newProjectData.link).toMatchObject({
+        type: 'github',
+        repo: 'user2/repo2',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      });
+
+      await expect(gitPromise).resolves.toEqual(0);
+    } finally {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    }
+  });
+
+  it('should prompt when it finds a repository', async () => {
+    const cwd = fixture('new-connection');
+    client.cwd = cwd;
+    try {
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'new-connection',
+        name: 'new-connection',
+      });
+
+      client.setArgv('git', 'connect', 'https://github.com/user2/repo2');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Found a repository in your local Git Config: https://github.com/user/repo`
+      );
+      await expect(client.stderr).toOutput(
+        `Do you still want to connect https://github.com/user2/repo2? (y/N)`
+      );
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput(
+        `Connecting Git remote: https://github.com/user2/repo2`
+      );
+      await expect(client.stderr).toOutput(
+        `Connected GitHub repository user2/repo2!`
+      );
+
+      const newProjectData: Project = await client.fetch(
+        `/v8/projects/new-connection`
+      );
+      expect(newProjectData.link).toMatchObject({
+        type: 'github',
+        repo: 'user2/repo2',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      });
+
+      await expect(gitPromise).resolves.toEqual(0);
+    } finally {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    }
+  });
+
+  it('should prompt when it finds multiple remotes', async () => {
+    const cwd = fixture('multiple-remotes');
+    client.cwd = cwd;
+    try {
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'multiple-remotes',
+        name: 'multiple-remotes',
+      });
+
+      client.setArgv('git', 'connect', 'https://github.com/user3/repo3');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Found multiple Git repositories in your local Git config:\n  • origin: https://github.com/user/repo.git\n  • secondary: https://github.com/user/repo2.git`
+      );
+      await expect(client.stderr).toOutput(
+        `Do you still want to connect https://github.com/user3/repo3? (y/N)`
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Connecting Git remote: https://github.com/user3/repo3`
+      );
+      await expect(client.stderr).toOutput(
+        `Connected GitHub repository user3/repo3!`
+      );
+
+      const newProjectData: Project = await client.fetch(
+        `/v8/projects/multiple-remotes`
+      );
+      expect(newProjectData.link).toMatchObject({
+        type: 'github',
+        repo: 'user3/repo3',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      });
+
+      await expect(gitPromise).resolves.toEqual(0);
+    } finally {
+      await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
+    }
+  });
+
+  it('should continue as normal when input matches single git remote', async () => {
+    const cwd = fixture('new-connection');
+    client.cwd = cwd;
+    try {
+      await fs.rename(join(cwd, 'git'), join(cwd, '.git'));
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'new-connection',
+        name: 'new-connection',
+      });
+
+      client.setArgv('git', 'connect', 'https://github.com/user/repo');
+      const gitPromise = git(client);
+
+      await expect(client.stderr).toOutput(
+        `Connecting Git remote: https://github.com/user/repo`
+      );
+      await expect(client.stderr).toOutput(
+        `Connected GitHub repository user/repo!`
+      );
+
+      const newProjectData: Project = await client.fetch(
+        `/v8/projects/new-connection`
+      );
+      expect(newProjectData.link).toMatchObject({
+        type: 'github',
+        repo: 'user/repo',
+        repoId: 1010,
+        gitCredentialId: '',
+        sourceless: true,
+        createdAt: 1656109539791,
+        updatedAt: 1656109539791,
+      });
+
+      await expect(gitPromise).resolves.toEqual(0);
     } finally {
       await fs.rename(join(cwd, '.git'), join(cwd, 'git'));
     }

@@ -24,6 +24,10 @@
       "dependsOn": ["build"],
       "outputMode": "new-only"
     },
+    "vitest-e2e-node-20": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
     "test-unit": {
       "dependsOn": ["build"],
       "outputMode": "new-only"

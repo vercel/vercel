@@ -2,14 +2,14 @@ import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import confirm from '../../util/input/confirm';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import {
-  EnvRecordsSource,
+  type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import {
@@ -21,14 +21,16 @@ import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
+import output from '../../output-manager';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
+import { pullSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import parseTarget from '../../util/parse-target';
+import { getLinkedProject } from '../../util/projects/link';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
-
-type Options = {
-  '--debug': boolean;
-  '--yes': boolean;
-  '--git-branch': string;
-};
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);
@@ -57,16 +59,23 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(
-  client: Client,
-  link: ProjectLinked,
-  environment: string,
-  opts: Partial<Options>,
-  args: string[],
-  cwd: string,
-  source: Extract<EnvRecordsSource, 'vercel-cli:env:pull' | 'vercel-cli:pull'>
-) {
-  const { output } = client;
+export default async function pull(client: Client, argv: string[]) {
+  const telemetryClient = new EnvPullTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArgs;
 
   if (args.length > 1) {
     output.error(
@@ -76,11 +85,61 @@ export default async function pull(
   }
 
   // handle relative or absolute filename
-  const [filename = '.env.local'] = args;
-  const fullPath = resolve(cwd, filename);
+  const [rawFilename] = args;
+  const filename = rawFilename || '.env.local';
   const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
+  telemetryClient.trackCliArgumentFilename(args[0]);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliOptionGitBranch(gitBranch);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
+  const environment =
+    parseTarget({
+      flagName: 'environment',
+      flags: opts,
+    }) || 'development';
+
+  await envPullCommandLogic(
+    client,
+    filename,
+    !!skipConfirmation,
+    environment,
+    link,
+    gitBranch,
+    client.cwd,
+    'vercel-cli:env:pull'
+  );
+
+  return 0;
+}
+
+export async function envPullCommandLogic(
+  client: Client,
+  filename: string,
+  skipConfirmation: boolean,
+  environment: string,
+  link: ProjectLinked,
+  gitBranch: string | undefined,
+  cwd: string,
+  source: EnvRecordsSource
+) {
+  const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
 
@@ -96,14 +155,10 @@ export default async function pull(
     ))
   ) {
     output.log('Canceled');
-    return 0;
+    return;
   }
 
-  const projectSlugLink = formatProject(
-    client,
-    link.org.slug,
-    link.project.name
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.log(
     `Downloading \`${chalk.cyan(
@@ -115,7 +170,7 @@ export default async function pull(
   output.spinner('Downloading');
 
   const records = (
-    await pullEnvRecords(output, client, link.project.id, source, {
+    await pullEnvRecords(client, link.project.id, source, {
       target: environment || 'development',
       gitBranch,
     })
@@ -124,7 +179,7 @@ export default async function pull(
   let deltaString = '';
   let oldEnv;
   if (exists) {
-    oldEnv = await createEnvObject(fullPath, output);
+    oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
       // Removes any double quotes from `records`, if they exist
       // We need this because double quotes are stripped from the local .env file,
@@ -171,8 +226,6 @@ export default async function pull(
       emoji('success')
     )}\n`
   );
-
-  return 0;
 }
 
 function escapeValue(value: string | undefined) {

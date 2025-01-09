@@ -1,26 +1,31 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
-import { help } from '../help';
+import { type Command, help } from '../help';
 import ls from './ls';
 import rm from './rm';
 import set from './set';
-import { aliasCommand } from './command';
+import {
+  aliasCommand,
+  listSubcommand,
+  removeSubcommand,
+  setSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AliasTelemetryClient } from '../../util/telemetry/commands/alias';
+import output from '../../output-manager';
+import { getCommandAliases } from '..';
 
 const COMMAND_CONFIG = {
-  default: ['set'],
-  ls: ['ls', 'list'],
-  rm: ['rm', 'remove'],
-  set: ['set'],
+  ls: getCommandAliases(listSubcommand),
+  rm: getCommandAliases(removeSubcommand),
+  set: getCommandAliases(setSubcommand),
 };
 
 export default async function alias(client: Client) {
-  const telemetryClient = new AliasTelemetryClient({
+  const telemetry = new AliasTelemetryClient({
     opts: {
-      output: client.output,
       store: client.telemetryEventStore,
     },
   });
@@ -30,15 +35,12 @@ export default async function alias(client: Client) {
   const flagsSpecification = getFlagsSpecification(aliasCommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
-  }
-
-  if (parsedArguments.flags['--help']) {
-    client.output.print(help(aliasCommand, { columns: client.stderr.columns }));
-    return 2;
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -46,15 +48,52 @@ export default async function alias(client: Client) {
     COMMAND_CONFIG
   );
 
+  const needHelp = parsedArguments.flags['--help'];
+
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('alias');
+    output.print(help(aliasCommand, { columns: client.stderr.columns }));
+    return 2;
+  }
+
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: aliasCommand, columns: client.stderr.columns })
+    );
+  }
+
   switch (subcommand) {
     case 'ls':
-      telemetryClient.trackCliSubcommandLs(subcommandOriginal);
-      return ls(client, parsedArguments.flags, args);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return ls(client, args);
     case 'rm':
-      telemetryClient.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, parsedArguments.flags, args);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(removeSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return rm(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
     default:
-      telemetryClient.trackCliSubcommandSet(subcommandOriginal);
-      return set(client, parsedArguments.flags, args);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('alias', subcommandOriginal);
+        printHelp(setSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return set(client, args);
   }
 }

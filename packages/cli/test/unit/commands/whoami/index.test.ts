@@ -4,6 +4,23 @@ import { useUser } from '../../../mocks/user';
 import whoami from '../../../../src/commands/whoami';
 
 describe('whoami', () => {
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'whoami';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = whoami(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should reject invalid arguments', async () => {
     client.setArgv('--invalid');
     const result = await whoami(client);

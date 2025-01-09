@@ -1,16 +1,37 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import createProject from '../../util/projects/create-project';
+import output from '../../output-manager';
+import { ProjectAddTelemetryClient } from '../../util/telemetry/commands/project/add';
+import { addSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
 
 export default async function add(
   client: Client,
-  args: string[],
-  contextName: string
-) {
-  const { output } = client;
+  argv: string[]
+): Promise<number> {
+  const telemetryClient = new ProjectAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args } = parsedArgs;
+
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -33,6 +54,7 @@ export default async function add(
   const start = Date.now();
 
   const [name] = args;
+  telemetryClient.trackCliArgumentName(name);
 
   try {
     await createProject(client, { name });
@@ -50,10 +72,12 @@ export default async function add(
   }
   const elapsed = ms(Date.now() - start);
 
+  const { contextName } = await getScope(client);
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(
       name.toLowerCase()
     )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
   );
-  return;
+
+  return 0;
 }

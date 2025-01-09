@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "bench",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "4.21.1",
+    "fs-extra": "8.0.1"
+  }
+}

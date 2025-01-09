@@ -3,6 +3,7 @@ import { yesOption } from '../../util/arg-common';
 
 export const buildCommand = {
   name: 'build',
+  aliases: [],
   description: 'Build the project.',
   arguments: [],
   options: [
@@ -17,14 +18,15 @@ export const buildCommand = {
       name: 'target',
       shorthand: null,
       type: String,
+      argument: 'TARGET',
       deprecated: false,
       description: 'Specify the target environment',
     },
     {
       name: 'output',
-      description: 'Directory where built assets should be written to',
+      description: 'Directory where built assets will be written to',
       shorthand: null,
-      argument: 'PATH',
+      argument: 'DIR',
       type: String,
       deprecated: false,
     },

@@ -32,11 +32,12 @@
     "npm-package-arg": "6.1.0",
     "prettier": "3.3.3",
     "source-map-support": "0.5.12",
+    "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
-    "ts-jest": "29.1.0",
+    "ts-jest": "29.1.5",
     "turbo": "1.13.3",
     "typescript": "4.9.5",
-    "vite": "5.1.6",
+    "vite": "5.1.8",
     "vitest": "2.0.3"
   },
   "scripts": {
@@ -127,7 +128,6 @@
           "no-async-promise-executor": 0,
           "no-control-regex": 0,
           "no-empty": 0,
-          "prefer-const": 0,
           "prefer-destructuring": 0,
           "@typescript-eslint/ban-types": 0,
           "@typescript-eslint/consistent-type-assertions": 0,
@@ -135,7 +135,9 @@
           "@typescript-eslint/no-empty-function": 0,
           "@typescript-eslint/no-explicit-any": 0,
           "@typescript-eslint/no-inferrable-types": 0,
-          "no-console": 2
+          "no-console": 2,
+          "@typescript-eslint/consistent-type-imports": "error",
+          "prefer-const": "error"
         }
       },
       {

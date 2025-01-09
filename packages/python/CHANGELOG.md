@@ -1,5 +1,43 @@
 # @vercel/python
 
+## 4.6.0
+
+### Minor Changes
+
+- Update default ignored folders from the zip output: ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+  - nested `node_modules`
+  - nested `.next` & `.nuxt`
+  - `.git` & `.vercel`
+
+### Patch Changes
+
+- Support VERCEL_IPC_PATH along with VERCEL_IPC_FD ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 4.5.1
+
+### Patch Changes
+
+- Fix ASGI response streaming ([#12610](https://github.com/vercel/vercel/pull/12610))
+
+## 4.5.0
+
+### Minor Changes
+
+- Report Request Metrics when using urllib3/requests ([#12580](https://github.com/vercel/vercel/pull/12580))
+
+## 4.4.1
+
+### Patch Changes
+
+- Use a ThreadingHTTPServer to handle concurrent requests ([#12578](https://github.com/vercel/vercel/pull/12578))
+
+## 4.4.0
+
+### Minor Changes
+
+- Add support for HTTP streaming ([#12557](https://github.com/vercel/vercel/pull/12557))
+
 ## 4.3.1
 
 ### Patch Changes

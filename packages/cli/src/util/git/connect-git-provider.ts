@@ -1,11 +1,11 @@
 import { URL } from 'url';
-import Client from '../client';
+import type Client from '../client';
 import chalk from 'chalk';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
-import { Output } from '../output';
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 export interface RepoInfo {
   url: string;
@@ -30,7 +30,6 @@ export async function disconnectGitProvider(
 
 export async function connectGitProvider(
   client: Client,
-  org: Org,
   projectId: string,
   type: string,
   repo: string
@@ -53,18 +52,18 @@ export async function connectGitProvider(
       apiError &&
       (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
     ) {
-      client.output.error(
+      output.error(
         `Failed to connect ${chalk.cyan(
           repo
         )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
       );
     } else if (apiError && err.action === 'Add a Login Connection') {
-      client.output.error(
+      output.error(
         err.message.replace(repo, chalk.cyan(repo)) +
           `\nVisit ${link(err.link)} for more information.`
       );
     } else {
-      client.output.error(
+      output.error(
         `Failed to connect the ${formatProvider(
           type
         )} repository ${repo}.\n${err}`
@@ -120,10 +119,7 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
   return { url: originUrl, provider, org, repo };
 }
 
-export function printRemoteUrls(
-  output: Output,
-  remoteUrls: Dictionary<string>
-) {
+export function printRemoteUrls(remoteUrls: Dictionary<string>) {
   for (const [name, url] of Object.entries(remoteUrls)) {
     output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
   }

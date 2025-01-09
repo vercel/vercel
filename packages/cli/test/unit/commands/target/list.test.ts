@@ -1,5 +1,5 @@
 import ms from 'ms';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, beforeEach, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import target from '../../../../src/commands/target';
@@ -10,7 +10,73 @@ import createLineIterator from 'line-async-iterator';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
 describe('target ls', () => {
-  describe.todo('--next');
+  describe('invalid argument', () => {
+    it('errors', async () => {
+      client.setArgv('target', 'ls', 'balderdash');
+      const exitCode = await target(client);
+
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('Invalid number of arguments');
+    });
+  });
+
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'target';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = target(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:list`,
+        },
+      ]);
+    });
+  });
+
+  describe('telemetry', () => {
+    beforeEach(() => {
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.stderr.isTTY = false;
+    });
+
+    it('tracks invocation', async () => {
+      const subcommandActual = 'list';
+      client.setArgv('target', subcommandActual);
+      const exitCode = await target(client);
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: subcommandActual,
+        },
+      ]);
+    });
+
+    it('tracks invocation of alias command name', async () => {
+      const subcommandActual = 'ls';
+      client.setArgv('target', subcommandActual);
+      const exitCode = await target(client);
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:list',
+          value: subcommandActual,
+        },
+      ]);
+    });
+  });
 
   it('should show custom environments with `vc target ls`', async () => {
     useUser();
@@ -28,7 +94,6 @@ describe('target ls', () => {
           updatedAt: 1717176548879,
           type: 'preview',
           description: '',
-          name: 'her',
           branchMatcher: {
             type: 'endsWith',
             pattern: 'her',
@@ -41,7 +106,6 @@ describe('target ls', () => {
           updatedAt: 1717176506341,
           type: 'preview',
           description: '',
-          name: 'ano',
           branchMatcher: {
             type: 'startsWith',
             pattern: 'ano',
@@ -103,7 +167,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'her',
+      'Her',
       'her',
       'env_8DTiPYD33Rcvu2hQwYAdw0rwLquY',
       'Preview',
@@ -112,7 +176,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'ano',
+      'Ano',
       'ano',
       'env_ph1tjPP20xp8VAuiFsYt4rhRYGys',
       'Preview',

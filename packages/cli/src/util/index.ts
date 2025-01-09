@@ -7,15 +7,16 @@ import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
-import highlight from './output/highlight';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '@vercel-internals/types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
-import { ArchiveFormat, Dictionary } from '@vercel/client';
+import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { VercelConfig } from './dev/types';
+import type Client from './client';
+import { type FetchOptions, isJSONObject } from './client';
+import type { ArchiveFormat, Dictionary } from '@vercel/client';
+import output from '../output-manager';
 
 export interface NowOptions {
   client: Client;
@@ -129,13 +130,12 @@ export default class Now {
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    cwd: string,
     archive?: ArchiveFormat
   ) {
-    let hashes: any = {};
+    const hashes: any = {};
     const uploadStamp = stamp();
 
-    let requestBody = {
+    const requestBody = {
       ...nowConfig,
       env,
       build,
@@ -170,7 +170,6 @@ export default class Now {
       isSettingUpProject,
       archive,
       skipAutoDetectionConfirmation,
-      cwd,
       prebuilt,
       vercelOutputDir,
       rootDirectory,
@@ -180,7 +179,7 @@ export default class Now {
 
     if (deployment && deployment.warnings) {
       let sizeExceeded = 0;
-      const { log, warn } = this._client.output;
+      const { log, warn } = output;
 
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
@@ -255,24 +254,13 @@ export default class Now {
     if (error.status >= 400 && error.status < 500) {
       const err = new Error();
 
-      const { code, unreferencedBuildSpecs } = error;
+      const { code } = error;
 
       if (code === 'env_value_invalid_type') {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
           'Please supply a String or a Number (https://err.sh/vercel/env-value-invalid-type)';
-      } else if (code === 'unreferenced_build_specifications') {
-        const count = unreferencedBuildSpecs.length;
-        const prefix = count === 1 ? 'build' : 'builds';
-
-        err.message =
-          `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.vercelignore'
-          )}):` +
-          `\n- ${unreferencedBuildSpecs
-            .map((item: any) => JSON.stringify(item))
-            .join('\n- ')}`;
       } else {
         Object.assign(err, error);
       }
@@ -338,7 +326,7 @@ export default class Now {
   }
 
   _onRetry(err: Error) {
-    this._client.output.debug(`Retrying: ${err}\n${err.stack}`);
+    output.debug(`Retrying: ${err}\n${err.stack}`);
   }
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
@@ -366,11 +354,11 @@ export default class Now {
       body = opts.body;
     }
 
-    const res = await this._client.output.time(
+    const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(this._client, res);
+    printIndications(res);
     return res;
   }
 

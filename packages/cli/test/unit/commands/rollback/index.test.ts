@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import rollback from '../../../../src/commands/rollback';
 import type { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -15,9 +15,6 @@ import { vi } from 'vitest';
 vi.setConfig({ testTimeout: 60000 });
 
 describe('rollback', () => {
-  describe.todo('--timeout');
-  describe.todo('--yes');
-
   describe('telemetry', () => {
     it('tracks usage', async () => {
       const { cwd, previousDeployment } = initRollbackTest();
@@ -29,8 +26,8 @@ describe('rollback', () => {
         '0',
         '--yes'
       );
-      const exitCodePromise = rollback(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await rollback(client);
+      expect(exitCode, 'exit code of "rollback"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -52,7 +49,8 @@ describe('rollback', () => {
     const exitCodePromise = rollback(client);
 
     await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should error if invalid deployment ID', async () => {
@@ -64,7 +62,8 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput(
       'Error: The provided argument "????" is not a valid deployment ID or URL'
     );
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should error if deployment not found', async () => {
@@ -77,7 +76,8 @@ describe('rollback', () => {
       'Error: Can\'t find the deployment "foo" under the context'
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should show status when not rolling back', async () => {
@@ -91,7 +91,8 @@ describe('rollback', () => {
     );
     await expect(client.stderr).toOutput('No deployment rollback in progress');
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
@@ -118,7 +119,8 @@ describe('rollback', () => {
       } (${previousDeployment.id})`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(0);
   });
 
   it('should rollback by deployment url', async () => {
@@ -137,7 +139,8 @@ describe('rollback', () => {
       } (${previousDeployment.id})`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(0);
   });
 
   it('should get status while rolling back', async () => {
@@ -166,7 +169,8 @@ describe('rollback', () => {
       } (${previousDeployment.id})`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(0);
   });
 
   it('should error if rollback request fails', async () => {
@@ -182,10 +186,10 @@ describe('rollback', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
     );
-    // we need to wait a super long time because fetch will return on 500
-    await expect(client.stderr).toOutput('Response Error (500)', 20000);
+    await expect(client.stderr).toOutput('Response Error (500)');
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should error if rollback fails (no aliases)', async () => {
@@ -204,7 +208,8 @@ describe('rollback', () => {
       `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should error if rollback fails (with aliases)', async () => {
@@ -239,7 +244,8 @@ describe('rollback', () => {
       `  ${chalk.red('failed')}       bar (bar_123)`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should error if deployment times out', async () => {
@@ -266,7 +272,8 @@ describe('rollback', () => {
       )} to try again`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 
   it('should immediately exit after requesting rollback', async () => {
@@ -290,7 +297,8 @@ describe('rollback', () => {
       } (${previousDeployment.id})`
     );
 
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(0);
   });
 
   it('should error if deployment belongs to different team', async () => {
@@ -311,7 +319,8 @@ describe('rollback', () => {
       'Error: Deployment belongs to a different team'
     );
 
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "rollback"').toEqual(1);
   });
 });
 

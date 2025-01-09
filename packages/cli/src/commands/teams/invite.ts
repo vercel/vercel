@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
@@ -13,6 +13,11 @@ import inviteUserToTeam from '../../util/teams/invite-user-to-team';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString, isError } from '@vercel/error-utils';
 import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/invite';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -36,17 +41,26 @@ const domains = Array.from(
 
 export default async function invite(
   client: Client,
-  emails: string[] = [],
+  argv: string[],
   { introMsg = '', noopMsg = 'No changes made' } = {}
 ): Promise<number> {
-  const { config, output, telemetryEventStore } = client;
+  const { config, telemetryEventStore } = client;
   const { currentTeam: currentTeamId } = config;
   const telemetry = new TeamsInviteTelemetryClient({
     opts: {
-      output,
       store: telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(inviteSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args: emails } = parsedArgs;
 
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
@@ -59,7 +73,7 @@ export default async function invite(
 
   if (!currentTeam) {
     // We specifically need a team scope here
-    let err = `You can't run this command under ${param(
+    const err = `You can't run this command under ${param(
       user.username || user.email
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`
@@ -72,7 +86,7 @@ export default async function invite(
     introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
   );
 
-  telemetry.trackCliArgumentEmail(emails.length);
+  telemetry.trackCliArgumentEmail(emails);
 
   if (emails.length > 0) {
     for (const email of emails) {

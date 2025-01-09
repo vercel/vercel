@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import teamsSwitch from '../../../../src/commands/teams/switch';
 import { useUser } from '../../../mocks/user';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 
 describe('switch', () => {
   describe('non-northstar', () => {
     it('should let you switch to team and back', async () => {
       const user = useUser();
-      const team = useTeams()[0];
+      const team = useTeam();
 
       // ? Switch to:
       // ── Personal Account ──────────────
@@ -17,11 +17,12 @@ describe('switch', () => {
       // ○ Team (slug)
       // ──────────────────────────────────
       // ○ Cancel
-      let exitCodePromise = teamsSwitch(client);
+      let exitCodePromise = teamsSwitch(client, []);
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      let exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Success! The team ${team.name} (${team.slug}) is now active!`
       );
@@ -33,11 +34,12 @@ describe('switch', () => {
       // ● Team (slug) (current)
       // ──────────────────────────────────
       // ○ Cancel
-      exitCodePromise = teamsSwitch(client);
+      exitCodePromise = teamsSwitch(client, []);
       await expect(client.stderr).toOutput('Switch to:');
       client.stdin.write('\x1B[A'); // Up arrow
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput(
         `Your account (${user.username}) is now active!`
       );
@@ -49,7 +51,7 @@ describe('switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      const team = useTeams()[0];
+      const team = useTeam();
       client.config.currentTeam = team.id;
 
       // ? Switch to:
@@ -57,11 +59,12 @@ describe('switch', () => {
       // ● Team (slug) (current)
       // ──────────────────────────────────
       // ○ Cancel
-      const exitCodePromise = teamsSwitch(client);
+      const exitCodePromise = teamsSwitch(client, []);
       // Test that personal account is not displayed in scope switcher
       await expect(client.stderr).not.toOutput(user.username);
       client.stdin.write('\r'); // Return key
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
       await expect(client.stderr).toOutput('No changes made');
     });
 
@@ -69,14 +72,15 @@ describe('switch', () => {
       const user = useUser({
         version: 'northstar',
       });
-      useTeams();
+      useTeam();
 
-      const exitCodePromise = teamsSwitch(client, user.username);
+      const exitCodePromise = teamsSwitch(client, [user.username]);
       // Personal account should be hidden
       await expect(client.stderr).toOutput(
         'You cannot set your Personal Account as the scope.'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(1);
     });
   });
 });

@@ -1,7 +1,7 @@
-import { DNSRecord, PaginationOptions } from '@vercel-internals/types';
+import type { DNSRecord, PaginationOptions } from '@vercel-internals/types';
 import { DomainNotFound, isAPIError } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
+import type Client from '../client';
+import output from '../../output-manager';
 
 type Response = {
   records: DNSRecord[];
@@ -9,7 +9,6 @@ type Response = {
 };
 
 export default async function getDomainDNSRecords(
-  output: Output,
   client: Client,
   domain: string,
   apiVersion = 3,

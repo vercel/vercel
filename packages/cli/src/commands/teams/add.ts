@@ -2,17 +2,16 @@ import chalk from 'chalk';
 import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
-
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';
+import output from '../../output-manager';
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
-
 const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
 
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
@@ -22,7 +21,6 @@ export default async function add(client: Client): Promise<number> {
   let slug;
   let team;
   let elapsed;
-  const { output } = client;
 
   output.log(
     `Pick a team identifier for its URL (e.g.: ${chalk.cyan(
@@ -90,17 +88,6 @@ export default async function add(client: Client): Promise<number> {
   output.stopSpinner();
   process.stdout.write(eraseLines(2));
 
-  /*
-  if (res.error) {
-    output.error(res.error.message);
-    output.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
-
-    return 1;
-    // TODO: maybe we want to ask the user to retry? not sure if
-    // there's a scenario where that would be wanted
-  }
-  */
-
   team = Object.assign(team, res);
 
   output.success(`Team name saved ${elapsed()}`);
@@ -109,7 +96,7 @@ export default async function add(client: Client): Promise<number> {
   // Update config file
   output.spinner('Saving');
   client.config.currentTeam = team.id;
-  writeToConfigFile(output, client.config);
+  writeToConfigFile(client.config);
   output.stopSpinner();
 
   await invite(client, [], {

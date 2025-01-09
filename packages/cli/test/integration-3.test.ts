@@ -7,7 +7,8 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import fetch, { RequestInfo } from 'node-fetch';
+import type { RequestInfo } from 'node-fetch';
+import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -145,7 +146,9 @@ test('output the version', async () => {
   expect(version).toBe(pkg.version);
 });
 
-test('login with unregistered user', async () => {
+// https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['login', `${session}@${session}.com`],

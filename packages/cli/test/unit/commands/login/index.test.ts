@@ -14,13 +14,31 @@ describe('login', () => {
   describe.todo('--gitlab');
   describe.todo('--bitbucket');
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'login';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = login(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client);
     await expect(client.stderr).toOutput(
       'Error: `--token` may not be used with the "login" command\n'
     );
-    await expect(exitCodePromise).resolves.toEqual(2);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "login"').toEqual(2);
   });
 
   it('should allow login via email as argument', async () => {
@@ -30,7 +48,8 @@ describe('login', () => {
     await expect(client.stderr).toOutput(
       `Success! Email authentication complete for ${user.email}`
     );
-    await expect(exitCodePromise).resolves.toEqual(0);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "login"').toEqual(0);
   });
 
   describe('northstar', () => {
@@ -41,11 +60,9 @@ describe('login', () => {
       });
       client.authConfig.token = undefined;
       client.setArgv('login', user.email);
-      const exitCodePromise = login(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
-      await expect(client.config.currentTeam).toEqual(
-        'northstar-defaultTeamId'
-      );
+      const exitCode = await login(client);
+      expect(exitCode, 'exit code of "login"').toEqual(0);
+      expect(client.config.currentTeam).toEqual('northstar-defaultTeamId');
     });
   });
 
@@ -70,7 +87,8 @@ describe('login', () => {
         `Success! Email authentication complete for ${user.email}`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "login"').toEqual(0);
     });
 
     it('should allow the `--no-color` flag', async () => {
@@ -93,9 +111,10 @@ describe('login', () => {
         `Success! Email authentication complete for ${user.email}`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "login"').toEqual(0);
 
-      await expect(client.getFullOutput()).not.toContain(emoji('tip'));
+      expect(client.getFullOutput()).not.toContain(emoji('tip'));
     });
 
     describe('with NO_COLOR="1" env var', () => {
@@ -137,7 +156,8 @@ describe('login', () => {
 
         await expect(client.stderr).not.toOutput(emoji('tip'));
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "login"').toEqual(0);
       });
     });
 
@@ -179,7 +199,8 @@ describe('login', () => {
         );
 
         await expect(client.stderr).not.toOutput(emoji('tip'));
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await exitCodePromise;
+        expect(exitCode, 'exit code for "login"').toEqual(0);
       });
     });
   });

@@ -1,16 +1,14 @@
-import { describe, expect, it } from 'vitest';
 import chalk from 'chalk';
+import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { Request, Response } from 'express';
 import promote from '../../../../src/commands/promote';
-import { LastAliasRequest } from '@vercel-internals/types';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { useDeployment } from '../../../mocks/deployment';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import sleep from '../../../../src/util/sleep';
-import { vi } from 'vitest';
+import type { Deployment, LastAliasRequest } from '@vercel-internals/types';
 
 vi.setConfig({ testTimeout: 60000 });
 
@@ -18,9 +16,6 @@ const projectName = 'vercel-promote';
 
 describe('promote', () => {
   describe('[deployment id/url]', () => {
-    describe.todo('--timeout');
-    describe.todo('--yes');
-
     describe('telemetry', () => {
       it('tracks usage', async () => {
         const { cwd, previousDeployment } = initPromoteTest();
@@ -32,8 +27,8 @@ describe('promote', () => {
           '0',
           '--yes'
         );
-        const exitCodePromise = promote(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await promote(client);
+        expect(exitCode, 'exit code for "promote"').toEqual(0);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -43,6 +38,10 @@ describe('promote', () => {
           {
             key: 'option:timeout',
             value: '[TIME]',
+          },
+          {
+            key: 'argument:urlOrDeploymentId',
+            value: '[REDACTED]',
           },
         ]);
       });
@@ -55,7 +54,8 @@ describe('promote', () => {
       const exitCodePromise = promote(client);
 
       await expect(client.stderr).toOutput('Error: Invalid timeout "foo"');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should error if invalid deployment ID', async () => {
@@ -67,7 +67,8 @@ describe('promote', () => {
       await expect(client.stderr).toOutput(
         'Error: The provided argument "????" is not a valid deployment ID or URL'
       );
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should error if deployment not found', async () => {
@@ -81,7 +82,8 @@ describe('promote', () => {
         'Error: Error: Can\'t find the deployment "foo" under the context'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should show status when not promoting', async () => {
@@ -97,7 +99,8 @@ describe('promote', () => {
         'No deployment promotion in progress'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:yes', value: 'TRUE' },
@@ -124,7 +127,8 @@ describe('promote', () => {
         } (${previousDeployment.id})`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
     });
 
     it('should promote by deployment url', async () => {
@@ -143,12 +147,13 @@ describe('promote', () => {
         } (${previousDeployment.id})`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
     });
 
     it('should fail to promote a preview deployment when user says no', async () => {
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url);
@@ -168,35 +173,33 @@ describe('promote', () => {
 
       await expect(client.stderr).toOutput('Error: Canceled');
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
     });
 
     it('should promote a preview deployment when user says yes', async () => {
       const inspectorUrl = `https://vercel.com/user/${projectName}/abcdefghijlmo`;
 
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
       let createWasCalled = false;
 
-      client.scenario.post(
-        '/v13/deployments',
-        (req: Request, res: Response) => {
-          createWasCalled = true;
-          expect(req.body).toMatchObject({
-            deploymentId: previousDeployment.id,
-            name: projectName,
-            target: 'production',
-            meta: {
-              action: 'promote',
-            },
-          });
-          res.json({
-            id: 'some-id',
-            inspectorUrl,
-          });
-        }
-      );
+      client.scenario.post('/v13/deployments', (req, res) => {
+        createWasCalled = true;
+        expect(req.body).toMatchObject({
+          deploymentId: previousDeployment.id,
+          name: projectName,
+          target: 'production',
+          meta: {
+            action: 'promote',
+          },
+        });
+        res.json({
+          id: 'some-id',
+          inspectorUrl,
+        });
+      });
 
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url);
@@ -217,7 +220,8 @@ describe('promote', () => {
       await expect(client.stderr).toOutput(
         `Successfully created new deployment of ${projectName} at ${inspectorUrl}`
       );
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
       expect(createWasCalled).toBe(true);
     });
 
@@ -226,27 +230,24 @@ describe('promote', () => {
 
       let createWasCalled = false;
       const { cwd, previousDeployment } = initPromoteTest({
-        deploymentTarget: 'preview',
+        deploymentTarget: null,
       });
 
-      client.scenario.post(
-        '/v13/deployments',
-        (req: Request, res: Response) => {
-          createWasCalled = true;
-          expect(req.body).toMatchObject({
-            deploymentId: previousDeployment.id,
-            name: projectName,
-            target: 'production',
-            meta: {
-              action: 'promote',
-            },
-          });
-          res.json({
-            id: 'some-id',
-            inspectorUrl,
-          });
-        }
-      );
+      client.scenario.post('/v13/deployments', (req, res) => {
+        createWasCalled = true;
+        expect(req.body).toMatchObject({
+          deploymentId: previousDeployment.id,
+          name: projectName,
+          target: 'production',
+          meta: {
+            action: 'promote',
+          },
+        });
+        res.json({
+          id: 'some-id',
+          inspectorUrl,
+        });
+      });
 
       client.cwd = cwd;
       client.setArgv('promote', previousDeployment.url, '--yes');
@@ -255,7 +256,8 @@ describe('promote', () => {
       await expect(client.stderr).toOutput(
         `Successfully created new deployment of ${projectName} at ${inspectorUrl}`
       );
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
       expect(createWasCalled).toBe(true);
     });
 
@@ -285,7 +287,8 @@ describe('promote', () => {
         } (${previousDeployment.id})`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
     });
 
     it('should error if promote request fails', async () => {
@@ -301,10 +304,10 @@ describe('promote', () => {
         `Fetching deployment "${previousDeployment.id}" in ${previousDeployment.creator?.username}`
       );
 
-      // we need to wait a super long time because fetch will return on 500
-      await expect(client.stderr).toOutput('Response Error (500)', 20000);
+      await expect(client.stderr).toOutput('Response Error (500)');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should error if promote fails (no aliases)', async () => {
@@ -323,7 +326,8 @@ describe('promote', () => {
         `Error: Failed to remap all aliases to the requested deployment ${previousDeployment.url} (${previousDeployment.id})`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should error if promote fails (with aliases)', async () => {
@@ -358,7 +362,8 @@ describe('promote', () => {
         `  ${chalk.red('failed')}       bar (bar_123)`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should error if deployment times out', async () => {
@@ -386,7 +391,8 @@ describe('promote', () => {
         10000
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
 
     it('should immediately exit after requesting promote', async () => {
@@ -410,7 +416,8 @@ describe('promote', () => {
         } (${previousDeployment.id})`
       );
 
-      await expect(exitCodePromise).resolves.toEqual(0);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(0);
     });
 
     it('should error if deployment belongs to different team', async () => {
@@ -431,7 +438,8 @@ describe('promote', () => {
         'Error: Deployment belongs to a different team'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "promote"').toEqual(1);
     });
   });
 });
@@ -478,7 +486,7 @@ function initPromoteTest({
 
   client.scenario.post(
     '/:version/projects/:project/promote/:id',
-    (req: Request, res: Response) => {
+    (req, res) => {
       if (promoteStatusCode === 500) {
         res.statusCode = 500;
         res.end('Server error');

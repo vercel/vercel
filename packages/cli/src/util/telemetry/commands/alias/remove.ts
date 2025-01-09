@@ -1,7 +1,12 @@
 import { TelemetryClient } from '../..';
+import type { TelemetryMethods } from '../../types';
+import type { removeSubcommand } from '../../../../commands/alias/command';
 
-export class AliasRmTelemetryClient extends TelemetryClient {
-  trackCliArgumentAlias(alias?: string) {
+export class AliasRemoveTelemetryClient
+  extends TelemetryClient
+  implements TelemetryMethods<typeof removeSubcommand>
+{
+  trackCliArgumentAlias(alias: string | undefined) {
     if (alias) {
       this.trackCliArgument({
         arg: 'alias',
@@ -10,7 +15,7 @@ export class AliasRmTelemetryClient extends TelemetryClient {
     }
   }
 
-  trackCliFlagYes(yes?: boolean) {
+  trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
     }

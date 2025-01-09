@@ -1,7 +1,6 @@
 import chalk from 'chalk';
-
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
@@ -12,26 +11,32 @@ import checkTransfer from '../../util/domains/check-transfer';
 import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
-
 import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
+import output from '../../output-manager';
+import { transferInSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 
-type Options = {
-  '--code': string;
-};
-
-export default async function transferIn(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { output, telemetryEventStore } = client;
-  const { contextName } = await getScope(client);
+export default async function transferIn(client: Client, argv: string[]) {
   const telemetry = new DomainsTransferInTelemetryClient({
     opts: {
-      store: telemetryEventStore,
-      output,
+      store: client.telemetryEventStore,
     },
   });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(
+    transferInSubcommand.options
+  );
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
   telemetry.trackCliOptionCode(opts['--code']);
 
   const [domainName] = args;
@@ -42,7 +47,7 @@ export default async function transferIn(
     return 1;
   }
 
-  telemetry.trackCliArgumentDomainName(domainName);
+  telemetry.trackCliArgumentDomain(domainName);
 
   if (!isRootDomain(domainName)) {
     output.error(
@@ -70,6 +75,7 @@ export default async function transferIn(
   }
 
   const { price } = domainPrice;
+  const { contextName } = await getScope(client);
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
       'available'

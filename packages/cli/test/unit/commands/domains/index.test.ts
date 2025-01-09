@@ -10,12 +10,38 @@ describe('domains', () => {
     lsSpy.mockClear();
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'domains';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = domains(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('routes to ls subcommand', async () => {
     const args: string[] = [];
-    const opts = {};
 
-    client.setArgv('dns', ...args);
+    client.setArgv('domains', ...args);
     await domains(client);
-    expect(lsSpy).toHaveBeenCalledWith(client, opts, args);
+    expect(lsSpy).toHaveBeenCalledWith(client, args);
+  });
+
+  describe('unrecognized subcommand', () => {
+    it('routes to ls', async () => {
+      const args: string[] = ['not-a-command'];
+
+      client.setArgv('domains', ...args);
+      await domains(client);
+      expect(lsSpy).toHaveBeenCalledWith(client, args);
+    });
   });
 });

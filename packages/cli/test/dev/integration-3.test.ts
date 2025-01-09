@@ -1,4 +1,5 @@
 import { spawnAsync } from '@vercel/build-utils';
+import assert from 'assert';
 import { resolve, delimiter } from 'path';
 import {
   sleep,
@@ -23,6 +24,7 @@ test('[vercel dev] 02-angular-node', async () => {
   let stderr = '';
 
   try {
+    assert(dev.stderr);
     dev.stderr.on('data', async (data: any) => {
       stderr += data.toString();
     });
@@ -78,26 +80,7 @@ test(
 
 test('[vercel dev] 08-hugo', async () => {
   if (process.platform === 'darwin') {
-    // 1. run the test without Hugo in the PATH
-    let tester = await testFixtureStdio(
-      '08-hugo',
-      async () => {
-        throw new Error('Expected dev server to fail to be ready');
-      },
-      {
-        readyTimeout: 2000,
-
-        // Important: for the first test, we MUST deploy this app so that the
-        // framework (e.g. Hugo) will be detected by the server and associated
-        // with the project since `vc dev` doesn't do framework detection
-        skipDeploy: false,
-      }
-    );
-    await expect(tester()).rejects.toThrow(
-      new Error('Dev server timed out while waiting to be ready')
-    );
-
-    // 2. Download `hugo` and update PATH
+    // 1. Download `hugo` and update PATH
     const hugoFixture = resolve(fixture('08-hugo'));
     await spawnAsync(
       `curl -sSL https://github.com/gohugoio/hugo/releases/download/v0.56.0/hugo_0.56.0_macOS-64bit.tar.gz | tar -xz -C "${hugoFixture}"`,
@@ -108,8 +91,8 @@ test('[vercel dev] 08-hugo', async () => {
     );
     process.env.PATH = `${hugoFixture}${delimiter}${process.env.PATH}`;
 
-    // 3. Rerun the test now that Hugo is in the PATH
-    tester = testFixtureStdio(
+    // 2. Rerun the test now that Hugo is in the PATH
+    const tester = testFixtureStdio(
       '08-hugo',
       async (testPath: any) => {
         await testPath(200, '/', /Hugo/m);

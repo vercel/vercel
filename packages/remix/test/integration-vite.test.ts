@@ -12,7 +12,10 @@ const fixturesPath = join(__dirname, 'fixtures-vite');
 const exampleAbsolute = (name: string) =>
   join(__dirname, '..', '..', '..', 'examples', name);
 
-const skipped = ['02-interactive-remix-routing-v2'];
+const skipped: string[] = [
+  // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
+];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   if (skipped.includes(fixture)) {

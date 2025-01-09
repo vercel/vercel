@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const loginCommand = {
   name: 'login',
+  aliases: [],
   description: 'Authenticate using your email or team id.',
   arguments: [
     {

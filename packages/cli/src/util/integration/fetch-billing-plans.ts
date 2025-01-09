@@ -4,7 +4,7 @@ import type {
   IntegrationProduct,
   Metadata,
   BillingPlan,
-} from '../../commands/integration/types';
+} from './types';
 
 export async function fetchBillingPlans(
   client: Client,

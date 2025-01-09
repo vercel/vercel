@@ -7,9 +7,26 @@
     "**/*.d.ts",
     "**/*.md"
   ],
-  "main": "./index.js",
   "types": "./index.d.ts",
-  "version": "1.4.2",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js"
+    },
+    "./headers": {
+      "import": "./headers.js",
+      "require": "./headers.js"
+    },
+    "./oidc": {
+      "import": "./oidc/index.js",
+      "require": "./oidc/index.js"
+    },
+    "./middleware": {
+      "import": "./middleware.js",
+      "require": "./middleware.js"
+    }
+  },
+  "version": "1.5.2",
   "repository": {
     "directory": "packages/functions",
     "type": "git",

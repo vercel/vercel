@@ -12,6 +12,24 @@ describe('teams invite', () => {
     useTeams(currentTeamId);
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'teams';
+      const subcommand = 'invite';
+
+      client.setArgv(command, subcommand, '--help');
+      const exitCodePromise = teams(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[email]', () => {
     beforeEach(() => {
       client.config = {
@@ -27,8 +45,8 @@ describe('teams invite', () => {
     describe('a single email value', () => {
       it('tracks telemetry events', async () => {
         client.setArgv('teams', 'invite', 'me@example.com');
-        const exitCodePromise = teams(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await teams(client);
+        expect(exitCode, 'exit code for "teams"').toEqual(0);
 
         await expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -46,8 +64,8 @@ describe('teams invite', () => {
     describe('several email value', () => {
       it('tracks telemetry events', async () => {
         client.setArgv('teams', 'invite', 'me@example.com', 'you@example.com');
-        const exitCodePromise = teams(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        const exitCode = await teams(client);
+        expect(exitCode, 'exit code for "teams"').toEqual(0);
 
         await expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {

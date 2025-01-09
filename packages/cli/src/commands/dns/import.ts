@@ -1,20 +1,34 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import { DnsImportTelemetryClient } from '../../util/telemetry/commands/dns/import';
+import { importSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 
-type Options = {};
-
-export default async function add(
-  client: Client,
-  opts: Options,
-  args: string[]
-) {
-  const { output } = client;
+export default async function importZone(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(importSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
+  const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
+  const telemetry = new DnsImportTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
 
   if (args.length !== 2) {
     output.error(
@@ -27,6 +41,8 @@ export default async function add(
 
   const addStamp = stamp();
   const [domain, zonefilePath] = args;
+  telemetry.trackCliArgumentDomain(domain);
+  telemetry.trackCliArgumentZonefile(zonefilePath);
 
   const recordIds = await importZonefile(
     client,

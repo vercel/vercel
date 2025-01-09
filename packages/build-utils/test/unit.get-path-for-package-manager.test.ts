@@ -1,5 +1,6 @@
 import { delimiter } from 'path';
 import { getPathForPackageManager } from '../src';
+import { describe, test, expect } from 'vitest';
 
 describe('Test `getPathForPackageManager()`', () => {
   test.each<{

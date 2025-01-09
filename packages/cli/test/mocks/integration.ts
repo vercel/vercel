@@ -2,8 +2,8 @@ import type {
   Configuration,
   Integration,
   MetadataSchema,
-  Resource,
-} from '../../src/commands/integration/types';
+} from '../../src/util/integration/types';
+import type { Resource } from '../../src/util/integration-resource/types';
 import { client } from './client';
 
 const metadataSchema1: MetadataSchema = {
@@ -144,6 +144,40 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataUnsupported: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Primary Region',
+      default: 'us-east-1',
+      description: 'Primary region where your database will be hosted',
+      'ui:placeholder': 'Choose your region',
+      type: 'string',
+      'ui:options': [
+        {
+          value: 'us-west-1',
+          label: 'West US (North California)',
+        },
+        {
+          value: 'us-east-1',
+          label: 'East US (North Virginia)',
+        },
+      ],
+    },
+    storage: {
+      type: 'number',
+      'ui:control': 'input',
+      'ui:hidden': { expr: "Region == 'us-east-1" },
+      'ui:label': 'Storage',
+      description: 'Disk space in GiB',
+      minimum: 1,
+      maximum: 256,
+    },
+  },
+  required: ['region'],
+};
+
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
@@ -194,6 +228,21 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-unsupported': {
+    id: 'acme',
+    name: 'Acme Integration',
+    slug: 'acme',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataUnsupported,
+      },
+    ],
+  },
 };
 
 const configurations: Record<string, Configuration[]> = {
@@ -216,7 +265,7 @@ const configurations: Record<string, Configuration[]> = {
       id: 'acme-first',
       integrationId: 'acme',
       ownerId: 'team_dummy',
-      slug: 'acme',
+      slug: 'acme-two-configurations',
       teamId: 'team_dummy',
       userId: 'user_dummy',
       scopes: ['read-write:integration-resource'],
@@ -228,13 +277,41 @@ const configurations: Record<string, Configuration[]> = {
       id: 'acme-second',
       integrationId: 'acme',
       ownerId: 'team_dummy',
-      slug: 'acme',
+      slug: 'acme-two-configurations',
       teamId: 'team_dummy',
       userId: 'user_dummy',
       scopes: ['read-write:integration-resource'],
       source: 'marketplace',
       installationType: 'marketplace',
       projects: ['acme-project'],
+    },
+  ],
+  'acme-two-projects': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-two-projects',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-1', 'acme-2'],
+    },
+  ],
+  'acme-no-projects': [
+    {
+      id: 'acme-first',
+      integrationId: 'acme',
+      ownerId: 'team_dummy',
+      slug: 'acme-no-projects',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
     },
   ],
   'acme-no-results': [],
@@ -422,8 +499,10 @@ export function useConfiguration() {
 
 export function useIntegration({
   withInstallation,
+  ownerId,
 }: {
   withInstallation: boolean;
+  ownerId?: string;
 }) {
   const storeId = 'store_123';
 
@@ -443,37 +522,27 @@ export function useIntegration({
     }
   );
 
-  client.scenario.get(
-    '/:version/integrations/integration/:integrationId/installed',
-    (req, res) => {
-      const { integrationId } = req.params;
-      const { teamId, source } = req.query;
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { installationType, integrationIdOrSlug } = req.query;
 
-      if (!teamId) {
-        res.status(500);
-        res.end();
-        return;
-      }
-
-      if (source !== 'marketplace') {
-        res.status(500);
-        res.end();
-        return;
-      }
-
-      res.json(
-        withInstallation
-          ? [
-              {
-                id: `${integrationId}-install`,
-                installationType: 'marketplace',
-                ownerId: teamId,
-              },
-            ]
-          : []
-      );
+    if (installationType !== 'marketplace') {
+      res.status(500);
+      res.end();
+      return;
     }
-  );
+
+    res.json(
+      withInstallation
+        ? [
+            {
+              id: `${integrationIdOrSlug}-install`,
+              installationType: 'marketplace',
+              ownerId,
+            },
+          ]
+        : []
+    );
+  });
 
   client.scenario.get(
     '/:version/integrations/integration/:integrationIdOrSlug/products/:productIdOrSlug/plans',

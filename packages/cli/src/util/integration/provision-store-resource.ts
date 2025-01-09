@@ -1,5 +1,5 @@
 import type Client from '../client';
-import type { Metadata } from '../../commands/integration/types';
+import type { Metadata } from './types';
 
 export async function provisionStoreResource(
   client: Client,

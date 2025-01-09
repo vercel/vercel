@@ -1,5 +1,23 @@
 # @vercel/functions
 
+## 1.5.2
+
+### Patch Changes
+
+- [vercel/functions] add geolocation.postalCode ([#12753](https://github.com/vercel/vercel/pull/12753))
+
+## 1.5.1
+
+### Patch Changes
+
+- [@vercel/functions] update headers doc ([#12649](https://github.com/vercel/vercel/pull/12649))
+
+## 1.5.0
+
+### Minor Changes
+
+- ipAddress: accept headers as input ([#12429](https://github.com/vercel/vercel/pull/12429))
+
 ## 1.4.2
 
 ### Patch Changes

@@ -1,9 +1,10 @@
 import confirm from './confirm';
 import chalk from 'chalk';
-import { frameworkList, Framework } from '@vercel/frameworks';
-import Client from '../client';
+import { frameworkList, type Framework } from '@vercel/frameworks';
+import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 const settingMap = {
   buildCommand: 'Build Command',
@@ -20,15 +21,13 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
 
 export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
 
-export default async function editProjectSettings(
+export async function editProjectSettings(
   client: Client,
   projectSettings: PartialProjectSettings | null,
   framework: Framework | null,
   autoConfirm: boolean,
   localConfigurationOverrides: PartialProjectSettings | null
 ): Promise<ProjectSettings> {
-  const { output } = client;
-
   // Create initial settings object defaulting everything to `null` and assigning what may exist in `projectSettings`
   const settings: ProjectSettings = Object.assign(
     {
@@ -142,7 +141,7 @@ export default async function editProjectSettings(
     choices,
   });
 
-  for (let setting of settingFields) {
+  for (const setting of settingFields) {
     const field = settingMap[setting];
     settings[setting] = await client.input.text({
       message: `What's your ${chalk.bold(field)}?`,

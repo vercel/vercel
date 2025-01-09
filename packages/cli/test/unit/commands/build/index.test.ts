@@ -21,6 +21,23 @@ describe('build', () => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'build';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = build(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should build with `@vercel/static`', async () => {
     const cwd = fixture('static');
     const output = join(cwd, '.vercel/output');
@@ -962,6 +979,7 @@ describe('build', () => {
     expect(configJson).toMatchObject({
       images: {
         sizes: [256, 384, 600, 1000],
+        qualities: [25, 50, 75],
         domains: [],
         minimumCacheTTL: 60,
         localPatterns: [{ search: '' }],
@@ -1217,7 +1235,8 @@ describe('build', () => {
     client.setArgv('build');
     const exitCodePromise = build(client);
     await expect(client.stderr).toOutput('Error: Detected unsupported');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "build"').toEqual(1);
   });
 
   it('should ignore `.env` for static site', async () => {
@@ -1441,9 +1460,4 @@ describe('build', () => {
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
     });
   });
-
-  describe.todo('--prod');
-  describe.todo('--target');
-  describe.todo('--output');
-  describe.todo('--yes');
 });

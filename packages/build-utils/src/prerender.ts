@@ -8,6 +8,7 @@ interface PrerenderOptions {
   group?: number;
   bypassToken?: string | null /* optional to be non-breaking change */;
   allowQuery?: string[];
+  allowHeader?: string[];
   initialHeaders?: Record<string, string>;
   initialStatus?: number;
   passQuery?: boolean;
@@ -25,6 +26,7 @@ export class Prerender {
   public group?: number;
   public bypassToken: string | null;
   public allowQuery?: string[];
+  public allowHeader?: string[];
   public initialHeaders?: Record<string, string>;
   public initialStatus?: number;
   public passQuery?: boolean;
@@ -40,6 +42,7 @@ export class Prerender {
     group,
     bypassToken,
     allowQuery,
+    allowHeader,
     initialHeaders,
     initialStatus,
     passQuery,
@@ -158,6 +161,20 @@ export class Prerender {
         );
       }
       this.allowQuery = allowQuery;
+    }
+
+    if (allowHeader !== undefined) {
+      if (!Array.isArray(allowHeader)) {
+        throw new Error(
+          'The `allowHeader` argument for `Prerender` must be Array.'
+        );
+      }
+      if (!allowHeader.every(q => typeof q === 'string')) {
+        throw new Error(
+          'The `allowHeader` argument for `Prerender` must be Array of strings.'
+        );
+      }
+      this.allowHeader = allowHeader;
     }
 
     if (experimentalStreamingLambdaPath !== undefined) {

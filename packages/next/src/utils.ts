@@ -178,6 +178,7 @@ function getImagesConfig(
     ? {
         domains: imagesManifest.images.domains,
         sizes: imagesManifest.images.sizes,
+        qualities: imagesManifest.images.qualities,
         remotePatterns: imagesManifest.images.remotePatterns,
         localPatterns: imagesManifest.images.localPatterns,
         minimumCacheTTL: imagesManifest.images.minimumCacheTTL,
@@ -610,6 +611,7 @@ export type NextImagesManifest = {
     localPatterns: Images['localPatterns'];
     minimumCacheTTL?: Images['minimumCacheTTL'];
     formats?: Images['formats'];
+    qualities?: Images['qualities'];
     unoptimized?: boolean;
     dangerouslyAllowSVG?: Images['dangerouslyAllowSVG'];
     contentSecurityPolicy?: Images['contentSecurityPolicy'];
@@ -932,6 +934,7 @@ export type NextPrerenderedRoutes = {
       initialHeaders?: Record<string, string>;
       experimentalBypassFor?: HasField;
       renderingMode: RenderingMode;
+      allowHeader: string[] | undefined;
     };
   };
 
@@ -944,6 +947,7 @@ export type NextPrerenderedRoutes = {
       prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
       renderingMode: RenderingMode;
+      allowHeader: string[] | undefined;
     };
   };
 
@@ -953,6 +957,8 @@ export type NextPrerenderedRoutes = {
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
       fallbackRevalidate?: number | false;
+      fallbackRootParams?: string[];
+      fallbackSourceRoute?: string;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -960,6 +966,7 @@ export type NextPrerenderedRoutes = {
       prefetchDataRouteRegex?: string | null;
       experimentalBypassFor?: HasField;
       renderingMode: RenderingMode;
+      allowHeader: string[] | undefined;
     };
   };
 
@@ -976,6 +983,7 @@ export type NextPrerenderedRoutes = {
       prefetchDataRouteRegex: string | null | undefined;
       experimentalBypassFor?: HasField;
       renderingMode: RenderingMode;
+      allowHeader: string[] | undefined;
     };
   };
 
@@ -1183,6 +1191,7 @@ export async function getPrerenderManifest(
             experimentalBypassFor?: HasField;
             experimentalPPR?: boolean;
             renderingMode?: RenderingMode;
+            allowHeader?: string[];
           };
         };
         dynamicRoutes: {
@@ -1192,6 +1201,8 @@ export async function getPrerenderManifest(
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
             fallbackRevalidate: number | false | undefined;
+            fallbackRootParams: string[] | undefined;
+            fallbackSourceRoute?: string;
             dataRoute: string | null;
             dataRouteRegex: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1199,6 +1210,7 @@ export async function getPrerenderManifest(
             experimentalBypassFor?: HasField;
             experimentalPPR?: boolean;
             renderingMode?: RenderingMode;
+            allowHeader?: string[];
           };
         };
         preview: {
@@ -1234,6 +1246,7 @@ export async function getPrerenderManifest(
           dataRoute,
           srcRoute,
           renderingMode: RenderingMode.STATIC,
+          allowHeader: undefined,
         };
       });
 
@@ -1248,6 +1261,7 @@ export async function getPrerenderManifest(
             dataRoute,
             dataRouteRegex,
             renderingMode: RenderingMode.STATIC,
+            allowHeader: undefined,
           };
         } else {
           ret.blockingFallbackRoutes[lazyRoute] = {
@@ -1255,6 +1269,7 @@ export async function getPrerenderManifest(
             dataRoute,
             dataRouteRegex,
             renderingMode: RenderingMode.STATIC,
+            allowHeader: undefined,
           };
         }
       });
@@ -1289,6 +1304,7 @@ export async function getPrerenderManifest(
         let initialHeaders: undefined | Record<string, string>;
         let experimentalBypassFor: undefined | HasField;
         let prefetchDataRoute: undefined | string | null;
+        let allowHeader: undefined | string[];
         let renderingMode: RenderingMode;
 
         if (manifest.version === 4) {
@@ -1296,6 +1312,7 @@ export async function getPrerenderManifest(
           initialHeaders = manifest.routes[route].initialHeaders;
           experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
           prefetchDataRoute = manifest.routes[route].prefetchDataRoute;
+          allowHeader = manifest.routes[route].allowHeader;
           renderingMode =
             manifest.routes[route].renderingMode ??
             (manifest.routes[route].experimentalPPR
@@ -1303,6 +1320,7 @@ export async function getPrerenderManifest(
               : RenderingMode.STATIC);
         } else {
           renderingMode = RenderingMode.STATIC;
+          allowHeader = undefined;
         }
 
         ret.staticRoutes[route] = {
@@ -1315,6 +1333,7 @@ export async function getPrerenderManifest(
           srcRoute,
           initialStatus,
           initialHeaders,
+          allowHeader,
           experimentalBypassFor,
           renderingMode,
         };
@@ -1330,7 +1349,9 @@ export async function getPrerenderManifest(
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
         let fallbackRevalidate: number | false | undefined;
-
+        let fallbackRootParams: undefined | string[];
+        let allowHeader: undefined | string[];
+        let fallbackSourceRoute: undefined | string;
         if (manifest.version === 4) {
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
@@ -1349,6 +1370,11 @@ export async function getPrerenderManifest(
               : RenderingMode.STATIC);
           fallbackRevalidate =
             manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
+          fallbackRootParams =
+            manifest.dynamicRoutes[lazyRoute].fallbackRootParams;
+          allowHeader = manifest.dynamicRoutes[lazyRoute].allowHeader;
+          fallbackSourceRoute =
+            manifest.dynamicRoutes[lazyRoute].fallbackSourceRoute;
         }
 
         if (typeof fallback === 'string') {
@@ -1363,7 +1389,10 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             fallbackRevalidate,
+            fallbackRootParams,
+            fallbackSourceRoute,
             renderingMode,
+            allowHeader,
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
@@ -1374,6 +1403,7 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             renderingMode,
+            allowHeader,
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
@@ -1384,6 +1414,7 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             renderingMode,
+            allowHeader,
           };
         }
       });
@@ -2116,6 +2147,7 @@ export const onPrerenderRoute =
     let initialHeaders: Record<string, string> | undefined;
     let experimentalBypassFor: HasField | undefined;
     let renderingMode: RenderingMode;
+    let allowHeader: string[] | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
@@ -2132,6 +2164,7 @@ export const onPrerenderRoute =
       }
       srcRoute = null;
       dataRoute = pr.dataRoute;
+      allowHeader = pr.allowHeader;
       experimentalBypassFor = pr.experimentalBypassFor;
       renderingMode = pr.renderingMode;
       prefetchDataRoute = pr.prefetchDataRoute;
@@ -2139,6 +2172,7 @@ export const onPrerenderRoute =
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
+      allowHeader = prerenderManifest.omittedRoutes[routeKey].allowHeader;
       experimentalBypassFor =
         prerenderManifest.omittedRoutes[routeKey].experimentalBypassFor;
       renderingMode = prerenderManifest.omittedRoutes[routeKey].renderingMode;
@@ -2152,6 +2186,7 @@ export const onPrerenderRoute =
         dataRoute,
         initialHeaders,
         initialStatus,
+        allowHeader,
         experimentalBypassFor,
         renderingMode,
         prefetchDataRoute,
@@ -2167,8 +2202,12 @@ export const onPrerenderRoute =
       // When the route has PPR enabled and has a fallback defined, we should
       // read the value from the manifest and use it as the value for the route.
       if (isFallback) {
-        const { fallbackStatus, fallbackHeaders, fallbackRevalidate } =
-          prerenderManifest.fallbackRoutes[routeKey];
+        const {
+          fallbackStatus,
+          fallbackHeaders,
+          fallbackRevalidate,
+          fallbackSourceRoute,
+        } = prerenderManifest.fallbackRoutes[routeKey];
 
         if (fallbackStatus) {
           initialStatus = fallbackStatus;
@@ -2176,6 +2215,10 @@ export const onPrerenderRoute =
 
         if (fallbackHeaders) {
           initialHeaders = fallbackHeaders;
+        }
+
+        if (fallbackSourceRoute) {
+          srcRoute = fallbackSourceRoute;
         }
 
         // If we're rendering with PPR and as this is a fallback, we should use
@@ -2200,12 +2243,14 @@ export const onPrerenderRoute =
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
+    let didPostpone = false;
     if (renderingMode === RenderingMode.PARTIALLY_STATIC && appDir) {
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
         const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
         if ('postponed' in meta && typeof meta.postponed === 'string') {
+          didPostpone = true;
           postponedPrerender = meta.postponed;
 
           // Assign the headers Content-Type header to the prerendered type.
@@ -2216,6 +2261,14 @@ export const onPrerenderRoute =
           // Read the HTML file and append it to the prerendered content.
           const html = await fs.readFileSync(htmlPath, 'utf8');
           postponedPrerender += html;
+        } else {
+          // Set the content type to text/html; charset=utf-8.
+          initialHeaders ??= {};
+          initialHeaders['content-type'] = 'text/html; charset=utf-8';
+
+          // Read the HTML file and set it to the prerendered content.
+          const html = await fs.readFileSync(htmlPath, 'utf8');
+          postponedPrerender = html;
         }
       }
 
@@ -2461,6 +2514,7 @@ export const onPrerenderRoute =
       ) as RoutesManifestRoute | undefined;
       const isDynamic = isDynamicRoute(routeKey);
       const routeKeys = route?.routeKeys;
+
       // by default allowQuery should be undefined and only set when
       // we have sufficient information to set it
       let allowQuery: string[] | undefined;
@@ -2509,6 +2563,17 @@ export const onPrerenderRoute =
       let experimentalStreamingLambdaPath: string | undefined;
       if (
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        routesManifest?.ppr?.chain?.headers
+      ) {
+        // When the chain is present in the routes manifest, we use the
+        // output path as the target for the chain and assign all the provided
+        // headers to the chain.
+        chain = {
+          outputPath: pathnameToOutputName(entryDirectory, routeKey),
+          headers: routesManifest.ppr.chain.headers,
+        };
+      } else if (
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
         experimentalStreamingLambdaPaths
       ) {
         // Try to get the experimental streaming lambda path for the specific
@@ -2536,25 +2601,15 @@ export const onPrerenderRoute =
         // and this should be the pathname that will work for those cases.
         experimentalStreamingLambdaPath = paths.output;
 
-        if (routesManifest?.ppr?.chain?.headers) {
-          // When the chain is present in the routes manifest, we use the
-          // output path as the target for the chain and assign all the provided
-          // headers to the chain.
-          chain = {
-            outputPath: pathnameToOutputName(entryDirectory, routeKey),
-            headers: routesManifest.ppr.chain.headers,
-          };
-        } else {
-          // When the chain is not present in the routes manifest, we use the
-          // experimental streaming lambda path as the target for the chain and
-          // assign the pathname as the matched path to the headers. This allows
-          // for deployments to upgrade to working when Vercel supports reading
-          // the chain parameter.
-          chain = {
-            outputPath: paths.output,
-            headers: { 'x-matched-path': paths.pathname },
-          };
-        }
+        // When the chain is not present in the routes manifest, we use the
+        // experimental streaming lambda path as the target for the chain and
+        // assign the pathname as the matched path to the headers. This allows
+        // for deployments to upgrade to working when Vercel supports reading
+        // the chain parameter.
+        chain = {
+          outputPath: paths.output,
+          headers: { 'x-matched-path': paths.pathname },
+        };
       }
 
       // If this is a fallback page with PPR enabled, we should not have the
@@ -2562,7 +2617,10 @@ export const onPrerenderRoute =
       // have a HIT for the fallback page.
       let htmlAllowQuery = allowQuery;
       if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-        htmlAllowQuery = [];
+        const { fallbackRootParams } =
+          prerenderManifest.fallbackRoutes[routeKey];
+
+        htmlAllowQuery = fallbackRootParams ?? [];
       }
 
       prerenders[outputPathPage] = new Prerender({
@@ -2578,6 +2636,7 @@ export const onPrerenderRoute =
         sourcePath,
         experimentalStreamingLambdaPath,
         chain,
+        allowHeader,
 
         ...(isNotFound
           ? {
@@ -2624,6 +2683,7 @@ export const onPrerenderRoute =
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
+          allowHeader,
 
           ...(isNotFound
             ? {
@@ -2648,7 +2708,7 @@ export const onPrerenderRoute =
                         'content-type': rscContentTypeHeader,
                       }
                     : {}),
-                  ...(postponedPrerender && rscDidPostponeHeader && !isFallback
+                  ...(didPostpone && rscDidPostponeHeader && !isFallback
                     ? { [rscDidPostponeHeader]: '1' }
                     : {}),
                 },

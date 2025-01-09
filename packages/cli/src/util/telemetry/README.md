@@ -108,8 +108,8 @@ import joke from '../../../../src/commands/joke';
 
 it('tracks humor level', async () => {
   client.setArgv('joke', 'list', '10'); // build up the simulated command line segments
-  const exitCodePromise = joke(client); // call the command function
-  await expect(exitCodePromise).resolves.toEqual(0); // ensure the command reaches completion with success
+  const exitCode = await joke(client); // call the command function
+  expect(exitCode, 'exit code for "joke"').toEqual(0); // ensure the command reaches completion with success
 
   // ensure the store has the items you expect
   expect(client.telemetryEventStore).toHaveTelemetryEvents([

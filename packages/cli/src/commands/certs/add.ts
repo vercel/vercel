@@ -1,39 +1,52 @@
 import chalk from 'chalk';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
+import output from '../../output-manager';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import { getCommandName } from '../../util/pkg-name';
+import { CertsAddTelemetryClient } from '../../util/telemetry/commands/certs/add';
+import { addSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 import type { Cert } from '@vercel-internals/types';
 
-interface Options {
-  '--overwrite'?: boolean;
-  '--crt'?: string;
-  '--key'?: string;
-  '--ca'?: string;
-}
-
-async function add(
-  client: Client,
-  opts: Options,
-  args: string[]
-): Promise<number> {
-  const { output } = client;
+async function add(client: Client, argv: string[]): Promise<number> {
+  const { telemetryEventStore } = client;
   const addStamp = stamp();
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   let cert: Cert | Error;
 
   const {
-    '--overwrite': overwite,
+    '--overwrite': overwrite,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
   } = opts;
 
-  const { contextName } = await getScope(client);
+  const telemetry = new CertsAddTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagOverwrite(overwrite);
+  telemetry.trackCliOptionCrt(crtPath);
+  telemetry.trackCliOptionKey(keyPath);
+  telemetry.trackCliOptionCa(caPath);
 
-  if (overwite) {
+  if (overwrite) {
     output.error('Overwrite option is deprecated');
     return 1;
   }
@@ -83,6 +96,7 @@ async function add(
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
+    const { contextName } = await getScope(client);
     cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();
   }

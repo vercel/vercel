@@ -1,10 +1,10 @@
 import type { DNSRecord } from '@vercel-internals/types';
 import { DomainNotFound } from '../errors-ts';
-import { Output } from '../output';
-import Client from '../client';
+import type Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
 import chalk from 'chalk';
+import output from '../../output-manager';
 
 export type DomainRecordsItem = {
   domainName: string;
@@ -12,7 +12,6 @@ export type DomainRecordsItem = {
 };
 
 export default async function getDNSRecords(
-  output: Output,
   client: Client,
   contextName: string,
   next?: number
@@ -23,7 +22,7 @@ export default async function getDNSRecords(
     next
   );
   const domainsRecords = await Promise.all(
-    domainNames.map(createGetDomainRecords(output, client))
+    domainNames.map(createGetDomainRecords(client))
   );
   const onlyRecords = domainsRecords.map(item =>
     item instanceof DomainNotFound ? [] : item
@@ -34,9 +33,9 @@ export default async function getDNSRecords(
   };
 }
 
-function createGetDomainRecords(output: Output, client: Client) {
+function createGetDomainRecords(client: Client) {
   return async (domainName: string) => {
-    const data = await getDomainDNSRecords(output, client, domainName);
+    const data = await getDomainDNSRecords(client, domainName);
     if (data instanceof DomainNotFound) {
       return [];
     }
@@ -59,7 +58,7 @@ async function getDomainNames(
   contextName: string,
   next?: number
 ) {
-  client.output.spinner(`Fetching domains under ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching domains under ${chalk.bold(contextName)}`);
   const { domains, pagination } = await getDomains(client, next);
   return { domainNames: domains.map(domain => domain.name), pagination };
 }

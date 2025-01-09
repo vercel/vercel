@@ -5,7 +5,7 @@ import type {
   ProjectEnvVariable,
   ProjectLinked,
 } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
@@ -15,16 +15,30 @@ import ellipsis from '../../util/output/ellipsis';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import formatEnvironments from '../../util/env/format-environments';
 import { formatProject } from '../../util/projects/format-project';
+import output from '../../output-manager';
+import { EnvLsTelemetryClient } from '../../util/telemetry/commands/env/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {};
+export default async function ls(client: Client, argv: string[]) {
+  const telemetryClient = new EnvLsTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-export default async function ls(
-  client: Client,
-  link: ProjectLinked,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { output } = client;
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
 
   if (args.length > 2) {
     output.error(
@@ -36,6 +50,23 @@ export default async function ls(
   }
 
   const [envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+
   const { project, org } = link;
 
   const lsStamp = stamp();
@@ -49,7 +80,7 @@ export default async function ls(
   ]);
   const { envs } = envsResult;
 
-  const projectSlugLink = formatProject(client, org.slug, project.name);
+  const projectSlugLink = formatProject(org.slug, project.name);
 
   if (envs.length === 0) {
     output.log(
@@ -59,14 +90,13 @@ export default async function ls(
     output.log(
       `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
-    client.stdout.write(`${getTable(client, link, envs, customEnvs)}\n`);
+    client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
   }
 
   return 0;
 }
 
 function getTable(
-  client: Client,
   link: ProjectLinked,
   records: ProjectEnvVariable[],
   customEnvironments: CustomEnvironment[]
@@ -80,14 +110,13 @@ function getTable(
     [
       {
         name: '',
-        rows: records.map(row => getRow(client, link, row, customEnvironments)),
+        rows: records.map(row => getRow(link, row, customEnvironments)),
       },
     ]
   );
 }
 
 function getRow(
-  client: Client,
   link: ProjectLinked,
   env: ProjectEnvVariable,
   customEnvironments: CustomEnvironment[]
@@ -109,7 +138,7 @@ function getRow(
   return [
     chalk.bold(env.key),
     value,
-    formatEnvironments(client, link, env, customEnvironments),
+    formatEnvironments(link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
 }
