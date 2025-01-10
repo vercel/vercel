@@ -6,7 +6,6 @@ import chalk from 'chalk';
 // @ts-ignore
 import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
-import confirm from '../../util/input/confirm';
 import toHumanPath from '../../util/humanize-path';
 import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
@@ -224,7 +223,9 @@ async function guess(client: Client, exampleList: string[], name: string) {
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (await confirm(client, `Did you mean ${chalk.bold(found)}?`, false)) {
+    if (
+      await client.input.confirm(`Did you mean ${chalk.bold(found)}?`, false)
+    ) {
       return found;
     }
   } else {

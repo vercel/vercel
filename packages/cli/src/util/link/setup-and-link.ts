@@ -15,7 +15,7 @@ import {
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
-import confirm from '../input/confirm';
+
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
 import selectOrg from '../input/select-org';
@@ -84,8 +84,7 @@ export default async function setupAndLink(
 
   const shouldStartSetup =
     autoConfirm ||
-    (await confirm(
-      client,
+    (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));

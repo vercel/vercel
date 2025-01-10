@@ -111,8 +111,11 @@ export default class Client extends EventEmitter implements Stdio {
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
         expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
-      confirm: (opts: Parameters<typeof confirm>[0]) =>
-        confirm({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      confirm: (message: string, preferred: boolean) =>
+        confirm(
+          { theme, message, default: preferred },
+          { input: this.stdin, output: this.stderr }
+        ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
         select<T>(
           { theme, ...opts },

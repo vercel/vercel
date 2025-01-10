@@ -4,7 +4,6 @@ import { join } from 'path';
 import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import confirm from '../../util/input/confirm';
 import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
@@ -327,8 +326,7 @@ async function promptConnectArg({
   let shouldConnect = yes;
   if (!shouldConnect) {
     const { url: repoUrlFromArg } = repoInfoFromArg;
-    shouldConnect = await confirm(
-      client,
+    shouldConnect = await client.input.confirm(
       `Do you still want to connect ${link(repoUrlFromArg)}?`,
       false
     );
@@ -408,8 +406,7 @@ async function confirmRepoConnect(
 ) {
   let shouldReplaceProject = yes;
   if (!shouldReplaceProject) {
-    shouldReplaceProject = await confirm(
-      client,
+    shouldReplaceProject = await client.input.confirm(
       `Looks like you already have a ${formatProvider(
         connectedProvider
       )} repository connected: ${chalk.cyan(
