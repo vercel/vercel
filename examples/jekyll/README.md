@@ -6,7 +6,7 @@ This directory is a brief example of a [Jekyll](https://jekyllrb.com/) site that
 
 Deploy your own Jekyll project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/jekyll&template=jekyll)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/jekyll&template=jekyll)
 
 _Live Example: https://jekyll-template.vercel.app_
 

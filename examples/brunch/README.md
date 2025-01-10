@@ -6,7 +6,7 @@ This directory is a brief example of a [Brunch](https://brunch.io/) site that ca
 
 Deploy your own Brunch project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/brunch&template=brunch)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/brunch&template=brunch)
 
 _Live Example: https://brunch-template.vercel.app_
 

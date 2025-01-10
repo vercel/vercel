@@ -6,7 +6,7 @@ This directory is a brief example of a [Stencil](https://stenciljs.com/) app tha
 
 Deploy your own Stencil project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/stencil&template=stencil)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/stencil&template=stencil)
 
 _Live Example: https://stencil-template.vercel.app_
 

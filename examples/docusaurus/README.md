@@ -8,7 +8,7 @@ This directory is a brief example of a [Docusaurus](https://docusaurus.io/) site
 
 Deploy your own Docusaurus project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/docusaurus&template=docusaurus)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/docusaurus&template=docusaurus)
 
 _Live Example: https://docusaurus-template.vercel.app_
 

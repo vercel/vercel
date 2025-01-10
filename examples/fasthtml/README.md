@@ -2,7 +2,7 @@
 
 Deploy your [FastHTML](https://fastht.ml/) project to Vercel with zero configuration.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/fasthtml&template=fasthtml)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/fasthtml&template=fasthtml)
 
 _Live Example: https://fasthtml-template.vercel.app_
 

@@ -6,7 +6,7 @@ This is a [Next.js](https://nextjs.org/) with [Storybook](https://storybook.js.o
 
 Deploy your own Storybook project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/storybook&template=storybook)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/storybook&template=storybook)
 
 _Live Example: https://storybook-template.vercel.app_
 

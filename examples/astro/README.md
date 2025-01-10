@@ -13,7 +13,7 @@ Learn more about [Astro on Vercel](https://vercel.com/docs/frameworks/astro).
 
 Deploy your own Astro project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/astro&template=astro)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/astro&template=astro)
 
 _Live Example: https://astro-template.vercel.app_
 

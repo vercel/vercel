@@ -8,7 +8,7 @@ This directory is a brief example of a [Polymer](https://www.polymer-project.org
 
 Deploy your own Polymer project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/polymer&template=polymer)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/polymer&template=polymer)
 
 _Live Example: https://polymer-template.vercel.app_
 

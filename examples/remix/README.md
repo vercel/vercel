@@ -10,7 +10,7 @@ npx create-remix@latest --template vercel/vercel/examples/remix
 
 ## Deploy Your Own
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/remix&template=remix)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/remix&template=remix)
 
 _Live Example: https://remix-run-template.vercel.app_
 

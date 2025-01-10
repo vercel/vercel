@@ -8,7 +8,7 @@ This directory is a brief example of a [Hexo](https://hexo.io/) site that can be
 
 Deploy your own Hexo project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/hexo&template=hexo)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/hexo&template=hexo)
 
 _Live Example: https://hexo-template.vercel.app_
 

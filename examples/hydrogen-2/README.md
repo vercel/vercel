@@ -4,7 +4,7 @@ This directory is a brief example of a [Hydrogen v2](https://shopify.dev/custom-
 
 ## Deploy Your Own
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/hydrogen-2&template=hydrogen-2)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/hydrogen-2&template=hydrogen-2)
 
 _Live Example: https://hydrogen-v2-template.vercel.app_
 
