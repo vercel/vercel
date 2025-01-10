@@ -1,4 +1,5 @@
 import path from 'path';
+import url from 'url';
 import semver from 'semver';
 import { Sema } from 'async-sema';
 import {
@@ -54,6 +55,7 @@ import {
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   RenderingMode,
   getPostponeResumeOutput,
+  isRouteWithSrc,
 } from './utils';
 import {
   nodeFileTrace,
@@ -244,6 +246,33 @@ export async function serverBuild({
     for (const value of Object.values(appRscPrefetches)) {
       if (!value.contentType) {
         value.contentType = rscContentTypeHeader;
+      }
+    }
+
+    if (routesManifest.rewriteHeaders) {
+      for (const rewrite of [
+        ...beforeFilesRewrites,
+        ...afterFilesRewrites,
+        ...fallbackRewrites,
+      ]) {
+        if (!isRouteWithSrc(rewrite) || !rewrite.dest) continue;
+
+        const { protocol, pathname, query } = url.parse(rewrite.dest);
+
+        // If this is an external URL, we don't want to rewrite it.
+        if (protocol) continue;
+
+        // If the pathname was rewritten, add it to the headers.
+        if (pathname) {
+          rewrite.headers ??= {};
+          rewrite.headers[routesManifest.rewriteHeaders.pathHeader] = pathname;
+        }
+
+        // If the query was rewritten, add it to the headers.
+        if (query) {
+          rewrite.headers ??= {};
+          rewrite.headers[routesManifest.rewriteHeaders.queryHeader] = query;
+        }
       }
     }
 

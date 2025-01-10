@@ -260,6 +260,10 @@ type RoutesManifestOld = {
     didPostponeHeader?: string;
     contentTypeHeader: string;
   };
+  rewriteHeaders?: {
+    pathHeader: string;
+    queryHeader: string;
+  };
   skipMiddlewareUrlNormalize?: boolean;
   /**
    * Configuration related to Partial Prerendering.
@@ -3715,4 +3719,8 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   }
 
   return updatedPrefetches;
+}
+
+export function isRouteWithSrc(route: Route): route is RouteWithSrc {
+  return 'src' in route;
 }
