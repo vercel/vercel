@@ -1,30 +1,33 @@
-import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import semver from 'semver';
+import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import semver from 'semver';
+
 import {
   download,
+  FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   normalizePath,
-  FileFsRef,
   NowBuildError,
   validateNpmrc,
-  type Files,
-  type PackageJson,
-  type BuildOptions,
-  type Config,
-  type Meta,
   type Builder,
+  type BuildOptions,
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type Config,
   type Cron,
+  type Files,
   type FlagDefinitions,
+  type Meta,
+  type PackageJson,
 } from '@vercel/build-utils';
+import type { VercelConfig } from '@vercel/client';
+import { fileNameSymbol } from '@vercel/client';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
@@ -38,45 +41,43 @@ import {
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
-import { fileNameSymbol } from '@vercel/client';
-import type { VercelConfig } from '@vercel/client';
 
-import { pullCommandLogic } from '../pull';
-import { staticFiles as getFiles } from '../../util/get-files';
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import cmd from '../../util/output/cmd';
-import * as cli from '../../util/pkg-name';
-import cliPkg from '../../util/pkg';
-import readJSONFile from '../../util/read-json-file';
-import { CantParseJSONFile } from '../../util/errors-ts';
-import {
-  pickOverrides,
-  readProjectSettings,
-  type ProjectLinkAndSettings,
-} from '../../util/projects/project-settings';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
-import confirm from '../../util/input/confirm';
-import { emoji, prependEmoji } from '../../util/emoji';
-import stamp from '../../util/output/stamp';
+import output from '../../output-manager';
+import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
+import { importBuilders } from '../../util/build/import-builders';
+import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import { scrubArgv } from '../../util/build/scrub-argv';
+import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
   type PathOverride,
 } from '../../util/build/write-build-result';
-import { importBuilders } from '../../util/build/import-builders';
-import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
-import { sortBuilders } from '../../util/build/sort-builders';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
 import { printError, toEnumerableError } from '../../util/error';
-import { validateConfig } from '../../util/validate-config';
-import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
-import { help } from '../help';
-import { buildCommand } from './command';
-import { scrubArgv } from '../../util/build/scrub-argv';
+import { CantParseJSONFile } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import confirm from '../../util/input/confirm';
+import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
+import cliPkg from '../../util/pkg';
+import * as cli from '../../util/pkg-name';
+import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  pickOverrides,
+  readProjectSettings,
+  type ProjectLinkAndSettings,
+} from '../../util/projects/project-settings';
+import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
-import output from '../../output-manager';
+import { validateConfig } from '../../util/validate-config';
+import { help } from '../help';
+import { pullCommandLogic } from '../pull';
+import { buildCommand } from './command';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 

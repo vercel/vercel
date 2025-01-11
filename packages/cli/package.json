@@ -24,8 +24,8 @@
     "type-check": "tsc --noEmit"
   },
   "bin": {
-    "vc": "./dist/index.js",
-    "vercel": "./dist/index.js"
+    "vc": "./dist/vc.js",
+    "vercel": "./dist/vc.js"
   },
   "files": [
     "dist"
