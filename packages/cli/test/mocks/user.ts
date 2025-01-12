@@ -3,11 +3,14 @@ import { client } from './client';
 import type { User } from '@vercel-internals/types';
 
 export function useUser(additionalAttrs: Partial<User> = {}) {
+  delete additionalAttrs.version;
+
   const user = {
     id: chance().guid(),
     email: chance().email(),
     name: chance().name(),
     username: chance().first().toLowerCase(),
+    version: 'northstar',
     ...additionalAttrs,
   };
   client.scenario.get('/v2/user', (_req, res) => {
