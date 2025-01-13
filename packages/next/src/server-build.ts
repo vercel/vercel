@@ -250,16 +250,18 @@ export async function serverBuild({
       }
     }
 
-    const modifyRewrites = (rewrites: Route[], replace = false) => {
+    const modifyRewrites = (rewrites: Route[], isAfterFilesRewrite = false) => {
       for (let i = 0; i < rewrites.length; i++) {
         const rewrite = rewrites[i];
 
         // If this doesn't have a src or dest, we can't modify it.
         if (!rewrite.src || !rewrite.dest) continue;
 
+        // Parse the destination URL to get the protocol, pathname, and query
+        // before we mutate the destination.
         const { protocol, pathname, query } = url.parse(rewrite.dest);
 
-        if (replace) {
+        if (isAfterFilesRewrite) {
           // ensures that userland rewrites are still correctly matched to their special outputs
           // PPR should match .prefetch.rsc, .rsc
           // non-PPR should match .rsc
@@ -282,34 +284,87 @@ export async function serverBuild({
             rewrite.dest.substring(destQueryIndex);
         }
 
+        // If the rewrite headers are not enabled, we don't need to add the
+        // rewrite headers.
         const { rewriteHeaders } = routesManifest;
+        if (!rewriteHeaders) continue;
 
-        // If enabled (the rewrite headers is set) and this isn't an external
-        // URL, we want to add the rewrite headers to the response if this is
-        // an RSC request.
-        if (rewriteHeaders && !protocol && (pathname || query)) {
-          const headers: Record<string, string> = {};
-          const updated: Route = {
-            src: rewrite.src,
-            has: [{ type: 'header', key: rscHeader }],
-            dest: rewrite.dest,
-            check: true,
-            headers,
-          };
+        // If the rewrite was external or didn't include a pathname or query,
+        // we don't need to add the rewrite headers.
+        if (protocol || (!pathname && !query)) continue;
 
-          // If the pathname was rewritten, add it to the headers.
-          if (pathname) {
-            headers[rewriteHeaders.pathHeader] = pathname;
-          }
+        const missing =
+          'missing' in rewrite && rewrite.missing ? rewrite.missing : [];
 
-          // If the query was rewritten, add it to the headers.
-          if (query) {
-            headers[rewriteHeaders.queryHeader] = query;
-          }
+        // Find any rules that could conflict with our new rule.
+        let found = missing.filter(
+          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
+        );
 
-          rewrites.splice(i, 0, updated);
-          i++;
+        // If we found a `missing` rule that would conflict with our rule,
+        // skip adding this rewrite.
+        if (
+          found.some(
+            m =>
+              // These are rules that don't have a value check or those that
+              // have their value set to '1'.
+              !m.value || m.value === '1'
+          )
+        ) {
+          continue;
         }
+
+        const has = 'has' in rewrite && rewrite.has ? rewrite.has : [];
+
+        // Find any rules that could conflict with our new rule.
+        found = has.filter(
+          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
+        );
+
+        // If we found a `has` rule that would conflict with our rule,
+        // skip adding this rewrite.
+        if (
+          found.some(
+            h =>
+              // These are rules that have a value set to anything other than
+              // '1'.
+              h.value && h.value !== '1'
+          )
+        ) {
+          continue;
+        }
+
+        // Remove any existing RSC header rules as we'll add our own.
+        for (const h of found) {
+          has.splice(has.indexOf(h), 1);
+        }
+
+        // Add our new RSC header rule.
+        has.push({ type: 'header', key: rscHeader, value: '1' });
+
+        // Create a new rewrite that adds the rsc header to the rule.
+        const headers: Record<string, string> =
+          'headers' in rewrite && rewrite.headers
+            ? // Clone the existing headers to avoid mutating the original
+              // object.
+              { ...rewrite.headers }
+            : {};
+
+        const updated: Route = {
+          ...rewrite,
+          has,
+          headers,
+        };
+
+        // If the pathname was rewritten, add it to the headers.
+        if (pathname) headers[rewriteHeaders.pathHeader] = pathname;
+
+        // If the query was rewritten, add it to the headers.
+        if (query) headers[rewriteHeaders.queryHeader] = query;
+
+        // Insert the updated rewrite before the original rewrite.
+        rewrites.splice(i, 0, updated);
+        i++;
       }
     };
 
