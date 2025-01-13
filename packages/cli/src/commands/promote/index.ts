@@ -1,7 +1,7 @@
 import ms from 'ms';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import requestPromote from './request-promote';
 import promoteStatus from './status';
@@ -23,7 +23,7 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

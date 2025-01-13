@@ -14,7 +14,7 @@ import getDeployment from '../../util/get-deployment';
 import getDeploymentsByProjectId from '../../util/deploy/get-deployments-by-project-id';
 import { getCommandName } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import type Client from '../../util/client';
 import type { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
@@ -43,7 +43,7 @@ export default async function remove(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

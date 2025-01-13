@@ -8,7 +8,7 @@ import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import output from '../../output-manager';
@@ -30,7 +30,7 @@ export default async function list(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

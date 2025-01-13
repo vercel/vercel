@@ -1,5 +1,25 @@
 # @vercel/python
 
+## 4.7.0
+
+### Minor Changes
+
+- Add support for in-function concurrency ([#12850](https://github.com/vercel/vercel/pull/12850))
+
+## 4.6.0
+
+### Minor Changes
+
+- Update default ignored folders from the zip output: ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+  - nested `node_modules`
+  - nested `.next` & `.nuxt`
+  - `.git` & `.vercel`
+
+### Patch Changes
+
+- Support VERCEL_IPC_PATH along with VERCEL_IPC_FD ([#12813](https://github.com/vercel/vercel/pull/12813))
+
 ## 4.5.1
 
 ### Patch Changes

@@ -1,5 +1,73 @@
 # vercel
 
+## 39.3.0
+
+### Minor Changes
+
+- [cli] add compile cache to improve startup performance ([#12783](https://github.com/vercel/vercel/pull/12783))
+
+### Patch Changes
+
+- [cli] standardizes uses of confirm on confirm.ts ([#12834](https://github.com/vercel/vercel/pull/12834))
+
+- [cli] sort imports in build/index.ts ([#12833](https://github.com/vercel/vercel/pull/12833))
+
+- Updated dependencies [[`5fea2c49103adf6f7153f04378bff6f571375b0e`](https://github.com/vercel/vercel/commit/5fea2c49103adf6f7153f04378bff6f571375b0e)]:
+  - @vercel/python@4.7.0
+
+## 39.2.6
+
+### Patch Changes
+
+- [cli] centralize printError import location ([#12823](https://github.com/vercel/vercel/pull/12823))
+
+- [cli] remove double export of printError by moving printError to error.ts ([#12824](https://github.com/vercel/vercel/pull/12824))
+
+- [cli] consolidate error constructors ([#12825](https://github.com/vercel/vercel/pull/12825))
+
+- [cli] rename handleError to printError and remove default ([#12821](https://github.com/vercel/vercel/pull/12821))
+
+## 39.2.5
+
+### Patch Changes
+
+- [cli] update handleError to use output utilities ([#12817](https://github.com/vercel/vercel/pull/12817))
+
+- Fix bug where when page doesn't postpone it still generates a correct fallback ([#12811](https://github.com/vercel/vercel/pull/12811))
+
+- Updated dependencies [[`4cb6143887f36060e9e4fa5866aa97a6af25b6ae`](https://github.com/vercel/vercel/commit/4cb6143887f36060e9e4fa5866aa97a6af25b6ae), [`e570a1660c2b18a41d8c3985e645a175a44a5ea4`](https://github.com/vercel/vercel/commit/e570a1660c2b18a41d8c3985e645a175a44a5ea4), [`2a59669c70b65fd01f755c8fd646e08619ebee3d`](https://github.com/vercel/vercel/commit/2a59669c70b65fd01f755c8fd646e08619ebee3d), [`9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4`](https://github.com/vercel/vercel/commit/9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4)]:
+  - @vercel/redwood@2.1.12
+  - @vercel/remix-builder@5.0.2
+  - @vercel/next@4.4.2
+  - @vercel/node@5.0.2
+  - @vercel/static-build@2.5.41
+  - @vercel/build-utils@9.0.1
+  - @vercel/hydrogen@1.0.11
+
+## 39.2.4
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Update `@vercel/fun` to v1.1.2 ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- [deploy] make deploy --target case sensitive ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
+  - @vercel/next@4.4.1
+  - @vercel/static-build@2.5.40
+  - @vercel/build-utils@9.0.0
+  - @vercel/hydrogen@1.0.10
+  - @vercel/redwood@2.1.11
+  - @vercel/remix-builder@5.0.1
+  - @vercel/python@4.6.0
+  - @vercel/node@5.0.1
+
 ## 39.2.3
 
 ### Patch Changes

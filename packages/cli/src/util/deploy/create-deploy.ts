@@ -1,6 +1,5 @@
 import generateCertForDeploy from './generate-cert-for-deploy';
 import * as ERRORS_TS from '../errors-ts';
-import * as ERRORS from '../errors';
 import { NowError } from '../now-error';
 import mapCertError from '../certs/map-cert-error';
 import type { Org } from '@vercel-internals/types';
@@ -62,7 +61,7 @@ export default async function createDeploy(
       }
 
       if (err.code === 'bad_request' && err.keyword) {
-        throw new ERRORS.SchemaValidationFailed(
+        throw new ERRORS_TS.SchemaValidationFailed(
           err.message,
           err.keyword,
           err.dataPath,

@@ -9,7 +9,7 @@ import output from '../../output-manager';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
@@ -29,7 +29,7 @@ export default async function list(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;

@@ -11,7 +11,7 @@ import type Client from '../../util/client';
 import { switchSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -29,7 +29,7 @@ export default async function change(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   let {

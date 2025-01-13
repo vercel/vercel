@@ -23,6 +23,7 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
+import confirm from '../../util/input/confirm';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -138,11 +139,13 @@ export async function add(client: Client, args: string[]) {
       return projectLink.exitCode;
     }
 
-    const openInWeb = await client.input.confirm({
-      message: !installation
+    const openInWeb = await confirm(
+      client,
+      !installation
         ? 'Terms have not been accepted. Open Vercel Dashboard?'
         : 'This resource must be provisioned through the Web UI. Open Vercel Dashboard?',
-    });
+      true
+    );
 
     if (openInWeb) {
       privisionResourceViaWebUI(
@@ -172,9 +175,11 @@ async function getOptionalLinkedProject(client: Client) {
     return;
   }
 
-  const shouldLinkToProject = await client.input.confirm({
-    message: 'Do you want to link this resource to the current project?',
-  });
+  const shouldLinkToProject = await confirm(
+    client,
+    'Do you want to link this resource to the current project?',
+    true
+  );
 
   if (!shouldLinkToProject) {
     return;
@@ -370,9 +375,7 @@ async function confirmProductSelection(
     `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
   );
 
-  return client.input.confirm({
-    message: 'Confirm selection?',
-  });
+  return confirm(client, 'Confirm selection?', true);
 }
 
 async function provisionStorageProduct(

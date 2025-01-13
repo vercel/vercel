@@ -7,7 +7,7 @@ import { getResources } from '../../util/integration-resource/get-resources';
 import { listSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import table from '../../util/output/table';
 import title from 'title';
 import type { Team } from '@vercel-internals/types';
@@ -22,7 +22,7 @@ export async function list(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

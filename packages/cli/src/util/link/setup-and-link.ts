@@ -14,7 +14,7 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import type Client from '../client';
-import handleError from '../handle-error';
+import { printError } from '../error';
 import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
@@ -225,7 +225,7 @@ export default async function setupAndLink(
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
     }
-    handleError(err);
+    printError(err);
 
     return { status: 'error', exitCode: 1 };
   }

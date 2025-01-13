@@ -19,7 +19,7 @@ import { help } from '../help';
 import { pullCommand, type PullCommandFlags } from './command';
 import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
 
@@ -66,7 +66,7 @@ export default async function main(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

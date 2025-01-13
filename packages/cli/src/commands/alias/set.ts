@@ -19,7 +19,7 @@ import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { listSubcommand } from './command';
 import type { Domain } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
@@ -32,7 +32,7 @@ export default async function set(client: Client, argv: string[]) {
   try {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

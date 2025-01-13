@@ -979,6 +979,7 @@ describe('build', () => {
     expect(configJson).toMatchObject({
       images: {
         sizes: [256, 384, 600, 1000],
+        qualities: [25, 50, 75],
         domains: [],
         minimumCacheTTL: 60,
         localPatterns: [{ search: '' }],
