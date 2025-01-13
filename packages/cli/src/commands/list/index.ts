@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import title from 'title';
 import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
@@ -54,7 +54,7 @@ export default async function list(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
@@ -248,7 +248,7 @@ export default async function list(client: Client) {
             Date.now() - (dep?.undeletedAt ?? dep.createdAt)
           );
           const targetName =
-            dep.customEnvironment?.name ||
+            dep.customEnvironment?.slug ||
             (dep.target === 'production' ? 'Production' : 'Preview');
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
@@ -258,7 +258,7 @@ export default async function list(client: Client) {
             stateString(dep.readyState || ''),
             formatEnvironment(contextName, project.name, {
               id: targetSlug,
-              name: targetName,
+              slug: targetName,
             }),
             ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
             ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),

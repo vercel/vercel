@@ -6,7 +6,7 @@ import { parseArguments } from '../../util/get-args';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
 import getScope from '../../util/get-scope';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
@@ -38,7 +38,7 @@ export default async function redeploy(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

@@ -48,6 +48,9 @@ export const packageManagers: Array<
           path: 'bun.lockb',
         },
         {
+          path: 'bun.lock',
+        },
+        {
           path: 'package.json',
           // Depends on https://github.com/nodejs/corepack/pull/307
           matchContent: '"packageManager":\\s*"bun@.*"',

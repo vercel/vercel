@@ -2,7 +2,7 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import ls from './ls';
@@ -41,7 +41,7 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 

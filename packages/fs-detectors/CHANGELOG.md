@@ -1,5 +1,36 @@
 # @vercel/fs-detectors
 
+## 5.3.2
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 5.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`f031084df97745754da800a8c23a29ae2d58e1e8`](https://github.com/vercel/vercel/commit/f031084df97745754da800a8c23a29ae2d58e1e8)]:
+  - @vercel/routing-utils@5.0.0
+
+## 5.3.0
+
+### Minor Changes
+
+- Add bun detection using bun.lock ([#12740](https://github.com/vercel/vercel/pull/12740))
+
+### Patch Changes
+
+- Updated dependencies [[`0c4ce9cfbf0c6d3108656584d56fa501e3efe15e`](https://github.com/vercel/vercel/commit/0c4ce9cfbf0c6d3108656584d56fa501e3efe15e)]:
+  - @vercel/routing-utils@4.0.0
+
+## 5.2.12
+
+### Patch Changes
+
+- Updated dependencies [[`759c0028e01dafa7df83e0dd4b3f3560757910b8`](https://github.com/vercel/vercel/commit/759c0028e01dafa7df83e0dd4b3f3560757910b8)]:
+  - @vercel/frameworks@3.4.0
+
 ## 5.2.11
 
 ### Patch Changes

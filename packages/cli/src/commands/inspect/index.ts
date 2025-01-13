@@ -7,7 +7,7 @@ import { URL } from 'url';
 import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { displayBuildLogs } from '../../util/logs';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -40,7 +40,7 @@ export default async function inspect(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
@@ -207,8 +207,8 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  const customEnvironmentName = deployment.customEnvironment?.name;
-  const target = customEnvironmentName ?? deployment.target ?? 'preview';
+  const customEnvironmentSlug = deployment.customEnvironment?.slug;
+  const target = customEnvironmentSlug ?? deployment.target ?? 'preview';
   print(`    ${chalk.cyan('target')}\t`);
   // TODO: once custom environments is shipped for all users,
   // make all deployments link to the environment settings page

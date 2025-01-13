@@ -94,7 +94,6 @@ describe('target ls', () => {
           updatedAt: 1717176548879,
           type: 'preview',
           description: '',
-          name: 'her',
           branchMatcher: {
             type: 'endsWith',
             pattern: 'her',
@@ -107,7 +106,6 @@ describe('target ls', () => {
           updatedAt: 1717176506341,
           type: 'preview',
           description: '',
-          name: 'ano',
           branchMatcher: {
             type: 'startsWith',
             pattern: 'ano',
@@ -169,7 +167,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'her',
+      'Her',
       'her',
       'env_8DTiPYD33Rcvu2hQwYAdw0rwLquY',
       'Preview',
@@ -178,7 +176,7 @@ describe('target ls', () => {
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'ano',
+      'Ano',
       'ano',
       'env_ph1tjPP20xp8VAuiFsYt4rhRYGys',
       'Preview',

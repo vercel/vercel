@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
 import requestRollback from './request-rollback';
@@ -23,7 +23,7 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 

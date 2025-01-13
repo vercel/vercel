@@ -17,7 +17,7 @@ import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
 import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
@@ -25,7 +25,7 @@ export default async function add(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
   const { args } = parsedArgs;

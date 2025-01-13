@@ -1,5 +1,111 @@
 # vercel
 
+## 39.2.6
+
+### Patch Changes
+
+- [cli] centralize printError import location ([#12823](https://github.com/vercel/vercel/pull/12823))
+
+- [cli] remove double export of printError by moving printError to error.ts ([#12824](https://github.com/vercel/vercel/pull/12824))
+
+- [cli] consolidate error constructors ([#12825](https://github.com/vercel/vercel/pull/12825))
+
+- [cli] rename handleError to printError and remove default ([#12821](https://github.com/vercel/vercel/pull/12821))
+
+## 39.2.5
+
+### Patch Changes
+
+- [cli] update handleError to use output utilities ([#12817](https://github.com/vercel/vercel/pull/12817))
+
+- Fix bug where when page doesn't postpone it still generates a correct fallback ([#12811](https://github.com/vercel/vercel/pull/12811))
+
+- Updated dependencies [[`4cb6143887f36060e9e4fa5866aa97a6af25b6ae`](https://github.com/vercel/vercel/commit/4cb6143887f36060e9e4fa5866aa97a6af25b6ae), [`e570a1660c2b18a41d8c3985e645a175a44a5ea4`](https://github.com/vercel/vercel/commit/e570a1660c2b18a41d8c3985e645a175a44a5ea4), [`2a59669c70b65fd01f755c8fd646e08619ebee3d`](https://github.com/vercel/vercel/commit/2a59669c70b65fd01f755c8fd646e08619ebee3d), [`9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4`](https://github.com/vercel/vercel/commit/9d6fb57d5659f1b8d38fea5ff3d54f8efb8bc5f4)]:
+  - @vercel/redwood@2.1.12
+  - @vercel/remix-builder@5.0.2
+  - @vercel/next@4.4.2
+  - @vercel/node@5.0.2
+  - @vercel/static-build@2.5.41
+  - @vercel/build-utils@9.0.1
+  - @vercel/hydrogen@1.0.11
+
+## 39.2.4
+
+### Patch Changes
+
+- Added root params support for pages powered by partial prerendering ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Update `@vercel/fun` to v1.1.2 ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Update "follow-redirects" to v1.15.9 to avoid security vulnerability report ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- [deploy] make deploy --target case sensitive ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
+  - @vercel/next@4.4.1
+  - @vercel/static-build@2.5.40
+  - @vercel/build-utils@9.0.0
+  - @vercel/hydrogen@1.0.10
+  - @vercel/redwood@2.1.11
+  - @vercel/remix-builder@5.0.1
+  - @vercel/python@4.6.0
+  - @vercel/node@5.0.1
+
+## 39.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`c077e05d5e6591c553e53c047a981e97ecc1c30b`](https://github.com/vercel/vercel/commit/c077e05d5e6591c553e53c047a981e97ecc1c30b)]:
+  - @vercel/remix-builder@5.0.0
+
+## 39.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`f031084df97745754da800a8c23a29ae2d58e1e8`](https://github.com/vercel/vercel/commit/f031084df97745754da800a8c23a29ae2d58e1e8)]:
+  - @vercel/node@5.0.0
+  - @vercel/remix-builder@4.0.0
+  - @vercel/redwood@2.1.10
+  - @vercel/static-build@2.5.39
+
+## 39.2.1
+
+### Patch Changes
+
+- Fix hanging command when `spawn()` fails during CLI extension invocation ([#12735](https://github.com/vercel/vercel/pull/12735))
+
+- Update to v2 endpoints for fetching integrations and installations ([#12721](https://github.com/vercel/vercel/pull/12721))
+
+- Bug fix: new integrations using protocols for storage category can be created via the CLI wizard ([#12733](https://github.com/vercel/vercel/pull/12733))
+
+- [cli] expand cache boundary ([#12726](https://github.com/vercel/vercel/pull/12726))
+
+- bump cookie and sentry/node ([#12739](https://github.com/vercel/vercel/pull/12739))
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d), [`0c4ce9cfbf0c6d3108656584d56fa501e3efe15e`](https://github.com/vercel/vercel/commit/0c4ce9cfbf0c6d3108656584d56fa501e3efe15e), [`bcb9fbe059a017cf78ed2d7b15991d704beb4cf8`](https://github.com/vercel/vercel/commit/bcb9fbe059a017cf78ed2d7b15991d704beb4cf8)]:
+  - @vercel/build-utils@8.8.0
+  - @vercel/node@4.0.0
+  - @vercel/remix-builder@3.0.0
+  - @vercel/static-build@2.5.38
+  - @vercel/redwood@2.1.9
+
+## 39.2.0
+
+### Minor Changes
+
+- Prefer --archive=tgz-split over VERCEL_SPLIT_ARCHIVE ([#12718](https://github.com/vercel/vercel/pull/12718))
+
+### Patch Changes
+
+- update express even more ([#12703](https://github.com/vercel/vercel/pull/12703))
+
+- Updated dependencies [[`318b5dc77157fa0f6942296407e97251197467fa`](https://github.com/vercel/vercel/commit/318b5dc77157fa0f6942296407e97251197467fa), [`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/node@3.2.29
+  - @vercel/build-utils@8.7.0
+  - @vercel/static-build@2.5.37
+
 ## 39.1.3
 
 ### Patch Changes

@@ -8,9 +8,8 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/vercel": "7.6.0",
-    "astro": "^4.9.2",
-    "react": "18.3.1",
-    "web-vitals": "^4.0.1"
+    "@astrojs/vercel": "8.0.1",
+    "astro": "^5.1.1",
+    "react": "18.3.1"
   }
 }

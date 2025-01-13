@@ -1,5 +1,47 @@
 # @vercel/node
 
+## 5.0.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Updated dependencies [[`e570a1660c2b18a41d8c3985e645a175a44a5ea4`](https://github.com/vercel/vercel/commit/e570a1660c2b18a41d8c3985e645a175a44a5ea4)]:
+  - @vercel/build-utils@9.0.1
+
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
+  - @vercel/build-utils@9.0.0
+
+## 5.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
+## 4.0.0
+
+### Major Changes
+
+- update path-to-regexp ([#12734](https://github.com/vercel/vercel/pull/12734))
+
+### Patch Changes
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d)]:
+  - @vercel/build-utils@8.8.0
+
+## 3.2.29
+
+### Patch Changes
+
+- update express even more ([#12703](https://github.com/vercel/vercel/pull/12703))
+
+- Updated dependencies [[`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/build-utils@8.7.0
+
 ## 3.2.28
 
 ### Patch Changes

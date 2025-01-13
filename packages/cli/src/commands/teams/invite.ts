@@ -16,7 +16,7 @@ import { TeamsInviteTelemetryClient } from '../../util/telemetry/commands/teams/
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { inviteSubcommand } from './command';
 
 const validateEmail = (data: string) =>
@@ -57,7 +57,7 @@ export default async function invite(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
   const { args: emails } = parsedArgs;
