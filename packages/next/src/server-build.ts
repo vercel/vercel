@@ -55,7 +55,6 @@ import {
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   RenderingMode,
   getPostponeResumeOutput,
-  isRouteWithSrc,
 } from './utils';
 import {
   nodeFileTrace,
@@ -229,6 +228,8 @@ export async function serverBuild({
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
@@ -249,56 +250,72 @@ export async function serverBuild({
       }
     }
 
-    if (routesManifest.rewriteHeaders) {
-      for (const rewrite of [
-        ...beforeFilesRewrites,
-        ...afterFilesRewrites,
-        ...fallbackRewrites,
-      ]) {
-        if (!isRouteWithSrc(rewrite) || !rewrite.dest) continue;
+    const modifyRewrites = (rewrites: Route[], replace = false) => {
+      for (let i = 0; i < rewrites.length; i++) {
+        const rewrite = rewrites[i];
+
+        // If this doesn't have a src or dest, we can't modify it.
+        if (!rewrite.src || !rewrite.dest) continue;
 
         const { protocol, pathname, query } = url.parse(rewrite.dest);
 
-        // If this is an external URL, we don't want to rewrite it.
-        if (protocol) continue;
+        if (replace) {
+          // ensures that userland rewrites are still correctly matched to their special outputs
+          // PPR should match .prefetch.rsc, .rsc
+          // non-PPR should match .rsc
+          const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
 
-        // If the pathname was rewritten, add it to the headers.
-        if (pathname) {
-          rewrite.headers ??= {};
-          rewrite.headers[routesManifest.rewriteHeaders.pathHeader] = pathname;
+          rewrite.src = rewrite.src.replace(
+            /\/?\(\?:\/\)\?/,
+            `(?<rscsuff>${rscSuffix})?(?:/)?`
+          );
+
+          let destQueryIndex = rewrite.dest.indexOf('?');
+
+          if (destQueryIndex === -1) {
+            destQueryIndex = rewrite.dest.length;
+          }
+
+          rewrite.dest =
+            rewrite.dest.substring(0, destQueryIndex) +
+            '$rscsuff' +
+            rewrite.dest.substring(destQueryIndex);
         }
 
-        // If the query was rewritten, add it to the headers.
-        if (query) {
-          rewrite.headers ??= {};
-          rewrite.headers[routesManifest.rewriteHeaders.queryHeader] = query;
+        const { rewriteHeaders } = routesManifest;
+
+        // If enabled (the rewrite headers is set) and this isn't an external
+        // URL, we want to add the rewrite headers to the response if this is
+        // an RSC request.
+        if (rewriteHeaders && !protocol && (pathname || query)) {
+          const headers: Record<string, string> = {};
+          const updated: Route = {
+            src: rewrite.src,
+            has: [{ type: 'header', key: rscHeader }],
+            dest: rewrite.dest,
+            check: true,
+            headers,
+          };
+
+          // If the pathname was rewritten, add it to the headers.
+          if (pathname) {
+            headers[rewriteHeaders.pathHeader] = pathname;
+          }
+
+          // If the query was rewritten, add it to the headers.
+          if (query) {
+            headers[rewriteHeaders.queryHeader] = query;
+          }
+
+          rewrites.splice(i, 0, updated);
+          i++;
         }
       }
-    }
+    };
 
-    for (const rewrite of afterFilesRewrites) {
-      if (rewrite.src && rewrite.dest) {
-        // ensures that userland rewrites are still correctly matched to their special outputs
-        // PPR should match .prefetch.rsc, .rsc
-        // non-PPR should match .rsc
-        const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
-
-        rewrite.src = rewrite.src.replace(
-          /\/?\(\?:\/\)\?/,
-          `(?<rscsuff>${rscSuffix})?(?:/)?`
-        );
-        let destQueryIndex = rewrite.dest.indexOf('?');
-
-        if (destQueryIndex === -1) {
-          destQueryIndex = rewrite.dest.length;
-        }
-
-        rewrite.dest =
-          rewrite.dest.substring(0, destQueryIndex) +
-          '$rscsuff' +
-          rewrite.dest.substring(destQueryIndex);
-      }
-    }
+    modifyRewrites(beforeFilesRewrites);
+    modifyRewrites(afterFilesRewrites, true);
+    modifyRewrites(fallbackRewrites);
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -1668,7 +1685,6 @@ export async function serverBuild({
     }
   }
 
-  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
   const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
