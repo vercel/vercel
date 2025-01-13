@@ -60,7 +60,6 @@ import { CantParseJSONFile } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import confirm from '../../util/input/confirm';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
@@ -206,8 +205,7 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
-      confirmed = await confirm(
-        client,
+      confirmed = await client.input.confirm(
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
         )} for retrieving them?`,

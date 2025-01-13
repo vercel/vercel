@@ -5,7 +5,6 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
-import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
@@ -100,5 +99,5 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
 
   output.log('The following alias will be removed permanently');
   output.print(`  ${tbl}\n`);
-  return confirm(client, chalk.red('Are you sure?'), false);
+  return client.input.confirm(chalk.red('Are you sure?'), false);
 }
