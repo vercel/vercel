@@ -1,7 +1,6 @@
 import execa from 'execa';
 import { fileURLToPath } from 'node:url';
 import { readFile, writeFile, readdir, unlink } from 'node:fs/promises';
-import dot from 'dot';
 
 export async function compileDevTemplates() {
   const dirRoot = new URL('../', import.meta.url);
