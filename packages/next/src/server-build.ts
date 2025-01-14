@@ -314,7 +314,12 @@ export async function serverBuild({
           continue;
         }
 
-        const has = 'has' in rewrite && rewrite.has ? rewrite.has : [];
+        const has =
+          'has' in rewrite && rewrite.has
+            ? // As we mutate the array below, we need to clone it to avoid
+              // mutating the original
+              [...rewrite.has]
+            : [];
 
         // Find any rules that could conflict with our new rule.
         found = has.filter(
