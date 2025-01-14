@@ -8,7 +8,7 @@ This directory is a brief example of a [RedwoodJS](https://redwoodjs.com) app wi
 
 Deploy your own RedwoodJS project, along with Serverless Functions, with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/redwoodjs&template=redwoodjs)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/redwoodjs&template=redwoodjs)
 
 _Live Example: https://redwood-template.vercel.app_
 

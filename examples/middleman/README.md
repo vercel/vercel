@@ -6,7 +6,7 @@ This directory is a brief example of a [Middleman](https://middlemanapp.com/) si
 
 Deploy your own Middleman project with Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/middleman&template=middleman)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/framework-boilerplates/middleman&template=middleman)
 
 _Live Example: https://middleman-template.vercel.app_
 
