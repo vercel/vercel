@@ -15,9 +15,6 @@ const {
  */
 const runBuildLambda = createRunBuildLambda(builder);
 
-/**
- * @type {import('@vercel/build-utils').BuildV2}
- */
 jest.setTimeout(360000);
 
 it('Should build the serverless-config-promise example', async () => {
