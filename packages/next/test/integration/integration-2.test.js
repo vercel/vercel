@@ -7,8 +7,17 @@ const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
 
+/**
+ * @type {(inputPath: string) => Promise<{
+ *  buildResult: import('@vercel/build-utils').BuildResultV2Typical,
+ *  workPath: string
+ * }>}
+ */
 const runBuildLambda = createRunBuildLambda(builder);
 
+/**
+ * @type {import('@vercel/build-utils').BuildV2}
+ */
 jest.setTimeout(360000);
 
 it('Should build the serverless-config-promise example', async () => {
@@ -591,5 +600,70 @@ describe('PPR', () => {
       // cache posioning.
       expect(output['[lang]'].fallback).toEqual(null);
     });
+  });
+});
+
+describe('rewrite headers', () => {
+  let routes;
+  beforeAll(async () => {
+    const output = await runBuildLambda(
+      path.join(__dirname, 'rewrite-headers')
+    );
+    routes = output.buildResult.routes;
+  });
+
+  it('should add rewrite headers before the original rewrite', () => {
+    let route = routes.filter(r => r.src?.includes('/hello/sam'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/hello/samantha',
+      'x-nextjs-rewritten-query': undefined,
+    });
+    expect(route[1].headers).toBeUndefined();
+  });
+
+  it('should add rewrite query headers', () => {
+    let route = routes.filter(r => r.src?.includes('/hello/fred'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/other',
+      'x-nextjs-rewritten-query': 'key=value',
+    });
+    expect(route[1].headers).toBeUndefined();
+  });
+
+  it('should not add external rewrite headers', () => {
+    const route = routes.filter(r => r.src?.includes('google'));
+    expect(route.length).toBe(1);
+    expect(route[0].headers).toBeUndefined();
+  });
+
+  it('should not add rewrite headers when it is excluded with missing', () => {
+    const route = routes.filter(r => r.src?.includes('missing'));
+    expect(route.length).toBe(1);
+    expect(route[0].headers).toBeUndefined();
+  });
+
+  it('should combine has rules', () => {
+    const route = routes.filter(r => r.src?.includes('/hello/has'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/other',
+      'x-nextjs-rewritten-query': undefined,
+    });
+    expect(route[0].has).toEqual([
+      {
+        type: 'header',
+        key: 'x-other-header',
+        value: 'other-value',
+      },
+      {
+        type: 'header',
+        key: 'rsc',
+        value: '1',
+      },
+    ]);
+
+    expect(route[1].headers).toBeUndefined();
   });
 });
