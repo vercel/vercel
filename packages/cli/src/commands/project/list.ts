@@ -81,8 +81,8 @@ export default async function list(
 
     for (const nodeVersion of NODE_VERSIONS) {
       if (
-        nodeVersion.discontinueDate &&
-        nodeVersion.discontinueDate.valueOf() > Date.now()
+        nodeVersion.deprecationDate &&
+        nodeVersion.deprecationDate.valueOf() > Date.now()
       ) {
         upcomingDeprecationVersionsList.push(nodeVersion.range);
       }
