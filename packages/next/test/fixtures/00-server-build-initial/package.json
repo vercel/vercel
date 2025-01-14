@@ -4,7 +4,7 @@
     "now-build": "next build"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "next": "10.0.8",

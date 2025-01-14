@@ -10,7 +10,7 @@
   "author": "Andy",
   "private": true,
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "next": "9.1.5",
