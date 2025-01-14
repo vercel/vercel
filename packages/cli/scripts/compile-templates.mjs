@@ -7,9 +7,7 @@ export async function compileDevTemplates() {
 
   // Compile the `doT.js` template files for `vercel dev`
   const templatesDir = new URL('src/util/dev/templates/', dirRoot);
-  const dotPacker = fileURLToPath(
-    new URL('../../node_modules/dot/bin/dot-packer', dirRoot)
-  );
+  const dotPacker = fileURLToPath(new URL('./scripts/dot-packer', dirRoot));
   await execa(process.execPath, [dotPacker], {
     cwd: templatesDir,
     stdio: ['ignore', 'ignore', 'inherit'],

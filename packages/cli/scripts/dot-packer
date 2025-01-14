@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+
+/* Continuation of https://github.com/Katahdin/dot-packer */
+
+var dot = require('dot');
+
+var render = dot.process({});
