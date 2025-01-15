@@ -89,9 +89,9 @@ export default async function list(
     }
 
     output.warn(
-      `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
+      `The following Node.js versions are deprecated: ${upcomingDeprecationVersionsList.join(
         ', '
-      )}. Please upgrade your projects immediately.`
+      )} and will be discontinued soon. Please upgrade your projects immediately.`
     );
     output.log(
       'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
