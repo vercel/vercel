@@ -10,7 +10,7 @@
     "deploy": "docusaurus deploy"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "@docusaurus/core": "^2.0.0-alpha.23",

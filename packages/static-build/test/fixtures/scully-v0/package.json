@@ -11,7 +11,7 @@
   },
   "private": true,
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "@angular/animations": "~9.0.0-rc.7",

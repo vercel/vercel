@@ -4,7 +4,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "next": "9.5.1",

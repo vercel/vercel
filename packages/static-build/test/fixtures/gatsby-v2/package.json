@@ -14,6 +14,6 @@
     "clean": "gatsby clean"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   }
 }
