@@ -10,8 +10,6 @@ import { setTimeout } from 'timers/promises';
 
 vi.setConfig({ testTimeout: 20 * 1000 });
 
-const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
-
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
   const isTypeScript = ext === '.ts';
@@ -80,7 +78,7 @@ async function withDevServer(
   }
 }
 
-(NODE_MAJOR < 18 ? describe.skip : describe)('web handlers', () => {
+describe('web handlers', () => {
   describe('for node runtime', () => {
     test('with `waitUntil` from import', () =>
       withDevServer(
