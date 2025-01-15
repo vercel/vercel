@@ -8,9 +8,6 @@
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
     "test": "echo \"No tests yet\""
   },
-  "engines": {
-    "node": "16.x"
-  },
   "browserslist": [
     "defaults"
   ],
