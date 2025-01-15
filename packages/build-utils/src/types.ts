@@ -449,6 +449,11 @@ export interface Images {
   contentDispositionType?: ImageContentDispositionType;
 }
 
+export interface TimeTracking {
+  installTimeMs: number;
+  buildTimeMs: number;
+}
+
 /**
  * If a Builder ends up creating filesystem outputs conforming to
  * the Build Output API, then the Builder should return this type.
@@ -496,6 +501,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  timeTracking?: TimeTracking;
   flags?: { definitions: FlagDefinitions };
 }
 

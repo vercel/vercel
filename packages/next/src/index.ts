@@ -336,6 +336,7 @@ export const build: BuildV2 = async buildOptions => {
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
+  const installStartedAt = Date.now();
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
@@ -350,6 +351,7 @@ export const build: BuildV2 = async buildOptions => {
   } else {
     await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
   }
+  const installTime = Date.now() - installStartedAt;
 
   if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
@@ -460,6 +462,7 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  const buildStartedAt = Date.now();
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPaths = getNodeBinPaths({
@@ -490,6 +493,7 @@ export const build: BuildV2 = async buildOptions => {
       env,
     });
   }
+  const buildTime = Date.now() - buildStartedAt;
   debug('build command exited');
 
   if (buildCallback) {
@@ -2340,6 +2344,10 @@ export const build: BuildV2 = async buildOptions => {
       ...staticFiles,
       ...staticDirectoryFiles,
       ...privateOutputs.files,
+    },
+    timeTracking: {
+      installTimeMs: installTime,
+      buildTimeMs: buildTime,
     },
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
