@@ -836,6 +836,7 @@ type DetectedPnpmVersion =
   | 'pnpm 7'
   | 'pnpm 8'
   | 'pnpm 9'
+  | 'pnpm 10'
   | 'corepack_enabled';
 
 function detectPnpmVersion(
@@ -850,8 +851,10 @@ function detectPnpmVersion(
       return 'pnpm 7';
     case lockfileVersion === 6.0 || lockfileVersion === 6.1:
       return 'pnpm 8';
-    case lockfileVersion === 7.0 || lockfileVersion === 9.0:
+    case lockfileVersion === 7.0:
       return 'pnpm 9';
+    case lockfileVersion === 9.0:
+      return 'pnpm 10';
     default:
       return 'not found';
   }
@@ -870,6 +873,8 @@ function validLockfileForPackageManager(
       return true;
     case 'pnpm':
       switch (packageManagerMajorVersion) {
+        case 10:
+          return lockfileVersion === 9.0;
         case 9:
           // bug in pnpm 9.0.0 causes incompatibility with lockfile version 6.0
           if (
@@ -1087,6 +1092,14 @@ export function detectPackageManager(
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@9.x',
             pnpmVersionRange: '9.x',
+          };
+        case 'pnpm 10':
+          // pnpm 9
+          return {
+            path: '/pnpm10/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm@10.x',
+            pnpmVersionRange: '10.x',
           };
         case 'pnpm 6':
           return {
