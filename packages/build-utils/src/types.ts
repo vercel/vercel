@@ -449,6 +449,16 @@ export interface Images {
   contentDispositionType?: ImageContentDispositionType;
 }
 
+export interface ExecutionTime {
+  startedAt: number;
+  finishedAt: number;
+}
+
+export interface Metrics {
+  install?: ExecutionTime;
+  build?: ExecutionTime;
+}
+
 /**
  * If a Builder ends up creating filesystem outputs conforming to
  * the Build Output API, then the Builder should return this type.
@@ -496,6 +506,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
+  metrics?: Metrics;
   flags?: { definitions: FlagDefinitions };
 }
 
