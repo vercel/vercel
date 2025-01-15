@@ -31,7 +31,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 16"
+    "node": ">= 18"
   },
   "dependencies": {
     "@vercel/build-utils": "9.0.1",
