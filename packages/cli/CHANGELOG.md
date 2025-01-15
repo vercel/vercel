@@ -1,5 +1,13 @@
 # vercel
 
+## 39.3.1
+
+### Patch Changes
+
+- Enable executable bit for `src/vc.js` script ([#12863](https://github.com/vercel/vercel/pull/12863))
+
+- [cli] refactor confirm component to use `client.input.confirm` interface ([#12846](https://github.com/vercel/vercel/pull/12846))
+
 ## 39.3.0
 
 ### Minor Changes
