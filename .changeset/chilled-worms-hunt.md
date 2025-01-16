@@ -2,4 +2,4 @@
 '@vercel/build-utils': minor
 ---
 
-Add `shouldUseWebApi` property to `NodejsLambda` class
+Add `useWebApi` property to `NodejsLambda` class

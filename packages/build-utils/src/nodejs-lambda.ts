@@ -3,29 +3,29 @@ import { Lambda, LambdaOptionsWithFiles } from './lambda';
 interface NodejsLambdaOptions extends LambdaOptionsWithFiles {
   shouldAddHelpers: boolean;
   shouldAddSourcemapSupport: boolean;
-  shouldUseWebApi?: boolean;
   awsLambdaHandler?: string;
+  useWebApi?: boolean;
 }
 
 export class NodejsLambda extends Lambda {
   launcherType: 'Nodejs';
   shouldAddHelpers: boolean;
   shouldAddSourcemapSupport: boolean;
-  shouldUseWebApi?: boolean;
   awsLambdaHandler?: string;
+  useWebApi?: boolean;
 
   constructor({
     shouldAddHelpers,
     shouldAddSourcemapSupport,
-    shouldUseWebApi,
     awsLambdaHandler,
+    useWebApi,
     ...opts
   }: NodejsLambdaOptions) {
     super(opts);
     this.launcherType = 'Nodejs';
     this.shouldAddHelpers = shouldAddHelpers;
     this.shouldAddSourcemapSupport = shouldAddSourcemapSupport;
-    this.shouldUseWebApi = shouldUseWebApi;
     this.awsLambdaHandler = awsLambdaHandler;
+    this.useWebApi = useWebApi;
   }
 }
