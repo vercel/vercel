@@ -20,6 +20,7 @@ export const BaseFunctionConfigSchema = {
       oneOf: [
         {
           type: 'array',
+          minItems: 1,
           items: { type: 'string' },
         },
         {
