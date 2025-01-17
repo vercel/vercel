@@ -1,5 +1,4 @@
 ---
-"@vercel/build-utils": major
 "vercel": major
 "@vercel/client": major
 "@vercel/functions": major
