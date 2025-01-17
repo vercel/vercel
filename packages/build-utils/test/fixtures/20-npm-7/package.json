@@ -5,6 +5,6 @@
     "build": "mkdir -p public && (printf \"npm version: \" && npm -v) > public/index.txt"
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   }
 }
