@@ -1820,6 +1820,7 @@ export const frameworks = [
       'Vite is a new breed of frontend build tool that significantly improves the frontend development experience.',
     description: 'A Vue.js app, created with Vite.',
     website: 'https://vitejs.dev',
+    supersedes: ['ionic-react'],
     envPrefix: 'VITE_',
     detectors: {
       every: [
