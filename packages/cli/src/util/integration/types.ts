@@ -44,6 +44,8 @@ export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
   };
 };
 
+export type VideoIntegrationProtocol = IntegrationProductProtocolBase;
+
 export interface IntegrationProduct {
   id: string;
   slug: string;
@@ -52,6 +54,7 @@ export interface IntegrationProduct {
   type?: 'storage' | string;
   protocols?: {
     storage?: StorageIntegrationProtocol;
+    video?: VideoIntegrationProtocol;
   };
   metadataSchema: MetadataSchema;
 }

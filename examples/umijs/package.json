@@ -1,17 +1,14 @@
 {
   "private": true,
   "scripts": {
-    "start": "umi dev",
-    "dev": "umi dev --port $PORT",
+    "dev": "umi dev",
     "build": "umi build",
-    "test": "umi test",
-    "lint:es": "eslint --ext .js src mock tests",
-    "lint:ts": "tslint \"src/**/*.ts\" \"src/**/*.tsx\"",
-    "precommit": "lint-staged"
+    "postinstall": "umi setup",
+    "setup": "umi setup",
+    "start": "npm run dev"
   },
   "dependencies": {
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6"
+    "umi": "^4.4.4"
   },
   "devDependencies": {
     "@types/jest": "^23.3.12",
