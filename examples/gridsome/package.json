@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "gridsome": "0.7.23"
+  },
+  "engines": {
+    "node": "<17"
   }
 }

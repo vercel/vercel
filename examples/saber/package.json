@@ -4,6 +4,9 @@
     "dev": "saber",
     "build": "saber build"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "devDependencies": {
     "saber": "latest",
     "saber-theme-minima": "latest",
