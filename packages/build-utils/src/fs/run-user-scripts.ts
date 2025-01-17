@@ -668,20 +668,13 @@ export async function runNpmInstall(
       turboSupportsCorepackHome,
     });
     let commandArgs: string[];
-    const isPotentiallyBrokenNpm =
-      cliType === 'npm' &&
-      !args.includes('--legacy-peer-deps') &&
-      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
     if (cliType === 'npm') {
       opts.prettyCommand = 'npm install';
       commandArgs = args
         .filter(a => a !== '--prefer-offline')
         .concat(['install', '--no-audit', '--unsafe-perm']);
-      if (
-        isPotentiallyBrokenNpm &&
-        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1'
-      ) {
+      if (spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1') {
         // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
         // and then later ran `npm install`, it would fail. So the only way
         // to safely upgrade npm from npm@8.5.0 is to set this flag. The docs
@@ -719,7 +712,6 @@ export async function runNpmInstall(
         'eresolve-report.txt'
       );
       if (
-        isPotentiallyBrokenNpm &&
         !commandArgs.includes('--legacy-peer-deps') &&
         fs.existsSync(potentialErrorPath)
       ) {
