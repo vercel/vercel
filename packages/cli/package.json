@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "39.2.6",
+  "version": "39.3.0",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -24,8 +24,8 @@
     "type-check": "tsc --noEmit"
   },
   "bin": {
-    "vc": "./dist/index.js",
-    "vercel": "./dist/index.js"
+    "vc": "./dist/vc.js",
+    "vercel": "./dist/vc.js"
   },
   "files": [
     "dist"
@@ -40,7 +40,7 @@
     "@vercel/hydrogen": "1.0.11",
     "@vercel/next": "4.4.2",
     "@vercel/node": "5.0.2",
-    "@vercel/python": "4.6.0",
+    "@vercel/python": "4.7.0",
     "@vercel/redwood": "2.1.12",
     "@vercel/remix-builder": "5.0.2",
     "@vercel/ruby": "2.1.0",

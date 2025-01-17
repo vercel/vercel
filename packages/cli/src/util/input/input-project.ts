@@ -1,5 +1,4 @@
 import type Client from '../client';
-import confirm from './confirm';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
 import chalk from 'chalk';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -46,16 +45,14 @@ export default async function inputProject(
 
   if (!detectedProject) {
     // did not auto-detect a project to link
-    shouldLinkProject = await confirm(
-      client,
+    shouldLinkProject = await client.input.confirm(
       `Link to existing project?`,
       false
     );
   } else {
     // auto-detected a project to link
     if (
-      await confirm(
-        client,
+      await client.input.confirm(
         `Found project ${chalk.cyan(
           `“${org.slug}/${detectedProject.name}”`
         )}. Link to it?`,
@@ -66,8 +63,7 @@ export default async function inputProject(
     }
 
     // user doesn't want to link the auto-detected project
-    shouldLinkProject = await confirm(
-      client,
+    shouldLinkProject = await client.input.confirm(
       `Link to different existing project?`,
       true
     );

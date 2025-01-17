@@ -6,7 +6,6 @@ import slugify from '@sindresorhus/slugify';
 import { basename, join, normalize } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
-import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
@@ -105,8 +104,7 @@ export async function ensureRepoLink(
     // Not yet linked, so prompt user to begin linking
     const shouldLink =
       yes ||
-      (await confirm(
-        client,
+      (await client.input.confirm(
         `Link Git repository at ${chalk.cyan(
           `“${toHumanPath(rootPath)}”`
         )} to your Project(s)?`,

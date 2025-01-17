@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvironments from '../../util/env/format-environments';
@@ -109,8 +108,7 @@ export default async function rm(client: Client, argv: string[]) {
   const skipConfirmation = opts['--yes'];
   if (
     !skipConfirmation &&
-    !(await confirm(
-      client,
+    !(await client.input.confirm(
       `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
         link,
         env,

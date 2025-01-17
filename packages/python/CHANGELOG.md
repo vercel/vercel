@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.7.0
+
+### Minor Changes
+
+- Add support for in-function concurrency ([#12850](https://github.com/vercel/vercel/pull/12850))
+
 ## 4.6.0
 
 ### Minor Changes

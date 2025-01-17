@@ -195,9 +195,7 @@ describe.skipIf(isWindows)('client.input', () => {
   });
   describe('confirm', () => {
     it(`defaults to true if no default is provided`, async () => {
-      const answer = client.input.confirm({
-        message: 'Confirm the value',
-      });
+      const answer = client.input.confirm('Confirm the value', true);
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );
@@ -205,10 +203,7 @@ describe.skipIf(isWindows)('client.input', () => {
       await expect(answer).resolves.toEqual(true);
     });
     it(`defaulting to false works`, async () => {
-      const answer = client.input.confirm({
-        message: 'Confirm the value',
-        default: false,
-      });
+      const answer = client.input.confirm('Confirm the value', false);
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (y/N)"`
       );
@@ -216,9 +211,7 @@ describe.skipIf(isWindows)('client.input', () => {
       await expect(answer).resolves.toEqual(false);
     });
     it(`typing "n" for the value`, async () => {
-      const answer = client.input.confirm({
-        message: 'Confirm the value',
-      });
+      const answer = client.input.confirm('Confirm the value', true);
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );
@@ -230,9 +223,7 @@ describe.skipIf(isWindows)('client.input', () => {
       await expect(answer).resolves.toEqual(false);
     });
     it(`typing "y" for the value`, async () => {
-      const answer = client.input.confirm({
-        message: 'Confirm the value',
-      });
+      const answer = client.input.confirm('Confirm the value', true);
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );

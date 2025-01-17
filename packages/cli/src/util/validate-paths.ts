@@ -1,7 +1,6 @@
 import { lstat } from 'fs-extra';
 import chalk from 'chalk';
 import { homedir } from 'os';
-import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
 import type Client from './client';
 import output from '../output-manager';
@@ -77,8 +76,7 @@ export default async function validatePaths(
 
   // ask confirmation if the directory is home
   if (path === homedir()) {
-    const shouldDeployHomeDirectory = await confirm(
-      client,
+    const shouldDeployHomeDirectory = await client.input.confirm(
       `You are deploying your home directory. Do you want to continue?`,
       false
     );
