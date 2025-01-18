@@ -7,38 +7,45 @@ import debug from '../debug';
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
 export const NODE_VERSIONS: NodeVersion[] = [
-  { major: 22, range: '22.x', runtime: 'nodejs22.x' },
-  { major: 20, range: '20.x', runtime: 'nodejs20.x' },
-  { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+  { major: 22, range: '22.x', runtime: 'nodejs22.x', state: 'active' },
+  { major: 20, range: '20.x', runtime: 'nodejs20.x', state: 'active' },
+  {
+    major: 18,
+    range: '18.x',
+    runtime: 'nodejs18.x',
+    state: 'deprecated',
+    discontinueDate: new Date('2025-08-01'),
+  },
   {
     major: 16,
     range: '16.x',
     runtime: 'nodejs16.x',
+    state: 'deprecated',
     discontinueDate: new Date('2025-01-31'),
   },
   {
     major: 14,
     range: '14.x',
     runtime: 'nodejs14.x',
-    discontinueDate: new Date('2023-08-15'),
+    state: 'discontinued',
   },
   {
     major: 12,
     range: '12.x',
     runtime: 'nodejs12.x',
-    discontinueDate: new Date('2022-10-03'),
+    state: 'discontinued',
   },
   {
     major: 10,
     range: '10.x',
     runtime: 'nodejs10.x',
-    discontinueDate: new Date('2021-04-20'),
+    state: 'discontinued',
   },
   {
     major: 8,
     range: '8.10.x',
     runtime: 'nodejs8.10',
-    discontinueDate: new Date('2020-01-06'),
+    state: 'discontinued',
   },
 ];
 
