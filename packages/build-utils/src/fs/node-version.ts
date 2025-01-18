@@ -145,21 +145,31 @@ export async function getSupportedNodeVersion(
 
   debug(`Selected Node.js ${selection.range}`);
 
-  if (selection.discontinueDate) {
+  if (selection.state === 'deprecated') {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
       `Error: Node.js version ${
         selection.range
-      } has reached End-of-Life. Deployments created on or after ${d} will fail to build. ${getHint(
+      } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
         isAuto
       )}`
+    );
+  } else if (selection.state === 'discontinued') {
+    console.warn(
+      `Error: Node.js version ${
+        selection.range
+      } is discontinued. Deployments will fail to build. ${getHint(isAuto)}`
     );
   }
 
   return selection;
 }
 
-function isDiscontinued({ discontinueDate }: NodeVersion): boolean {
+function isDiscontinued(nodeVersion: NodeVersion): boolean {
   const today = Date.now();
-  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
+  return (
+    nodeVersion.state === 'discontinued' ||
+    (nodeVersion.state === 'deprecated' &&
+      nodeVersion.discontinueDate.getTime() <= today)
+  );
 }
