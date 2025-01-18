@@ -2,28 +2,48 @@ import execa from 'execa';
 import which from 'which';
 import { join } from 'path';
 import { intersects } from 'semver';
-import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
+import {
+  Meta,
+  debug,
+  NowBuildError,
+  ActiveNodeVersion,
+  DeprecatedNodeVersion,
+  DiscontinuedNodeVersion,
+} from '@vercel/build-utils';
 
-interface RubyVersion extends NodeVersion {
+interface ActiveRubyVersion extends ActiveNodeVersion {
   minor: number;
 }
 
+interface DeprecatedRubyVersion extends DeprecatedNodeVersion {
+  minor: number;
+}
+
+interface DiscontinuedRubyVersion extends DiscontinuedNodeVersion {
+  minor: number;
+}
+
+type RubyVersion =
+  | ActiveRubyVersion
+  | DeprecatedRubyVersion
+  | DiscontinuedRubyVersion;
+
 const allOptions: RubyVersion[] = [
-  { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
-  { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
+  { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3', state: 'active' },
+  { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2', state: 'active' },
   {
     major: 2,
     minor: 7,
     range: '2.7.x',
     runtime: 'ruby2.7',
-    discontinueDate: new Date('2023-12-07'),
+    state: 'discontinued',
   },
   {
     major: 2,
     minor: 5,
     range: '2.5.x',
     runtime: 'ruby2.5',
-    discontinueDate: new Date('2021-11-30'),
+    state: 'discontinued',
   },
 ];
 
@@ -39,9 +59,13 @@ function getLatestRubyVersion(): RubyVersion {
   return selection;
 }
 
-function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
+function isDiscontinued(rubyVersion: RubyVersion): boolean {
   const today = Date.now();
-  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
+  return (
+    rubyVersion.state === 'discontinued' ||
+    (rubyVersion.state === 'deprecated' &&
+      rubyVersion.discontinueDate.getTime() <= today)
+  );
 }
 
 function getRubyPath(meta: Meta, gemfileContents: string) {
