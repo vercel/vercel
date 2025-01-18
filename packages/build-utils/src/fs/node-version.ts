@@ -13,8 +13,7 @@ export const NODE_VERSIONS: NodeVersion[] = [
     major: 18,
     range: '18.x',
     runtime: 'nodejs18.x',
-    state: 'deprecated',
-    discontinueDate: new Date('2025-08-01'),
+    state: 'active',
   },
   {
     major: 16,
