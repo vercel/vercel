@@ -1,7 +1,6 @@
-import type { Output } from '../util/output';
+import output from '../output-manager';
 
 export interface ParseTargetOptions<FlagName extends string> {
-  output: Output;
   flagName: FlagName;
   flags: { [K in `--${FlagName}`]?: string } & { '--prod'?: boolean };
 }
@@ -10,7 +9,6 @@ export interface ParseTargetOptions<FlagName extends string> {
  * Parses the environment target from the `--target`/`--environment` and `--prod` flags.
  */
 export default function parseTarget<FlagName extends string>({
-  output,
   flagName,
   flags,
 }: ParseTargetOptions<FlagName>): string | undefined {
@@ -25,9 +23,8 @@ export default function parseTarget<FlagName extends string>({
   }
 
   if (typeof targetFlagValue === 'string') {
-    const lowerCaseTarget = targetFlagValue.toLowerCase();
-    output.debug(`Setting target to ${lowerCaseTarget}`);
-    return lowerCaseTarget;
+    output.debug(`Setting target to ${targetFlagValue}`);
+    return targetFlagValue;
   }
 
   if (prodFlagValue) {

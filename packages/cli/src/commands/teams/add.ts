@@ -2,25 +2,17 @@ import chalk from 'chalk';
 import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
-
-import textInput from '../../util/input/text';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
 import { errorToString, isError } from '@vercel/error-utils';
+import output from '../../output-manager';
 
-const validateSlugKeypress = (data: string, value: string) =>
-  // TODO: the `value` here should contain the current value + the keypress
-  // should be fixed on utils/input/text.js
-  /^[a-zA-Z]+[a-zA-Z0-9_-]*$/.test(value + data);
-
-const validateNameKeypress = (data: string, value: string) =>
-  // TODO: the `value` here should contain the current value + the keypress
-  // should be fixed on utils/input/text.js
-  /^[ a-zA-Z0-9_-]+$/.test(value + data);
+const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
+const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
 
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
@@ -29,7 +21,6 @@ export default async function add(client: Client): Promise<number> {
   let slug;
   let team;
   let elapsed;
-  const { output } = client;
 
   output.log(
     `Pick a team identifier for its URL (e.g.: ${chalk.cyan(
@@ -39,12 +30,10 @@ export default async function add(client: Client): Promise<number> {
   do {
     try {
       // eslint-disable-next-line no-await-in-loop
-      slug = await textInput({
-        label: `- ${teamUrlPrefix}`,
-        validateKeypress: validateSlugKeypress,
-        initialValue: slug,
-        valid: team,
-        forceLowerCase: true,
+      slug = await client.input.text({
+        message: `- ${teamUrlPrefix}`,
+        validate: validateSlug,
+        default: slug,
       });
     } catch (err: unknown) {
       if (isError(err) && err.message === 'USER_ABORT') {
@@ -78,9 +67,9 @@ export default async function add(client: Client): Promise<number> {
   let name;
 
   try {
-    name = await textInput({
-      label: `- ${teamNamePrefix}`,
-      validateKeypress: validateNameKeypress,
+    name = await client.input.text({
+      message: `- ${teamNamePrefix}`,
+      validate: validateName,
     });
   } catch (err: unknown) {
     if (isError(err) && err.message === 'USER_ABORT') {
@@ -98,17 +87,6 @@ export default async function add(client: Client): Promise<number> {
 
   output.stopSpinner();
   process.stdout.write(eraseLines(2));
-
-  /*
-  if (res.error) {
-    output.error(res.error.message);
-    output.log(`${chalk.red(`✖ ${teamNamePrefix}`)}${name}`);
-
-    return 1;
-    // TODO: maybe we want to ask the user to retry? not sure if
-    // there's a scenario where that would be wanted
-  }
-  */
 
   team = Object.assign(team, res);
 

@@ -1,6 +1,8 @@
-# Experimental: @vercel/firewall
+# @vercel/firewall
 
 ## Programmatic rate limits
+
+[See our Firewall docs for detailed documentation of @vercel/firewall.](https://vercel.com/docs/security/vercel-waf/programmatic-access)
 
 ```ts
 import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';

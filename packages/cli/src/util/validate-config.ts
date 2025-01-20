@@ -7,7 +7,7 @@ import {
   rewritesSchema,
   trailingSlashSchema,
 } from '@vercel/routing-utils';
-import { VercelConfig } from './dev/types';
+import type { VercelConfig } from './dev/types';
 import {
   functionsSchema,
   buildsSchema,
@@ -50,10 +50,41 @@ const imagesSchema = {
         enum: ['image/avif', 'image/webp', 'image/jpeg', 'image/png'],
       },
     },
+    localPatterns: {
+      type: 'array',
+      minItems: 0,
+      maxItems: 25,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          pathname: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 256,
+          },
+          search: {
+            type: 'string',
+            minLength: 0,
+            maxLength: 256,
+          },
+        },
+      },
+    },
     minimumCacheTTL: {
       type: 'integer',
       minimum: 1,
       maximum: 315360000,
+    },
+    qualities: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 20,
+      items: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 100,
+      },
     },
     remotePatterns: {
       type: 'array',
@@ -74,12 +105,17 @@ const imagesSchema = {
           },
           port: {
             type: 'string',
-            minLength: 1,
+            minLength: 0,
             maxLength: 5,
           },
           pathname: {
             type: 'string',
             minLength: 1,
+            maxLength: 256,
+          },
+          search: {
+            type: 'string',
+            minLength: 0,
             maxLength: 256,
           },
         },

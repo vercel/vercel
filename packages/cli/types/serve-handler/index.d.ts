@@ -1,5 +1,5 @@
 declare module 'serve-handler' {
-  import http from 'http';
+  import type http from 'http';
 
   export default function (
     request: http.IncomingMessage,

@@ -8,7 +8,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     deploymentId: '',
   };
   it('should deploy and pass probe checks', async () => {
-    await require('../../utils').normalizeReactVersion(__dirname);
     ctx = await deployAndTest(__dirname);
   });
 

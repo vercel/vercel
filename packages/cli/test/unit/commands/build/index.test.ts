@@ -21,6 +21,23 @@ describe('build', () => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
 
+  describe('--help', () => {
+    it('tracks telemetry', async () => {
+      const command = 'build';
+
+      client.setArgv(command, '--help');
+      const exitCodePromise = build(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:help',
+          value: command,
+        },
+      ]);
+    });
+  });
+
   it('should build with `@vercel/static`', async () => {
     const cwd = fixture('static');
     const output = join(cwd, '.vercel/output');
@@ -340,6 +357,9 @@ describe('build', () => {
       deploymentTarget: 'v8-worker',
       entrypoint: 'api/edge.js',
     });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:prod', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "preview" env vars by default', async () => {
@@ -371,6 +391,9 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:yes', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "production" env vars with `--prod`', async () => {
@@ -406,6 +429,10 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:prod', value: 'TRUE' },
+      { key: 'flag:yes', value: 'TRUE' },
+    ]);
   });
 
   it('should pull "production" env vars with `--target production`', async () => {
@@ -441,6 +468,10 @@ describe('build', () => {
       await fs.remove(envFilePath);
       await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
     }
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:target', value: 'production' },
+      { key: 'flag:yes', value: 'TRUE' },
+    ]);
   });
 
   it('should build root-level `middleware.js` and exclude from static files', async () => {
@@ -948,8 +979,10 @@ describe('build', () => {
     expect(configJson).toMatchObject({
       images: {
         sizes: [256, 384, 600, 1000],
+        qualities: [25, 50, 75],
         domains: [],
         minimumCacheTTL: 60,
+        localPatterns: [{ search: '' }],
         formats: ['image/avif', 'image/webp'],
         contentDispositionType: 'attachment',
       },
@@ -1202,7 +1235,8 @@ describe('build', () => {
     client.setArgv('build');
     const exitCodePromise = build(client);
     await expect(client.stderr).toOutput('Error: Detected unsupported');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "build"').toEqual(1);
   });
 
   it('should ignore `.env` for static site', async () => {

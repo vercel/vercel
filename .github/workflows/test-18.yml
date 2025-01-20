@@ -1,14 +1,11 @@
 name: Tests Node.js v18
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - '!*'
   pull_request:
+  merge_group:
 
 env:
+  VERCEL_TELEMETRY_DISABLED: '1'
   NODE_VERSION: '18'
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
@@ -22,7 +19,7 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.waitForTarball.outputs.url }}
@@ -102,7 +99,7 @@ jobs:
           echo "misses=$TURBO_MISS_COUNT" >> $GITHUB_OUTPUT
       - name: 'Upload Test Report to Datadog'
         if: ${{ steps['turbo-summary'].outputs.misses != '0' && !cancelled() }}
-        run: 'npx @datadog/datadog-ci@2.18.1 junit upload --service vercel-cli .junit-reports'
+        run: 'npx @datadog/datadog-ci@2.36.0 junit upload --service vercel-cli .junit-reports'
         env:
           DATADOG_API_KEY: ${{secrets.DATADOG_API_KEY_CLI}}
           DD_ENV: ci

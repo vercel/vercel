@@ -6,7 +6,6 @@ import slugify from '@sindresorhus/slugify';
 import { basename, join, normalize } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
-import confirm from '../input/confirm';
 import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
@@ -21,8 +20,8 @@ import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
 import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { isAPIError } from '../errors-ts';
 import { isGitWorktreeOrSubmodule } from '../git-helpers';
+import output from '../../output-manager';
 
 const home = homedir();
 
@@ -85,14 +84,13 @@ export async function ensureRepoLink(
   cwd: string,
   { yes, overwrite }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
-  const { output } = client;
-
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
     output.debug(`Found Git repository root directory: ${repoLink.rootPath}`);
   } else {
     throw new Error('Could not determine Git repository root directory');
   }
+  // eslint-disable-next-line prefer-const
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (overwrite || !repoConfig) {
@@ -104,10 +102,9 @@ export async function ensureRepoLink(
     });
 
     // Not yet linked, so prompt user to begin linking
-    let shouldLink =
+    const shouldLink =
       yes ||
-      (await confirm(
-        client,
+      (await client.input.confirm(
         `Link Git repository at ${chalk.cyan(
           `“${toHumanPath(rootPath)}”`
         )} to your Project(s)?`,
@@ -126,10 +123,7 @@ export async function ensureRepoLink(
     );
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-    const remoteUrls = await getRemoteUrls(
-      join(rootPath, '.git/config'),
-      output
-    );
+    const remoteUrls = await getRemoteUrls(join(rootPath, '.git/config'));
     if (!remoteUrls) {
       throw new Error('Could not determine Git remote URLs');
     }
@@ -279,31 +273,23 @@ export async function ensureRepoLink(
       output.spinner(`Creating new Project: ${orgAndName}`);
       delete selection.newProject;
       if (!selection.rootDirectory) delete selection.rootDirectory;
-      try {
-        const project = (selected[i] = await createProject(client, {
-          ...selection,
-          framework: selection.framework.slug,
-        }));
-        await connectGitProvider(
-          client,
-          org,
-          project.id,
-          parsedRepoUrl.provider,
-          `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
-        );
-        output.log(
-          `Created new Project: ${output.link(
-            orgAndName,
-            `https://vercel.com/${orgAndName}`,
-            { fallback: false }
-          )}`
-        );
-      } catch (err) {
-        if (isAPIError(err) && err.code === 'too_many_projects') {
-          output.prettyError(err);
-          return;
-        }
-      }
+      const project = (selected[i] = await createProject(client, {
+        ...selection,
+        framework: selection.framework.slug,
+      }));
+      await connectGitProvider(
+        client,
+        project.id,
+        parsedRepoUrl.provider,
+        `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
+      );
+      output.log(
+        `Created new Project: ${output.link(
+          orgAndName,
+          `https://vercel.com/${orgAndName}`,
+          { fallback: false }
+        )}`
+      );
     }
 
     repoConfig = {
@@ -358,7 +344,7 @@ export async function findRepoRoot(
   client: Client,
   start: string
 ): Promise<string | undefined> {
-  const { debug } = client.output;
+  const { debug } = output;
   const REPO_JSON_PATH = join(VERCEL_DIR, VERCEL_DIR_REPO);
   /**
    * If the current repo is a git submodule or git worktree '.git' is a file

@@ -1,5 +1,5 @@
 import { parse } from 'url';
-import { ListenSpec } from './types';
+import type { ListenSpec } from './types';
 
 export function parseListen(str: string, defaultPort = 3000): ListenSpec {
   let port = Number(str);

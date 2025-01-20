@@ -6,16 +6,24 @@ import input from '@inquirer/input';
 import select from '@inquirer/select';
 import { EventEmitter } from 'events';
 import { URL } from 'url';
-import { VercelConfig } from '@vercel/client';
-import retry, { RetryFunction, Options as RetryOptions } from 'async-retry';
-import fetch, { BodyInit, Headers, RequestInit, Response } from 'node-fetch';
+import type { VercelConfig } from '@vercel/client';
+import retry, {
+  type RetryFunction,
+  type Options as RetryOptions,
+} from 'async-retry';
+import fetch, {
+  type BodyInit,
+  Headers,
+  type RequestInit,
+  type Response,
+} from 'node-fetch';
 import ua from './ua';
-import { Output } from './output/create-output';
 import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
-import { SAMLError } from './login/types';
+import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile } from './config/files';
+import type { TelemetryEventStore } from './telemetry';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -30,6 +38,7 @@ import { normalizeError } from '@vercel/error-utils';
 import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
+import output from '../output-manager';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -47,11 +56,11 @@ export interface ClientOptions extends Stdio {
   argv: string[];
   apiUrl: string;
   authConfig: AuthConfig;
-  output: Output;
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   agent?: Agent;
+  telemetryEventStore: TelemetryEventStore;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -65,13 +74,13 @@ export default class Client extends EventEmitter implements Stdio {
   stdin: ReadableTTY;
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
-  output: Output;
   config: GlobalConfig;
   agent?: Agent;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
   input;
+  telemetryEventStore: TelemetryEventStore;
 
   constructor(opts: ClientOptions) {
     super();
@@ -82,11 +91,11 @@ export default class Client extends EventEmitter implements Stdio {
     this.stdin = opts.stdin;
     this.stdout = opts.stdout;
     this.stderr = opts.stderr;
-    this.output = opts.output;
     this.config = opts.config;
     this.localConfig = opts.localConfig;
     this.localConfigPath = opts.localConfigPath;
     this.requestIdCounter = 1;
+    this.telemetryEventStore = opts.telemetryEventStore;
 
     const theme = {
       prefix: gray('?'),
@@ -102,8 +111,11 @@ export default class Client extends EventEmitter implements Stdio {
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
         expand({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
-      confirm: (opts: Parameters<typeof confirm>[0]) =>
-        confirm({ theme, ...opts }, { input: this.stdin, output: this.stderr }),
+      confirm: (message: string, default_value: boolean) =>
+        confirm(
+          { theme, message, default: default_value },
+          { input: this.stdin, output: this.stderr }
+        ),
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
         select<T>(
           { theme, ...opts },
@@ -150,7 +162,7 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     const requestId = this.requestIdCounter++;
-    return this.output.time(
+    return output.time(
       res => {
         if (res) {
           return `#${requestId} ← ${res.status} ${
@@ -170,7 +182,7 @@ export default class Client extends EventEmitter implements Stdio {
     return this.retry(async bail => {
       const res = await this._fetch(url, opts);
 
-      printIndications(this, res);
+      printIndications(res);
 
       if (!res.ok) {
         const error = await responseError(res);
@@ -241,9 +253,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     if (typeof result === 'number') {
       if (error instanceof APIError) {
-        this.output.prettyError(error);
+        output.prettyError(error);
       } else {
-        this.output.error(
+        output.error(
           `Failed to re-authenticate for ${bold(error.scope)} scope`
         );
       }
@@ -255,7 +267,7 @@ export default class Client extends EventEmitter implements Stdio {
   });
 
   _onRetry = (error: Error) => {
-    this.output.debug(`Retrying: ${error}\n${error.stack}`);
+    output.debug(`Retrying: ${error}\n${error.stack}`);
   };
 
   get cwd(): string {

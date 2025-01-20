@@ -1,4 +1,4 @@
-import psl from 'psl';
+import { parse } from 'tldts';
 import { InvalidDomain } from '../errors-ts';
 import isWildcardAlias from '../alias/is-wildcard-alias';
 import extractDomain from '../alias/extract-domain';
@@ -8,10 +8,7 @@ export default function getWildcardCNSForAlias(alias: string) {
     return [extractDomain(alias), alias];
   }
 
-  const parsedDomain = psl.parse(alias);
-  if (parsedDomain.error) {
-    throw new InvalidDomain(alias);
-  }
+  const parsedDomain = parse(alias);
 
   const { domain, subdomain } = parsedDomain;
   if (!domain) {

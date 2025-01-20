@@ -1,5 +1,84 @@
 # @vercel/remix-builder
 
+## 5.0.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+- Update `@remix-run/dev` fork to v2.15.2 ([#12796](https://github.com/vercel/vercel/pull/12796))
+
+## 5.0.1
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 5.0.0
+
+### Major Changes
+
+- Remove `@remix-run/dev` dev dependency ([#12762](https://github.com/vercel/vercel/pull/12762))
+
+## 4.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
+## 3.0.0
+
+### Major Changes
+
+- Bump path-to-regexp from 6.2.1 to 6.3.0 ([#12744](https://github.com/vercel/vercel/pull/12744))
+
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
+## 2.2.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.13.1 ([#12334](https://github.com/vercel/vercel/pull/12334))
+
+## 2.2.12
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 2.2.11
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 2.2.10
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+## 2.2.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.12.0 ([#12124](https://github.com/vercel/vercel/pull/12124))
+
+## 2.2.8
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
 ## 2.2.7
 
 ### Patch Changes

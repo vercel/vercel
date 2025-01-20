@@ -2,15 +2,15 @@
 
 exports[`base level help output > help 1`] = `
 "
-  [1m▲ vercel[22m [options] <command | path>
+  ▲ vercel [options] <command | path>
 
-  [2mFor deploy command help, run \`vercel deploy --help\`[22m
+  For deploy command help, run \`vercel deploy --help\`
 
-  [2mCommands:[22m
+  Commands:
 
-    [2mBasic[22m
+    Basic
 
-      deploy               [path]      Performs a deployment [1m(default)[22m
+      deploy               [path]      Performs a deployment (default)
       build                            Build the project locally into './vercel/output'
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
@@ -30,7 +30,7 @@ exports[`base level help output > help 1`] = `
       rollback             [url|id]    Quickly revert back to a previous deployment
       switch               [scope]     Switches between different scopes
 
-    [2mAdvanced[22m
+    Advanced
 
       alias                [cmd]       Manages your domain aliases
       bisect                           Use binary search to find the deployment that introduced a bug
@@ -43,34 +43,34 @@ exports[`base level help output > help 1`] = `
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
-  [2mGlobal Options:[22m
+  Global Options:
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     --cwd                          Current working directory
-    -A [1m[4mFILE[24m[22m, --local-config=[1m[4mFILE[24m[22m   Path to the local \`vercel.json\` file
-    -Q [1m[4mDIR[24m[22m, --global-config=[1m[4mDIR[24m[22m    Path to the global \`.vercel\` directory
+    -A FILE, --local-config=FILE   Path to the local \`vercel.json\` file
+    -Q DIR, --global-config=DIR    Path to the global \`.vercel\` directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
-    -t [4mTOKEN[24m, --token=[4mTOKEN[24m        Login token
+    -t TOKEN, --token=TOKEN        Login token
 
-  [2mExamples:[22m
+  Examples:
 
-  [90m–[39m Deploy the current directory
+  – Deploy the current directory
 
-    [36m$ vercel[39m
+    $ vercel
 
-  [90m–[39m Deploy a custom path
+  – Deploy a custom path
 
-    [36m$ vercel /usr/src/project[39m
+    $ vercel /usr/src/project
 
-  [90m–[39m Deploy with Environment Variables
+  – Deploy with Environment Variables
 
-    [36m$ vercel -e NODE_ENV=production[39m
+    $ vercel -e NODE_ENV=production
 
-  [90m–[39m Show the usage information for the sub command [2m\`list\`[22m
+  – Show the usage information for the sub command \`list\`
 
-    [36m$ vercel help list[39m
+    $ vercel help list
 "
 `;

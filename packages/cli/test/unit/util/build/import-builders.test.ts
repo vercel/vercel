@@ -20,7 +20,7 @@ const repoRoot = join(__dirname, '../../../../../..');
 describe('importBuilders()', () => {
   it('should import built-in Builders', async () => {
     const specs = new Set(['@vercel/node', '@vercel/next']);
-    const builders = await importBuilders(specs, process.cwd(), client.output);
+    const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node')?.pkg).toMatchObject(vercelNodePkg);
     expect(builders.get('@vercel/next')?.pkg).toMatchObject(vercelNextPkg);
@@ -40,7 +40,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@latest`', async () => {
     const specs = new Set(['@vercel/node@latest', '@vercel/next@latest']);
-    const builders = await importBuilders(specs, process.cwd(), client.output);
+    const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@latest')?.pkg).toMatchObject(
       vercelNodePkg
@@ -64,7 +64,7 @@ describe('importBuilders()', () => {
 
   it('should import built-in Builders using `@canary`', async () => {
     const specs = new Set(['@vercel/node@canary', '@vercel/next@canary']);
-    const builders = await importBuilders(specs, process.cwd(), client.output);
+    const builders = await importBuilders(specs, process.cwd());
     expect(builders.size).toEqual(2);
     expect(builders.get('@vercel/node@canary')?.pkg).toMatchObject(
       vercelNodePkg
@@ -94,7 +94,7 @@ describe('importBuilders()', () => {
       try {
         const spec = '@vercel/node@2.0.0';
         const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd, client.output);
+        const builders = await importBuilders(specs, cwd);
         expect(builders.size).toEqual(1);
         expect(builders.get(spec)?.pkg.name).toEqual('@vercel/node');
         expect(builders.get(spec)?.pkg.version).toEqual('2.0.0');
@@ -121,7 +121,7 @@ describe('importBuilders()', () => {
         const spec = 'vercel-deno@2.0.1';
         const tarballSpec = 'https://files-njlxk3l0r-curated-tests.vercel.app';
         const specs = new Set([spec, tarballSpec]);
-        const builders = await importBuilders(specs, cwd, client.output);
+        const builders = await importBuilders(specs, cwd);
         expect(builders.size).toEqual(2);
         expect(builders.get(spec)?.pkg.name).toEqual('vercel-deno');
         expect(builders.get(spec)?.pkg.version).toEqual('2.0.1');
@@ -146,30 +146,6 @@ describe('importBuilders()', () => {
     }
   );
 
-  it.skipIf(isWindows)(
-    'should install and warn when Builder is deprecated',
-    async () => {
-      const cwd = await getWriteableDirectory();
-      try {
-        const spec = '@now/node';
-        const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd, client.output);
-        expect(builders.size).toEqual(1);
-        expect(builders.get(spec)?.pkg.name).toEqual('@now/node');
-        expect(builders.get(spec)?.pkg.version).toEqual('1.8.5');
-        expect(builders.get(spec)?.pkgPath).toEqual(
-          join(cwd, '.vercel/builders/node_modules/@now/node/package.json')
-        );
-        expect(typeof builders.get(spec)?.builder.build).toEqual('function');
-        await expect(client.stderr).toOutput(
-          'npm WARN deprecated @now/node@1.8.5: "@now/node" is deprecated and will stop receiving updates on December 31, 2020. Please use "@vercel/node" instead.'
-        );
-      } finally {
-        await remove(cwd);
-      }
-    }
-  );
-
   // this test creates symlinks which require admin by default on Windows
   it.skipIf(isWindows)(
     'should install and import legacy `@now/build-utils` Builders',
@@ -178,7 +154,7 @@ describe('importBuilders()', () => {
       try {
         const spec = '@frontity/now@1.2.0';
         const specs = new Set([spec]);
-        const builders = await importBuilders(specs, cwd, client.output);
+        const builders = await importBuilders(specs, cwd);
         expect(builders.size).toEqual(1);
         expect(builders.get(spec)?.pkg.name).toEqual('@frontity/now');
         expect(builders.get(spec)?.pkg.version).toEqual('1.2.0');
@@ -198,7 +174,7 @@ describe('importBuilders()', () => {
     try {
       const spec = '@vercel/does-not-exist@0.0.1';
       const specs = new Set([spec]);
-      await importBuilders(specs, cwd, client.output);
+      await importBuilders(specs, cwd);
     } catch (_err: unknown) {
       err = _err as Error;
     } finally {
@@ -221,7 +197,7 @@ describe('importBuilders()', () => {
 describe('resolveBuilders()', () => {
   it('should return builders to install when missing', async () => {
     const specs = new Set(['@vercel/does-not-exist']);
-    const result = await resolveBuilders(process.cwd(), specs, client.output);
+    const result = await resolveBuilders(process.cwd(), specs);
     if (!('buildersToAdd' in result)) {
       throw new Error('Expected `buildersToAdd` to be defined');
     }
@@ -234,7 +210,7 @@ describe('resolveBuilders()', () => {
 
     // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
-      await resolveBuilders(process.cwd(), specs, client.output, new Map());
+      await resolveBuilders(process.cwd(), specs, new Map());
     } catch (_err: unknown) {
       err = _err as Error;
     }

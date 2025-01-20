@@ -1,13 +1,21 @@
-import React from 'react';
-import styles from './index.css';
+import { Link, Outlet } from 'umi';
+import styles from './index.less';
 
-const BasicLayout: React.FC = props => {
+export default function Layout() {
   return (
-    <div className={styles.normal}>
-      <h1 className={styles.title}>Yay! Welcome to umi!</h1>
-      {props.children}
+    <div className={styles.navs}>
+      <ul>
+        <li>
+          <Link to="/">Home</Link>
+        </li>
+        <li>
+          <Link to="/docs">Docs</Link>
+        </li>
+        <li>
+          <a href="https://github.com/umijs/umi">Github</a>
+        </li>
+      </ul>
+      <Outlet />
     </div>
   );
-};
-
-export default BasicLayout;
+}

@@ -2,6 +2,7 @@ import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 
 export const deployCommand = {
   name: 'deploy',
+  aliases: [],
   description:
     'Deploy your project to Vercel. The `deploy` command is the default command for the Vercel CLI, and can be omitted (`vc deploy my-app` equals `vc my-app`).',
   arguments: [
@@ -33,7 +34,7 @@ export const deployCommand = {
       name: 'env',
       shorthand: 'e',
       type: [String],
-      argument: 'key=value',
+      argument: 'KEY=VALUE',
       deprecated: false,
       description:
         'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
@@ -42,7 +43,7 @@ export const deployCommand = {
       name: 'build-env',
       shorthand: 'b',
       type: [String],
-      argument: 'key=value',
+      argument: 'KEY=VALUE',
       deprecated: false,
       description:
         'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
@@ -51,7 +52,7 @@ export const deployCommand = {
       name: 'meta',
       shorthand: 'm',
       type: [String],
-      argument: 'key=value',
+      argument: 'KEY=VALUE',
       deprecated: false,
       description:
         'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
@@ -60,6 +61,7 @@ export const deployCommand = {
       name: 'regions',
       shorthand: null,
       type: String,
+      argument: 'REGION',
       deprecated: false,
       description: 'Set default regions to enable the deployment on',
     },
@@ -83,9 +85,10 @@ export const deployCommand = {
       name: 'archive',
       shorthand: null,
       type: String,
+      argument: 'FORMAT',
       deprecated: false,
       description:
-        'Compress the deployment code into a file before uploading it',
+        'Compress the deployment code into an archive before uploading it',
     },
     {
       name: 'no-wait',
@@ -118,27 +121,22 @@ export const deployCommand = {
       shorthand: 'n',
       type: String,
       deprecated: true,
-      description: 'Provide a Vercel Project name',
     },
     {
       name: 'no-clipboard',
       shorthand: null,
       type: Boolean,
       deprecated: true,
-      description: 'Do not copy deployment URL to clipboard',
     },
     {
       name: 'target',
       shorthand: null,
       type: String,
+      argument: 'TARGET',
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
-    {
-      ...confirmOption,
-      deprecated: true,
-      description: 'Use default options to skip all prompts',
-    },
+    confirmOption,
   ],
   examples: [
     {

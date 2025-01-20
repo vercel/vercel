@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import selectOrg from '../../../../src/util/input/select-org';
-import { createTeam, useTeams } from '../../../mocks/team';
+import { createTeam, useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
 describe('selectOrg', () => {
-  let user;
-  let team;
+  let user: ReturnType<typeof useUser>;
+  let team: ReturnType<typeof createTeam>;
 
   beforeEach(() => {
-    team = useTeams()[0];
+    team = useTeam();
   });
 
   describe('non-northstar', () => {
@@ -96,7 +96,7 @@ describe('selectOrg', () => {
   });
 
   describe('without current team', () => {
-    let team2;
+    let team2: ReturnType<typeof createTeam>;
 
     beforeEach(() => {
       team2 = createTeam();

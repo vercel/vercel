@@ -1,10 +1,9 @@
 import chalk from 'chalk';
-import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvironments from '../../util/env/format-environments';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -12,21 +11,30 @@ import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
-import type { ProjectLinked } from '@vercel-internals/types';
+import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
+import output from '../../output-manager';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {
-  '--debug': boolean;
-  '--yes': boolean;
-};
+export default async function rm(client: Client, argv: string[]) {
+  const telemetryClient = new EnvRmTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-export default async function rm(
-  client: Client,
-  link: ProjectLinked,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { output } = client;
-  const { project } = link;
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   if (args.length > 3) {
     output.error(
@@ -37,7 +45,27 @@ export default async function rm(
     return 1;
   }
 
+  // eslint-disable-next-line prefer-const
   let [envName, envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagYes(opts['--yes']);
+
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+  const { project } = link;
 
   if (!envName) {
     envName = await client.input.text({
@@ -66,7 +94,7 @@ export default async function rm(
       message: `Remove ${envName} from which Environments?`,
       choices: envs.map(env => ({
         value: env.id,
-        name: formatEnvironments(client, link, env, customEnvironments),
+        name: formatEnvironments(link, env, customEnvironments),
       })),
     });
 
@@ -80,10 +108,8 @@ export default async function rm(
   const skipConfirmation = opts['--yes'];
   if (
     !skipConfirmation &&
-    !(await confirm(
-      client,
+    !(await client.input.confirm(
       `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
-        client,
         link,
         env,
         customEnvironments
@@ -99,7 +125,7 @@ export default async function rm(
 
   try {
     output.spinner('Removing');
-    await removeEnvRecord(output, client, project.id, env);
+    await removeEnvRecord(client, project.id, env);
   } catch (err: unknown) {
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);

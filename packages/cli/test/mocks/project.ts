@@ -119,8 +119,13 @@ const latestProductionDeployment: Deployment = {
   private: true,
   readyState: 'READY',
   target: 'production',
-  type: undefined,
+  type: 'LAMBDAS',
   url: 'a-project-name-rjtr4pz3f.vercel.app',
+  name: 'a-project-name',
+  regions: ['sfo1'],
+  public: false,
+  status: 'READY',
+  version: 2,
 };
 export const defaultProject: Project = {
   id: 'foo',
@@ -142,15 +147,20 @@ export const defaultProject: Project = {
  */
 export function useUnknownProject() {
   let project: Project;
-  client.scenario.get(`/:version/projects/:projectNameOrId`, (_req, res) => {
+  client.scenario.get(`/:version/projects/:projectNameOrId`, (req, res) => {
+    if (
+      project?.id === req.params.projectNameOrId ||
+      project?.name === req.params.projectNameOrId
+    ) {
+      return res.json(project);
+    }
     res.status(404).send();
   });
   client.scenario.post(`/:version/projects`, (req, res) => {
-    const { name } = req.body;
     project = {
       ...defaultProject,
-      name,
-      id: name,
+      ...req.body,
+      id: req.body.name,
     };
     res.json(project);
   });
@@ -358,7 +368,7 @@ export function useProject(
   client.scenario.get(`/v9/projects`, (req, res) => {
     res.json({
       projects: [project],
-      pagination: null,
+      pagination: {},
     });
   });
   client.scenario.post(`/v1/projects`, (req, res) => {
@@ -403,7 +413,7 @@ function exposeSystemEnvs(
     }
   }
 
-  for (let env of projectEnvs) {
+  for (const env of projectEnvs) {
     if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
     } else {

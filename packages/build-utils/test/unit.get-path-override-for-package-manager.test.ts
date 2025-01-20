@@ -1,4 +1,13 @@
 import { getPathOverrideForPackageManager } from '../src/fs/run-user-scripts';
+import {
+  describe,
+  beforeEach,
+  test,
+  expect,
+  vi,
+  MockInstance,
+  afterEach,
+} from 'vitest';
 
 describe('Test `getPathOverrideForPackageManager()`', () => {
   describe('with no corepack package manger', () => {
@@ -131,7 +140,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
 
       test('should warn if detected package manager intersects the engine range', () => {
-        const consoleWarnSpy = jest.spyOn(console, 'warn');
+        const consoleWarnSpy = vi.spyOn(console, 'warn');
         getPathOverrideForPackageManager({
           cliType: 'pnpm',
           lockfileVersion: 9.0,
@@ -147,7 +156,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
 
       test('should warn if no detected package manager', () => {
-        const consoleWarnSpy = jest.spyOn(console, 'warn');
+        const consoleWarnSpy = vi.spyOn(console, 'warn');
         getPathOverrideForPackageManager({
           cliType: 'pnpm',
           lockfileVersion: 9.0,
@@ -165,10 +174,10 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
   });
 
   describe('using corepack', () => {
-    let consoleWarnSpy: jest.SpyInstance;
+    let consoleWarnSpy: MockInstance<typeof console.warn>;
 
     beforeEach(() => {
-      consoleWarnSpy = jest.spyOn(console, 'warn');
+      consoleWarnSpy = vi.spyOn(console, 'warn');
     });
 
     afterEach(() => {

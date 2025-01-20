@@ -6,14 +6,8 @@ const builder = require('../../');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
-const { normalizeReactVersion } = require('../utils');
 
-const runBuildLambda = async projectPath => {
-  const innerRunBuildLambda = createRunBuildLambda(builder);
-
-  await normalizeReactVersion(projectPath);
-  return innerRunBuildLambda(projectPath);
-};
+const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
 
@@ -462,7 +456,76 @@ it('should not generate lambdas that conflict with static index route in app wit
 });
 
 describe('PPR', () => {
-  it('should have the same lambda for revalidation and resume', async () => {
+  describe('legacy', () => {
+    it('should have the same lambda for revalidation and resume', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['index']).toBeDefined();
+      expect(output['index'].type).toBe('Prerender');
+      expect(output['index'].lambda).toBeDefined();
+      expect(output['index'].lambda.type).toBe('Lambda');
+
+      expect(output['_next/postponed/resume/index']).toBeDefined();
+      expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['index'].lambda).toBe(
+        output['_next/postponed/resume/index']
+      );
+    });
+
+    it('should support basePath', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy-basepath'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['chat/index']).toBeDefined();
+      expect(output['chat/index'].type).toBe('Prerender');
+      expect(output['chat/index'].lambda).toBeDefined();
+      expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+      expect(output['chat/_next/postponed/resume/index']).toBeDefined();
+      expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['chat/index'].lambda).toBe(
+        output['chat/_next/postponed/resume/index']
+      );
+      expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.outputPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.headers).toEqual({
+        'x-matched-path': '_next/postponed/resume/index',
+      });
+    });
+  });
+
+  it('should have the chain added', async () => {
     const {
       buildResult: { output },
     } = await runBuildLambda(path.join(__dirname, 'ppr'));
@@ -477,15 +540,56 @@ describe('PPR', () => {
 
     expect(lambdas.size).toBe(2);
 
-    // Validate that these two lambdas are the same.
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
-    expect(output['index'].lambda).toBeDefined();
-    expect(output['index'].lambda.type).toBe('Lambda');
+    expect(output['index'].chain?.outputPath).toBe('index');
+  });
 
-    expect(output['_next/postponed/resume/index']).toBeDefined();
-    expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+  it('should support basePath', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr-basepath'));
 
-    expect(output['index'].lambda).toBe(output['_next/postponed/resume/index']);
+    // Validate that there are only the two lambdas created.
+    const lambdas = new Set();
+    for (const key of Object.keys(output)) {
+      if (output[key].type === 'Lambda') {
+        lambdas.add(output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+
+    // Validate that these two lambdas are the same.
+    expect(output['chat/index']).toBeDefined();
+    expect(output['chat/index'].type).toBe('Prerender');
+    expect(output['chat/index'].lambda).toBeDefined();
+    expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
+    expect(output['chat/index'].chain?.headers).toEqual({
+      'next-resume': '1',
+    });
+  });
+
+  describe('root params', () => {
+    it('should not generate a prerender for the missing root params route', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-root-params'));
+
+      expect(output['[lang]']).toBeDefined();
+      expect(output['[lang]'].type).toBe('Prerender');
+
+      // We want this to be a chainable prerender (supports Partial
+      // Prerendering).
+      expect(output['[lang]'].chain).toBeDefined();
+
+      // TODO: once we support revalidating this page, we should remove this
+      // We don't want to generate a fallback for this route. If this case fails
+      // it indicates that the fallback was generated, and we're at risk of
+      // cache posioning.
+      expect(output['[lang]'].fallback).toEqual(null);
+    });
   });
 });

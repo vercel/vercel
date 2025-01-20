@@ -8,14 +8,13 @@ import {
 } from './errors-ts';
 import humanizePath from './humanize-path';
 import readJSONFile from './read-json-file';
-import { VercelConfig } from './dev/types';
-import { Output } from './output';
+import type { VercelConfig } from './dev/types';
 import { isErrnoException } from '@vercel/error-utils';
+import output from '../output-manager';
 
 let config: VercelConfig;
 
 export default async function getConfig(
-  output: Output,
   configFile?: string
 ): Promise<VercelConfig | Error> {
   // If config was already read, just return it

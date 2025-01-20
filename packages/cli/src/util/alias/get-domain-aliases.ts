@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 import getAliases from './get-aliases';
 import type { Alias } from '@vercel-internals/types';
 

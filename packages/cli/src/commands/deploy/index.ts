@@ -4,19 +4,19 @@ import {
   scanParentDirs,
 } from '@vercel/build-utils';
 import {
-  Dictionary,
+  type Dictionary,
   fileNameSymbol,
   VALID_ARCHIVE_FORMATS,
-  VercelConfig,
+  type VercelConfig,
 } from '@vercel/client';
-import { errorToString, isErrnoException, isError } from '@vercel/error-utils';
+import { errorToString, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
-import Now, { CreateOptions } from '../../util';
-import Client from '../../util/client';
+import Now, { type CreateOptions } from '../../util';
+import type Client from '../../util/client';
 import { readLocalConfig } from '../../util/config/files';
 import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
@@ -26,8 +26,8 @@ import { printDeploymentStatus } from '../../util/deploy/print-deployment-status
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { handleError } from '../../util/error';
-import { SchemaValidationFailed } from '../../util/errors';
+import { printError } from '../../util/error';
+import { SchemaValidationFailed } from '../../util/errors-ts';
 import {
   AliasDomainConfigured,
   BuildError,
@@ -51,13 +51,6 @@ import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getProjectName from '../../util/get-project-name';
-import toHumanPath from '../../util/humanize-path';
-import confirm from '../../util/input/confirm';
-import editProjectSettings from '../../util/input/edit-project-settings';
-import inputProject from '../../util/input/input-project';
-import { inputRootDirectory } from '../../util/input/input-root-directory';
-import selectOrg from '../../util/input/select-org';
-import { Output } from '../../util/output';
 import code from '../../util/output/code';
 import highlight from '../../util/output/highlight';
 import param from '../../util/output/param';
@@ -65,10 +58,6 @@ import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandName } from '../../util/pkg-name';
-import {
-  getLinkedProject,
-  linkFolderToProject,
-} from '../../util/projects/link';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
@@ -76,9 +65,17 @@ import validatePaths, {
 import { help } from '../help';
 import { deployCommand } from './command';
 import parseTarget from '../../util/parse-target';
+import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
+import output from '../../output-manager';
+import { ensureLink } from '../../util/link/ensure-link';
+import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 
 export default async (client: Client): Promise<number> => {
-  const { output } = client;
+  const telemetryClient = new DeployTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
   let parsedArguments = null;
 
@@ -88,16 +85,40 @@ export default async (client: Client): Promise<number> => {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
 
+    telemetryClient.trackCliOptionArchive(parsedArguments.flags['--archive']);
+    telemetryClient.trackCliOptionEnv(parsedArguments.flags['--env']);
+    telemetryClient.trackCliOptionBuildEnv(
+      parsedArguments.flags['--build-env']
+    );
+    telemetryClient.trackCliOptionMeta(parsedArguments.flags['--meta']);
+    telemetryClient.trackCliFlagPrebuilt(parsedArguments.flags['--prebuilt']);
+    telemetryClient.trackCliOptionRegions(parsedArguments.flags['--regions']);
+    telemetryClient.trackCliFlagNoWait(parsedArguments.flags['--no-wait']);
+    telemetryClient.trackCliFlagYes(parsedArguments.flags['--yes']);
+    telemetryClient.trackCliOptionTarget(parsedArguments.flags['--target']);
+    telemetryClient.trackCliFlagProd(parsedArguments.flags['--prod']);
+    telemetryClient.trackCliFlagSkipDomain(
+      parsedArguments.flags['--skip-domain']
+    );
+    telemetryClient.trackCliFlagPublic(parsedArguments.flags['--public']);
+    telemetryClient.trackCliFlagLogs(parsedArguments.flags['--logs']);
+    telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
+    telemetryClient.trackCliFlagWithCache(
+      parsedArguments.flags['--with-cache']
+    );
+
     if ('--confirm' in parsedArguments.flags) {
+      telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
   if (parsedArguments.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('deploy');
     output.print(help(deployCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -113,6 +134,7 @@ export default async (client: Client): Promise<number> => {
     // If path is relative: resolve
     // if path is absolute: clear up strange `/` etc
     paths = parsedArguments.args.map(item => resolve(client.cwd, item));
+    telemetryClient.trackCliArgumentProjectPath(paths[0]);
   } else {
     paths = [client.cwd];
   }
@@ -127,7 +149,9 @@ export default async (client: Client): Promise<number> => {
 
   // #region Config loading
   let localConfig = client.localConfig || readLocalConfig(paths[0]);
+
   if (localConfig) {
+    client.localConfig = localConfig;
     const { version } = localConfig;
     const file = highlight(localConfig[fileNameSymbol]!);
     const prop = code('version');
@@ -170,6 +194,7 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliOptionName(parsedArguments.flags['--name']);
   }
 
   if (parsedArguments.flags['--no-clipboard']) {
@@ -181,11 +206,11 @@ export default async (client: Client): Promise<number> => {
         emoji('warning')
       )}\n`
     );
+    telemetryClient.trackCliFlagNoClipboard(true);
   }
   // #endregion
 
   const target = parseTarget({
-    output: output,
     flagName: 'target',
     flags: parsedArguments.flags,
   });
@@ -196,100 +221,29 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  // retrieve `project` and `org` from .vercel
-  const link = await getLinkedProject(client, cwd);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  }
-
-  let { org, project, status } = link;
-
-  let newProjectName = null;
-  let rootDirectory = project ? project.rootDirectory : null;
-  let sourceFilesOutsideRootDirectory: boolean | undefined = true;
-
-  if (status === 'not_linked') {
-    const shouldStartSetup =
-      autoConfirm ||
-      (await confirm(
-        client,
-        `Set up and deploy ${chalk.cyan(`“${toHumanPath(cwd)}”`)}?`,
-        true
-      ));
-
-    if (!shouldStartSetup) {
-      output.print(`Canceled. Project not set up.\n`);
-      return 0;
-    }
-
-    try {
-      org = await selectOrg(
-        client,
-        'Which scope do you want to deploy to?',
-        autoConfirm
-      );
-    } catch (err: unknown) {
-      if (
-        isErrnoException(err) &&
-        (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
-      ) {
-        output.error(err.message);
-        return 1;
-      }
-
-      throw err;
-    }
-
-    // We use `localConfig` here to read the name
-    // even though the `vercel.json` file can change
-    // afterwards, this is fine since the property
-    // will be deprecated and can be replaced with
-    // user input.
-    const detectedProjectName = getProjectName({
+  // Retrieve `project` and `org` from linked Project.
+  // If not linked, prompt user to set up a new Project.
+  const link = await ensureLink('deploy', client, cwd, {
+    autoConfirm,
+    setupMsg: 'Set up and deploy',
+    projectName: getProjectName({
       nameParam: parsedArguments.flags['--name'],
       nowConfig: localConfig,
       paths,
-    });
-
-    const projectOrNewProjectName = await inputProject(
-      client,
-      org,
-      detectedProjectName,
-      autoConfirm
-    );
-
-    if (typeof projectOrNewProjectName === 'string') {
-      newProjectName = projectOrNewProjectName;
-      rootDirectory = await inputRootDirectory(client, cwd, autoConfirm);
-    } else {
-      project = projectOrNewProjectName;
-      rootDirectory = project.rootDirectory;
-      sourceFilesOutsideRootDirectory = project.sourceFilesOutsideRootDirectory;
-
-      // we can already link the project
-      await linkFolderToProject(
-        client,
-        cwd,
-        {
-          projectId: project.id,
-          orgId: org.id,
-        },
-        project.name,
-        org.slug
-      );
-      status = 'linked';
-    }
+    }),
+  });
+  if (typeof link === 'number') {
+    return link;
   }
+
+  const { org, project } = link;
+  const rootDirectory = project.rootDirectory;
+  const sourceFilesOutsideRootDirectory =
+    project.sourceFilesOutsideRootDirectory ?? true;
 
   // For repo-style linking, reset the path to the root of the repository
-  if (link.status === 'linked' && link.repoRoot) {
+  if (link.repoRoot) {
     cwd = link.repoRoot;
-  }
-
-  // At this point `org` should be populated
-  if (!org) {
-    throw new Error(`"org" is not defined`);
   }
 
   // #region Build `--prebuilt`
@@ -299,11 +253,7 @@ export default async (client: Client): Promise<number> => {
 
     // For repo-style linking, update `cwd` to be the Project
     // subdirectory when `rootDirectory` setting is defined
-    if (
-      link.status === 'linked' &&
-      link.repoRoot &&
-      link.project.rootDirectory
-    ) {
+    if (link.repoRoot && link.project.rootDirectory) {
       vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
     }
 
@@ -361,19 +311,11 @@ export default async (client: Client): Promise<number> => {
   const contextName = org.slug;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
-  // if we have `sourceFilesOutsideRootDirectory` set to `true`, we use the current path
-  // and upload the entire directory.
-  const sourcePath =
-    rootDirectory && !sourceFilesOutsideRootDirectory
-      ? join(cwd, rootDirectory)
-      : cwd;
-
   if (
     rootDirectory &&
     (await validateRootDirectory(
-      output,
       cwd,
-      sourcePath,
+      join(cwd, rootDirectory),
       project
         ? `To change your Project Settings, go to https://vercel.com/${org?.slug}/${project.name}/settings`
         : ''
@@ -461,7 +403,7 @@ export default async (client: Client): Promise<number> => {
     parseMeta(parsedArguments.flags['--meta'])
   );
 
-  const gitMetadata = await createGitMeta(cwd, output, project);
+  const gitMetadata = await createGitMeta(cwd, project);
   // #endregion
 
   // #region Env vars validation
@@ -497,18 +439,18 @@ export default async (client: Client): Promise<number> => {
   const regions = regionFlag.length > 0 ? regionFlag : localConfig.regions;
   // #endregion
 
-  const currentTeam = org?.type === 'team' ? org.id : undefined;
+  const currentTeam = org.type === 'team' ? org.id : undefined;
   const now = new Now({
     client,
     currentTeam,
   });
-  let deployStamp = stamp();
+  const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
-  const name = project ? project.name : newProjectName;
+  const name = project.name;
   if (!name) {
     throw new Error(
       '`name` not found on project or provided by existing project'
@@ -556,14 +498,8 @@ export default async (client: Client): Promise<number> => {
       createArgs.projectSettings = {
         sourceFilesOutsideRootDirectory,
         rootDirectory,
+        ...localConfigurationOverrides,
       };
-
-      if (status === 'linked') {
-        createArgs.projectSettings = {
-          ...createArgs.projectSettings,
-          ...localConfigurationOverrides,
-        };
-      }
     }
 
     // Read the `engines.node` field from `package.json` and send as a
@@ -594,49 +530,12 @@ export default async (client: Client): Promise<number> => {
       client,
       now,
       contextName,
-      sourcePath,
+      cwd,
       createArgs,
       org,
       !project,
-      cwd,
       archive
     );
-
-    if (deployment.code === 'missing_project_settings') {
-      let { projectSettings, framework } = deployment;
-      if (rootDirectory) {
-        projectSettings.rootDirectory = rootDirectory;
-      }
-
-      if (typeof sourceFilesOutsideRootDirectory !== 'undefined') {
-        projectSettings.sourceFilesOutsideRootDirectory =
-          sourceFilesOutsideRootDirectory;
-      }
-
-      const settings = await editProjectSettings(
-        client,
-        projectSettings,
-        framework,
-        false,
-        localConfigurationOverrides
-      );
-
-      // deploy again, but send projectSettings this time
-      createArgs.projectSettings = settings;
-
-      deployStamp = stamp();
-      createArgs.deployStamp = deployStamp;
-      deployment = await createDeploy(
-        client,
-        now,
-        contextName,
-        sourcePath,
-        createArgs,
-        org,
-        false,
-        cwd
-      );
-    }
 
     if (deployment instanceof NotDomainOwner) {
       output.error(deployment.message);
@@ -687,6 +586,11 @@ export default async (client: Client): Promise<number> => {
       debug(`Error: ${err}\n${err.stack}`);
     }
 
+    if (err instanceof UploadErrorMissingArchive) {
+      output.prettyError(err);
+      return 1;
+    }
+
     if (err instanceof NotDomainOwner) {
       output.error(err.message);
       return 1;
@@ -698,7 +602,6 @@ export default async (client: Client): Promise<number> => {
       );
 
       const purchase = await purchaseDomainIfAvailable(
-        output,
         client,
         err.meta.domain,
         contextName
@@ -713,11 +616,11 @@ export default async (client: Client): Promise<number> => {
       }
 
       if (purchase === false || purchase instanceof UserAborted) {
-        handleCreateDeployError(output, deployment, localConfig);
+        handleCreateDeployError(deployment, localConfig);
         return 1;
       }
 
-      handleCreateDeployError(output, purchase, localConfig);
+      handleCreateDeployError(purchase, localConfig);
       return 1;
     }
 
@@ -737,7 +640,7 @@ export default async (client: Client): Promise<number> => {
       err instanceof ConflictingFilePath ||
       err instanceof ConflictingPathSegment
     ) {
-      handleCreateDeployError(output, err, localConfig);
+      handleCreateDeployError(err, localConfig);
       return 1;
     }
 
@@ -759,18 +662,14 @@ export default async (client: Client): Promise<number> => {
       return 1;
     }
 
-    handleError(err);
+    printError(err);
     return 1;
   }
 
-  return printDeploymentStatus(client, deployment, deployStamp, noWait);
+  return printDeploymentStatus(deployment, deployStamp, noWait);
 };
 
-function handleCreateDeployError(
-  output: Output,
-  error: Error,
-  localConfig: VercelConfig
-) {
+function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   if (error instanceof InvalidDomain) {
     output.error(`The domain ${error.meta.domain} is not valid`);
     return 1;

@@ -58,6 +58,6 @@ module.exports = async ({ github, context }) => {
     owner,
     repo,
     issue_number: pr.data.number,
-    labels: ['area: tests', 'semver: none', 'pr: automerge'],
+    labels: ['area: tests', 'semver: none'],
   });
 };

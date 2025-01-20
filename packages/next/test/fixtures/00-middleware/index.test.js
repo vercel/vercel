@@ -7,7 +7,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   let ctx = {};
 
   it('should deploy and pass probe checks', async () => {
-    await require('../../utils').normalizeReactVersion(__dirname);
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
@@ -110,7 +109,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         `${ctx.deploymentUrl}/_next/data/testing-build-id/financial.json?slug=financial`
       ).then(res => res.json());
 
-      console.log({ newData, data });
+      console.log(JSON.stringify({ newData, data }, null, 2));
 
       if (isNaN(newData.now)) {
         throw new Error();

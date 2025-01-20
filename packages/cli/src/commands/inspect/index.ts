@@ -4,10 +4,10 @@ import chalk from 'chalk';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { displayBuildLogs } from '../../util/logs';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -21,9 +21,18 @@ import { getCommandName } from '../../util/pkg-name';
 import sleep from '../../util/sleep';
 import { help } from '../help';
 import { inspectCommand } from './command';
+import output from '../../output-manager';
+
+import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
 
 export default async function inspect(client: Client) {
-  const { print, error, warn } = client.output;
+  const { print, error, warn } = output;
+  const telemetry = new InspectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArguments;
 
   const flagsSpecification = getFlagsSpecification(inspectCommand.options);
@@ -31,11 +40,12 @@ export default async function inspect(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
   if (parsedArguments.flags['--help']) {
+    telemetry.trackCliFlagHelp('inspect');
     print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -61,6 +71,11 @@ export default async function inspect(client: Client) {
     print(help(inspectCommand, { columns: client.stderr.columns }));
     return 1;
   }
+
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
+  telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
+  telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
+  telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
 
   // validate the timeout
   const timeout = ms(parsedArguments.flags['--timeout'] ?? '3m');
@@ -93,7 +108,7 @@ export default async function inspect(client: Client) {
   try {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
-  client.output.spinner(
+  output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
 
@@ -165,7 +180,7 @@ async function printDetails({
   client: Client;
   startTimestamp: number;
 }): Promise<void> {
-  client.output.log(
+  output.log(
     `Fetched deployment "${chalk.bold(deployment.url)}" in ${chalk.bold(
       contextName
     )} ${elapsed(Date.now() - startTimestamp)}`
@@ -181,7 +196,7 @@ async function printDetails({
     alias: aliases,
   } = deployment;
 
-  const { print, link } = client.output;
+  const { print, link } = output;
 
   const { builds } =
     deployment.version === 2
@@ -192,8 +207,8 @@ async function printDetails({
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
-  const customEnvironmentName = deployment.customEnvironment?.name;
-  const target = customEnvironmentName ?? deployment.target ?? 'preview';
+  const customEnvironmentSlug = deployment.customEnvironment?.slug;
+  const target = customEnvironmentSlug ?? deployment.target ?? 'preview';
   print(`    ${chalk.cyan('target')}\t`);
   // TODO: once custom environments is shipped for all users,
   // make all deployments link to the environment settings page

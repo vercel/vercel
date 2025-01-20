@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { glob, isDirectory, isSymbolicLink } from '../src';
+import { describe, expect, it } from 'vitest';
 
 describe('glob()', () => {
   it('should not return entries for empty directories by default', async () => {

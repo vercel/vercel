@@ -2,8 +2,7 @@
 
 [index](../modules/index.md).Request
 
-We define a new type so this function can be reused with
-the global `Request`, `node-fetch` and other types.
+We define a new type so this function can be reused with the global `Request`, `node-fetch` and other types.
 
 ## Table of contents
 
@@ -15,14 +14,10 @@ the global `Request`, `node-fetch` and other types.
 
 ### headers
 
-• **headers**: `Object`
+• **headers**: `Headers`
 
-#### Type declaration
-
-| Name  | Type                                     |
-| :---- | :--------------------------------------- |
-| `get` | (`name`: `string`) => `null` \| `string` |
+Represents the headers of a request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:40](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L40)
+[packages/functions/src/headers.ts:52](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L52)

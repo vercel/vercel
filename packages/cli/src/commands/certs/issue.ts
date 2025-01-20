@@ -1,9 +1,7 @@
-import { parse } from 'psl';
 import chalk from 'chalk';
-
-import { Output } from '../../util/output';
+import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import createCertForCns from '../../util/certs/create-cert-for-cns';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
@@ -14,27 +12,50 @@ import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
 import { getCommandName } from '../../util/pkg-name';
-import { CertsCommandFlags } from './command';
+import output from '../../output-manager';
+import { CertsIssueTelemetryClient } from '../../util/telemetry/commands/certs/issue';
+import { issueSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 
 export default async function issue(
   client: Client,
-  opts: CertsCommandFlags,
-  args: string[]
-) {
+  argv: string[]
+): Promise<number> {
   let cert;
-  const { output } = client;
+  const { telemetryEventStore } = client;
   const addStamp = stamp();
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(issueSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
   const {
     '--challenge-only': challengeOnly,
-    '--overwrite': overwite,
+    '--overwrite': overwrite,
     '--crt': crtPath,
     '--key': keyPath,
     '--ca': caPath,
   } = opts;
 
-  const { contextName } = await getScope(client);
+  const telemetry = new CertsIssueTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagChallengeOnly(challengeOnly);
+  telemetry.trackCliFlagOverwrite(overwrite);
+  telemetry.trackCliOptionCrt(crtPath);
+  telemetry.trackCliOptionKey(keyPath);
+  telemetry.trackCliOptionCa(caPath);
 
-  if (overwite) {
+  if (overwrite) {
     output.error('Overwrite option is deprecated');
     return 1;
   }
@@ -80,16 +101,19 @@ export default async function issue(
     );
     return 1;
   }
+  telemetry.trackCliArgumentCn(args[0]);
 
   const cns = getCnsFromArgs(args);
+
+  const { contextName } = await getScope(client);
 
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.
   if (challengeOnly) {
-    return runStartOrder(output, client, cns, contextName, addStamp);
+    return runStartOrder(client, cns, contextName, addStamp);
   }
 
-  // If the user does not specify anything, we try to fullfill a pending order that may exist
+  // If the user does not specify anything, we try to fulfill a pending order that may exist
   // and if it doesn't exist we try to issue the cert solving from the server
   cert = await finishCertOrder(client, cns, contextName);
   if (cert instanceof ERRORS.CertOrderNotFound) {
@@ -99,13 +123,13 @@ export default async function issue(
   if (cert instanceof ERRORS.CertError) {
     if (cert.meta.code === 'wildcard_not_allowed') {
       // Fallback to start cert order when receiving a wildcard_not_allowed error
-      return runStartOrder(output, client, cns, contextName, addStamp, {
+      return runStartOrder(client, cns, contextName, addStamp, {
         fallingBack: true,
       });
     }
   }
 
-  const handledResult = handleCertError(output, cert);
+  const handledResult = handleCertError(cert);
   if (handledResult === 1) {
     return handledResult;
   }
@@ -128,7 +152,6 @@ export default async function issue(
 }
 
 async function runStartOrder(
-  output: Output,
   client: Client,
   cns: string[],
   contextName: string,
@@ -175,14 +198,12 @@ async function runStartOrder(
   );
   const [header, ...rows] = dnsTable(
     pendingChallenges.map(challenge => {
-      const parsedDomain = parse(challenge.domain);
-      if (parsedDomain.error) {
+      const subdomain = getSubdomain(challenge.domain);
+      if (subdomain === null) {
         throw new ERRORS.InvalidDomain(challenge.domain);
       }
       return [
-        parsedDomain.subdomain
-          ? `_acme-challenge.${parsedDomain.subdomain}`
-          : `_acme-challenge`,
+        subdomain ? `_acme-challenge.${subdomain}` : `_acme-challenge`,
         'TXT',
         challenge.value,
       ];
@@ -190,7 +211,7 @@ async function runStartOrder(
   ).split('\n');
 
   output.print(`${header}\n`);
-  process.stdout.write(`${rows.join('\n')}\n\n`);
+  client.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
     `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`

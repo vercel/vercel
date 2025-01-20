@@ -1,13 +1,13 @@
 import { expect } from 'vitest';
-import { toOutput } from './matchers';
-
-interface ToOutputMatchers<R = unknown> {
-  toOutput: (test: string, timeout?: number) => Promise<R>;
-}
+import type { ToHaveTelemetryEventsMatchers } from './to-have-telemetry-events';
+import { toHaveTelemetryEvents } from './to-have-telemetry-events';
+import type { ToOutputMatchers } from './to-output';
+import { toOutput } from './to-output';
 
 declare module 'vitest' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface Assertion<T = any> extends ToOutputMatchers<T> {}
+  interface Assertion<T = any>
+    extends ToOutputMatchers<T>,
+      ToHaveTelemetryEventsMatchers<T> {}
 }
 
-expect.extend({ toOutput });
+expect.extend({ toOutput, toHaveTelemetryEvents });

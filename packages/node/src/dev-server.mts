@@ -168,6 +168,7 @@ process.on('message', async m => {
         await onExit();
       }
       process.exit(0);
+      break;
     default:
       console.error(`unknown IPC message from parent:`, m);
       break;

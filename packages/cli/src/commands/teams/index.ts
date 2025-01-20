@@ -1,83 +1,114 @@
-import error from '../../util/output/error';
 import list from './list';
 import add from './add';
 import change from './switch';
 import invite from './invite';
 import { parseArguments } from '../../util/get-args';
-import Client from '../../util/client';
-import { teamsCommand } from './command';
-import { help } from '../help';
+import {
+  addSubcommand,
+  inviteSubcommand,
+  listSubcommand,
+  switchSubcommand,
+  teamsCommand,
+} from './command';
+import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
+import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
+import output from '../../output-manager';
+import getSubcommand from '../../util/get-subcommand';
+import type Client from '../../util/client';
 
-export default async (client: Client) => {
-  let subcommand;
+const COMMAND_CONFIG = {
+  list: ['ls', 'list'],
+  switch: ['switch', 'change'],
+  add: ['create', 'add'],
+  invite: ['invite'],
+};
 
-  let parsedArgs = null;
+export default async function teams(client: Client) {
+  const telemetry = new TeamsTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(teamsCommand.options);
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
       permissive: true,
     });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
-  const { output } = client;
+  if (parsedArgs.args[0] === 'switch') {
+    parsedArgs.args.unshift('teams');
+  }
 
-  if (parsedArgs.flags['--help']) {
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
+
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('teams', subcommand);
     output.print(help(teamsCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const isSwitch = parsedArgs.args[0] === 'switch';
-
-  parsedArgs.args = parsedArgs.args.slice(1);
-
-  if (isSwitch) {
-    subcommand = 'switch';
-  } else {
-    subcommand = parsedArgs.args.shift();
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: teamsCommand, columns: client.stderr.columns })
+    );
   }
 
-  let exitCode = 0;
   switch (subcommand) {
-    case 'list':
-    case 'ls': {
-      exitCode = await list(client);
-      break;
+    case 'list': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return list(client, args);
     }
-    case 'switch':
-    case 'change': {
-      exitCode = await change(client, parsedArgs.args[0]);
-      break;
+    case 'switch': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(switchSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSwitch(subcommandOriginal);
+      return change(client, args);
     }
-    case 'add':
-    case 'create': {
-      exitCode = await add(client);
-      break;
+    case 'add': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(addSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client);
     }
-
     case 'invite': {
-      exitCode = await invite(client, parsedArgs.args);
-      break;
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(inviteSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandInvite(subcommandOriginal);
+      return invite(client, args);
     }
     default: {
-      if (subcommand !== 'help') {
-        // eslint-disable-next-line no-console
-        console.error(
-          error('Please specify a valid subcommand: add | ls | switch | invite')
-        );
-      }
-      exitCode = 2;
-      client.output.print(
-        help(teamsCommand, { columns: client.stderr.columns })
+      output.error(
+        'Please specify a valid subcommand: add | ls | switch | invite'
       );
+      output.print(help(teamsCommand, { columns: client.stderr.columns }));
+      return 2;
     }
   }
-  return exitCode;
-};
+}

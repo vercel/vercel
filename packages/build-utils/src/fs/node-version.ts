@@ -6,7 +6,10 @@ import debug from '../debug';
 
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
+// `NODE_VERSIONS` is assumed to be sorted by version number
+// with the newest supported version first
 export const NODE_VERSIONS: NodeVersion[] = [
+  { major: 22, range: '22.x', runtime: 'nodejs22.x' },
   { major: 20, range: '20.x', runtime: 'nodejs20.x' },
   { major: 18, range: '18.x', runtime: 'nodejs18.x' },
   {

@@ -5,12 +5,8 @@ import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
-import type {
-  ConfigRoute,
-  RouteManifest,
-} from '@remix-run/dev/dist/config/routes';
-import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
 
 export const require_ = createRequire(__filename);
 
@@ -77,9 +73,9 @@ function isEdgeRuntime(runtime: string): boolean {
 }
 
 export function getResolvedRouteConfig(
-  route: ConfigRoute,
+  route: RouteManifestEntry,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig | null>,
+  configs: Map<RouteManifestEntry, BaseFunctionConfig | null>,
   isHydrogen2: boolean
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
@@ -129,13 +125,16 @@ export function calculateRouteConfigHash(config: ResolvedRouteConfig): string {
 
 export function isLayoutRoute(
   routeId: string,
-  routes: Pick<ConfigRoute, 'id' | 'parentId'>[]
+  routes: Pick<RouteManifestEntry, 'id' | 'parentId'>[]
 ): boolean {
   return routes.some(r => r.parentId === routeId);
 }
 
-export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
-  let currentRoute: ConfigRoute = route;
+export function* getRouteIterator(
+  route: RouteManifestEntry,
+  routes: RouteManifest
+) {
+  let currentRoute: RouteManifestEntry = route;
   do {
     yield currentRoute;
     if (currentRoute.parentId) {
@@ -147,7 +146,7 @@ export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
 }
 
 export function getPathFromRoute(
-  route: ConfigRoute,
+  route: RouteManifestEntry,
   routes: RouteManifest
 ): ResolvedRoutePaths {
   if (
@@ -222,8 +221,7 @@ export async function chdirAndReadConfig(
   dir: string,
   packageJsonPath: string
 ) {
-  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
-    await import(join(remixRunDevPath, 'dist/config.js'));
+  const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
 
   const originalCwd = process.cwd();
 

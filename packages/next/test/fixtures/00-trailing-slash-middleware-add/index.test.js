@@ -25,7 +25,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       }
       `
     );
-    await require('../../utils').normalizeReactVersion(outputPath)
     ctx = await deployAndTest(outputPath);
   });
 

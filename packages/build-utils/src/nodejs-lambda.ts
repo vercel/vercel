@@ -4,6 +4,7 @@ interface NodejsLambdaOptions extends LambdaOptionsWithFiles {
   shouldAddHelpers: boolean;
   shouldAddSourcemapSupport: boolean;
   awsLambdaHandler?: string;
+  useWebApi?: boolean;
 }
 
 export class NodejsLambda extends Lambda {
@@ -11,11 +12,13 @@ export class NodejsLambda extends Lambda {
   shouldAddHelpers: boolean;
   shouldAddSourcemapSupport: boolean;
   awsLambdaHandler?: string;
+  useWebApi?: boolean;
 
   constructor({
     shouldAddHelpers,
     shouldAddSourcemapSupport,
     awsLambdaHandler,
+    useWebApi,
     ...opts
   }: NodejsLambdaOptions) {
     super(opts);
@@ -23,5 +26,6 @@ export class NodejsLambda extends Lambda {
     this.shouldAddHelpers = shouldAddHelpers;
     this.shouldAddSourcemapSupport = shouldAddSourcemapSupport;
     this.awsLambdaHandler = awsLambdaHandler;
+    this.useWebApi = useWebApi;
   }
 }

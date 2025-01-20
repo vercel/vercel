@@ -1,35 +1,30 @@
 {
-	"name": "sveltekit-2",
-	"version": "0.0.1",
-	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
-		"test": "playwright test",
-		"test:unit": "vitest",
-		"lint": "prettier --plugin-search-dir . --check . && eslint .",
-		"format": "prettier --plugin-search-dir . --write ."
-	},
-	"devDependencies": {
-		"@fontsource/fira-mono": "^4.5.10",
-		"@neoconfetti/svelte": "^1.0.0",
-		"@playwright/test": "^1.40.1",
-		"@sveltejs/adapter-vercel": "^3.1.0",
-		"@sveltejs/kit": "^1.30.3",
-		"@types/cookie": "^0.5.4",
-		"eslint": "^8.55.0",
-		"eslint-config-prettier": "^8.10.0",
-		"eslint-plugin-svelte": "^2.35.1",
-		"prettier": "^2.8.8",
-		"prettier-plugin-svelte": "^2.10.1",
-		"svelte": "^3.59.2",
-		"svelte-check": "^3.6.2",
-		"typescript": "^5.3.3",
-		"vite": "^4.5.1",
-		"vitest": "^0.25.8",
-		"web-vitals": "^3.5.0"
-	},
-	"type": "module"
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "package": "svelte-kit package",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./jsconfig.json",
+    "check:watch": "svelte-check --tsconfig ./jsconfig.json --watch",
+    "lint": "prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "1.0.0-next.65",
+    "@sveltejs/kit": "1.0.0-next.428",
+    "@types/cookie": "^0.5.1",
+    "prettier": "^2.6.2",
+    "prettier-plugin-svelte": "^2.7.0",
+    "svelte": "^3.46.0",
+    "svelte-check": "^2.7.1",
+    "typescript": "^4.7.4",
+    "vite": "^3.0.8"
+  },
+  "type": "module",
+  "dependencies": {
+    "@fontsource/fira-mono": "^4.5.0",
+    "cookie": "^0.4.1",
+    "web-vitals": "^2.1.4"
+  }
 }

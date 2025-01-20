@@ -1,7 +1,7 @@
 {
-  "name": "ionic-conference-app",
-  "type": "angular",
+  "name": "ionic-angular-2",
   "integrations": {
-    "cordova": {}
-  }
+    "capacitor": {}
+  },
+  "type": "angular"
 }

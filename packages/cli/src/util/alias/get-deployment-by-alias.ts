@@ -1,14 +1,13 @@
 import path from 'path';
 import chalk from 'chalk';
-import Client from '../client';
-import { Output } from '../output';
+import type Client from '../client';
 import type { User } from '@vercel-internals/types';
-import { VercelConfig } from '../dev/types';
+import type { VercelConfig } from '../dev/types';
 import getDeploymentsByAppName from '../deploy/get-deployments-by-appname';
 import getDeployment from '../get-deployment';
+import output from '../../output-manager';
 
 async function getAppLastDeployment(
-  output: Output,
   client: Client,
   appName: string,
   user: User,
@@ -30,7 +29,6 @@ async function getAppLastDeployment(
 
 export async function getDeploymentForAlias(
   client: Client,
-  output: Output,
   args: string[],
   localConfigPath: string | undefined,
   user: User,
@@ -58,13 +56,7 @@ export async function getDeploymentForAlias(
   }
 
   try {
-    return await getAppLastDeployment(
-      output,
-      client,
-      appName,
-      user,
-      contextName
-    );
+    return await getAppLastDeployment(client, appName, user, contextName);
   } finally {
     output.stopSpinner();
   }

@@ -1,16 +1,15 @@
 import semver from 'semver';
 import XDGAppPaths from 'xdg-app-paths';
 import { dirname, parse as parsePath, resolve as resolvePath } from 'path';
-import type { Output } from '../output';
 import { existsSync, outputJSONSync, readJSONSync } from 'fs-extra';
 import type { PackageJson } from '@vercel/build-utils';
 import { spawn } from 'child_process';
+import output from '../../output-manager';
 
 interface GetLatestVersionOptions {
   cacheDir?: string;
   distTag?: string;
   notifyInterval?: number;
-  output?: Output;
   pkg: PackageJson;
   updateCheckInterval?: number;
 }
@@ -33,14 +32,13 @@ interface GetLatestWorkerPayload {
  * detected version. The version could be stale, but still newer than the
  * current version.
  *
- * @returns {String|undefined} If a newer version is found, then the lastest
+ * @returns {String|undefined} If a newer version is found, then the latest
  * version, otherwise `undefined`.
  */
 export default function getLatestVersion({
   cacheDir = XDGAppPaths('com.vercel.cli').cache(),
   distTag = 'latest',
   notifyInterval = 1000 * 60 * 60 * 24 * 3, // 3 days
-  output,
   pkg,
   updateCheckInterval = 1000 * 60 * 60 * 24, // 1 day
 }: GetLatestVersionOptions): string | undefined {
@@ -69,20 +67,17 @@ export default function getLatestVersion({
     }
   }
 
-  if (!cache || !cache.expireAt || cache.expireAt < Date.now()) {
-    spawnWorker(
-      {
-        cacheFile,
-        distTag,
-        name: pkg.name,
-        updateCheckInterval,
-      },
-      output
-    );
+  if (!cache || !cache.expireAt || cache.expireAt <= Date.now()) {
+    spawnWorker({
+      cacheFile,
+      distTag,
+      name: pkg.name,
+      updateCheckInterval,
+    });
   }
 
   if (cache) {
-    const shouldNotify = !cache.notifyAt || cache.notifyAt < Date.now();
+    const shouldNotify = !cache.notifyAt || cache.notifyAt <= Date.now();
 
     let updateAvailable = false;
     if (cache.version && pkg.version) {
@@ -101,10 +96,7 @@ export default function getLatestVersion({
  * Spawn the worker, wait for the worker to report it's ready, then signal the
  * worker to fetch the latest version.
  */
-function spawnWorker(
-  payload: GetLatestWorkerPayload,
-  output: Output | undefined
-) {
+function spawnWorker(payload: GetLatestWorkerPayload) {
   // we need to find the update worker script since the location is
   // different based on production vs tests
   let dir = dirname(__filename);

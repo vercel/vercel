@@ -1,12 +1,11 @@
-import { Output } from '../output';
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import { readFile } from 'fs-extra';
 import { parseEnv } from '../parse-env';
 import chalk from 'chalk';
+import output from '../../output-manager';
 
 export async function createEnvObject(
-  envPath: string,
-  output: Output
+  envPath: string
 ): Promise<Dictionary<string | undefined> | undefined> {
   // Originally authored by Tyler Waters under MIT License: https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/lib/parse.js
   // https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/LICENSE

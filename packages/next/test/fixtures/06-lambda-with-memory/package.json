@@ -4,8 +4,8 @@
     "@types/node": "^12.12.56",
     "@types/react": "^16.9.49",
     "next": "canary",
-    "react": "19.0.0-rc-3208e73e-20240730",
-    "react-dom": "19.0.0-rc-3208e73e-20240730",
+    "react": "latest",
+    "react-dom": "latest",
     "typescript": "4.9.5"
   },
   "ignoreNextjsUpdates": true
