@@ -6,7 +6,7 @@ import {
 } from '../../../util/config/files';
 import { parseArguments } from '../../../util/get-args';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import handleError from '../../../util/handle-error';
+import { printError } from '../../../util/error';
 import { getCommandName } from '../../../util/pkg-name';
 import { help } from '../../help';
 import { logoutCommand } from './command';
@@ -14,9 +14,10 @@ import {
   revocationRequest,
   processRevocationResponse,
 } from '../../../util/oauth';
+import o from '../../../output-manager';
 
 export async function future(client: Client): Promise<number> {
-  const { output: o, config, authConfig } = client;
+  const { config, authConfig } = client;
 
   o.warn('This command is not ready yet. Do not use!');
 
@@ -26,7 +27,7 @@ export async function future(client: Client): Promise<number> {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
@@ -53,7 +54,7 @@ export async function future(client: Client): Promise<number> {
   const [revocationError] = await processRevocationResponse(revocationResponse);
 
   if (revocationError) {
-    handleError(revocationError);
+    printError(revocationError);
     return 1;
   }
 
@@ -71,7 +72,7 @@ export async function future(client: Client): Promise<number> {
     o.debug('Configuration has been deleted');
   } catch (err: unknown) {
     o.debug(errorToString(err));
-    o.error(`Failed during logout`);
+    o.error('Failed during logout');
     return 1;
   }
 

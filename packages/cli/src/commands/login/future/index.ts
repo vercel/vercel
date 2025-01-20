@@ -4,7 +4,7 @@ import * as open from 'open';
 import type Client from '../../../util/client';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import { parseArguments } from '../../../util/get-args';
-import handleError from '../../../util/handle-error';
+import { printError } from '../../../util/error';
 import { help } from '../../help';
 import { loginCommand } from './command';
 // import { updateCurrentTeamAfterLogin } from '../../../util/login/update-current-team-after-login';
@@ -23,10 +23,9 @@ import {
   processDeviceAccessTokenResponse,
   isOAuthError,
 } from '../../../util/oauth';
+import o from '../../../output-manager';
 
 export async function future(client: Client): Promise<number> {
-  const { output: o } = client;
-
   o.warn('This command is not ready yet. Do not use!');
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
@@ -38,7 +37,7 @@ export async function future(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
     if (!parsedArgs) throw new Error('Could not parse args');
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
@@ -62,7 +61,7 @@ export async function future(client: Client): Promise<number> {
     await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
 
   if (deviceAuthorizationError) {
-    handleError(deviceAuthorizationError);
+    printError(deviceAuthorizationError);
     return 1;
   }
 
@@ -195,6 +194,6 @@ export async function future(client: Client): Promise<number> {
 
   if (!error) return 0;
 
-  handleError(error);
+  printError(error);
   return 1;
 }

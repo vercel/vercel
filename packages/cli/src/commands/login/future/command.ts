@@ -3,6 +3,7 @@ import { packageName } from '../../../util/pkg-name';
 
 export const loginCommand = {
   name: 'login',
+  aliases: [],
   description: 'Authenticate the CLI.',
   arguments: [],
   options: [
