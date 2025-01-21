@@ -1,5 +1,20 @@
 # vercel
 
+## 39.3.0
+
+### Minor Changes
+
+- [cli] add compile cache to improve startup performance ([#12783](https://github.com/vercel/vercel/pull/12783))
+
+### Patch Changes
+
+- [cli] standardizes uses of confirm on confirm.ts ([#12834](https://github.com/vercel/vercel/pull/12834))
+
+- [cli] sort imports in build/index.ts ([#12833](https://github.com/vercel/vercel/pull/12833))
+
+- Updated dependencies [[`5fea2c49103adf6f7153f04378bff6f571375b0e`](https://github.com/vercel/vercel/commit/5fea2c49103adf6f7153f04378bff6f571375b0e)]:
+  - @vercel/python@4.7.0
+
 ## 39.2.6
 
 ### Patch Changes

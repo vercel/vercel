@@ -2,7 +2,6 @@ import { bold } from 'chalk';
 import doSamlLogin from './saml';
 import showLoginPrompt from './prompt';
 import type { LoginResult, SAMLError } from './types';
-import confirm from '../input/confirm';
 import type Client from '../client';
 import output from '../../output-manager';
 
@@ -15,7 +14,7 @@ export default async function reauthenticate(
     output.log(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
     );
-    if (await confirm(client, `Log in with SAML?`, true)) {
+    if (await client.input.confirm(`Log in with SAML?`, true)) {
       return doSamlLogin(client, error.teamId);
     }
   } else {

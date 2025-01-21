@@ -6,7 +6,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
-import confirm from '../../util/input/confirm';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { removeIntegration } from '../../util/integration/remove-integration';
 import { removeSubcommand } from './command';
@@ -102,5 +101,5 @@ async function confirmIntegrationRemoval(
   output.log(
     `The ${chalk.bold(integration)} integration will be removed permanently from team ${chalk.bold(team.name)}.`
   );
-  return confirm(client, `${chalk.red('Are you sure?')}`, false);
+  return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
 }

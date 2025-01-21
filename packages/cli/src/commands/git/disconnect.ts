@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import confirm from '../../util/input/confirm';
+
 import { getCommandName } from '../../util/pkg-name';
 import { disconnectGitProvider } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
@@ -64,8 +64,7 @@ export default async function disconnect(client: Client, argv: string[]) {
     );
     const confirmDisconnect =
       autoConfirm ||
-      (await confirm(
-        client,
+      (await client.input.confirm(
         `Are you sure you want to disconnect ${chalk.cyan(
           `${linkOrg}/${repo}`
         )} from your project?`,

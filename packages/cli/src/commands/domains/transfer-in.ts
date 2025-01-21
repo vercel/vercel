@@ -8,7 +8,6 @@ import stamp from '../../util/output/stamp';
 import getAuthCode from '../../util/domains/get-auth-code';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import checkTransfer from '../../util/domains/check-transfer';
-import confirm from '../../util/input/confirm';
 import isRootDomain from '../../util/is-root-domain';
 import { getCommandName } from '../../util/pkg-name';
 import { DomainsTransferInTelemetryClient } from '../../util/telemetry/commands/domains/transfer-in';
@@ -84,8 +83,7 @@ export default async function transferIn(client: Client, argv: string[]) {
 
   const authCode = await getAuthCode(client, opts['--code']);
 
-  const shouldTransfer = await confirm(
-    client,
+  const shouldTransfer = await client.input.confirm(
     transferPolicy === 'no-change'
       ? `Transfer now for ${chalk.bold(`$${price}`)}?`
       : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,

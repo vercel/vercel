@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+/dist
 
 # misc
 .DS_Store
@@ -17,10 +17,16 @@
 .env.development.local
 .env.test.local
 .env.production.local
-.vscode
+/.nx
+/.nx/cache
+/.vscode/*
+!/.vscode/extensions.json
+.idea
 
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Optional eslint cache
+.eslintcache
 .vercel

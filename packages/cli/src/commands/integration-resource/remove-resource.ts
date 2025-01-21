@@ -6,7 +6,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
-import confirm from '../../util/input/confirm';
 import { deleteResource as _deleteResource } from '../../util/integration-resource/delete-resource';
 import { getResources } from '../../util/integration-resource/get-resources';
 import {
@@ -144,5 +143,5 @@ async function confirmDeleteResource(
   resource: Resource
 ): Promise<boolean> {
   output.log(`${chalk.bold(resource.name)} will be deleted permanently.`);
-  return confirm(client, `${chalk.red('Are you sure?')}`, false);
+  return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
 }
