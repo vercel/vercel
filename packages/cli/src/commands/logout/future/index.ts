@@ -19,7 +19,7 @@ import o from '../../../output-manager';
 export async function future(client: Client): Promise<number> {
   const { config, authConfig } = client;
 
-  o.warn('This command is not ready yet. Do not use!');
+  o.warn('This feature is under active development. Do not use!');
 
   const flagsSpecification = getFlagsSpecification(logoutCommand.options);
 

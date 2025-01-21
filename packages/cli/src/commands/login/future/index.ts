@@ -7,7 +7,7 @@ import { parseArguments } from '../../../util/get-args';
 import { printError } from '../../../util/error';
 import { help } from '../../help';
 import { loginCommand } from './command';
-// import { updateCurrentTeamAfterLogin } from '../../../util/login/update-current-team-after-login';
+import { updateCurrentTeamAfterLogin } from '../../../util/login/update-current-team-after-login';
 import {
   writeToAuthConfigFile,
   writeToConfigFile,
@@ -26,7 +26,7 @@ import {
 import o from '../../../output-manager';
 
 export async function future(client: Client): Promise<number> {
-  o.warn('This command is not ready yet. Do not use!');
+  o.warn('This feature is under active development. Do not use!');
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
 
@@ -143,47 +143,38 @@ export async function future(client: Client): Promise<number> {
           default:
             return tokenError.cause;
         }
-      } else if (tokenError) {
-        return tokenError;
-      } else if (token) {
-        // Save the user's authentication token to the configuration file.
-        client.authConfig.token = token.access_token;
-        error = undefined;
-        // TODO: Decide on what to do with the refresh_token
+      }
 
-        // TODO: What to do here? The response has no `teamId`
-        // if (token.teamId) {
-        //   client.config.currentTeam = token.teamId;
-        // } else {
-        //   delete client.config.currentTeam;
-        // }
+      if (tokenError) return tokenError;
 
-        // // If we have a brand new login, update `currentTeam`
-        // user is not currently authenticated on this machine
-        // const isInitialLogin = !client.authConfig.token;
-        // if (isInitialLogin) {
-        //   await updateCurrentTeamAfterLogin(
-        //     client,
-        //     o,
-        //     client.config.currentTeam
-        //   );
-        // }
+      // user is not currently authenticated on this machine
+      const isInitialLogin = !client.authConfig.token;
 
-        writeToAuthConfigFile(client.authConfig);
-        writeToConfigFile(client.config);
+      // Save the user's authentication token to the configuration file.
+      client.authConfig.token = token.access_token;
+      error = undefined;
 
-        o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+      const { team_id } = await jwtVerify(token.access_token);
+      if (team_id) client.config.currentTeam = team_id;
+      else delete client.config.currentTeam;
 
-        o.print(`
+      // If we have a brand new login, update `currentTeam`
+      if (isInitialLogin) {
+        await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
+      }
+
+      writeToAuthConfigFile(client.authConfig);
+      writeToConfigFile(client.config);
+
+      o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+      o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in. In order to deploy something, run ${getCommandName()}.
 
   ${prependEmoji(
     `Connect your Git Repositories to deploy every branch push automatically (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).`,
     emoji('tip')
   )}\n`);
-
-        return;
-      }
     }
   }
 
@@ -196,4 +187,8 @@ export async function future(client: Client): Promise<number> {
 
   printError(error);
   return 1;
+}
+
+function jwtVerify(token: string): Promise<{ team_id?: string }> {
+  throw new Error('Not implemented');
 }
