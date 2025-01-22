@@ -22,6 +22,7 @@ import {
   deviceAccessTokenRequest,
   processDeviceAccessTokenResponse,
   isOAuthError,
+  verifyJWT,
 } from '../../../util/oauth';
 import o from '../../../output-manager';
 
@@ -143,6 +144,7 @@ export async function future(client: Client): Promise<number> {
           default:
             return tokenError.cause;
         }
+        break;
       }
 
       if (tokenError) return tokenError;
@@ -154,9 +156,14 @@ export async function future(client: Client): Promise<number> {
       client.authConfig.token = token.access_token;
       error = undefined;
 
-      const { team_id } = await jwtVerify(token.access_token);
-      if (team_id) client.config.currentTeam = team_id;
-      else delete client.config.currentTeam;
+      const { team_id } = await verifyJWT(token.access_token);
+      o.debug('access_token verified');
+
+      if (team_id) {
+        client.config.currentTeam = team_id;
+      } else {
+        delete client.config.currentTeam;
+      }
 
       // If we have a brand new login, update `currentTeam`
       if (isInitialLogin) {
@@ -175,6 +182,8 @@ export async function future(client: Client): Promise<number> {
     `Connect your Git Repositories to deploy every branch push automatically (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).`,
     emoji('tip')
   )}\n`);
+
+      return;
     }
   }
 
@@ -187,8 +196,4 @@ export async function future(client: Client): Promise<number> {
 
   printError(error);
   return 1;
-}
-
-function jwtVerify(token: string): Promise<{ team_id?: string }> {
-  throw new Error('Not implemented');
 }

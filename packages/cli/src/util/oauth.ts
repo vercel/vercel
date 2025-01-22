@@ -1,4 +1,5 @@
 import fetch, { type Response } from 'node-fetch';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 // https://vercel.com/.well-known/openid-configuration
 export const as: {
@@ -6,6 +7,7 @@ export const as: {
   device_authorization_endpoint: URL;
   token_endpoint: URL;
   revocation_endpoint: URL;
+  jwks_uri: URL;
 } = {
   client_id: '', // TODO: Embed client_id
   revocation_endpoint: new URL(
@@ -15,6 +17,7 @@ export const as: {
     'https://vercel.com/api/login/oauth/device-authorization'
   ),
   token_endpoint: new URL('https://vercel.com/api/login/oauth/token'),
+  jwks_uri: new URL('https://vercel.com/api/login/oauth/jwks'),
 };
 
 /**
@@ -292,4 +295,14 @@ function canParseURL(url: string) {
   } catch {
     return false;
   }
+}
+
+const JWKS = createRemoteJWKSet(as.jwks_uri);
+
+export async function verifyJWT(token: string) {
+  const { payload } = await jwtVerify<{ team_id?: string }>(token, JWKS, {
+    issuer: 'https://vercel.com',
+    audience: ['https://api.vercel.com', 'https://vercel.com/api'],
+  });
+  return payload;
 }
