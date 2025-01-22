@@ -496,7 +496,7 @@ export const build: BuildV2 = async buildOptions => {
     ));
   } else if (buildScriptName) {
     ({ executionTime: buildExecutionTime } = await measureExecTime(() =>
-      runPackageJsonScript(entryPath, buildScriptName, {
+      runPackageJsonScript(entryPath, buildScriptName as string, {
         ...spawnOpts,
         env,
       })
