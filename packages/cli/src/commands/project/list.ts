@@ -83,9 +83,7 @@ export default async function list(
       // If there are scenarios where we will be deprecating a version
       // without knowing the discontinue date
       // Then we'll want to consider adding a `deprecationDate` field to the nodeVersion type
-      const upcomingDiscontinueDate =
-        nodeVersion.state === 'deprecated' &&
-        nodeVersion.discontinueDate.valueOf() > Date.now();
+      const upcomingDiscontinueDate = nodeVersion.state === 'deprecated';
       if (upcomingDiscontinueDate) {
         upcomingDiscontinuedVersionsList.push(nodeVersion.range);
       }
