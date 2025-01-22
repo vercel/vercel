@@ -260,6 +260,10 @@ type RoutesManifestOld = {
     didPostponeHeader?: string;
     contentTypeHeader: string;
   };
+  rewriteHeaders?: {
+    pathHeader: string;
+    queryHeader: string;
+  };
   skipMiddlewareUrlNormalize?: boolean;
   /**
    * Configuration related to Partial Prerendering.
