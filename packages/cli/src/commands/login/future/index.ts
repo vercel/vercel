@@ -47,7 +47,7 @@ export async function future(client: Client): Promise<number> {
     return 2;
   }
 
-  const scope = parsedArgs.flags['--scope']?.valueOf();
+  const scope = parsedArgs.flags['--scope']?.valueOf() ?? 'openid';
   o.debug(`Requesting scopes: ${scope?.split(' ').join(', ') ?? 'none'}`);
 
   const deviceAuthorizationResponse = await deviceAuthorizationRequest({
@@ -134,17 +134,16 @@ export async function future(client: Client): Promise<number> {
         const { code } = tokenError;
         switch (code) {
           case 'authorization_pending':
-            break;
+            continue;
           case 'slow_down':
             intervalMs += 5 * 1000;
             o.debug(
               `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
             );
-            break;
+            continue;
           default:
             return tokenError.cause;
         }
-        break;
       }
 
       if (tokenError) return tokenError;
@@ -160,8 +159,10 @@ export async function future(client: Client): Promise<number> {
       o.debug('access_token verified');
 
       if (team_id) {
+        o.debug('Current team updated');
         client.config.currentTeam = team_id;
       } else {
+        o.debug('Current team deleted');
         delete client.config.currentTeam;
       }
 
