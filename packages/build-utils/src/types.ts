@@ -455,8 +455,12 @@ export interface ExecutionTime {
 }
 
 export interface Metrics {
-  install?: ExecutionTime;
-  build?: ExecutionTime;
+  install: {
+    duration?: ExecutionTime;
+  };
+  build: {
+    duration?: ExecutionTime;
+  };
 }
 
 /**

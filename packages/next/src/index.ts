@@ -2354,8 +2354,12 @@ export const build: BuildV2 = async buildOptions => {
       ...privateOutputs.files,
     },
     metrics: {
-      install: installExecutionTime,
-      build: buildExecutionTime,
+      install: {
+        duration: installExecutionTime,
+      },
+      build: {
+        duration: buildExecutionTime,
+      },
     },
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
