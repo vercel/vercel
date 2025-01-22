@@ -2483,6 +2483,27 @@ export async function serverBuild({
           ]
         : []),
 
+      // When PPR is not enabled but client segment cache is, then rewrite any
+      // segment prefetches to a regular RSC route.
+      ...(isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix &&
+      !isAppPPREnabled
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join('/', entryDirectory, `/$path.rsc`),
+              check: true,
+            },
+          ]
+        : []),
+
       // routes to call after a file has been matched
       { handle: 'hit' },
       // Before we handle static files we need to set proper caching headers
