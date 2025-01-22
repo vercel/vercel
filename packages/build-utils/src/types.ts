@@ -324,33 +324,51 @@ export interface PackageJson {
   readonly packageManager?: string;
 }
 
-interface BaseNodeVersion {
+export interface ConstructorVersion {
   /** major version number: 18 */
   major: number;
+  /** minor version number: 18 */
+  minor?: number;
   /** major version range: "18.x" */
   range: string;
   /** runtime descriptor: "nodejs18.x" */
   runtime: string;
+  discontinueDate?: Date;
 }
 
-export interface ActiveNodeVersion extends BaseNodeVersion {
-  state: 'active';
+interface BaseVersion extends ConstructorVersion {
+  state: 'active' | 'deprecated' | 'discontinued';
 }
 
-export interface DeprecatedNodeVersion extends BaseNodeVersion {
-  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
-  discontinueDate: Date;
-  state: 'deprecated';
+export class Version implements BaseVersion {
+  major: number;
+  minor?: number;
+  range: string;
+  runtime: string;
+  discontinueDate?: Date;
+  constructor(version: ConstructorVersion) {
+    this.major = version.major;
+    this.minor = version.minor;
+    this.range = version.range;
+    this.runtime = version.runtime;
+    this.discontinueDate = version.discontinueDate;
+  }
+  get state() {
+    if (this.discontinueDate && this.discontinueDate.getTime() <= Date.now()) {
+      return 'discontinued';
+    } else if (this.discontinueDate) {
+      return 'deprecated';
+    }
+    return 'active';
+  }
+  get formattedDate() {
+    return (
+      this.discontinueDate && this.discontinueDate.toISOString().split('T')[0]
+    );
+  }
 }
 
-export interface DiscontinuedNodeVersion extends BaseNodeVersion {
-  state: 'discontinued';
-}
-
-export type NodeVersion =
-  | ActiveNodeVersion
-  | DeprecatedNodeVersion
-  | DiscontinuedNodeVersion;
+export class NodeVersion extends Version {}
 
 export interface Builder {
   use: string;

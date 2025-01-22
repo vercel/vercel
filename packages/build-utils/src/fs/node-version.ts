@@ -7,45 +7,51 @@ import debug from '../debug';
 export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 
 export const NODE_VERSIONS: NodeVersion[] = [
-  { major: 22, range: '22.x', runtime: 'nodejs22.x', state: 'active' },
-  { major: 20, range: '20.x', runtime: 'nodejs20.x', state: 'active' },
-  {
+  new NodeVersion({
+    major: 22,
+    range: '22.x',
+    runtime: 'nodejs22.x',
+  }),
+  new NodeVersion({
+    major: 20,
+    range: '20.x',
+    runtime: 'nodejs20.x',
+  }),
+  new NodeVersion({
     major: 18,
     range: '18.x',
     runtime: 'nodejs18.x',
-    state: 'active',
-  },
-  {
+  }),
+  new NodeVersion({
     major: 16,
     range: '16.x',
     runtime: 'nodejs16.x',
-    state: 'deprecated',
     discontinueDate: new Date('2025-01-31'),
-  },
-  {
+  }),
+  new NodeVersion({
     major: 14,
     range: '14.x',
     runtime: 'nodejs14.x',
-    state: 'discontinued',
-  },
-  {
+    discontinueDate: new Date('2023-08-15'),
+  }),
+  new NodeVersion({
     major: 12,
     range: '12.x',
     runtime: 'nodejs12.x',
-    state: 'discontinued',
-  },
-  {
+    discontinueDate: new Date('2022-10-03'),
+  }),
+  new NodeVersion({
     major: 10,
     range: '10.x',
     runtime: 'nodejs10.x',
-    state: 'discontinued',
-  },
-  {
+    discontinueDate: new Date('2021-04-20'),
+  }),
+  new NodeVersion({
     major: 8,
     range: '8.10.x',
     runtime: 'nodejs8.10',
-    state: 'discontinued',
-  },
+    discontinueDate: new Date('2020-01-06'),
+  }),
 ];
 
 function getOptions() {
@@ -93,7 +99,9 @@ export function getLatestNodeVersion(availableVersions?: NodeVersionMajor[]) {
 }
 
 export function getDiscontinuedNodeVersions(): NodeVersion[] {
-  return getOptions().filter(isDiscontinued);
+  return getOptions().filter(version => {
+    return version.state === 'discontinued';
+  });
 }
 
 export async function getSupportedNodeVersion(
@@ -133,7 +141,7 @@ export async function getSupportedNodeVersion(
     selection = getLatestNodeVersion(availableVersions);
   }
 
-  if (isDiscontinued(selection)) {
+  if (selection.state === 'discontinued') {
     const intro = `Node.js Version "${selection.range}" is discontinued and must be upgraded.`;
     throw new NowBuildError({
       code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
@@ -145,30 +153,25 @@ export async function getSupportedNodeVersion(
   debug(`Selected Node.js ${selection.range}`);
 
   if (selection.state === 'deprecated') {
-    const d = selection.discontinueDate.toISOString().split('T')[0];
-    console.warn(
-      `Error: Node.js version ${
-        selection.range
-      } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
-        isAuto
-      )}`
-    );
-  } else if (selection.state === 'discontinued') {
-    console.warn(
-      `Error: Node.js version ${
-        selection.range
-      } is discontinued. Deployments will fail to build. ${getHint(isAuto)}`
-    );
+    const d = selection.formattedDate;
+    // formattedDate should never be undefined because the check for deprecated
+    // expects that discontinueDate is set but this check is done for completeness
+    if (d) {
+      console.warn(
+        `Error: Node.js version ${
+          selection.range
+        } is deprecated. Deployments created on or after ${d} will fail to build. ${getHint(
+          isAuto
+        )}`
+      );
+    } else {
+      console.warn(
+        `Error: Node.js version ${selection.range} is deprecated. ${getHint(
+          isAuto
+        )}`
+      );
+    }
   }
 
   return selection;
-}
-
-function isDiscontinued(nodeVersion: NodeVersion): boolean {
-  const today = Date.now();
-  return (
-    nodeVersion.state === 'discontinued' ||
-    (nodeVersion.state === 'deprecated' &&
-      nodeVersion.discontinueDate.getTime() <= today)
-  );
 }
