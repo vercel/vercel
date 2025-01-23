@@ -8,11 +8,11 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "browser": "./edge/index.js",
       "default": "./index.js"
     },
     "./entry.server": {
       "types": "./entry.server.d.ts",
+      "edge": "./edge/entry.server.js",
       "default": "./entry.server.js"
     },
     "./vite": {
