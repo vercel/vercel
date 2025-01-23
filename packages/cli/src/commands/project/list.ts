@@ -114,14 +114,18 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
-        ),
+        [
+          'Project Name',
+          'Latest Production URL',
+          'Updated',
+          'Node Version',
+        ].map(header => chalk.bold(chalk.cyan(header))),
         ...projectList.flatMap(project => [
           [
             chalk.bold(project.name),
             getLatestProdUrl(project),
             chalk.gray(ms(Date.now() - project.updatedAt)),
+            project.nodeVersion ?? '',
           ],
         ]),
       ],
