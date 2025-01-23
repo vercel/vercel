@@ -1,10 +1,12 @@
 import { isbot } from 'isbot';
+import { createElement } from 'react';
 import {
   renderToReadableStream,
   type RenderToReadableStreamOptions,
   type RenderToPipeableStreamOptions,
 } from 'react-dom/server';
-import type { ReactNode } from 'react';
+import { ServerRouter } from 'react-router';
+import type { AppLoadContext, EntryContext } from 'react-router';
 
 export type RenderOptions = {
   [K in keyof RenderToReadableStreamOptions &
@@ -15,17 +17,21 @@ export async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  router: ReactNode,
+  routerContext: EntryContext,
+  _loadContext?: AppLoadContext,
   options?: RenderOptions
 ): Promise<Response> {
-  const body = await renderToReadableStream(router, {
-    ...options,
-    signal: request.signal,
-    onError(error) {
-      console.error(error);
-      responseStatusCode = 500;
-    },
-  });
+  const body = await renderToReadableStream(
+    createElement(ServerRouter, { context: routerContext, url: request.url }),
+    {
+      ...options,
+      signal: request.signal,
+      onError(error) {
+        console.error(error);
+        responseStatusCode = 500;
+      },
+    }
+  );
 
   if (isbot(request.headers.get('user-agent'))) {
     await body.allReady;

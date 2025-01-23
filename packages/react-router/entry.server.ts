@@ -1,14 +1,17 @@
 import { PassThrough } from 'node:stream';
-import { isbot } from 'isbot';
-import {
-  renderToPipeableStream,
-  type RenderToReadableStreamOptions,
-  type RenderToPipeableStreamOptions,
-} from 'react-dom/server';
-import { createReadableStreamFromReadable } from '@react-router/node';
-import type { ReactNode } from 'react';
 
-const ABORT_DELAY = 5000;
+import { createElement } from 'react';
+import { createReadableStreamFromReadable } from '@react-router/node';
+import { isbot } from 'isbot';
+import { renderToPipeableStream } from 'react-dom/server';
+import { ServerRouter } from 'react-router';
+import type { AppLoadContext, EntryContext } from 'react-router';
+import type {
+  RenderToPipeableStreamOptions,
+  RenderToReadableStreamOptions,
+} from 'react-dom/server';
+
+export const streamTimeout = 5_000;
 
 export type RenderOptions = {
   [K in keyof RenderToReadableStreamOptions &
@@ -19,86 +22,59 @@ export function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  router: ReactNode,
-  options?: RenderOptions
-): Promise<Response> {
-  // If the request is from a bot, we want to wait for the full
-  // response to render before sending it to the client. This
-  // ensures that bots can see the full page content.
-  if (isbot(request.headers.get('user-agent'))) {
-    return serveTheBots(responseStatusCode, responseHeaders, router, options);
-  }
-
-  return serveBrowsers(responseStatusCode, responseHeaders, router, options);
-}
-
-function serveTheBots(
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  router: ReactNode,
+  routerContext: EntryContext,
+  _loadContext?: AppLoadContext,
   options?: RenderOptions
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
-    const { pipe, abort } = renderToPipeableStream(router, {
-      ...options,
+    let shellRendered = false;
+    const userAgent = request.headers.get('user-agent');
 
-      // Use onAllReady to wait for the entire document to be ready
-      onAllReady() {
-        responseHeaders.set('Content-Type', 'text/html');
-        const body = new PassThrough();
-        const stream = createReadableStreamFromReadable(body);
+    // Ensure requests from bots and SPA Mode renders wait for all content to load before responding
+    // https://react.dev/reference/react-dom/server/renderToPipeableStream#waiting-for-all-content-to-load-for-crawlers-and-static-generation
+    const readyOption: keyof RenderToPipeableStreamOptions =
+      (userAgent && isbot(userAgent)) || routerContext.isSpaMode
+        ? 'onAllReady'
+        : 'onShellReady';
 
-        resolve(
-          new Response(stream, {
-            status: responseStatusCode,
-            headers: responseHeaders,
-          })
-        );
+    const { pipe, abort } = renderToPipeableStream(
+      createElement(ServerRouter, { context: routerContext, url: request.url }),
+      {
+        ...options,
 
-        pipe(body);
-      },
-      onShellError(err) {
-        reject(err);
-      },
-    });
-    setTimeout(abort, ABORT_DELAY);
-  });
-}
+        [readyOption]() {
+          shellRendered = true;
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
 
-function serveBrowsers(
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  router: ReactNode,
-  options?: RenderOptions
-): Promise<Response> {
-  return new Promise((resolve, reject) => {
-    let didError = false;
-    const { pipe, abort } = renderToPipeableStream(router, {
-      ...options,
+          responseHeaders.set('Content-Type', 'text/html');
 
-      // use onShellReady to wait until a suspense boundary is triggered
-      onShellReady() {
-        responseHeaders.set('Content-Type', 'text/html');
-        const body = new PassThrough();
-        const stream = createReadableStreamFromReadable(body);
+          resolve(
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
+          );
 
-        resolve(
-          new Response(stream, {
-            status: didError ? 500 : responseStatusCode,
-            headers: responseHeaders,
-          })
-        );
+          pipe(body);
+        },
+        onShellError(error: unknown) {
+          reject(error);
+        },
+        onError(error: unknown) {
+          responseStatusCode = 500;
+          // Log streaming rendering errors from inside the shell.  Don't log
+          // errors encountered during initial shell rendering since they'll
+          // reject and get logged in handleDocumentRequest.
+          if (shellRendered) {
+            console.error(error);
+          }
+        },
+      }
+    );
 
-        pipe(body);
-      },
-      onShellError(err) {
-        reject(err);
-      },
-      onError(err) {
-        didError = true;
-        console.error(err);
-      },
-    });
-    setTimeout(abort, ABORT_DELAY);
+    // Abort the rendering stream after the `streamTimeout` so it has time to
+    // flush down the rejected boundaries
+    setTimeout(abort, streamTimeout + 1000);
   });
 }
