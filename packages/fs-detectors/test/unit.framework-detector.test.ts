@@ -465,6 +465,12 @@ describe('detectFramework()', () => {
 
     expect(await detectFramework({ fs, frameworkList })).toBe('remix');
   });
+
+  it('Should detect Vite + Ionic React as `vite`', async () => {
+    const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'ionic-react'));
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('vite');
+  });
 });
 
 describe('detectFrameworks()', () => {

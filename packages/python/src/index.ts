@@ -229,6 +229,7 @@ export const build: BuildV3 = async ({
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
     environment: {},
+    supportsResponseStreaming: true,
   });
 
   return { output };
