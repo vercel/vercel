@@ -22,7 +22,11 @@ export async function handleRequest(
   options?: RenderOptions
 ): Promise<Response> {
   const body = await renderToReadableStream(
-    createElement(ServerRouter, { context: routerContext, url: request.url }),
+    createElement(ServerRouter, {
+      context: routerContext,
+      url: request.url,
+      nonce: options?.nonce,
+    }),
     {
       ...options,
       signal: request.signal,

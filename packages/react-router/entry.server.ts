@@ -38,7 +38,11 @@ export function handleRequest(
         : 'onShellReady';
 
     const { pipe, abort } = renderToPipeableStream(
-      createElement(ServerRouter, { context: routerContext, url: request.url }),
+      createElement(ServerRouter, {
+        context: routerContext,
+        url: request.url,
+        nonce: options?.nonce,
+      }),
       {
         ...options,
 
