@@ -255,7 +255,12 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          matchPackage: 'react-router',
+          path: 'vite.config.js',
+          matchContent: '@react-router/dev/vite',
+        },
+        {
+          path: 'vite.config.ts',
+          matchContent: '@react-router/dev/vite',
         },
         {
           path: 'react-router.config.js',
