@@ -241,7 +241,8 @@ export const frameworks = [
   {
     name: 'React Router',
     slug: 'react-router',
-    demo: 'https://react-router-template.vercel.app',
+    // TODO: uncomment this after "react-router" template is added
+    //demo: 'https://react-router-v7-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/react-router.svg',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/react-router-dark.svg',
