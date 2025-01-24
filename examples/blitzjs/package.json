@@ -1,5 +1,5 @@
 {
-  "name": "my-app-name",
+  "name": "blitzjs",
   "version": "1.0.0",
   "scripts": {
     "dev": "blitz dev",
