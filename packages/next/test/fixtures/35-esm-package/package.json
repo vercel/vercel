@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "https://files-aigquqgch-vtest314-ijjk-testing.vercel.app/next-15.2.0-canary.25.tgz",
+    "next": "https://files-avw4s5tj8-vtest314-ijjk-testing.vercel.app/next-15.2.0-canary.25.tgz",
     "react": "latest",
     "react-dom": "latest"
   },
