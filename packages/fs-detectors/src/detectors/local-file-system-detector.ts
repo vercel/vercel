@@ -47,7 +47,8 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
         } else if (stat.isDirectory()) {
           type = 'dir';
         } else {
-          throw new Error(`Dirent was neither file nor directory: ${path}`);
+          // could be socket, fifo, block device, or character device
+          type = 'other';
         }
 
         return { name, path, type };
