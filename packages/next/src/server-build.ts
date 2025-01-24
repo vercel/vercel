@@ -1941,18 +1941,17 @@ export async function serverBuild({
                     },
                     continue: true,
                   },
+                  {
+                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}`,
+                    continue: true,
+                  },
                 ]
               : []),
-
-            {
-              src: `^${path.posix.join('/', entryDirectory)}$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}`,
-              continue: true,
-            },
 
             // Auto-prefix non-locale path with default locale
             // note for prerendered pages this will cause
