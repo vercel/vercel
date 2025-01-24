@@ -11,21 +11,18 @@ web_modules/
 /.blitz/
 /.next/
 *.sqlite
+*.sqlite-journal
 .now
-.vercel
-.blitz-console-history
+.blitz**
 blitz-log.log
 
 # misc
 .DS_Store
 
 # local env files
-.env
-.envrc
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+.envrc
 
 # Logs
 logs
@@ -38,7 +35,7 @@ pids
 *.pid.lock
 
 # Testing
-coverage
+.coverage
 *.lcov
 .nyc_output
 lib-cov
@@ -54,3 +51,4 @@ lib-cov
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vercel
