@@ -1950,29 +1950,28 @@ export async function serverBuild({
                     )}`,
                     continue: true,
                   },
+                  // Auto-prefix non-locale path with default locale
+                  // note for prerendered pages this will cause
+                  // x-now-route-matches to contain the path minus the locale
+                  // e.g. for /de/posts/[slug] x-now-route-matches would have
+                  // 1=posts%2Fpost-1
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?!(?:_next/.*|${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(?:/.*|$))(.*)$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}/$1`,
+                    continue: true,
+                  },
                 ]
               : []),
-
-            // Auto-prefix non-locale path with default locale
-            // note for prerendered pages this will cause
-            // x-now-route-matches to contain the path minus the locale
-            // e.g. for /de/posts/[slug] x-now-route-matches would have
-            // 1=posts%2Fpost-1
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                '/'
-              )}(?!(?:_next/.*|${i18n.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})(?:/.*|$))(.*)$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}/$1`,
-              continue: true,
-            },
           ]
         : []),
 
