@@ -83,37 +83,110 @@ interface ReactRouterBuildResult extends BuildResultBase {
 
 type BuildResult = RemixBuildResult | ReactRouterBuildResult;
 
-interface BuilderInfo {
-  packageName: string;
-  buildCommand: string;
-  buildResultPath: string;
+interface RenderFunctionOptions {
+  nodeVersion: NodeVersion;
+  entrypointDir: string;
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint: string | undefined;
+  frameworkVersion: string;
+  config: /*TODO: ResolvedNodeRouteConfig*/ any;
 }
 
-class ReactRouterInfo implements BuilderInfo {
-  get packageName() {
-    return 'react-router';
+abstract class FrameworkSettings {
+  static configFileName: string;
+  static primaryPackageName: string;
+  static buildCommand: string;
+  static buildResultFilePath: string;
+
+  static createVariantFrameworkSettings(workPath: string) {
+    const isReactRouter = findConfig(
+      workPath,
+      ReactRouterFrameworkSettings.configFileName,
+      ['.js', '.ts', '.mjs', '.mts']
+    );
+
+    if (isReactRouter) {
+      return ReactRouterFrameworkSettings;
+    }
+
+    return RemixFrameworkSettings;
   }
 
-  get buildCommand() {
-    return 'react-router build';
-  }
-
-  get buildResultPath() {
-    return '.vercel/react-router-build-result.json';
+  createRenderFunction(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    options: RenderFunctionOptions
+  ): Promise<EdgeFunction | NodejsLambda> {
+    throw new Error('FrameworkSettings#createReanderFunction not implemented');
   }
 }
 
-class RemixRunInfo implements BuilderInfo {
-  get packageName() {
-    return '@remix-run/dev';
+class RemixFrameworkSettings extends FrameworkSettings {
+  static primaryPackageName = '@remix-run/dev';
+  static buildCommand = 'remix build';
+  static buildResultFilePath = '.vercel/remix-build-result.json';
+  static configFileName = ''; // TODO
+
+  static createRenderFunction({
+    nodeVersion,
+    entrypointDir,
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    frameworkVersion,
+    config,
+  }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
+    if (config.runtime === 'edge') {
+      return createRenderEdgeFunction(
+        entrypointDir,
+        rootDir,
+        serverBuildPath,
+        serverEntryPoint,
+        frameworkVersion,
+        config
+      );
+    }
+
+    return createRenderNodeFunction(
+      nodeVersion,
+      entrypointDir,
+      rootDir,
+      serverBuildPath,
+      serverEntryPoint,
+      frameworkVersion,
+      config
+    );
   }
 
-  get buildCommand() {
-    return 'remix build';
-  }
+  // TODO: pull in the implementations for:
+  // - `createRenderEdgeFunction`
+  // - `createRenderNodeFunction`
+}
 
-  get buildResultPath() {
-    return '.vercel/remix-build-result.json';
+class ReactRouterFrameworkSettings extends FrameworkSettings {
+  static configFileName = 'react-router.config';
+  static primaryPackageName = 'react-router';
+  static buildCommand = 'react-router build';
+  static buildResultFilePath = '.vercel/react-router-build-result.json';
+
+  static createRenderFunction({
+    nodeVersion,
+    entrypointDir,
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    frameworkVersion,
+    config,
+  }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
+    return createRenderReactRouterFunction(
+      nodeVersion,
+      entrypointDir,
+      rootDir,
+      serverBuildPath,
+      serverEntryPoint,
+      frameworkVersion,
+      config
+    );
   }
 }
 
@@ -128,16 +201,8 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
-  // Determine if this is a React Router project
-  const isReactRouter = findConfig(workPath, 'react-router.config', [
-    '.js',
-    '.ts',
-    '.mjs',
-    '.mts',
-  ]);
-  const builderInfo = isReactRouter
-    ? new ReactRouterInfo()
-    : new RemixRunInfo();
+  const frameworkSettings =
+    FrameworkSettings.createVariantFrameworkSettings(workPath);
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
@@ -187,7 +252,7 @@ export const build: BuildV2 = async ({
   //   Remix - use "@remix-run/dev"
   //   React Router - use "react-router"
   const frameworkVersion = await getPackageVersion(
-    builderInfo.packageName,
+    frameworkSettings.primaryPackageName,
     entrypointFsDirname,
     repoRootPath
   );
@@ -211,7 +276,7 @@ export const build: BuildV2 = async ({
       debug(`Executing "build" script`);
       await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
     } else {
-      await execCommand(builderInfo.buildCommand, {
+      await execCommand(frameworkSettings.buildCommand, {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
@@ -220,7 +285,7 @@ export const build: BuildV2 = async ({
 
   const buildResultJsonPath = join(
     entrypointFsDirname,
-    builderInfo.buildResultPath
+    frameworkSettings.buildResultFilePath
   );
   let buildResult: BuildResult | undefined;
   try {
@@ -293,38 +358,15 @@ export const build: BuildV2 = async ({
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),
     ...serverBundles.map(bundle => {
-      if (isReactRouter) {
-        return createRenderReactRouterFunction(
-          nodeVersion,
-          entrypointFsDirname,
-          repoRootPath,
-          join(entrypointFsDirname, bundle.file),
-          undefined,
-          frameworkVersion,
-          bundle.config
-        );
-      }
-
-      if (bundle.config.runtime === 'edge') {
-        return createRenderEdgeFunction(
-          entrypointFsDirname,
-          repoRootPath,
-          join(entrypointFsDirname, bundle.file),
-          undefined,
-          frameworkVersion,
-          bundle.config
-        );
-      }
-
-      return createRenderNodeFunction(
+      return frameworkSettings.createRenderFunction({
         nodeVersion,
-        entrypointFsDirname,
-        repoRootPath,
-        join(entrypointFsDirname, bundle.file),
-        undefined,
+        entrypointDir: entrypointFsDirname,
+        rootDir: repoRootPath,
+        serverBuildPath: join(entrypointFsDirname, bundle.file),
+        serverEntryPoint: undefined,
         frameworkVersion,
-        bundle.config
-      );
+        config: bundle.config,
+      });
     }),
   ]);
 
