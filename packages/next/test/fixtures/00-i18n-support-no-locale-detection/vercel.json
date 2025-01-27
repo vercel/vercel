@@ -8,7 +8,7 @@
   ],
   "probes": [
     {
-      "path": "/en-US",
+      "path": "/",
       "headers": {
         "accept-language": "en;q=0.9"
       },
@@ -19,7 +19,7 @@
       "mustContain": "\"en-US\""
     },
     {
-      "path": "/en-US",
+      "path": "/",
       "headers": {
         "accept-language": "nl;q=0.9"
       },
@@ -30,7 +30,7 @@
       "mustContain": "\"en-US\""
     },
     {
-      "path": "/en-US",
+      "path": "/",
       "headers": {
         "accept-language": "nl-NL;q=0.9"
       },
@@ -41,7 +41,7 @@
       "mustContain": "\"en-US\""
     },
     {
-      "path": "/en-US",
+      "path": "/",
       "headers": {
         "accept-language": "fr;q=0.9"
       },
@@ -52,7 +52,7 @@
       "mustContain": "\"en-US\""
     },
     {
-      "path": "/en-US",
+      "path": "/",
       "headers": {
         "accept-language": "en-US;q=0.9"
       },
@@ -75,12 +75,12 @@
     },
 
     {
-      "path": "/en-US",
+      "path": "/",
       "status": 200,
       "mustContain": "index page"
     },
     {
-      "path": "/en-US",
+      "path": "/",
       "status": 200,
       "mustContain": ">en-US<"
     },
@@ -162,12 +162,12 @@
     },
 
     {
-      "path": "/en-US/dynamic/hello",
+      "path": "/dynamic/hello",
       "status": 200,
       "mustContain": "dynamic page"
     },
     {
-      "path": "/en-US/dynamic/hello",
+      "path": "/dynamic/hello",
       "status": 200,
       "mustContain": "\"en-US\""
     },
@@ -203,12 +203,12 @@
     },
 
     {
-      "path": "/en-US/gsp",
+      "path": "/gsp",
       "status": 200,
       "mustContain": "gsp page"
     },
     {
-      "path": "/en-US/gsp",
+      "path": "/gsp",
       "status": 200,
       "mustContain": ">en-US<"
     },
@@ -244,12 +244,12 @@
     },
 
     {
-      "path": "/en-US/gssp",
+      "path": "/gssp",
       "status": 200,
       "mustContain": "gssp page"
     },
     {
-      "path": "/en-US/gssp",
+      "path": "/gssp",
       "status": 200,
       "mustContain": ">en-US<"
     },
@@ -285,17 +285,17 @@
     },
 
     {
-      "path": "/en-US/gssp/first",
+      "path": "/gssp/first",
       "status": 200,
       "mustContain": "gssp page"
     },
     {
-      "path": "/en-US/gssp/first",
+      "path": "/gssp/first",
       "status": 200,
       "mustContain": ">en-US<"
     },
     {
-      "path": "/en-US/gssp/first",
+      "path": "/gssp/first",
       "status": 200,
       "mustContain": "slug\":\"first\""
     },
@@ -477,12 +477,12 @@
     },
 
     {
-      "path": "/en-US/gsp/blocking/first",
+      "path": "/gsp/blocking/first",
       "status": 200,
       "mustContain": "catchall"
     },
     {
-      "path": "/en-US/gsp/blocking/first",
+      "path": "/gsp/blocking/first",
       "status": 200,
       "mustContain": "lang=\"en-US\""
     },
@@ -536,4 +536,3 @@
     }
   ]
 }
-
