@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
+import { platform } from 'node:process';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
 const socketdir = path.join(os.tmpdir(), 'socket-dir');
@@ -27,9 +28,11 @@ describe('LocalFileSystemDetector', () => {
         fs.writeFile(path.join(tmpdir, filePath), path.basename(filePath))
       )
     );
-    await new Promise<void>(resolve => {
-      server.listen(path.join(socketdir, 'socket'), () => resolve());
-    });
+    if (platform !== 'win32') {
+      await new Promise<void>(resolve => {
+        server.listen(path.join(socketdir, 'socket'), () => resolve());
+      });
+    }
   });
 
   afterAll(async () => {
