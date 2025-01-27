@@ -76,7 +76,7 @@ describe('LocalFileSystemDetector', () => {
       });
     });
 
-    it('should call readdir correctly', async () => {
+    it('should call correctly', async () => {
       const readdirResults = await Promise.all(
         dirs.map(dir => localFileSystem.readdir(dir))
       );
