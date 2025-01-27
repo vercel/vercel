@@ -239,6 +239,59 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'React Router',
+    slug: 'react-router',
+    // TODO: uncomment this after "react-router" template is added
+    //demo: 'https://react-router-v7-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/react-router.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/react-router-dark.svg',
+    tagline: 'Declarative routing for React',
+    description:
+      'A user‑obsessed, standards‑focused, multi‑strategy router you can deploy anywhere.',
+    website: 'https://reactrouter.com',
+    sort: 7,
+    supersedes: ['hydrogen', 'vite'],
+    useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
+    detectors: {
+      some: [
+        {
+          path: 'vite.config.js',
+          matchContent: '@react-router/dev/vite',
+        },
+        {
+          path: 'vite.config.ts',
+          matchContent: '@react-router/dev/vite',
+        },
+        {
+          path: 'react-router.config.js',
+        },
+        {
+          path: 'react-router.config.ts',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        value: 'react-router build',
+        placeholder: '`npm run build` or `react-router build`',
+      },
+      devCommand: {
+        value: 'react-router dev',
+        placeholder: 'react-router dev',
+      },
+      outputDirectory: {
+        value: 'build',
+      },
+    },
+    dependency: 'react-router',
+    getOutputDirName: async () => 'build',
+  },
+  {
     name: 'Astro',
     slug: 'astro',
     demo: 'https://astro-template.vercel.app',
