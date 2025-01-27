@@ -5,27 +5,39 @@ import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
+const socketdir = path.join(os.tmpdir(), 'socket-dir');
 
 const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
 
 const localFileSystem = new LocalFileSystemDetector(tmpdir);
+const socketFileSystem = new LocalFileSystemDetector(socketdir);
 
 describe('LocalFileSystemDetector', () => {
+  const server = net.createServer();
+
   beforeAll(async () => {
     await Promise.all(
       dirs.map(dir => fs.mkdir(path.join(tmpdir, dir), { recursive: true }))
     );
+    fs.mkdir(socketdir, { recursive: true });
     await Promise.all(
       filePaths.map(filePath =>
         fs.writeFile(path.join(tmpdir, filePath), path.basename(filePath))
       )
     );
+    await new Promise<void>(resolve => {
+      server.listen(path.join(socketdir, 'socket'), () => resolve());
+    });
   });
 
   afterAll(async () => {
     await fs.rm(tmpdir, { recursive: true, force: true });
+    await fs.rm(socketdir, { recursive: true, force: true });
+    await new Promise<void>(resolve => {
+      server.close(() => resolve());
+    });
   });
 
   it('should be instance of DetectorFilesystem', () => {
@@ -60,32 +72,20 @@ describe('LocalFileSystemDetector', () => {
     expect(isFile.every(v => v)).toBe(true);
   });
 
-  describe('readdir', () => {
-    const server = net.createServer();
+  it('should call readdir correctly', async () => {
+    const readdirResults = await Promise.all(
+      dirs.map(dir => localFileSystem.readdir(dir))
+    );
+    const expectedPaths = [...dirs, ...filePaths].sort().slice(1); // drop the first path since its the root
+    const actualPaths = readdirResults
+      .flatMap(result => result.map(stat => stat.path))
+      .sort();
+    expect(actualPaths).toEqual(expectedPaths);
+  });
 
-    beforeAll(async () => {
-      // Creates a socket to ensure sockets are handled correctly
-      await new Promise<void>(resolve => {
-        server.listen(path.join(tmpdir, 'socket'), () => resolve());
-      });
-    });
-
-    afterAll(async () => {
-      await new Promise<void>(resolve => {
-        server.close(() => resolve());
-      });
-    });
-
-    it('should call correctly', async () => {
-      const readdirResults = await Promise.all(
-        dirs.map(dir => localFileSystem.readdir(dir))
-      );
-      const expectedPaths = [...dirs, ...filePaths].sort().slice(1); // drop the first path since its the root
-      const actualPaths = readdirResults
-        .flatMap(result => result.map(stat => stat.path))
-        .sort();
-      expect(actualPaths).toEqual(expectedPaths);
-    });
+  it('should skip entry if not file or directory', async () => {
+    const readdirResults = await socketFileSystem.readdir(socketdir);
+    expect(readdirResults).toEqual([]);
   });
 
   it('should call chdir correctly', async () => {
