@@ -3,8 +3,41 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { pathToRegexp, compile, Key } from 'path-to-regexp';
+import {
+  pathToRegexp as pathToRegexpCurrent,
+  compile,
+  Key,
+} from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
 import { Route, Redirect, Rewrite, HasField, Header } from './types';
+
+// run the updated version of path-to-regexp, compare the results, and log if different
+function pathToRegexp(
+  callerId: string,
+  path: string,
+  keys?: Key[],
+  options?: { strict: boolean; sensitive: boolean; delimiter: string }
+) {
+  const currentRegExp = pathToRegexpCurrent(path, keys, options);
+
+  try {
+    const newRegExp = pathToRegexpUpdated(path, keys, options);
+    const diff = currentRegExp.toString() !== newRegExp.toString();
+    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
+    // for verification that they show up in the build logs as expected
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || diff) {
+      // each of these path-to-regexp comparisons logs an innocuous message
+      // so we (1) can easily grab it by querying the build logs
+      // and (2) it doesn't spook the user
+      console.log(`SYSTEM TEST #${callerId} A: ${path}`);
+    }
+  } catch (err) {
+    const error = err as Error;
+    console.log(`SYSTEM TEST #${callerId} B: ${error.message}`);
+  }
+
+  return currentRegExp;
+}
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -196,7 +229,7 @@ export function sourceToRegex(source: string): {
   segments: string[];
 } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, {
+  const r = pathToRegexp('632', source, keys, {
     strict: true,
     sensitive: true,
     delimiter: '/',
@@ -299,9 +332,9 @@ function replaceSegments(
   const hostnameKeys: Key[] = [];
 
   try {
-    pathToRegexp(pathname, pathnameKeys);
-    pathToRegexp(hash || '', hashKeys);
-    pathToRegexp(hostname || '', hostnameKeys);
+    pathToRegexp('528', pathname, pathnameKeys);
+    pathToRegexp('834', hash || '', hashKeys);
+    pathToRegexp('712', hostname || '', hostnameKeys);
   } catch (_) {
     // this is not fatal so don't error when failing to parse the
     // params from the destination

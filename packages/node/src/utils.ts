@@ -1,7 +1,36 @@
 import { debug, streamToBuffer } from '@vercel/build-utils';
-import { pathToRegexp } from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpCurrent, Key } from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
 import type { IncomingMessage } from 'http';
 import { extname } from 'path';
+
+// run the updated version of path-to-regexp, compare the results, and log if different
+function pathToRegexp(
+  callerId: string,
+  path: string,
+  keys?: Key[],
+  options?: { strict: boolean; sensitive: boolean; delimiter: string }
+) {
+  const currentRegExp = pathToRegexpCurrent(path, keys, options);
+
+  try {
+    const newRegExp = pathToRegexpUpdated(path, keys, options);
+    const diff = currentRegExp.toString() !== newRegExp.toString();
+    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
+    // for verification that they show up in the build logs as expected
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || diff) {
+      // each of these path-to-regexp comparisons logs an innocuous message
+      // so we (1) can easily grab it by querying the build logs
+      // and (2) it doesn't spook the user
+      console.log(`SYSTEM TEST #${callerId} A: ${path}`);
+    }
+  } catch (err) {
+    const error = err as Error;
+    console.log(`SYSTEM TEST #${callerId} B: ${error.message}`);
+  }
+
+  return currentRegExp;
+}
 
 // When exiting this process, wait for Vercel Function server to finish
 // all its work, especially waitUntil promises before exiting this process.
@@ -47,9 +76,9 @@ function getRegExpFromMatcher(
     );
   }
 
-  const regExps = [pathToRegexp(matcher).source];
+  const regExps = [pathToRegexp('316', matcher).source];
   if (matcher === '/' && !allMatchers.includes('/index')) {
-    regExps.push(pathToRegexp('/index').source);
+    regExps.push(pathToRegexp('491', '/index').source);
   }
   return regExps;
 }

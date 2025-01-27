@@ -1,12 +1,41 @@
 import semver from 'semver';
 import { existsSync, readFileSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
-import { pathToRegexp, Key } from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpCurrent, Key } from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
 import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
+
+// run the updated version of path-to-regexp, compare the results, and log if different
+function pathToRegexp(
+  callerId: string,
+  path: string,
+  keys?: Key[],
+  options?: { strict: boolean; sensitive: boolean; delimiter: string }
+) {
+  const currentRegExp = pathToRegexpCurrent(path, keys, options);
+
+  try {
+    const newRegExp = pathToRegexpUpdated(path, keys, options);
+    const diff = currentRegExp.toString() !== newRegExp.toString();
+    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
+    // for verification that they show up in the build logs as expected
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || diff) {
+      // each of these path-to-regexp comparisons logs an innocuous message
+      // so we (1) can easily grab it by querying the build logs
+      // and (2) it doesn't spook the user
+      console.log(`SYSTEM TEST #${callerId} A: ${path}`);
+    }
+  } catch (err) {
+    const error = err as Error;
+    console.log(`SYSTEM TEST #${callerId} B: ${error.message}`);
+  }
+
+  return currentRegExp;
+}
 
 export const require_ = createRequire(__filename);
 
@@ -195,7 +224,7 @@ export function getPathFromRoute(
 
 export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
-  const re = pathToRegexp(rePath, keys);
+  const re = pathToRegexp('923', rePath, keys);
   return keys.length > 0 ? re : false;
 }
 
