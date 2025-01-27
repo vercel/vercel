@@ -300,7 +300,8 @@ export async function getNodeVersion(
   const latestVersion = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    return { ...latestVersion, runtime: 'nodejs' };
+    latestVersion.runtime = 'nodejs';
+    return latestVersion;
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   const configuredVersion = config.nodeVersion || fallbackVersion;
