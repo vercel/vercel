@@ -1,0 +1,70 @@
+import React, { useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { Button, Input } from "@/components/ui/button";
+import L from "leaflet";
+export default function RoutePlannerApp() {
+  const [startPoint, setStartPoint] = useState("");
+  const [endPoint, setEndPoint] = useState("");
+  const [route, setRoute] = useState(null);
+
+  const fetchRoute = async () => {
+    if (!startPoint || !endPoint) {
+      alert("Please enter both start and end points!");
+      return;
+    }
+
+    // Simulate route fetching - Replace with an actual API like Mapbox or OpenRouteService
+    const mockRoute = [
+      [26.9124, 75.7873], // Start coordinates (e.g., Jaipur)
+      [28.7041, 77.1025], // End coordinates (e.g., Delhi)
+    ];
+    setRoute(mockRoute);
+  };
+
+  const customIcon = new L.Icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+    iconSize: [32, 32],
+  });
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Automated Route Planner</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Input
+          type="text"
+          placeholder="Enter Start Location"
+          value={startPoint}
+          onChange={(e) => setStartPoint(e.target.value)}
+        />
+        <Input
+          type="text"
+          placeholder="Enter End Location"
+          value={endPoint}
+          onChange={(e) => setEndPoint(e.target.value)}
+        />
+      </div>
+
+      <Button onClick={fetchRoute} className="mb-4">
+        Plan Route
+      </Button>
+
+      <MapContainer center={[27.3912, 76.7944]} zoom={6} className="h-96 w-full">
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+        {route && (
+          <>
+            <Marker position={route[0]} icon={customIcon}>
+              <Popup>Start Point</Popup>
+            </Marker>
+            <Marker position={route[1]} icon={customIcon}>
+              <Popup>End Point</Popup>
+            </Marker>
+            <Polyline positions={route} color="blue" />
+          </>
+        )}
+      </MapContainer>
+    </div>
+  );
+}
