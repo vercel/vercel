@@ -1,6 +1,7 @@
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
@@ -59,15 +60,32 @@ describe('LocalFileSystemDetector', () => {
     expect(isFile.every(v => v)).toBe(true);
   });
 
-  it('should call readdir correctly', async () => {
-    const readdirResults = await Promise.all(
-      dirs.map(dir => localFileSystem.readdir(dir))
-    );
-    const expectedPaths = [...dirs, ...filePaths].sort().slice(1); // drop the first path since its the root
-    const actualPaths = readdirResults
-      .flatMap(result => result.map(stat => stat.path))
-      .sort();
-    expect(actualPaths).toEqual(expectedPaths);
+  describe('readdir', () => {
+    const server = net.createServer();
+
+    beforeAll(async () => {
+      // Creates a socket to ensure sockets are handled correctly
+      await new Promise<void>(resolve => {
+        server.listen(path.join(tmpdir, 'socket'), () => resolve());
+      });
+    });
+
+    afterAll(async () => {
+      await new Promise<void>(resolve => {
+        server.close(() => resolve());
+      });
+    });
+
+    it('should call readdir correctly', async () => {
+      const readdirResults = await Promise.all(
+        dirs.map(dir => localFileSystem.readdir(dir))
+      );
+      const expectedPaths = [...dirs, ...filePaths].sort().slice(1); // drop the first path since its the root
+      const actualPaths = readdirResults
+        .flatMap(result => result.map(stat => stat.path))
+        .sort();
+      expect(actualPaths).toEqual(expectedPaths);
+    });
   });
 
   it('should call chdir correctly', async () => {
