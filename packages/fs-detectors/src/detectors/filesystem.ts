@@ -3,7 +3,7 @@ import { posix as posixPath } from 'path';
 export interface DetectorFilesystemStat {
   name: string;
   path: string;
-  type: 'file' | 'dir' | 'other';
+  type: 'file' | 'dir';
 }
 /**
  * `DetectorFilesystem` is an abstract class that represents a virtual filesystem
