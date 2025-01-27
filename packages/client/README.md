@@ -1,6 +1,6 @@
 # @vercel/client
 
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
+[Join the Vercel Community](https://vercel.community/)
 
 The official Node.js client for deploying to [Vercel](https://vercel.com).
 

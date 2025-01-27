@@ -1,6 +1,7 @@
+import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import getProjectByDeployment from '../../../../src/util/projects/get-project-by-deployment';
-import { useTeams } from '../../../mocks/team';
+import { useTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useDeployment } from '../../../mocks/deployment';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -22,7 +23,6 @@ describe('getProjectByDeployment', () => {
     const { deployment, project } = await getProjectByDeployment({
       client,
       deployId: d.id,
-      output: client.output,
     });
 
     expect(project.id).toBe(p.id);
@@ -30,7 +30,7 @@ describe('getProjectByDeployment', () => {
   });
 
   it('should get project and deployment associated to a team', async () => {
-    const [team] = useTeams('team_dummy');
+    const team = useTeam('team_dummy');
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,
@@ -54,7 +54,6 @@ describe('getProjectByDeployment', () => {
     const { deployment, project } = await getProjectByDeployment({
       client,
       deployId: d.id,
-      output: client.output,
     });
 
     expect(project.id).toBe(p.id);
@@ -62,7 +61,7 @@ describe('getProjectByDeployment', () => {
   });
 
   it("should error if deployment team doesn't match current user's team", async () => {
-    const [team] = useTeams('team_dummy');
+    const team = useTeam('team_dummy');
     const user = useUser();
     const { project: p } = useProject({
       ...defaultProject,
@@ -86,7 +85,6 @@ describe('getProjectByDeployment', () => {
       getProjectByDeployment({
         client,
         deployId: d.id,
-        output: client.output,
       })
     ).rejects.toThrowError("Deployment doesn't belong to current team");
 
@@ -97,7 +95,6 @@ describe('getProjectByDeployment', () => {
       getProjectByDeployment({
         client,
         deployId: d.id,
-        output: client.output,
       })
     ).rejects.toThrowError('Deployment belongs to a different team');
   });

@@ -3,13 +3,14 @@ import open from 'open';
 import { URL } from 'url';
 import { listen } from 'async-listen';
 import isDocker from 'is-docker';
-import Client from '../client';
+import type Client from '../client';
 import prompt, { readInput } from './prompt';
 import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
 import eraseLines from '../output/erase-lines';
-import { LoginResult } from './types';
+import type { LoginResult } from './types';
+import output from '../../output-manager';
 
 export default async function doOauthLogin(
   client: Client,
@@ -31,7 +32,6 @@ export default async function doOauthLogin(
   }
 
   if ('verificationToken' in result) {
-    const { output } = client;
     output.spinner('Verifying authentication token');
     result = await verify(
       client,
@@ -62,7 +62,6 @@ async function getVerificationTokenInBand(
   url: URL,
   provider: string
 ) {
-  const { output } = client;
   const server = http.createServer();
   const { port } = await listen(server, 0, '127.0.0.1');
   url.searchParams.set('next', `http://localhost:${port}`);
@@ -164,7 +163,6 @@ async function getVerificationTokenInBand(
  * provided to them in the callback URL after the login is successful.
  */
 async function getVerificationTokenOutOfBand(client: Client, url: URL) {
-  const { output } = client;
   url.searchParams.set(
     'next',
     `https://vercel.com/notifications/cli-login-oob`

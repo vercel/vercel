@@ -1,7 +1,12 @@
+import path from 'path';
+import { runNpmInstall, cloneEnv } from '../src';
+import type { Meta } from '../src/types';
+import { afterEach, expect, it, vi } from 'vitest';
+
 let spawnExitCode = 0;
 
-const spawnMock = jest.fn();
-jest.mock('cross-spawn', () => {
+const spawnMock = vi.fn();
+vi.mock('cross-spawn', () => {
   const spawn = (...args: any) => {
     spawnMock(...args);
     const child = {
@@ -13,17 +18,13 @@ jest.mock('cross-spawn', () => {
     };
     return child;
   };
-  return spawn;
+  return { default: spawn };
 });
 
 afterEach(() => {
   spawnExitCode = 0;
   spawnMock.mockClear();
 });
-
-import path from 'path';
-import { runNpmInstall, cloneEnv } from '../src';
-import type { Meta } from '../src/types';
 
 function getTestSpawnOpts(env: Record<string, string>) {
   return { env: cloneEnv(process.env, env) };
@@ -56,30 +57,6 @@ it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node1
   const meta: Meta = {};
   const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
   const nodeVersion = getNodeVersion(16);
-  await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
-  expect(spawnMock.mock.calls.length).toBe(1);
-  const args = spawnMock.mock.calls[0];
-  expect(args[0]).toEqual('npm');
-  expect(args[1]).toEqual([
-    'install',
-    '--no-audit',
-    '--unsafe-perm',
-    '--legacy-peer-deps',
-  ]);
-  expect(args[2]).toEqual({
-    cwd: fixture,
-    prettyCommand: 'npm install',
-    stdio: 'inherit',
-    env: expect.any(Object),
-  });
-});
-
-it('should include peer dependencies when VERCEL_NPM_LEGACY_PEER_DEPS=1 on node14 and npm7+', async () => {
-  const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
-  const meta: Meta = {};
-  const spawnOpts = getTestSpawnOpts({ VERCEL_NPM_LEGACY_PEER_DEPS: '1' });
-
-  const nodeVersion = getNodeVersion(14);
   await runNpmInstall(fixture, [], spawnOpts, meta, nodeVersion);
   expect(spawnMock.mock.calls.length).toBe(1);
   const args = spawnMock.mock.calls[0];

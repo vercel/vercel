@@ -6,8 +6,13 @@ import { lstat, readlink, Stats } from 'fs-extra';
 import { normalizePath } from './normalize-path';
 import FileFsRef from '../file-fs-ref';
 
-export interface GlobOptions extends vanillaGlob_.IOptions {
+export interface GlobOptions {
+  cwd?: string;
+  dot?: boolean;
+  follow?: boolean;
+  ignore?: string | ReadonlyArray<string>;
   includeDirectories?: boolean;
+  nodir?: boolean;
 }
 
 const vanillaGlob = promisify(vanillaGlob_);

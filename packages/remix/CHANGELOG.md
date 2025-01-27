@@ -1,5 +1,212 @@
 # @vercel/remix-builder
 
+## 5.0.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+- Update `@remix-run/dev` fork to v2.15.2 ([#12796](https://github.com/vercel/vercel/pull/12796))
+
+## 5.0.1
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 5.0.0
+
+### Major Changes
+
+- Remove `@remix-run/dev` dev dependency ([#12762](https://github.com/vercel/vercel/pull/12762))
+
+## 4.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
+## 3.0.0
+
+### Major Changes
+
+- Bump path-to-regexp from 6.2.1 to 6.3.0 ([#12744](https://github.com/vercel/vercel/pull/12744))
+
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
+## 2.2.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.13.1 ([#12334](https://github.com/vercel/vercel/pull/12334))
+
+## 2.2.12
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 2.2.11
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 2.2.10
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+## 2.2.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.12.0 ([#12124](https://github.com/vercel/vercel/pull/12124))
+
+## 2.2.8
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 2.2.7
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 2.2.6
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.2 ([#11968](https://github.com/vercel/vercel/pull/11968))
+
+## 2.2.5
+
+### Patch Changes
+
+- [remix] remove contact note ([#11947](https://github.com/vercel/vercel/pull/11947))
+
+## 2.2.4
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.1 ([#11924](https://github.com/vercel/vercel/pull/11924))
+
+## 2.2.3
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.0 ([#11913](https://github.com/vercel/vercel/pull/11913))
+
+## 2.2.2
+
+### Patch Changes
+
+- Fix POST requests when `unstable_singleFetch` is enabled ([#11904](https://github.com/vercel/vercel/pull/11904))
+
+- Update `@remix-run/dev` fork to v2.10.3 ([#11893](https://github.com/vercel/vercel/pull/11893))
+
+## 2.2.1
+
+### Patch Changes
+
+- Revert "Fix corepack `packageManager` detection on monorepos" ([#11865](https://github.com/vercel/vercel/pull/11865))
+
+## 2.2.0
+
+### Minor Changes
+
+- Use `nativeFetch` mode when `unstable_singleFetch` is enabled ([#11844](https://github.com/vercel/vercel/pull/11844))
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#11811](https://github.com/vercel/vercel/pull/11811))
+
+## 2.1.11
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.3 with a bug fix for browser mapping support ([#11841](https://github.com/vercel/vercel/pull/11841))
+
+## 2.1.10
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.10.2 ([#11837](https://github.com/vercel/vercel/pull/11837))
+
+## 2.1.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.10.0 ([#11771](https://github.com/vercel/vercel/pull/11771))
+
+## 2.1.8
+
+### Patch Changes
+
+- Add opt-in env var to use native Fetch polyfills ([#11748](https://github.com/vercel/vercel/pull/11748))
+
+## 2.1.7
+
+### Patch Changes
+
+- Upgrade to @vercel/nft 0.27.2 with browser remapping support ([#11700](https://github.com/vercel/vercel/pull/11700))
+
+## 2.1.6
+
+### Patch Changes
+
+- Bump `@vercel/nft@0.27.0` ([#11580](https://github.com/vercel/vercel/pull/11580))
+
+- Update `@remix-run/dev` fork to v2.9.2-patch.2 ([#11582](https://github.com/vercel/vercel/pull/11582))
+
+## 2.1.5
+
+### Patch Changes
+
+- Add `mjs` and `mts` extensions to vite detection ([#11307](https://github.com/vercel/vercel/pull/11307))
+
+## 2.1.4
+
+### Patch Changes
+
+- Disable `prepareCache()` npm install for Remix + Vite ([#11281](https://github.com/vercel/vercel/pull/11281))
+
+## 2.1.3
+
+### Patch Changes
+
+- Improve hueristics for detecting Remix + Vite ([#11256](https://github.com/vercel/vercel/pull/11256))
+
+## 2.1.2
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.8.1 ([#11241](https://github.com/vercel/vercel/pull/11241))
+
+## 2.1.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#11209](https://github.com/vercel/vercel/pull/11209))
+
+- Remove usage of `ensureResolvable()` in Vite builds ([#11213](https://github.com/vercel/vercel/pull/11213))
+
+- Update `@remix-run/dev` fork to v2.8.0 ([#11206](https://github.com/vercel/vercel/pull/11206))
+
+- Ensure the symlink directory exists in `ensureSymlink()` ([#11205](https://github.com/vercel/vercel/pull/11205))
+
 ## 2.1.0
 
 ### Minor Changes

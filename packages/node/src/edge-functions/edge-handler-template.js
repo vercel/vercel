@@ -88,7 +88,12 @@ function registerFetchListener(module, options, dependencies) {
           `No default or HTTP-named export was found at ${url}. Add one to handle requests. Learn more: https://vercel.link/creating-edge-middleware`
         );
       }
-      const response = await respond(handler, event, options, dependencies);
+      const response = await respond(
+        (req, ctx) => handler(req, { waitUntil: ctx.waitUntil.bind(ctx) }),
+        event,
+        options,
+        dependencies
+      );
       event.respondWith(response);
     } catch (error) {
       event.respondWith(toResponseError(error, dependencies.Response));

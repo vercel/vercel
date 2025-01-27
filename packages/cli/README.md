@@ -6,7 +6,7 @@
   <p align="center">Develop. Preview. Ship.</p>
 </p>
 
-[![Join the community on GitHub Discussions](https://badgen.net/badge/join%20the%20discussion/on%20github/black?icon=github)](https://github.com/vercel/vercel/discussions)
+[Join the Vercel Community](https://vercel.community/)
 
 ## Usage
 
@@ -49,15 +49,15 @@ At this point you can make modifications to the CLI source code and test them ou
 cd packages/cli
 ```
 
-### `pnpm dev <cli-commands...>`
+### `pnpm vercel <cli-commands...>`
 
-From within the `packages/cli` directory, you can use the "dev" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
+From within the `packages/cli` directory, you can use the "vercel" script to quickly execute Vercel CLI from its TypeScript source code directly (without having to manually compile first). For example:
 
 ```bash
-pnpm dev deploy
-pnpm dev whoami
-pnpm dev login
-pnpm dev switch --debug
+pnpm vercel deploy
+pnpm vercel whoami
+pnpm vercel login
+pnpm vercel switch --debug
 ```
 
 When you are satisfied with your changes, make a commit and create a pull request!

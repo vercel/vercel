@@ -1,10 +1,7 @@
-import { Output } from '../output';
-import Client from '../client';
-import type {
-  ProjectEnvVariable,
-  ProjectEnvTarget,
-} from '@vercel-internals/types';
 import { URLSearchParams } from 'url';
+import type Client from '../client';
+import type { ProjectEnvVariable } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 /** The CLI command that was used that needs the environment variables. */
 export type EnvRecordsSource =
@@ -16,7 +13,6 @@ export type EnvRecordsSource =
   | 'vercel-cli:pull';
 
 export default async function getEnvRecords(
-  output: Output,
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
@@ -25,7 +21,7 @@ export default async function getEnvRecords(
     gitBranch,
     decrypt,
   }: {
-    target?: ProjectEnvTarget | string;
+    target?: string;
     gitBranch?: string;
     decrypt?: boolean;
   } = {}
@@ -36,7 +32,15 @@ export default async function getEnvRecords(
   const query = new URLSearchParams();
 
   if (target) {
-    query.set('target', target);
+    let targetParam = 'target';
+    if (
+      target !== 'production' &&
+      target !== 'preview' &&
+      target !== 'development'
+    ) {
+      targetParam = 'customEnvironmentId';
+    }
+    query.set(targetParam, target);
   }
   if (gitBranch) {
     query.set('gitBranch', gitBranch);
@@ -48,18 +52,17 @@ export default async function getEnvRecords(
     query.set('source', source);
   }
 
-  const url = `/v8/projects/${projectId}/env?${query}`;
+  const url = `/v10/projects/${projectId}/env?${query}`;
 
   return client.fetch<{ envs: ProjectEnvVariable[] }>(url);
 }
 
 interface PullEnvOptions {
-  target?: ProjectEnvTarget | string;
+  target?: string;
   gitBranch?: string;
 }
 
 export async function pullEnvRecords(
-  output: Output,
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
@@ -70,7 +73,7 @@ export async function pullEnvRecords(
   );
   const query = new URLSearchParams();
 
-  let url = `/v1/env/pull/${projectId}`;
+  let url = `/v2/env/pull/${projectId}`;
 
   if (target) {
     url += `/${encodeURIComponent(target)}`;

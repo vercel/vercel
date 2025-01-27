@@ -49,8 +49,10 @@ class WorkerOutput {
     );
     this.debugLog.push(`[${new Date().toISOString()}] [${type}] ${str}`);
     if (type === 'debug' && this.debugOutputEnabled) {
+      // eslint-disable-next-line no-console
       console.error(`> '[debug] [${new Date().toISOString()}] ${str}`);
     } else if (type === 'error') {
+      // eslint-disable-next-line no-console
       console.error(`Error: ${str}`);
     }
   }
@@ -159,6 +161,7 @@ if (process.connected) {
   output.debug("Notifying parent we're ready");
   process.send({ type: 'ready' });
 } else {
+  // eslint-disable-next-line no-console
   console.error('No IPC bridge detected, exiting');
   process.exit(1);
 }

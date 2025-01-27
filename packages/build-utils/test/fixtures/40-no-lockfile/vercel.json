@@ -1,7 +1,0 @@
-{
-  "build": {
-    "env": {
-      "VERCEL_ENABLE_NPM_DEFAULT": "1"
-    }
-  }
-}

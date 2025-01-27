@@ -4,23 +4,77 @@ const path = require('path');
 
 const runnersMap = new Map([
   [
+    'vitest-unit',
+    {
+      min: 1,
+      max: 1,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
+      nodeVersions: ['16', '18', '20', '22'],
+    },
+  ],
+  [
+    'vitest-e2e',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest'],
+    },
+  ],
+  [
+    'vitest-e2e-node-20',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest'],
+      nodeVersions: ['20'],
+    },
+  ],
+  [
     'test-unit',
     {
       min: 1,
       max: 1,
-      runners: ['ubuntu-latest', 'macos-latest', 'windows-latest'],
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
     },
   ],
-  ['test-e2e', { min: 1, max: 7, runners: ['ubuntu-latest'] }],
+  [
+    'test-e2e',
+    { min: 1, max: 7, testScript: 'test', runners: ['ubuntu-latest'] },
+  ],
   [
     'test-next-local',
-    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '18' },
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+      testScript: 'test',
+      nodeVersions: ['18'],
+    },
   ],
   [
     'test-next-local-legacy',
-    { min: 1, max: 5, runners: ['ubuntu-latest'], nodeVersion: '16' },
+    {
+      min: 1,
+      max: 5,
+      runners: ['ubuntu-latest'],
+
+      testScript: 'test',
+      nodeVersions: ['16'],
+    },
   ],
-  ['test-dev', { min: 1, max: 7, runners: ['ubuntu-latest', 'macos-latest'] }],
+  [
+    'test-dev',
+    {
+      min: 1,
+      max: 7,
+      testScript: 'test',
+      runners: ['ubuntu-latest', 'macos-14'],
+    },
+  ],
 ]);
 
 const packageOptionsOverrides = {
@@ -36,13 +90,12 @@ function getRunnerOptions(scriptName, packageName) {
       packageOptionsOverrides[packageName]
     );
   }
-  return (
-    runnerOptions || {
-      min: 1,
-      max: 1,
-      runners: ['ubuntu-latest'],
-    }
-  );
+  if (!runnerOptions) {
+    throw new Error(
+      `Unable to find runner options for package "${packageName}" and script ${scriptName}`
+    );
+  }
+  return runnerOptions;
 }
 
 async function getChunkedTests() {
@@ -98,27 +151,36 @@ async function getChunkedTests() {
       const [packagePath, packageName] = packagePathAndName.split(',');
       return Object.entries(scriptNames).flatMap(([scriptName, testPaths]) => {
         const runnerOptions = getRunnerOptions(scriptName, packageName);
-        const { runners, min, max, nodeVersion } = runnerOptions;
+        const {
+          runners,
+          min,
+          max,
+          testScript,
+          nodeVersions = ['16'],
+        } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
         return intoChunks(min, max, sortedTestPaths).flatMap(
           (chunk, chunkNumber, allChunks) => {
-            return runners.map(runner => {
-              return {
-                runner,
-                packagePath,
-                packageName,
-                scriptName,
-                nodeVersion,
-                testPaths: chunk.map(testFile =>
-                  path.relative(
-                    path.join(__dirname, '../', packagePath),
-                    testFile
-                  )
-                ),
-                chunkNumber: chunkNumber + 1,
-                allChunksLength: allChunks.length,
-              };
+            return nodeVersions.flatMap(nodeVersion => {
+              return runners.map(runner => {
+                return {
+                  runner,
+                  packagePath,
+                  packageName,
+                  scriptName,
+                  testScript,
+                  nodeVersion,
+                  testPaths: chunk.map(testFile =>
+                    path.relative(
+                      path.join(__dirname, '../', packagePath),
+                      testFile
+                    )
+                  ),
+                  chunkNumber: chunkNumber + 1,
+                  allChunksLength: allChunks.length,
+                };
+              });
             });
           }
         );

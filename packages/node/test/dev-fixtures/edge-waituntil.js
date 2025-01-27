@@ -1,4 +1,4 @@
-/* global Response */
+/* eslint-disable -- flakey application of `global Response` eslint directive */
 
 export const config = { runtime: 'edge' };
 

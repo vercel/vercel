@@ -1,12 +1,15 @@
-import Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import connect from './connect';
 import disconnect from './disconnect';
 import { help } from '../help';
 import { gitCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { GitTelemetryClient } from '../../util/telemetry/commands/git';
+import type Client from '../../util/client';
+import getSubcommand from '../../util/get-subcommand';
 
 const COMMAND_CONFIG = {
   connect: ['connect'],
@@ -14,50 +17,43 @@ const COMMAND_CONFIG = {
 };
 
 export default async function main(client: Client) {
-  let argv: any;
-  let subcommand: string | string[];
-
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(gitCommand.options);
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--yes': Boolean,
-      '-y': '--yes',
-
-      // deprecated
-      '-c': '--yes',
-      '--confirm': '--yes',
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
     });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
+  const telemetry = new GitTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-  if (argv['--help']) {
-    client.output.print(help(gitCommand, { columns: client.stderr.columns }));
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('git', subcommand);
+    output.print(help(gitCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  argv._ = argv._.slice(1);
-  subcommand = argv._[0];
-  const args = argv._.slice(1);
-  const autoConfirm = Boolean(argv['--yes']);
-  const { cwd, output } = client;
-
-  const linkedProject = await ensureLink('git', client, cwd, { autoConfirm });
-  if (typeof linkedProject === 'number') {
-    return linkedProject;
-  }
-
-  const { org, project } = linkedProject;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
   switch (subcommand) {
     case 'connect':
-      return await connect(client, argv, args, project, org);
+      telemetry.trackCliSubcommandConnect(subcommandOriginal);
+      return connect(client, args);
     case 'disconnect':
-      return await disconnect(client, args, project, org);
+      telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
+      return disconnect(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      client.output.print(help(gitCommand, { columns: client.stderr.columns }));
+      output.print(help(gitCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

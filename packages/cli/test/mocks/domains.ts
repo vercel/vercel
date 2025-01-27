@@ -1,12 +1,13 @@
+import assert from 'assert';
 import chance from 'chance';
 import { client } from './client';
 
-export function createDomain(k: string) {
+export function createDomain(k?: string) {
   return {
     suffix: chance().bool(),
     verified: chance().bool(),
-    nameservers: chance().string(),
-    intendedNameservers: chance().string(),
+    nameservers: [chance().string()],
+    intendedNameservers: [chance().string()],
     customNameservers: chance().string(),
     creator: {
       username: chance().string(),
@@ -30,6 +31,7 @@ export function createDomain(k: string) {
 
 export function useDomains() {
   client.scenario.get('/v5/domains', (req, res) => {
+    assert(typeof req.query.limit === 'string');
     const limit = parseInt(req.query.limit);
     const domains = Array.from({ length: limit }, (v, i) =>
       createDomain(`${i}`)
@@ -41,14 +43,17 @@ export function useDomains() {
   });
 }
 
-export function useDomain(postfix: string) {
+export function useDomain(postfix?: string) {
+  const domain = createDomain(postfix);
+
   client.scenario.get(
     `/v4/domains/${encodeURIComponent(`example-${postfix}.com`)}`,
     (req, res) => {
-      const domain = createDomain(postfix);
       res.json({
         domain,
       });
     }
   );
+
+  return domain;
 }

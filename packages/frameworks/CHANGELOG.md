@@ -1,5 +1,60 @@
 # @vercel/frameworks
 
+## 3.4.0
+
+### Minor Changes
+
+- [frameworks] pass `$PORT` to dev command for newer svelte apps ([#12696](https://github.com/vercel/vercel/pull/12696))
+
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
+## 3.3.0
+
+### Minor Changes
+
+- [frameworks] Make FastHTML detector more specific ([#12065](https://github.com/vercel/vercel/pull/12065))
+
+## 3.2.0
+
+### Minor Changes
+
+- [fs-detectors] Adds new detector for Sanity v3 ([#11991](https://github.com/vercel/vercel/pull/11991))
+
+## 3.1.1
+
+### Patch Changes
+
+- Improvements to "fasthtml" framework preset ([#11900](https://github.com/vercel/vercel/pull/11900))
+
+## 3.1.0
+
+### Minor Changes
+
+- Add FastHTML framework preset ([#11889](https://github.com/vercel/vercel/pull/11889))
+
+## 3.0.3
+
+### Patch Changes
+
+- Update SvelteKit v1 devCommand ([#11494](https://github.com/vercel/vercel/pull/11494))
+
+## 3.0.2
+
+### Patch Changes
+
+- Update framework detection to support SolidStart v1 ([#11308](https://github.com/vercel/vercel/pull/11308))
+
+## 3.0.1
+
+### Patch Changes
+
+- Swap jest for vitest in CLI unit tests ([#11302](https://github.com/vercel/vercel/pull/11302))
+
 ## 3.0.0
 
 ### Major Changes

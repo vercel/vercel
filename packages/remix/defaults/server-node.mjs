@@ -1,23 +1,32 @@
 import {
   createRequestHandler as createRemixRequestHandler,
+  createReadableStreamFromReadable,
   writeReadableStreamToWritable,
   installGlobals,
 } from '@remix-run/node';
-
-installGlobals();
-
 import * as build from '@remix-run/dev/server-build';
+
+installGlobals({
+  nativeFetch:
+    // Explicit opt-in to native fetch via runtime env var
+    (parseInt(process.versions.node, 10) >= 20 &&
+      process.env.VERCEL_REMIX_NATIVE_FETCH === '1') ||
+    // `unstable_singleFetch` future flag added in Remix v2.9.0
+    build.future.unstable_singleFetch ||
+    // `v3_singleFetch` future flag stabilized in Remix v2.13.0
+    build.future.v3_singleFetch,
+});
 
 const handleRequest = createRemixRequestHandler(
   build.default || build,
   process.env.NODE_ENV
 );
 
-function createRemixHeaders(requestHeaders) {
+function toWebHeaders(nodeHeaders) {
   const headers = new Headers();
 
-  for (const key in requestHeaders) {
-    const header = requestHeaders[key];
+  for (const key in nodeHeaders) {
+    const header = nodeHeaders[key];
     // set-cookie is an array (maybe others)
     if (Array.isArray(header)) {
       for (const value of header) {
@@ -31,8 +40,12 @@ function createRemixHeaders(requestHeaders) {
   return headers;
 }
 
+function toNodeHeaders(webHeaders) {
+  return webHeaders.raw?.() || [...webHeaders].flat();
+}
+
 function createRemixRequest(req, res) {
-  const host = req.headers['x-forwarded-host'] || req.headers['host'];
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const url = new URL(req.url, `${protocol}://${host}`);
 
@@ -42,12 +55,13 @@ function createRemixRequest(req, res) {
 
   const init = {
     method: req.method,
-    headers: createRemixHeaders(req.headers),
+    headers: toWebHeaders(req.headers),
     signal: controller.signal,
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    init.body = req;
+    init.body = createReadableStreamFromReadable(req);
+    init.duplex = 'half';
   }
 
   return new Request(url.href, init);
@@ -55,11 +69,10 @@ function createRemixRequest(req, res) {
 
 async function sendRemixResponse(res, nodeResponse) {
   res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders = nodeResponse.headers.raw();
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
-    multiValueHeaders
+    toNodeHeaders(nodeResponse.headers)
   );
 
   if (nodeResponse.body) {

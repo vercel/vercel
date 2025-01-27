@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Middleman is Running" },
+    { "path": "/pages/hello.html/", "mustContain": "Hello from Middleman" }
+  ]
+}

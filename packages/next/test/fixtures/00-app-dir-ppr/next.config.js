@@ -14,6 +14,10 @@ module.exports = {
         source: '/rewritten-to-index',
         destination: '/?fromRewrite=1',
       },
+      {
+        source: '/greedy-rewrite/test-page/:path*',
+        destination: '/test-page/:path*',
+      }
     ];
   },
 };

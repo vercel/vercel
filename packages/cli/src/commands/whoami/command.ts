@@ -1,8 +1,8 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const whoamiCommand: Command = {
+export const whoamiCommand = {
   name: 'whoami',
+  aliases: [],
   description: 'Shows the username of the currently logged in user.',
   arguments: [],
   options: [],
@@ -12,4 +12,4 @@ export const whoamiCommand: Command = {
       value: `${packageName} whoami`,
     },
   ],
-};
+} as const;

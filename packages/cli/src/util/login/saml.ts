@@ -1,5 +1,5 @@
 import { URL } from 'url';
-import Client from '../client';
+import type Client from '../client';
 import doOauthLogin from './oauth';
 
 export default function doSamlLogin(

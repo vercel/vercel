@@ -1,53 +1,83 @@
-import chalk from 'chalk';
+import chalk, { type Chalk } from 'chalk';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
-import wait, { StopSpinner } from './wait';
+import wait, { type StopSpinner } from './wait';
 import { errorToString } from '@vercel/error-utils';
 import { removeEmoji } from '../emoji';
 import type * as tty from 'tty';
+import { inspect } from 'util';
 
 const IS_TEST = process.env.NODE_ENV === 'test';
 
 export interface OutputOptions {
+  stream?: tty.WriteStream;
   debug?: boolean;
   supportsHyperlink?: boolean;
   noColor?: boolean;
 }
 
 export interface LogOptions {
-  color?: typeof chalk;
+  color?: Chalk;
 }
 
-interface LinkOptions {
+export interface LinkOptions {
+  color?: false | ((text: string) => string);
   fallback?: false | (() => string);
 }
 
+let defaultChalkColorLevel: chalk.Level = 0;
+
 export class Output {
-  stream: tty.WriteStream;
-  debugEnabled: boolean;
-  supportsHyperlink: boolean;
-  colorDisabled: boolean;
+  stream!: tty.WriteStream;
+  debugEnabled!: boolean;
+  supportsHyperlink!: boolean;
+  colorDisabled!: boolean;
   private spinnerMessage: string;
   private _spinner: StopSpinner | null;
 
-  constructor(
-    stream: tty.WriteStream,
-    {
-      debug: debugEnabled = false,
-      supportsHyperlink = detectSupportsHyperlink(stream),
-      noColor = false,
-    }: OutputOptions = {}
-  ) {
-    this.stream = stream;
-    this.debugEnabled = debugEnabled;
-    this.supportsHyperlink = supportsHyperlink;
+  constructor(stream: tty.WriteStream, options: OutputOptions = {}) {
     this.spinnerMessage = '';
     this._spinner = null;
 
-    this.colorDisabled = getNoColor(noColor);
-    if (this.colorDisabled) {
-      chalk.level = 0;
+    this.initialize({
+      ...options,
+      stream,
+    });
+  }
+
+  /**
+   * Parts of the constructor logic that can be called again after construction
+   * to change some values.
+   */
+  initialize({
+    stream,
+    debug: debugEnabled,
+    supportsHyperlink,
+    noColor,
+  }: OutputOptions = {}) {
+    if (stream !== undefined) {
+      this.stream = stream;
+    }
+
+    if (debugEnabled !== undefined) {
+      this.debugEnabled = debugEnabled;
+    }
+
+    if (supportsHyperlink === undefined) {
+      this.supportsHyperlink = detectSupportsHyperlink(this.stream);
+    } else {
+      this.supportsHyperlink = supportsHyperlink;
+    }
+
+    if (noColor !== undefined) {
+      this.colorDisabled = getNoColor(noColor);
+      if (this.colorDisabled) {
+        defaultChalkColorLevel = chalk.level;
+        chalk.level = 0;
+      } else {
+        chalk.level = defaultChalkColorLevel;
+      }
     }
   }
 
@@ -123,12 +153,12 @@ export class Output {
     this.print(`${chalk.cyan('> Success!')} ${str}\n`);
   };
 
-  debug = (str: string) => {
+  debug = (debug: unknown) => {
     if (this.debugEnabled) {
       this.log(
         `${chalk.bold('[debug]')} ${chalk.gray(
           `[${new Date().toISOString()}]`
-        )} ${str}`
+        )} ${debugToString(debug)}`
       );
     }
   };
@@ -198,7 +228,7 @@ export class Output {
   link = (
     text: string,
     url: string,
-    { fallback }: LinkOptions = {}
+    { fallback, color = chalk.cyan }: LinkOptions = {}
   ): string => {
     // Based on https://github.com/sindresorhus/terminal-link (MIT license)
     if (!this.supportsHyperlink) {
@@ -212,7 +242,7 @@ export class Output {
         : `${text} (${renderLink(url)})`;
     }
 
-    return ansiEscapes.link(chalk.cyan(text), url);
+    return ansiEscapes.link(color ? color(text) : text, url);
   };
 }
 
@@ -225,4 +255,11 @@ function getNoColor(noColorArg: boolean | undefined): boolean {
     process.env.NO_COLOR === '1' ||
     noColorArg;
   return !!noColor;
+}
+
+function debugToString(debug: unknown): string {
+  if (typeof debug === 'string') {
+    return debug;
+  }
+  return inspect(debug);
 }

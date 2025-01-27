@@ -1,4 +1,4 @@
-/* global ReadableStream, TextEncoderStream, Response */
+/* eslint-disable -- flakey application of `global ReadableStream, TextEncoderStream, Response` eslint directive */
 
 const DEFER_MS = 10;
 

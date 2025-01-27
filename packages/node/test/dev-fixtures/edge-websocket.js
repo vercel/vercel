@@ -1,4 +1,4 @@
-/*global TextEncoderStream, ReadableStream, Response, WebSocket */
+/* eslint-disable -- flakey application of `global TextEncoderStream, ReadableStream, Response, WebSocket` eslint directive */
 
 export const config = { runtime: 'edge' };
 

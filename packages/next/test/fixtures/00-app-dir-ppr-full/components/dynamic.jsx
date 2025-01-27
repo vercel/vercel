@@ -20,7 +20,11 @@ export const Dynamic = ({ pathname, fallback }) => {
         {pathname && (
           <>
             <dt>Pathname</dt>
-            <dd>{pathname}</dd>
+            {/* We're encoding this using the following format so that even if
+                the HTML is sent as flight data, it will still retain the same
+                content, and can be inspected without having to run the
+                javascript. */}
+            <dd data-pathname={`data-pathname=${pathname}`}>{pathname}</dd>
           </>
         )}
         {messages.map(({ name, value }) => (

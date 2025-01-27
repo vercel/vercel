@@ -32,6 +32,7 @@ import {
   shouldServe,
   debug,
   cloneEnv,
+  getProvidedRuntime,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -249,7 +250,7 @@ export async function build({
       await buildHandlerWithGoMod(buildOptions);
     }
 
-    const runtime = 'provided.al2';
+    const runtime = await getProvidedRuntime();
     const lambda = new Lambda({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
@@ -745,9 +746,17 @@ async function writeGoWork(
 ) {
   const workspaces = new Set(['.']);
   const goWorkPath = await findGoWorkFile(modulePath || workPath, workPath);
+  let goVersion: string | undefined;
 
   if (goWorkPath) {
     const contents = await readFile(goWorkPath, 'utf-8');
+
+    // Extract go version if present
+    const goVersionMatch = contents.match(/^go\s+(\d+\.\d+(\.\d+)?)/m);
+    if (goVersionMatch) {
+      goVersion = goVersionMatch[1];
+    }
+
     const addPath = (path: string) => {
       if (path) {
         if (path.startsWith('.')) {
@@ -779,9 +788,25 @@ async function writeGoWork(
     }
   } else if (modulePath) {
     workspaces.add(relative(destDir, modulePath));
+
+    // If no existing go.work, try to get version from go.mod
+    const goModPath = join(modulePath, 'go.mod');
+    if (await pathExists(goModPath)) {
+      const goModContents = await readFile(goModPath, 'utf-8');
+      const goVersionMatch = goModContents.match(/^go\s+(\d+\.\d+(\.\d+)?)/m);
+      if (goVersionMatch) {
+        goVersion = goVersionMatch[1];
+      }
+    }
   }
 
-  const contents = `use (\n${Array.from(workspaces)
+  // Construct go.work contents with version directive if available
+  let contents = '';
+  if (goVersion) {
+    contents += `go ${goVersion}\n\n`;
+  }
+
+  contents += `use (\n${Array.from(workspaces)
     .map(w => `  ${w}\n`)
     .join('')})\n`;
   // console.log(contents);

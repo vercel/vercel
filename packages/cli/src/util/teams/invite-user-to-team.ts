@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 
 interface InviteResponse {
   uid: string;

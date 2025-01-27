@@ -2,15 +2,34 @@ import { help } from '../help';
 import { whoamiCommand } from './command';
 
 import getScope from '../../util/get-scope';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import type Client from '../../util/client';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 
 export default async function whoami(client: Client): Promise<number> {
-  const { output } = client;
-  const argv = getArgs(client.argv.slice(2), {});
-  argv._ = argv._.slice(1);
+  let parsedArgs = null;
 
-  if (argv['--help'] || argv._[0] === 'help') {
+  const flagsSpecification = getFlagsSpecification(whoamiCommand.options);
+
+  const telemetry = new WhoamiTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  // Parse CLI args
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('whoami');
     output.print(help(whoamiCommand, { columns: client.stderr.columns }));
     return 2;
   }

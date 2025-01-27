@@ -66,7 +66,6 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
-  avoidTopLevelInstall?: boolean;
   [key: string]: unknown;
 }
 
@@ -109,6 +108,13 @@ export interface BuildOptions {
    * on the build environment.
    */
   meta?: Meta;
+
+  /**
+   * A callback to be invoked by a builder after a project's
+   * build command has been run but before the outputs have been
+   * fully processed
+   */
+  buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
 }
 
 export interface PrepareCacheOptions {
@@ -266,6 +272,7 @@ export namespace PackageJson {
   export interface Engines {
     node?: string;
     npm?: string;
+    pnpm?: string;
   }
 
   export interface PublishConfig {
@@ -317,16 +324,51 @@ export interface PackageJson {
   readonly packageManager?: string;
 }
 
-export interface NodeVersion {
+export interface ConstructorVersion {
   /** major version number: 18 */
   major: number;
+  /** minor version number: 18 */
+  minor?: number;
   /** major version range: "18.x" */
   range: string;
   /** runtime descriptor: "nodejs18.x" */
   runtime: string;
-  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
+
+interface BaseVersion extends ConstructorVersion {
+  state: 'active' | 'deprecated' | 'discontinued';
+}
+
+export class Version implements BaseVersion {
+  major: number;
+  minor?: number;
+  range: string;
+  runtime: string;
+  discontinueDate?: Date;
+  constructor(version: ConstructorVersion) {
+    this.major = version.major;
+    this.minor = version.minor;
+    this.range = version.range;
+    this.runtime = version.runtime;
+    this.discontinueDate = version.discontinueDate;
+  }
+  get state() {
+    if (this.discontinueDate && this.discontinueDate.getTime() <= Date.now()) {
+      return 'discontinued';
+    } else if (this.discontinueDate) {
+      return 'deprecated';
+    }
+    return 'active';
+  }
+  get formattedDate() {
+    return (
+      this.discontinueDate && this.discontinueDate.toISOString().split('T')[0]
+    );
+  }
+}
+
+export class NodeVersion extends Version {}
 
 export interface Builder {
   use: string;
@@ -363,6 +405,7 @@ export interface ProjectSettings {
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
 }
@@ -370,6 +413,7 @@ export interface BuilderV2 {
 export interface BuilderV3 {
   version: 3;
   build: BuildV3;
+  diagnostics?: Diagnostics;
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
@@ -404,11 +448,34 @@ export type RemotePattern = {
    * Double `**` matches any number of path segments.
    */
   pathname?: string;
+
+  /**
+   * Can be literal query string such as `?v=1` or
+   * empty string meaning no query string.
+   */
+  search?: string;
 };
+
+export interface LocalPattern {
+  /**
+   * Can be literal or wildcard.
+   * Single `*` matches a single path segment.
+   * Double `**` matches any number of path segments.
+   */
+  pathname?: string;
+
+  /**
+   * Can be literal query string such as `?v=1` or
+   * empty string meaning no query string.
+   */
+  search?: string;
+}
 
 export interface Images {
   domains: string[];
   remotePatterns?: RemotePattern[];
+  localPatterns?: LocalPattern[];
+  qualities?: number[];
   sizes: number[];
   minimumCacheTTL?: number;
   formats?: ImageFormat[];
@@ -440,15 +507,6 @@ export interface Cron {
   schedule: string;
 }
 
-/**
- * @deprecated Replaced by Variants. Remove once fully replaced.
- */
-export interface Flag {
-  key: string;
-  defaultValue?: unknown;
-  metadata: Record<string, unknown>;
-}
-
 /** The framework which created the function */
 export interface FunctionFramework {
   slug: string;
@@ -473,9 +531,7 @@ export interface BuildResultV2Typical {
   framework?: {
     version: string;
   };
-  /** @deprecated Replaced by Variants. Remove once fully replaced. */
-  flags?: Flag[];
-  variants?: Record<string, VariantDefinition>;
+  flags?: { definitions: FlagDefinitions };
 }
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
@@ -489,6 +545,7 @@ export interface BuildResultV3 {
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
+export type Diagnostics = (options: BuildOptions) => Promise<Files>;
 export type ShouldServe = (
   options: ShouldServeOptions
 ) => boolean | Promise<boolean>;
@@ -500,23 +557,38 @@ export type StartDevServer = (
  * TODO: The following types will eventually be exported by a more
  *       relevant package.
  */
-type VariantJSONArray = ReadonlyArray<VariantJSONValue>;
+type FlagJSONArray = ReadonlyArray<FlagJSONValue>;
 
-type VariantJSONValue =
+type FlagJSONValue =
   | string
   | boolean
   | number
   | null
-  | VariantJSONArray
-  | { [key: string]: VariantJSONValue };
+  | FlagJSONArray
+  | { [key: string]: FlagJSONValue };
 
-type VariantOption = {
-  value: VariantJSONValue;
+type FlagOption = {
+  value: FlagJSONValue;
   label?: string;
 };
 
-export interface VariantDefinition {
-  options?: VariantOption[];
+export interface FlagDefinition {
+  options?: FlagOption[];
   origin?: string;
   description?: string;
+}
+
+export type FlagDefinitions = Record<string, FlagDefinition>;
+
+export interface Chain {
+  /**
+   * The build output to use that references the lambda that will be used to
+   * append to the response.
+   */
+  outputPath: string;
+
+  /**
+   * The headers to send when making the request to append to the response.
+   */
+  headers: Record<string, string>;
 }

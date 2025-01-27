@@ -2,5 +2,8 @@
   "private": true,
   "scripts": {
     "build": "pelican && mv output public"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

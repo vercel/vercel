@@ -4,8 +4,10 @@ import {
   relative,
   parse as parsePath,
   sep,
-  basename as pathBasename,
+  basename,
 } from 'path';
+import { Project } from 'ts-morph';
+import { getConfig } from '@vercel/static-config';
 import { readFileSync, lstatSync, existsSync } from 'fs';
 import { intersects, validRange } from 'semver';
 import {
@@ -25,7 +27,6 @@ import {
   FileFsRef,
   PackageJson,
   getEnvForPackageManager,
-  getLambdaOptionsFromFunction,
   readConfigFile,
   isSymbolicLink,
   scanParentDirs,
@@ -78,15 +79,20 @@ export const build: BuildV2 = async ({
   if (!spawnOpts.env) {
     spawnOpts.env = {};
   }
-  const { cliType, lockfileVersion } = await scanParentDirs(
-    entrypointFsDirname
-  );
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
@@ -166,7 +172,7 @@ export const build: BuildV2 = async ({
       // No need to transform non-html files
       staticOutputs[fileName] = fileFsRef;
     } else {
-      const fileNameWithoutExtension = pathBasename(fileName, '.html');
+      const fileNameWithoutExtension = basename(fileName, '.html');
 
       const pathWithoutHtmlExtension = join(
         parsedPath.dir,
@@ -188,21 +194,25 @@ export const build: BuildV2 = async ({
   // │   ├── bazinga
   // │   │   ├── bazinga.js
   // │   ├── graphql.js
-
-  const functionFiles = {
-    ...(await glob('*.js', apiDistPath)), // top-level
-    ...(await glob('*/*.js', apiDistPath)), // one-level deep
-  };
+  const functionFiles = await glob('**/*.{js,ts}', apiDistPath);
 
   const sourceCache = new Map<string, string | Buffer | null>();
   const fsCache = new Map<string, File>();
+  const project = new Project();
 
   for (const [funcName, fileFsRef] of Object.entries(functionFiles)) {
     const outputName = join(apiDir, parsePath(funcName).name); // remove `.js` extension
     const absEntrypoint = fileFsRef.fsPath;
     const relativeEntrypoint = relative(workPath, absEntrypoint);
     const awsLambdaHandler = getAWSLambdaHandler(relativeEntrypoint, 'handler');
-    const sourceFile = relativeEntrypoint.replace('/dist/', '/src/');
+    let sourceFile = relativeEntrypoint.replace('/dist/', '/src/');
+
+    // Is this a TS file?
+    const sourceFileBase = basename(sourceFile, '.js');
+    const sourceFileDir = dirname(sourceFile);
+    if (existsSync(join(sourceFileDir, `${sourceFileBase}.ts`))) {
+      sourceFile = join(sourceFileDir, `${sourceFileBase}.ts`);
+    }
 
     const { fileList, esmFileList, warnings } = await nodeFileTrace(
       [absEntrypoint],
@@ -256,19 +266,22 @@ export const build: BuildV2 = async ({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
-    const lambdaOptions = await getLambdaOptionsFromFunction({
-      sourceFile,
-      config,
-    });
+    const staticConfig = getConfig(project, sourceFile);
+
+    const regions = staticConfig?.regions;
+    if (regions && !Array.isArray(regions)) {
+      throw new Error('"regions" configuration must be an array');
+    }
 
     const lambda = new NodejsLambda({
+      ...staticConfig,
+      regions,
       files: lambdaFiles,
       handler: relativeEntrypoint,
       runtime: nodeVersion.runtime,
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: false,
       awsLambdaHandler,
-      ...lambdaOptions,
     });
     lambdaOutputs[outputName] = lambda;
   }

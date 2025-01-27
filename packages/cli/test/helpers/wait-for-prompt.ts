@@ -1,3 +1,4 @@
+import stripAnsi from 'strip-ansi';
 import type { CLIProcess } from './types';
 
 function getPromptErrorDetails(
@@ -26,6 +27,7 @@ export default async function waitForPrompt(
   return new Promise<void>((resolve, reject) => {
     let mostRecentChunk = 'NO CHUNKS SO FAR';
 
+    // eslint-disable-next-line no-console
     console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(() => {
       cleanup();
@@ -54,9 +56,10 @@ export default async function waitForPrompt(
     };
 
     const onData = (rawChunk: Buffer) => {
-      const chunk = rawChunk.toString();
+      const chunk = stripAnsi(rawChunk.toString());
 
       mostRecentChunk = chunk;
+      // eslint-disable-next-line no-console
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cleanup();

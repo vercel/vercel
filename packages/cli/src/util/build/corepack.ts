@@ -1,9 +1,10 @@
 import { delimiter, join } from 'path';
-import { PackageJson, spawnAsync } from '@vercel/build-utils';
+import { type PackageJson, spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
+import output from '../../output-manager';
 
 export async function initCorepack({
   repoRootPath,
@@ -19,16 +20,16 @@ export async function initCorepack({
     join(repoRootPath, 'package.json')
   );
   if (pkg instanceof CantParseJSONFile) {
-    console.warn(
+    output.warn(
       'Warning: Could not enable corepack because package.json is invalid JSON',
       pkg.meta.parseErrorLocation
     );
   } else if (!pkg?.packageManager) {
-    console.warn(
+    output.warn(
       'Warning: Could not enable corepack because package.json is missing "packageManager" property'
     );
   } else {
-    console.log(
+    output.log(
       `Detected ENABLE_EXPERIMENTAL_COREPACK=1 and "${pkg.packageManager}" in package.json`
     );
     const corepackRootDir = join(repoRootPath, VERCEL_DIR, 'cache', 'corepack');

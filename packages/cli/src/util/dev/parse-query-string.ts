@@ -11,7 +11,7 @@ export function parseQueryString(
     return query;
   }
   const params = querystring.slice(1).split('&');
-  for (let param of params) {
+  for (const param of params) {
     let [key, value] = param.split('=');
     if (key !== undefined) {
       key = decodeURIComponent(key);
@@ -44,8 +44,8 @@ export function formatQueryString(
   }
   let s = '';
   let prefix = '?';
-  for (let [key, values] of Object.entries(query)) {
-    for (let value of values) {
+  for (const [key, values] of Object.entries(query)) {
+    for (const value of values) {
       s += prefix;
       s += encodeURIComponent(key);
       if (value !== undefined) {

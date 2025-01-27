@@ -13,12 +13,15 @@ export const help = () => `
       deploy               [path]      Performs a deployment ${chalk.bold(
         '(default)'
       )}
+      build                            Build the project locally into './vercel/output'
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
       help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
       inspect              [id]        Displays information related to a deployment
+      i | install          [name]      Install an integration from the Marketplace
+      integration          [cmd]       Manages your Marketplace integrations
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
@@ -39,7 +42,6 @@ export const help = () => `
       logs                 [url]       Displays the logs for a deployment
       projects                         Manages your Projects
       rm | remove          [id]        Removes a deployment
-      secrets              [name]      Manages your global Secrets, for use in Environment Variables
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
@@ -49,17 +51,17 @@ export const help = () => `
     -v, --version                  Output the version number
     --cwd                          Current working directory
     -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
-  'FILE'
-)}   Path to the local ${'`vercel.json`'} file
+      'FILE'
+    )}   Path to the local ${'`vercel.json`'} file
     -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
-  'DIR'
-)}    Path to the global ${'`.vercel`'} directory
+      'DIR'
+    )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
     -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
-  'TOKEN'
-)}        Login token
+      'TOKEN'
+    )}        Login token
 
   ${chalk.dim('Examples:')}
 
@@ -76,8 +78,8 @@ export const help = () => `
     ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
   ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
-  '`list`'
-)}
+    '`list`'
+  )}
 
     ${chalk.cyan(`$ ${packageName} help list`)}
 `;

@@ -66,7 +66,7 @@ type RushWorkspaces = {
   projects: [
     {
       projectFolder: string;
-    }
+    },
   ];
 };
 

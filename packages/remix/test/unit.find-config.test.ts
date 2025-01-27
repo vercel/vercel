@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { findConfig } from '../src/utils';
+import { describe, it, expect } from 'vitest';
 
 const fixture = (name: string) => join(__dirname, 'fixtures-legacy', name);
 

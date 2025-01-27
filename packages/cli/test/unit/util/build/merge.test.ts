@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { writeFile, readdir, mkdirp, stat, remove, readFile } from 'fs-extra';

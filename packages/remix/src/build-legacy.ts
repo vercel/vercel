@@ -27,7 +27,6 @@ import type {
   PackageJson,
   BuildResultV2Typical,
 } from '@vercel/build-utils';
-import type { ConfigRoute } from '@remix-run/dev/dist/config/routes';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import {
   calculateRouteConfigHash,
@@ -46,17 +45,12 @@ import {
   isESM,
 } from './utils';
 import { patchHydrogenServer } from './hydrogen';
+import type { RouteManifestEntry } from './types';
 
 interface ServerBundle {
   serverBuildPath: string;
   routes: string[];
 }
-
-const remixBuilderPkg = JSON.parse(
-  readFileSync(join(__dirname, '../package.json'), 'utf8')
-);
-const remixRunDevForkVersion =
-  remixBuilderPkg.devDependencies['@remix-run/dev'];
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 
@@ -73,12 +67,12 @@ const nodeServerSrcPromise = fs.readFile(
 const VERCEL_REMIX_MIN_VERSION = '1.10.0';
 
 // Minimum supported version of the `@vercel/remix-run-dev` forked compiler
-const REMIX_RUN_DEV_MIN_VERSION = '1.15.0';
+const VERCEL_REMIX_RUN_DEV_MIN_VERSION = '1.15.0';
 
 // Maximum version of `@vercel/remix-run-dev` fork
 // (and also `@vercel/remix` since they get published at the same time)
-const REMIX_RUN_DEV_MAX_VERSION = remixRunDevForkVersion.slice(
-  remixRunDevForkVersion.lastIndexOf('@') + 1
+const { VERCEL_REMIX_RUN_DEV_MAX_VERSION } = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf8')
 );
 
 export const build: BuildV2 = async ({
@@ -104,8 +98,14 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, packageJsonPath, lockfileVersion, lockfilePath } =
-    await scanParentDirs(entrypointFsDirname);
+  const {
+    cliType,
+    packageJsonPath,
+    lockfileVersion,
+    lockfilePath,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
 
   if (!packageJsonPath) {
     throw new Error('Failed to locate `package.json` file in your project');
@@ -125,8 +125,10 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env,
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
@@ -174,12 +176,15 @@ export const build: BuildV2 = async ({
     pkg.dependencies?.['@remix-run/dev'] ||
     pkg.devDependencies?.['@remix-run/dev'];
 
-  const serverBundlesMap = new Map<string, ConfigRoute[]>();
-  const resolvedConfigsMap = new Map<ConfigRoute, ResolvedRouteConfig>();
+  const serverBundlesMap = new Map<string, RouteManifestEntry[]>();
+  const resolvedConfigsMap = new Map<RouteManifestEntry, ResolvedRouteConfig>();
 
   // Read the `export const config` (if any) for each route
   const project = new Project();
-  const staticConfigsMap = new Map<ConfigRoute, BaseFunctionConfig | null>();
+  const staticConfigsMap = new Map<
+    RouteManifestEntry,
+    BaseFunctionConfig | null
+  >();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
     let staticConfig = getConfig(project, routePath);
@@ -256,8 +261,8 @@ export const build: BuildV2 = async ({
     !remixRunDevPkgVersion?.startsWith('https:')
   ) {
     const remixDevForkVersion = resolveSemverMinMax(
-      REMIX_RUN_DEV_MIN_VERSION,
-      REMIX_RUN_DEV_MAX_VERSION,
+      VERCEL_REMIX_RUN_DEV_MIN_VERSION,
+      VERCEL_REMIX_RUN_DEV_MAX_VERSION,
       remixVersion
     );
     // Remove `@remix-run/dev`, add `@vercel/remix-run-dev`
@@ -288,7 +293,7 @@ export const build: BuildV2 = async ({
       //    the latest known published version of `@vercel/remix`.
       const vercelRemixVersion = resolveSemverMinMax(
         VERCEL_REMIX_MIN_VERSION,
-        REMIX_RUN_DEV_MAX_VERSION,
+        VERCEL_REMIX_RUN_DEV_MAX_VERSION,
         remixVersion
       );
       pkg.dependencies['@vercel/remix'] = vercelRemixVersion;
@@ -803,10 +808,7 @@ async function writeEntrypointFile(
   } catch (err: any) {
     if (err.code === 'ENOENT') {
       throw new Error(
-        `The "${relative(
-          rootDir,
-          dirname(path)
-        )}" directory does not exist. Please contact support at https://vercel.com/help.`
+        `The "${relative(rootDir, dirname(path))}" directory does not exist.`
       );
     }
     throw err;

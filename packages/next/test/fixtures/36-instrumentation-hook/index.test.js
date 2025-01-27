@@ -14,7 +14,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('node: should be able to use the instrumentation code in a app router page', async () => {
     const endpoint = `${ctx.deploymentUrl}/node`;
-    console.log(endpoint)
+    console.log(endpoint);
     const res = await fetch(endpoint);
     expect(res.status).toBe(200);
     const text = await res.text();
@@ -23,7 +23,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('node: should be able to use the instrumentation code in a route handler', async () => {
     const endpoint = `${ctx.deploymentUrl}/api/node`;
-    console.log(endpoint)
+    console.log(endpoint);
     const res = await fetch(endpoint);
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -35,7 +35,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('edge: should be able to use the instrumentation code in a app router page', async () => {
     const endpoint = `${ctx.deploymentUrl}/edge`;
-    console.log(endpoint)
+    console.log(endpoint);
     const res = await fetch(endpoint);
     expect(res.status).toBe(200);
     const text = await res.text();
@@ -44,7 +44,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('edge: should be able to use the instrumentation code in a route handler', async () => {
     const endpoint = `${ctx.deploymentUrl}/api/edge`;
-    console.log(endpoint)
+    console.log(endpoint);
     const res = await fetch(endpoint);
     expect(res.status).toBe(200);
     const data = await res.json();

@@ -1,5 +1,19 @@
 import chance from 'chance';
 import { client } from './client';
+import { beforeEach } from 'vitest';
+import { teamCache } from '../../src/util/teams/get-team-by-id';
+import assert from 'assert';
+
+export type Team = {
+  id: string;
+  slug: string;
+  name: string;
+  creatorId: string;
+  created: string;
+  avatar: null;
+};
+
+let teams: Team[] = [];
 
 export function useTeams(
   teamId?: string,
@@ -15,19 +29,12 @@ export function useTeams(
     apiVersion: 1,
   }
 ) {
-  const id = teamId || chance().guid();
-  const teams = [
-    {
-      id,
-      slug: chance().string({ length: 5, casing: 'lower' }),
-      name: chance().company(),
-      creatorId: chance().guid(),
-      created: '2017-04-29T17:21:54.514Z',
-      avatar: null,
-    },
-  ];
+  // intentionally blow away accrued teams added by `createTeam`
+  teams = [];
 
-  for (let team of teams) {
+  createTeam(teamId);
+
+  for (const team of teams) {
     client.scenario.get(`/teams/${team.id}`, (_req, res) => {
       if (options.failMissingToken) {
         res.statusCode = 403;
@@ -69,3 +76,29 @@ export function useTeams(
 
   return options.apiVersion === 2 ? { teams } : teams;
 }
+
+export function useTeam(teamId?: string) {
+  const teams = useTeams(teamId);
+  assert(Array.isArray(teams));
+  return teams[0];
+}
+
+export function createTeam(teamId?: string, slug?: string, name?: string) {
+  const id = teamId || chance().guid();
+  const teamSlug = slug || chance().string({ length: 5, casing: 'lower' });
+  const teamName = name || chance().company();
+  const newTeam = {
+    id,
+    slug: teamSlug,
+    name: teamName,
+    creatorId: chance().guid(),
+    created: '2017-04-29T17:21:54.514Z',
+    avatar: null,
+  };
+  teams.push(newTeam);
+  return newTeam;
+}
+
+beforeEach(() => {
+  teamCache.clear();
+});

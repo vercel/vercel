@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "41-npm-workspaces-corepack",
+  "version": "1.0.0",
+  "packageManager": "npm@10.7.0",
+  "workspaces": [
+    "a",
+    "b"
+  ]
+}

@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it } from 'vitest';
 import { listen } from 'async-listen';
 import { createProxy } from 'proxy';
 import { ProxyAgent } from 'proxy-agent';

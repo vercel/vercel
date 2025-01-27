@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import { TurboDryRun } from './types';
 
 const rootDir = path.join(__dirname, '..');
+const ignoredPackages = ['api', 'examples'];
 
 async function main() {
   const sha = await getSha();
@@ -17,20 +18,22 @@ async function main() {
   );
   const turboJson: TurboDryRun = JSON.parse(turboStdout);
   for (const task of turboJson.tasks) {
+    if (ignoredPackages.includes(task.directory)) {
+      continue;
+    }
+
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
-    // api is not a package that will be published of this repo, but is used when deployed to Vercel
-    if (originalPackageObj.name === 'api') {
-      continue;
-    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 
     if (task.dependencies.length > 0) {
       for (const dependency of task.dependencies) {
         const name = dependency.split('#')[0];
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${name}.tgz`;
+        // pnpm 8 fails to install dependencies with @ in the URL
+        const escapedName = name.replace('@', '%40');
+        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }

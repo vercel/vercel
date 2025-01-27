@@ -2,7 +2,7 @@ import ms from 'ms';
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -10,22 +10,38 @@ import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import output from '../../output-manager';
+import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 
-export default async function ls(
-  client: Client,
-  opts: Partial<PaginationOptions>,
-  args: string[]
-) {
-  const { output } = client;
+export default async function ls(client: Client, argv: string[]) {
+  const telemetry = new DomainsLsTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-  let paginationOptions;
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
+
+  let paginationOptions: (number | undefined)[];
 
   try {
     paginationOptions = getPaginationOpts(opts);

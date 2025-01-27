@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "\"Amazon Linux 2\"" }
+  ]
+}

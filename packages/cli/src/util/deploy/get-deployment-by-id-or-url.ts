@@ -4,6 +4,7 @@ import getTeamById from '../teams/get-team-by-id';
 import { isValidName } from '../is-valid-name';
 import type Client from '../client';
 import type { Deployment, Team } from '@vercel-internals/types';
+import output from '../../output-manager';
 
 /**
  * Renders feedback while retrieving a deployment, then validates the
@@ -23,7 +24,7 @@ export async function getDeploymentByIdOrURL({
   contextName: string;
   deployIdOrUrl: string;
 }): Promise<Deployment> {
-  const { config, output } = client;
+  const { config } = client;
 
   if (!isValidName(deployIdOrUrl)) {
     throw new Error(

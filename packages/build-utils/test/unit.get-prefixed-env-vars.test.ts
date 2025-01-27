@@ -1,4 +1,5 @@
 import { getPrefixedEnvVars } from '../src';
+import { describe, expect, it } from 'vitest';
 
 describe('Test `getPrefixedEnvVars()`', () => {
   const cases: Array<{
@@ -15,6 +16,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
           VERCEL_URL: 'example.vercel.sh',
           VERCEL_ENV: 'production',
           VERCEL_BRANCH_URL: 'example-git-main-acme.vercel.app',
+          VERCEL_PROJECT_PRODUCTION_URL: 'example.com',
           USER_ENV_VAR_NOT_VERCEL: 'example.com',
           VERCEL_ARTIFACTS_TOKEN: 'abc123',
           FOO: 'bar',
@@ -24,6 +26,7 @@ describe('Test `getPrefixedEnvVars()`', () => {
         NEXT_PUBLIC_VERCEL_URL: 'example.vercel.sh',
         NEXT_PUBLIC_VERCEL_ENV: 'production',
         NEXT_PUBLIC_VERCEL_BRANCH_URL: 'example-git-main-acme.vercel.app',
+        NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL: 'example.com',
         TURBO_CI_VENDOR_ENV_KEY: 'NEXT_PUBLIC_VERCEL_',
       },
     },

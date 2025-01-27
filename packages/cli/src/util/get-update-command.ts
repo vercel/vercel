@@ -35,7 +35,7 @@ async function getConfigPrefix() {
   return null;
 }
 
-async function isGlobal() {
+export async function isGlobal() {
   try {
     // This is true for e.g. nvm, node path will be equal to now path
     if (dirname(process.argv[0]) === dirname(process.argv[1])) {
@@ -83,6 +83,7 @@ export default async function getUpdateCommand(): Promise<string> {
   const pkgAndVersion = `${packageName}@latest`;
 
   const entrypoint = await realpath(process.argv[1]);
+  // eslint-disable-next-line prefer-const
   let { cliType, lockfilePath } = await scanParentDirs(
     dirname(dirname(entrypoint))
   );

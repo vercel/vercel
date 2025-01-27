@@ -1,22 +1,22 @@
+import type { Deployment, Org } from '@vercel-internals/types';
+import {
+  type ArchiveFormat,
+  type DeploymentOptions,
+  type VercelClientOptions,
+  createDeployment,
+} from '@vercel/client';
+import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import {
-  ArchiveFormat,
-  createDeployment,
-  DeploymentOptions,
-  VercelClientOptions,
-} from '@vercel/client';
-import { Output } from '../output';
-import { progress } from '../output/progress';
-import Now from '../../util';
-import type { Deployment, Org } from '@vercel-internals/types';
-import ua from '../ua';
-import { linkFolderToProject } from '../projects/link';
-import { prependEmoji, emoji } from '../emoji';
 import type { Agent } from 'http';
+import type Now from '../../util';
+import { emoji, prependEmoji } from '../emoji';
+import { displayBuildLogs } from '../logs';
+import { progress } from '../output/progress';
+import ua from '../ua';
+import output from '../../output-manager';
 
 function printInspectUrl(
-  output: Output,
   inspectorUrl: string | null | undefined,
   deployStamp: () => string
 ) {
@@ -34,12 +34,12 @@ function printInspectUrl(
 
 export default async function processDeployment({
   org,
-  cwd,
   projectName,
   isSettingUpProject,
   archive,
   skipAutoDetectionConfirmation,
   noWait,
+  withLogs,
   agent,
   ...args
 }: {
@@ -53,16 +53,17 @@ export default async function processDeployment({
   withCache?: boolean;
   org: Org;
   prebuilt: boolean;
+  vercelOutputDir?: string;
   projectName: string;
   isSettingUpProject: boolean;
   archive?: ArchiveFormat;
   skipAutoDetectionConfirmation?: boolean;
-  cwd: string;
   rootDirectory?: string | null;
   noWait?: boolean;
+  withLogs?: boolean;
   agent?: Agent;
 }) {
-  let {
+  const {
     now,
     path,
     requestBody,
@@ -71,11 +72,12 @@ export default async function processDeployment({
     withCache,
     quiet,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
   } = args;
 
   const client = now._client;
-  const { output } = client;
+
   const { env = {} } = requestBody;
   const token = now._token;
   if (!token) {
@@ -86,12 +88,13 @@ export default async function processDeployment({
     teamId: org.type === 'team' ? org.id : undefined,
     apiUrl: now._apiUrl,
     token,
-    debug: now._debug,
+    debug: output.isDebugEnabled(),
     userAgent: ua,
     path,
     force,
     withCache,
     prebuilt,
+    vercelOutputDir,
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
@@ -106,6 +109,13 @@ export default async function processDeployment({
   // collect indications to show the user once
   // the deployment is done
   const indications = [];
+
+  let abortController: AbortController | undefined;
+
+  function stopSpinner(): void {
+    abortController?.abort();
+    output.stopSpinner();
+  }
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -168,22 +178,11 @@ export default async function processDeployment({
       if (event.type === 'created') {
         const deployment: Deployment = event.payload;
 
-        await linkFolderToProject(
-          client,
-          cwd,
-          {
-            orgId: org.id,
-            projectId: deployment.projectId!,
-          },
-          projectName,
-          org.slug
-        );
-
         now.url = deployment.url;
 
-        output.stopSpinner();
+        stopSpinner();
 
-        printInspectUrl(output, deployment.inspectorUrl, deployStamp);
+        printInspectUrl(deployment.inspectorUrl, deployStamp);
 
         const isProdDeployment = deployment.target === 'production';
         const previewUrl = `https://${deployment.url}`;
@@ -197,7 +196,7 @@ export default async function processDeployment({
           ) + `\n`
         );
 
-        if (quiet) {
+        if (quiet || process.env.FORCE_TTY === '1') {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
@@ -205,18 +204,29 @@ export default async function processDeployment({
           return deployment;
         }
 
+        if (withLogs) {
+          let promise: Promise<void>;
+          ({ abortController, promise } = displayBuildLogs(
+            client,
+            deployment,
+            true
+          ));
+          promise.catch(error =>
+            output.warn(`Failed to read build logs: ${error}`)
+          );
+        }
         output.spinner(
           deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
           0
         );
       }
 
-      if (event.type === 'building') {
+      if (event.type === 'building' && !withLogs) {
         output.spinner('Building', 0);
       }
 
       if (event.type === 'canceled') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
@@ -226,23 +236,31 @@ export default async function processDeployment({
         event.type === 'ready' &&
         (event.payload.checksState
           ? event.payload.checksState === 'completed'
-          : true)
+          : true) &&
+        !withLogs
       ) {
         output.spinner('Completing', 0);
       }
 
-      if (event.type === 'checks-running') {
+      if (event.type === 'checks-running' && !withLogs) {
         output.spinner('Running Checks', 0);
       }
 
       if (event.type === 'checks-conclusion-failed') {
-        output.stopSpinner();
+        stopSpinner();
         return event.payload;
       }
 
       // Handle error events
       if (event.type === 'error') {
-        output.stopSpinner();
+        stopSpinner();
+
+        if (!archive) {
+          const maybeError = handleErrorSolvableWithArchive(event.payload);
+          if (maybeError) {
+            throw maybeError;
+          }
+        }
 
         const error = await now.handleDeploymentError(event.payload, {
           env,
@@ -261,13 +279,37 @@ export default async function processDeployment({
 
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
-        output.stopSpinner();
+        stopSpinner();
         event.payload.indications = indications;
         return event.payload;
       }
     }
   } catch (err) {
-    output.stopSpinner();
+    stopSpinner();
     throw err;
+  }
+}
+
+export const archiveSuggestionText =
+  'Try using `--archive=tgz` to limit the amount of files you upload.';
+
+export class UploadErrorMissingArchive extends Error {
+  link = 'https://vercel.com/docs/cli/deploy#archive';
+}
+
+export function handleErrorSolvableWithArchive(error: unknown) {
+  if (isErrorLike(error)) {
+    const isUploadRateLimit =
+      'errorName' in error &&
+      typeof error.errorName === 'string' &&
+      error.errorName.startsWith('api-upload-');
+    const isTooManyFilesLimit =
+      'code' in error && error.code === 'too_many_files';
+
+    if (isUploadRateLimit || isTooManyFilesLimit) {
+      return new UploadErrorMissingArchive(
+        `${error.message}\n${archiveSuggestionText}`
+      );
+    }
   }
 }

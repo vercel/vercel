@@ -1,7 +1,7 @@
-import Client from '../client';
+import type Client from '../client';
 import type { Team } from '@vercel-internals/types';
 
-const teamCache = new Map<string, Team>();
+export const teamCache = new Map<string, Team>();
 
 export default async function getTeamById(
   client: Client,

@@ -1,16 +1,8 @@
-import chalk from 'chalk';
-import table from 'text-table';
-import strlen from './strlen';
+import table from './output/table';
+import { gray } from 'chalk';
 
-const HEADER = ['name', 'type', 'value'].map(v => chalk.gray(v));
+const HEADER = ['name', 'type', 'value'].map(v => gray(v));
 
-export default function formatDNSTable(
-  rows: string[][],
-  { extraSpace = '' } = {}
-) {
-  return table([HEADER, ...rows], {
-    align: ['l', 'l', 'l'],
-    hsep: ' '.repeat(8),
-    stringLength: strlen,
-  }).replace(/^(.*)/gm, `${extraSpace}$1`);
+export default function formatDNSTable(rows: string[][]) {
+  return table([HEADER, ...rows], { hsep: 8 });
 }

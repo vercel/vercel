@@ -1,3 +1,4 @@
+import { describe, expect, test } from 'vitest';
 import { sortBuilders } from '../../../../src/util/build/sort-builders';
 
 describe('sortBuilders()', () => {
@@ -5,12 +6,12 @@ describe('sortBuilders()', () => {
     {
       name: 'should sort @vercel/next from middle to beginning',
       input: ['@vercel/node', '@vercel/next', '@vercel/python'],
-      output: ['@vercel/next', '@vercel/node', '@vercel/python'],
+      output: ['@vercel/next', '@vercel/python', '@vercel/node'],
     },
     {
       name: 'should sort @vercel/static-build from middle to beginning',
       input: ['@vercel/node', '@vercel/static-build', '@vercel/python'],
-      output: ['@vercel/static-build', '@vercel/node', '@vercel/python'],
+      output: ['@vercel/static-build', '@vercel/python', '@vercel/node'],
     },
     {
       name: 'should sort @vercel/remix from end to beginning',

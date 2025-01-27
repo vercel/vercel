@@ -18,15 +18,12 @@
     "lint:fix": "concurrently \"npm:lint:*:fix\" --names \"fix:\"",
     "lint:hbs": "ember-template-lint .",
     "lint:hbs:fix": "ember-template-lint . --fix",
-    "lint:js": "eslint . --cache",
-    "lint:js:fix": "eslint . --fix",
     "start": "ember serve",
     "test": "concurrently \"npm:lint\" \"npm:test:*\" --names \"lint,test:\"",
     "test:ember": "ember test"
   },
   "devDependencies": {
     "@babel/core": "^7.23.6",
-    "@babel/eslint-parser": "^7.23.3",
     "@babel/plugin-proposal-decorators": "^7.23.6",
     "@ember/optional-features": "^2.0.0",
     "@ember/string": "^3.1.1",
@@ -55,12 +52,6 @@
     "ember-source": "~5.5.0",
     "ember-template-lint": "^5.13.0",
     "ember-welcome-page": "^7.0.2",
-    "eslint": "^8.55.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-ember": "^11.11.1",
-    "eslint-plugin-n": "^16.4.0",
-    "eslint-plugin-prettier": "^5.0.1",
-    "eslint-plugin-qunit": "^8.0.1",
     "loader.js": "^4.7.0",
     "prettier": "^3.1.1",
     "qunit": "^2.20.0",
@@ -70,6 +61,9 @@
     "stylelint-prettier": "^4.1.0",
     "tracked-built-ins": "^3.3.0",
     "webpack": "^5.89.0"
+  },
+  "resolutions": {
+    "@babel/traverse": "7.25.9"
   },
   "engines": {
     "node": ">= 18"

@@ -1,6 +1,0 @@
-[
-  {
-    "src": "/",
-    "dest": "/.vercel/functions/my-function"
-  }
-]

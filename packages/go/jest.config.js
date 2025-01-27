@@ -8,6 +8,7 @@ module.exports = {
       {
         diagnostics: true,
         isolatedModules: true,
+        tsconfig: 'test/tsconfig.json',
       },
     ],
   },

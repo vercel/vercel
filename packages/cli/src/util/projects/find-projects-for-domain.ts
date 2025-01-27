@@ -1,32 +1,26 @@
-import Client from '../client';
-import type { Project } from '@vercel-internals/types';
-import { URLSearchParams } from 'url';
+import type Client from '../client';
 import { isAPIError } from '../errors-ts';
+import type { Project } from '@vercel-internals/types';
 
 export async function findProjectsForDomain(
   client: Client,
   domainName: string
 ): Promise<Project[] | Error> {
   try {
-    const limit = 50;
-    let result: Project[] = [];
+    const result: Project[] = [];
 
-    const query = new URLSearchParams({
-      hasProductionDomains: '1',
-      limit: limit.toString(),
-      domain: domainName,
-    });
-
-    for (let i = 0; i < 1000; i++) {
-      const response = await client.fetch<Project[]>(`/v2/projects/?${query}`);
-      result.push(...response);
-
-      if (response.length !== limit) {
-        break;
+    for await (const chunk of client.fetchPaginated<{ projects: Project[] }>(
+      '/v9/projects'
+    )) {
+      for (const project of chunk.projects) {
+        if (
+          project.targets?.production?.alias?.some(alias =>
+            alias.endsWith(domainName)
+          )
+        ) {
+          result.push(project);
+        }
       }
-
-      const [latest] = response.sort((a, b) => b.updatedAt - a.updatedAt);
-      query.set('from', latest.updatedAt.toString());
     }
 
     return result;

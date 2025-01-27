@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import plural from 'pluralize';
-import table from 'text-table';
+import table from '../../util/output/table';
 import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import elapsed from '../../util/output/elapsed';
@@ -13,51 +13,59 @@ import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name'
 import getDeployment from '../../util/get-deployment';
 import getDeploymentsByProjectId from '../../util/deploy/get-deployments-by-project-id';
 import { getCommandName } from '../../util/pkg-name';
-import getArgs from '../../util/get-args';
-import handleError from '../../util/handle-error';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 import type Client from '../../util/client';
-import { Output } from '../../util/output';
-import { Alias, Deployment, Project } from '@vercel-internals/types';
+import type { Alias, Deployment, Project } from '@vercel-internals/types';
 import { NowError } from '../../util/now-error';
 import { help } from '../help';
 import { removeCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RemoveTelemetryClient } from '../../util/telemetry/commands/remove';
+import output from '../../output-manager';
 
 type DeploymentWithAliases = Deployment & {
   aliases: Alias[];
 };
 
 export default async function remove(client: Client) {
-  let argv;
+  const telemetryClient = new RemoveTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(removeCommand.options);
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--hard': Boolean,
-      '--yes': Boolean,
-      '--safe': Boolean,
-      '-y': '--yes',
-      '-s': '--safe',
-    });
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
-  argv._ = argv._.slice(1);
-
-  const {
-    output,
-    config: { currentTeam },
-  } = client;
-  const hard = argv['--hard'];
-  const skipConfirmation = argv['--yes'];
-  const safe = argv['--safe'];
-  const ids: string[] = argv._;
-  const { success, error, log } = output;
-
-  if (argv['--help'] || ids[0] === 'help') {
+  if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('remove');
     output.print(help(removeCommand, { columns: client.stderr.columns }));
     return 2;
   }
+
+  const ids = parsedArgs.args.slice(1);
+  const hard = parsedArgs.flags['--hard'];
+  const skipConfirmation = parsedArgs.flags['--yes'];
+  const safe = parsedArgs.flags['--safe'];
+  telemetryClient.trackCliArgumentNameOrDeploymentId(ids);
+  telemetryClient.trackCliFlagSafe(safe);
+  telemetryClient.trackCliFlagHard(hard);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
+
+  const {
+    config: { currentTeam },
+  } = client;
+  const { success, error, log } = output;
 
   if (ids.length < 1) {
     error(`${getCommandName('rm')} expects at least one argument`);
@@ -164,12 +172,11 @@ export default async function remove(client: Client) {
   });
 
   if (deployments.length === 0 && projects.length === 0) {
+    const safeUnaliased = parsedArgs.flags['--safe'] ? 'unaliased' : 'any';
+    const stylizedIds = ids.map(id => chalk.bold(`"${id}"`)).join(', ');
+    const commandName = getCommandName('projects ls');
     log(
-      `Could not find ${argv['--safe'] ? 'unaliased' : 'any'} deployments ` +
-        `or projects matching ` +
-        `${ids
-          .map(id => chalk.bold(`"${id}"`))
-          .join(', ')}. Run ${getCommandName('ls')} to list.`
+      `Could not find ${safeUnaliased} deployments or projects matching ${stylizedIds}. Run ${commandName} to list.`
     );
     return 1;
   }
@@ -181,14 +188,13 @@ export default async function remove(client: Client) {
 
   if (deployments.length > 200) {
     output.warn(
-      `Only 200 deployments can get deleted at once. ` +
-        `Please continue 10 minutes after deletion to remove the rest.`
+      'Only 200 deployments can get deleted at once. Please continue 10 minutes after deletion to remove the rest.'
     );
   }
 
   if (!skipConfirmation) {
     const confirmation = (
-      await readConfirmation(deployments, projects, output)
+      await readConfirmation(deployments, projects)
     ).toLowerCase();
 
     if (confirmation !== 'y' && confirmation !== 'yes') {
@@ -203,7 +209,7 @@ export default async function remove(client: Client) {
   });
   const start = Date.now();
 
-  await Promise.all<any>([
+  await Promise.all([
     ...deployments.map(depl => now.remove(depl.id, { hard })),
     ...projects.map(project => removeProject(client, project.id)),
   ]);
@@ -214,11 +220,13 @@ export default async function remove(client: Client) {
   );
 
   deployments.forEach(depl => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(depl.url)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(depl.url)}\n`);
   });
 
   projects.forEach((project: Project) => {
-    console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+    // consider changing to `output.log`
+    output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
   });
 
   return 0;
@@ -226,8 +234,7 @@ export default async function remove(client: Client) {
 
 function readConfirmation(
   deployments: DeploymentWithAliases[],
-  projects: Project[],
-  output: Output
+  projects: Project[]
 ): Promise<string> {
   return new Promise(resolve => {
     if (deployments.length > 0) {
@@ -245,7 +252,7 @@ function readConfirmation(
           const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
           return [`  ${depl.id}`, url, time];
         }),
-        { align: ['l', 'r', 'l'], hsep: ' '.repeat(6) }
+        { align: ['l', 'r', 'l'], hsep: 6 }
       );
       output.print(`${deploymentTable}\n`);
     }
@@ -260,7 +267,7 @@ function readConfirmation(
     }
 
     if (projects.length > 0) {
-      console.log(
+      output.print(
         `The following ${plural(
           'project',
           projects.length,
@@ -268,16 +275,17 @@ function readConfirmation(
         )} will be permanently removed, ` +
           `including all ${
             projects.length > 1 ? 'their' : 'its'
-          } deployments and aliases:`
+          } deployments and aliases:\n`
       );
 
       for (const project of projects) {
-        console.log(`${chalk.gray('-')} ${chalk.bold(project.name)}`);
+        // consider changing to `output.log`
+        output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
       }
     }
 
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
 
     process.stdin

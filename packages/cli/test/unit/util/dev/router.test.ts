@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { devRouter } from '../../../../src/util/dev/router';
 
 describe('devRouter', () => {

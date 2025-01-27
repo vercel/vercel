@@ -38,8 +38,9 @@ import {
 import {
   getLatestNodeVersion,
   getDiscontinuedNodeVersions,
+  getSupportedNodeVersion,
 } from './fs/node-version';
-import streamToBuffer from './fs/stream-to-buffer';
+import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -72,6 +73,7 @@ export {
   walkParentDirs,
   getNodeBinPath,
   getNodeBinPaths,
+  getSupportedNodeVersion,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -86,6 +88,7 @@ export {
   getPlatformEnv,
   getPrefixedEnvVars,
   streamToBuffer,
+  streamToBufferChunks,
   debug,
   isSymbolicLink,
   isDirectory,
@@ -101,6 +104,7 @@ export {
 export { EdgeFunction } from './edge-function';
 export { readConfigFile } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
+export { getOsRelease, getProvidedRuntime } from './os';
 
 export * from './should-serve';
 export * from './schemas';
@@ -108,3 +112,5 @@ export * from './types';
 export * from './errors';
 
 export { NODE_VERSIONS } from './fs/node-version';
+
+export { getInstalledPackageVersion } from './get-installed-package-version';

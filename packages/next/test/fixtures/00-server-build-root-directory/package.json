@@ -4,5 +4,9 @@
     "packages": [
       "packages/*"
     ]
+  },
+  "overrides": {
+    "react": "latest",
+    "react-dom": "latest"
   }
 }

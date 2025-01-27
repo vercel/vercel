@@ -15,5 +15,5 @@ _Live Example: https://ionic-template.vercel.app_
 To get started with Ionic React deployed with Vercel, you can use the [Ionic CLI](https://ionicframework.com/docs/cli) to initialize the project:
 
 ```shell
-$ npx ionic start [project-name] conference --type react && cd [project-name]
+$ npx ionic start [project-name] tabs --type react && cd [project-name]
 ```

@@ -1,20 +1,39 @@
-import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
-import type { Project } from '@vercel-internals/types';
-import Client from '../../util/client';
+import chalk from 'chalk';
+import table from '../../util/output/table';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import strlen from '../../util/strlen';
 import { NODE_VERSIONS } from '@vercel/build-utils';
+import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
+import output from '../../output-manager';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import getScope from '../../util/get-scope';
+import type Client from '../../util/client';
+import type { Project } from '@vercel-internals/types';
 
 export default async function list(
   client: Client,
-  argv: any,
-  args: string[],
-  contextName: string
-) {
-  const { output } = client;
+  argv: string[]
+): Promise<number> {
+  const telemetryClient = new ProjectListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
   if (args.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -26,21 +45,24 @@ export default async function list(
 
   const start = Date.now();
 
+  const { contextName } = await getScope(client);
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = `/v4/projects/?limit=20`;
+  let projectsUrl = '/v9/projects?limit=20';
 
-  const deprecated = argv['--update-required'] || false;
+  const deprecated = opts['--update-required'] || false;
+  telemetryClient.trackCliFlagUpdateRequired(deprecated);
   if (deprecated) {
     projectsUrl += `&deprecated=${deprecated}`;
   }
 
-  const next = argv['--next'] || false;
+  const next = opts['--next'];
+  telemetryClient.trackCliOptionNext(next);
   if (next) {
     projectsUrl += `&until=${next}`;
   }
 
-  let {
+  const {
     projects: projectList,
     pagination,
   }: {
@@ -55,24 +77,25 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersionsList = [];
+    const upcomingDiscontinuedVersionsList = [];
 
     for (const nodeVersion of NODE_VERSIONS) {
-      if (
-        nodeVersion.discontinueDate &&
-        nodeVersion.discontinueDate.valueOf() > Date.now()
-      ) {
-        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      // If there are scenarios where we will be deprecating a version
+      // without knowing the discontinue date
+      // Then we'll want to consider adding a `deprecationDate` field to the nodeVersion type
+      const upcomingDiscontinueDate = nodeVersion.state === 'deprecated';
+      if (upcomingDiscontinueDate) {
+        upcomingDiscontinuedVersionsList.push(nodeVersion.range);
       }
     }
 
     output.warn(
-      `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
+      `The following Node.js versions are deprecated: ${upcomingDiscontinuedVersionsList.join(
         ', '
-      )}. Please upgrade your projects immediately.`
+      )} and will be discontinued soon. Please upgrade your projects immediately.`
     );
     output.log(
-      `For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version`
+      'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
     );
   }
 
@@ -87,29 +110,27 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
-        ),
-        ...projectList
-          .map(project => [
-            [
-              chalk.bold(project.name),
-              getLatestProdUrl(project),
-              chalk.gray(ms(Date.now() - project.updatedAt)),
-            ],
-          ])
-          .flat(),
+        [
+          'Project Name',
+          'Latest Production URL',
+          'Updated',
+          'Node Version',
+        ].map(header => chalk.bold(chalk.cyan(header))),
+        ...projectList.flatMap(project => [
+          [
+            chalk.bold(project.name),
+            getLatestProdUrl(project),
+            chalk.gray(ms(Date.now() - project.updatedAt)),
+            project.nodeVersion ?? '',
+          ],
+        ]),
       ],
-      {
-        align: ['l', 'l', 'l'],
-        hsep: ' '.repeat(3),
-        stringLength: strlen,
-      }
+      { hsep: 3 }
     ).replace(/^/gm, '  ');
     output.print(`\n${tablePrint}\n\n`);
 
     if (pagination && pagination.count === 20) {
-      const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d', '-y']);
+      const flags = getCommandFlags(opts, ['_', '--next', '-N', '-d', '-y']);
       const nextCmd = `project ls${flags} --next ${pagination.next}`;
       output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
     }
@@ -118,9 +139,7 @@ export default async function list(
 }
 
 function getLatestProdUrl(project: Project): string {
-  const alias =
-    project.alias?.filter(al => al.deployment)?.[0]?.domain ||
-    project.alias?.[0]?.domain;
-  if (alias) return 'https://' + alias;
+  const alias = project.targets?.production?.alias?.[0];
+  if (alias) return `https://${alias}`;
   return '--';
 }

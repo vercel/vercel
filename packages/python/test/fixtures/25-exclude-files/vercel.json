@@ -1,11 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/yes.py", "use": "@vercel/python" },
+    {
+      "src": "api/yes.py",
+      "use": "@vercel/python"
+    },
     {
       "src": "api/no.py",
       "use": "@vercel/python",
-      "config": { "excludeFiles": "ignoreme/**" }
+      "config": {
+        "excludeFiles": "ignoreme/**"
+      }
     }
   ]
 }

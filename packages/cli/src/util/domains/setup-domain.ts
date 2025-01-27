@@ -1,16 +1,15 @@
-import psl from 'psl';
+import { parse } from 'tldts';
 import { NowError } from '../now-error';
 import type { Domain } from '@vercel-internals/types';
-import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
 import addDomain from './add-domain';
-import Client from '../client';
+import type Client from '../client';
 import maybeGetDomainByName from './maybe-get-domain-by-name';
 import purchaseDomainIfAvailable from './purchase-domain-if-available';
 import extractDomain from '../alias/extract-domain';
+import output from '../../output-manager';
 
 export default async function setupDomain(
-  output: Output,
   client: Client,
   alias: string,
   contextName: string
@@ -32,7 +31,6 @@ export default async function setupDomain(
     `The domain ${aliasDomain} was not found, trying to purchase it`
   );
   const purchased = await purchaseDomainIfAvailable(
-    output,
     client,
     aliasDomain,
     contextName
@@ -45,10 +43,7 @@ export default async function setupDomain(
     output.debug(
       `Domain ${aliasDomain} is not available to be purchased. Trying to add it`
     );
-    const parsedDomain = psl.parse(aliasDomain);
-    if (parsedDomain.error) {
-      return new ERRORS.InvalidDomain(alias, parsedDomain.error.message);
-    }
+    const parsedDomain = parse(aliasDomain);
     if (!parsedDomain.domain) {
       return new ERRORS.InvalidDomain(alias);
     }
@@ -61,12 +56,12 @@ export default async function setupDomain(
     }
 
     output.debug(
-      `Domain ${domain} successfuly added and automatically verified`
+      `Domain ${domain} successfully added and automatically verified`
     );
     return addResult;
   }
 
-  output.debug(`The domain ${aliasDomain} was successfuly purchased`);
+  output.debug(`The domain ${aliasDomain} was successfully purchased`);
   const purchasedDomain = (await maybeGetDomainByName(
     client,
     contextName,

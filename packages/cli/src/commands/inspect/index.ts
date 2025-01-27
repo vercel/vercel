@@ -1,48 +1,61 @@
-import chalk from 'chalk';
-import getArgs from '../../util/get-args';
-import buildsList from '../../util/output/builds';
-import routesList from '../../util/output/routes';
-import indent from '../../util/output/indent';
-import elapsed from '../../util/output/elapsed';
-import { handleError } from '../../util/error';
-import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
-import getDeployment from '../../util/get-deployment';
 import type { Build, Deployment } from '@vercel-internals/types';
-import title from 'title';
 import { isErrnoException } from '@vercel/error-utils';
-import { URL } from 'url';
-import readStandardInput from '../../util/input/read-standard-input';
-import sleep from '../../util/sleep';
+import chalk from 'chalk';
 import ms from 'ms';
+import title from 'title';
+import { URL } from 'url';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
+import { displayBuildLogs } from '../../util/logs';
+import { printError } from '../../util/error';
+import { parseArguments } from '../../util/get-args';
+import getDeployment from '../../util/get-deployment';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getScope from '../../util/get-scope';
+import readStandardInput from '../../util/input/read-standard-input';
+import buildsList from '../../util/output/builds';
+import elapsed from '../../util/output/elapsed';
+import indent from '../../util/output/indent';
+import routesList from '../../util/output/routes';
+import { getCommandName } from '../../util/pkg-name';
+import sleep from '../../util/sleep';
 import { help } from '../help';
 import { inspectCommand } from './command';
+import output from '../../output-manager';
+
+import { InspectTelemetryClient } from '../../util/telemetry/commands/inspect';
 
 export default async function inspect(client: Client) {
-  const { output } = client;
-  let argv;
+  const { print, error, warn } = output;
+  const telemetry = new InspectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArguments;
+
+  const flagsSpecification = getFlagsSpecification(inspectCommand.options);
 
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--timeout': String,
-      '--wait': Boolean,
-    });
+    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
-  if (argv['--help']) {
-    output.print(help(inspectCommand, { columns: client.stderr.columns }));
+  if (parsedArguments.flags['--help']) {
+    telemetry.trackCliFlagHelp('inspect');
+    print(help(inspectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const { print, log, error } = client.output;
+  if (parsedArguments.args[0] === inspectCommand.name) {
+    parsedArguments.args.shift();
+  }
 
   // extract the first parameter
-  let [, deploymentIdOrHost] = argv._;
+  let [deploymentIdOrHost] = parsedArguments.args;
 
   if (!deploymentIdOrHost) {
     // if the URL is not passed in, check stdin
@@ -55,14 +68,19 @@ export default async function inspect(client: Client) {
 
   if (!deploymentIdOrHost) {
     error(`${getCommandName('inspect <url>')} expects exactly one argument`);
-    output.print(help(inspectCommand, { columns: client.stderr.columns }));
+    print(help(inspectCommand, { columns: client.stderr.columns }));
     return 1;
   }
 
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
+  telemetry.trackCliOptionTimeout(parsedArguments.flags['--timeout']);
+  telemetry.trackCliFlagLogs(parsedArguments.flags['--logs']);
+  telemetry.trackCliFlagWait(parsedArguments.flags['--wait']);
+
   // validate the timeout
-  const timeout = ms(argv['--timeout'] ?? '3m');
+  const timeout = ms(parsedArguments.flags['--timeout'] ?? '3m');
   if (timeout === undefined) {
-    error(`Invalid timeout "${argv['--timeout']}"`);
+    error(`Invalid timeout "${parsedArguments.flags['--timeout']}"`);
     return 1;
   }
 
@@ -82,31 +100,91 @@ export default async function inspect(client: Client) {
     throw err;
   }
 
-  const depFetchStart = Date.now();
+  const until = Date.now() + timeout;
+  const wait = parsedArguments.flags['--wait'] ?? false;
+  const withLogs = parsedArguments.flags['--logs'];
+  const startTimestamp = Date.now();
 
   try {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
-  client.output.spinner(
+  output.spinner(
     `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
   );
-
-  const until = Date.now() + timeout;
-  const wait = argv['--wait'];
 
   // resolve the deployment, since we might have been given an alias
   let deployment = await getDeployment(client, contextName, deploymentIdOrHost);
 
-  while (Date.now() < until) {
-    if (!wait || !isDeploying(deployment.readyState)) {
-      break;
+  let abortController: AbortController | undefined;
+  if (withLogs) {
+    let promise: Promise<void>;
+    ({ abortController, promise } = displayBuildLogs(client, deployment, wait));
+    if (wait) {
+      // when waiting for the deployment's end, we don't wait for the logs to finish
+      promise.catch(error => warn(`Failed to read build logs: ${error}`));
+    } else {
+      await promise;
     }
-
+  }
+  while (wait) {
     await sleep(250);
-
     // check the deployment state again
     deployment = await getDeployment(client, contextName, deploymentIdOrHost);
+    if (!isDeploying(deployment.readyState)) {
+      abortController?.abort();
+      break;
+    }
+    if (Date.now() > until) {
+      warn(`stopped waiting after ${ms(timeout, { long: true })}`);
+      abortController?.abort();
+      break;
+    }
   }
+  if (withLogs) {
+    print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
+  } else {
+    await printDetails({ deployment, contextName, client, startTimestamp });
+  }
+
+  return exitCode(deployment.readyState);
+}
+
+function stateString(s: Deployment['readyState']) {
+  const CIRCLE = '● ';
+  const sTitle = s && title(s);
+  switch (s) {
+    case 'INITIALIZING':
+    case 'BUILDING':
+      return chalk.yellow(CIRCLE) + sTitle;
+    case 'ERROR':
+      return chalk.red(CIRCLE) + sTitle;
+    case 'READY':
+      return chalk.green(CIRCLE) + sTitle;
+    case 'QUEUED':
+      return chalk.gray(CIRCLE) + sTitle;
+    case 'CANCELED':
+      return chalk.gray(CIRCLE) + sTitle;
+    default:
+      return chalk.gray('UNKNOWN');
+  }
+}
+
+async function printDetails({
+  deployment,
+  contextName,
+  client,
+  startTimestamp,
+}: {
+  deployment: Deployment;
+  contextName: string | null;
+  client: Client;
+  startTimestamp: number;
+}): Promise<void> {
+  output.log(
+    `Fetched deployment "${chalk.bold(deployment.url)}" in ${chalk.bold(
+      contextName
+    )} ${elapsed(Date.now() - startTimestamp)}`
+  );
 
   const {
     id,
@@ -118,21 +196,31 @@ export default async function inspect(client: Client) {
     alias: aliases,
   } = deployment;
 
+  const { print, link } = output;
+
   const { builds } =
     deployment.version === 2
       ? await client.fetch<{ builds: Build[] }>(`/v11/deployments/${id}/builds`)
       : { builds: [] };
 
-  log(
-    `Fetched deployment "${chalk.bold(url)}" in ${chalk.bold(
-      contextName
-    )} ${elapsed(Date.now() - depFetchStart)}`
-  );
-
   print('\n');
   print(chalk.bold('  General\n\n'));
   print(`    ${chalk.cyan('id')}\t\t${id}\n`);
   print(`    ${chalk.cyan('name')}\t${name}\n`);
+  const customEnvironmentSlug = deployment.customEnvironment?.slug;
+  const target = customEnvironmentSlug ?? deployment.target ?? 'preview';
+  print(`    ${chalk.cyan('target')}\t`);
+  // TODO: once custom environments is shipped for all users,
+  // make all deployments link to the environment settings page
+  print(
+    deployment.customEnvironment && deployment.team?.slug
+      ? `${link(
+          `${target}`,
+          `https://vercel.com/${deployment.team.slug}/${name}/settings/environments/${deployment.customEnvironment.id}`,
+          { fallback: () => target, color: false }
+        )}\n`
+      : `${target}\n`
+  );
   print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
   print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {
@@ -174,26 +262,11 @@ export default async function inspect(client: Client) {
     print(indent(routesList(routes), 4));
     print(`\n\n`);
   }
-
-  return 0;
 }
 
-function stateString(s: Deployment['readyState']) {
-  const CIRCLE = '● ';
-  const sTitle = s && title(s);
-  switch (s) {
-    case 'INITIALIZING':
-    case 'BUILDING':
-      return chalk.yellow(CIRCLE) + sTitle;
-    case 'ERROR':
-      return chalk.red(CIRCLE) + sTitle;
-    case 'READY':
-      return chalk.green(CIRCLE) + sTitle;
-    case 'QUEUED':
-      return chalk.gray(CIRCLE) + sTitle;
-    case 'CANCELED':
-      return chalk.gray(CIRCLE) + sTitle;
-    default:
-      return chalk.gray('UNKNOWN');
+function exitCode(state: Deployment['readyState']) {
+  if (state === 'ERROR' || state === 'CANCELED') {
+    return 1;
   }
+  return 0;
 }

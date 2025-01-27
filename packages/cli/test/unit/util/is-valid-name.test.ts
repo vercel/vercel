@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { isValidName } from '../../../src/util/is-valid-name';
 
 const tests = {

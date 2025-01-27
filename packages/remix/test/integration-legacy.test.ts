@@ -1,15 +1,14 @@
 const fs = require('fs');
 const { join } = require('path');
+import { vi, it, expect } from 'vitest';
 
 const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(12 * 60 * 1000);
+vi.setConfig({ testTimeout: 12 * 60 * 1000 });
 
 const fixturesPath = join(__dirname, 'fixtures-legacy');
-const exampleAbsolute = (name: string) =>
-  join(__dirname, '..', '..', '..', 'examples', name);
 
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
@@ -20,8 +19,3 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
     ).resolves.toBeDefined();
   });
 }
-
-it(`should build remix example`, async () => {
-  const example = exampleAbsolute('remix');
-  await expect(testDeployment(example)).resolves.toBeDefined();
-});

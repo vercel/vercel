@@ -7,6 +7,12 @@ const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
 
+/**
+ * @type {(inputPath: string) => Promise<{
+ *  buildResult: import('@vercel/build-utils').BuildResultV2Typical,
+ *  workPath: string
+ * }>}
+ */
 const runBuildLambda = createRunBuildLambda(builder);
 
 jest.setTimeout(360000);
@@ -247,15 +253,11 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
     'Max serverless function size was exceeded for 2 functions'
   );
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/big-image-1/);
   expect(logs).toMatch(/big-image-2/);
@@ -281,17 +283,13 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   // expect(logs).toContain(`Serverless Function's page: api/firebase.js`);
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
-  expect(logs).toMatch(
-    /node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB.*?\d{2}.*?MB/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
+  expect(logs).toMatch(/node_modules\/chrome-aws-lambda\/bin.*?\d{2}.*?MB/);
   expect(logs).toMatch(/node_modules\/@firebase\/firestore.*?\d{1}.*?MB/);
   expect(logs).toMatch(/public\/big-image-1\.jpg/);
   expect(logs).toMatch(/public\/big-image-2\.jpg/);
@@ -320,12 +318,10 @@ it('Should provide lambda info when limit is hit (uncompressed)', async () => {
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 50 MB compressed or 250 MB uncompressed reached'
+    'Max serverless function size of 250 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/hello.js`);
-  expect(logs).toMatch(
-    /Large Dependencies.*?Uncompressed size.*?Compressed size/
-  );
+  expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
   expect(logs).toMatch(/data\.txt/);
   expect(logs).toMatch(/\.next\/server\/pages/);
 });
@@ -463,4 +459,208 @@ it('should not generate lambdas that conflict with static index route in app wit
     }
   }
   expect(lambdas.size).toBe(1);
+});
+
+describe('PPR', () => {
+  describe('legacy', () => {
+    it('should have the same lambda for revalidation and resume', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['index']).toBeDefined();
+      expect(output['index'].type).toBe('Prerender');
+      expect(output['index'].lambda).toBeDefined();
+      expect(output['index'].lambda.type).toBe('Lambda');
+
+      expect(output['_next/postponed/resume/index']).toBeDefined();
+      expect(output['_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['index'].lambda).toBe(
+        output['_next/postponed/resume/index']
+      );
+    });
+
+    it('should support basePath', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-legacy-basepath'));
+
+      // Validate that there are only the two lambdas created.
+      const lambdas = new Set();
+      for (const key of Object.keys(output)) {
+        if (output[key].type === 'Lambda') {
+          lambdas.add(output[key]);
+        }
+      }
+
+      expect(lambdas.size).toBe(2);
+
+      // Validate that these two lambdas are the same.
+      expect(output['chat/index']).toBeDefined();
+      expect(output['chat/index'].type).toBe('Prerender');
+      expect(output['chat/index'].lambda).toBeDefined();
+      expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+      expect(output['chat/_next/postponed/resume/index']).toBeDefined();
+      expect(output['chat/_next/postponed/resume/index'].type).toBe('Lambda');
+
+      expect(output['chat/index'].lambda).toBe(
+        output['chat/_next/postponed/resume/index']
+      );
+      expect(output['chat/index'].experimentalStreamingLambdaPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.outputPath).toBe(
+        'chat/_next/postponed/resume/index'
+      );
+      expect(output['chat/index'].chain?.headers).toEqual({
+        'x-matched-path': '_next/postponed/resume/index',
+      });
+    });
+  });
+
+  it('should have the chain added', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr'));
+
+    // Validate that there are only the two lambdas created.
+    const lambdas = new Set();
+    for (const key of Object.keys(output)) {
+      if (output[key].type === 'Lambda') {
+        lambdas.add(output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+
+    expect(output['index']).toBeDefined();
+    expect(output['index'].type).toBe('Prerender');
+    expect(output['index'].chain?.outputPath).toBe('index');
+  });
+
+  it('should support basePath', async () => {
+    const {
+      buildResult: { output },
+    } = await runBuildLambda(path.join(__dirname, 'ppr-basepath'));
+
+    // Validate that there are only the two lambdas created.
+    const lambdas = new Set();
+    for (const key of Object.keys(output)) {
+      if (output[key].type === 'Lambda') {
+        lambdas.add(output[key]);
+      }
+    }
+
+    expect(lambdas.size).toBe(2);
+
+    // Validate that these two lambdas are the same.
+    expect(output['chat/index']).toBeDefined();
+    expect(output['chat/index'].type).toBe('Prerender');
+    expect(output['chat/index'].lambda).toBeDefined();
+    expect(output['chat/index'].lambda.type).toBe('Lambda');
+
+    expect(output['chat/index'].chain?.outputPath).toBe('chat/index');
+    expect(output['chat/index'].chain?.headers).toEqual({
+      'next-resume': '1',
+    });
+  });
+
+  describe('root params', () => {
+    it('should not generate a prerender for the missing root params route', async () => {
+      const {
+        buildResult: { output },
+      } = await runBuildLambda(path.join(__dirname, 'ppr-root-params'));
+
+      expect(output['[lang]']).toBeDefined();
+      expect(output['[lang]'].type).toBe('Prerender');
+
+      // We want this to be a chainable prerender (supports Partial
+      // Prerendering).
+      expect(output['[lang]'].chain).toBeDefined();
+
+      // TODO: once we support revalidating this page, we should remove this
+      // We don't want to generate a fallback for this route. If this case fails
+      // it indicates that the fallback was generated, and we're at risk of
+      // cache posioning.
+      expect(output['[lang]'].fallback).toEqual(null);
+    });
+  });
+});
+
+describe('rewrite headers', () => {
+  let routes;
+  beforeAll(async () => {
+    const output = await runBuildLambda(
+      path.join(__dirname, 'rewrite-headers')
+    );
+    routes = output.buildResult.routes;
+  });
+
+  it('should add rewrite headers before the original rewrite', () => {
+    let route = routes.filter(r => r.src?.includes('/hello/sam'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/hello/samantha',
+      'x-nextjs-rewritten-query': undefined,
+    });
+    expect(route[1].headers).toBeUndefined();
+  });
+
+  it('should add rewrite query headers', () => {
+    let route = routes.filter(r => r.src?.includes('/hello/fred'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/other',
+      'x-nextjs-rewritten-query': 'key=value',
+    });
+    expect(route[1].headers).toBeUndefined();
+  });
+
+  it('should not add external rewrite headers', () => {
+    const route = routes.filter(r => r.src?.includes('google'));
+    expect(route.length).toBe(1);
+    expect(route[0].headers).toBeUndefined();
+  });
+
+  it('should not add rewrite headers when it is excluded with missing', () => {
+    const route = routes.filter(r => r.src?.includes('missing'));
+    expect(route.length).toBe(1);
+    expect(route[0].headers).toBeUndefined();
+  });
+
+  it('should combine has rules', () => {
+    const route = routes.filter(r => r.src?.includes('/hello/has'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/other',
+      'x-nextjs-rewritten-query': undefined,
+    });
+    expect(route[0].has).toEqual([
+      {
+        type: 'header',
+        key: 'x-other-header',
+        value: 'other-value',
+      },
+      {
+        type: 'header',
+        key: 'rsc',
+        value: '1',
+      },
+    ]);
+
+    expect(route[1].headers).toBeUndefined();
+  });
 });

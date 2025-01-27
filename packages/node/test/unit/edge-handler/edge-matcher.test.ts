@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { prepareFilesystem } from '../test-utils';
 import { build } from '../../../src';
 
@@ -67,8 +68,8 @@ describe('middleware matchers', () => {
           matcher === undefined
             ? []
             : Array.isArray(matcher)
-            ? matcher
-            : [matcher],
+              ? matcher
+              : [matcher],
         middlewarePath: 'middleware.js',
         continue: true,
         override: true,

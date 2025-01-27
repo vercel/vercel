@@ -1,27 +1,8 @@
 import execa from 'execa';
-import getGlobalDir from './get-global-dir';
 
 const defaultOptions = {
   reject: false,
 };
-
-let globalArgs: string[] = [];
-
-function getGlobalArgs() {
-  if (process.env.CI) {
-    return [];
-  }
-
-  if (globalArgs.length === 0) {
-    globalArgs = ['-Q', getGlobalDir()];
-    console.log(
-      'No CI detected, adding defaultArgs to avoid polluting user settings',
-      globalArgs
-    );
-  }
-
-  return globalArgs;
-}
 
 /**
  * Execute Vercel CLI subcommands.
@@ -29,21 +10,35 @@ function getGlobalArgs() {
 export function execCli(
   file: string,
   args: string[] = [],
-  options?: execa.Options<string>
+  opts: execa.Options<string> & { token?: string | boolean } = {}
 ): execa.ExecaChildProcess<string> {
+  // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
-  const globalArgs = getGlobalArgs();
+  if (!args.includes('--token') && opts.token !== false) {
+    args.push(
+      '--token',
+      typeof opts.token === 'string' ? opts.token : process.env.VERCEL_TOKEN!
+    );
+  }
+
+  if (!args.includes('--scope')) {
+    args.push('--scope', process.env.VERCEL_TEAM_ID!);
+  }
 
   const combinedOptions: execa.Options<string> = {
     ...defaultOptions,
-    ...options,
+    ...opts,
   };
   // @ts-ignore - allow overwriting readonly property "env"
   combinedOptions.env = combinedOptions.env ?? {};
-  combinedOptions.env['NO_COLOR'] = combinedOptions.env['NO_COLOR'] ?? '1';
 
-  return execa(file, [...args, ...globalArgs], combinedOptions);
+  // Force color to be off. We can test color in unit tests.
+  combinedOptions.env['NO_COLOR'] = '1';
+  delete combinedOptions.env['FORCE_COLOR'];
+  delete process.env['FORCE_COLOR']; // this is inherited by execa
+
+  return execa(file, args, combinedOptions);
 }
 
 /**

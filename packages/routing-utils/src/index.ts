@@ -32,7 +32,7 @@ const VALID_HANDLE_VALUES = [
   'resource',
 ] as const;
 const validHandleValues = new Set<string>(VALID_HANDLE_VALUES);
-export type HandleValue = typeof VALID_HANDLE_VALUES[number];
+export type HandleValue = (typeof VALID_HANDLE_VALUES)[number];
 
 export function isHandler(route: Route): route is RouteWithHandle {
   return typeof (route as RouteWithHandle).handle !== 'undefined';

@@ -1,9 +1,10 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
 
-export const bisectCommand: Command = {
+export const bisectCommand = {
   name: 'bisect',
-  description: 'Bisect the current project interactively.',
+  aliases: [],
+  description:
+    'Bisect the current project interactively or via an automated test script.',
   arguments: [],
   options: [
     {
@@ -11,45 +12,40 @@ export const bisectCommand: Command = {
       description: 'Known bad URL',
       argument: 'URL',
       shorthand: 'b',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'good',
       description: 'Known good URL',
       argument: 'URL',
       shorthand: 'g',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'open',
       description: 'Automatically open each URL in the browser',
       argument: 'URL',
       shorthand: 'o',
-      type: 'string',
+      type: Boolean,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'path',
       description: 'Subpath of the deployment URL to test',
-      argument: 'URL',
+      argument: 'PATH',
       shorthand: 'p',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
     {
       name: 'run',
       description: 'Test script to run for each deployment',
-      argument: 'URL',
+      argument: 'SCRIPT',
       shorthand: 'r',
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
   ],
   examples: [
@@ -66,4 +62,4 @@ export const bisectCommand: Command = {
       value: `${packageName} bisect --run ./test.sh`,
     },
   ],
-};
+} as const;

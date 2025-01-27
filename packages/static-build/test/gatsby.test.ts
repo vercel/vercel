@@ -322,16 +322,20 @@ describe('gatsby utilities', () => {
 
       await createPluginSymlinks(fixture);
 
-      const analytics = require(path.join(
-        fixture,
-        'node_modules/@vercel/gatsby-plugin-vercel-analytics'
-      ));
+      const analytics = require(
+        path.join(
+          fixture,
+          'node_modules/@vercel/gatsby-plugin-vercel-analytics'
+        )
+      );
       expect(typeof analytics).toEqual('object');
 
-      const builder = require(path.join(
-        fixture,
-        'node_modules/@vercel/gatsby-plugin-vercel-builder/gatsby-node.js'
-      ));
+      const builder = require(
+        path.join(
+          fixture,
+          'node_modules/@vercel/gatsby-plugin-vercel-builder/gatsby-node.js'
+        )
+      );
       expect(typeof builder.onPostBuild).toEqual('function');
     });
   });

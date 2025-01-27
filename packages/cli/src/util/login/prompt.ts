@@ -1,13 +1,14 @@
-import Client from '../client';
+import type Client from '../client';
 import error from '../output/error';
 import listInput from '../input/list';
 import { getCommandName } from '../pkg-name';
-import { LoginResult, SAMLError } from './types';
+import type { LoginResult, SAMLError } from './types';
 import doSamlLogin from './saml';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
+import output from '../../output-manager';
 
 export default async function prompt(
   client: Client,
@@ -62,14 +63,9 @@ export async function readInput(
 
   while (!input) {
     try {
-      const { val } = await client.prompt({
-        type: 'input',
-        name: 'val',
-        message,
-      });
-      input = val;
+      input = await client.input.text({ message });
     } catch (err: any) {
-      console.log(); // \n
+      output.print('\n'); // \n
 
       if (err.isTtyError) {
         throw new Error(

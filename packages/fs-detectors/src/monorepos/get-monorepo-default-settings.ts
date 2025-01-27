@@ -7,10 +7,11 @@ import JSON5 from 'json5';
 import semver from 'semver';
 
 export class MissingBuildPipeline extends Error {
-  constructor() {
-    super(
-      'Missing required `build` pipeline in turbo.json or package.json Turbo configuration.'
-    );
+  constructor(usesTasks: boolean) {
+    const message = usesTasks
+      ? 'Missing required `build` task in turbo.json.'
+      : 'Missing required `build` pipeline in turbo.json or package.json Turbo configuration.';
+    super(message);
   }
 }
 
@@ -65,12 +66,15 @@ export async function getMonorepoDefaultSettings(
     ]);
 
     let hasBuildPipeline = false;
+    let hasTurboTasks = false;
     let turboSemVer = null;
 
     if (turboJSONBuf !== null) {
       const turboJSON = JSON5.parse(turboJSONBuf.toString('utf-8'));
 
-      if (turboJSON?.pipeline?.build) {
+      hasTurboTasks = 'tasks' in (turboJSON || {});
+
+      if (turboJSON?.pipeline?.build || turboJSON?.tasks?.build) {
         hasBuildPipeline = true;
       }
     }
@@ -89,7 +93,7 @@ export async function getMonorepoDefaultSettings(
     }
 
     if (!hasBuildPipeline) {
-      throw new MissingBuildPipeline();
+      throw new MissingBuildPipeline(hasTurboTasks);
     }
 
     if (projectPath === '/') {
@@ -118,8 +122,8 @@ export async function getMonorepoDefaultSettings(
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
           : packageManager
-          ? `${packageManager} install`
-          : null,
+            ? `${packageManager} install`
+            : null,
       commandForIgnoringBuildStep: 'npx turbo-ignore',
     };
   } else if (monorepoManager === 'nx') {
@@ -176,8 +180,8 @@ export async function getMonorepoDefaultSettings(
         packageManager === 'npm'
           ? `${packageManager} install --prefix=${relativeToRoot}`
           : packageManager
-          ? `${packageManager} install`
-          : null,
+            ? `${packageManager} install`
+            : null,
     };
   }
   // TODO (@Ethan-Arrowood) - Revisit rush support when we can test it better

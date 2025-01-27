@@ -1,35 +1,47 @@
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
+import { gray } from 'chalk';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import cmd from '../../util/output/cmd';
-import Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { listSubcommand } from './command';
+import output from '../../output-manager';
+import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 
-export default async function list(client: Client): Promise<number> {
-  const { config, output } = client;
-
-  const argv = getArgs(client.argv.slice(2), {
-    '--since': String,
-    '--until': String,
-    '--count': Number,
-    '--next': Number,
-    '-C': '--count',
-    '-N': '--next',
+export default async function list(
+  client: Client,
+  argv: string[]
+): Promise<number> {
+  const { config, telemetryEventStore } = client;
+  const telemetry = new TeamsListTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
   });
 
-  const next = argv['--next'];
-  const count = argv['--count'];
-
-  if (typeof next !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--next`');
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
     return 1;
   }
 
-  if (typeof count !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--count`');
+  const next = parsedArgs.flags['--next'];
+  telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
+  telemetry.trackCliOptionUntil(parsedArgs.flags['--until']);
+  telemetry.trackCliOptionSince(parsedArgs.flags['--since']);
+
+  if (typeof next !== 'undefined' && !Number.isInteger(next)) {
+    output.error('Please provide a number for flag `--next`');
     return 1;
   }
 
@@ -53,7 +65,7 @@ export default async function list(client: Client): Promise<number> {
     id,
     name,
     value: slug,
-    current: id === currentTeam ? chars.tick : '',
+    prefix: id === currentTeam ? chars.tick : ' ',
   }));
 
   if (user.version !== 'northstar') {
@@ -61,7 +73,7 @@ export default async function list(client: Client): Promise<number> {
       id: user.id,
       name: user.email,
       value: user.username || user.email,
-      current: accountIsCurrent ? chars.tick : '',
+      prefix: accountIsCurrent ? chars.tick : ' ',
     });
   }
 
@@ -76,17 +88,25 @@ export default async function list(client: Client): Promise<number> {
   output.stopSpinner();
   client.stdout.write('\n'); // empty line
 
-  table(
-    ['', 'id', 'email / name'],
-    teamList.map(team => [team.current, team.value, team.name]),
-    [1, 5],
-    (str: string) => {
-      client.stdout.write(str);
-    }
+  const teamTable = table(
+    [
+      ['id', 'email / name'].map(str => gray(str)),
+      ...teamList.map(team => [team.value, team.name]),
+    ],
+    { hsep: 5 }
   );
+  client.stderr.write(
+    currentTeam
+      ? teamTable
+          .split('\n')
+          .map((line, i) => `${i > 0 ? teamList[i - 1].prefix : ' '} ${line}`)
+          .join('\n')
+      : teamTable
+  );
+  client.stderr.write('\n');
 
   if (pagination?.count === 20) {
-    const flags = getCommandFlags(argv, ['_', '--next', '-N', '-d']);
+    const flags = getCommandFlags(parsedArgs.flags, ['--next', '-N', '-d']);
     const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
     client.stdout.write('\n'); // empty line
     output.log(`To display the next page run ${cmd(nextCmd)}`);

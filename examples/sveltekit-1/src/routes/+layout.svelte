@@ -1,48 +1,39 @@
 <script>
-	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
-	import { webVitals } from '$lib/vitals';
-	import Header from './Header.svelte';
-	import './styles.css';
+	import Header from '$lib/header/Header.svelte';
+  import { webVitals } from '$lib/vitals';
+  import { browser } from '$app/env';
+  import { page } from '$app/stores';
+  import '../app.css';
 
-	/** @type {import('./$types').LayoutServerData} */
-	export let data;
+  let analyticsId = import.meta.env.VERCEL_ANALYTICS_ID;
 
-	$: if (browser && data?.analyticsId) {
-		webVitals({
-			path: $page.url.pathname,
-			params: $page.params,
-			analyticsId: data.analyticsId
-		});
-	}
+  $: if (browser && analyticsId) {
+    webVitals({
+      path: $page.url.pathname,
+      params: $page.params,
+      analyticsId
+    })
+  }
 </script>
 
-<div class="app">
-	<Header />
+<Header />
 
-	<main>
-		<slot />
-	</main>
+<main>
+	<slot />
+</main>
 
-	<footer>
-		<p>visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit</p>
-	</footer>
-</div>
+<footer>
+	<p>visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit</p>
+</footer>
 
 <style>
-	.app {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-	}
-
 	main {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
 		padding: 1rem;
 		width: 100%;
-		max-width: 64rem;
+		max-width: 1024px;
 		margin: 0 auto;
 		box-sizing: border-box;
 	}
@@ -52,7 +43,7 @@
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
-		padding: 12px;
+		padding: 40px;
 	}
 
 	footer a {
@@ -61,7 +52,7 @@
 
 	@media (min-width: 480px) {
 		footer {
-			padding: 12px 0;
+			padding: 40px 0;
 		}
 	}
 </style>

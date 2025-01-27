@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import toHost from '../../../src/util/to-host';
 
 describe('toHost', () => {

@@ -29,3 +29,4 @@ export { monorepoManagers } from './monorepos/monorepo-managers';
 export { isOfficialRuntime, isStaticRuntime } from './is-official-runtime';
 export { packageManagers } from './package-managers/package-managers';
 export * from './monorepos/get-monorepo-default-settings';
+export { REGEX_NON_VERCEL_PLATFORM_FILES } from './detect-builders';

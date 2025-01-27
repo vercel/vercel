@@ -1,31 +1,42 @@
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import {
   writeToConfigFile,
   writeToAuthConfigFile,
 } from '../../util/config/files';
-import getArgs from '../../util/get-args';
-import Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
 import { errorToString } from '@vercel/error-utils';
 import { help } from '../help';
 import { logoutCommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 
 export default async function main(client: Client): Promise<number> {
-  let argv;
-  const { authConfig, config, output } = client;
+  const { authConfig, config } = client;
 
+  let parsedArgs = null;
+
+  const flagsSpecification = getFlagsSpecification(logoutCommand.options);
+
+  const telemetry = new LogoutTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  // Parse CLI args
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--help': Boolean,
-      '-h': '--help',
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
     return 1;
   }
 
-  if (argv['--help']) {
+  if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -41,7 +52,7 @@ export default async function main(client: Client): Promise<number> {
   let exitCode = 0;
 
   try {
-    await client.fetch(`/v3/user/tokens/current`, {
+    await client.fetch('/v3/user/tokens/current', {
       method: 'DELETE',
       useCurrentTeam: false,
     });
@@ -78,7 +89,7 @@ export default async function main(client: Client): Promise<number> {
   if (exitCode === 0) {
     output.log('Logged out!');
   } else {
-    output.error(`Failed during logout`);
+    output.error('Failed during logout');
   }
 
   return exitCode;

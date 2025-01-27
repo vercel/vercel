@@ -6,17 +6,15 @@ import getProjectByNameOrId from './get-project-by-id-or-name';
 import getScope from '../get-scope';
 import getTeamById from '../teams/get-team-by-id';
 import { isValidName } from '../is-valid-name';
-import { Output } from '../output';
 import { ProjectNotFound } from '../errors-ts';
+import output from '../../output-manager';
 
 export default async function getProjectByDeployment({
   client,
   deployId,
-  output,
 }: {
   client: Client;
   deployId: string;
-  output?: Output;
 }): Promise<{
   contextName: string;
   deployment: Deployment;

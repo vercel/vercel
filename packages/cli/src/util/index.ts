@@ -1,23 +1,22 @@
-import EventEmitter from 'events';
 import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
 import fetch, { Headers } from 'node-fetch';
-import { URLSearchParams } from 'url';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
-import highlight from './output/highlight';
 import { responseError } from './error';
 import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import { GitMetadata, Org } from '@vercel-internals/types';
-import { VercelConfig } from './dev/types';
-import Client, { FetchOptions, isJSONObject } from './client';
-import { ArchiveFormat, Dictionary } from '@vercel/client';
+import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { VercelConfig } from './dev/types';
+import type Client from './client';
+import { type FetchOptions, isJSONObject } from './client';
+import type { ArchiveFormat, Dictionary } from '@vercel/client';
+import output from '../output-manager';
 
 export interface NowOptions {
   client: Client;
@@ -36,6 +35,7 @@ export interface CreateOptions {
   project?: string;
   wantsPublic: boolean;
   prebuilt?: boolean;
+  vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
   gitMetadata?: GitMetadata;
@@ -50,6 +50,7 @@ export interface CreateOptions {
   projectSettings?: any;
   skipAutoDetectionConfirmation?: boolean;
   noWait?: boolean;
+  withLogs?: boolean;
   autoAssignCustomDomains?: boolean;
 }
 
@@ -62,9 +63,10 @@ export interface ListOptions {
   meta?: Dictionary<string>;
   nextTimestamp?: number;
   target?: string;
+  policy?: Dictionary<string>;
 }
 
-export default class Now extends EventEmitter {
+export default class Now {
   url: string | null;
   currentTeam: string | null;
   _client: Client;
@@ -81,8 +83,6 @@ export default class Now extends EventEmitter {
     forceNew = false,
     withCache = false,
   }: NowOptions) {
-    super();
-
     this.url = url;
     this._client = client;
     this._forceNew = forceNew;
@@ -99,14 +99,6 @@ export default class Now extends EventEmitter {
     return this._client.authConfig.token;
   }
 
-  get _output() {
-    return this._client.output;
-  }
-
-  get _debug() {
-    return this._client.output.isDebugEnabled();
-  }
-
   async create(
     path: string,
     {
@@ -117,6 +109,7 @@ export default class Now extends EventEmitter {
       name,
       project,
       prebuilt = false,
+      vercelOutputDir,
       rootDirectory,
       wantsPublic,
       meta,
@@ -132,17 +125,17 @@ export default class Now extends EventEmitter {
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
+      withLogs,
       autoAssignCustomDomains,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
-    cwd: string,
     archive?: ArchiveFormat
   ) {
-    let hashes: any = {};
+    const hashes: any = {};
     const uploadStamp = stamp();
 
-    let requestBody = {
+    const requestBody = {
       ...nowConfig,
       env,
       build,
@@ -177,15 +170,16 @@ export default class Now extends EventEmitter {
       isSettingUpProject,
       archive,
       skipAutoDetectionConfirmation,
-      cwd,
       prebuilt,
+      vercelOutputDir,
       rootDirectory,
       noWait,
+      withLogs,
     });
 
     if (deployment && deployment.warnings) {
       let sizeExceeded = 0;
-      const { log, warn } = this._output;
+      const { log, warn } = output;
 
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
@@ -260,24 +254,13 @@ export default class Now extends EventEmitter {
     if (error.status >= 400 && error.status < 500) {
       const err = new Error();
 
-      const { code, unreferencedBuildSpecs } = error;
+      const { code } = error;
 
       if (code === 'env_value_invalid_type') {
         const { key } = error;
         err.message =
           `The env key ${key} has an invalid type: ${typeof env[key]}. ` +
           'Please supply a String or a Number (https://err.sh/vercel/env-value-invalid-type)';
-      } else if (code === 'unreferenced_build_specifications') {
-        const count = unreferencedBuildSpecs.length;
-        const prefix = count === 1 ? 'build' : 'builds';
-
-        err.message =
-          `You defined ${count} ${prefix} that did not match any source files (please ensure they are NOT defined in ${highlight(
-            '.vercelignore'
-          )}):` +
-          `\n- ${unreferencedBuildSpecs
-            .map((item: any) => JSON.stringify(item))
-            .join('\n- ')}`;
       } else {
         Object.assign(err, error);
       }
@@ -307,175 +290,6 @@ export default class Now extends EventEmitter {
     }
 
     return new Error(error.message || error.errorMessage);
-  }
-
-  async listSecrets(next?: number, testWarningFlag?: boolean) {
-    const payload = await this.retry(async bail => {
-      let secretsUrl = '/v3/now/secrets?limit=20';
-
-      if (next) {
-        secretsUrl += `&until=${next}`;
-      }
-
-      if (testWarningFlag) {
-        secretsUrl += '&testWarning=1';
-      }
-
-      const res = await this._fetch(secretsUrl);
-
-      if (res.status === 200) {
-        // What we want
-        return res.json();
-      }
-      if (res.status > 200 && res.status < 500) {
-        // If something is wrong with our request, we don't retry
-        return bail(await responseError(res, 'Failed to list secrets'));
-      }
-      // If something is wrong with the server, we retry
-      throw await responseError(res, 'Failed to list secrets');
-    });
-
-    return payload;
-  }
-
-  async list(
-    app?: string,
-    { version = 4, meta = {}, nextTimestamp, target }: ListOptions = {},
-    prod?: boolean
-  ) {
-    const fetchRetry = async (url: string, options: FetchOptions = {}) => {
-      return this.retry(
-        async bail => {
-          const res = await this._fetch(url, options);
-
-          if (res.status === 200) {
-            return res.json();
-          }
-
-          if (res.status > 200 && res.status < 500) {
-            // If something is wrong with our request, we don't retry
-            return bail(await responseError(res, 'Failed to list deployments'));
-          }
-
-          // If something is wrong with the server, we retry
-          throw await responseError(res, 'Failed to list deployments');
-        },
-        {
-          retries: 3,
-          minTimeout: 2500,
-          onRetry: this._onRetry,
-        }
-      );
-    };
-
-    if (!app && !Object.keys(meta).length) {
-      // Get the 20 latest projects and their latest deployment
-      const query = new URLSearchParams({ limit: (20).toString() });
-      if (nextTimestamp) {
-        query.set('until', String(nextTimestamp));
-      }
-      const { projects, pagination } = await fetchRetry(
-        `/v4/projects/?${query}`
-      );
-
-      const deployments = await Promise.all(
-        projects.map(async ({ id: projectId }: any) => {
-          const query = new URLSearchParams({ limit: '1', projectId });
-          const { deployments } = await fetchRetry(
-            `/v${version}/now/deployments?${query}`
-          );
-          return deployments[0];
-        })
-      );
-
-      return { deployments: deployments.filter(x => x), pagination };
-    }
-
-    const query = new URLSearchParams();
-
-    if (app) {
-      query.set('app', app);
-    }
-
-    Object.keys(meta).map(key => query.set(`meta-${key}`, meta[key]));
-
-    query.set('limit', '20');
-
-    if (nextTimestamp) {
-      query.set('until', String(nextTimestamp));
-    }
-    if (prod) {
-      query.set('target', 'production');
-    } else if (target) {
-      query.set('target', target);
-    }
-
-    const response = await fetchRetry(`/v${version}/now/deployments?${query}`);
-    return response;
-  }
-
-  async findDeployment(hostOrId: string) {
-    const { debug } = this._output;
-
-    let id = hostOrId && !hostOrId.includes('.');
-
-    if (!id) {
-      let host = hostOrId.replace(/^https:\/\//i, '');
-
-      if (host.slice(-1) === '/') {
-        host = host.slice(0, -1);
-      }
-
-      const url = `/v10/now/deployments/get?url=${encodeURIComponent(
-        host
-      )}&resolve=1&noState=1`;
-
-      const deployment = await this.retry(
-        async bail => {
-          const res = await this._fetch(url);
-
-          // No retry on 4xx
-          if (res.status >= 400 && res.status < 500) {
-            debug(`Bailing on getting a deployment due to ${res.status}`);
-            return bail(
-              await responseError(res, `Failed to resolve deployment "${id}"`)
-            );
-          }
-
-          if (res.status !== 200) {
-            throw new Error('Fetching a deployment failed');
-          }
-
-          return res.json();
-        },
-        { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
-      );
-
-      id = deployment.id;
-    }
-
-    return this.retry(
-      async bail => {
-        const res = await this._fetch(
-          `/v11/now/deployments/${encodeURIComponent(id)}`
-        );
-
-        // No retry on 4xx
-        if (res.status >= 400 && res.status < 500) {
-          debug(`Bailing on getting a deployment due to ${res.status}`);
-          return bail(
-            await responseError(res, `Failed to resolve deployment "${id}"`)
-          );
-        }
-
-        if (res.status !== 200) {
-          throw new Error('Fetching a deployment failed');
-        }
-
-        return res.json();
-      },
-      { retries: 3, minTimeout: 2500, onRetry: this._onRetry }
-    );
   }
 
   async remove(deploymentId: string, { hard = false }: RemoveOptions) {
@@ -512,10 +326,8 @@ export default class Now extends EventEmitter {
   }
 
   _onRetry(err: Error) {
-    this._output.debug(`Retrying: ${err}\n${err.stack}`);
+    output.debug(`Retrying: ${err}\n${err.stack}`);
   }
-
-  close() {}
 
   async _fetch(_url: string, opts: FetchOptions = {}) {
     if (opts.useCurrentTeam !== false && this.currentTeam) {
@@ -542,11 +354,11 @@ export default class Now extends EventEmitter {
       body = opts.body;
     }
 
-    const res = await this._output.time(
+    const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
       fetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
-    printIndications(this._client, res);
+    printIndications(res);
     return res;
   }
 

@@ -15,6 +15,7 @@ export function forkDevServer(options: {
   require_: NodeRequire;
   entrypoint: string;
   meta: Meta;
+  printLogs?: boolean;
 
   /**
    * A path to the dev-server path. This is used in tests.
@@ -34,7 +35,9 @@ export function forkDevServer(options: {
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--loader ${esmLoader} ${nodeOptions || ''}`;
+      nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
+        nodeOptions || ''
+      }`;
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
@@ -57,8 +60,18 @@ export function forkDevServer(options: {
         : undefined,
       NODE_OPTIONS: nodeOptions,
     }),
+    stdio: options.printLogs ? 'pipe' : undefined,
   };
   const child = fork(devServerPath, [], forkOptions);
+
+  if (options.printLogs) {
+    child.stdout?.on('data', data => {
+      console.log(`stdout: ${data}`);
+    });
+    child.stderr?.on('data', data => {
+      console.error(`stderr: ${data}`);
+    });
+  }
 
   checkForPid(devServerPath, child);
 

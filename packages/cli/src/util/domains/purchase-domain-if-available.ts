@@ -1,20 +1,18 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 
-import { Output } from '../output';
-import Client from '../client';
+import type Client from '../client';
 import eraseLines from '../output/erase-lines';
 import getDomainPrice from './get-domain-price';
 import getDomainStatus from './get-domain-status';
-import promptBool from '../input/prompt-bool';
 import purchaseDomain from './purchase-domain';
 import stamp from '../output/stamp';
 import * as ERRORS from '../errors-ts';
+import output from '../../output-manager';
 
 const isTTY = process.stdout.isTTY;
 
 export default async function purchaseDomainIfAvailable(
-  output: Output,
   client: Client,
   domain: string,
   contextName: string
@@ -51,11 +49,11 @@ export default async function purchaseDomainIfAvailable(
     );
 
     if (
-      !(await promptBool(
+      !(await client.input.confirm(
         `Buy ${chalk.underline(domain)} for ${chalk.bold(
           `$${price}`
         )} (${plural('yr', period, true)})?`,
-        client
+        false
       ))
     ) {
       output.print(eraseLines(1));

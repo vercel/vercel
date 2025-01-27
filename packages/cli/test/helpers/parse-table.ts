@@ -2,12 +2,10 @@ export function pluckIdentifiersFromDeploymentList(output: string): {
   project: string | undefined;
   org: string | undefined;
 } {
-  const project = output.match(/(?<=Deployments for )(.*)(?= under)/);
-  const org = output.match(/(?<=under )(.*)(?= \[)/);
-
+  const m = output.match(/Deployments for (.*)\/(.*)\s/);
   return {
-    project: project?.[0],
-    org: org?.[0],
+    project: m?.[2],
+    org: m?.[1],
   };
 }
 

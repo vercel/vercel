@@ -1,13 +1,16 @@
 import type Client from '../../util/client';
-import getArgs from '../../util/get-args';
+import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import ms from 'ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
 import { help } from '../help';
-import { rollbackCommand } from './command';
+import { rollbackCommand, statusSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { RollbackTelemetryClient } from '../../util/telemetry/commands/rollback';
+import output from '../../output-manager';
 
 /**
  * `vc rollback` command
@@ -15,42 +18,60 @@ import { rollbackCommand } from './command';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async (client: Client): Promise<number> => {
-  let argv;
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(rollbackCommand.options);
   try {
-    argv = getArgs(client.argv.slice(2), {
-      '--timeout': String,
-      '--yes': Boolean,
-      '-y': '--yes',
-    });
-  } catch (err) {
-    handleError(err);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+  } catch (error) {
+    printError(error);
     return 1;
   }
 
-  if (argv['--help'] || argv._[0] === 'help') {
-    client.output.print(
-      help(rollbackCommand, { columns: client.stderr.columns })
-    );
+  const telemetry = new RollbackTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!parsedArgs.args[1] && needHelp) {
+    telemetry.trackCliFlagHelp('rollback');
+    output.print(help(rollbackCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   // validate the timeout
-  let timeout = argv['--timeout'];
+  const timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+    output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
 
-  const actionOrDeployId = argv._[1] || 'status';
+  const actionOrDeployId = parsedArgs.args[1] || 'status';
 
   try {
     if (actionOrDeployId === 'status') {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('promote', 'status');
+        output.print(
+          help(statusSubcommand, {
+            columns: client.stderr.columns,
+            parent: rollbackCommand,
+          })
+        );
+        return 2;
+      }
+      telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
-        autoConfirm: Boolean(argv['--yes']),
+        autoConfirm: Boolean(parsedArgs.flags['--yes']),
         client,
         commandName: 'promote',
         cwd: client.cwd,
-        projectNameOrId: argv._[2],
+        projectNameOrId: parsedArgs.args[2],
       });
 
       return await rollbackStatus({
@@ -76,7 +97,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    client.output.prettyError(err);
+    output.prettyError(err);
     return 1;
   }
 };

@@ -1,23 +1,36 @@
 import chalk from 'chalk';
 import ms from 'ms';
-import table from 'text-table';
+import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 
-type Options = {};
-
-export default async function rm(
-  client: Client,
-  _opts: Options,
-  args: string[]
-) {
-  const { output } = client;
+export default async function rm(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args } = parsedArgs;
+  const { telemetryEventStore } = client;
+  const telemetry = new DnsRmTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
   await getScope(client);
 
   const [recordId] = args;
@@ -30,6 +43,8 @@ export default async function rm(
     return 1;
   }
 
+  telemetry.trackCliArgumentId(recordId);
+
   const record = await getDNSRecordById(client, recordId);
 
   if (!record) {
@@ -39,7 +54,7 @@ export default async function rm(
 
   const { domain: domainName } = record;
   const yes = await readConfirmation(
-    output,
+    client,
     'The following record will be removed permanently',
     domainName,
     record
@@ -52,16 +67,14 @@ export default async function rm(
 
   const rmStamp = stamp();
   await deleteDNSRecordById(client, domainName, record.id);
-  console.log(
-    `${chalk.cyan('> Success!')} Record ${chalk.gray(
-      `${record.id}`
-    )} removed ${chalk.gray(rmStamp())}`
+  output.success(
+    `Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(rmStamp())}`
   );
   return 0;
 }
 
 function readConfirmation(
-  output: Output,
+  client: Client,
   msg: string,
   domainName: string,
   record: DNSRecord
@@ -71,13 +84,13 @@ function readConfirmation(
     output.print(
       `${table([getDeleteTableRow(domainName, record)], {
         align: ['l', 'r', 'l'],
-        hsep: ' '.repeat(6),
+        hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
     output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('[y/N] ')}`
+      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
     );
-    process.stdin
+    client.stdin
       .on('data', d => {
         process.stdin.pause();
         resolve(d.toString().trim().toLowerCase() === 'y');

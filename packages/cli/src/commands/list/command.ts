@@ -1,8 +1,9 @@
-import { Command } from '../help';
 import { packageName } from '../../util/pkg-name';
+import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
-export const listCommand: Command = {
+export const listCommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'List app deployments for an app.',
   arguments: [
     {
@@ -15,30 +16,33 @@ export const listCommand: Command = {
       name: 'meta',
       description:
         'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
-      argument: 'KEY=value',
-      shorthand: null,
-      type: 'string',
+      argument: 'KEY=VALUE',
+      shorthand: 'm',
+      type: [String],
       deprecated: false,
-      multi: true,
+    },
+    {
+      name: 'policy',
+      description:
+        'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
+      argument: 'KEY=VALUE',
+      shorthand: 'p',
+      type: [String],
+      deprecated: false,
     },
     {
       name: 'environment',
       description: '',
-      argument: 'production|preview',
+      argument: 'TARGET',
       shorthand: null,
-      type: 'string',
+      type: String,
       deprecated: false,
-      multi: false,
     },
-    {
-      name: 'next',
-      description: 'Show next page of results',
-      argument: 'MS',
-      shorthand: 'n',
-      type: 'string',
-      deprecated: false,
-      multi: false,
-    },
+    nextOption,
+    // this can be deprecated someday
+    { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
+    yesOption,
+    confirmOption,
   ],
   examples: [
     {
@@ -58,4 +62,4 @@ export const listCommand: Command = {
       value: `${packageName} list my-app --next 1584722256178`,
     },
   ],
-};
+} as const;

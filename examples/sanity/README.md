@@ -18,7 +18,7 @@ Install dependencies:
 npx @sanity/cli install
 ```
 
-Pull down environment variables from your Vercel project (requires the [Vercel CLI](https://vercel.com/cli)):
+Pull down environment variables from your Vercel project (requires the [Vercel CLI](https://vercel.com/docs/cli)):
 
 ```sh
 vercel env pull

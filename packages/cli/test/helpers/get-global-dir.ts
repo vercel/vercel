@@ -13,6 +13,7 @@ export default function getGlobalDir() {
   }
 
   if (!fs.existsSync(globalDir)) {
+    // eslint-disable-next-line no-console
     console.log('Creating global config directory ', globalDir);
     ensureDirSync(globalDir);
   }

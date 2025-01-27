@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "next": "13",
+    "@vercel/speed-insights": "latest"
+  },
+  "ignoreNextjsUpdates": true,
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}

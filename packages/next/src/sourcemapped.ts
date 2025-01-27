@@ -1,4 +1,8 @@
-import type { RawSourceMap } from 'source-map';
+import {
+  SourceMapConsumer,
+  SourceMapGenerator,
+  type RawSourceMap,
+} from 'source-map';
 import convertSourceMap from 'convert-source-map';
 import fs from 'fs-extra';
 import {
@@ -73,15 +77,28 @@ async function getSourceMap(
   content: string,
   fullFilePath?: string
 ): Promise<RawSourceMap | null> {
+  let map: RawSourceMap;
   try {
     if (fullFilePath && (await fs.pathExists(`${fullFilePath}.map`))) {
       const mapJson = await fs.readFile(`${fullFilePath}.map`, 'utf8');
-      return convertSourceMap.fromJSON(mapJson).toObject();
+      map = convertSourceMap.fromJSON(mapJson).toObject();
+    } else {
+      map = convertSourceMap.fromComment(content).toObject();
     }
-    return convertSourceMap.fromComment(content).toObject();
   } catch {
     return null;
   }
+
+  if ('sections' in map) {
+    // Webpack's `webpack-source` package doesn't support sectioned source maps, but Turbopack outputs them.
+    // Do this conditionally as it's unnecessary work otherwise.
+    return flattenSourceMap(map);
+  }
+  return map;
+}
+
+async function flattenSourceMap(map: RawSourceMap): Promise<RawSourceMap> {
+  return new SourceMapGenerator(await new SourceMapConsumer(map)).toJSON();
 }
 
 /**

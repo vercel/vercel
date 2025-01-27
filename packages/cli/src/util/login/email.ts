@@ -4,10 +4,11 @@ import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';
 import verify from './verify';
 import executeLogin from './login';
-import Client from '../client';
-import { LoginResult } from './types';
+import type Client from '../client';
+import type { LoginResult } from './types';
 import { isAPIError } from '../errors-ts';
 import { errorToString } from '@vercel/error-utils';
+import output from '../../output-manager';
 
 export default async function doEmailLogin(
   client: Client,
@@ -16,7 +17,6 @@ export default async function doEmailLogin(
 ): Promise<LoginResult> {
   let securityCode;
   let verificationToken;
-  const { output } = client;
 
   output.spinner('Sending you an email');
 

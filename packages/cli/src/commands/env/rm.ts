@@ -1,36 +1,40 @@
 import chalk from 'chalk';
-import type { Project } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import confirm from '../../util/input/confirm';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
-import formatEnvTarget from '../../util/env/format-env-target';
-import {
-  isValidEnvTarget,
-  getEnvTargetPlaceholder,
-} from '../../util/env/env-target';
-import Client from '../../util/client';
+import formatEnvironments from '../../util/env/format-environments';
+import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import { EnvRmTelemetryClient } from '../../util/telemetry/commands/env/rm';
+import output from '../../output-manager';
+import { removeSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {
-  '--debug': boolean;
-  '--yes': boolean;
-};
+export default async function rm(client: Client, argv: string[]) {
+  const telemetryClient = new EnvRmTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-export default async function rm(
-  client: Client,
-  project: Project,
-  opts: Partial<Options>,
-  args: string[],
-  output: Output
-) {
-  // improve the way we show inquirer prompts
-  require('../../util/input/patch-inquirer');
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
 
   if (args.length > 3) {
     output.error(
@@ -41,42 +45,42 @@ export default async function rm(
     return 1;
   }
 
+  // eslint-disable-next-line prefer-const
   let [envName, envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTarget);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
-  while (!envName) {
-    const { inputName } = await client.prompt({
-      type: 'input',
-      name: 'inputName',
-      message: `What’s the name of the variable?`,
-    });
-
-    if (!inputName) {
-      output.error(`Name cannot be empty`);
-      continue;
-    }
-
-    envName = inputName;
-  }
-
-  if (!isValidEnvTarget(envTarget)) {
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
     output.error(
-      `The Environment ${param(
-        envTarget
-      )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
     );
     return 1;
   }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+  const { project } = link;
 
-  const result = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:rm',
-    {
+  if (!envName) {
+    envName = await client.input.text({
+      message: "What's the name of the variable?",
+      validate: val => (val ? true : 'Name cannot be empty'),
+    });
+  }
+
+  const [result, customEnvironments] = await Promise.all([
+    getEnvRecords(client, project.id, 'vercel-cli:env:rm', {
       target: envTarget,
       gitBranch: envGitBranch,
-    }
-  );
+    }),
+    getCustomEnvironments(client, project.id),
+  ]);
 
   let envs = result.envs.filter(env => env.key === envName);
 
@@ -86,11 +90,12 @@ export default async function rm(
   }
 
   while (envs.length > 1) {
-    const { id } = await client.prompt({
-      name: 'id',
-      type: 'list',
+    const id = await client.input.select({
       message: `Remove ${envName} from which Environments?`,
-      choices: envs.map(env => ({ value: env.id, name: formatEnvTarget(env) })),
+      choices: envs.map(env => ({
+        value: env.id,
+        name: formatEnvironments(link, env, customEnvironments),
+      })),
     });
 
     if (!id) {
@@ -103,10 +108,11 @@ export default async function rm(
   const skipConfirmation = opts['--yes'];
   if (
     !skipConfirmation &&
-    !(await confirm(
-      client,
-      `Removing Environment Variable ${param(env.key)} from ${formatEnvTarget(
-        env
+    !(await client.input.confirm(
+      `Removing Environment Variable ${param(env.key)} from ${formatEnvironments(
+        link,
+        env,
+        customEnvironments
       )} in Project ${chalk.bold(project.name)}. Are you sure?`,
       false
     ))
@@ -119,7 +125,7 @@ export default async function rm(
 
   try {
     output.spinner('Removing');
-    await removeEnvRecord(output, client, project.id, env);
+    await removeEnvRecord(client, project.id, env);
   } catch (err: unknown) {
     if (isAPIError(err) && isKnownError(err)) {
       output.error(err.serverMessage);

@@ -12,7 +12,15 @@ const fixturesPath = path.resolve(__dirname, 'fixtures');
 const testsThatFailToBuild = new Map([
   [
     '11-version-2-5-error',
-    'Found `Gemfile` with discontinued Ruby version: `ruby "~> 2.5.x".` Please set `ruby "~> 3.2.x"` in your `Gemfile` to use Ruby 3.2.x.',
+    'Found `Gemfile` with discontinued Ruby version: `ruby "~> 2.5.x".` Please set `ruby "~> 3.3.x"` in your `Gemfile` to use Ruby 3.3.x.',
+  ],
+  [
+    '12-version-3-3-on-al2-error',
+    'Found `Gemfile` with invalid Ruby version: `ruby "~> 3.3.x".` Please set `ruby "~> 3.2.x"` in your `Gemfile` to use Ruby 3.2.x.',
+  ],
+  [
+    '13-version-3-2-on-al2023-error',
+    'Found `Gemfile` with invalid Ruby version: `ruby "~> 3.2.x".` Please set `ruby "~> 3.3.x"` in your `Gemfile` to use Ruby 3.3.x.',
   ],
 ]);
 

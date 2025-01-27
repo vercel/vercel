@@ -1,7 +1,7 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative, sep } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
-import { nodeFileTrace } from '@vercel/nft';
+import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
 import {
   BuildResultV2Typical,
   debug,
@@ -19,10 +19,12 @@ import {
   NodejsLambda,
 } from '@vercel/build-utils';
 import {
-  ensureResolvable,
   getPathFromRoute,
   getRegExpFromPath,
+  getPackageVersion,
   hasScript,
+  logNftWarnings,
+  findConfig,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
@@ -36,8 +38,12 @@ const nodeServerSrcPromise = fs.readFile(
   join(DEFAULTS_PATH, 'server-node.mjs'),
   'utf-8'
 );
+const reactRouterServerSrcPromise = fs.readFile(
+  join(DEFAULTS_PATH, 'server-react-router.mjs'),
+  'utf-8'
+);
 
-interface RemixBuildResult {
+interface BuildResultBase {
   buildManifest: {
     serverBundles?: Record<
       string,
@@ -56,15 +62,26 @@ interface RemixBuildResult {
       }
     >;
   };
-  remixConfig: {
-    buildDirectory: string;
-  };
   viteConfig?: {
     build?: {
       assetsDir: string;
     };
   };
 }
+
+interface RemixBuildResult extends BuildResultBase {
+  remixConfig: {
+    buildDirectory: string;
+  };
+}
+
+interface ReactRouterBuildResult extends BuildResultBase {
+  reactRouterConfig: {
+    buildDirectory: string;
+  };
+}
+
+type BuildResult = RemixBuildResult | ReactRouterBuildResult;
 
 export const build: BuildV2 = async ({
   entrypoint,
@@ -77,6 +94,14 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
+  // Determine if this is a React Router project
+  const isReactRouter = findConfig(workPath, 'react-router.config', [
+    '.js',
+    '.ts',
+    '.mjs',
+    '.mts',
+  ]);
+
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
@@ -85,10 +110,13 @@ export const build: BuildV2 = async ({
     meta
   );
 
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entrypointFsDirname,
-    true
-  );
+  const {
+    cliType,
+    lockfileVersion,
+    packageJson,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   if (!spawnOpts.env) {
@@ -98,8 +126,10 @@ export const build: BuildV2 = async ({
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env,
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
@@ -116,20 +146,14 @@ export const build: BuildV2 = async ({
     await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
   }
 
-  // Determine the version of Remix based on the `@remix-run/dev`
-  // package version.
-  const remixRunDevPath = await ensureResolvable(
+  // Determine the version of framework:
+  //   Remix - use "@remix-run/dev"
+  //   React Router - use "react-router"
+  const frameworkVersion = await getPackageVersion(
+    isReactRouter ? 'react-router' : '@remix-run/dev',
     entrypointFsDirname,
-    repoRootPath,
-    '@remix-run/dev'
+    repoRootPath
   );
-  const remixRunDevPkg = JSON.parse(
-    readFileSync(join(remixRunDevPath, 'package.json'), 'utf8')
-  );
-  const remixVersion = remixRunDevPkg.version;
-
-  // Make `remix build` output production mode
-  spawnOpts.env.NODE_ENV = 'production';
 
   // Run "Build Command"
   if (buildCommand) {
@@ -150,32 +174,23 @@ export const build: BuildV2 = async ({
       debug(`Executing "build" script`);
       await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
     } else {
-      await execCommand('remix build', {
+      await execCommand(isReactRouter ? 'react-router build' : 'remix build', {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
     }
   }
 
-  // This needs to happen before we run NFT to create the Node/Edge functions
-  // TODO: maybe remove this?
-  await Promise.all([
-    ensureResolvable(
-      entrypointFsDirname,
-      repoRootPath,
-      '@remix-run/server-runtime'
-    ),
-    ensureResolvable(entrypointFsDirname, repoRootPath, '@remix-run/node'),
-  ]);
-
-  const remixBuildResultPath = join(
+  const buildResultJsonPath = join(
     entrypointFsDirname,
-    '.vercel/remix-build-result.json'
+    isReactRouter
+      ? '.vercel/react-router-build-result.json'
+      : '.vercel/remix-build-result.json'
   );
-  let remixBuildResult: RemixBuildResult | undefined;
+  let buildResult: BuildResult | undefined;
   try {
-    const remixBuildResultContents = readFileSync(remixBuildResultPath, 'utf8');
-    remixBuildResult = JSON.parse(remixBuildResultContents);
+    const buildResultContents = readFileSync(buildResultJsonPath, 'utf8');
+    buildResult = JSON.parse(buildResultContents);
   } catch (err: unknown) {
     if (!isErrnoException(err) || err.code !== 'ENOENT') {
       throw err;
@@ -186,7 +201,7 @@ export const build: BuildV2 = async ({
     const buildDirectory = join(entrypointFsDirname, 'build');
     if (statSync(buildDirectory).isDirectory()) {
       console.warn('WARN: The `vercelPreset()` Preset was not detected.');
-      remixBuildResult = {
+      buildResult = {
         buildManifest: {
           routes: {
             root: {
@@ -211,10 +226,10 @@ export const build: BuildV2 = async ({
       // Detect if a server build exists (won't be the case when `ssr: false`)
       const serverPath = 'build/server/index.js';
       if (existsSync(join(entrypointFsDirname, serverPath))) {
-        remixBuildResult.buildManifest.routeIdToServerBundleId = {
+        buildResult.buildManifest.routeIdToServerBundleId = {
           'routes/_index': '',
         };
-        remixBuildResult.buildManifest.serverBundles = {
+        buildResult.buildManifest.serverBundles = {
           '': {
             id: '',
             file: serverPath,
@@ -225,27 +240,43 @@ export const build: BuildV2 = async ({
     }
   }
 
-  if (!remixBuildResult) {
+  if (!buildResult) {
     throw new Error(
       'Could not determine build output directory. Please configure the `vercelPreset()` Preset from the `@vercel/remix` npm package'
     );
   }
 
-  const { buildManifest, remixConfig, viteConfig } = remixBuildResult;
+  const { buildManifest, viteConfig } = buildResult;
+  const buildDirectory =
+    'remixConfig' in buildResult
+      ? buildResult.remixConfig.buildDirectory
+      : buildResult.reactRouterConfig.buildDirectory;
 
-  const staticDir = join(remixConfig.buildDirectory, 'client');
+  const staticDir = join(buildDirectory, 'client');
   const serverBundles = Object.values(buildManifest.serverBundles ?? {});
 
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),
     ...serverBundles.map(bundle => {
+      if (isReactRouter) {
+        return createRenderReactRouterFunction(
+          nodeVersion,
+          entrypointFsDirname,
+          repoRootPath,
+          join(entrypointFsDirname, bundle.file),
+          undefined,
+          frameworkVersion,
+          bundle.config
+        );
+      }
+
       if (bundle.config.runtime === 'edge') {
         return createRenderEdgeFunction(
           entrypointFsDirname,
           repoRootPath,
           join(entrypointFsDirname, bundle.file),
           undefined,
-          remixVersion,
+          frameworkVersion,
           bundle.config
         );
       }
@@ -256,7 +287,7 @@ export const build: BuildV2 = async ({
         repoRootPath,
         join(entrypointFsDirname, bundle.file),
         undefined,
-        remixVersion,
+        frameworkVersion,
         bundle.config
       );
     }),
@@ -316,8 +347,119 @@ export const build: BuildV2 = async ({
     dest: '/',
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return { routes, output, framework: { version: frameworkVersion } };
 };
+
+async function createRenderReactRouterFunction(
+  nodeVersion: NodeVersion,
+  entrypointDir: string,
+  rootDir: string,
+  serverBuildPath: string,
+  serverEntryPoint: string | undefined,
+  frameworkVersion: string,
+  config: /*TODO: ResolvedNodeRouteConfig*/ any
+): Promise<EdgeFunction | NodejsLambda> {
+  const isEdgeFunction = config.runtime === 'edge';
+  const files: Files = {};
+
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    const baseServerBuildPath = basename(serverBuildPath, '.js');
+    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
+    handlerPath = join(rootDir, handler);
+
+    // Copy the `server-react-router.mjs` file into the "build" directory
+    const reactRouterServerSrc = await reactRouterServerSrcPromise;
+    await fs.writeFile(
+      handlerPath,
+      reactRouterServerSrc.replace(
+        'ENTRYPOINT_PLACEHOLDER',
+        `./${baseServerBuildPath}.js`
+      )
+    );
+  }
+
+  // Trace the handler with `@vercel/nft`
+  let conditions: NodeFileTraceOptions['conditions'];
+  let readFile: NodeFileTraceOptions['readFile'];
+  if (isEdgeFunction) {
+    conditions = ['edge-light', 'browser', 'module', 'import', 'require'];
+    readFile = async fsPath => {
+      let source: Buffer | string;
+      try {
+        source = await fs.readFile(fsPath);
+      } catch (err: any) {
+        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+          return null;
+        }
+        throw err;
+      }
+      if (basename(fsPath) === 'package.json') {
+        // For Edge Functions, patch "main" field to prefer "browser" or "module"
+        const pkgJson = JSON.parse(source.toString());
+
+        for (const prop of ['browser', 'module']) {
+          const val = pkgJson[prop];
+          if (typeof val === 'string') {
+            pkgJson.main = val;
+
+            // Return the modified `package.json` to nft
+            source = JSON.stringify(pkgJson);
+            break;
+          }
+        }
+      }
+      return source;
+    };
+  }
+  const trace = await nodeFileTrace([handlerPath], {
+    base: rootDir,
+    processCwd: entrypointDir,
+    conditions,
+    readFile,
+  });
+
+  logNftWarnings(trace.warnings, 'react-router');
+
+  for (const file of trace.fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+
+  let fn: NodejsLambda | EdgeFunction;
+  if (isEdgeFunction) {
+    fn = new EdgeFunction({
+      files,
+      deploymentTarget: 'v8-worker',
+      entrypoint: handler,
+      regions: config.regions,
+      framework: {
+        slug: 'react-router',
+        version: frameworkVersion,
+      },
+    });
+  } else {
+    fn = new NodejsLambda({
+      files,
+      handler,
+      runtime: nodeVersion.runtime,
+      shouldAddHelpers: false,
+      shouldAddSourcemapSupport: false,
+      operationType: 'SSR',
+      supportsResponseStreaming: true,
+      useWebApi: true,
+      regions: config.regions,
+      memory: config.memory,
+      maxDuration: config.maxDuration,
+      framework: {
+        slug: 'react-router',
+        version: frameworkVersion,
+      },
+    });
+  }
+
+  return fn;
+}
 
 async function createRenderNodeFunction(
   nodeVersion: NodeVersion,
@@ -325,7 +467,7 @@ async function createRenderNodeFunction(
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  remixVersion: string,
+  frameworkVersion: string,
   config: /*TODO: ResolvedNodeRouteConfig*/ any
 ): Promise<NodejsLambda> {
   const files: Files = {};
@@ -354,9 +496,7 @@ async function createRenderNodeFunction(
     processCwd: entrypointDir,
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/node');
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
@@ -375,7 +515,7 @@ async function createRenderNodeFunction(
     maxDuration: config.maxDuration,
     framework: {
       slug: 'remix',
-      version: remixVersion,
+      version: frameworkVersion,
     },
   });
 
@@ -387,7 +527,7 @@ async function createRenderEdgeFunction(
   rootDir: string,
   serverBuildPath: string,
   serverEntryPoint: string | undefined,
-  remixVersion: string,
+  frameworkVersion: string,
   config: /* TODO: ResolvedEdgeRouteConfig*/ any
 ): Promise<EdgeFunction> {
   const files: Files = {};
@@ -446,9 +586,7 @@ async function createRenderEdgeFunction(
     },
   });
 
-  for (const warning of trace.warnings) {
-    debug(`Warning from trace: ${warning.message}`);
-  }
+  logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
   for (const file of trace.fileList) {
     if (
@@ -469,7 +607,7 @@ async function createRenderEdgeFunction(
     regions: config.regions,
     framework: {
       slug: 'remix',
-      version: remixVersion,
+      version: frameworkVersion,
     },
   });
 

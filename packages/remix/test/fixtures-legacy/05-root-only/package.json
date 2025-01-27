@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^1.14.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

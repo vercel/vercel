@@ -5,6 +5,7 @@ GEM
 
 PLATFORMS
   x86_64-darwin-21
+  x86_64-linux
 
 DEPENDENCIES
   cowsay (~> 0.3.0)
