@@ -6,41 +6,27 @@ import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 import { platform } from 'node:process';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
-const socketdir = path.join(os.tmpdir(), 'socket-dir');
 
 const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
 
 const localFileSystem = new LocalFileSystemDetector(tmpdir);
-const socketFileSystem = new LocalFileSystemDetector(socketdir);
 
 describe('LocalFileSystemDetector', () => {
-  const server = net.createServer();
-
   beforeAll(async () => {
     await Promise.all(
       dirs.map(dir => fs.mkdir(path.join(tmpdir, dir), { recursive: true }))
     );
-    fs.mkdir(socketdir, { recursive: true });
     await Promise.all(
       filePaths.map(filePath =>
         fs.writeFile(path.join(tmpdir, filePath), path.basename(filePath))
       )
     );
-    if (platform !== 'win32') {
-      await new Promise<void>(resolve => {
-        server.listen(path.join(socketdir, 'socket'), () => resolve());
-      });
-    }
   });
 
   afterAll(async () => {
     await fs.rm(tmpdir, { recursive: true, force: true });
-    await fs.rm(socketdir, { recursive: true, force: true });
-    await new Promise<void>(resolve => {
-      server.close(() => resolve());
-    });
   });
 
   it('should be instance of DetectorFilesystem', () => {
@@ -86,9 +72,29 @@ describe('LocalFileSystemDetector', () => {
     expect(actualPaths).toEqual(expectedPaths);
   });
 
-  it('should skip entry if not file or directory', async () => {
-    const readdirResults = await socketFileSystem.readdir(socketdir);
-    expect(readdirResults).toEqual([]);
+  it('should skip entry if socket', async () => {
+    // Windows does not support Unix domain sockets
+    if (platform === 'win32') {
+      return;
+    }
+
+    const socketdir = path.join(os.tmpdir(), 'socket-dir');
+    const socketFileSystem = new LocalFileSystemDetector(socketdir);
+    const server = net.createServer();
+
+    try {
+      fs.mkdir(socketdir, { recursive: true });
+      await new Promise<void>(resolve => {
+        server.listen(path.join(socketdir, 'socket'), () => resolve());
+      });
+      const readdirResults = await socketFileSystem.readdir(socketdir);
+      expect(readdirResults).toEqual([]);
+    } finally {
+      await fs.rm(socketdir, { recursive: true, force: true });
+      await new Promise<void>(resolve => {
+        server.close(() => resolve());
+      });
+    }
   });
 
   it('should call chdir correctly', async () => {
