@@ -3,7 +3,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
-import { platform } from 'node:process';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
 
@@ -74,7 +73,7 @@ describe('LocalFileSystemDetector', () => {
 
   it('should skip entry if socket', async () => {
     // Windows does not support Unix domain sockets
-    if (platform === 'win32') {
+    if (process.platform === 'win32') {
       return;
     }
 
