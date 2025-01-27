@@ -2,29 +2,37 @@ import execa from 'execa';
 import which from 'which';
 import { join } from 'path';
 import { intersects } from 'semver';
-import { Meta, NodeVersion, debug, NowBuildError } from '@vercel/build-utils';
+import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 
-interface RubyVersion extends NodeVersion {
-  minor: number;
-}
+class RubyVersion extends Version {}
 
 const allOptions: RubyVersion[] = [
-  { major: 3, minor: 3, range: '3.3.x', runtime: 'ruby3.3' },
-  { major: 3, minor: 2, range: '3.2.x', runtime: 'ruby3.2' },
-  {
+  new RubyVersion({
+    major: 3,
+    minor: 3,
+    range: '3.3.x',
+    runtime: 'ruby3.3',
+  }),
+  new RubyVersion({
+    major: 3,
+    minor: 2,
+    range: '3.2.x',
+    runtime: 'ruby3.2',
+  }),
+  new RubyVersion({
     major: 2,
     minor: 7,
     range: '2.7.x',
     runtime: 'ruby2.7',
     discontinueDate: new Date('2023-12-07'),
-  },
-  {
+  }),
+  new RubyVersion({
     major: 2,
     minor: 5,
     range: '2.5.x',
     runtime: 'ruby2.5',
     discontinueDate: new Date('2021-11-30'),
-  },
+  }),
 ];
 
 function getLatestRubyVersion(): RubyVersion {
@@ -37,11 +45,6 @@ function getLatestRubyVersion(): RubyVersion {
     });
   }
   return selection;
-}
-
-function isDiscontinued({ discontinueDate }: RubyVersion): boolean {
-  const today = Date.now();
-  return discontinueDate !== undefined && discontinueDate.getTime() <= today;
 }
 
 function getRubyPath(meta: Meta, gemfileContents: string) {
@@ -69,17 +72,18 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
           link: 'http://vercel.link/ruby-version',
         });
       }
-      const discontinued = isDiscontinued(selection);
-      if (discontinued || !isInstalled(selection)) {
+
+      if (selection.state === 'discontinued' || !isInstalled(selection)) {
         const latest = getLatestRubyVersion();
         const intro = `Found \`Gemfile\` with ${
-          discontinued ? 'discontinued' : 'invalid'
+          selection.state === 'discontinued' ? 'discontinued' : 'invalid'
         } Ruby version: \`${line}.\``;
         const hint = `Please set \`ruby "~> ${latest.range}"\` in your \`Gemfile\` to use Ruby ${latest.range}.`;
         throw new NowBuildError({
-          code: discontinued
-            ? 'RUBY_DISCONTINUED_VERSION'
-            : 'RUBY_INVALID_VERSION',
+          code:
+            selection.state === 'discontinued'
+              ? 'RUBY_DISCONTINUED_VERSION'
+              : 'RUBY_INVALID_VERSION',
           link: 'http://vercel.link/ruby-version',
           message: `${intro} ${hint}`,
         });
