@@ -14,21 +14,35 @@ function pathToRegexp(
   const currentRegExp = pathToRegexpCurrent(path, keys, options);
 
   try {
-    const newRegExp = pathToRegexpUpdated(path, keys, options);
-    const diff = currentRegExp.toString() !== newRegExp.toString();
+    const currentKeys = keys;
+    const newKeys: Key[] = [];
+    const newRegExp = pathToRegexpUpdated(path, newKeys, options);
+
     // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
     // for verification that they show up in the build logs as expected
-    if (process.env.FORCE_PATH_TO_REGEXP_LOG || diff) {
+
+    const isDiffRegExp = currentRegExp.toString() !== newRegExp.toString();
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffRegExp) {
       const message = JSON.stringify({
         path,
         currentRegExp: currentRegExp.toString(),
         newRegExp: newRegExp.toString(),
       });
-      console.log(`[vc] PATH TO REGEXP DIFF @ #${callerId}: ${message}`);
+      console.error(`[vc] PATH TO REGEXP PATH DIFF @ #${callerId}: ${message}`);
+    }
+
+    const isDiffKeys = keys?.toString() === newKeys?.toString();
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffKeys) {
+      const message = JSON.stringify({
+        isDiffKeys,
+        currentKeys,
+        newKeys,
+      });
+      console.error(`[vc] PATH TO REGEXP KEYS DIFF @ #${callerId}: ${message}`);
     }
   } catch (err) {
     const error = err as Error;
-    console.log(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${error.message}`);
+    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${error.message}`);
   }
 
   return currentRegExp;
