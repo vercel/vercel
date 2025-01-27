@@ -37,11 +37,6 @@ export interface KvSessionStorageOptions {
   prefix?: string;
 }
 
-const genRanHex = (size: number) =>
-  Array.from({ length: size }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('');
-
 export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
   kv,
   cookie,
@@ -49,18 +44,23 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
 }: KvSessionStorageOptions) {
   type S = SessionIdStorageStrategy<Data, FlashData>;
 
+  async function setData(id: string, value: string, expires?: Date) {
+    if (expires) {
+      await kv.set(id, value, { pxat: expires.getTime() });
+    } else {
+      await kv.set(id, value);
+    }
+  }
+
   const createData: S['createData'] = async (data, expires) => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const baseId = genRanHex(16);
-      const id = `${prefix}:${baseId}`;
+      const id = `${prefix}:${crypto.randomUUID()}`;
+      // `exists` returns the number of keys that match the
+      // given pattern, so if it's 0 then the key doesn't exist.
       if ((await kv.exists(id)) === 0) {
         const str = JSON.stringify(data);
-        if (expires) {
-          await kv.set(id, str, { pxat: expires.getTime() });
-        } else {
-          await kv.set(id, str);
-        }
+        await setData(id, str, expires);
         return id;
       }
     }
@@ -76,11 +76,7 @@ export function createKvSessionStorage<Data = SessionData, FlashData = Data>({
       // If the data is empty then delete the session key
       return deleteData(id);
     }
-    if (expires) {
-      await kv.set(id, str, { pxat: expires.getTime() });
-    } else {
-      await kv.set(id, str);
-    }
+    await setData(id, str, expires);
   };
 
   const deleteData: S['deleteData'] = async id => {

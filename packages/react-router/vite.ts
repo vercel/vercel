@@ -18,20 +18,20 @@ function hashConfig(config: Record<string, unknown>): string {
   return Buffer.from(str).toString('base64url');
 }
 
-function flattenAndSort(o: Record<string, unknown>) {
-  const n: Record<string, unknown> = {};
+function flattenAndSort(object: Record<string, unknown>) {
+  const sortedObject: Record<string, unknown> = {};
   const keys: string[] = [];
-  for (const key in o) keys.push(key);
-  for (const key of keys.sort()) n[key] = o[key];
-  return n;
+  for (const key in object) keys.push(key);
+  for (const key of keys.sort()) sortedObject[key] = object[key];
+  return sortedObject;
 }
 
-function runOnce<T extends (...args: any[]) => any>(fn: T) {
+function runOnce<Runner extends (...args: any[]) => any>(runner: Runner) {
   let ran = false;
-  return (...args: Parameters<T>) => {
+  return (...args: Parameters<Runner>) => {
     if (ran) return;
     ran = true;
-    fn(...args);
+    runner(...args);
   };
 }
 
@@ -43,6 +43,17 @@ export function vercelPreset(): Preset {
   const routeConfigs = new Map<string, BaseFunctionConfig>();
   const bundleConfigs = new Map<string, BaseFunctionConfig>();
 
+  /**
+   * Returns the exported `config` from the leaf route file,
+   * including the configuration from any parent routes,
+   * which is done via JavaScript prototype inheritance.
+   *
+   * Note that the `branch` array is sorted according to the
+   * hierarchy of the route files, so the first element of
+   * the array is the parent layout route, and the last
+   * element is the leaf route. Thusly, we iterate over
+   * the array in reverse order.
+   */
   function getRouteConfig(
     branch: RouteManifestEntry[],
     index = branch.length - 1
