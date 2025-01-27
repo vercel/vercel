@@ -83,6 +83,40 @@ interface ReactRouterBuildResult extends BuildResultBase {
 
 type BuildResult = RemixBuildResult | ReactRouterBuildResult;
 
+interface BuilderInfo {
+  packageName: string;
+  buildCommand: string;
+  buildResultPath: string;
+}
+
+class ReactRouterInfo implements BuilderInfo {
+  get packageName() {
+    return 'react-router';
+  }
+
+  get buildCommand() {
+    return 'react-router build';
+  }
+
+  get buildResultPath() {
+    return '.vercel/react-router-build-result.json';
+  }
+}
+
+class RemixRunInfo implements BuilderInfo {
+  get packageName() {
+    return '@remix-run/dev';
+  }
+
+  get buildCommand() {
+    return 'remix build';
+  }
+
+  get buildResultPath() {
+    return '.vercel/remix-build-result.json';
+  }
+}
+
 export const build: BuildV2 = async ({
   entrypoint,
   workPath,
@@ -101,6 +135,9 @@ export const build: BuildV2 = async ({
     '.mjs',
     '.mts',
   ]);
+  const builderInfo = isReactRouter
+    ? new ReactRouterInfo()
+    : new RemixRunInfo();
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
@@ -150,7 +187,7 @@ export const build: BuildV2 = async ({
   //   Remix - use "@remix-run/dev"
   //   React Router - use "react-router"
   const frameworkVersion = await getPackageVersion(
-    isReactRouter ? 'react-router' : '@remix-run/dev',
+    builderInfo.packageName,
     entrypointFsDirname,
     repoRootPath
   );
@@ -174,7 +211,7 @@ export const build: BuildV2 = async ({
       debug(`Executing "build" script`);
       await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
     } else {
-      await execCommand(isReactRouter ? 'react-router build' : 'remix build', {
+      await execCommand(builderInfo.buildCommand, {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
@@ -183,9 +220,7 @@ export const build: BuildV2 = async ({
 
   const buildResultJsonPath = join(
     entrypointFsDirname,
-    isReactRouter
-      ? '.vercel/react-router-build-result.json'
-      : '.vercel/remix-build-result.json'
+    builderInfo.buildResultPath
   );
   let buildResult: BuildResult | undefined;
   try {
