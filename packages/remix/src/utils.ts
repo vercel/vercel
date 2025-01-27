@@ -24,14 +24,16 @@ function pathToRegexp(
     // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
     // for verification that they show up in the build logs as expected
     if (process.env.FORCE_PATH_TO_REGEXP_LOG || diff) {
-      // each of these path-to-regexp comparisons logs an innocuous message
-      // so we (1) can easily grab it by querying the build logs
-      // and (2) it doesn't spook the user
-      console.log(`SYSTEM TEST #${callerId} A: ${path}`);
+      const message = JSON.stringify({
+        path,
+        currentRegExp: currentRegExp.toString(),
+        newRegExp: newRegExp.toString(),
+      });
+      console.log(`[vc] PATH TO REGEXP DIFF @ #${callerId}: ${message}`);
     }
   } catch (err) {
     const error = err as Error;
-    console.log(`SYSTEM TEST #${callerId} B: ${error.message}`);
+    console.log(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${error.message}`);
   }
 
   return currentRegExp;
