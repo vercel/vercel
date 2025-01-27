@@ -9,9 +9,6 @@
     "cy:open": "cypress open",
     "test": "run-p --race dev cy:run"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "compression": "^1.7.1",
     "polka": "next",
