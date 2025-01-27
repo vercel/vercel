@@ -1358,7 +1358,6 @@ export const frameworks = [
   {
     name: 'Saber',
     slug: 'saber',
-    demo: 'https://saber-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/saber.svg',
     tagline:
       'Saber is a framework for building static sites in Vue.js that supports data from any source.',
