@@ -189,7 +189,8 @@ async function getChunkedTests() {
               const flakeyTest =
                 chunk.nodeVersion === '22' &&
                 chunk.runner === 'windows-latest' &&
-                chunk.testScript === 'vitest-unit';
+                chunk.testScript === 'vitest-unit' &&
+                chunk.packageName === 'vercel';
               return !flakeyTest;
             })
         );
