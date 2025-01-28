@@ -2,4 +2,4 @@
 '@vercel/next': patch
 ---
 
-only add defaultLocale redirect if localeDetection is enabled
+ensure defaultLocale rewrite doesn't conflict with user-defined redirects
