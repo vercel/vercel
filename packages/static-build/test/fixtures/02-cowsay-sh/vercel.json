@@ -9,7 +9,7 @@
   "probes": [
     { "path": "/", "mustContain": "cow:RANDOMNESS_PLACEHOLDER" },
     { "path": "/node20sh/", "mustContain": "node:v20" },
-    { "path": "/node22sh/", "mustContain": "node:v18" },
+    { "path": "/node22sh/", "mustContain": "node:v22" },
     { "path": "/subdirectory/", "mustContain": "yoda:RANDOMNESS_PLACEHOLDER" }
   ]
 }
