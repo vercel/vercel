@@ -230,7 +230,7 @@ describe('create v2 deployment', () => {
           token,
           teamId: process.env.VERCEL_TEAM_ID,
           path: uploadFolder,
-          archive: 'split-tgz',
+          archive: 'tgz',
         },
         { name: 'archive-project' },
       ];
