@@ -62,6 +62,10 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
   ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
   : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
+const skipDefaultLocaleRewrite = Boolean(
+  process.env.NEXT_EXPERIMENTAL_SKIP_DEFAULT_LOCALE_REWRITE
+);
+
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
@@ -583,7 +587,11 @@ export function localizeDynamicRoutes(
       // when locale detection is disabled we don't add the default locale
       // to the path while resolving routes so we need to be able to match
       // without it being present
-      if (isLocalePrefixed && routesManifest?.i18n?.localeDetection === false) {
+      if (
+        skipDefaultLocaleRewrite &&
+        isLocalePrefixed &&
+        routesManifest?.i18n?.localeDetection === false
+      ) {
         const nonLocalePrefixedRoute = JSON.parse(JSON.stringify(route));
         nonLocalePrefixedRoute.src = nonLocalePrefixedRoute.src.replace(
           '^',
