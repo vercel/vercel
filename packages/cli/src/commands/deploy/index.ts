@@ -63,7 +63,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { help } from '../help';
-import { deployCommand } from './command';
+import { deployCommand, deprecatedArchiveSplitTgz } from './command';
 import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
@@ -218,7 +218,10 @@ export default async (client: Client): Promise<number> => {
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
     typeof parsedArchive === 'string' &&
-    !(isValidArchive(parsedArchive) || parsedArchive === 'split-tgz')
+    !(
+      isValidArchive(parsedArchive) ||
+      parsedArchive === deprecatedArchiveSplitTgz
+    )
   ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
