@@ -19,6 +19,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       },
     });
     expect(res.status).toEqual(307);
-    expect(res.headers.get('location')).toEqual(`/fr-BE`);
+    expect(res.headers.get('location')).toEqual(`${ctx.deploymentUrl}/fr-BE`);
   });
 });
