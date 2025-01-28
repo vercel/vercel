@@ -224,8 +224,13 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
   if (parsedArchive === 'split-tgz') {
-    output.warn(
-      '`--archive=tgz` now has the same behavior as `--archive=split-tgz`. `split-tgz` is deprecated and will be removed in the future. Please use `--archive=tgz` instead.'
+    output.print(
+      `${prependEmoji(
+        `${param('--archive=tgz')} now has the same behavior as ${param(
+          '--archive=split-tgz'
+        )}. Please use ${param('--archive=tgz')} instead.`,
+        emoji('warning')
+      )}\n`
     );
   }
 
