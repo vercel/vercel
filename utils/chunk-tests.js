@@ -7,7 +7,7 @@ const runnersMap = new Map([
     'vitest-unit',
     {
       min: 1,
-      max: 1,
+      max: 2,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['16', '18', '20', '22'],
