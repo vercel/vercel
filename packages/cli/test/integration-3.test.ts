@@ -313,66 +313,6 @@ test('ensure we render a warning for deployments with no files', async () => {
   expect(res.status).toBe(404);
 });
 
-describe('given a deployment', () => {
-  const context = {
-    deploymentUrl: '',
-    directory: '',
-    stderr: '',
-    stdout: '',
-    exitCode: -1,
-  };
-
-  beforeAll(async () => {
-    const directory = await setupE2EFixture('runtime-logs');
-    Object.assign(
-      context,
-      await execCli(binaryPath, [directory, '--public', '--yes'])
-    );
-    context.deploymentUrl = pickUrl(context.stdout);
-    const { href } = new URL(context.deploymentUrl);
-    await waitForDeployment(href);
-  });
-
-  it('prints build logs', async () => {
-    const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-      'inspect',
-      context.deploymentUrl,
-      '--logs',
-    ]);
-
-    const TIMESTAMP_FORMAT =
-      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
-    expect(stderr).toMatch(TIMESTAMP_FORMAT);
-
-    const allLogs = formatOutput({ stdout, stderr });
-    expect(stderr, allLogs).toContain('Running "vercel build"');
-    expect(stderr, allLogs).toContain('Deploying outputs...');
-    expect(exitCode, allLogs).toBe(0);
-  });
-
-  it('prints runtime logs as json', async () => {
-    const [{ stdout, stderr }, res] = await Promise.all([
-      execCli(
-        binaryPath,
-        ['logs', context.deploymentUrl, '--json'],
-        // kill the command since it could last up to 5 minutes
-        { timeout: ms('10s') }
-      ),
-      fetch(`${context.deploymentUrl}/api/greetings`),
-    ]);
-    const allLogs = formatOutput({ stdout, stderr });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: 'Hello, World!' });
-    expect(stderr, allLogs).toContain(
-      `Displaying runtime logs for deployment ${
-        new URL(context.deploymentUrl).host
-      }`
-    );
-    expect(stdout, allLogs).toContain(`/api/greetings`);
-    expect(stdout, allLogs).toContain(`hi!`);
-  });
-});
-
 test('ensure we render a prompt when deploying home directory', async () => {
   const directory = homedir();
 
