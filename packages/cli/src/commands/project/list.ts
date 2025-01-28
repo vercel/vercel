@@ -77,24 +77,20 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersionsList = [];
+    const upcomingDiscontinuedVersionsList = [];
 
     for (const nodeVersion of NODE_VERSIONS) {
-      // This logic presumes that adding a discontinue date for a node version
-      // implies that the version is deprecated.
       // If there are scenarios where we will be deprecating a version
       // without knowing the discontinue date
       // Then we'll want to consider adding a `deprecationDate` field to the nodeVersion type
-      const upcomingDiscontinueDate =
-        nodeVersion.discontinueDate &&
-        nodeVersion.discontinueDate.valueOf() > Date.now();
+      const upcomingDiscontinueDate = nodeVersion.state === 'deprecated';
       if (upcomingDiscontinueDate) {
-        upcomingDeprecationVersionsList.push(nodeVersion.range);
+        upcomingDiscontinuedVersionsList.push(nodeVersion.range);
       }
     }
 
     output.warn(
-      `The following Node.js versions are deprecated: ${upcomingDeprecationVersionsList.join(
+      `The following Node.js versions are deprecated: ${upcomingDiscontinuedVersionsList.join(
         ', '
       )} and will be discontinued soon. Please upgrade your projects immediately.`
     );

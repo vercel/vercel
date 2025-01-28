@@ -554,11 +554,14 @@ export function localizeDynamicRoutes(
   isCorrectLocaleAPIRoutes?: boolean,
   inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
-  return dynamicRoutes.map((route: RouteWithSrc) => {
-    // i18n is already handled for middleware
-    if (route.middleware !== undefined || route.middlewarePath !== undefined)
-      return route;
+  const finalDynamicRoutes: RouteWithSrc[] = [];
 
+  for (const route of dynamicRoutes as RouteWithSrc[]) {
+    // i18n is already handled for middleware
+    if (route.middleware !== undefined || route.middlewarePath !== undefined) {
+      finalDynamicRoutes.push(route);
+      continue;
+    }
     const { i18n } = routesManifest || {};
 
     if (i18n) {
@@ -576,6 +579,18 @@ export function localizeDynamicRoutes(
 
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
+
+      // when locale detection is disabled we don't add the default locale
+      // to the path while resolving routes so we need to be able to match
+      // without it being present
+      if (isLocalePrefixed && routesManifest?.i18n?.localeDetection === false) {
+        const nonLocalePrefixedRoute = JSON.parse(JSON.stringify(route));
+        nonLocalePrefixedRoute.src = nonLocalePrefixedRoute.src.replace(
+          '^',
+          `^${dynamicPrefix || ''}[/]?`
+        );
+        finalDynamicRoutes.push(nonLocalePrefixedRoute);
+      }
 
       route.src = route.src.replace(
         '^',
@@ -599,8 +614,10 @@ export function localizeDynamicRoutes(
     } else {
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
     }
-    return route;
-  });
+    finalDynamicRoutes.push(route);
+  }
+
+  return finalDynamicRoutes;
 }
 
 type LoaderKey = 'imgix' | 'cloudinary' | 'akamai' | 'default';
