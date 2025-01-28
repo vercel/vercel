@@ -581,7 +581,7 @@ export function localizeDynamicRoutes(
         '^',
         `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
           isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')}/)?`
       );
 
       if (
@@ -593,7 +593,7 @@ export function localizeDynamicRoutes(
         // path so that the prerender object is used
         route.dest = route.dest!.replace(
           `${path.posix.join('/', entryDirectory, '/')}`,
-          `${path.posix.join('/', entryDirectory, '$nextLocale', '/')}`
+          `${path.posix.join('/', entryDirectory, '$nextLocale')}`
         );
       }
     } else {
