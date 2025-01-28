@@ -93,41 +93,24 @@ interface RenderFunctionOptions {
   config: /*TODO: ResolvedNodeRouteConfig*/ any;
 }
 
-abstract class FrameworkSettings {
-  static configFileName: string;
-  static primaryPackageName: string;
-  static buildCommand: string;
-  static buildResultFilePath: string;
+interface FrameworkSettings {
+  configFileName: string;
+  primaryPackageName: string;
+  buildCommand: string;
+  buildResultFilePath: string;
 
-  static createVariantFrameworkSettings(workPath: string) {
-    const isReactRouter = findConfig(
-      workPath,
-      ReactRouterFrameworkSettings.configFileName,
-      ['.js', '.ts', '.mjs', '.mts']
-    );
-
-    if (isReactRouter) {
-      return ReactRouterFrameworkSettings;
-    }
-
-    return RemixFrameworkSettings;
-  }
-
-  createRenderFunction(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  createRenderFunction: (
     options: RenderFunctionOptions
-  ): Promise<EdgeFunction | NodejsLambda> {
-    throw new Error('FrameworkSettings#createReanderFunction not implemented');
-  }
+  ) => Promise<EdgeFunction | NodejsLambda>;
 }
 
-class RemixFrameworkSettings extends FrameworkSettings {
-  static primaryPackageName = '@remix-run/dev';
-  static buildCommand = 'remix build';
-  static buildResultFilePath = '.vercel/remix-build-result.json';
-  static configFileName = ''; // TODO
+const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
+  primaryPackageName: '@remix-run/dev',
+  buildCommand: 'remix build',
+  buildResultFilePath: '.vercel/remix-build-result.json',
+  configFileName: '', // TODO
 
-  static createRenderFunction({
+  createRenderFunction({
     nodeVersion,
     entrypointDir,
     rootDir,
@@ -156,20 +139,16 @@ class RemixFrameworkSettings extends FrameworkSettings {
       frameworkVersion,
       config
     );
-  }
+  },
+};
 
-  // TODO: pull in the implementations for:
-  // - `createRenderEdgeFunction`
-  // - `createRenderNodeFunction`
-}
+const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
+  configFileName: 'react-router.config',
+  primaryPackageName: 'react-router',
+  buildCommand: 'react-router build',
+  buildResultFilePath: '.vercel/react-router-build-result.json',
 
-class ReactRouterFrameworkSettings extends FrameworkSettings {
-  static configFileName = 'react-router.config';
-  static primaryPackageName = 'react-router';
-  static buildCommand = 'react-router build';
-  static buildResultFilePath = '.vercel/react-router-build-result.json';
-
-  static createRenderFunction({
+  createRenderFunction({
     nodeVersion,
     entrypointDir,
     rootDir,
@@ -187,7 +166,20 @@ class ReactRouterFrameworkSettings extends FrameworkSettings {
       frameworkVersion,
       config
     );
+  },
+};
+
+function determineFrameworkSettings(workPath: string) {
+  const isReactRouter = findConfig(
+    workPath,
+    REACT_ROUTER_FRAMEWORK_SETTINGS.configFileName,
+    ['.js', '.ts', '.mjs', '.mts']
+  );
+
+  if (isReactRouter) {
+    return REACT_ROUTER_FRAMEWORK_SETTINGS;
   }
+  return REMIX_FRAMEWORK_SETTINGS;
 }
 
 export const build: BuildV2 = async ({
@@ -201,8 +193,7 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
-  const frameworkSettings =
-    FrameworkSettings.createVariantFrameworkSettings(workPath);
+  const frameworkSettings = determineFrameworkSettings(workPath);
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
