@@ -694,27 +694,7 @@ export async function runNpmInstall(
       commandArgs.push('--production');
     }
 
-    try {
-      await spawnAsync(cliType, commandArgs, opts);
-    } catch (err: unknown) {
-      const potentialErrorPath = path.join(
-        process.env.HOME || '/',
-        '.npm',
-        'eresolve-report.txt'
-      );
-      if (
-        !commandArgs.includes('--legacy-peer-deps') &&
-        fs.existsSync(potentialErrorPath)
-      ) {
-        console.warn(
-          'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.'
-        );
-        commandArgs.push('--legacy-peer-deps');
-        await spawnAsync(cliType, commandArgs, opts);
-      } else {
-        throw err;
-      }
-    }
+    await spawnAsync(cliType, commandArgs, opts);
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
