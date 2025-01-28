@@ -1,6 +1,7 @@
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
 const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
@@ -68,6 +69,31 @@ describe('LocalFileSystemDetector', () => {
       .flatMap(result => result.map(stat => stat.path))
       .sort();
     expect(actualPaths).toEqual(expectedPaths);
+  });
+
+  it('should skip entry if socket', async () => {
+    // Windows does not support Unix domain sockets
+    if (process.platform === 'win32') {
+      return;
+    }
+
+    const socketdir = path.join(os.tmpdir(), 'socket-dir');
+    const socketFileSystem = new LocalFileSystemDetector(socketdir);
+    const server = net.createServer();
+
+    try {
+      fs.mkdir(socketdir, { recursive: true });
+      await new Promise<void>(resolve => {
+        server.listen(path.join(socketdir, 'socket'), () => resolve());
+      });
+      const readdirResults = await socketFileSystem.readdir(socketdir);
+      expect(readdirResults).toEqual([]);
+    } finally {
+      await fs.rm(socketdir, { recursive: true, force: true });
+      await new Promise<void>(resolve => {
+        server.close(() => resolve());
+      });
+    }
   });
 
   it('should call chdir correctly', async () => {

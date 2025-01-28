@@ -378,20 +378,19 @@ export function hasScript(scriptName: string, pkg?: PackageJson) {
   return typeof scripts[scriptName] === 'string';
 }
 
-export async function getRemixVersion(
+export async function getPackageVersion(
+  name: string,
   dir: string,
   base: string
 ): Promise<string> {
-  const resolvedPath = require_.resolve('@remix-run/dev', { paths: [dir] });
+  const resolvedPath = require_.resolve(name, { paths: [dir] });
   const pkgPath = await walkParentDirs({
     base,
     start: dirname(resolvedPath),
     filename: 'package.json',
   });
   if (!pkgPath) {
-    throw new Error(
-      `Failed to find \`package.json\` file for "@remix-run/dev"`
-    );
+    throw new Error(`Failed to find \`package.json\` file for "${name}"`);
   }
   const { version } = JSON.parse(
     await fs.readFile(pkgPath, 'utf8')
@@ -428,6 +427,7 @@ export function isVite(dir: string): boolean {
   ]);
   if (!viteConfig) return false;
 
+  // `remix.config` should only exist for non-Vite Remix projects
   const remixConfig = findConfig(dir, 'remix.config');
   if (!remixConfig) return true;
 
@@ -447,6 +447,6 @@ export function isVite(dir: string): boolean {
     return true;
   }
 
-  // If none of those conditions matched, then treat it as a legacy project and print a warning
+  // If none of those conditions matched, then treat it as a legacy project
   return false;
 }
