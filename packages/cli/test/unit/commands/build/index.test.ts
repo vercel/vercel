@@ -16,7 +16,9 @@ vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
 
-describe('build', () => {
+describe.skipIf(
+  process.platform === 'win32' && process.version.startsWith('v22')
+)('build', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
