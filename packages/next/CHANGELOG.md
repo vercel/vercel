@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.4.3
+
+### Patch Changes
+
+- ensure defaultLocale rewrite doesn't conflict with user-defined redirects ([#12916](https://github.com/vercel/vercel/pull/12916))
+
+- Added headers for user-supplied rewrites ([#12847](https://github.com/vercel/vercel/pull/12847))
+
 ## 4.4.2
 
 ### Patch Changes

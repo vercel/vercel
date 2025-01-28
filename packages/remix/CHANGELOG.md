@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 5.1.0
+
+### Minor Changes
+
+- Add support for React Router v7 ([#12904](https://github.com/vercel/vercel/pull/12904))
+
+- Enable `nativeFetch` when `v3_singleFetch` future flag is enabled ([#12918](https://github.com/vercel/vercel/pull/12918))
+
+### Patch Changes
+
+- [remix] Create an interface for differences remix vs react-router ([#12925](https://github.com/vercel/vercel/pull/12925))
+
 ## 5.0.2
 
 ### Patch Changes
