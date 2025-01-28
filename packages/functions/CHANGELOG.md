@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 1.6.0
+
+### Minor Changes
+
+- Add middleware-related helper functions ([#12938](https://github.com/vercel/vercel/pull/12938))
+
 ## 1.5.2
 
 ### Patch Changes

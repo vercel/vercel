@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 5.0.3
+
+### Patch Changes
+
+- Fix requests failing due to the presence of `Transfer-Encoding` header in edge-function dev server. ([#10701](https://github.com/vercel/vercel/pull/10701))
+
+- Split `build()`, `prepareCache()` and `startDevServer()` into separate files ([#12872](https://github.com/vercel/vercel/pull/12872))
+
+- Updated dependencies [[`745404610a836fa6c2068c5c192d2f3e8b86918f`](https://github.com/vercel/vercel/commit/745404610a836fa6c2068c5c192d2f3e8b86918f), [`3a5507fd1459c77b4491f1c9c3a64ad42e4ff009`](https://github.com/vercel/vercel/commit/3a5507fd1459c77b4491f1c9c3a64ad42e4ff009)]:
+  - @vercel/build-utils@9.1.0
+
 ## 5.0.2
 
 ### Patch Changes
