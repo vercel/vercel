@@ -215,10 +215,19 @@ export default async (client: Client): Promise<number> => {
     flags: parsedArguments.flags,
   });
 
-  const archive = parsedArguments.flags['--archive'];
-  if (typeof archive === 'string' && !isValidArchive(archive)) {
+  let archive = parsedArguments.flags['--archive'];
+  if (
+    typeof archive === 'string' &&
+    !(isValidArchive(archive) || archive === 'split-tgz')
+  ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
+  }
+  if (archive === 'split-tgz') {
+    archive = 'tgz';
+    output.warn(
+      '`--archive tgz` now has the same behavior as `--archive split-tgz`. `split-tgz` is deprecated and will be removed in the future. Please use `--archive tgz` instead.'
+    );
   }
 
   // Retrieve `project` and `org` from linked Project.
