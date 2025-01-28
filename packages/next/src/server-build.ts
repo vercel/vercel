@@ -202,7 +202,7 @@ export async function serverBuild({
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
   );
   const skipDefaultLocaleRewrite = Boolean(
-    process.env.NEXT_EXPERIMENTAL_SKIP_DEFAULT_LOCALE_REWRITE
+    process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
   );
 
   const lambdas: { [key: string]: Lambda } = {};

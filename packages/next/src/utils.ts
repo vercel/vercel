@@ -63,7 +63,7 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
   : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
 const skipDefaultLocaleRewrite = Boolean(
-  process.env.NEXT_EXPERIMENTAL_SKIP_DEFAULT_LOCALE_REWRITE
+  process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
 );
 
 // Identify /[param]/ in route string
