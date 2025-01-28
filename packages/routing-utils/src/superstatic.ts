@@ -38,7 +38,7 @@ function pathToRegexp(
       console.error(`[vc] PATH TO REGEXP PATH DIFF @ #${callerId}: ${message}`);
     }
 
-    const isDiffKeys = keys?.toString() === newKeys?.toString();
+    const isDiffKeys = keys?.toString() !== newKeys?.toString();
     if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffKeys) {
       const message = JSON.stringify({
         isDiffKeys,
