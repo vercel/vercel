@@ -215,18 +215,17 @@ export default async (client: Client): Promise<number> => {
     flags: parsedArguments.flags,
   });
 
-  let archive = parsedArguments.flags['--archive'];
+  const parsedArchive = parsedArguments.flags['--archive'];
   if (
-    typeof archive === 'string' &&
-    !(isValidArchive(archive) || archive === 'split-tgz')
+    typeof parsedArchive === 'string' &&
+    !(isValidArchive(parsedArchive) || parsedArchive === 'split-tgz')
   ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
   }
-  if (archive === 'split-tgz') {
-    archive = 'tgz';
+  if (parsedArchive === 'split-tgz') {
     output.warn(
-      '`--archive tgz` now has the same behavior as `--archive split-tgz`. `split-tgz` is deprecated and will be removed in the future. Please use `--archive tgz` instead.'
+      '`--archive=tgz` now has the same behavior as `--archive=split-tgz`. `split-tgz` is deprecated and will be removed in the future. Please use `--archive=tgz` instead.'
     );
   }
 
@@ -543,7 +542,7 @@ export default async (client: Client): Promise<number> => {
       createArgs,
       org,
       !project,
-      archive
+      parsedArchive ? 'tgz' : undefined
     );
 
     if (deployment instanceof NotDomainOwner) {
