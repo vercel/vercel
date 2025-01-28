@@ -1,5 +1,14 @@
 # @vercel/build-utils
 
+## 9.1.0
+
+### Minor Changes
+
+- Add `useWebApi` property to `NodejsLambda` class ([#12873](https://github.com/vercel/vercel/pull/12873))
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+
 ## 9.0.1
 
 ### Patch Changes
