@@ -152,46 +152,49 @@ describe('build', () => {
   });
 
   it('should handle symlinked static files', async () => {
-    const cwd = fixture('static-symlink');
-    const output = join(cwd, '.vercel/output');
-
-    // try to create the symlink, if it fails (e.g. Windows), skip the test
-    try {
-      await fs.unlink(join(cwd, 'foo.html'));
-      await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
+    if (process.platform === 'win32') {
+      // this test runs a build command with `mkdir -p` which is unsupported on Windows
       // eslint-disable-next-line no-console
-      console.log('Symlinks not available, skipping test');
+      console.log('Skipping test on Windows');
       return;
     }
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
+    const cwd = fixture('static-symlink');
+    const output = join(cwd, '.vercel/output');
 
-    // `builds.json` says that "@vercel/static" was run
-    const builds = await fs.readJSON(join(output, 'builds.json'));
-    expect(builds).toMatchObject({
-      target: 'preview',
-      builds: [
-        {
-          require: '@vercel/static',
-          apiVersion: 2,
-          src: '**',
-          use: '@vercel/static',
-        },
-      ],
-    });
+    await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
 
-    // "static" directory contains static files
-    const files = await fs.readdir(join(output, 'static'));
-    expect(files.sort()).toEqual(['foo.html', 'index.html']);
-    expect(
-      (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink()
-    ).toEqual(true);
-    expect(
-      (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink()
-    ).toEqual(false);
+    try {
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      // `builds.json` says that "@vercel/static" was run
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      // "static" directory contains static files
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['foo.html', 'index.html']);
+      expect(
+        (await fs.lstat(join(output, 'static', 'foo.html'))).isSymbolicLink()
+      ).toEqual(true);
+      expect(
+        (await fs.lstat(join(output, 'static', 'index.html'))).isSymbolicLink()
+      ).toEqual(false);
+    } finally {
+      await fs.unlink(join(cwd, 'foo.html'));
+    }
   });
 
   it('should normalize "src" path in `vercel.json`', async () => {
