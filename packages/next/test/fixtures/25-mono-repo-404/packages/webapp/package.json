@@ -3,7 +3,7 @@
   "name": "25-mono-repo-packages-webapp",
   "version": "0.0.1",
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "next": "9.3.4",

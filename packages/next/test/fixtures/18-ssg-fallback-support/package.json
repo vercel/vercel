@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "next": "9.2.3-canary.13",
