@@ -7,11 +7,7 @@
     "dev": "next",
     "build": "next build"
   },
-  "author": "Andy",
   "private": true,
-  "engines": {
-    "node": "18.x"
-  },
   "dependencies": {
     "next": "9.1.5",
     "react": "16.12.0",

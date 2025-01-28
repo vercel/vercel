@@ -31,9 +31,6 @@
       "git add"
     ]
   },
-  "engines": {
-    "node": "18.x"
-  },
   "resolutions": {
     "**/jsdom": "22.1.0"
   }

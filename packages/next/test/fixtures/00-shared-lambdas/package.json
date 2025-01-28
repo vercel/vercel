@@ -1,7 +1,4 @@
 {
-  "engines": {
-    "node": "18.x"
-  },
   "dependencies": {
     "next": "10.0.8",
     "react": "^16.8.6",
