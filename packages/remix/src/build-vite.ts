@@ -94,7 +94,6 @@ interface RenderFunctionOptions {
 }
 
 interface FrameworkSettings {
-  configFileName: string;
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
@@ -108,7 +107,6 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
-  configFileName: '', // TODO
 
   createRenderFunction({
     nodeVersion,
@@ -143,7 +141,6 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
 };
 
 const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
-  configFileName: 'react-router.config',
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
@@ -170,11 +167,12 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
 };
 
 function determineFrameworkSettings(workPath: string) {
-  const isReactRouter = findConfig(
-    workPath,
-    REACT_ROUTER_FRAMEWORK_SETTINGS.configFileName,
-    ['.js', '.ts', '.mjs', '.mts']
-  );
+  const isReactRouter = findConfig(workPath, 'react-router.config', [
+    '.js',
+    '.ts',
+    '.mjs',
+    '.mts',
+  ]);
 
   if (isReactRouter) {
     return REACT_ROUTER_FRAMEWORK_SETTINGS;
