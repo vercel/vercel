@@ -1,8 +1,8 @@
 const path = require('path');
 const { deployAndTest } = require('../../utils');
+const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
 const ctx = {};
-
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   beforeAll(async () => {
@@ -16,7 +16,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       redirect: 'manual',
       headers: {
         'x-redirect-me': '1',
-      }
+      },
     });
     expect(res.status).toEqual(307);
     expect(res.headers.get('location')).toEqual(`/fr-BE`);
