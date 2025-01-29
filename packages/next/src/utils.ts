@@ -223,6 +223,10 @@ type RoutesManifestRoute = {
   regex: string;
   namedRegex?: string;
   routeKeys?: { [named: string]: string };
+  prefetchSegmentDataRoutes?: {
+    source: string;
+    destination: string;
+  }[];
 };
 
 type RoutesManifestOld = {
@@ -263,6 +267,21 @@ type RoutesManifestOld = {
     prefetchHeader?: string;
     didPostponeHeader?: string;
     contentTypeHeader: string;
+
+    /**
+     * Header for the prefetch segment data route rewrites.
+     */
+    prefetchSegmentHeader?: string;
+
+    /**
+     * Suffix for the prefetch segment data route rewrites.
+     */
+    prefetchSegmentSuffix?: string;
+
+    /**
+     * Suffix for the prefetch segment data route directory.
+     */
+    prefetchSegmentDirSuffix?: string;
   };
   rewriteHeaders?: {
     pathHeader: string;
@@ -351,6 +370,7 @@ export async function getDynamicRoutes({
   isServerMode,
   dynamicMiddlewareRouteMap,
   isAppPPREnabled,
+  isAppClientSegmentCacheEnabled,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -363,6 +383,7 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -402,7 +423,13 @@ export async function getDynamicRoutes({
             continue;
           }
 
-          const { page, namedRegex, regex, routeKeys } = params;
+          const {
+            page,
+            namedRegex,
+            regex,
+            routeKeys,
+            prefetchSegmentDataRoutes,
+          } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
             dest: `${
@@ -434,6 +461,34 @@ export async function getDynamicRoutes({
                 key: '__next_preview_data',
               },
             ];
+          }
+
+          if (
+            isAppClientSegmentCacheEnabled &&
+            prefetchSegmentDataRoutes &&
+            prefetchSegmentDataRoutes.length > 0
+          ) {
+            for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+              routes.push({
+                ...route,
+                src: prefetchSegmentDataRoute.source,
+                dest: `${
+                  !isDev
+                    ? path.posix.join(
+                        '/',
+                        entryDirectory,
+                        prefetchSegmentDataRoute.destination
+                      )
+                    : prefetchSegmentDataRoute.destination
+                }${
+                  routeKeys
+                    ? `?${Object.entries(routeKeys)
+                        .map(([key, value]) => `${value}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`,
+              });
+            }
           }
 
           if (isAppPPREnabled) {
@@ -2079,6 +2134,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -2116,6 +2172,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      isAppClientSegmentCacheEnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2277,8 +2334,13 @@ export const onPrerenderRoute =
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
-        const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-        if ('postponed' in meta && typeof meta.postponed === 'string') {
+        const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+        if (
+          typeof meta === 'object' &&
+          meta !== null &&
+          'postponed' in meta &&
+          typeof meta.postponed === 'string'
+        ) {
           didPostpone = true;
           postponedPrerender = meta.postponed;
 
@@ -2756,6 +2818,78 @@ export const onPrerenderRoute =
           renderingMode !== RenderingMode.PARTIALLY_STATIC
         ) {
           prerenders[normalizePathData(outputPathData)] = prerender;
+        }
+      }
+
+      const prefetchSegmentSuffix = routesManifest?.rsc?.prefetchSegmentSuffix;
+      const prefetchSegmentDirSuffix =
+        routesManifest?.rsc?.prefetchSegmentDirSuffix;
+
+      if (
+        isAppClientSegmentCacheEnabled &&
+        prefetchSegmentSuffix &&
+        prefetchSegmentDirSuffix &&
+        rscDidPostponeHeader &&
+        appDir
+      ) {
+        const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+        if (fs.existsSync(metaPath)) {
+          const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+          if (
+            typeof meta === 'object' &&
+            meta !== null &&
+            'segmentPaths' in meta &&
+            typeof meta.segmentPaths === 'object' &&
+            meta.segmentPaths !== null &&
+            Array.isArray(meta.segmentPaths)
+          ) {
+            const segmentsDir = path.join(
+              appDir,
+              routeFileNoExt + prefetchSegmentDirSuffix
+            );
+            for (const segmentPath of meta.segmentPaths) {
+              const outputSegmentPath =
+                path.join(
+                  outputPathPage + prefetchSegmentDirSuffix,
+                  segmentPath
+                ) + prefetchSegmentSuffix;
+
+              let fallback: FileFsRef | null = null;
+
+              // Only add the fallback if this is not a fallback route.
+              if (!isFallback) {
+                const fsPath = path.join(
+                  segmentsDir,
+                  segmentPath + prefetchSegmentSuffix
+                );
+
+                fallback = new FileFsRef({ fsPath });
+              }
+
+              prerenders[outputSegmentPath] = new Prerender({
+                expiration: initialRevalidate,
+                lambda,
+                allowQuery,
+                fallback,
+
+                // Use the same prerender group as the JSON/data prerender.
+                group: prerenderGroup,
+                allowHeader,
+
+                // These routes are always only static, so they should not
+                // permit any bypass unless it's for preview
+                bypassToken: prerenderManifest.bypassToken,
+                experimentalBypassFor: undefined,
+
+                initialHeaders: {
+                  ...initialHeaders,
+                  vary: rscVaryHeader,
+                  'content-type': rscContentTypeHeader,
+                  [rscDidPostponeHeader]: '2',
+                },
+              });
+            }
+          }
         }
       }
 
