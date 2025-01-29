@@ -1,5 +1,15 @@
 # vercel
 
+## 39.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/node@5.0.4
+  - @vercel/remix-builder@5.1.1
+  - @vercel/redwood@2.1.13
+  - @vercel/static-build@2.5.43
+
 ## 39.4.1
 
 ### Patch Changes
