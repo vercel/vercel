@@ -416,6 +416,42 @@ export const build: BuildV2 = async ({
   return { routes, output, framework: { version: frameworkVersion } };
 };
 
+async function edgeReadFile(fsPath: string) {
+  let source: Buffer | string;
+  try {
+    source = await fs.readFile(fsPath);
+  } catch (err: any) {
+    if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+      return null;
+    }
+    throw err;
+  }
+  if (basename(fsPath) === 'package.json') {
+    // For Edge Functions, patch "main" field to prefer "browser" or "module"
+    const pkgJson = JSON.parse(source.toString());
+
+    for (const prop of ['browser', 'module']) {
+      const val = pkgJson[prop];
+      if (typeof val === 'string') {
+        pkgJson.main = val;
+
+        // Return the modified `package.json` to nft
+        source = JSON.stringify(pkgJson);
+        break;
+      }
+    }
+  }
+  return source;
+}
+
+const EDGE_TRACE_CONDITIONS = [
+  'edge-light',
+  'browser',
+  'module',
+  'import',
+  'require',
+];
+
 async function createRenderReactRouterFunction(
   nodeVersion: NodeVersion,
   entrypointDir: string,
@@ -450,34 +486,8 @@ async function createRenderReactRouterFunction(
   let conditions: NodeFileTraceOptions['conditions'];
   let readFile: NodeFileTraceOptions['readFile'];
   if (isEdgeFunction) {
-    conditions = ['edge-light', 'browser', 'module', 'import', 'require'];
-    readFile = async fsPath => {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    };
+    conditions = EDGE_TRACE_CONDITIONS;
+    readFile = edgeReadFile;
   }
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
@@ -622,34 +632,8 @@ async function createRenderEdgeFunction(
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
-    conditions: ['edge-light', 'browser', 'module', 'import', 'require'],
-    async readFile(fsPath) {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    },
+    conditions: EDGE_TRACE_CONDITIONS,
+    readFile: edgeReadFile,
   });
 
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
