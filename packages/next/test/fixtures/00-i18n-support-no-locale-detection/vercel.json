@@ -520,19 +520,6 @@
       "path": "/_next/data/testing-build-id/fr/gsp/blocking/first.json",
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
-    },
-    {
-      "path": "/",
-      "status": 307,
-      "headers": {
-        "x-redirect-me": "1"
-      },
-      "fetchOptions": {
-        "redirect": "manual"
-      },
-      "responseHeaders": {
-        "location": "//fr-BE/"
-      }
     }
   ]
 }

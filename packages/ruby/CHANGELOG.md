@@ -1,5 +1,12 @@
 # @vercel/ruby
 
+## 2.2.0
+
+### Minor Changes
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+
 ## 2.1.0
 
 ### Minor Changes

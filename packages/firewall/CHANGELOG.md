@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 0.1.6
+
+### Patch Changes
+
+- Bump next from 14.2.10 to 14.2.21 ([#12842](https://github.com/vercel/vercel/pull/12842))
+
 ## 0.1.5
 
 ### Patch Changes

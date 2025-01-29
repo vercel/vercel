@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "path-to-regexp": "6.1.0"
   },
   "devDependencies": {

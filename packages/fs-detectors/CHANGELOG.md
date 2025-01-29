@@ -1,5 +1,21 @@
 # @vercel/fs-detectors
 
+## 5.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/routing-utils@5.0.1
+
+## 5.3.3
+
+### Patch Changes
+
+- Fix local file system readdir to not throw on special file system stat types ([#12915](https://github.com/vercel/vercel/pull/12915))
+
+- Updated dependencies [[`d645bdd4312730b10bef89ad9e18e111500849fc`](https://github.com/vercel/vercel/commit/d645bdd4312730b10bef89ad9e18e111500849fc)]:
+  - @vercel/frameworks@3.5.0
+
 ## 5.3.2
 
 ### Patch Changes
