@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.1
+
+### Patch Changes
+
+- log diff between current and updated versions of path-to-regexp ([#12926](https://github.com/vercel/vercel/pull/12926))
+
 ## 5.0.0
 
 ### Major Changes

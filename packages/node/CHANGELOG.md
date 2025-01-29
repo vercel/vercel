@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.0.4
+
+### Patch Changes
+
+- log diff between current and updated versions of path-to-regexp ([#12926](https://github.com/vercel/vercel/pull/12926))
+
 ## 5.0.3
 
 ### Patch Changes
