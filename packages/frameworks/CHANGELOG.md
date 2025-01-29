@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.5.0
+
+### Minor Changes
+
+- Make vite detection supersede ionic-react ([#12880](https://github.com/vercel/vercel/pull/12880))
+
 ## 3.4.0
 
 ### Minor Changes

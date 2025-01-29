@@ -1,5 +1,41 @@
 # vercel
 
+## 39.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`f3d60336f560b6458bc639047efb80c804ea1fbb`](https://github.com/vercel/vercel/commit/f3d60336f560b6458bc639047efb80c804ea1fbb)]:
+  - @vercel/next@4.4.4
+
+## 39.4.0
+
+### Minor Changes
+
+- [cli] add Node Version to project list output table ([#12895](https://github.com/vercel/vercel/pull/12895))
+
+### Patch Changes
+
+- Enable executable bit for `src/vc.js` script ([#12863](https://github.com/vercel/vercel/pull/12863))
+
+- Add video integration category to the integration install CLI ([#12870](https://github.com/vercel/vercel/pull/12870))
+
+- [cli] update warning in ls --update-required for clarity ([#12864](https://github.com/vercel/vercel/pull/12864))
+
+- Added headers for user-supplied rewrites ([#12847](https://github.com/vercel/vercel/pull/12847))
+
+- [cli] refactor confirm component to use `client.input.confirm` interface ([#12846](https://github.com/vercel/vercel/pull/12846))
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+- Updated dependencies [[`56f72ffefb828c3001f7c82259ed0f71db4f629e`](https://github.com/vercel/vercel/commit/56f72ffefb828c3001f7c82259ed0f71db4f629e), [`745404610a836fa6c2068c5c192d2f3e8b86918f`](https://github.com/vercel/vercel/commit/745404610a836fa6c2068c5c192d2f3e8b86918f), [`b6bb709370d2565121808340d43d0a9d90b53de1`](https://github.com/vercel/vercel/commit/b6bb709370d2565121808340d43d0a9d90b53de1), [`85a64db8d9b6a6e9f7c6a019d51777930a806584`](https://github.com/vercel/vercel/commit/85a64db8d9b6a6e9f7c6a019d51777930a806584), [`ac6a62eff7db3b3e2713adc1f5bd6a1331d838ce`](https://github.com/vercel/vercel/commit/ac6a62eff7db3b3e2713adc1f5bd6a1331d838ce), [`f65ea2245382dd2449c96f695ed692d419a83868`](https://github.com/vercel/vercel/commit/f65ea2245382dd2449c96f695ed692d419a83868), [`7af40c1e9d9916cbe8287359662fc940f1d24fce`](https://github.com/vercel/vercel/commit/7af40c1e9d9916cbe8287359662fc940f1d24fce), [`06307180c20ca07b65f7cb5e93b65c977b9ccd70`](https://github.com/vercel/vercel/commit/06307180c20ca07b65f7cb5e93b65c977b9ccd70), [`3a5507fd1459c77b4491f1c9c3a64ad42e4ff009`](https://github.com/vercel/vercel/commit/3a5507fd1459c77b4491f1c9c3a64ad42e4ff009), [`cefda60a603d60cc35e4697c36e751cca411e6bb`](https://github.com/vercel/vercel/commit/cefda60a603d60cc35e4697c36e751cca411e6bb), [`003866c4c93e893edb7a5e89b519fc8879b370c0`](https://github.com/vercel/vercel/commit/003866c4c93e893edb7a5e89b519fc8879b370c0)]:
+  - @vercel/remix-builder@5.1.0
+  - @vercel/build-utils@9.1.0
+  - @vercel/node@5.0.3
+  - @vercel/python@4.7.1
+  - @vercel/next@4.4.3
+  - @vercel/ruby@2.2.0
+  - @vercel/static-build@2.5.42
+
 ## 39.3.0
 
 ### Minor Changes
