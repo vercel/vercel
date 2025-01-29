@@ -36,6 +36,7 @@
     "glob": "10.3.16",
     "jest-junit": "16.0.0",
     "path-to-regexp": "6.2.1",
+    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
     "semver": "7.5.2",
     "vitest": "2.0.1"
   },

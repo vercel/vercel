@@ -1352,6 +1352,9 @@ importers:
       path-to-regexp:
         specifier: 6.2.1
         version: 6.2.1
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1584,6 +1587,9 @@ importers:
       path-to-regexp:
         specifier: 6.2.1
         version: 6.2.1
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
       semver:
         specifier: 7.5.2
         version: 7.5.2
@@ -1596,6 +1602,9 @@ importers:
       path-to-regexp:
         specifier: 6.1.0
         version: 6.1.0
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
     optionalDependencies:
       ajv:
         specifier: ^6.12.3
@@ -7875,7 +7884,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.24.0)(typescript@4.9.4)
       '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.4)
       eslint: 8.24.0
-      eslint-config-prettier: 8.10.0(eslint@8.24.0)
+      eslint-config-prettier: 8.5.0(eslint@8.24.0)
       eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import@2.31.0)(eslint@8.24.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.24.0)
@@ -10569,15 +10578,6 @@ packages:
       esutils: 2.0.3
     optionalDependencies:
       source-map: 0.6.1
-    dev: true
-
-  /eslint-config-prettier@8.10.0(eslint@8.24.0):
-    resolution: {integrity: sha512-SM8AMJdeQqRYT9O9zguiruQZaN7+z+E4eAP9oiLNGKMtomwaB1E9dcgUD6ZAn/eQAb52USbvezbiljfZUhbJcg==}
-    hasBin: true
-    peerDependencies:
-      eslint: '>=7.0.0'
-    dependencies:
-      eslint: 8.24.0
     dev: true
 
   /eslint-config-prettier@8.5.0(eslint@8.24.0):
@@ -14670,6 +14670,9 @@ packages:
 
   /path-to-regexp@6.2.1:
     resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
+
+  /path-to-regexp@6.3.0:
+    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
