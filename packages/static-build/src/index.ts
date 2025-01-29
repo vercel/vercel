@@ -868,7 +868,10 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob('**/{.shadow-cljs,node_modules}/**', repoRootPath || workPath)
+    await glob(
+      '**/{.shadow-cljs,node_modules,.yarn/cache}/**',
+      repoRootPath || workPath
+    )
   );
 
   // Framework cache files
