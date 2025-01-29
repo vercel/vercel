@@ -226,7 +226,7 @@ export default async (client: Client): Promise<number> => {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
   }
-  if (parsedArchive === 'split-tgz') {
+  if (parsedArchive === deprecatedArchiveSplitTgz) {
     output.print(
       `${prependEmoji(
         `${param('--archive=tgz')} now has the same behavior as ${param(
