@@ -2832,6 +2832,12 @@ export const prepareCache: PrepareCache = async ({
       path.join(cacheEntrypoint, outputDirectory, 'cache/**'),
       cacheBasePath
     )),
+    ...(await glob(
+      isMonorepo
+        ? '**/.yarn/cache/**'
+        : path.join(cacheEntrypoint, '.yarn/cache/**'),
+      cacheBasePath
+    )),
   };
 
   debug('Cache file manifest produced');
