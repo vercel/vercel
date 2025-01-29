@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.4.4
+
+### Patch Changes
+
+- flag behavior to defer defaultLocale rewrite ([#12941](https://github.com/vercel/vercel/pull/12941))
+
 ## 4.4.3
 
 ### Patch Changes
