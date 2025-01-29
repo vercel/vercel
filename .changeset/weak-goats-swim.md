@@ -1,6 +1,6 @@
 ---
 '@vercel/client': major
-'vercel': minor
+'vercel': major
 ---
 
 Make split-tgz the default for archive deployments
