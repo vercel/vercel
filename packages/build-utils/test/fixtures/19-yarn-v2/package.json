@@ -21,6 +21,6 @@
     "sirv-cli": "^0.4.4"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   }
 }
