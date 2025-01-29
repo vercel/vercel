@@ -97,6 +97,7 @@ interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
+  slug: string;
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -107,6 +108,7 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
+  slug: 'remix',
 
   createRenderFunction({
     nodeVersion,
@@ -144,6 +146,7 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
+  slug: 'react-router',
 
   createRenderFunction({
     nodeVersion,
@@ -510,7 +513,7 @@ async function createRenderReactRouterFunction(
       entrypoint: handler,
       regions: config.regions,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
@@ -528,7 +531,7 @@ async function createRenderReactRouterFunction(
       memory: config.memory,
       maxDuration: config.maxDuration,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
@@ -590,7 +593,7 @@ async function createRenderNodeFunction(
     memory: config.memory,
     maxDuration: config.maxDuration,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
@@ -656,7 +659,7 @@ async function createRenderEdgeFunction(
     entrypoint: handler,
     regions: config.regions,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
