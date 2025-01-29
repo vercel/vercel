@@ -186,6 +186,25 @@ importers:
         specifier: 4.9.4
         version: 4.9.4
 
+  internals/path-to-regexp:
+    dependencies:
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
+    devDependencies:
+      '@vercel-internals/tsconfig':
+        specifier: 1.0.0
+        version: link:../tsconfig
+      '@vercel/style-guide':
+        specifier: 4.0.2
+        version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4)
+      typescript:
+        specifier: 4.9.4
+        version: 4.9.4
+
   internals/tsconfig:
     devDependencies:
       '@vercel/style-guide':
@@ -1316,6 +1335,9 @@ importers:
       '@types/node':
         specifier: 16.18.11
         version: 16.18.11
+      '@vercel-internals/path-to-regexp':
+        specifier: 1.0.0
+        version: link:../../internals/path-to-regexp
       '@vercel/build-utils':
         specifier: 9.1.0
         version: link:../build-utils
@@ -1349,12 +1371,6 @@ importers:
       node-fetch:
         specifier: 2.6.9
         version: 2.6.9
-      path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1575,6 +1591,9 @@ importers:
       '@types/semver':
         specifier: 7.3.13
         version: 7.3.13
+      '@vercel-internals/path-to-regexp':
+        specifier: 1.0.0
+        version: link:../../internals/path-to-regexp
       '@vercel/build-utils':
         specifier: 9.1.0
         version: link:../build-utils
@@ -1584,12 +1603,6 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
-      path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
       semver:
         specifier: 7.5.2
         version: 7.5.2
@@ -1599,12 +1612,9 @@ importers:
 
   packages/routing-utils:
     dependencies:
-      path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
+      '@vercel-internals/path-to-regexp':
+        specifier: 1.0.0
+        version: link:../../internals/path-to-regexp
     optionalDependencies:
       ajv:
         specifier: ^6.12.3
@@ -14668,11 +14678,9 @@ packages:
     resolution: {integrity: sha512-h9DqehX3zZZDCEm+xbfU0ZmwCGFCAAraPJWMXJ4+v32NjZJilVg3k1TcKsRgIb8IQ/izZSaydDc1OhJCZvs2Dw==}
     dev: false
 
-  /path-to-regexp@6.2.1:
-    resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
-
   /path-to-regexp@6.3.0:
     resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
+    dev: false
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}

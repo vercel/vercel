@@ -20,8 +20,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
-    "path-to-regexp": "6.1.0"
+    "@vercel-internals/path-to-regexp": "1.0.0"
   },
   "devDependencies": {
     "@types/jest": "27.4.1",
