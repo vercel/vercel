@@ -129,7 +129,7 @@
       "status": 200,
       "mustContain": ">nl-NL<"
     },
-
+    
     {
       "path": "/non-existent",
       "status": 404
@@ -164,6 +164,16 @@
       "path": "/hello.txt",
       "status": 200,
       "mustContain": "hello world!"
+    },
+    {
+      "path": "/_next/static/testing-build-id/_buildManifest.js",
+      "status": 200,
+      "mustContain": "BUILD_MANIFEST"
+    },
+    {
+      "path": "/another/_next/static/testing-build-id/_buildManifest.js",
+      "status": 200,
+      "mustContain": "BUILD_MANIFEST"
     },
 
     {
