@@ -227,7 +227,7 @@ describe('validateConfig', () => {
       ],
     });
     expect(error!.message).toEqual(
-      'Invalid vercel.json - `headers[1].headers` should NOT have more than 2048 items.'
+      'Invalid vercel.json - `headers[1].headers` should NOT have more than 1024 items.'
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#headers'
