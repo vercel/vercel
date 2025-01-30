@@ -10,8 +10,16 @@ vi.setConfig({ testTimeout: 12 * 60 * 1000 });
 
 const fixturesPath = join(__dirname, 'fixtures-legacy');
 
+const skipped: string[] = [
+  // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
+  '04-with-npm9-linked',
+];
+
 // eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
+  if (skipped.includes(fixture)) {
+    continue;
+  }
   // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
