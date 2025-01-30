@@ -1335,9 +1335,6 @@ importers:
       '@types/node':
         specifier: 16.18.11
         version: 16.18.11
-      '@vercel-internals/path-to-regexp':
-        specifier: 1.0.0
-        version: link:../../internals/path-to-regexp
       '@vercel/build-utils':
         specifier: 9.1.0
         version: link:../build-utils
@@ -1411,6 +1408,9 @@ importers:
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
+      '@vercel-internals/path-to-regexp':
+        specifier: 1.0.0
+        version: link:../../internals/path-to-regexp
       '@vercel/functions':
         specifier: workspace:*
         version: link:../functions
@@ -1611,10 +1611,6 @@ importers:
         version: 2.0.1(@types/node@14.18.33)
 
   packages/routing-utils:
-    dependencies:
-      '@vercel-internals/path-to-regexp':
-        specifier: 1.0.0
-        version: link:../../internals/path-to-regexp
     optionalDependencies:
       ajv:
         specifier: ^6.12.3
@@ -1626,6 +1622,9 @@ importers:
       '@types/node':
         specifier: 14.18.33
         version: 14.18.33
+      '@vercel-internals/path-to-regexp':
+        specifier: 1.0.0
+        version: link:../../internals/path-to-regexp
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
