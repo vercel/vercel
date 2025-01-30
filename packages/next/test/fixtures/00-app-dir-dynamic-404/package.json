@@ -4,7 +4,6 @@
     "react": "latest",
     "react-dom": "latest"
   },
-  "ignoreNextjsUpdates": true,
   "scripts": {
     "vercel-build": "next build"
   }

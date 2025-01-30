@@ -7,6 +7,5 @@
     "next": "canary",
     "react": "latest",
     "react-dom": "latest"
-  },
-  "ignoreNextjsUpdates": true
+  }
 }

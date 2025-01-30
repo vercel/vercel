@@ -3,9 +3,9 @@ name: Cron Update Next
 on:
   # Allow manual runs
   workflow_dispatch:
-  # Run every 4 hours https://crontab.guru/every-4-hours
+  # Run every 10 minutes https://crontab.guru/every-10-minutes
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '*/10 * * * *'
 
 jobs:
   create-pull-request:
@@ -28,4 +28,4 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
             const script = require('./utils/update-next.js')
-            await script({ github, context })
+            await script({ github, context, tag: 'canary' })
