@@ -19,12 +19,11 @@
     "test-unit": "pnpm test",
     "type-check": "tsc --noEmit"
   },
-  "dependencies": {
-    "@vercel-internals/path-to-regexp": "1.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jest": "27.4.1",
     "@types/node": "14.18.33",
+    "@vercel-internals/path-to-regexp": "1.0.0",
     "ajv": "^6.12.3",
     "jest-junit": "16.0.0",
     "typescript": "4.9.5"
