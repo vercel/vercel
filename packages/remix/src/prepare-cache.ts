@@ -1,4 +1,5 @@
 import {
+  defaultCacheDirGlob,
   getNodeVersion,
   getSpawnOptions,
   glob,
@@ -58,8 +59,7 @@ export const prepareCache: PrepareCache = async ({
     );
   }
 
-  // Cache `node_modules`
-  const nodeModulesFiles = await glob('**/{node_modules,.yarn/cache}/**', root);
+  const nodeModulesFiles = await glob(defaultCacheDirGlob, root);
 
   return { ...nodeModulesFiles, ...cacheDirFiles };
 };

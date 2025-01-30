@@ -114,3 +114,5 @@ export * from './errors';
 export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
+
+export { defaultCacheDirGlob } from './default-cache-dir-glob';

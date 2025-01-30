@@ -37,6 +37,7 @@ import {
   scanParentDirs,
   cloneEnv,
   getInstalledPackageVersion,
+  defaultCacheDirGlob,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -868,10 +869,11 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob(
-      '**/{.shadow-cljs,node_modules,.yarn/cache}/**',
-      repoRootPath || workPath
-    )
+    await glob(defaultCacheDirGlob, repoRootPath || workPath)
+  );
+  Object.assign(
+    cacheFiles,
+    await glob('**/.shadow-cljs/**', repoRootPath || workPath)
   );
 
   // Framework cache files
