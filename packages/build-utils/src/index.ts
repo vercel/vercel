@@ -111,6 +111,8 @@ export * from './schemas';
 export * from './types';
 export * from './errors';
 
+export * from './trace';
+
 export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
