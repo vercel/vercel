@@ -97,6 +97,7 @@ interface FrameworkSettings {
   buildCommand: string;
   buildResultFilePath: string;
   slug: string;
+  sourceSearchValue: string;
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -108,6 +109,7 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
   slug: 'remix',
+  sourceSearchValue: '@remix-run/dev/server-build',
 
   createRenderFunction({
     nodeVersion,
@@ -146,6 +148,7 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
   slug: 'react-router',
+  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
 
   createRenderFunction({
     nodeVersion,
@@ -487,7 +490,7 @@ async function createRenderReactRouterFunction(
     await fs.writeFile(
       handlerPath,
       reactRouterServerSrc.replace(
-        'ENTRYPOINT_PLACEHOLDER',
+        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -568,7 +571,7 @@ async function createRenderNodeFunction(
     await fs.writeFile(
       handlerPath,
       nodeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -625,7 +628,7 @@ async function createRenderEdgeFunction(
     await fs.writeFile(
       handlerPath,
       edgeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
