@@ -33,7 +33,7 @@ import {
   NodejsLambda,
   BuildV2,
   PrepareCache,
-  defaultCachePath,
+  defaultCachePathGlob,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { getTransformedRoutes, Route } from '@vercel/routing-utils';
@@ -322,5 +322,5 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 }
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
-  return glob(defaultCachePath, repoRootPath || workPath);
+  return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
