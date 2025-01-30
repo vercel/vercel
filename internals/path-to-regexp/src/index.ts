@@ -59,7 +59,12 @@ export function pathToRegexp(
     }
   } catch (err) {
     const error = err as Error;
-    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${error.message}`);
+    const message = JSON.stringify({
+      path,
+      error: error.message,
+    });
+
+    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${message}`);
   }
 
   return currentRegExp;
