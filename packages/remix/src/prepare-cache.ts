@@ -59,7 +59,7 @@ export const prepareCache: PrepareCache = async ({
   }
 
   // Cache `node_modules`
-  const nodeModulesFiles = await glob('**/node_modules/**', root);
+  const nodeModulesFiles = await glob('**/{node_modules,.yarn/cache}/**', root);
 
   return { ...nodeModulesFiles, ...cacheDirFiles };
 };
