@@ -1,5 +1,5 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
-import { basename, dirname, join, relative, sep } from 'path';
+import { basename, dirname, join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
 import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
 import {
@@ -13,7 +13,6 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  FileBlob,
   FileFsRef,
   EdgeFunction,
   NodejsLambda,
@@ -632,8 +631,6 @@ async function createRenderEdgeFunction(
     );
   }
 
-  let remixRunVercelPkgJson: string | undefined;
-
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
@@ -645,15 +642,7 @@ async function createRenderEdgeFunction(
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
   for (const file of trace.fileList) {
-    if (
-      remixRunVercelPkgJson &&
-      file.endsWith(`@remix-run${sep}vercel${sep}package.json`)
-    ) {
-      // Use the modified `@remix-run/vercel` package.json which contains "browser" field
-      files[file] = new FileBlob({ data: remixRunVercelPkgJson });
-    } else {
-      files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-    }
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }
 
   const fn = new EdgeFunction({
