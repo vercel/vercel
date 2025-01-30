@@ -1,5 +1,5 @@
 import {
-  defaultCacheDirGlob,
+  defaultCachePath,
   getNodeVersion,
   getSpawnOptions,
   glob,
@@ -59,7 +59,7 @@ export const prepareCache: PrepareCache = async ({
     );
   }
 
-  const defaultCacheFiles = await glob(defaultCacheDirGlob, root);
+  const defaultCacheFiles = await glob(defaultCachePath, root);
 
   return { ...defaultCacheFiles, ...cacheDirFiles };
 };

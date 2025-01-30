@@ -37,7 +37,7 @@ import {
   scanParentDirs,
   cloneEnv,
   getInstalledPackageVersion,
-  defaultCacheDirGlob,
+  defaultCachePath,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -869,7 +869,7 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob(defaultCacheDirGlob, repoRootPath || workPath)
+    await glob(defaultCachePath, repoRootPath || workPath)
   );
   Object.assign(
     cacheFiles,

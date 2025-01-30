@@ -115,4 +115,4 @@ export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
 
-export { defaultCacheDirGlob } from './default-cache-dir-glob';
+export { defaultCachePathGlob } from './default-cache-path-glob';
