@@ -186,6 +186,37 @@ function determineFrameworkSettings(workPath: string) {
   return REMIX_FRAMEWORK_SETTINGS;
 }
 
+interface HandlerOptions {
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  serverSourcePromise: Promise<string>;
+  sourceSearchValue: string;
+}
+
+async function determineHandler({
+  rootDir,
+  serverBuildPath,
+  serverEntryPoint,
+  serverSourcePromise,
+  sourceSearchValue,
+}: HandlerOptions) {
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    const baseServerBuildPath = basename(serverBuildPath, '.js');
+    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
+    handlerPath = join(rootDir, handler);
+
+    const serverSource = await serverSourcePromise;
+    await fs.writeFile(
+      handlerPath,
+      serverSource.replace(sourceSearchValue, `./${baseServerBuildPath}.js`)
+    );
+  }
+  return { handler, handlerPath };
+}
+
 export const build: BuildV2 = async ({
   entrypoint,
   workPath,
@@ -479,23 +510,13 @@ async function createRenderReactRouterFunction(
   const isEdgeFunction = config.runtime === 'edge';
   const files: Files = {};
 
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-react-router.mjs` file into the "build" directory
-    const reactRouterServerSrc = await reactRouterServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      reactRouterServerSrc.replace(
-        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: reactRouterServerSrcPromise,
+    sourceSearchValue: REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   // Trace the handler with `@vercel/nft`
   let conditions: NodeFileTraceOptions['conditions'];
@@ -560,23 +581,13 @@ async function createRenderNodeFunction(
 ): Promise<NodejsLambda> {
   const files: Files = {};
 
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-node.mjs` file into the "build" directory
-    const nodeServerSrc = await nodeServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      nodeServerSrc.replace(
-        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: nodeServerSrcPromise,
+    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -617,23 +628,13 @@ async function createRenderEdgeFunction(
 ): Promise<EdgeFunction> {
   const files: Files = {};
 
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-edge.mjs` file into the "build" directory
-    const edgeServerSrc = await edgeServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      edgeServerSrc.replace(
-        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: edgeServerSrcPromise,
+    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   let remixRunVercelPkgJson: string | undefined;
 
