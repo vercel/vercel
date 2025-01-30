@@ -59,7 +59,7 @@ export const prepareCache: PrepareCache = async ({
     );
   }
 
-  const nodeModulesFiles = await glob(defaultCacheDirGlob, root);
+  const defaultCacheFiles = await glob(defaultCacheDirGlob, root);
 
-  return { ...nodeModulesFiles, ...cacheDirFiles };
+  return { ...defaultCacheFiles, ...cacheDirFiles };
 };
