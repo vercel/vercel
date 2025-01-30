@@ -97,6 +97,8 @@ interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
+  slug: string;
+  sourceSearchValue: string;
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -107,6 +109,8 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
+  slug: 'remix',
+  sourceSearchValue: '@remix-run/dev/server-build',
 
   createRenderFunction({
     nodeVersion,
@@ -144,6 +148,8 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
+  slug: 'react-router',
+  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
 
   createRenderFunction({
     nodeVersion,
@@ -452,6 +458,15 @@ const EDGE_TRACE_CONDITIONS = [
   'require',
 ];
 
+const COMMON_NODE_FUNCTION_OPTIONS = {
+  shouldAddHelpers: false,
+  shouldAddSourcemapSupport: false,
+  operationType: 'SSR',
+  supportsResponseStreaming: true,
+} as const;
+
+const COMMON_EDGE_FUNCTION_OPTIONS = { deploymentTarget: 'v8-worker' } as const;
+
 async function createRenderReactRouterFunction(
   nodeVersion: NodeVersion,
   entrypointDir: string,
@@ -476,7 +491,7 @@ async function createRenderReactRouterFunction(
     await fs.writeFile(
       handlerPath,
       reactRouterServerSrc.replace(
-        'ENTRYPOINT_PLACEHOLDER',
+        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -505,30 +520,27 @@ async function createRenderReactRouterFunction(
   let fn: NodejsLambda | EdgeFunction;
   if (isEdgeFunction) {
     fn = new EdgeFunction({
+      ...COMMON_EDGE_FUNCTION_OPTIONS,
       files,
-      deploymentTarget: 'v8-worker',
       entrypoint: handler,
       regions: config.regions,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
   } else {
     fn = new NodejsLambda({
+      ...COMMON_NODE_FUNCTION_OPTIONS,
       files,
       handler,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers: false,
-      shouldAddSourcemapSupport: false,
-      operationType: 'SSR',
-      supportsResponseStreaming: true,
       useWebApi: true,
       regions: config.regions,
       memory: config.memory,
       maxDuration: config.maxDuration,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
@@ -560,7 +572,7 @@ async function createRenderNodeFunction(
     await fs.writeFile(
       handlerPath,
       nodeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -579,18 +591,15 @@ async function createRenderNodeFunction(
   }
 
   const fn = new NodejsLambda({
+    ...COMMON_NODE_FUNCTION_OPTIONS,
     files,
     handler,
     runtime: nodeVersion.runtime,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: false,
-    operationType: 'SSR',
-    supportsResponseStreaming: true,
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
@@ -620,7 +629,7 @@ async function createRenderEdgeFunction(
     await fs.writeFile(
       handlerPath,
       edgeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -651,12 +660,12 @@ async function createRenderEdgeFunction(
   }
 
   const fn = new EdgeFunction({
+    ...COMMON_EDGE_FUNCTION_OPTIONS,
     files,
-    deploymentTarget: 'v8-worker',
     entrypoint: handler,
     regions: config.regions,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
