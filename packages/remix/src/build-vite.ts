@@ -97,6 +97,8 @@ interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
+  slug: string;
+  sourceSearchValue: string;
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -107,6 +109,8 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
+  slug: 'remix',
+  sourceSearchValue: '@remix-run/dev/server-build',
 
   createRenderFunction({
     nodeVersion,
@@ -144,6 +148,8 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
+  slug: 'react-router',
+  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
 
   createRenderFunction({
     nodeVersion,
@@ -416,6 +422,51 @@ export const build: BuildV2 = async ({
   return { routes, output, framework: { version: frameworkVersion } };
 };
 
+async function edgeReadFile(fsPath: string) {
+  let source: Buffer | string;
+  try {
+    source = await fs.readFile(fsPath);
+  } catch (err: any) {
+    if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+      return null;
+    }
+    throw err;
+  }
+  if (basename(fsPath) === 'package.json') {
+    // For Edge Functions, patch "main" field to prefer "browser" or "module"
+    const pkgJson = JSON.parse(source.toString());
+
+    for (const prop of ['browser', 'module']) {
+      const val = pkgJson[prop];
+      if (typeof val === 'string') {
+        pkgJson.main = val;
+
+        // Return the modified `package.json` to nft
+        source = JSON.stringify(pkgJson);
+        break;
+      }
+    }
+  }
+  return source;
+}
+
+const EDGE_TRACE_CONDITIONS = [
+  'edge-light',
+  'browser',
+  'module',
+  'import',
+  'require',
+];
+
+const COMMON_NODE_FUNCTION_OPTIONS = {
+  shouldAddHelpers: false,
+  shouldAddSourcemapSupport: false,
+  operationType: 'SSR',
+  supportsResponseStreaming: true,
+} as const;
+
+const COMMON_EDGE_FUNCTION_OPTIONS = { deploymentTarget: 'v8-worker' } as const;
+
 async function createRenderReactRouterFunction(
   nodeVersion: NodeVersion,
   entrypointDir: string,
@@ -440,7 +491,7 @@ async function createRenderReactRouterFunction(
     await fs.writeFile(
       handlerPath,
       reactRouterServerSrc.replace(
-        'ENTRYPOINT_PLACEHOLDER',
+        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -450,34 +501,8 @@ async function createRenderReactRouterFunction(
   let conditions: NodeFileTraceOptions['conditions'];
   let readFile: NodeFileTraceOptions['readFile'];
   if (isEdgeFunction) {
-    conditions = ['edge-light', 'browser', 'module', 'import', 'require'];
-    readFile = async fsPath => {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    };
+    conditions = EDGE_TRACE_CONDITIONS;
+    readFile = edgeReadFile;
   }
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
@@ -495,30 +520,27 @@ async function createRenderReactRouterFunction(
   let fn: NodejsLambda | EdgeFunction;
   if (isEdgeFunction) {
     fn = new EdgeFunction({
+      ...COMMON_EDGE_FUNCTION_OPTIONS,
       files,
-      deploymentTarget: 'v8-worker',
       entrypoint: handler,
       regions: config.regions,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
   } else {
     fn = new NodejsLambda({
+      ...COMMON_NODE_FUNCTION_OPTIONS,
       files,
       handler,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers: false,
-      shouldAddSourcemapSupport: false,
-      operationType: 'SSR',
-      supportsResponseStreaming: true,
       useWebApi: true,
       regions: config.regions,
       memory: config.memory,
       maxDuration: config.maxDuration,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
@@ -550,7 +572,7 @@ async function createRenderNodeFunction(
     await fs.writeFile(
       handlerPath,
       nodeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -569,18 +591,15 @@ async function createRenderNodeFunction(
   }
 
   const fn = new NodejsLambda({
+    ...COMMON_NODE_FUNCTION_OPTIONS,
     files,
     handler,
     runtime: nodeVersion.runtime,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: false,
-    operationType: 'SSR',
-    supportsResponseStreaming: true,
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
@@ -610,7 +629,7 @@ async function createRenderEdgeFunction(
     await fs.writeFile(
       handlerPath,
       edgeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -622,34 +641,8 @@ async function createRenderEdgeFunction(
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
-    conditions: ['edge-light', 'browser', 'module', 'import', 'require'],
-    async readFile(fsPath) {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    },
+    conditions: EDGE_TRACE_CONDITIONS,
+    readFile: edgeReadFile,
   });
 
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
@@ -667,12 +660,12 @@ async function createRenderEdgeFunction(
   }
 
   const fn = new EdgeFunction({
+    ...COMMON_EDGE_FUNCTION_OPTIONS,
     files,
-    deploymentTarget: 'v8-worker',
     entrypoint: handler,
     regions: config.regions,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
