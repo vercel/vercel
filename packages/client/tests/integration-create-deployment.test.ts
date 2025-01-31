@@ -1,4 +1,4 @@
-import { it, expect, describe, beforeEach, vi, beforeAll } from 'vitest';
+import { it, expect, describe, beforeEach, vi } from 'vitest';
 import path from 'path';
 import fetch_ from 'node-fetch';
 import { generateNewToken } from './common';
@@ -169,13 +169,20 @@ describe('create v2 deployment', () => {
   });
 
   describe('using --archive=tgz', () => {
-    let uploadFolder: string;
-
-    beforeAll(async () => {
-      uploadFolder = await generateFakeFiles(300, 100);
+    // mocking function to chunk every 10kb instead of 100mb
+    // to save time and memory in the test
+    vi.mock('@vercel/build-utils', async importActual => {
+      const actual: typeof import('@vercel/build-utils') = await importActual();
+      return {
+        ...actual,
+        streamToBufferChunks: (stream: NodeJS.ReadableStream) => {
+          return actual.streamToBufferChunks(stream, 10 * 1024);
+        },
+      };
     });
 
     it('single file deployments untar to original project', async () => {
+      const uploadFolder = await generateFakeFiles(50, 100);
       const args: Parameters<typeof createDeployment> = [
         {
           token,
@@ -186,23 +193,32 @@ describe('create v2 deployment', () => {
         { name: 'archive-project' },
       ];
 
-      const buffersFromNormalArchiving: Buffer[] = [];
+      const buffersFromChunkArchiving = new Map<string, Buffer>();
       for await (const event of createDeployment(...args)) {
         if (event.type === 'hashes-calculated') {
-          const item = Object.values(event.payload)[0];
-          if (isObject(item) && 'data' in item && Buffer.isBuffer(item.data)) {
-            buffersFromNormalArchiving.push(item.data);
-          }
+          Object.values(event.payload).forEach(item => {
+            if (
+              isObject(item) &&
+              'data' in item &&
+              Buffer.isBuffer(item.data) &&
+              Array.isArray(item.names)
+            ) {
+              const fileName = path.basename(item.names[0]);
+              buffersFromChunkArchiving.set(fileName, item.data);
+            }
+          });
         }
       }
-      const concatenatedBufferFromNormalArchiving = Buffer.concat(
-        buffersFromNormalArchiving
-      );
+
+      expect(buffersFromChunkArchiving.size).toEqual(1);
+      const concatenatedBufferFromChunkArchiving = Buffer.concat([
+        buffersFromChunkArchiving.get('source.tgz.part1')!,
+      ]);
 
       {
         const tmpDir = setupTmpDir();
         const extractStream = Readable.from(
-          concatenatedBufferFromNormalArchiving
+          concatenatedBufferFromChunkArchiving
         )
           .pipe(createGunzip())
           .pipe(tar.extract(tmpDir));
@@ -212,25 +228,13 @@ describe('create v2 deployment', () => {
     });
 
     it('multipart archive deployments untar to original project', async () => {
-      // mocking function to chunk every 10kb instead of 100mb
-      // to save time and memory in the test
-      vi.mock('@vercel/build-utils', async importActual => {
-        const actual: typeof import('@vercel/build-utils') =
-          await importActual();
-        return {
-          ...actual,
-          streamToBufferChunks: (stream: NodeJS.ReadableStream) => {
-            return actual.streamToBufferChunks(stream, 10 * 1024);
-          },
-        };
-      });
-
+      const uploadFolder = await generateFakeFiles(300, 100);
       const args: Parameters<typeof createDeployment> = [
         {
           token,
           teamId: process.env.VERCEL_TEAM_ID,
           path: uploadFolder,
-          archive: 'split-tgz',
+          archive: 'tgz',
         },
         { name: 'archive-project' },
       ];
