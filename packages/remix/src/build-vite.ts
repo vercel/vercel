@@ -98,6 +98,15 @@ interface FrameworkSettings {
   buildResultFilePath: string;
   slug: string;
   sourceSearchValue: string;
+  edge: {
+    serverSourcePromise: Promise<string>;
+    traceWarningTag: string;
+  };
+  node: {
+    serverSourcePromise: Promise<string>;
+    traceWarningTag: string;
+    options: { useWebApi?: boolean };
+  };
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -110,6 +119,15 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   buildResultFilePath: '.vercel/remix-build-result.json',
   slug: 'remix',
   sourceSearchValue: '@remix-run/dev/server-build',
+  edge: {
+    serverSourcePromise: edgeServerSrcPromise,
+    traceWarningTag: '@remix-run/server-runtime',
+  },
+  node: {
+    serverSourcePromise: nodeServerSrcPromise,
+    traceWarningTag: '@remix-run/node',
+    options: {},
+  },
 
   createRenderFunction({
     nodeVersion,
@@ -149,6 +167,16 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   buildResultFilePath: '.vercel/react-router-build-result.json',
   slug: 'react-router',
   sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
+  // React Router uses the same server source for both node and edge
+  edge: {
+    serverSourcePromise: reactRouterServerSrcPromise,
+    traceWarningTag: 'react-router',
+  },
+  node: {
+    serverSourcePromise: reactRouterServerSrcPromise,
+    traceWarningTag: 'react-router',
+    options: { useWebApi: true },
+  },
 
   createRenderFunction({
     nodeVersion,
@@ -513,7 +541,10 @@ async function createRenderReactRouterFunction(
     rootDir,
     serverBuildPath,
     serverEntryPoint,
-    serverSourcePromise: reactRouterServerSrcPromise,
+    serverSourcePromise:
+      // React Router has the same promise for both edge and node
+      // so this chooses edge out of convenience
+      REACT_ROUTER_FRAMEWORK_SETTINGS.edge.serverSourcePromise,
     sourceSearchValue: REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
   });
 
@@ -531,7 +562,12 @@ async function createRenderReactRouterFunction(
     readFile,
   });
 
-  logNftWarnings(trace.warnings, 'react-router');
+  // React Router has the same warning tag for both edge and node
+  // so this chooses edge out of convenience
+  logNftWarnings(
+    trace.warnings,
+    REACT_ROUTER_FRAMEWORK_SETTINGS.edge.traceWarningTag
+  );
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
@@ -555,7 +591,7 @@ async function createRenderReactRouterFunction(
       files,
       handler,
       runtime: nodeVersion.runtime,
-      useWebApi: true,
+      useWebApi: REACT_ROUTER_FRAMEWORK_SETTINGS.node.options.useWebApi,
       regions: config.regions,
       memory: config.memory,
       maxDuration: config.maxDuration,
@@ -584,7 +620,7 @@ async function createRenderNodeFunction(
     rootDir,
     serverBuildPath,
     serverEntryPoint,
-    serverSourcePromise: nodeServerSrcPromise,
+    serverSourcePromise: REMIX_FRAMEWORK_SETTINGS.node.serverSourcePromise,
     sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
   });
 
@@ -594,7 +630,7 @@ async function createRenderNodeFunction(
     processCwd: entrypointDir,
   });
 
-  logNftWarnings(trace.warnings, '@remix-run/node');
+  logNftWarnings(trace.warnings, REMIX_FRAMEWORK_SETTINGS.node.traceWarningTag);
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
@@ -608,6 +644,7 @@ async function createRenderNodeFunction(
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
+    useWebApi: REMIX_FRAMEWORK_SETTINGS.node.options.useWebApi,
     framework: {
       slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
@@ -631,7 +668,7 @@ async function createRenderEdgeFunction(
     rootDir,
     serverBuildPath,
     serverEntryPoint,
-    serverSourcePromise: edgeServerSrcPromise,
+    serverSourcePromise: REMIX_FRAMEWORK_SETTINGS.edge.serverSourcePromise,
     sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
   });
 
@@ -643,7 +680,7 @@ async function createRenderEdgeFunction(
     readFile: edgeReadFile,
   });
 
-  logNftWarnings(trace.warnings, '@remix-run/server-runtime');
+  logNftWarnings(trace.warnings, REMIX_FRAMEWORK_SETTINGS.edge.traceWarningTag);
 
   for (const file of trace.fileList) {
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
