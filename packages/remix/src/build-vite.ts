@@ -476,7 +476,6 @@ async function createRenderReactRouterFunction(
   config: /*TODO: ResolvedNodeRouteConfig*/ any
 ): Promise<EdgeFunction | NodejsLambda> {
   const isEdgeFunction = config.runtime === 'edge';
-  const files: Files = {};
 
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
@@ -512,9 +511,7 @@ async function createRenderReactRouterFunction(
 
   logNftWarnings(trace.warnings, 'react-router');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   let fn: NodejsLambda | EdgeFunction;
   if (isEdgeFunction) {
@@ -557,8 +554,6 @@ async function createRenderNodeFunction(
   frameworkVersion: string,
   config: /*TODO: ResolvedNodeRouteConfig*/ any
 ): Promise<NodejsLambda> {
-  const files: Files = {};
-
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
@@ -585,9 +580,7 @@ async function createRenderNodeFunction(
 
   logNftWarnings(trace.warnings, '@remix-run/node');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   const fn = new NodejsLambda({
     ...COMMON_NODE_FUNCTION_OPTIONS,
@@ -614,8 +607,6 @@ async function createRenderEdgeFunction(
   frameworkVersion: string,
   config: /* TODO: ResolvedEdgeRouteConfig*/ any
 ): Promise<EdgeFunction> {
-  const files: Files = {};
-
   let handler = relative(rootDir, serverBuildPath);
   let handlerPath = join(rootDir, handler);
   if (!serverEntryPoint) {
@@ -644,9 +635,7 @@ async function createRenderEdgeFunction(
 
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   const fn = new EdgeFunction({
     ...COMMON_EDGE_FUNCTION_OPTIONS,
@@ -660,4 +649,18 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
+}
+
+async function getFilesFromTrace({
+  fileList,
+  rootDir,
+}: {
+  fileList: Set<string>;
+  rootDir: string;
+}) {
+  const files: Files = {};
+  for (const file of fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+  return files;
 }
