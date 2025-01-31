@@ -1,5 +1,23 @@
 # @vercel/static-build
 
+## 2.6.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.67
+
+## 2.5.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.66
+
 ## 2.5.43
 
 ### Patch Changes

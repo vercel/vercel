@@ -1,5 +1,25 @@
 # @vercel/remix-builder
 
+## 5.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 5.1.2
+
+### Patch Changes
+
+- [remix] extract common function options ([#12960](https://github.com/vercel/vercel/pull/12960))
+
+- [remix] extract sourceSearchValue into FrameworkSettings ([#12969](https://github.com/vercel/vercel/pull/12969))
+
+- [remix] extract common edge file tracing logic ([#12953](https://github.com/vercel/vercel/pull/12953))
+
+- [remix] remove check based on never set remixRunVercelPkgJson ([#12971](https://github.com/vercel/vercel/pull/12971))
+
+- [remix] refactor framework slug into FrameworkSettings ([#12958](https://github.com/vercel/vercel/pull/12958))
+
 ## 5.1.1
 
 ### Patch Changes
