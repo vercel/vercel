@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.4.5
+
+### Patch Changes
+
+- Add test case for locale false rewrite ([#12959](https://github.com/vercel/vercel/pull/12959))
+
 ## 4.4.4
 
 ### Patch Changes
