@@ -1,5 +1,7 @@
 import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 
+export const deprecatedArchiveSplitTgz = 'split-tgz';
+
 export const deployCommand = {
   name: 'deploy',
   aliases: [],

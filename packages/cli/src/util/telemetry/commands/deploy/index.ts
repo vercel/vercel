@@ -1,6 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { deployCommand } from '../../../../commands/deploy/command';
+import { deprecatedArchiveSplitTgz } from '../../../../commands/deploy/command';
 import { VALID_ARCHIVE_FORMATS } from '@vercel/client';
 
 export class DeployTelemetryClient
@@ -17,9 +18,10 @@ export class DeployTelemetryClient
   }
   trackCliOptionArchive(format: string | undefined) {
     if (format) {
-      const allowedFormat = (
-        VALID_ARCHIVE_FORMATS as ReadonlyArray<string>
-      ).includes(format)
+      const allowedFormat = [
+        ...VALID_ARCHIVE_FORMATS,
+        deprecatedArchiveSplitTgz,
+      ].includes(format)
         ? format
         : this.redactedValue;
       this.trackCliOption({
