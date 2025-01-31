@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "public",
+  "build": {
+    "env": {
+      "VERCEL_DEBUG": "1",
+      "VERCEL_ALLOW_NODEJS22": "1"
+    }
+  },
+  "regions": ["iad1"],
   "rewrites": [
     {
       "source": "/",
