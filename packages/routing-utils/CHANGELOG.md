@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.2
+
+### Patch Changes
+
+- Update routes schema for new limit of 2048 ([#12968](https://github.com/vercel/vercel/pull/12968))
+
 ## 5.0.1
 
 ### Patch Changes
