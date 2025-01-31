@@ -1,5 +1,22 @@
 # vercel
 
+## 40.1.0
+
+### Minor Changes
+
+- Add "react-router" framework entry ([#12932](https://github.com/vercel/vercel/pull/12932))
+
+### Patch Changes
+
+- Updated dependencies [[`5c696af2b40f0fc368e84cafa6d82b2ce998fc19`](https://github.com/vercel/vercel/commit/5c696af2b40f0fc368e84cafa6d82b2ce998fc19)]:
+  - @vercel/static-build@2.6.0
+  - @vercel/build-utils@9.2.0
+  - @vercel/hydrogen@1.1.0
+  - @vercel/redwood@2.2.0
+  - @vercel/remix-builder@5.2.0
+  - @vercel/next@4.5.0
+  - @vercel/node@5.1.0
+
 ## 40.0.0
 
 ### Major Changes

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 9.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
 ## 9.1.1
 
 ### Patch Changes
