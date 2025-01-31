@@ -2877,9 +2877,17 @@ export async function getStaticFiles(
   } else {
     debug('No public folder found');
   }
+
+  // Collect static metadata files from <output>/server/_metadata
+  const staticMetadataFolderFiles = await glob(
+    '**',
+    path.join(entryPath, outputDirectory, 'server', '_metadata')
+  );
+
   const staticFiles: Record<string, FileFsRef> = {};
   const staticDirectoryFiles: Record<string, FileFsRef> = {};
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
+  const staticMetadataFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
     staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
@@ -2896,11 +2904,18 @@ export async function getStaticFiles(
       publicFolderFiles[file];
   }
 
+  for (const file of Object.keys(staticMetadataFolderFiles)) {
+    staticMetadataFiles[
+      path.posix.join(entryDirectory, 'server/_metadata', file)
+    ] = staticMetadataFolderFiles[file];
+  }
+
   console.timeEnd(collectLabel);
   return {
     staticFiles,
     staticDirectoryFiles,
     publicDirectoryFiles,
+    staticMetadataFiles,
   };
 }
 
