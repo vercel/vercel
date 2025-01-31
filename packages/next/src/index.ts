@@ -2817,7 +2817,7 @@ export const prepareCache: PrepareCache = async ({
 
   debug('Producing cache file manifest...');
 
-  // for monorepos we want to cache all node_modules
+  // for monorepos we want to cache all node_modules and .yarn/cache
   const isMonorepo = repoRootPath && repoRootPath !== workPath;
   const cacheBasePath = repoRootPath || workPath;
   const cacheEntrypoint = path.relative(cacheBasePath, entryPath);
@@ -2830,6 +2830,12 @@ export const prepareCache: PrepareCache = async ({
     )),
     ...(await glob(
       path.join(cacheEntrypoint, outputDirectory, 'cache/**'),
+      cacheBasePath
+    )),
+    ...(await glob(
+      isMonorepo
+        ? '**/.yarn/cache/**'
+        : path.join(cacheEntrypoint, '.yarn/cache/**'),
       cacheBasePath
     )),
   };

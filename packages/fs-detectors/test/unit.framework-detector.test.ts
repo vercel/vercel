@@ -466,6 +466,22 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('remix');
   });
 
+  it('Should detect React Router v7 as `react-router` via `vite.config.ts`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': 'import { reactRouter } from "@react-router/dev/vite"',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('react-router');
+  });
+
+  it('Should detect React Router v7 as `react-router` via `react-router.config.ts`', async () => {
+    const fs = new VirtualFilesystem({
+      'react-router.config.ts': '',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('react-router');
+  });
+
   it('Should detect Vite + Ionic React as `vite`', async () => {
     const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'ionic-react'));
 

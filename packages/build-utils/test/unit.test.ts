@@ -341,8 +341,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       16
     );
     expect(warningMessages).toStrictEqual([
-      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-01-31 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-01-31 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
+      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-02-03 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
+      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-02-03 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
     ]);
   } finally {
     global.Date.now = realDateNow;

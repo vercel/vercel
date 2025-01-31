@@ -1,4 +1,5 @@
 import {
+  defaultCachePathGlob,
   getNodeVersion,
   getSpawnOptions,
   glob,
@@ -58,8 +59,7 @@ export const prepareCache: PrepareCache = async ({
     );
   }
 
-  // Cache `node_modules`
-  const nodeModulesFiles = await glob('**/node_modules/**', root);
+  const defaultCacheFiles = await glob(defaultCachePathGlob, root);
 
-  return { ...nodeModulesFiles, ...cacheDirFiles };
+  return { ...defaultCacheFiles, ...cacheDirFiles };
 };
