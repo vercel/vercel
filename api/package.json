@@ -5,6 +5,9 @@
   "description": "API for the vercel/vercel repo",
   "main": "index.js",
   "scripts": {},
+  "engines": {
+    "node": "22.13.1"
+  },
   "dependencies": {
     "@sentry/node": "7.120.1",
     "got": "11.8.5",
@@ -13,7 +16,7 @@
     "tar-fs": "2.0.0"
   },
   "devDependencies": {
-    "@types/node": "16.18.11",
+    "@types/node": "22.13.0",
     "@types/node-fetch": "2.5.4",
     "@types/tar-fs": "1.16.1",
     "@vercel/node": "*"
