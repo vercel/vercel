@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.0.1
+
+### Patch Changes
+
+- Ensure proper files are published ([#12984](https://github.com/vercel/vercel/pull/12984))
+
 ## 1.0.0
 
 ### Major Changes
