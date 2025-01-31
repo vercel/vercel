@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
 ## 2.1.14
 
 ### Patch Changes
