@@ -7,9 +7,6 @@
     "build": "sapper export",
     "start": "node __sapper__/build"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "compression": "^1.7.1",
     "polka": "next",
