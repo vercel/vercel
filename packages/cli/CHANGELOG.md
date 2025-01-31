@@ -1,5 +1,21 @@
 # vercel
 
+## 40.0.0
+
+### Major Changes
+
+- Make split-tgz the default for archive deployments ([#12943](https://github.com/vercel/vercel/pull/12943))
+
+### Patch Changes
+
+- Updated dependencies [[`a9f2138035befec646d01c23203dba66790ea323`](https://github.com/vercel/vercel/commit/a9f2138035befec646d01c23203dba66790ea323), [`e9acda308cefc4e12784d742968a6816e1f1072b`](https://github.com/vercel/vercel/commit/e9acda308cefc4e12784d742968a6816e1f1072b), [`bfbe07e2b5a87b07da464a6504566f29a76a9e8b`](https://github.com/vercel/vercel/commit/bfbe07e2b5a87b07da464a6504566f29a76a9e8b), [`d07466a32f9026109f333fe653d1ff02a012756f`](https://github.com/vercel/vercel/commit/d07466a32f9026109f333fe653d1ff02a012756f), [`96c7a3ab6041efeb1eda9aab97d0a75c61e17bbe`](https://github.com/vercel/vercel/commit/96c7a3ab6041efeb1eda9aab97d0a75c61e17bbe), [`b52b7e3a8cd775d56149683cb809b7ad9c77a514`](https://github.com/vercel/vercel/commit/b52b7e3a8cd775d56149683cb809b7ad9c77a514), [`9cfe0ec1439c6d3b038ab21f125cfe0223ad62c8`](https://github.com/vercel/vercel/commit/9cfe0ec1439c6d3b038ab21f125cfe0223ad62c8)]:
+  - @vercel/remix-builder@5.1.2
+  - @vercel/next@4.4.5
+  - @vercel/build-utils@9.1.1
+  - @vercel/node@5.0.5
+  - @vercel/redwood@2.1.14
+  - @vercel/static-build@2.5.44
+
 ## 39.4.2
 
 ### Patch Changes
