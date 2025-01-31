@@ -10,6 +10,20 @@ const {
   writeFileSync,
 } = require('fs');
 
+/** direcotry paths to search when updating to canary tag */
+const PATHS_CANARY = [
+  'packages/next/test/fixtures',
+  'packages/next/test/integration',
+];
+
+/** direcotry paths to search when updating to latest tag */
+const PATHS_LATEST = [
+  'packages/cli/test/dev/fixtures',
+  'packages/cli/test/fixtures/unit',
+  'packages/fs-detectors/test/fixtures',
+  'packages/static-build/test/fixtures',
+];
+
 function exec(cmd, args, opts) {
   console.log({ input: `${cmd} ${args.join(' ')}`, cwd: opts?.cwd });
   const output = execFileSync(cmd, args, opts).toString().trim();
@@ -67,15 +81,18 @@ function updatePackageJson(file, newVersion) {
 
 async function createPullRequest(
   github,
-  owner,
-  repo,
   branch,
+  contextRepo,
   newVersion,
   updatedCount
 ) {
-  console.log(
-    `mocked out creating PR: ${{ branch, newVersion, updatedCount }}`
-  );
+  if (!github || !contextRepo) {
+    throw new Error(
+      'Cannot create pull request because github or context is not provided.'
+    );
+  }
+
+  const { owner, repo } = contextRepo;
 
   const pr = await github.rest.pulls.create({
     owner,
@@ -137,15 +154,10 @@ function updateExamples(github, newVersion, branch) {
 
 function getTestPaths(tag) {
   if (tag === 'canary') {
-    return ['packages/next/test/fixtures', 'packages/next/test/integration'];
+    return PATHS_CANARY;
   }
 
-  return [
-    'packages/cli/test/dev/fixtures',
-    'packages/cli/test/fixtures/unit',
-    'packages/fs-detectors/test/fixtures',
-    'packages/static-build/test/fixtures',
-  ];
+  return PATHS_LATEST;
 }
 
 module.exports = async ({ github, context, tag } = {}) => {
@@ -179,7 +191,6 @@ module.exports = async ({ github, context, tag } = {}) => {
       if (updatePackageJson(pkgJsonFile, newVersion)) {
         updatedCount++;
       }
-      continue;
     }
 
     for (const name of readdirSync(dir)) {
@@ -203,16 +214,9 @@ module.exports = async ({ github, context, tag } = {}) => {
     } to Next.js version ${newVersion}`
   );
 
-  if (!github || !context) {
-    console.error('Error: missing github or context');
-    return;
-  }
-
-  const { repo, owner } = context.repo;
   await createPullRequest(
     github,
-    owner,
-    repo,
+    context?.repo,
     branch,
     newVersion,
     updatedCount
