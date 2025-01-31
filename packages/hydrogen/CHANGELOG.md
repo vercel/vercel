@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.1.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
 ## 1.0.11
 
 ### Patch Changes

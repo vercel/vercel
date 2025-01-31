@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
 ## 5.1.2
 
 ### Patch Changes
