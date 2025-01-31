@@ -1,4 +1,5 @@
 ---
+'vercel': minor
 '@vercel/frameworks': minor
 ---
 
