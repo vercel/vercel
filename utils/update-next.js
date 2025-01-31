@@ -10,7 +10,7 @@ const {
   writeFileSync,
 } = require('fs');
 
-/** direcotry paths to search when updating to canary tag */
+/** directory paths to search when updating to canary tag */
 const PATHS_CANARY = [
   'packages/next/test/fixtures',
   'packages/next/test/integration',
