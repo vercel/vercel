@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 9.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 9.1.1
+
+### Patch Changes
+
+- [cli] shift node 16 deprecation date to 2025-02-03 ([#12981](https://github.com/vercel/vercel/pull/12981))
+
 ## 9.1.0
 
 ### Minor Changes
