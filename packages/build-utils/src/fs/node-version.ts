@@ -28,7 +28,7 @@ export const NODE_VERSIONS: NodeVersion[] = [
     major: 16,
     range: '16.x',
     runtime: 'nodejs16.x',
-    discontinueDate: new Date('2025-02-03'),
+    discontinueDate: new Date('2025-02-28'),
   }),
   new NodeVersion({
     major: 14,
