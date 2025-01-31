@@ -16,7 +16,7 @@ const PATHS_CANARY = [
   'packages/next/test/integration',
 ];
 
-/** direcotry paths to search when updating to latest tag */
+/** directory paths to search when updating to latest tag */
 const PATHS_LATEST = [
   'packages/cli/test/dev/fixtures',
   'packages/cli/test/fixtures/unit',
