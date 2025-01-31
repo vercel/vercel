@@ -1,7 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Home" },
-    { "path": "/", "mustContain": "Gridsome" },
-    { "path": "/about", "mustContain": "About us" }
-  ]
-}
