@@ -48,6 +48,7 @@ import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
+import { measureExecTime } from './metrics';
 
 export {
   FileBlob,
@@ -99,6 +100,7 @@ export {
   hardLinkDir,
   traverseUpDirectories,
   validateNpmrc,
+  measureExecTime,
 };
 
 export { EdgeFunction } from './edge-function';

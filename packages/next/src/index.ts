@@ -27,6 +27,8 @@ import {
   BuildResultV2Typical as BuildResult,
   BuildResultBuildOutput,
   getInstalledPackageVersion,
+  measureExecTime,
+  ExecutionTime,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -336,19 +338,24 @@ export const build: BuildV2 = async buildOptions => {
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
+  let installExecutionTime: undefined | ExecutionTime = undefined;
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
 
-      await execCommand(installCommand, {
-        ...spawnOpts,
-        cwd: entryPath,
-      });
+      ({ executionTime: installExecutionTime } = await measureExecTime(() =>
+        execCommand(installCommand, {
+          ...spawnOpts,
+          cwd: entryPath,
+        })
+      ));
     } else {
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+    ({ executionTime: installExecutionTime } = await measureExecTime(() =>
+      runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion)
+    ));
   }
 
   if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
@@ -460,6 +467,7 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  let buildExecutionTime: undefined | ExecutionTime = undefined;
   if (buildCommand) {
     // Add `node_modules/.bin` to PATH
     const nodeBinPaths = getNodeBinPaths({
@@ -479,16 +487,20 @@ export const build: BuildV2 = async buildOptions => {
     );
 
     console.log(`Running "${buildCommand}"`);
-    await execCommand(buildCommand, {
-      ...spawnOpts,
-      cwd: entryPath,
-      env,
-    });
+    ({ executionTime: buildExecutionTime } = await measureExecTime(() =>
+      execCommand(buildCommand, {
+        ...spawnOpts,
+        cwd: entryPath,
+        env,
+      })
+    ));
   } else if (buildScriptName) {
-    await runPackageJsonScript(entryPath, buildScriptName, {
-      ...spawnOpts,
-      env,
-    });
+    ({ executionTime: buildExecutionTime } = await measureExecTime(() =>
+      runPackageJsonScript(entryPath, buildScriptName as string, {
+        ...spawnOpts,
+        env,
+      })
+    ));
   }
   debug('build command exited');
 
@@ -2340,6 +2352,14 @@ export const build: BuildV2 = async buildOptions => {
       ...staticFiles,
       ...staticDirectoryFiles,
       ...privateOutputs.files,
+    },
+    metrics: {
+      install: {
+        duration: installExecutionTime,
+      },
+      build: {
+        duration: buildExecutionTime,
+      },
     },
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
