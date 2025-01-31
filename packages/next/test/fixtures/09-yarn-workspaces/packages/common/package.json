@@ -9,7 +9,7 @@
     "build": "tsc"
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "devDependencies": {
     "typescript": "4.9.5"

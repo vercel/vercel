@@ -9,7 +9,7 @@
   "keywords": [],
   "private": true,
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "dependencies": {
     "nuxt": "2.15.2"

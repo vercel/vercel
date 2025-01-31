@@ -8,7 +8,7 @@
     "postinstall": "lerna run build --scope=@jimmy/common"
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "dependencies": {
     "@jimmy/common": "^1.0.64",

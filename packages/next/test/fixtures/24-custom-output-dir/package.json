@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "engines": {
-    "node": "18.x"
+    "node": "16.x"
   },
   "dependencies": {
     "next": "canary",
