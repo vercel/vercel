@@ -3,57 +3,9 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import {
-  pathToRegexp as pathToRegexpCurrent,
-  compile,
-  Key,
-} from 'path-to-regexp';
-import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
+import { pathToRegexp, compile, Key } from '@vercel-internals/path-to-regexp';
+
 import { Route, Redirect, Rewrite, HasField, Header } from './types';
-
-// run the updated version of path-to-regexp, compare the results, and log if different
-function pathToRegexp(
-  callerId: string,
-  path: string,
-  keys?: Key[],
-  options?: { strict: boolean; sensitive: boolean; delimiter: string }
-) {
-  const currentRegExp = pathToRegexpCurrent(path, keys, options);
-
-  try {
-    const currentKeys = keys;
-    const newKeys: Key[] = [];
-    const newRegExp = pathToRegexpUpdated(path, newKeys, options);
-
-    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
-    // for verification that they show up in the build logs as expected
-
-    const isDiffRegExp = currentRegExp.toString() !== newRegExp.toString();
-    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffRegExp) {
-      const message = JSON.stringify({
-        path,
-        currentRegExp: currentRegExp.toString(),
-        newRegExp: newRegExp.toString(),
-      });
-      console.error(`[vc] PATH TO REGEXP PATH DIFF @ #${callerId}: ${message}`);
-    }
-
-    const isDiffKeys = keys?.toString() !== newKeys?.toString();
-    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffKeys) {
-      const message = JSON.stringify({
-        isDiffKeys,
-        currentKeys,
-        newKeys,
-      });
-      console.error(`[vc] PATH TO REGEXP KEYS DIFF @ #${callerId}: ${message}`);
-    }
-  } catch (err) {
-    const error = err as Error;
-    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${error.message}`);
-  }
-
-  return currentRegExp;
-}
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
