@@ -225,7 +225,7 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if over 1024 routes', () => {
+  test('fails if over 2048 routes', () => {
     assertError('string', [
       {
         dataPath: '',
@@ -238,16 +238,16 @@ describe('normalizeRoutes', () => {
       },
     ]);
 
-    const arr = new Array(1026);
+    const arr = new Array(2049);
     arr.fill(true);
 
     assertError(arr, [
       {
         dataPath: '',
         keyword: 'maxItems',
-        message: 'should NOT have more than 1024 items',
+        message: 'should NOT have more than 2048 items',
         params: {
-          limit: '1024',
+          limit: '2048',
         },
         schemaPath: '#/maxItems',
       },

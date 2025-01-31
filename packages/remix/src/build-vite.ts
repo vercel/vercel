@@ -1,5 +1,5 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
-import { basename, dirname, join, relative, sep } from 'path';
+import { basename, dirname, join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
 import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
 import {
@@ -13,7 +13,6 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
-  FileBlob,
   FileFsRef,
   EdgeFunction,
   NodejsLambda,
@@ -83,6 +82,109 @@ interface ReactRouterBuildResult extends BuildResultBase {
 
 type BuildResult = RemixBuildResult | ReactRouterBuildResult;
 
+interface RenderFunctionOptions {
+  nodeVersion: NodeVersion;
+  entrypointDir: string;
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint: string | undefined;
+  frameworkVersion: string;
+  config: /*TODO: ResolvedNodeRouteConfig*/ any;
+}
+
+interface FrameworkSettings {
+  primaryPackageName: string;
+  buildCommand: string;
+  buildResultFilePath: string;
+  slug: string;
+  sourceSearchValue: string;
+
+  createRenderFunction: (
+    options: RenderFunctionOptions
+  ) => Promise<EdgeFunction | NodejsLambda>;
+}
+
+const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
+  primaryPackageName: '@remix-run/dev',
+  buildCommand: 'remix build',
+  buildResultFilePath: '.vercel/remix-build-result.json',
+  slug: 'remix',
+  sourceSearchValue: '@remix-run/dev/server-build',
+
+  createRenderFunction({
+    nodeVersion,
+    entrypointDir,
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    frameworkVersion,
+    config,
+  }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
+    if (config.runtime === 'edge') {
+      return createRenderEdgeFunction(
+        entrypointDir,
+        rootDir,
+        serverBuildPath,
+        serverEntryPoint,
+        frameworkVersion,
+        config
+      );
+    }
+
+    return createRenderNodeFunction(
+      nodeVersion,
+      entrypointDir,
+      rootDir,
+      serverBuildPath,
+      serverEntryPoint,
+      frameworkVersion,
+      config
+    );
+  },
+};
+
+const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
+  primaryPackageName: 'react-router',
+  buildCommand: 'react-router build',
+  buildResultFilePath: '.vercel/react-router-build-result.json',
+  slug: 'react-router',
+  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
+
+  createRenderFunction({
+    nodeVersion,
+    entrypointDir,
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    frameworkVersion,
+    config,
+  }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
+    return createRenderReactRouterFunction(
+      nodeVersion,
+      entrypointDir,
+      rootDir,
+      serverBuildPath,
+      serverEntryPoint,
+      frameworkVersion,
+      config
+    );
+  },
+};
+
+function determineFrameworkSettings(workPath: string) {
+  const isReactRouter = findConfig(workPath, 'react-router.config', [
+    '.js',
+    '.ts',
+    '.mjs',
+    '.mts',
+  ]);
+
+  if (isReactRouter) {
+    return REACT_ROUTER_FRAMEWORK_SETTINGS;
+  }
+  return REMIX_FRAMEWORK_SETTINGS;
+}
+
 export const build: BuildV2 = async ({
   entrypoint,
   workPath,
@@ -94,13 +196,7 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
-  // Determine if this is a React Router project
-  const isReactRouter = findConfig(workPath, 'react-router.config', [
-    '.js',
-    '.ts',
-    '.mjs',
-    '.mts',
-  ]);
+  const frameworkSettings = determineFrameworkSettings(workPath);
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
@@ -150,7 +246,7 @@ export const build: BuildV2 = async ({
   //   Remix - use "@remix-run/dev"
   //   React Router - use "react-router"
   const frameworkVersion = await getPackageVersion(
-    isReactRouter ? 'react-router' : '@remix-run/dev',
+    frameworkSettings.primaryPackageName,
     entrypointFsDirname,
     repoRootPath
   );
@@ -174,7 +270,7 @@ export const build: BuildV2 = async ({
       debug(`Executing "build" script`);
       await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
     } else {
-      await execCommand(isReactRouter ? 'react-router build' : 'remix build', {
+      await execCommand(frameworkSettings.buildCommand, {
         ...spawnOpts,
         cwd: entrypointFsDirname,
       });
@@ -183,9 +279,7 @@ export const build: BuildV2 = async ({
 
   const buildResultJsonPath = join(
     entrypointFsDirname,
-    isReactRouter
-      ? '.vercel/react-router-build-result.json'
-      : '.vercel/remix-build-result.json'
+    frameworkSettings.buildResultFilePath
   );
   let buildResult: BuildResult | undefined;
   try {
@@ -258,38 +352,15 @@ export const build: BuildV2 = async ({
   const [staticFiles, ...functions] = await Promise.all([
     glob('**', staticDir),
     ...serverBundles.map(bundle => {
-      if (isReactRouter) {
-        return createRenderReactRouterFunction(
-          nodeVersion,
-          entrypointFsDirname,
-          repoRootPath,
-          join(entrypointFsDirname, bundle.file),
-          undefined,
-          frameworkVersion,
-          bundle.config
-        );
-      }
-
-      if (bundle.config.runtime === 'edge') {
-        return createRenderEdgeFunction(
-          entrypointFsDirname,
-          repoRootPath,
-          join(entrypointFsDirname, bundle.file),
-          undefined,
-          frameworkVersion,
-          bundle.config
-        );
-      }
-
-      return createRenderNodeFunction(
+      return frameworkSettings.createRenderFunction({
         nodeVersion,
-        entrypointFsDirname,
-        repoRootPath,
-        join(entrypointFsDirname, bundle.file),
-        undefined,
+        entrypointDir: entrypointFsDirname,
+        rootDir: repoRootPath,
+        serverBuildPath: join(entrypointFsDirname, bundle.file),
+        serverEntryPoint: undefined,
         frameworkVersion,
-        bundle.config
-      );
+        config: bundle.config,
+      });
     }),
   ]);
 
@@ -350,6 +421,51 @@ export const build: BuildV2 = async ({
   return { routes, output, framework: { version: frameworkVersion } };
 };
 
+async function edgeReadFile(fsPath: string) {
+  let source: Buffer | string;
+  try {
+    source = await fs.readFile(fsPath);
+  } catch (err: any) {
+    if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+      return null;
+    }
+    throw err;
+  }
+  if (basename(fsPath) === 'package.json') {
+    // For Edge Functions, patch "main" field to prefer "browser" or "module"
+    const pkgJson = JSON.parse(source.toString());
+
+    for (const prop of ['browser', 'module']) {
+      const val = pkgJson[prop];
+      if (typeof val === 'string') {
+        pkgJson.main = val;
+
+        // Return the modified `package.json` to nft
+        source = JSON.stringify(pkgJson);
+        break;
+      }
+    }
+  }
+  return source;
+}
+
+const EDGE_TRACE_CONDITIONS = [
+  'edge-light',
+  'browser',
+  'module',
+  'import',
+  'require',
+];
+
+const COMMON_NODE_FUNCTION_OPTIONS = {
+  shouldAddHelpers: false,
+  shouldAddSourcemapSupport: false,
+  operationType: 'SSR',
+  supportsResponseStreaming: true,
+} as const;
+
+const COMMON_EDGE_FUNCTION_OPTIONS = { deploymentTarget: 'v8-worker' } as const;
+
 async function createRenderReactRouterFunction(
   nodeVersion: NodeVersion,
   entrypointDir: string,
@@ -374,7 +490,7 @@ async function createRenderReactRouterFunction(
     await fs.writeFile(
       handlerPath,
       reactRouterServerSrc.replace(
-        'ENTRYPOINT_PLACEHOLDER',
+        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -384,34 +500,8 @@ async function createRenderReactRouterFunction(
   let conditions: NodeFileTraceOptions['conditions'];
   let readFile: NodeFileTraceOptions['readFile'];
   if (isEdgeFunction) {
-    conditions = ['edge-light', 'browser', 'module', 'import', 'require'];
-    readFile = async fsPath => {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    };
+    conditions = EDGE_TRACE_CONDITIONS;
+    readFile = edgeReadFile;
   }
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
@@ -429,30 +519,27 @@ async function createRenderReactRouterFunction(
   let fn: NodejsLambda | EdgeFunction;
   if (isEdgeFunction) {
     fn = new EdgeFunction({
+      ...COMMON_EDGE_FUNCTION_OPTIONS,
       files,
-      deploymentTarget: 'v8-worker',
       entrypoint: handler,
       regions: config.regions,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
   } else {
     fn = new NodejsLambda({
+      ...COMMON_NODE_FUNCTION_OPTIONS,
       files,
       handler,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers: false,
-      shouldAddSourcemapSupport: false,
-      operationType: 'SSR',
-      supportsResponseStreaming: true,
       useWebApi: true,
       regions: config.regions,
       memory: config.memory,
       maxDuration: config.maxDuration,
       framework: {
-        slug: 'react-router',
+        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
         version: frameworkVersion,
       },
     });
@@ -484,7 +571,7 @@ async function createRenderNodeFunction(
     await fs.writeFile(
       handlerPath,
       nodeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
@@ -503,18 +590,15 @@ async function createRenderNodeFunction(
   }
 
   const fn = new NodejsLambda({
+    ...COMMON_NODE_FUNCTION_OPTIONS,
     files,
     handler,
     runtime: nodeVersion.runtime,
-    shouldAddHelpers: false,
-    shouldAddSourcemapSupport: false,
-    operationType: 'SSR',
-    supportsResponseStreaming: true,
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });
@@ -544,69 +628,33 @@ async function createRenderEdgeFunction(
     await fs.writeFile(
       handlerPath,
       edgeServerSrc.replace(
-        '@remix-run/dev/server-build',
+        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
         `./${baseServerBuildPath}.js`
       )
     );
   }
 
-  let remixRunVercelPkgJson: string | undefined;
-
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
-    conditions: ['edge-light', 'browser', 'module', 'import', 'require'],
-    async readFile(fsPath) {
-      let source: Buffer | string;
-      try {
-        source = await fs.readFile(fsPath);
-      } catch (err: any) {
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          return null;
-        }
-        throw err;
-      }
-      if (basename(fsPath) === 'package.json') {
-        // For Edge Functions, patch "main" field to prefer "browser" or "module"
-        const pkgJson = JSON.parse(source.toString());
-
-        for (const prop of ['browser', 'module']) {
-          const val = pkgJson[prop];
-          if (typeof val === 'string') {
-            pkgJson.main = val;
-
-            // Return the modified `package.json` to nft
-            source = JSON.stringify(pkgJson);
-            break;
-          }
-        }
-      }
-      return source;
-    },
+    conditions: EDGE_TRACE_CONDITIONS,
+    readFile: edgeReadFile,
   });
 
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
   for (const file of trace.fileList) {
-    if (
-      remixRunVercelPkgJson &&
-      file.endsWith(`@remix-run${sep}vercel${sep}package.json`)
-    ) {
-      // Use the modified `@remix-run/vercel` package.json which contains "browser" field
-      files[file] = new FileBlob({ data: remixRunVercelPkgJson });
-    } else {
-      files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-    }
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }
 
   const fn = new EdgeFunction({
+    ...COMMON_EDGE_FUNCTION_OPTIONS,
     files,
-    deploymentTarget: 'v8-worker',
     entrypoint: handler,
     regions: config.regions,
     framework: {
-      slug: 'remix',
+      slug: REMIX_FRAMEWORK_SETTINGS.slug,
       version: frameworkVersion,
     },
   });

@@ -5,13 +5,8 @@
       "use": "@vercel/static-build",
       "config": {
         "zeroConfig": true,
-        "buildCommand": "next build && next export",
         "outputDirectory": "out"
       }
     }
-  ],
-  "probes": [{ "path": "/", "mustContain": "hello world" }],
-  "projectSettings": {
-    "nodeVersion": "16.x"
-  }
+  ]
 }
