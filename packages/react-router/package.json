@@ -12,7 +12,7 @@
     },
     "./entry.server": {
       "types": "./entry.server.d.ts",
-      "edge": "./edge/entry.server.js",
+      "edge-light": "./edge/entry.server.js",
       "default": "./entry.server.js"
     },
     "./vite": {
