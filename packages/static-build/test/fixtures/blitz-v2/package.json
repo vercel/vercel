@@ -6,8 +6,7 @@
     "build": "blitz build",
     "start": "blitz start",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "prepare": "husky install"
+    "test:watch": "vitest"
   },
   "prettier": {
     "semi": false,
@@ -29,7 +28,6 @@
     "@types/node": "18.11.9",
     "@types/react": "18.0.25",
     "@vitejs/plugin-react": "2.2.0",
-    "husky": "8.0.2",
     "jsdom": "20.0.3",
     "lint-staged": "13.0.3",
     "prettier": "2.8.8",

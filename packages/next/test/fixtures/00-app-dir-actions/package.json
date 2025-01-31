@@ -1,11 +1,10 @@
 {
   "dependencies": {
-    "next": "canary",
+    "next": "15.2.0-canary.33",
     "react": "latest",
     "react-dom": "latest"
   },
   "scripts": {
     "build": "next build && cp .next/server/server-reference-manifest.json public/"
-  },
-  "ignoreNextjsUpdates": true
+  }
 }

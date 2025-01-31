@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "canary",
+    "next": "15.2.0-canary.33",
     "react": "latest",
     "react-dom": "latest"
   },
@@ -9,6 +9,5 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
-  },
-  "ignoreNextjsUpdates": true
+  }
 }
