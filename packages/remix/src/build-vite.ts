@@ -185,6 +185,37 @@ function determineFrameworkSettings(workPath: string) {
   return REMIX_FRAMEWORK_SETTINGS;
 }
 
+interface HandlerOptions {
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  serverSourcePromise: Promise<string>;
+  sourceSearchValue: string;
+}
+
+async function determineHandler({
+  rootDir,
+  serverBuildPath,
+  serverEntryPoint,
+  serverSourcePromise,
+  sourceSearchValue,
+}: HandlerOptions) {
+  let handler = relative(rootDir, serverBuildPath);
+  let handlerPath = join(rootDir, handler);
+  if (!serverEntryPoint) {
+    const baseServerBuildPath = basename(serverBuildPath, '.js');
+    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
+    handlerPath = join(rootDir, handler);
+
+    const serverSource = await serverSourcePromise;
+    await fs.writeFile(
+      handlerPath,
+      serverSource.replace(sourceSearchValue, `./${baseServerBuildPath}.js`)
+    );
+  }
+  return { handler, handlerPath };
+}
+
 export const build: BuildV2 = async ({
   entrypoint,
   workPath,
@@ -476,25 +507,14 @@ async function createRenderReactRouterFunction(
   config: /*TODO: ResolvedNodeRouteConfig*/ any
 ): Promise<EdgeFunction | NodejsLambda> {
   const isEdgeFunction = config.runtime === 'edge';
-  const files: Files = {};
 
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-react-router.mjs` file into the "build" directory
-    const reactRouterServerSrc = await reactRouterServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      reactRouterServerSrc.replace(
-        REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: reactRouterServerSrcPromise,
+    sourceSearchValue: REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   // Trace the handler with `@vercel/nft`
   let conditions: NodeFileTraceOptions['conditions'];
@@ -512,9 +532,7 @@ async function createRenderReactRouterFunction(
 
   logNftWarnings(trace.warnings, 'react-router');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   let fn: NodejsLambda | EdgeFunction;
   if (isEdgeFunction) {
@@ -557,25 +575,13 @@ async function createRenderNodeFunction(
   frameworkVersion: string,
   config: /*TODO: ResolvedNodeRouteConfig*/ any
 ): Promise<NodejsLambda> {
-  const files: Files = {};
-
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-node.mjs` file into the "build" directory
-    const nodeServerSrc = await nodeServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      nodeServerSrc.replace(
-        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: nodeServerSrcPromise,
+    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -585,9 +591,7 @@ async function createRenderNodeFunction(
 
   logNftWarnings(trace.warnings, '@remix-run/node');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   const fn = new NodejsLambda({
     ...COMMON_NODE_FUNCTION_OPTIONS,
@@ -614,25 +618,13 @@ async function createRenderEdgeFunction(
   frameworkVersion: string,
   config: /* TODO: ResolvedEdgeRouteConfig*/ any
 ): Promise<EdgeFunction> {
-  const files: Files = {};
-
-  let handler = relative(rootDir, serverBuildPath);
-  let handlerPath = join(rootDir, handler);
-  if (!serverEntryPoint) {
-    const baseServerBuildPath = basename(serverBuildPath, '.js');
-    handler = join(dirname(handler), `server-${baseServerBuildPath}.mjs`);
-    handlerPath = join(rootDir, handler);
-
-    // Copy the `server-edge.mjs` file into the "build" directory
-    const edgeServerSrc = await edgeServerSrcPromise;
-    await fs.writeFile(
-      handlerPath,
-      edgeServerSrc.replace(
-        REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
-        `./${baseServerBuildPath}.js`
-      )
-    );
-  }
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: edgeServerSrcPromise,
+    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
+  });
 
   // Trace the handler with `@vercel/nft`
   const trace = await nodeFileTrace([handlerPath], {
@@ -644,9 +636,7 @@ async function createRenderEdgeFunction(
 
   logNftWarnings(trace.warnings, '@remix-run/server-runtime');
 
-  for (const file of trace.fileList) {
-    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
-  }
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
   const fn = new EdgeFunction({
     ...COMMON_EDGE_FUNCTION_OPTIONS,
@@ -660,4 +650,18 @@ async function createRenderEdgeFunction(
   });
 
   return fn;
+}
+
+async function getFilesFromTrace({
+  fileList,
+  rootDir,
+}: {
+  fileList: Set<string>;
+  rootDir: string;
+}) {
+  const files: Files = {};
+  for (const file of fileList) {
+    files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
+  }
+  return files;
 }
