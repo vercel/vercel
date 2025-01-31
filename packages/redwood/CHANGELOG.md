@@ -1,5 +1,25 @@
 # @vercel/redwood
 
+## 2.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 2.1.14
+
+### Patch Changes
+
+- Updated dependencies [[`3d310f508b9ff8f891838d8ba8ea24e428a06a9d`](https://github.com/vercel/vercel/commit/3d310f508b9ff8f891838d8ba8ea24e428a06a9d)]:
+  - @vercel/routing-utils@5.0.2
+
+## 2.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/routing-utils@5.0.1
+
 ## 2.1.12
 
 ### Patch Changes

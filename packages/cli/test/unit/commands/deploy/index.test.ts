@@ -257,7 +257,7 @@ describe('deploy', () => {
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(0);
     expect(body?.files?.length).toEqual(1);
-    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz.part1');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'option:archive',
@@ -405,7 +405,7 @@ describe('deploy', () => {
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(0);
     expect(body?.files?.length).toEqual(1);
-    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz');
+    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz.part1');
     expect(uploadingLines.length).toEqual(5);
     expect(
       uploadingLines[0].startsWith('Uploading [--------------------]')
@@ -953,7 +953,7 @@ describe('deploy', () => {
       expect(mock).toHaveBeenCalledWith(
         ...Object.values({
           ...baseCreateDeployArgs,
-          archive: 'split-tgz',
+          archive: 'tgz',
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([

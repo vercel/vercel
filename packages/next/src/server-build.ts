@@ -201,6 +201,9 @@ export async function serverBuild({
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
   );
+  const skipDefaultLocaleRewrite = Boolean(
+    process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -1941,6 +1944,14 @@ export async function serverBuild({
                     },
                     continue: true,
                   },
+                ]
+              : []),
+
+            // We only want to add these rewrites before user redirects
+            // when `skipDefaultLocaleRewrite` is not flagged on
+            // and when localeDetection is enabled.
+            ...(!skipDefaultLocaleRewrite || i18n.localeDetection !== false
+              ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory)}$`,
                     dest: `${path.posix.join(
@@ -2254,7 +2265,9 @@ export async function serverBuild({
       // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
-            ...(i18n.localeDetection === false
+            // When `skipDefaultLocaleRewrite` is flagged on and localeDetection is disabled,
+            // we only want to add the rewrite as the fallback case once routing is complete.
+            ...(skipDefaultLocaleRewrite && i18n.localeDetection === false
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory)}$`,
