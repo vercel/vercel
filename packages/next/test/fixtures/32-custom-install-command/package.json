@@ -4,9 +4,6 @@
   "scripts": {
     "build": "next build"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "next": "canary",
     "react": "latest",
