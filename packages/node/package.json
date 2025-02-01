@@ -62,7 +62,7 @@
     "jest-junit": "16.0.0",
     "source-map-support": "0.5.12",
     "tree-kill": "1.2.2",
-    "vite": "5.1.8",
+    "vite": "5.4.12",
     "vitest": "2.0.1"
   }
 }
