@@ -39,7 +39,7 @@ module.exports = function setupTests(groupIndex) {
   }
 
   // https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
-  const fixturesToSkip = ['ember-v3', '53-native-gems'];
+  const fixturesToSkip = ['ember-v3'];
 
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {
