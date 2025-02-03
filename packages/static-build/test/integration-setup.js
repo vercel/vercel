@@ -54,7 +54,7 @@ module.exports = function setupTests(groupIndex) {
     'angular-v8',
     'vue-v2',
     'sapper-v0',
-    'build 22-docusaurus-2-build-fail',
+    '22-docusaurus-2-build-fail',
   ];
 
   // eslint-disable-next-line no-restricted-syntax
