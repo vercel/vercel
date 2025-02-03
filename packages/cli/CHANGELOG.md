@@ -1,5 +1,84 @@
 # vercel
 
+## 40.1.0
+
+### Minor Changes
+
+- Add "react-router" framework entry ([#12932](https://github.com/vercel/vercel/pull/12932))
+
+### Patch Changes
+
+- Updated dependencies [[`5c696af2b40f0fc368e84cafa6d82b2ce998fc19`](https://github.com/vercel/vercel/commit/5c696af2b40f0fc368e84cafa6d82b2ce998fc19)]:
+  - @vercel/static-build@2.6.0
+  - @vercel/build-utils@9.2.0
+  - @vercel/hydrogen@1.1.0
+  - @vercel/redwood@2.2.0
+  - @vercel/remix-builder@5.2.0
+  - @vercel/next@4.5.0
+  - @vercel/node@5.1.0
+
+## 40.0.0
+
+### Major Changes
+
+- Make split-tgz the default for archive deployments ([#12943](https://github.com/vercel/vercel/pull/12943))
+
+### Patch Changes
+
+- Updated dependencies [[`a9f2138035befec646d01c23203dba66790ea323`](https://github.com/vercel/vercel/commit/a9f2138035befec646d01c23203dba66790ea323), [`e9acda308cefc4e12784d742968a6816e1f1072b`](https://github.com/vercel/vercel/commit/e9acda308cefc4e12784d742968a6816e1f1072b), [`bfbe07e2b5a87b07da464a6504566f29a76a9e8b`](https://github.com/vercel/vercel/commit/bfbe07e2b5a87b07da464a6504566f29a76a9e8b), [`d07466a32f9026109f333fe653d1ff02a012756f`](https://github.com/vercel/vercel/commit/d07466a32f9026109f333fe653d1ff02a012756f), [`96c7a3ab6041efeb1eda9aab97d0a75c61e17bbe`](https://github.com/vercel/vercel/commit/96c7a3ab6041efeb1eda9aab97d0a75c61e17bbe), [`b52b7e3a8cd775d56149683cb809b7ad9c77a514`](https://github.com/vercel/vercel/commit/b52b7e3a8cd775d56149683cb809b7ad9c77a514), [`9cfe0ec1439c6d3b038ab21f125cfe0223ad62c8`](https://github.com/vercel/vercel/commit/9cfe0ec1439c6d3b038ab21f125cfe0223ad62c8)]:
+  - @vercel/remix-builder@5.1.2
+  - @vercel/next@4.4.5
+  - @vercel/build-utils@9.1.1
+  - @vercel/node@5.0.5
+  - @vercel/redwood@2.1.14
+  - @vercel/static-build@2.5.44
+
+## 39.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/node@5.0.4
+  - @vercel/remix-builder@5.1.1
+  - @vercel/redwood@2.1.13
+  - @vercel/static-build@2.5.43
+
+## 39.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`f3d60336f560b6458bc639047efb80c804ea1fbb`](https://github.com/vercel/vercel/commit/f3d60336f560b6458bc639047efb80c804ea1fbb)]:
+  - @vercel/next@4.4.4
+
+## 39.4.0
+
+### Minor Changes
+
+- [cli] add Node Version to project list output table ([#12895](https://github.com/vercel/vercel/pull/12895))
+
+### Patch Changes
+
+- Enable executable bit for `src/vc.js` script ([#12863](https://github.com/vercel/vercel/pull/12863))
+
+- Add video integration category to the integration install CLI ([#12870](https://github.com/vercel/vercel/pull/12870))
+
+- [cli] update warning in ls --update-required for clarity ([#12864](https://github.com/vercel/vercel/pull/12864))
+
+- Added headers for user-supplied rewrites ([#12847](https://github.com/vercel/vercel/pull/12847))
+
+- [cli] refactor confirm component to use `client.input.confirm` interface ([#12846](https://github.com/vercel/vercel/pull/12846))
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+- Updated dependencies [[`56f72ffefb828c3001f7c82259ed0f71db4f629e`](https://github.com/vercel/vercel/commit/56f72ffefb828c3001f7c82259ed0f71db4f629e), [`745404610a836fa6c2068c5c192d2f3e8b86918f`](https://github.com/vercel/vercel/commit/745404610a836fa6c2068c5c192d2f3e8b86918f), [`b6bb709370d2565121808340d43d0a9d90b53de1`](https://github.com/vercel/vercel/commit/b6bb709370d2565121808340d43d0a9d90b53de1), [`85a64db8d9b6a6e9f7c6a019d51777930a806584`](https://github.com/vercel/vercel/commit/85a64db8d9b6a6e9f7c6a019d51777930a806584), [`ac6a62eff7db3b3e2713adc1f5bd6a1331d838ce`](https://github.com/vercel/vercel/commit/ac6a62eff7db3b3e2713adc1f5bd6a1331d838ce), [`f65ea2245382dd2449c96f695ed692d419a83868`](https://github.com/vercel/vercel/commit/f65ea2245382dd2449c96f695ed692d419a83868), [`7af40c1e9d9916cbe8287359662fc940f1d24fce`](https://github.com/vercel/vercel/commit/7af40c1e9d9916cbe8287359662fc940f1d24fce), [`06307180c20ca07b65f7cb5e93b65c977b9ccd70`](https://github.com/vercel/vercel/commit/06307180c20ca07b65f7cb5e93b65c977b9ccd70), [`3a5507fd1459c77b4491f1c9c3a64ad42e4ff009`](https://github.com/vercel/vercel/commit/3a5507fd1459c77b4491f1c9c3a64ad42e4ff009), [`cefda60a603d60cc35e4697c36e751cca411e6bb`](https://github.com/vercel/vercel/commit/cefda60a603d60cc35e4697c36e751cca411e6bb), [`003866c4c93e893edb7a5e89b519fc8879b370c0`](https://github.com/vercel/vercel/commit/003866c4c93e893edb7a5e89b519fc8879b370c0)]:
+  - @vercel/remix-builder@5.1.0
+  - @vercel/build-utils@9.1.0
+  - @vercel/node@5.0.3
+  - @vercel/python@4.7.1
+  - @vercel/next@4.4.3
+  - @vercel/ruby@2.2.0
+  - @vercel/static-build@2.5.42
+
 ## 39.3.0
 
 ### Minor Changes

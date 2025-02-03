@@ -77,21 +77,22 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (deprecated) {
-    const upcomingDeprecationVersionsList = [];
+    const upcomingDiscontinuedVersionsList = [];
 
     for (const nodeVersion of NODE_VERSIONS) {
-      if (
-        nodeVersion.discontinueDate &&
-        nodeVersion.discontinueDate.valueOf() > Date.now()
-      ) {
-        upcomingDeprecationVersionsList.push(nodeVersion.range);
+      // If there are scenarios where we will be deprecating a version
+      // without knowing the discontinue date
+      // Then we'll want to consider adding a `deprecationDate` field to the nodeVersion type
+      const upcomingDiscontinueDate = nodeVersion.state === 'deprecated';
+      if (upcomingDiscontinueDate) {
+        upcomingDiscontinuedVersionsList.push(nodeVersion.range);
       }
     }
 
     output.warn(
-      `The following Node.js versions will be deprecated soon: ${upcomingDeprecationVersionsList.join(
+      `The following Node.js versions are deprecated: ${upcomingDiscontinuedVersionsList.join(
         ', '
-      )}. Please upgrade your projects immediately.`
+      )} and will be discontinued soon. Please upgrade your projects immediately.`
     );
     output.log(
       'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
@@ -109,14 +110,18 @@ export default async function list(
   if (projectList.length > 0) {
     const tablePrint = table(
       [
-        ['Project Name', 'Latest Production URL', 'Updated'].map(header =>
-          chalk.bold(chalk.cyan(header))
-        ),
+        [
+          'Project Name',
+          'Latest Production URL',
+          'Updated',
+          'Node Version',
+        ].map(header => chalk.bold(chalk.cyan(header))),
         ...projectList.flatMap(project => [
           [
             chalk.bold(project.name),
             getLatestProdUrl(project),
             chalk.gray(ms(Date.now() - project.updatedAt)),
+            project.nodeVersion ?? '',
           ],
         ]),
       ],

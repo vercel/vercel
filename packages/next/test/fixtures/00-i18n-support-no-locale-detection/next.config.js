@@ -2,6 +2,34 @@ module.exports = {
   generateBuildId() {
     return 'testing-build-id';
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        has: [
+          {
+            type: 'header',
+            key: 'x-redirect-me',
+          },
+        ],
+        destination: '/fr-BE',
+        permanent: false,
+        locale: false,
+      },
+      {
+        source: '/:path+',
+        has: [
+          {
+            type: 'header',
+            key: 'x-redirect-me',
+          },
+        ],
+        destination: '/fr-BE/:path+',
+        permanent: false,
+        locale: false,
+      },
+    ];
+  },
   i18n: {
     localeDetection: false,
     locales: ['nl-NL', 'nl-BE', 'nl', 'fr-BE', 'fr', 'en-US', 'en'],
