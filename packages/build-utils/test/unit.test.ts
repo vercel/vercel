@@ -50,7 +50,9 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should only match supported node versions, otherwise throw an error', async () => {
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
     'major',
     16
