@@ -585,13 +585,6 @@ export function localizeDynamicRoutes(
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
-      route.src = route.src.replace(
-        '^',
-        `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-          isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
-      );
-
       // when locale detection is disabled we don't add the default locale
       // to the path while resolving routes so we need to be able to match
       // without it being present
@@ -607,6 +600,13 @@ export function localizeDynamicRoutes(
         );
         nonLocalePrefixedRoutes.push(nonLocalePrefixedRoute);
       }
+
+      route.src = route.src.replace(
+        '^',
+        `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
+          isLocalePrefixed ? '<nextLocale>' : ':'
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+      );
 
       if (
         isLocalePrefixed &&
