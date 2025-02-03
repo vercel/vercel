@@ -1,5 +1,31 @@
 # @vercel/next
 
+## 4.5.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 4.4.5
+
+### Patch Changes
+
+- Add test case for locale false rewrite ([#12959](https://github.com/vercel/vercel/pull/12959))
+
+## 4.4.4
+
+### Patch Changes
+
+- flag behavior to defer defaultLocale rewrite ([#12941](https://github.com/vercel/vercel/pull/12941))
+
+## 4.4.3
+
+### Patch Changes
+
+- ensure defaultLocale rewrite doesn't conflict with user-defined redirects ([#12916](https://github.com/vercel/vercel/pull/12916))
+
+- Added headers for user-supplied rewrites ([#12847](https://github.com/vercel/vercel/pull/12847))
+
 ## 4.4.2
 
 ### Patch Changes
