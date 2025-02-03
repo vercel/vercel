@@ -44,7 +44,7 @@ module.exports = function setupTests(groupIndex) {
     '53-native-gems',
 
     // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-    'build 26-ejected-cra',
+    '26-ejected-cra',
     '12-create-react-app',
     '02-cowsay-sh',
     '48-nuxt-without-framework',
