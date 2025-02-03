@@ -559,6 +559,7 @@ export function localizeDynamicRoutes(
   inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
   const finalDynamicRoutes: RouteWithSrc[] = [];
+  const nonLocalePrefixedRoutes: RouteWithSrc[] = [];
 
   for (const route of dynamicRoutes as RouteWithSrc[]) {
     // i18n is already handled for middleware
@@ -584,6 +585,13 @@ export function localizeDynamicRoutes(
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
+      route.src = route.src.replace(
+        '^',
+        `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
+          isLocalePrefixed ? '<nextLocale>' : ':'
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+      );
+
       // when locale detection is disabled we don't add the default locale
       // to the path while resolving routes so we need to be able to match
       // without it being present
@@ -597,15 +605,8 @@ export function localizeDynamicRoutes(
           '^',
           `^${dynamicPrefix || ''}[/]?`
         );
-        finalDynamicRoutes.push(nonLocalePrefixedRoute);
+        nonLocalePrefixedRoutes.push(nonLocalePrefixedRoute);
       }
-
-      route.src = route.src.replace(
-        '^',
-        `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
-          isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
-      );
 
       if (
         isLocalePrefixed &&
@@ -623,6 +624,10 @@ export function localizeDynamicRoutes(
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
     }
     finalDynamicRoutes.push(route);
+  }
+
+  if (nonLocalePrefixedRoutes.length > 0) {
+    finalDynamicRoutes.push(...nonLocalePrefixedRoutes);
   }
 
   return finalDynamicRoutes;
