@@ -222,6 +222,8 @@ describe('frameworks', () => {
     'sanity-v3',
     'scully',
     'solidstart',
+    'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
   ];
 
   // TODO: remove this after "react-router" template is added
