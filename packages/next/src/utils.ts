@@ -559,6 +559,7 @@ export function localizeDynamicRoutes(
   inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
   const finalDynamicRoutes: RouteWithSrc[] = [];
+  const nonLocalePrefixedRoutes: RouteWithSrc[] = [];
 
   for (const route of dynamicRoutes as RouteWithSrc[]) {
     // i18n is already handled for middleware
@@ -597,14 +598,18 @@ export function localizeDynamicRoutes(
           '^',
           `^${dynamicPrefix || ''}[/]?`
         );
-        finalDynamicRoutes.push(nonLocalePrefixedRoute);
+        nonLocalePrefixedRoutes.push(nonLocalePrefixedRoute);
       }
 
       route.src = route.src.replace(
         '^',
         `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
           isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})${
+          // the locale is not optional on this path with the skip default
+          // locale rewrite flag otherwise can cause double slash in dest
+          skipDefaultLocaleRewrite ? '' : '?'
+        }`
       );
 
       if (
@@ -623,6 +628,10 @@ export function localizeDynamicRoutes(
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
     }
     finalDynamicRoutes.push(route);
+  }
+
+  if (nonLocalePrefixedRoutes.length > 0) {
+    finalDynamicRoutes.push(...nonLocalePrefixedRoutes);
   }
 
   return finalDynamicRoutes;
