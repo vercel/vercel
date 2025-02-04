@@ -12,7 +12,6 @@ const fixturesPath = join(__dirname, 'fixtures-legacy');
 
 const skipped: string[] = [
   // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
-  '04-with-npm9-linked',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

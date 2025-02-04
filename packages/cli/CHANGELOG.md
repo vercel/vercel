@@ -1,5 +1,16 @@
 # vercel
 
+## 41.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
+### Patch Changes
+
+- Updated dependencies [[`e6284c54132c4e0ec06e93331e79328a86a8b735`](https://github.com/vercel/vercel/commit/e6284c54132c4e0ec06e93331e79328a86a8b735), [`322044b064a346cd4c25c12e725906ffbf445c0c`](https://github.com/vercel/vercel/commit/322044b064a346cd4c25c12e725906ffbf445c0c)]:
+  - @vercel/remix-builder@5.2.1
+
 ## 40.1.0
 
 ### Minor Changes

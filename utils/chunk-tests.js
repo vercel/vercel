@@ -56,17 +56,6 @@ const runnersMap = new Map([
     },
   ],
   [
-    'test-next-local-legacy',
-    {
-      min: 1,
-      max: 5,
-      runners: ['ubuntu-latest'],
-
-      testScript: 'test',
-      nodeVersions: ['16'],
-    },
-  ],
-  [
     'test-dev',
     {
       min: 1,
