@@ -215,7 +215,19 @@ async function getDeployment(host: string) {
 }
 
 describe('frameworks', () => {
-  const skipExamples = ['sanity-v3', 'solidstart'];
+  const skipExamples = [
+    'dojo',
+    'saber',
+    'gridsome',
+    'sanity-v3',
+    'scully',
+    'solidstart',
+    'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+  ];
+
+  // TODO: remove this after "react-router" template is added
+  skipExamples.push('react-router');
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');

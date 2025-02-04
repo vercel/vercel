@@ -156,7 +156,7 @@ async function getChunkedTests() {
           min,
           max,
           testScript,
-          nodeVersions = ['16'],
+          nodeVersions = ['18'],
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
