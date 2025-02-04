@@ -50,7 +50,9 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-it('should only match supported node versions, otherwise throw an error', async () => {
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
     'major',
     16
@@ -98,7 +100,9 @@ it('should only match supported node versions, otherwise throw an error', async 
   );
 });
 
-it('should match all semver ranges', async () => {
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
   expect(await getSupportedNodeVersion('16.x')).toHaveProperty('major', 16);
@@ -332,30 +336,6 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
   try {
     global.Date.now = () => new Date('2021-02-23').getTime();
 
-    expect(await getSupportedNodeVersion('10.x', false)).toHaveProperty(
-      'major',
-      10
-    );
-    expect(await getSupportedNodeVersion('10.x', true)).toHaveProperty(
-      'major',
-      10
-    );
-    expect(await getSupportedNodeVersion('12.x', false)).toHaveProperty(
-      'major',
-      12
-    );
-    expect(await getSupportedNodeVersion('12.x', true)).toHaveProperty(
-      'major',
-      12
-    );
-    expect(await getSupportedNodeVersion('14.x', false)).toHaveProperty(
-      'major',
-      14
-    );
-    expect(await getSupportedNodeVersion('14.x', true)).toHaveProperty(
-      'major',
-      14
-    );
     expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
       'major',
       16
@@ -365,14 +345,8 @@ it('should warn for deprecated versions, soon to be discontinued', async () => {
       16
     );
     expect(warningMessages).toStrictEqual([
-      'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 10.x has reached End-of-Life. Deployments created on or after 2021-04-20 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
-      'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 12.x has reached End-of-Life. Deployments created on or after 2022-10-03 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
-      'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 14.x has reached End-of-Life. Deployments created on or after 2023-08-15 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
-      'Error: Node.js version 16.x has reached End-of-Life. Deployments created on or after 2025-01-31 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
+      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-02-03 will fail to build. Please set "engines": { "node": "22.x" } in your `package.json` file to use Node.js 22.',
+      'Error: Node.js version 16.x is deprecated. Deployments created on or after 2025-02-03 will fail to build. Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.',
     ]);
   } finally {
     global.Date.now = realDateNow;

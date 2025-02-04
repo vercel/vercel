@@ -1,6 +1,6 @@
 {
   "name": "@vercel/client",
-  "version": "13.5.4",
+  "version": "15.0.0",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "homepage": "https://vercel.com",
@@ -22,7 +22,7 @@
     "type-check": "tsc --noEmit"
   },
   "engines": {
-    "node": ">= 16"
+    "node": ">= 18"
   },
   "devDependencies": {
     "@types/async-retry": "1.4.5",
@@ -39,9 +39,9 @@
     "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "9.0.1",
+    "@vercel/build-utils": "9.2.0",
     "@vercel/error-utils": "2.0.3",
-    "@vercel/routing-utils": "5.0.0",
+    "@vercel/routing-utils": "5.0.2",
     "async-retry": "1.2.3",
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",

@@ -203,6 +203,9 @@ export async function serverBuild({
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
   );
+  const skipDefaultLocaleRewrite = Boolean(
+    process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -1960,36 +1963,42 @@ export async function serverBuild({
                 ]
               : []),
 
-            {
-              src: `^${path.posix.join('/', entryDirectory)}$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}`,
-              continue: true,
-            },
-
-            // Auto-prefix non-locale path with default locale
-            // note for prerendered pages this will cause
-            // x-now-route-matches to contain the path minus the locale
-            // e.g. for /de/posts/[slug] x-now-route-matches would have
-            // 1=posts%2Fpost-1
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                '/'
-              )}(?!(?:_next/.*|${i18n.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})(?:/.*|$))(.*)$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}/$1`,
-              continue: true,
-            },
+            // We only want to add these rewrites before user redirects
+            // when `skipDefaultLocaleRewrite` is not flagged on
+            // and when localeDetection is enabled.
+            ...(!skipDefaultLocaleRewrite || i18n.localeDetection !== false
+              ? [
+                  {
+                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}`,
+                    continue: true,
+                  },
+                  // Auto-prefix non-locale path with default locale
+                  // note for prerendered pages this will cause
+                  // x-now-route-matches to contain the path minus the locale
+                  // e.g. for /de/posts/[slug] x-now-route-matches would have
+                  // 1=posts%2Fpost-1
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?!(?:_next/.*|${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(?:/.*|$))(.*)$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}/$1`,
+                    continue: true,
+                  },
+                ]
+              : []),
           ]
         : []),
 
@@ -2334,6 +2343,41 @@ export async function serverBuild({
       // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
+            // When `skipDefaultLocaleRewrite` is flagged on and localeDetection is disabled,
+            // we only want to add the rewrite as the fallback case once routing is complete.
+            ...(skipDefaultLocaleRewrite && i18n.localeDetection === false
+              ? [
+                  {
+                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}`,
+                    check: true,
+                  },
+                  // Auto-prefix non-locale path with default locale
+                  // note for prerendered pages this will cause
+                  // x-now-route-matches to contain the path minus the locale
+                  // e.g. for /de/posts/[slug] x-now-route-matches would have
+                  // 1=posts%2Fpost-1
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?!(?:_next/.*|${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(?:/.*|$))(.*)$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}/$1`,
+                    check: true,
+                  },
+                ]
+              : []),
             {
               src: path.posix.join(
                 '/',

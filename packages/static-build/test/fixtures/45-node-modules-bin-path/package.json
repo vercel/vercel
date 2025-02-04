@@ -7,15 +7,10 @@
     "dev": "next",
     "build": "next build"
   },
-  "author": "Andy",
-  "private": true,
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
-    "next": "9.1.5",
-    "react": "16.12.0",
-    "react-dom": "16.12.0"
+    "next": "^15.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "ignoreNextjsUpdates": true
 }
