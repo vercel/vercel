@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 15.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
 ## 14.0.1
 
 ### Patch Changes
