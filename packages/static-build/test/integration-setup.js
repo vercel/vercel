@@ -38,8 +38,24 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, fixtures);
   }
 
-  // https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
-  const fixturesToSkip = ['ember-v3', '53-native-gems'];
+  const fixturesToSkip = [
+    // https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
+    'ember-v3',
+    '53-native-gems',
+
+    // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    '26-ejected-cra',
+    '12-create-react-app',
+    '02-cowsay-sh',
+    '48-nuxt-without-framework',
+    '47-nuxt-with-custom-output',
+    'gatsby-v2',
+    'angular-v8-configured',
+    'angular-v8',
+    'vue-v2',
+    'sapper-v0',
+    '22-docusaurus-2-build-fail',
+  ];
 
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {

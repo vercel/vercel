@@ -10,7 +10,7 @@ import classnames from 'classnames';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import withBaseUrl from '@docusaurus/withBaseUrl';
+import { useBaseUrlUtils } from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 const features = [
@@ -49,6 +49,7 @@ const features = [
 function Home() {
   const context = useDocusaurusContext();
   const { siteConfig = {} } = context;
+  const { withBaseUrl } = useBaseUrlUtils();
   return (
     <Layout
       title={`Hello from ${siteConfig.title}`}

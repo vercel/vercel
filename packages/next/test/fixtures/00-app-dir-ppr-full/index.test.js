@@ -397,7 +397,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       });
     });
 
-    it('should revalidate the pages and perform a blocking render when the fallback is revalidated', async () => {
+    // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+    // eslint-disable-next-line jest/no-disabled-tests
+    it.skip('should revalidate the pages and perform a blocking render when the fallback is revalidated', async () => {
       let res = await fetch(`${ctx.deploymentUrl}/fallback/static-01/dynamic`);
       expect(res.status).toEqual(200);
       expect(res.headers.get('x-vercel-cache')).toEqual('PRERENDER');

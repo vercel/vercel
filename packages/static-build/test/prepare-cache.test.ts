@@ -3,7 +3,7 @@ import path from 'path';
 import { prepareCache } from '../src';
 
 describe('prepareCache()', () => {
-  test('should cache node_modules and .shadow-cljs', async () => {
+  test('should cache node_modules and .shadow-cljs and .yarn/cache', async () => {
     const files = await prepareCache({
       config: { zeroConfig: true },
       workPath: path.resolve(__dirname, './cache-fixtures/default'),
@@ -13,6 +13,7 @@ describe('prepareCache()', () => {
 
     expect(files['node_modules/file']).toBeDefined();
     expect(files['.shadow-cljs/file5']).toBeDefined();
+    expect(files['.yarn/cache/file']).toBeDefined();
     expect(files['index.js']).toBeUndefined();
   });
 
