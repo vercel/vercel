@@ -2533,8 +2533,7 @@ export async function serverBuild({
       rscPrefetchHeader &&
       prefetchSegmentHeader &&
       prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix &&
-      !isAppPPREnabled
+      prefetchSegmentSuffix
         ? [
             {
               src: path.posix.join(
