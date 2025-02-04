@@ -1,8 +1,4 @@
 ---
-"vercel": major
-"@vercel/client": major
-"@vercel/functions": major
-"@vercel/node": major
 ---
 
-[cli] bump minimum node version to 18
+Bump minimum node version for running the project to 18 
