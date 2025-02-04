@@ -241,14 +241,13 @@ export const frameworks = [
   {
     name: 'React Router',
     slug: 'react-router',
-    // TODO: uncomment this after "react-router" template is added
-    //demo: 'https://react-router-v7-template.vercel.app',
+    demo: 'https://react-router-v7-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/react-router.svg',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/react-router-dark.svg',
     tagline: 'Declarative routing for React',
     description:
-      'A user‑obsessed, standards‑focused, multi‑strategy router you can deploy anywhere.',
+      'A user-obsessed, standards-focused, multi-strategy router you can deploy anywhere.',
     website: 'https://reactrouter.com',
     sort: 7,
     supersedes: ['hydrogen', 'vite'],
