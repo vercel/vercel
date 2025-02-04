@@ -605,7 +605,11 @@ export function localizeDynamicRoutes(
         '^',
         `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
           isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})${
+          // the locale is not optional on this path with the skip default
+          // locale rewrite flag otherwise can cause double slash in dest
+          skipDefaultLocaleRewrite ? '' : '?'
+        }`
       );
 
       if (
