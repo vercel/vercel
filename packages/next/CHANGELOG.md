@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.5.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 4.4.5
+
+### Patch Changes
+
+- Add test case for locale false rewrite ([#12959](https://github.com/vercel/vercel/pull/12959))
+
 ## 4.4.4
 
 ### Patch Changes
