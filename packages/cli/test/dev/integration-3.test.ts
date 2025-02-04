@@ -50,7 +50,9 @@ test('[vercel dev] 02-angular-node', async () => {
   stderr.includes('@now/build-utils@latest');
 });
 
-test(
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
     '03-aurelia',
@@ -174,7 +176,9 @@ test(
   )
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 16-vue-node',
   testFixtureStdio(
     '16-vue-node',
@@ -190,7 +194,9 @@ test(
   )
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 17-vuepress-node',
   testFixtureStdio(
     '17-vuepress-node',
@@ -267,7 +273,9 @@ test(
   )
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 19-mithril',
   testFixtureStdio(
     '19-mithril',
@@ -311,7 +319,9 @@ test(
   )
 );
 
-test(
+// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip(
   '[vercel dev] 23-docusaurus',
   testFixtureStdio(
     '23-docusaurus',
