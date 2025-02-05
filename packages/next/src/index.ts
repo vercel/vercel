@@ -27,6 +27,10 @@ import {
   BuildResultV2Typical as BuildResult,
   BuildResultBuildOutput,
   getInstalledPackageVersion,
+  Span,
+  detectPackageManager,
+  BUILDER_INSTALLER_STEP,
+  BUILDER_COMPILE_STEP,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -199,6 +203,9 @@ function isLegacyNext(nextVersion: string) {
 
 export const build: BuildV2 = async buildOptions => {
   let { workPath, repoRootPath } = buildOptions;
+  const buildSpan =
+    buildOptions.span ?? new Span({ name: BUILDER_COMPILE_STEP });
+
   const {
     files,
     entrypoint,
@@ -336,19 +343,48 @@ export const build: BuildV2 = async buildOptions => {
     await writeNpmRc(entryPath, process.env.NPM_AUTH_TOKEN);
   }
 
-  if (typeof installCommand === 'string') {
-    if (installCommand.trim()) {
-      console.log(`Running "install" command: \`${installCommand}\`...`);
+  const { detectedPackageManager } =
+    detectPackageManager(cliType, lockfileVersion) ?? {};
 
-      await execCommand(installCommand, {
-        ...spawnOpts,
-        cwd: entryPath,
+  const trimmedInstallCommand = installCommand?.trim();
+
+  // If we don't have an install command defined then we fall back
+  // to zero config install, otherwise we run the user generated install command
+  const shouldRunInstallCommand =
+    // Case 1: We have a zero config install
+    typeof trimmedInstallCommand === 'undefined' ||
+    // Case 1: We have a install command which is non zero length
+    Boolean(trimmedInstallCommand);
+
+  buildSpan.setAttributes({
+    install: JSON.stringify(shouldRunInstallCommand),
+  });
+
+  if (shouldRunInstallCommand) {
+    await buildSpan
+      .child(BUILDER_INSTALLER_STEP, {
+        cliType,
+        lockfileVersion: lockfileVersion?.toString(),
+        packageJsonPackageManager,
+        detectedPackageManager,
+        installCommand: trimmedInstallCommand,
+      })
+      .trace(async () => {
+        if (typeof trimmedInstallCommand === 'string') {
+          console.log(
+            `Running "install" command: \`${trimmedInstallCommand}\`...`
+          );
+
+          await execCommand(trimmedInstallCommand, {
+            ...spawnOpts,
+            cwd: entryPath,
+          });
+        } else {
+          await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+        }
       });
-    } else {
-      console.log(`Skipping "install" command...`);
-    }
   } else {
-    await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+    console.log(`Skipping "install" command...`);
   }
 
   if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
@@ -460,36 +496,43 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  if (buildCommand) {
-    // Add `node_modules/.bin` to PATH
-    const nodeBinPaths = getNodeBinPaths({
-      start: entryPath,
-      base: repoRootPath,
-    });
-    const nodeBinPath = nodeBinPaths.join(path.delimiter);
-    env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+  await buildSpan
+    .child(BUILDER_COMPILE_STEP, {
+      buildCommand,
+      buildScriptName,
+    })
+    .trace(async () => {
+      if (buildCommand) {
+        // Add `node_modules/.bin` to PATH
+        const nodeBinPaths = getNodeBinPaths({
+          start: entryPath,
+          base: repoRootPath,
+        });
+        const nodeBinPath = nodeBinPaths.join(path.delimiter);
+        env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
-    // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
-    if (!env.YARN_NODE_LINKER) {
-      env.YARN_NODE_LINKER = 'node-modules';
-    }
+        // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+        if (!env.YARN_NODE_LINKER) {
+          env.YARN_NODE_LINKER = 'node-modules';
+        }
 
-    debug(
-      `Added "${nodeBinPath}" to PATH env because a build command was used.`
-    );
+        debug(
+          `Added "${nodeBinPath}" to PATH env because a build command was used.`
+        );
 
-    console.log(`Running "${buildCommand}"`);
-    await execCommand(buildCommand, {
-      ...spawnOpts,
-      cwd: entryPath,
-      env,
+        console.log(`Running "${buildCommand}"`);
+        await execCommand(buildCommand, {
+          ...spawnOpts,
+          cwd: entryPath,
+          env,
+        });
+      } else if (buildScriptName) {
+        await runPackageJsonScript(entryPath, buildScriptName, {
+          ...spawnOpts,
+          env,
+        });
+      }
     });
-  } else if (buildScriptName) {
-    await runPackageJsonScript(entryPath, buildScriptName, {
-      ...spawnOpts,
-      env,
-    });
-  }
   debug('build command exited');
 
   if (buildCallback) {
