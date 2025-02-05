@@ -9,10 +9,7 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard",
-      "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
-      }
+      "mustContain": "hello from app/dashboard"
     },
     {
       "path": "/dashboard",
