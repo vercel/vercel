@@ -1074,9 +1074,6 @@ importers:
       '@vercel/build-utils':
         specifier: 9.2.0
         version: link:../build-utils
-      '@vercel/routing-utils':
-        specifier: 5.0.2
-        version: link:../routing-utils
       esbuild:
         specifier: 0.14.47
         version: 0.14.47
@@ -1102,6 +1099,9 @@ importers:
       '@types/react':
         specifier: 18.0.26
         version: 18.0.26
+      '@vercel/routing-utils':
+        specifier: 5.0.2
+        version: link:../routing-utils
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1532,9 +1532,6 @@ importers:
       '@vercel/nft':
         specifier: 0.27.10
         version: 0.27.10
-      '@vercel/routing-utils':
-        specifier: 5.0.2
-        version: link:../routing-utils
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1557,6 +1554,9 @@ importers:
       '@vercel/build-utils':
         specifier: 9.2.0
         version: link:../build-utils
+      '@vercel/routing-utils':
+        specifier: 5.0.2
+        version: link:../routing-utils
       execa:
         specifier: 3.2.0
         version: 3.2.0
