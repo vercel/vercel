@@ -3,7 +3,6 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import { NODE_VERSIONS } from '@vercel/build-utils';
 import { ProjectListTelemetryClient } from '../../util/telemetry/commands/project/list';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
@@ -75,31 +74,6 @@ export default async function list(
   output.stopSpinner();
 
   const elapsed = ms(Date.now() - start);
-
-  if (deprecated) {
-    const upcomingDiscontinuedVersionsList = [];
-
-    for (const nodeVersion of NODE_VERSIONS) {
-      // If there are scenarios where we will be deprecating a version
-      // without knowing the discontinue date
-      // Then we'll want to consider adding a `deprecationDate` field to the nodeVersion type
-      const upcomingDiscontinueDate = nodeVersion.state === 'deprecated';
-      if (upcomingDiscontinueDate) {
-        upcomingDiscontinuedVersionsList.push(nodeVersion.range);
-      }
-    }
-
-    if (upcomingDiscontinuedVersionsList) {
-      output.warn(
-        `The following Node.js versions are deprecated: ${upcomingDiscontinuedVersionsList.join(
-          ', '
-        )} and will be discontinued soon. Please upgrade your projects immediately.`
-      );
-      output.log(
-        'For more information visit: https://vercel.com/docs/functions/serverless-functions/runtimes/node-js#node.js-version'
-      );
-    }
-  }
 
   output.log(
     `${
