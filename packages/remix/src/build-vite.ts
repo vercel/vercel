@@ -1,7 +1,7 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
-import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
+import { nodeFileTrace } from '@vercel/nft';
 import {
   BuildResultV2Typical,
   debug,
@@ -139,25 +139,34 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
     config,
   }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
     if (config.runtime === 'edge') {
-      return createRenderEdgeFunction(
+      return createRenderEdgeFunction({
         entrypointDir,
         rootDir,
         serverBuildPath,
         serverEntryPoint,
         frameworkVersion,
-        config
-      );
+        config,
+        traceWarningTag: this.edge.traceWarningTag,
+        sourceSearchValue: this.sourceSearchValue,
+        serverSourcePromise: this.edge.serverSourcePromise,
+        frameworkSlug: this.slug,
+      });
     }
 
-    return createRenderNodeFunction(
+    return createRenderNodeFunction({
       nodeVersion,
       entrypointDir,
       rootDir,
       serverBuildPath,
       serverEntryPoint,
       frameworkVersion,
-      config
-    );
+      config,
+      traceWarningTag: this.node.traceWarningTag,
+      sourceSearchValue: this.sourceSearchValue,
+      serverSourcePromise: this.node.serverSourcePromise,
+      useWebApi: this.node.options.useWebApi,
+      frameworkSlug: this.slug,
+    });
   },
 };
 
@@ -187,15 +196,35 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
     frameworkVersion,
     config,
   }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
-    return createRenderReactRouterFunction(
+    if (config.runtime === 'edge') {
+      return createRenderEdgeFunction({
+        entrypointDir,
+        rootDir,
+        serverBuildPath,
+        serverEntryPoint,
+        frameworkVersion,
+        config,
+        traceWarningTag: this.edge.traceWarningTag,
+        sourceSearchValue: this.sourceSearchValue,
+        serverSourcePromise: this.edge.serverSourcePromise,
+        frameworkSlug: this.slug,
+      });
+    }
+
+    return createRenderNodeFunction({
       nodeVersion,
       entrypointDir,
       rootDir,
       serverBuildPath,
       serverEntryPoint,
       frameworkVersion,
-      config
-    );
+      config,
+      traceWarningTag: this.node.traceWarningTag,
+      sourceSearchValue: this.sourceSearchValue,
+      serverSourcePromise: this.node.serverSourcePromise,
+      useWebApi: this.node.options.useWebApi,
+      frameworkSlug: this.slug,
+    });
   },
 };
 
@@ -525,98 +554,97 @@ const COMMON_NODE_FUNCTION_OPTIONS = {
 
 const COMMON_EDGE_FUNCTION_OPTIONS = { deploymentTarget: 'v8-worker' } as const;
 
-async function createRenderReactRouterFunction(
-  nodeVersion: NodeVersion,
-  entrypointDir: string,
-  rootDir: string,
-  serverBuildPath: string,
-  serverEntryPoint: string | undefined,
-  frameworkVersion: string,
-  config: /*TODO: ResolvedNodeRouteConfig*/ any
-): Promise<EdgeFunction | NodejsLambda> {
-  const isEdgeFunction = config.runtime === 'edge';
-
+async function createRenderEdgeFunction({
+  rootDir,
+  serverBuildPath,
+  serverEntryPoint,
+  entrypointDir,
+  config,
+  frameworkVersion,
+  sourceSearchValue,
+  serverSourcePromise,
+  frameworkSlug,
+  traceWarningTag,
+}: {
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  entrypointDir: string;
+  config: any;
+  frameworkVersion: string;
+  sourceSearchValue: string;
+  serverSourcePromise: Promise<string>;
+  useWebApi?: boolean;
+  frameworkSlug: string;
+  traceWarningTag: string;
+}) {
   const { handler, handlerPath } = await determineHandler({
     rootDir,
     serverBuildPath,
     serverEntryPoint,
-    serverSourcePromise:
-      // React Router has the same promise for both edge and node
-      // so this chooses edge out of convenience
-      REACT_ROUTER_FRAMEWORK_SETTINGS.edge.serverSourcePromise,
-    sourceSearchValue: REACT_ROUTER_FRAMEWORK_SETTINGS.sourceSearchValue,
+    serverSourcePromise,
+    sourceSearchValue,
   });
 
   // Trace the handler with `@vercel/nft`
-  let conditions: NodeFileTraceOptions['conditions'];
-  let readFile: NodeFileTraceOptions['readFile'];
-  if (isEdgeFunction) {
-    conditions = EDGE_TRACE_CONDITIONS;
-    readFile = edgeReadFile;
-  }
   const trace = await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
-    conditions,
-    readFile,
+    conditions: EDGE_TRACE_CONDITIONS,
+    readFile: edgeReadFile,
   });
 
-  // React Router has the same warning tag for both edge and node
-  // so this chooses edge out of convenience
-  logNftWarnings(
-    trace.warnings,
-    REACT_ROUTER_FRAMEWORK_SETTINGS.edge.traceWarningTag
-  );
+  logNftWarnings(trace.warnings, traceWarningTag);
 
   const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
-  let fn: NodejsLambda | EdgeFunction;
-  if (isEdgeFunction) {
-    fn = new EdgeFunction({
-      ...COMMON_EDGE_FUNCTION_OPTIONS,
-      files,
-      entrypoint: handler,
-      regions: config.regions,
-      framework: {
-        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
-        version: frameworkVersion,
-      },
-    });
-  } else {
-    fn = new NodejsLambda({
-      ...COMMON_NODE_FUNCTION_OPTIONS,
-      files,
-      handler,
-      runtime: nodeVersion.runtime,
-      useWebApi: REACT_ROUTER_FRAMEWORK_SETTINGS.node.options.useWebApi,
-      regions: config.regions,
-      memory: config.memory,
-      maxDuration: config.maxDuration,
-      framework: {
-        slug: REACT_ROUTER_FRAMEWORK_SETTINGS.slug,
-        version: frameworkVersion,
-      },
-    });
-  }
+  const fn = new EdgeFunction({
+    ...COMMON_EDGE_FUNCTION_OPTIONS,
+    files,
+    entrypoint: handler,
+    regions: config.regions,
+    framework: {
+      slug: frameworkSlug,
+      version: frameworkVersion,
+    },
+  });
 
   return fn;
 }
 
-async function createRenderNodeFunction(
-  nodeVersion: NodeVersion,
-  entrypointDir: string,
-  rootDir: string,
-  serverBuildPath: string,
-  serverEntryPoint: string | undefined,
-  frameworkVersion: string,
-  config: /*TODO: ResolvedNodeRouteConfig*/ any
-): Promise<NodejsLambda> {
+async function createRenderNodeFunction({
+  rootDir,
+  serverBuildPath,
+  serverEntryPoint,
+  entrypointDir,
+  nodeVersion,
+  config,
+  frameworkVersion,
+  sourceSearchValue,
+  serverSourcePromise,
+  useWebApi,
+  frameworkSlug,
+  traceWarningTag,
+}: {
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  entrypointDir: string;
+  nodeVersion: NodeVersion;
+  config: any;
+  frameworkVersion: string;
+  sourceSearchValue: string;
+  serverSourcePromise: Promise<string>;
+  useWebApi?: boolean;
+  frameworkSlug: string;
+  traceWarningTag: string;
+}) {
   const { handler, handlerPath } = await determineHandler({
     rootDir,
     serverBuildPath,
     serverEntryPoint,
-    serverSourcePromise: REMIX_FRAMEWORK_SETTINGS.node.serverSourcePromise,
-    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
+    serverSourcePromise,
+    sourceSearchValue,
   });
 
   // Trace the handler with `@vercel/nft`
@@ -625,7 +653,7 @@ async function createRenderNodeFunction(
     processCwd: entrypointDir,
   });
 
-  logNftWarnings(trace.warnings, REMIX_FRAMEWORK_SETTINGS.node.traceWarningTag);
+  logNftWarnings(trace.warnings, traceWarningTag);
 
   const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
 
@@ -637,51 +665,9 @@ async function createRenderNodeFunction(
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
-    useWebApi: REMIX_FRAMEWORK_SETTINGS.node.options.useWebApi,
+    useWebApi,
     framework: {
-      slug: REMIX_FRAMEWORK_SETTINGS.slug,
-      version: frameworkVersion,
-    },
-  });
-
-  return fn;
-}
-
-async function createRenderEdgeFunction(
-  entrypointDir: string,
-  rootDir: string,
-  serverBuildPath: string,
-  serverEntryPoint: string | undefined,
-  frameworkVersion: string,
-  config: /* TODO: ResolvedEdgeRouteConfig*/ any
-): Promise<EdgeFunction> {
-  const { handler, handlerPath } = await determineHandler({
-    rootDir,
-    serverBuildPath,
-    serverEntryPoint,
-    serverSourcePromise: REMIX_FRAMEWORK_SETTINGS.edge.serverSourcePromise,
-    sourceSearchValue: REMIX_FRAMEWORK_SETTINGS.sourceSearchValue,
-  });
-
-  // Trace the handler with `@vercel/nft`
-  const trace = await nodeFileTrace([handlerPath], {
-    base: rootDir,
-    processCwd: entrypointDir,
-    conditions: EDGE_TRACE_CONDITIONS,
-    readFile: edgeReadFile,
-  });
-
-  logNftWarnings(trace.warnings, REMIX_FRAMEWORK_SETTINGS.edge.traceWarningTag);
-
-  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
-
-  const fn = new EdgeFunction({
-    ...COMMON_EDGE_FUNCTION_OPTIONS,
-    files,
-    entrypoint: handler,
-    regions: config.regions,
-    framework: {
-      slug: REMIX_FRAMEWORK_SETTINGS.slug,
+      slug: frameworkSlug,
       version: frameworkVersion,
     },
   });
