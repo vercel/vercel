@@ -387,7 +387,6 @@ This is an abstract enumeration type that is implemented by one of the following
 
 - `nodejs20.x`
 - `nodejs18.x`
-- `nodejs16.x`
 - `java11`
 - `python3.9`
 - `dotnet6`
