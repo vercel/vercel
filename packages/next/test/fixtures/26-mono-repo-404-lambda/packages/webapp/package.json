@@ -1,9 +1,6 @@
 {
   "name": "26-packages-webapp",
   "version": "0.0.1",
-  "engines": {
-    "node": "18.x"
-  },
   "dependencies": {
     "next": "15.2.0-canary.33",
     "react": "^16.8.6",

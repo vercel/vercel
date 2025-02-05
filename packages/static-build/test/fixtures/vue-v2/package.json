@@ -7,9 +7,6 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "core-js": "^2.6.5",
     "vue": "^2.6.10"
@@ -23,9 +20,5 @@
     "plugins": {
       "autoprefixer": {}
     }
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions"
-  ]
+  }
 }
