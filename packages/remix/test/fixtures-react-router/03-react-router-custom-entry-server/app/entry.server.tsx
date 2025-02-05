@@ -17,6 +17,6 @@ export default async function (
         loadContext,
         { nonce },
     );
-    res.setHeader('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
+    res.headers.set('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
     return res;
 }
