@@ -1,7 +1,7 @@
 import { handleRequest } from '@vercel/react-router/entry.server';
 import type { AppLoadContext, EntryContext } from 'react-router';
 
-export default function (
+export default async function (
     request: Request,
     responseStatusCode: number,
     responseHeaders: Headers,
@@ -9,7 +9,7 @@ export default function (
     loadContext?: AppLoadContext,
 ): Promise<Response> {
     const nonce = 'MY_SUPER_SECRET_NONCE';
-    return handleRequest(
+    const res = await handleRequest(
         request,
         responseStatusCode,
         responseHeaders,
@@ -17,4 +17,6 @@ export default function (
         loadContext,
         { nonce },
     );
+    res.setHeader('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
+    return res;
 }
