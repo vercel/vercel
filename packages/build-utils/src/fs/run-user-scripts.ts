@@ -1321,7 +1321,7 @@ export async function runPipInstall(
 export function getScriptName(
   pkg: Pick<PackageJson, 'scripts'> | null | undefined,
   possibleNames: Iterable<string>
-): string | null {
+): string | undefined {
   if (pkg?.scripts) {
     for (const name of possibleNames) {
       if (name in pkg.scripts) {
@@ -1329,7 +1329,7 @@ export function getScriptName(
       }
     }
   }
-  return null;
+  return undefined;
 }
 
 /**
