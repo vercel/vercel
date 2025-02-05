@@ -169,7 +169,6 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
         "content-type": "text/x-component"
       },
       "headers": {
@@ -248,8 +247,7 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "content-type": "text/x-component"
       }
     },
     {
