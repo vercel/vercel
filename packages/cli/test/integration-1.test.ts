@@ -83,9 +83,7 @@ afterAll(async () => {
   }
 });
 
-// https://linear.app/vercel/issue/ZERO-3239/unskip-tests-failing-due-to-corepack-issues
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('[vc build] should build project with corepack and select npm@8.1.0', async () => {
+test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-npm');
@@ -114,9 +112,7 @@ test.skip('[vc build] should build project with corepack and select npm@8.1.0', 
   }
 });
 
-// https://linear.app/vercel/issue/ZERO-3239/unskip-tests-failing-due-to-corepack-issues
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
+test('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
   try {
     process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
     const directory = await setupE2EFixture('vc-build-corepack-pnpm');
