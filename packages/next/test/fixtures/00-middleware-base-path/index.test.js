@@ -71,9 +71,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, 'success');
   });
 
-  // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should revalidate content correctly for optional catch-all route', async () => {
+  it('should revalidate content correctly for optional catch-all route', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/docs/financial`);
       let $ = cheerio.load(await res.text());
