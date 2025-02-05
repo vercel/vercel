@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.6.1
+
+### Patch Changes
+
+- Enable "demo" property for "react-router" framework ([#13008](https://github.com/vercel/vercel/pull/13008))
+
 ## 3.6.0
 
 ### Minor Changes

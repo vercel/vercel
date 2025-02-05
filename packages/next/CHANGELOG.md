@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.5.1
+
+### Patch Changes
+
+- ensure non-locale prefixed route variants come after more specific ones ([#13003](https://github.com/vercel/vercel/pull/13003))
+
 ## 4.5.0
 
 ### Minor Changes

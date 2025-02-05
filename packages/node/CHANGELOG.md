@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.1.1
+
+### Patch Changes
+
+- better path-to-regexp diff logging ([#12962](https://github.com/vercel/vercel/pull/12962))
+
 ## 5.1.0
 
 ### Minor Changes
