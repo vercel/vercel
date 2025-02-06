@@ -25,7 +25,12 @@ import {
   logNftWarnings,
   findConfig,
 } from './utils';
-import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
+import type {
+  BuildResultBuildOutput,
+  BuildV2,
+  Files,
+  NodeVersion,
+} from '@vercel/build-utils';
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 
@@ -334,6 +339,25 @@ export const build: BuildV2 = async ({
         cwd: entrypointFsDirname,
       });
     }
+  }
+
+  // If the Build Command or Framework output files according
+  // to the Build Output v3 API, then stop processing here
+  // since the output is already in its final form.
+  let buildOutputVersion: undefined | number;
+  try {
+    const boaConfigPath = join(entrypointFsDirname, 'output/config.json');
+    const buildResultContents = await fs.readFile(boaConfigPath, 'utf8');
+    const data = JSON.parse(buildResultContents);
+    buildOutputVersion = data.version;
+  } catch (_) {
+    // tolerate for older versions
+  }
+  if (buildOutputVersion) {
+    return {
+      buildOutputPath: join(entrypointFsDirname, 'output'),
+      buildOutputVersion,
+    } as BuildResultBuildOutput;
   }
 
   const buildResultJsonPath = join(
