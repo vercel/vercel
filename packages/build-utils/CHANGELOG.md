@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 9.2.1
+
+### Patch Changes
+
+- Add tracer utility to @vercel/build-utils ([#13013](https://github.com/vercel/vercel/pull/13013))
+
 ## 9.2.0
 
 ### Minor Changes
