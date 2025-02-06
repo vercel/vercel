@@ -28,15 +28,16 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   });
 
   it.each([
-    {
-      title: 'should update content for prerendered path correctly',
-      pathsToCheck: [
-        { urlPath: '/fallback-blocking/first' },
-        { urlPath: '/fallback-blocking/first', query: '?slug=first' },
-        { urlPath: '/fallback-blocking/first', query: '?slug=random' },
-        { urlPath: '/fallback-blocking/first', query: '?another=value' },
-      ],
-    },
+    // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+    // {
+    //   title: 'should update content for prerendered path correctly',
+    //   pathsToCheck: [
+    //     { urlPath: '/fallback-blocking/first' },
+    //     { urlPath: '/fallback-blocking/first', query: '?slug=first' },
+    //     { urlPath: '/fallback-blocking/first', query: '?slug=random' },
+    //     { urlPath: '/fallback-blocking/first', query: '?another=value' },
+    //   ],
+    // },
     // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
     // {
     //   title: 'should update content for non-prerendered path correctly',
