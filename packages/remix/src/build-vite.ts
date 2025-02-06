@@ -1,7 +1,7 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
-import { nodeFileTrace } from '@vercel/nft';
+import { nodeFileTrace, type NodeFileTraceResult } from '@vercel/nft';
 import {
   BuildResultV2Typical,
   debug,
@@ -92,21 +92,52 @@ interface RenderFunctionOptions {
   config: /*TODO: ResolvedNodeRouteConfig*/ any;
 }
 
+const COMMON_NODE_RUNTIME_SETTINGS = {
+  traceFunction: traceNodeFiles,
+  createRuntimeFunction: createNodeFunction,
+};
+
+const COMMON_EDGE_RUNTIME_SETTINGS = {
+  traceFunction: traceEdgeFiles,
+  createRuntimeFunction: createEdgeFunction,
+};
+
+interface FrameworkRuntimeSettings {
+  serverSourcePromise: Promise<string>;
+  traceWarningTag: string;
+  traceFunction: ({
+    handlerPath,
+    rootDir,
+    entrypointDir,
+  }: {
+    handlerPath: string;
+    rootDir: string;
+    entrypointDir: string;
+  }) => Promise<NodeFileTraceResult>;
+}
+
+interface FrameworkEdgeSettings extends FrameworkRuntimeSettings {
+  options?: undefined;
+  createRuntimeFunction: typeof createEdgeFunction;
+}
+
+interface FrameworkNodeSettings extends FrameworkRuntimeSettings {
+  options: { useWebApi?: boolean };
+  createRuntimeFunction: typeof createNodeFunction;
+}
+
 interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
   slug: string;
   sourceSearchValue: string;
-  edge: {
-    serverSourcePromise: Promise<string>;
-    traceWarningTag: string;
-  };
-  node: {
-    serverSourcePromise: Promise<string>;
-    traceWarningTag: string;
-    options: { useWebApi?: boolean };
-  };
+  edge: FrameworkEdgeSettings;
+  node: FrameworkNodeSettings;
+
+  getRuntimeSettings: (
+    runtime: string
+  ) => FrameworkEdgeSettings | FrameworkNodeSettings;
 
   createRenderFunction: (
     options: RenderFunctionOptions
@@ -120,13 +151,22 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   slug: 'remix',
   sourceSearchValue: '@remix-run/dev/server-build',
   edge: {
+    ...COMMON_EDGE_RUNTIME_SETTINGS,
     serverSourcePromise: edgeServerSrcPromise,
     traceWarningTag: '@remix-run/server-runtime',
   },
   node: {
+    ...COMMON_NODE_RUNTIME_SETTINGS,
     serverSourcePromise: nodeServerSrcPromise,
     traceWarningTag: '@remix-run/node',
     options: {},
+  },
+
+  getRuntimeSettings(runtime: string) {
+    if (runtime === 'edge') {
+      return this.edge;
+    }
+    return this.node;
   },
 
   createRenderFunction({
@@ -138,34 +178,17 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
     frameworkVersion,
     config,
   }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
-    if (config.runtime === 'edge') {
-      return createRenderEdgeFunction({
-        entrypointDir,
-        rootDir,
-        serverBuildPath,
-        serverEntryPoint,
-        frameworkVersion,
-        config,
-        traceWarningTag: this.edge.traceWarningTag,
-        sourceSearchValue: this.sourceSearchValue,
-        serverSourcePromise: this.edge.serverSourcePromise,
-        frameworkSlug: this.slug,
-      });
-    }
-
-    return createRenderNodeFunction({
-      nodeVersion,
+    return createRenderFunction({
       entrypointDir,
       rootDir,
       serverBuildPath,
       serverEntryPoint,
       frameworkVersion,
       config,
-      traceWarningTag: this.node.traceWarningTag,
+      frameworkRuntimeSettings: this.getRuntimeSettings(config),
       sourceSearchValue: this.sourceSearchValue,
-      serverSourcePromise: this.node.serverSourcePromise,
-      useWebApi: this.node.options.useWebApi,
       frameworkSlug: this.slug,
+      nodeVersion,
     });
   },
 };
@@ -178,13 +201,22 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
   // React Router uses the same server source for both node and edge
   edge: {
+    ...COMMON_EDGE_RUNTIME_SETTINGS,
     serverSourcePromise: reactRouterServerSrcPromise,
     traceWarningTag: 'react-router',
   },
   node: {
+    ...COMMON_NODE_RUNTIME_SETTINGS,
     serverSourcePromise: reactRouterServerSrcPromise,
     traceWarningTag: 'react-router',
     options: { useWebApi: true },
+  },
+
+  getRuntimeSettings(runtime: string) {
+    if (runtime === 'edge') {
+      return this.edge;
+    }
+    return this.node;
   },
 
   createRenderFunction({
@@ -196,34 +228,17 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
     frameworkVersion,
     config,
   }: RenderFunctionOptions): Promise<EdgeFunction | NodejsLambda> {
-    if (config.runtime === 'edge') {
-      return createRenderEdgeFunction({
-        entrypointDir,
-        rootDir,
-        serverBuildPath,
-        serverEntryPoint,
-        frameworkVersion,
-        config,
-        traceWarningTag: this.edge.traceWarningTag,
-        sourceSearchValue: this.sourceSearchValue,
-        serverSourcePromise: this.edge.serverSourcePromise,
-        frameworkSlug: this.slug,
-      });
-    }
-
-    return createRenderNodeFunction({
-      nodeVersion,
+    return createRenderFunction({
       entrypointDir,
       rootDir,
       serverBuildPath,
       serverEntryPoint,
       frameworkVersion,
       config,
-      traceWarningTag: this.node.traceWarningTag,
+      frameworkRuntimeSettings: this.getRuntimeSettings(config),
       sourceSearchValue: this.sourceSearchValue,
-      serverSourcePromise: this.node.serverSourcePromise,
-      useWebApi: this.node.options.useWebApi,
       frameworkSlug: this.slug,
+      nodeVersion,
     });
   },
 };
@@ -509,170 +524,71 @@ export const build: BuildV2 = async ({
   return { routes, output, framework: { version: frameworkVersion } };
 };
 
-async function edgeReadFile(fsPath: string) {
-  let source: Buffer | string;
-  try {
-    source = await fs.readFile(fsPath);
-  } catch (err: any) {
-    if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-      return null;
+async function traceEdgeFiles({
+  handlerPath,
+  rootDir,
+  entrypointDir,
+}: {
+  handlerPath: string;
+  rootDir: string;
+  entrypointDir: string;
+}) {
+  const EDGE_TRACE_CONDITIONS = [
+    'edge-light',
+    'browser',
+    'module',
+    'import',
+    'require',
+  ];
+  async function edgeReadFile(fsPath: string) {
+    let source: Buffer | string;
+    try {
+      source = await fs.readFile(fsPath);
+    } catch (err: any) {
+      if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+        return null;
+      }
+      throw err;
     }
-    throw err;
-  }
-  if (basename(fsPath) === 'package.json') {
-    // For Edge Functions, patch "main" field to prefer "browser" or "module"
-    const pkgJson = JSON.parse(source.toString());
+    if (basename(fsPath) === 'package.json') {
+      // For Edge Functions, patch "main" field to prefer "browser" or "module"
+      const pkgJson = JSON.parse(source.toString());
 
-    for (const prop of ['browser', 'module']) {
-      const val = pkgJson[prop];
-      if (typeof val === 'string') {
-        pkgJson.main = val;
+      for (const prop of ['browser', 'module']) {
+        const val = pkgJson[prop];
+        if (typeof val === 'string') {
+          pkgJson.main = val;
 
-        // Return the modified `package.json` to nft
-        source = JSON.stringify(pkgJson);
-        break;
+          // Return the modified `package.json` to nft
+          source = JSON.stringify(pkgJson);
+          break;
+        }
       }
     }
+    return source;
   }
-  return source;
-}
 
-const EDGE_TRACE_CONDITIONS = [
-  'edge-light',
-  'browser',
-  'module',
-  'import',
-  'require',
-];
-
-const COMMON_NODE_FUNCTION_OPTIONS = {
-  shouldAddHelpers: false,
-  shouldAddSourcemapSupport: false,
-  operationType: 'SSR',
-  supportsResponseStreaming: true,
-} as const;
-
-const COMMON_EDGE_FUNCTION_OPTIONS = { deploymentTarget: 'v8-worker' } as const;
-
-async function createRenderEdgeFunction({
-  rootDir,
-  serverBuildPath,
-  serverEntryPoint,
-  entrypointDir,
-  config,
-  frameworkVersion,
-  sourceSearchValue,
-  serverSourcePromise,
-  frameworkSlug,
-  traceWarningTag,
-}: {
-  rootDir: string;
-  serverBuildPath: string;
-  serverEntryPoint?: string;
-  entrypointDir: string;
-  config: any;
-  frameworkVersion: string;
-  sourceSearchValue: string;
-  serverSourcePromise: Promise<string>;
-  useWebApi?: boolean;
-  frameworkSlug: string;
-  traceWarningTag: string;
-}) {
-  const { handler, handlerPath } = await determineHandler({
-    rootDir,
-    serverBuildPath,
-    serverEntryPoint,
-    serverSourcePromise,
-    sourceSearchValue,
-  });
-
-  // Trace the handler with `@vercel/nft`
-  const trace = await nodeFileTrace([handlerPath], {
+  return await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
     conditions: EDGE_TRACE_CONDITIONS,
     readFile: edgeReadFile,
   });
-
-  logNftWarnings(trace.warnings, traceWarningTag);
-
-  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
-
-  const fn = new EdgeFunction({
-    ...COMMON_EDGE_FUNCTION_OPTIONS,
-    files,
-    entrypoint: handler,
-    regions: config.regions,
-    framework: {
-      slug: frameworkSlug,
-      version: frameworkVersion,
-    },
-  });
-
-  return fn;
 }
 
-async function createRenderNodeFunction({
+async function traceNodeFiles({
+  handlerPath,
   rootDir,
-  serverBuildPath,
-  serverEntryPoint,
   entrypointDir,
-  nodeVersion,
-  config,
-  frameworkVersion,
-  sourceSearchValue,
-  serverSourcePromise,
-  useWebApi,
-  frameworkSlug,
-  traceWarningTag,
 }: {
+  handlerPath: string;
   rootDir: string;
-  serverBuildPath: string;
-  serverEntryPoint?: string;
   entrypointDir: string;
-  nodeVersion: NodeVersion;
-  config: any;
-  frameworkVersion: string;
-  sourceSearchValue: string;
-  serverSourcePromise: Promise<string>;
-  useWebApi?: boolean;
-  frameworkSlug: string;
-  traceWarningTag: string;
 }) {
-  const { handler, handlerPath } = await determineHandler({
-    rootDir,
-    serverBuildPath,
-    serverEntryPoint,
-    serverSourcePromise,
-    sourceSearchValue,
-  });
-
-  // Trace the handler with `@vercel/nft`
-  const trace = await nodeFileTrace([handlerPath], {
+  return await nodeFileTrace([handlerPath], {
     base: rootDir,
     processCwd: entrypointDir,
   });
-
-  logNftWarnings(trace.warnings, traceWarningTag);
-
-  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
-
-  const fn = new NodejsLambda({
-    ...COMMON_NODE_FUNCTION_OPTIONS,
-    files,
-    handler,
-    runtime: nodeVersion.runtime,
-    regions: config.regions,
-    memory: config.memory,
-    maxDuration: config.maxDuration,
-    useWebApi,
-    framework: {
-      slug: frameworkSlug,
-      version: frameworkVersion,
-    },
-  });
-
-  return fn;
 }
 
 async function getFilesFromTrace({
@@ -687,4 +603,122 @@ async function getFilesFromTrace({
     files[file] = await FileFsRef.fromFsPath({ fsPath: join(rootDir, file) });
   }
   return files;
+}
+
+function createEdgeFunction({
+  files,
+  handler,
+  config,
+  frameworkSlug,
+  frameworkVersion,
+}: {
+  files: Files;
+  handler: string;
+  config: any;
+  frameworkSlug: string;
+  frameworkVersion: string;
+  nodeVersion: NodeVersion;
+  useWebApi?: boolean;
+}) {
+  return new EdgeFunction({
+    deploymentTarget: 'v8-worker',
+    files,
+    entrypoint: handler,
+    regions: config.regions,
+    framework: {
+      slug: frameworkSlug,
+      version: frameworkVersion,
+    },
+  });
+}
+
+function createNodeFunction({
+  files,
+  handler,
+  config,
+  frameworkSlug,
+  frameworkVersion,
+  nodeVersion,
+  useWebApi,
+}: {
+  files: Files;
+  handler: string;
+  config: any;
+  frameworkSlug: string;
+  frameworkVersion: string;
+  nodeVersion: NodeVersion;
+  useWebApi?: boolean;
+}) {
+  return new NodejsLambda({
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: false,
+    operationType: 'SSR',
+    supportsResponseStreaming: true,
+    files,
+    handler,
+    runtime: nodeVersion.runtime,
+    regions: config.regions,
+    memory: config.memory,
+    maxDuration: config.maxDuration,
+    useWebApi,
+    framework: {
+      slug: frameworkSlug,
+      version: frameworkVersion,
+    },
+  });
+}
+
+async function createRenderFunction({
+  rootDir,
+  serverBuildPath,
+  serverEntryPoint,
+  entrypointDir,
+  config,
+  frameworkVersion,
+  frameworkRuntimeSettings,
+  sourceSearchValue,
+  frameworkSlug,
+  nodeVersion,
+}: {
+  rootDir: string;
+  serverBuildPath: string;
+  serverEntryPoint?: string;
+  entrypointDir: string;
+  config: any;
+  frameworkVersion: string;
+  sourceSearchValue: string;
+  nodeVersion: NodeVersion;
+  frameworkSlug: string;
+  frameworkRuntimeSettings: FrameworkNodeSettings | FrameworkEdgeSettings;
+}) {
+  const { handler, handlerPath } = await determineHandler({
+    rootDir,
+    serverBuildPath,
+    serverEntryPoint,
+    serverSourcePromise: frameworkRuntimeSettings.serverSourcePromise,
+    sourceSearchValue,
+  });
+
+  // Trace the handler with `@vercel/nft`
+  const trace = await frameworkRuntimeSettings.traceFunction({
+    handlerPath,
+    rootDir,
+    entrypointDir,
+  });
+
+  logNftWarnings(trace.warnings, frameworkRuntimeSettings.traceWarningTag);
+
+  const files = await getFilesFromTrace({ fileList: trace.fileList, rootDir });
+
+  const fn = frameworkRuntimeSettings.createRuntimeFunction({
+    files,
+    handler,
+    config,
+    frameworkSlug,
+    frameworkVersion,
+    nodeVersion,
+    useWebApi: frameworkRuntimeSettings.options?.useWebApi,
+  });
+
+  return fn;
 }
