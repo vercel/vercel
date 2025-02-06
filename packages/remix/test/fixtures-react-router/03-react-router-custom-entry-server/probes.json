@@ -1,0 +1,17 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "<script nonce=\"MY_SUPER_SECRET_NONCE\">",
+      "responseHeaders": {
+        "content-security-policy": "script-src 'nonce-MY_SUPER_SECRET_NONCE'"
+      }
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    }
+  ]
+}
+
