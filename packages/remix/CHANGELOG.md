@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.2.3
+
+### Patch Changes
+
+- [remix] extract remaining framework specific settings to FrameworkSettings ([#12992](https://github.com/vercel/vercel/pull/12992))
+
 ## 5.2.2
 
 ### Patch Changes
