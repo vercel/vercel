@@ -1,5 +1,18 @@
 # @vercel/client
 
+## 15.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`150990344d7195c72bb336614153c77d8cefb78c`](https://github.com/vercel/vercel/commit/150990344d7195c72bb336614153c77d8cefb78c)]:
+  - @vercel/routing-utils@5.0.3
+
+## 15.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
 ## 14.0.1
 
 ### Patch Changes

@@ -50,13 +50,7 @@ afterEach(() => {
   console.warn = originalConsoleWarn;
 });
 
-// https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
-it.skip('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('16.x', false)).toHaveProperty(
-    'major',
-    16
-  );
+it('should only match supported node versions, otherwise throw an error', async () => {
   expect(await getSupportedNodeVersion('18.x', false)).toHaveProperty(
     'major',
     18
@@ -72,11 +66,11 @@ it.skip('should only match supported node versions, otherwise throw an error', a
   await expectBuilderError(getSupportedNodeVersion('999.x', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('foo', true), autoMessage);
   await expectBuilderError(getSupportedNodeVersion('=> 10', true), autoMessage);
-
-  expect(await getSupportedNodeVersion('16.x', true)).toHaveProperty(
-    'major',
-    16
+  await expectBuilderError(
+    getSupportedNodeVersion('=> 16.x', true),
+    autoMessage
   );
+
   expect(await getSupportedNodeVersion('18.x', true)).toHaveProperty(
     'major',
     18

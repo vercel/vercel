@@ -10,7 +10,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['16', '18', '20', '22'],
+      nodeVersions: ['18', '20', '22'],
     },
   ],
   [
@@ -53,17 +53,6 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest'],
       testScript: 'test',
       nodeVersions: ['18'],
-    },
-  ],
-  [
-    'test-next-local-legacy',
-    {
-      min: 1,
-      max: 5,
-      runners: ['ubuntu-latest'],
-
-      testScript: 'test',
-      nodeVersions: ['16'],
     },
   ],
   [

@@ -1,5 +1,19 @@
 # @vercel/remix-builder
 
+## 5.2.2
+
+### Patch Changes
+
+- better path-to-regexp diff logging ([#12962](https://github.com/vercel/vercel/pull/12962))
+
+## 5.2.1
+
+### Patch Changes
+
+- [remix] extract common logic for getting files from trace ([#12983](https://github.com/vercel/vercel/pull/12983))
+
+- [remix] extract common handler logic into `determineHandler` function ([#12973](https://github.com/vercel/vercel/pull/12973))
+
 ## 5.2.0
 
 ### Minor Changes

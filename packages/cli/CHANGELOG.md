@@ -1,5 +1,29 @@
 # vercel
 
+## 41.0.1
+
+### Patch Changes
+
+- [cli] remove warning `projects lists --update-required` about deprecated node versions ([#13016](https://github.com/vercel/vercel/pull/13016))
+
+- [cli] updat vercel/fun to 1.1.4 ([#13018](https://github.com/vercel/vercel/pull/13018))
+
+- Updated dependencies [[`38758561c2cfe9ebae2b1d2af506b585639a2b84`](https://github.com/vercel/vercel/commit/38758561c2cfe9ebae2b1d2af506b585639a2b84), [`150990344d7195c72bb336614153c77d8cefb78c`](https://github.com/vercel/vercel/commit/150990344d7195c72bb336614153c77d8cefb78c)]:
+  - @vercel/next@4.5.1
+  - @vercel/node@5.1.1
+  - @vercel/remix-builder@5.2.2
+
+## 41.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
+### Patch Changes
+
+- Updated dependencies [[`e6284c54132c4e0ec06e93331e79328a86a8b735`](https://github.com/vercel/vercel/commit/e6284c54132c4e0ec06e93331e79328a86a8b735), [`322044b064a346cd4c25c12e725906ffbf445c0c`](https://github.com/vercel/vercel/commit/322044b064a346cd4c25c12e725906ffbf445c0c)]:
+  - @vercel/remix-builder@5.2.1
+
 ## 40.1.0
 
 ### Minor Changes
