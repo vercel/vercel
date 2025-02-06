@@ -1551,6 +1551,25 @@ importers:
         specifier: 16.0.0
         version: 16.0.0
 
+  packages/related:
+    optionalDependencies:
+      ajv:
+        specifier: ^6.12.3
+        version: 6.12.3
+    devDependencies:
+      '@types/jest':
+        specifier: 27.4.1
+        version: 27.4.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
+
   packages/remix:
     dependencies:
       '@vercel/error-utils':
