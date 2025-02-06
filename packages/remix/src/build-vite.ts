@@ -1,6 +1,6 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
-import { isErrnoException } from '@vercel/error-utils';
+import { isErrnoException, errorToString } from '@vercel/error-utils';
 import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
 import {
   BuildResultV2Typical,
@@ -25,12 +25,7 @@ import {
   logNftWarnings,
   findConfig,
 } from './utils';
-import type {
-  BuildResultBuildOutput,
-  BuildV2,
-  Files,
-  NodeVersion,
-} from '@vercel/build-utils';
+import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
 const DEFAULTS_PATH = join(__dirname, '../defaults');
 
@@ -344,20 +339,28 @@ export const build: BuildV2 = async ({
   // If the Build Command or Framework output files according
   // to the Build Output v3 API, then stop processing here
   // since the output is already in its final form.
+  const buildOutputPath = join(entrypointFsDirname, '.vercel/output');
   let buildOutputVersion: undefined | number;
   try {
-    const boaConfigPath = join(entrypointFsDirname, 'output/config.json');
+    const boaConfigPath = join(buildOutputPath, 'config.json');
     const buildResultContents = await fs.readFile(boaConfigPath, 'utf8');
-    const data = JSON.parse(buildResultContents);
-    buildOutputVersion = data.version;
-  } catch (_) {
-    // tolerate for older versions
+    buildOutputVersion = JSON.parse(buildResultContents).version;
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // ENOENT is fine, no need to log
+    } else {
+      debug(
+        `Error reading ".vercel/output/config.json": ${errorToString(err)}`
+      );
+    }
   }
   if (buildOutputVersion) {
-    return {
-      buildOutputPath: join(entrypointFsDirname, 'output'),
-      buildOutputVersion,
-    } as BuildResultBuildOutput;
+    if (buildOutputVersion !== 3) {
+      throw new Error(
+        `The "version" property in ".vercel/output/config.json" must be 3 (received ${buildOutputVersion})`
+      );
+    }
+    return { buildOutputVersion: 3, buildOutputPath };
   }
 
   const buildResultJsonPath = join(
