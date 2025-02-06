@@ -213,7 +213,7 @@ export async function revocationRequest(options: {
   return await fetch(as.revocation_endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(options),
+    body: new URLSearchParams({ ...options, client_id: as.client_id }),
   });
 }
 
