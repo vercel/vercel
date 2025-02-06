@@ -3019,7 +3019,14 @@ export type FunctionsConfigManifestV1 = {
   functions: Record<
     string,
     {
-      maxDuration?: number;
+      maxDuration?: number | undefined;
+      runtime?: 'nodejs';
+      matchers?: Array<{
+        regexp: string;
+        originalSource: string;
+        has?: Rewrite['has'];
+        missing?: Rewrite['has'];
+      }>;
     }
   >;
 };
@@ -3160,6 +3167,174 @@ export function normalizeEdgeFunctionPath(
   }
 
   return shortPath;
+}
+
+export async function getNodeMiddleware({
+  config,
+  baseDir,
+  projectDir,
+  entryPath,
+  nextVersion,
+  nodeVersion,
+  lstatSema,
+  lstatResults,
+  pageExtensions,
+  routesManifest,
+  outputDirectory,
+  prerenderBypassToken,
+  isCorrectMiddlewareOrder,
+  functionsConfigManifest,
+  requiredServerFilesManifest,
+}: {
+  config: Config;
+  baseDir: string;
+  projectDir: string;
+  lstatSema: Sema;
+  lstatResults: { [key: string]: ReturnType<typeof lstat> };
+  entryPath: string;
+  nodeVersion: string;
+  pageExtensions: string[];
+  nextVersion: string;
+  outputDirectory: string;
+  prerenderBypassToken: string;
+  isCorrectMiddlewareOrder: boolean;
+  routesManifest: RoutesManifest;
+  functionsConfigManifest?: FunctionsConfigManifestV1;
+  requiredServerFilesManifest: NextRequiredServerFilesManifest;
+}): Promise<null | {
+  lambdas: Record<string, NodejsLambda>;
+  routes: RouteWithSrc[];
+}> {
+  const middlewareFunctionConfig =
+    functionsConfigManifest?.functions['/_middleware'];
+
+  if (!middlewareFunctionConfig || !middlewareFunctionConfig.matchers) {
+    console.log('no node middleware');
+    return null;
+  }
+  const routes: RouteWithSrc[] = [];
+  const routeMatchers = getRouteMatchers(
+    { matchers: middlewareFunctionConfig.matchers },
+    routesManifest
+  );
+
+  for (const matcher of routeMatchers) {
+    const route: Route = {
+      continue: true,
+      src: matcher.regexp,
+      has: matcher.has,
+      missing: [
+        {
+          type: 'header',
+          key: 'x-prerender-revalidate',
+          value: prerenderBypassToken,
+        },
+        ...(matcher.missing || []),
+      ],
+    };
+
+    route.middlewarePath = '/_middleware';
+    route.middlewareRawSrc = matcher.originalSource
+      ? [matcher.originalSource]
+      : [];
+
+    if (isCorrectMiddlewareOrder) {
+      route.override = true;
+    }
+    routes.push(route);
+  }
+
+  const sourceFile = await getSourceFilePathFromPage({
+    workPath: entryPath,
+    page: normalizeSourceFilePageFromManifest('/middleware', 'middleware', {}),
+    pageExtensions,
+  });
+
+  const vercelConfigOpts = await getLambdaOptionsFromFunction({
+    sourceFile,
+    config,
+  });
+
+  const middlewareFile = path.join(
+    entryPath,
+    outputDirectory,
+    'server',
+    'middleware.js'
+  );
+  const middlewareTrace = `${middlewareFile}.nft.json`;
+  const middlewareTraceDir = path.dirname(middlewareTrace);
+
+  const { files } = JSON.parse(await fs.readFile(middlewareTrace, 'utf8'));
+
+  const fileList: string[] = [];
+  const normalizedBaseDir = `${baseDir}${
+    baseDir.endsWith(path.sep) ? '' : path.sep
+  }`;
+  files.forEach((file: string) => {
+    const absolutePath = path.join(middlewareTraceDir, file);
+
+    // ensure we don't attempt including files outside
+    // of the base dir e.g. `/bin/sh`
+    if (absolutePath.startsWith(normalizedBaseDir)) {
+      fileList.push(path.relative(baseDir, absolutePath));
+    } else {
+      console.log('outside base dir', absolutePath);
+    }
+  });
+  const reasons = new Map();
+  const tracedFiles: Record<string, FileFsRef> = {};
+
+  await Promise.all(
+    fileList.map(
+      collectTracedFiles(baseDir, lstatResults, lstatSema, reasons, tracedFiles)
+    )
+  );
+
+  const launcherData = (
+    await fs.readFile(path.join(__dirname, 'middleware-launcher.js'), 'utf8')
+  )
+    .replace(
+      /(?:var|const) conf = __NEXT_CONFIG__/,
+      `const conf = ${JSON.stringify({
+        ...requiredServerFilesManifest.config,
+        distDir: path.relative(
+          projectDir,
+          path.join(entryPath, outputDirectory)
+        ),
+      })}`
+    )
+    .replace('__NEXT_MIDDLEWARE_PATH__', `./.next/server/middleware.js`);
+
+  const lambda = new NodejsLambda({
+    ...vercelConfigOpts,
+    runtime: nodeVersion,
+    handler: path.join(
+      path.relative(baseDir, projectDir),
+      '___next_launcher.cjs'
+    ),
+    useWebApi: true,
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: false,
+    framework: {
+      slug: 'nextjs',
+      version: nextVersion,
+    },
+    files: {
+      ...tracedFiles,
+      [path.relative(outputDirectory, middlewareFile)]: new FileFsRef({
+        fsPath: middlewareFile,
+      }),
+      [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
+        new FileBlob({ data: launcherData }),
+    },
+  });
+
+  return {
+    routes,
+    lambdas: {
+      _middleware: lambda,
+    },
+  };
 }
 
 export async function getMiddlewareBundle({
@@ -3320,7 +3495,7 @@ export async function getMiddlewareBundle({
 
     const source: {
       staticRoutes: Route[];
-      dynamicRouteMap: Map<string, RouteWithSrc>;
+      dynamicRouteMap: Map<string, RouteSrc>;
       edgeFunctions: Record<string, EdgeFunction>;
     } = {
       staticRoutes: [],
@@ -3545,7 +3720,7 @@ export function upgradeMiddlewareManifestV2(
  * @returns matchers for the middleware route.
  */
 function getRouteMatchers(
-  info: EdgeFunctionInfoV2,
+  info: { matchers: EdgeFunctionInfoV2['matchers'] },
   { basePath = '', i18n }: RoutesManifest
 ): EdgeFunctionMatcher[] {
   function getRegexp(regexp: string) {

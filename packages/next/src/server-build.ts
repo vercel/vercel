@@ -55,6 +55,7 @@ import {
   MAX_UNCOMPRESSED_LAMBDA_SIZE,
   RenderingMode,
   getPostponeResumeOutput,
+  getNodeMiddleware,
 } from './utils';
 import {
   nodeFileTrace,
@@ -1531,6 +1532,24 @@ export async function serverBuild({
     ];
   });
 
+  const nodeMiddleware = await getNodeMiddleware({
+    config,
+    baseDir,
+    projectDir,
+    entryPath,
+    nextVersion,
+    nodeVersion: nodeVersion.runtime,
+    lstatSema,
+    lstatResults,
+    pageExtensions: requiredServerFilesManifest.config.pageExtensions,
+    routesManifest,
+    outputDirectory,
+    prerenderBypassToken: prerenderManifest.bypassToken as string,
+    isCorrectMiddlewareOrder,
+    functionsConfigManifest,
+    requiredServerFilesManifest,
+  });
+
   const middleware = await getMiddlewareBundle({
     config,
     entryPath,
@@ -1818,6 +1837,7 @@ export async function serverBuild({
       ...staticDirectoryFiles,
       ...privateOutputs.files,
       ...middleware.edgeFunctions,
+      ...nodeMiddleware?.lambdas,
       ...(isNextDataServerResolving
         ? {
             __next_data_catchall: nextDataCatchallOutput,
@@ -1996,7 +2016,9 @@ export async function serverBuild({
         ? denormalizeNextDataRoute(true)
         : []),
 
-      ...(isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+      ...(isCorrectMiddlewareOrder
+        ? [...middleware.staticRoutes, ...(nodeMiddleware?.routes || [])]
+        : []),
 
       ...(routesManifest?.skipMiddlewareUrlNormalize
         ? normalizeNextDataRoute(true)
@@ -2070,7 +2092,9 @@ export async function serverBuild({
       // while middleware was in beta the order came right before
       // handle: 'filesystem' we maintain this for older versions
       // to prevent a local/deploy mismatch
-      ...(!isCorrectMiddlewareOrder ? middleware.staticRoutes : []),
+      ...(!isCorrectMiddlewareOrder
+        ? [...middleware.staticRoutes, ...(nodeMiddleware?.routes || [])]
+        : []),
 
       ...(appDir
         ? [
