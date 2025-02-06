@@ -29,6 +29,7 @@ import {
   getEnvForPackageManager,
   getNodeVersion,
   getPathForPackageManager,
+  detectPackageManager,
   getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
@@ -74,6 +75,7 @@ export {
   getNodeBinPath,
   getNodeBinPaths,
   getSupportedNodeVersion,
+  detectPackageManager,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -110,6 +112,8 @@ export * from './should-serve';
 export * from './schemas';
 export * from './types';
 export * from './errors';
+
+export * from './trace';
 
 export { NODE_VERSIONS } from './fs/node-version';
 
