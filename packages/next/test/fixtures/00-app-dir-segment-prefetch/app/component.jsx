@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
+import Link from "next/link";
 
 async function DynamicComponent() {
   await connection();
@@ -31,7 +32,7 @@ export function Component() {
           </li>
         ))}
       </ul>
-      <Suspense>
+      <Suspense fallback={<div>Loading Dynamic Component</div>}>
         <DynamicComponent />
       </Suspense>
     </main>
