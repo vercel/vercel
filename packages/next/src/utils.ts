@@ -2088,6 +2088,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  shouldSkipVaryHeader: boolean;
 };
 let prerenderGroup = 1;
 
@@ -2125,6 +2126,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      shouldSkipVaryHeader,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2686,7 +2688,7 @@ export const onPrerenderRoute =
           ? {
               initialHeaders: {
                 ...initialHeaders,
-                vary: rscVaryHeader,
+                ...(shouldSkipVaryHeader ? {} : { vary: rscVaryHeader }),
               },
             }
           : {}),
@@ -2733,7 +2735,7 @@ export const onPrerenderRoute =
             ? {
                 initialHeaders: {
                   ...initialHeaders,
-                  vary: rscVaryHeader,
+                  ...(shouldSkipVaryHeader ? {} : { vary: rscVaryHeader }),
                   ...((outputPathData || outputPathPrefetchData)?.endsWith(
                     '.json'
                   )

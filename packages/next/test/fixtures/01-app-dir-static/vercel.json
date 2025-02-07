@@ -9,10 +9,7 @@
     {
       "path": "/blog/about",
       "status": 200,
-      "mustContain": "about",
-      "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
-      }
+      "mustContain": "about"
     },
     {
       "path": "/404",

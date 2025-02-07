@@ -2192,6 +2192,9 @@ export const build: BuildV2 = async buildOptions => {
       isSharedLambdas,
       canUsePreviewMode,
       isAppPPREnabled: false,
+      // Relevant Next.js versions will be handled by server-build.ts, which
+      // does correctly configure this variable.
+      shouldSkipVaryHeader: false,
     });
 
     await Promise.all(
