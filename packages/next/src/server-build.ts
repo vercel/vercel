@@ -1,4 +1,5 @@
 import path from 'path';
+import url from 'url';
 import semver from 'semver';
 import { Sema } from 'async-sema';
 import {
@@ -200,6 +201,9 @@ export async function serverBuild({
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
   );
+  const skipDefaultLocaleRewrite = Boolean(
+    process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -227,6 +231,8 @@ export async function serverBuild({
   let appBuildTraces: UnwrapPromise<ReturnType<typeof glob>> = {};
   let appDir: string | null = null;
 
+  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
+
   if (appPathRoutesManifest) {
     appDir = path.join(pagesDir, '../app');
     appBuildTraces = await glob('**/*.js.nft.json', appDir);
@@ -247,29 +253,132 @@ export async function serverBuild({
       }
     }
 
-    for (const rewrite of afterFilesRewrites) {
-      if (rewrite.src && rewrite.dest) {
-        // ensures that userland rewrites are still correctly matched to their special outputs
-        // PPR should match .prefetch.rsc, .rsc
-        // non-PPR should match .rsc
-        const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
+    const modifyRewrites = (rewrites: Route[], isAfterFilesRewrite = false) => {
+      for (let i = 0; i < rewrites.length; i++) {
+        const rewrite = rewrites[i];
 
-        rewrite.src = rewrite.src.replace(
-          /\/?\(\?:\/\)\?/,
-          `(?<rscsuff>${rscSuffix})?(?:/)?`
-        );
-        let destQueryIndex = rewrite.dest.indexOf('?');
+        // If this doesn't have a src or dest, we can't modify it.
+        if (!rewrite.src || !rewrite.dest) continue;
 
-        if (destQueryIndex === -1) {
-          destQueryIndex = rewrite.dest.length;
+        // Parse the destination URL to get the protocol, pathname, and query
+        // before we mutate the destination.
+        const { protocol, pathname, query } = url.parse(rewrite.dest);
+
+        if (isAfterFilesRewrite) {
+          // ensures that userland rewrites are still correctly matched to their special outputs
+          // PPR should match .prefetch.rsc, .rsc
+          // non-PPR should match .rsc
+          const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
+
+          rewrite.src = rewrite.src.replace(
+            /\/?\(\?:\/\)\?/,
+            `(?<rscsuff>${rscSuffix})?(?:/)?`
+          );
+
+          let destQueryIndex = rewrite.dest.indexOf('?');
+
+          if (destQueryIndex === -1) {
+            destQueryIndex = rewrite.dest.length;
+          }
+
+          rewrite.dest =
+            rewrite.dest.substring(0, destQueryIndex) +
+            '$rscsuff' +
+            rewrite.dest.substring(destQueryIndex);
         }
 
-        rewrite.dest =
-          rewrite.dest.substring(0, destQueryIndex) +
-          '$rscsuff' +
-          rewrite.dest.substring(destQueryIndex);
+        // If the rewrite headers are not enabled, we don't need to add the
+        // rewrite headers.
+        const { rewriteHeaders } = routesManifest;
+        if (!rewriteHeaders) continue;
+
+        // If the rewrite was external or didn't include a pathname or query,
+        // we don't need to add the rewrite headers.
+        if (protocol || (!pathname && !query)) continue;
+
+        const missing =
+          'missing' in rewrite && rewrite.missing ? rewrite.missing : [];
+
+        // Find any rules that could conflict with our new rule.
+        let found = missing.filter(
+          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
+        );
+
+        // If we found a `missing` rule that would conflict with our rule,
+        // skip adding this rewrite.
+        if (
+          found.some(
+            m =>
+              // These are rules that don't have a value check or those that
+              // have their value set to '1'.
+              !m.value || m.value === '1'
+          )
+        ) {
+          continue;
+        }
+
+        const has =
+          'has' in rewrite && rewrite.has
+            ? // As we mutate the array below, we need to clone it to avoid
+              // mutating the original
+              [...rewrite.has]
+            : [];
+
+        // Find any rules that could conflict with our new rule.
+        found = has.filter(
+          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
+        );
+
+        // If we found a `has` rule that would conflict with our rule,
+        // skip adding this rewrite.
+        if (
+          found.some(
+            h =>
+              // These are rules that have a value set to anything other than
+              // '1'.
+              h.value && h.value !== '1'
+          )
+        ) {
+          continue;
+        }
+
+        // Remove any existing RSC header rules as we'll add our own.
+        for (const h of found) {
+          has.splice(has.indexOf(h), 1);
+        }
+
+        // Add our new RSC header rule.
+        has.push({ type: 'header', key: rscHeader, value: '1' });
+
+        // Create a new rewrite that adds the rsc header to the rule.
+        const headers: Record<string, string> =
+          'headers' in rewrite && rewrite.headers
+            ? // Clone the existing headers to avoid mutating the original
+              // object.
+              { ...rewrite.headers }
+            : {};
+
+        const updated: Route = {
+          ...rewrite,
+          has,
+          headers,
+        };
+
+        // If the pathname was rewritten, add it to the headers.
+        if (pathname) headers[rewriteHeaders.pathHeader] = pathname;
+
+        // If the query was rewritten, add it to the headers.
+        if (query) headers[rewriteHeaders.queryHeader] = query;
+
+        // Insert the updated rewrite before the original rewrite.
+        rewrites.splice(i, 0, updated);
+        i++;
       }
-    }
+    };
+
+    modifyRewrites(beforeFilesRewrites);
+    modifyRewrites(afterFilesRewrites, true);
+    modifyRewrites(fallbackRewrites);
   }
 
   const isCorrectNotFoundRoutes = semver.gte(
@@ -1639,7 +1748,6 @@ export async function serverBuild({
     }
   }
 
-  const rscHeader = routesManifest.rsc?.header?.toLowerCase() || '__rsc__';
   const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
@@ -1839,36 +1947,42 @@ export async function serverBuild({
                 ]
               : []),
 
-            {
-              src: `^${path.posix.join('/', entryDirectory)}$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}`,
-              continue: true,
-            },
-
-            // Auto-prefix non-locale path with default locale
-            // note for prerendered pages this will cause
-            // x-now-route-matches to contain the path minus the locale
-            // e.g. for /de/posts/[slug] x-now-route-matches would have
-            // 1=posts%2Fpost-1
-            {
-              src: `^${path.posix.join(
-                '/',
-                entryDirectory,
-                '/'
-              )}(?!(?:_next/.*|${i18n.locales
-                .map(locale => escapeStringRegexp(locale))
-                .join('|')})(?:/.*|$))(.*)$`,
-              dest: `${path.posix.join(
-                '/',
-                entryDirectory,
-                i18n.defaultLocale
-              )}/$1`,
-              continue: true,
-            },
+            // We only want to add these rewrites before user redirects
+            // when `skipDefaultLocaleRewrite` is not flagged on
+            // and when localeDetection is enabled.
+            ...(!skipDefaultLocaleRewrite || i18n.localeDetection !== false
+              ? [
+                  {
+                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}`,
+                    continue: true,
+                  },
+                  // Auto-prefix non-locale path with default locale
+                  // note for prerendered pages this will cause
+                  // x-now-route-matches to contain the path minus the locale
+                  // e.g. for /de/posts/[slug] x-now-route-matches would have
+                  // 1=posts%2Fpost-1
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?!(?:_next/.*|${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(?:/.*|$))(.*)$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}/$1`,
+                    continue: true,
+                  },
+                ]
+              : []),
           ]
         : []),
 
@@ -2151,6 +2265,41 @@ export async function serverBuild({
       // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
+            // When `skipDefaultLocaleRewrite` is flagged on and localeDetection is disabled,
+            // we only want to add the rewrite as the fallback case once routing is complete.
+            ...(skipDefaultLocaleRewrite && i18n.localeDetection === false
+              ? [
+                  {
+                    src: `^${path.posix.join('/', entryDirectory)}$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}`,
+                    check: true,
+                  },
+                  // Auto-prefix non-locale path with default locale
+                  // note for prerendered pages this will cause
+                  // x-now-route-matches to contain the path minus the locale
+                  // e.g. for /de/posts/[slug] x-now-route-matches would have
+                  // 1=posts%2Fpost-1
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/'
+                    )}(?!(?:_next/.*|${i18n.locales
+                      .map(locale => escapeStringRegexp(locale))
+                      .join('|')})(?:/.*|$))(.*)$`,
+                    dest: `${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      i18n.defaultLocale
+                    )}/$1`,
+                    check: true,
+                  },
+                ]
+              : []),
             {
               src: path.posix.join(
                 '/',

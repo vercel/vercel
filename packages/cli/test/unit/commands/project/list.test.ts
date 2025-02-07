@@ -115,6 +115,7 @@ describe('list', () => {
       'Project Name',
       'Latest Production URL',
       'Updated',
+      'Node Version',
     ]);
 
     line = await lines.next();
@@ -158,6 +159,7 @@ describe('list', () => {
       'Project Name',
       'Latest Production URL',
       'Updated',
+      'Node Version',
     ]);
 
     line = await lines.next();

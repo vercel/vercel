@@ -3,8 +3,87 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { pathToRegexp, compile, Key } from 'path-to-regexp';
 import { Route, Redirect, Rewrite, HasField, Header } from './types';
+
+/*
+  [START] Temporary double-install of path-to-regexp to compare the impact of the update
+  https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
+*/
+import {
+  pathToRegexp as pathToRegexpCurrent,
+  Key,
+  compile,
+} from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
+
+function cloneKeys(keys: Key[] | undefined): Key[] | undefined {
+  if (typeof keys === 'undefined') {
+    return undefined;
+  }
+
+  return keys.slice(0);
+}
+
+function compareKeys(left: Key[] | undefined, right: Key[] | undefined) {
+  const leftSerialized =
+    typeof left === 'undefined' ? 'undefined' : left.toString();
+  const rightSerialized =
+    typeof right === 'undefined' ? 'undefined' : right.toString();
+  return leftSerialized === rightSerialized;
+}
+
+// run the updated version of path-to-regexp, compare the results, and log if different
+export function pathToRegexp(
+  callerId: string,
+  path: string,
+  keys?: Key[],
+  options?: { strict: boolean; sensitive: boolean; delimiter: string }
+) {
+  const newKeys = cloneKeys(keys);
+  const currentRegExp = pathToRegexpCurrent(path, keys, options);
+
+  try {
+    const currentKeys = keys;
+    const newRegExp = pathToRegexpUpdated(path, newKeys, options);
+
+    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
+    // for verification that they show up in the build logs as expected
+
+    const isDiffRegExp = currentRegExp.toString() !== newRegExp.toString();
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffRegExp) {
+      const message = JSON.stringify({
+        path,
+        currentRegExp: currentRegExp.toString(),
+        newRegExp: newRegExp.toString(),
+      });
+      console.error(`[vc] PATH TO REGEXP PATH DIFF @ #${callerId}: ${message}`);
+    }
+
+    const isDiffKeys = !compareKeys(keys, newKeys);
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffKeys) {
+      const message = JSON.stringify({
+        isDiffKeys,
+        currentKeys,
+        newKeys,
+      });
+      console.error(`[vc] PATH TO REGEXP KEYS DIFF @ #${callerId}: ${message}`);
+    }
+  } catch (err) {
+    const error = err as Error;
+    const message = JSON.stringify({
+      path,
+      error: error.message,
+    });
+
+    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${message}`);
+  }
+
+  return currentRegExp;
+}
+/*
+  [END] Temporary double-install of path-to-regexp to compare the impact of the update
+  https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
+*/
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 
@@ -196,7 +275,7 @@ export function sourceToRegex(source: string): {
   segments: string[];
 } {
   const keys: Key[] = [];
-  const r = pathToRegexp(source, keys, {
+  const r = pathToRegexp('632', source, keys, {
     strict: true,
     sensitive: true,
     delimiter: '/',
@@ -299,9 +378,9 @@ function replaceSegments(
   const hostnameKeys: Key[] = [];
 
   try {
-    pathToRegexp(pathname, pathnameKeys);
-    pathToRegexp(hash || '', hashKeys);
-    pathToRegexp(hostname || '', hostnameKeys);
+    pathToRegexp('528', pathname, pathnameKeys);
+    pathToRegexp('834', hash || '', hashKeys);
+    pathToRegexp('712', hostname || '', hostnameKeys);
   } catch (_) {
     // this is not fatal so don't error when failing to parse the
     // params from the destination

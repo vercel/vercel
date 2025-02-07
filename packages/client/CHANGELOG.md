@@ -1,5 +1,60 @@
 # @vercel/client
 
+## 15.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`5c404c56702ff8685628ffe0db8a90e8cb87568a`](https://github.com/vercel/vercel/commit/5c404c56702ff8685628ffe0db8a90e8cb87568a)]:
+  - @vercel/build-utils@9.2.1
+
+## 15.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`150990344d7195c72bb336614153c77d8cefb78c`](https://github.com/vercel/vercel/commit/150990344d7195c72bb336614153c77d8cefb78c)]:
+  - @vercel/routing-utils@5.0.3
+
+## 15.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
+## 14.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`5c696af2b40f0fc368e84cafa6d82b2ce998fc19`](https://github.com/vercel/vercel/commit/5c696af2b40f0fc368e84cafa6d82b2ce998fc19)]:
+  - @vercel/build-utils@9.2.0
+
+## 14.0.0
+
+### Major Changes
+
+- Ignore .yarn/cache by default on vercel CLI deploys ([#12977](https://github.com/vercel/vercel/pull/12977))
+
+- Make split-tgz the default for archive deployments ([#12943](https://github.com/vercel/vercel/pull/12943))
+
+### Patch Changes
+
+- Updated dependencies [[`b52b7e3a8cd775d56149683cb809b7ad9c77a514`](https://github.com/vercel/vercel/commit/b52b7e3a8cd775d56149683cb809b7ad9c77a514), [`3d310f508b9ff8f891838d8ba8ea24e428a06a9d`](https://github.com/vercel/vercel/commit/3d310f508b9ff8f891838d8ba8ea24e428a06a9d)]:
+  - @vercel/build-utils@9.1.1
+  - @vercel/routing-utils@5.0.2
+
+## 13.5.6
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/routing-utils@5.0.1
+
+## 13.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`745404610a836fa6c2068c5c192d2f3e8b86918f`](https://github.com/vercel/vercel/commit/745404610a836fa6c2068c5c192d2f3e8b86918f), [`3a5507fd1459c77b4491f1c9c3a64ad42e4ff009`](https://github.com/vercel/vercel/commit/3a5507fd1459c77b4491f1c9c3a64ad42e4ff009)]:
+  - @vercel/build-utils@9.1.0
+
 ## 13.5.4
 
 ### Patch Changes

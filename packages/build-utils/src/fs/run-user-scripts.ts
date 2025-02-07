@@ -300,7 +300,8 @@ export async function getNodeVersion(
   const latestVersion = getLatestNodeVersion(availableVersions);
   if (meta.isDev) {
     // Use the system-installed version of `node` in PATH for `vercel dev`
-    return { ...latestVersion, runtime: 'nodejs' };
+    latestVersion.runtime = 'nodejs';
+    return latestVersion;
   }
   const { packageJson } = await scanParentDirs(destPath, true);
   const configuredVersion = config.nodeVersion || fallbackVersion;
@@ -1320,7 +1321,7 @@ export async function runPipInstall(
 export function getScriptName(
   pkg: Pick<PackageJson, 'scripts'> | null | undefined,
   possibleNames: Iterable<string>
-): string | null {
+): string | undefined {
   if (pkg?.scripts) {
     for (const name of possibleNames) {
       if (name in pkg.scripts) {
@@ -1328,7 +1329,7 @@ export function getScriptName(
       }
     }
   }
-  return null;
+  return undefined;
 }
 
 /**
