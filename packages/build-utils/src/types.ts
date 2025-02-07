@@ -4,6 +4,7 @@ import type FileBlob from './file-blob';
 import type { Lambda } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import type { Span } from './trace';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -115,6 +116,11 @@ export interface BuildOptions {
    * fully processed
    */
   buildCallback?: (opts: Omit<BuildOptions, 'buildCallback'>) => Promise<void>;
+
+  /**
+   * The current trace state from the internal vc tracing
+   */
+  span?: Span;
 }
 
 export interface PrepareCacheOptions {
@@ -324,16 +330,51 @@ export interface PackageJson {
   readonly packageManager?: string;
 }
 
-export interface NodeVersion {
+export interface ConstructorVersion {
   /** major version number: 18 */
   major: number;
+  /** minor version number: 18 */
+  minor?: number;
   /** major version range: "18.x" */
   range: string;
   /** runtime descriptor: "nodejs18.x" */
   runtime: string;
-  /** date beyond which this version is discontinued: 2023-08-17T19:05:45.951Z */
   discontinueDate?: Date;
 }
+
+interface BaseVersion extends ConstructorVersion {
+  state: 'active' | 'deprecated' | 'discontinued';
+}
+
+export class Version implements BaseVersion {
+  major: number;
+  minor?: number;
+  range: string;
+  runtime: string;
+  discontinueDate?: Date;
+  constructor(version: ConstructorVersion) {
+    this.major = version.major;
+    this.minor = version.minor;
+    this.range = version.range;
+    this.runtime = version.runtime;
+    this.discontinueDate = version.discontinueDate;
+  }
+  get state() {
+    if (this.discontinueDate && this.discontinueDate.getTime() <= Date.now()) {
+      return 'discontinued';
+    } else if (this.discontinueDate) {
+      return 'deprecated';
+    }
+    return 'active';
+  }
+  get formattedDate() {
+    return (
+      this.discontinueDate && this.discontinueDate.toISOString().split('T')[0]
+    );
+  }
+}
+
+export class NodeVersion extends Version {}
 
 export interface Builder {
   use: string;

@@ -8,9 +8,13 @@ import * as build from '@remix-run/dev/server-build';
 
 installGlobals({
   nativeFetch:
+    // Explicit opt-in to native fetch via runtime env var
     (parseInt(process.versions.node, 10) >= 20 &&
       process.env.VERCEL_REMIX_NATIVE_FETCH === '1') ||
-    build.future.unstable_singleFetch,
+    // `unstable_singleFetch` future flag added in Remix v2.9.0
+    build.future.unstable_singleFetch ||
+    // `v3_singleFetch` future flag stabilized in Remix v2.13.0
+    build.future.v3_singleFetch,
 });
 
 const handleRequest = createRemixRequestHandler(

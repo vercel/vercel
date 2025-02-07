@@ -1,5 +1,17 @@
 # @vercel/functions
 
+## 2.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
+## 1.6.0
+
+### Minor Changes
+
+- Add middleware-related helper functions ([#12938](https://github.com/vercel/vercel/pull/12938))
+
 ## 1.5.2
 
 ### Patch Changes
