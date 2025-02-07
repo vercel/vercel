@@ -1,6 +1,6 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
-import { isErrnoException } from '@vercel/error-utils';
+import { isErrnoException, errorToString } from '@vercel/error-utils';
 import { nodeFileTrace, NodeFileTraceOptions } from '@vercel/nft';
 import {
   BuildResultV2Typical,
@@ -334,6 +334,33 @@ export const build: BuildV2 = async ({
         cwd: entrypointFsDirname,
       });
     }
+  }
+
+  // If the Build Command or Framework output files according
+  // to the Build Output v3 API, then stop processing here
+  // since the output is already in its final form.
+  const buildOutputPath = join(entrypointFsDirname, '.vercel/output');
+  let buildOutputVersion: undefined | number;
+  try {
+    const boaConfigPath = join(buildOutputPath, 'config.json');
+    const buildResultContents = await fs.readFile(boaConfigPath, 'utf8');
+    buildOutputVersion = JSON.parse(buildResultContents).version;
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // ENOENT is fine, no need to log
+    } else {
+      debug(
+        `Error reading ".vercel/output/config.json": ${errorToString(err)}`
+      );
+    }
+  }
+  if (buildOutputVersion) {
+    if (buildOutputVersion !== 3) {
+      throw new Error(
+        `The "version" property in ".vercel/output/config.json" must be 3 (received ${buildOutputVersion})`
+      );
+    }
+    return { buildOutputVersion: 3, buildOutputPath };
   }
 
   const buildResultJsonPath = join(
