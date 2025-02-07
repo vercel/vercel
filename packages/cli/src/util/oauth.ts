@@ -9,7 +9,7 @@ export const as: {
   revocation_endpoint: URL;
   jwks_uri: URL;
 } = {
-  client_id: '', // TODO: Embed client_id
+  client_id: 'cl_v9RsjXlLr2yv2ZwgOSz1pe0CQvhzRn9W',
   revocation_endpoint: new URL(
     'https://vercel.com/api/login/oauth/token/revoke'
   ),
