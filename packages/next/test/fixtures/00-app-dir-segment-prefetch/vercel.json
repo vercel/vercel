@@ -15,7 +15,7 @@
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/index.segments/_tree.segment.rsc"
+        "x-matched-path": "/index.segments/_tree.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -28,7 +28,7 @@
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/hello-world.segments/_tree.segment.rsc"
+        "x-matched-path": "/blog/hello-world.segments/_tree.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -41,7 +41,7 @@
         "Next-Router-Segment-Prefetch": "/_index"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/hello-world.segments/_index.segment.rsc"
+        "x-matched-path": "/blog/hello-world.segments/_index.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -54,7 +54,7 @@
         "Next-Router-Segment-Prefetch": "/blog"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/hello-world.segments/blog.segment.rsc"
+        "x-matched-path": "/blog/hello-world.segments/blog.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -67,7 +67,7 @@
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/hello-world.segments/blog/$d$slug$hello-world.segment.rsc"
+        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -80,7 +80,7 @@
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world/__PAGE__"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
+        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -93,7 +93,7 @@
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
-        "X-Matched-Path": "/blog/[slug].segments/_tree.segment.rsc"
+        "x-matched-path": "/blog/[slug].segments/_tree.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     }
