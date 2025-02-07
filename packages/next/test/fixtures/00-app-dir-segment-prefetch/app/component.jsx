@@ -32,7 +32,7 @@ export function Component() {
           </li>
         ))}
       </ul>
-      <Suspense fallback={<div>Loading Dynamic Component</div>}>
+      <Suspense fallback={<div>Loading...</div>}>
         <DynamicComponent />
       </Suspense>
     </main>

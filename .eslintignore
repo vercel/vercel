@@ -4,7 +4,7 @@ examples
 
 packages/node/src/bridge.ts
 
-packages/*/test/fixtures
+# packages/*/test/fixtures
 
 # cli
 packages/cli/@types
