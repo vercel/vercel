@@ -96,6 +96,32 @@
         "x-matched-path": "/blog/[slug].segments/_tree.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-not-prerendered",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug].segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-not-prerendered",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered/__PAGE__"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug]/__PAGE__.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
     }
   ]
 }

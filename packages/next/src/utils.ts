@@ -487,6 +487,7 @@ export async function getDynamicRoutes({
                         .join('&')}`
                     : ''
                 }`,
+                check: true,
               });
             }
           }
