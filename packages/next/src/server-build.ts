@@ -2527,8 +2527,8 @@ export async function serverBuild({
           ]
         : []),
 
-      // When PPR is not enabled but client segment cache is, then rewrite any
-      // segment prefetches to a regular RSC route.
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to the regular RSC request.
       ...(isAppClientSegmentCacheEnabled &&
       rscPrefetchHeader &&
       prefetchSegmentHeader &&
@@ -2541,7 +2541,11 @@ export async function serverBuild({
                 entryDirectory,
                 `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
               ),
-              dest: path.posix.join('/', entryDirectory, `/$path.rsc`),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
               check: true,
             },
           ]
