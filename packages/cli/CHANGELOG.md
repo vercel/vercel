@@ -1,5 +1,15 @@
 # vercel
 
+## 41.0.3
+
+### Patch Changes
+
+- Added new prefetch segments feature for Next.js ([#12897](https://github.com/vercel/vercel/pull/12897))
+
+- Updated dependencies [[`8c4bcda423836afa051765d6832c57ec7b6d9f6b`](https://github.com/vercel/vercel/commit/8c4bcda423836afa051765d6832c57ec7b6d9f6b), [`1bfe8e56146877a209c7d67e924ef0b0e3b7d030`](https://github.com/vercel/vercel/commit/1bfe8e56146877a209c7d67e924ef0b0e3b7d030)]:
+  - @vercel/next@4.5.2
+  - @vercel/remix-builder@5.2.4
+
 ## 41.0.2
 
 ### Patch Changes
