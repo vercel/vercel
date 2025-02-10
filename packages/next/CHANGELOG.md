@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.5.2
+
+### Patch Changes
+
+- Added new prefetch segments feature for Next.js ([#12897](https://github.com/vercel/vercel/pull/12897))
+
 ## 4.5.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.2.4
+
+### Patch Changes
+
+- Support "build" script that produces Build Output API ([#13031](https://github.com/vercel/vercel/pull/13031))
+
 ## 5.2.3
 
 ### Patch Changes
