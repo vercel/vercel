@@ -81,7 +81,7 @@ import { validateConfig } from '../../util/validate-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
-import { writeFile } from 'fs/promises';
+import { mkdir, writeFile } from 'fs/promises';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -316,7 +316,7 @@ export default async function main(client: Client): Promise<number> {
     process.env.NOW_BUILDER = '1';
 
     await rootSpan
-      .child('vs.doBuild')
+      .child('vc.doBuild')
       .trace(span =>
         doBuild(client, project, buildsJson, cwd, outputDir, span)
       );
@@ -338,8 +338,17 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
-    // Ensure that all traces have flushed to disk before we exit
-    await writeFile(join(outputDir, 'trace'), JSON.stringify(reporter.events));
+    try {
+      const diagnosticsOutputPath = join(outputDir, 'diagnostics');
+      await mkdir(diagnosticsOutputPath, { recursive: true });
+      // Ensure that all traces have flushed to disk before we exit
+      await writeFile(
+        join(diagnosticsOutputPath, 'cli_traces.json'),
+        JSON.stringify(reporter.events)
+      );
+    } catch (err) {
+      // Ignore errors when writing diagnostics
+    }
 
     // Unset environment variables that were added by dotenv
     // (this is mostly for the unit tests)
