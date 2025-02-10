@@ -62,6 +62,10 @@ export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
   ? Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
   : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
 
+const skipDefaultLocaleRewrite = Boolean(
+  process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
+);
+
 // Identify /[param]/ in route string
 // eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
@@ -219,6 +223,10 @@ type RoutesManifestRoute = {
   regex: string;
   namedRegex?: string;
   routeKeys?: { [named: string]: string };
+  prefetchSegmentDataRoutes?: {
+    source: string;
+    destination: string;
+  }[];
 };
 
 type RoutesManifestOld = {
@@ -259,6 +267,25 @@ type RoutesManifestOld = {
     prefetchHeader?: string;
     didPostponeHeader?: string;
     contentTypeHeader: string;
+
+    /**
+     * Header for the prefetch segment data route rewrites.
+     */
+    prefetchSegmentHeader?: string;
+
+    /**
+     * Suffix for the prefetch segment data route rewrites.
+     */
+    prefetchSegmentSuffix?: string;
+
+    /**
+     * Suffix for the prefetch segment data route directory.
+     */
+    prefetchSegmentDirSuffix?: string;
+  };
+  rewriteHeaders?: {
+    pathHeader: string;
+    queryHeader: string;
   };
   skipMiddlewareUrlNormalize?: boolean;
   /**
@@ -343,6 +370,7 @@ export async function getDynamicRoutes({
   isServerMode,
   dynamicMiddlewareRouteMap,
   isAppPPREnabled,
+  isAppClientSegmentCacheEnabled,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -355,6 +383,7 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -394,7 +423,13 @@ export async function getDynamicRoutes({
             continue;
           }
 
-          const { page, namedRegex, regex, routeKeys } = params;
+          const {
+            page,
+            namedRegex,
+            regex,
+            routeKeys,
+            prefetchSegmentDataRoutes,
+          } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
             dest: `${
@@ -426,6 +461,35 @@ export async function getDynamicRoutes({
                 key: '__next_preview_data',
               },
             ];
+          }
+
+          if (
+            isAppClientSegmentCacheEnabled &&
+            prefetchSegmentDataRoutes &&
+            prefetchSegmentDataRoutes.length > 0
+          ) {
+            for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+              routes.push({
+                ...route,
+                src: prefetchSegmentDataRoute.source,
+                dest: `${
+                  !isDev
+                    ? path.posix.join(
+                        '/',
+                        entryDirectory,
+                        prefetchSegmentDataRoute.destination
+                      )
+                    : prefetchSegmentDataRoute.destination
+                }${
+                  routeKeys
+                    ? `?${Object.entries(routeKeys)
+                        .map(([key, value]) => `${value}=$${key}`)
+                        .join('&')}`
+                    : ''
+                }`,
+                check: true,
+              });
+            }
           }
 
           if (isAppPPREnabled) {
@@ -550,11 +614,15 @@ export function localizeDynamicRoutes(
   isCorrectLocaleAPIRoutes?: boolean,
   inversedAppPathRoutesManifest?: Record<string, string>
 ): RouteWithSrc[] {
-  return dynamicRoutes.map((route: RouteWithSrc) => {
-    // i18n is already handled for middleware
-    if (route.middleware !== undefined || route.middlewarePath !== undefined)
-      return route;
+  const finalDynamicRoutes: RouteWithSrc[] = [];
+  const nonLocalePrefixedRoutes: RouteWithSrc[] = [];
 
+  for (const route of dynamicRoutes as RouteWithSrc[]) {
+    // i18n is already handled for middleware
+    if (route.middleware !== undefined || route.middlewarePath !== undefined) {
+      finalDynamicRoutes.push(route);
+      continue;
+    }
     const { i18n } = routesManifest || {};
 
     if (i18n) {
@@ -573,11 +641,31 @@ export function localizeDynamicRoutes(
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
+      // when locale detection is disabled we don't add the default locale
+      // to the path while resolving routes so we need to be able to match
+      // without it being present
+      if (
+        skipDefaultLocaleRewrite &&
+        isLocalePrefixed &&
+        routesManifest?.i18n?.localeDetection === false
+      ) {
+        const nonLocalePrefixedRoute = JSON.parse(JSON.stringify(route));
+        nonLocalePrefixedRoute.src = nonLocalePrefixedRoute.src.replace(
+          '^',
+          `^${dynamicPrefix || ''}[/]?`
+        );
+        nonLocalePrefixedRoutes.push(nonLocalePrefixedRoute);
+      }
+
       route.src = route.src.replace(
         '^',
         `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
           isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})?`
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})${
+          // the locale is not optional on this path with the skip default
+          // locale rewrite flag otherwise can cause double slash in dest
+          skipDefaultLocaleRewrite ? '' : '?'
+        }`
       );
 
       if (
@@ -595,8 +683,14 @@ export function localizeDynamicRoutes(
     } else {
       route.src = route.src.replace('^', `^${dynamicPrefix}`);
     }
-    return route;
-  });
+    finalDynamicRoutes.push(route);
+  }
+
+  if (nonLocalePrefixedRoutes.length > 0) {
+    finalDynamicRoutes.push(...nonLocalePrefixedRoutes);
+  }
+
+  return finalDynamicRoutes;
 }
 
 type LoaderKey = 'imgix' | 'cloudinary' | 'akamai' | 'default';
@@ -2050,6 +2144,7 @@ type OnPrerenderRouteArgs = {
   isCorrectNotFoundRoutes?: boolean;
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -2087,6 +2182,7 @@ export const onPrerenderRoute =
       isCorrectNotFoundRoutes,
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
+      isAppClientSegmentCacheEnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2248,8 +2344,13 @@ export const onPrerenderRoute =
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
-        const meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-        if ('postponed' in meta && typeof meta.postponed === 'string') {
+        const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+        if (
+          typeof meta === 'object' &&
+          meta !== null &&
+          'postponed' in meta &&
+          typeof meta.postponed === 'string'
+        ) {
           didPostpone = true;
           postponedPrerender = meta.postponed;
 
@@ -2727,6 +2828,78 @@ export const onPrerenderRoute =
           renderingMode !== RenderingMode.PARTIALLY_STATIC
         ) {
           prerenders[normalizePathData(outputPathData)] = prerender;
+        }
+      }
+
+      const prefetchSegmentSuffix = routesManifest?.rsc?.prefetchSegmentSuffix;
+      const prefetchSegmentDirSuffix =
+        routesManifest?.rsc?.prefetchSegmentDirSuffix;
+
+      if (
+        isAppClientSegmentCacheEnabled &&
+        prefetchSegmentSuffix &&
+        prefetchSegmentDirSuffix &&
+        rscDidPostponeHeader &&
+        appDir
+      ) {
+        const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+        if (fs.existsSync(metaPath)) {
+          const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+          if (
+            typeof meta === 'object' &&
+            meta !== null &&
+            'segmentPaths' in meta &&
+            typeof meta.segmentPaths === 'object' &&
+            meta.segmentPaths !== null &&
+            Array.isArray(meta.segmentPaths)
+          ) {
+            const segmentsDir = path.join(
+              appDir,
+              routeFileNoExt + prefetchSegmentDirSuffix
+            );
+            for (const segmentPath of meta.segmentPaths) {
+              const outputSegmentPath =
+                path.join(
+                  outputPathPage + prefetchSegmentDirSuffix,
+                  segmentPath
+                ) + prefetchSegmentSuffix;
+
+              let fallback: FileFsRef | null = null;
+
+              // Only add the fallback if this is not a fallback route.
+              if (!isFallback) {
+                const fsPath = path.join(
+                  segmentsDir,
+                  segmentPath + prefetchSegmentSuffix
+                );
+
+                fallback = new FileFsRef({ fsPath });
+              }
+
+              prerenders[outputSegmentPath] = new Prerender({
+                expiration: initialRevalidate,
+                lambda,
+                allowQuery,
+                fallback,
+
+                // Use the same prerender group as the JSON/data prerender.
+                group: prerenderGroup,
+                allowHeader,
+
+                // These routes are always only static, so they should not
+                // permit any bypass unless it's for preview
+                bypassToken: prerenderManifest.bypassToken,
+                experimentalBypassFor: undefined,
+
+                initialHeaders: {
+                  ...initialHeaders,
+                  vary: rscVaryHeader,
+                  'content-type': rscContentTypeHeader,
+                  [rscDidPostponeHeader]: '2',
+                },
+              });
+            }
+          }
         }
       }
 

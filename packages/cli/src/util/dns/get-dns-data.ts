@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type { DNSRecordData } from '@vercel-internals/types';
-import confirm from '../input/confirm';
 import type Client from '../client';
 import output from '../../output-manager';
 
@@ -88,7 +87,7 @@ export default async function getDNSData(
 }
 
 async function verifyData(client: Client) {
-  return confirm(client, 'Is this correct?', false);
+  return client.input.confirm('Is this correct?', false);
 }
 
 async function getRecordName(client: Client, type: string) {

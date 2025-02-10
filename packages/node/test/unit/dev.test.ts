@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test, vi } from 'vitest';
 import { forkDevServer, readMessage } from '../../src/fork-dev-server';
 import { resolve, extname } from 'path';
-import { createServer } from 'http';
+import { createServer, request } from 'http';
 import { listen } from 'async-listen';
 import { once } from 'node:events';
 import { fetch } from 'undici';
@@ -9,8 +9,6 @@ import { promisify } from 'util';
 import { setTimeout } from 'timers/promises';
 
 vi.setConfig({ testTimeout: 20 * 1000 });
-
-const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 function testForkDevServer(entrypoint: string) {
   const ext = extname(entrypoint);
@@ -80,7 +78,7 @@ async function withDevServer(
   }
 }
 
-(NODE_MAJOR < 18 ? describe.skip : describe)('web handlers', () => {
+describe('web handlers', () => {
   describe('for node runtime', () => {
     test('with `waitUntil` from import', () =>
       withDevServer(
@@ -509,4 +507,45 @@ async function withDevServer(
         });
       }));
   });
+});
+
+test('dev server should remove transfer encoding header', async () => {
+  expect.assertions(2);
+  const child = testForkDevServer('./edge-echo.js');
+  try {
+    const result = await readMessage(child);
+    if (result.state !== 'message') {
+      throw new Error('Exited. error: ' + JSON.stringify(result.value));
+    }
+
+    const { address, port } = result.value;
+    let resResolve, resReject;
+    const resPromise = new Promise((resolve, reject) => {
+      resResolve = resolve;
+      resReject = reject;
+    });
+    // Undici will throw if we set Transfer-Encoding, we must use http.request
+    const req = request(`http://${address}:${port}/api/edge-echo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    req.once('response', res => {
+      expect(res.statusCode).toEqual(200);
+      res.setEncoding('utf-8');
+      res.on('data', chunk => {
+        expect(chunk).toEqual('Hello!');
+      });
+      res.on('error', resReject!);
+      res.on('end', resResolve!);
+    });
+    req.on('error', resReject!);
+    req.flushHeaders();
+    req.write('Hello!');
+    req.end();
+    await resPromise;
+  } finally {
+    child.kill(9);
+  }
 });

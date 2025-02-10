@@ -4,7 +4,6 @@ import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import confirm from '../../util/input/confirm';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -148,8 +147,7 @@ export async function envPullCommandLogic(
   } else if (
     exists &&
     !skipConfirmation &&
-    !(await confirm(
-      client,
+    !(await client.input.confirm(
       `Found existing file ${param(filename)}. Do you want to overwrite?`,
       false
     ))

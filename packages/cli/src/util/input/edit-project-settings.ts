@@ -1,4 +1,3 @@
-import confirm from './confirm';
 import chalk from 'chalk';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import type Client from '../client';
@@ -118,7 +117,7 @@ export async function editProjectSettings(
   // Prompt the user if they want to modify any settings not defined by local configuration.
   if (
     autoConfirm ||
-    !(await confirm(client, 'Want to modify these settings?', false))
+    !(await client.input.confirm('Want to modify these settings?', false))
   ) {
     return settings;
   }

@@ -1,5 +1,23 @@
 # @vercel/frameworks
 
+## 3.6.1
+
+### Patch Changes
+
+- Enable "demo" property for "react-router" framework ([#13008](https://github.com/vercel/vercel/pull/13008))
+
+## 3.6.0
+
+### Minor Changes
+
+- Add "react-router" framework entry ([#12932](https://github.com/vercel/vercel/pull/12932))
+
+## 3.5.0
+
+### Minor Changes
+
+- Make vite detection supersede ionic-react ([#12880](https://github.com/vercel/vercel/pull/12880))
+
 ## 3.4.0
 
 ### Minor Changes

@@ -5,6 +5,12 @@
       "method": "POST",
       "status": 200,
       "mustContain": "[{\"1\":2},\"data\",\"ok\"]"
+    },
+    {
+      "path": "/api/test",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "{\"success\":true}"
     }
   ]
 }

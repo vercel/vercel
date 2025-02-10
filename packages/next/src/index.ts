@@ -1388,6 +1388,11 @@ export const build: BuildV2 = async buildOptions => {
         requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
       : false;
 
+    const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
+        true
+      : false;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1444,6 +1449,7 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppClientSegmentCacheEnabled,
       });
     }
 
@@ -1964,6 +1970,7 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
+      isAppClientSegmentCacheEnabled: false,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -1994,6 +2001,7 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientSegmentCacheEnabled: false,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2192,6 +2200,7 @@ export const build: BuildV2 = async buildOptions => {
       isSharedLambdas,
       canUsePreviewMode,
       isAppPPREnabled: false,
+      isAppClientSegmentCacheEnabled: false,
     });
 
     await Promise.all(
@@ -2817,7 +2826,7 @@ export const prepareCache: PrepareCache = async ({
 
   debug('Producing cache file manifest...');
 
-  // for monorepos we want to cache all node_modules
+  // for monorepos we want to cache all node_modules and .yarn/cache
   const isMonorepo = repoRootPath && repoRootPath !== workPath;
   const cacheBasePath = repoRootPath || workPath;
   const cacheEntrypoint = path.relative(cacheBasePath, entryPath);
@@ -2830,6 +2839,12 @@ export const prepareCache: PrepareCache = async ({
     )),
     ...(await glob(
       path.join(cacheEntrypoint, outputDirectory, 'cache/**'),
+      cacheBasePath
+    )),
+    ...(await glob(
+      isMonorepo
+        ? '**/.yarn/cache/**'
+        : path.join(cacheEntrypoint, '.yarn/cache/**'),
       cacheBasePath
     )),
   };

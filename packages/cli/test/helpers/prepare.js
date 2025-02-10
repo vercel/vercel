@@ -602,11 +602,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'runtime-logs': {
-      'api/greetings.js':
-        'module.exports = (_, res) => {console.log("hi!"); res.json({ message: "Hello, World!" })}',
-      'index.txt': 'Hello, World!',
-    },
   };
 
   for (const [typeName, needed] of Object.entries(spec)) {
