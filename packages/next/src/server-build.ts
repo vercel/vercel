@@ -370,6 +370,9 @@ export async function serverBuild({
 
         const updated: Route = {
           ...rewrite,
+          // We don't want to perform the actual rewrite here, instead we want
+          // to just add the headers associated with the rewrite.
+          dest: undefined,
           has,
           headers,
         };
