@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { handle } from 'hono/vercel';
 import { createRequestHandler } from 'react-router';
 
 // @ts-expect-error - virtual module provided by React Router at build time
@@ -18,4 +17,4 @@ app.use((c) => handler(c.req.raw, {
     VALUE_FROM_HONO: 'Hello from Hono'
 }));
 
-export default handle(app);
+export default app.fetch;
