@@ -2,4 +2,4 @@
 "@vercel/remix-builder": patch
 ---
 
-[remix] Add link to remix documentation after vercelPreset() warning
+[remix] Add link to documentation after vercelPreset() warning
