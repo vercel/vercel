@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 9.3.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
 ## 9.2.1
 
 ### Patch Changes
