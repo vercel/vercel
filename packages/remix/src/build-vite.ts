@@ -166,7 +166,7 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
   slug: 'react-router',
-  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
+  sourceSearchValue: 'virtual:react-router/server-build',
   // React Router uses the same server source for both node and edge
   edge: {
     serverSourcePromise: reactRouterServerSrcPromise,
