@@ -1,6 +1,6 @@
 {
-  "name": "@vercel/related",
-  "version": "1.0.0",
+  "name": "@vercel/related-projects",
+  "version": "0.0.1",
   "description": "Vercel utilities for working with related projects",
   "files": [
     "dist"
@@ -9,7 +9,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/vercel/vercel.git",
-    "directory": "packages/related"
+    "directory": "packages/related-projects"
   },
   "license": "Apache-2.0",
   "scripts": {

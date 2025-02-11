@@ -1,4 +1,4 @@
-# @vercel/related
+# `@vercel/related-projects`
 
 Utilities for stitching together Vercel deployments across multiple projects.
 
@@ -6,7 +6,7 @@ Utilities for stitching together Vercel deployments across multiple projects.
 
 ### Install
 
-`npm add @vercel/related`
+`pnpm add @vercel/related-projects`
 
 ### Configure related projects
 
@@ -19,7 +19,7 @@ Utilities for stitching together Vercel deployments across multiple projects.
 ## Retrieve related projects data
 
 ```ts
-import { relatedProjects } from '@vercel/related';
+import { relatedProjects } from '@vercel/related-projects';
 
 // fully typed env variable
 const projects = relatedProjects();
@@ -28,7 +28,7 @@ const projects = relatedProjects();
 ### Reference hosts of related projects
 
 ```ts
-import { withRelatedProject } from '@vercel/related';
+import { withRelatedProject } from '@vercel/related-projects';
 
 const apiHost = withRelatedProject({
   projectName: 'my-api-project',
@@ -46,5 +46,5 @@ const apiHost = process.env.API_HOST;
 ### Access related projects types
 
 ```ts
-import type { VercelRelatedProject } from '@vercel/related';
+import type { VercelRelatedProject } from '@vercel/related-projects';
 ```
