@@ -1095,7 +1095,7 @@ export function detectPackageManager(
             pnpmVersionRange: '9.x',
           };
         case 'pnpm 10':
-          // pnpm 9
+          // pnpm 10
           return {
             path: '/pnpm10/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
