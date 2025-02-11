@@ -1229,8 +1229,8 @@ describe.skipIf(flakey)('build', () => {
       expect(files.sort()).toEqual([
         'builds.json',
         'config.json',
-        'static',
         'diagnostics',
+        'static',
       ]);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;

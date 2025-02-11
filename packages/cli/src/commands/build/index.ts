@@ -125,8 +125,6 @@ export interface BuildsManifest {
 class InMemoryReporter implements Reporter {
   public events: TraceEvent[] = [];
 
-  async flushAll() {}
-
   report(event: TraceEvent) {
     this.events.push(event);
   }
