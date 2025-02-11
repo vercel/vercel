@@ -78,13 +78,13 @@ describe('Test `detectPackageManager()`', () => {
         },
       },
       {
-        name: 'for 9.0 lockfile returns pnpm 9 path',
+        name: 'for 9.0 lockfile returns pnpm 10 path',
         args: ['pnpm', 9.0],
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
-          detectedPackageManager: 'pnpm@9.x',
-          pnpmVersionRange: '9.x',
-          path: '/pnpm9/node_modules/.bin',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
         },
       },
       {
