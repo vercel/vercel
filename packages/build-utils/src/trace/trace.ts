@@ -71,7 +71,8 @@ export class Span {
 
     this.status = 'stopped';
 
-    const duration = Date.now() - this._start;
+    // durations are reported in microseconds
+    const duration = (Date.now() - this._start) * 1000;
 
     const traceEvent: TraceEvent = {
       name: this.name,

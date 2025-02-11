@@ -1230,7 +1230,7 @@ describe.skipIf(flakey)('build', () => {
         'builds.json',
         'config.json',
         'static',
-        'trace',
+        'diagnostics',
       ]);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
