@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.3.0
+
+### Minor Changes
+
+- Add support for custom server entrypoint in React Router apps ([#13043](https://github.com/vercel/vercel/pull/13043))
+
 ## 5.2.4
 
 ### Patch Changes

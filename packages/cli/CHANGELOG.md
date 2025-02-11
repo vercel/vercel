@@ -1,5 +1,22 @@
 # vercel
 
+## 41.1.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+### Patch Changes
+
+- Fixed bug where rewrites would be applied twice in some cases ([#13040](https://github.com/vercel/vercel/pull/13040))
+
+- Updated dependencies [[`cc0b7194b119f72f59f77f9fba7e7a1188dac03c`](https://github.com/vercel/vercel/commit/cc0b7194b119f72f59f77f9fba7e7a1188dac03c), [`7e1ee69be35db77d7692c07f5eab255ce24399de`](https://github.com/vercel/vercel/commit/7e1ee69be35db77d7692c07f5eab255ce24399de), [`1f1186f26c6189c36098c76e3acda69ccb1790e0`](https://github.com/vercel/vercel/commit/1f1186f26c6189c36098c76e3acda69ccb1790e0), [`6a4c779704d777e11370a19df5bcba168dd6dd48`](https://github.com/vercel/vercel/commit/6a4c779704d777e11370a19df5bcba168dd6dd48)]:
+  - @vercel/build-utils@9.3.0
+  - @vercel/next@4.6.0
+  - @vercel/remix-builder@5.3.0
+  - @vercel/node@5.1.3
+  - @vercel/static-build@2.6.2
+
 ## 41.0.3
 
 ### Patch Changes
