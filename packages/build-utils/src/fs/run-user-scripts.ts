@@ -604,6 +604,41 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
+function getInstallCommandForPackageManager({
+  packageManager,
+  args,
+}: {
+  packageManager: CliType;
+  args: string[];
+}) {
+  switch (packageManager) {
+    case 'npm':
+      return {
+        prettyCommand: 'npm install',
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--no-audit', '--unsafe-perm']),
+      };
+    case 'pnpm':
+      return {
+        prettyCommand: 'pnpm install',
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--unsafe-perm']),
+      };
+    case 'bun':
+      return {
+        prettyCommand: 'bun install',
+        commandArguments: ['install', ...args],
+      };
+    case 'yarn':
+      return {
+        prettyCommand: 'yarn install',
+        commandArguments: ['install', ...args],
+      };
+  }
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -668,34 +703,16 @@ export async function runNpmInstall(
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
     });
-    let commandArgs: string[];
 
-    if (cliType === 'npm') {
-      opts.prettyCommand = 'npm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--no-audit', '--unsafe-perm']);
-    } else if (cliType === 'pnpm') {
-      // PNPM's install command is similar to NPM's but without the audit nonsense
-      // @see options https://pnpm.io/cli/install
-      opts.prettyCommand = 'pnpm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--unsafe-perm']);
-    } else if (cliType === 'bun') {
-      // @see options https://bun.sh/docs/cli/install
-      opts.prettyCommand = 'bun install';
-      commandArgs = ['install', ...args];
-    } else {
-      opts.prettyCommand = 'yarn install';
-      commandArgs = ['install', ...args];
-    }
+    const { commandArguments, prettyCommand } =
+      getInstallCommandForPackageManager({ packageManager: cliType, args });
+    opts.prettyCommand = prettyCommand;
 
     if (process.env.NPM_ONLY_PRODUCTION) {
-      commandArgs.push('--production');
+      commandArguments.push('--production');
     }
 
-    await spawnAsync(cliType, commandArgs, opts);
+    await spawnAsync(cliType, commandArguments, opts);
 
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
