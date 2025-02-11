@@ -146,6 +146,7 @@ export async function serverBuild({
   variantsManifest,
   experimentalPPRRoutes,
   isAppPPREnabled,
+  isAppClientSegmentCacheEnabled,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -188,6 +189,7 @@ export async function serverBuild({
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -200,6 +202,9 @@ export async function serverBuild({
 
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
+  );
+  const skipDefaultLocaleRewrite = Boolean(
+    process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
   );
 
   const lambdas: { [key: string]: Lambda } = {};
@@ -265,11 +270,19 @@ export async function serverBuild({
           // ensures that userland rewrites are still correctly matched to their special outputs
           // PPR should match .prefetch.rsc, .rsc
           // non-PPR should match .rsc
-          const rscSuffix = isAppPPREnabled ? `(\\.prefetch)?\\.rsc` : '\\.rsc';
+          const parts = ['\\.rsc'];
+          if (isAppPPREnabled) {
+            parts.push('\\.prefetch\\.rsc');
+          }
+          if (isAppClientSegmentCacheEnabled) {
+            parts.push('\\.segments/.+\\.segment\\.rsc');
+          }
+
+          const rscSuffix = parts.join('|');
 
           rewrite.src = rewrite.src.replace(
             /\/?\(\?:\/\)\?/,
-            `(?<rscsuff>${rscSuffix})?(?:/)?`
+            `(?:/)?(?<rscsuff>${rscSuffix})?`
           );
 
           let destQueryIndex = rewrite.dest.indexOf('?');
@@ -357,6 +370,9 @@ export async function serverBuild({
 
         const updated: Route = {
           ...rewrite,
+          // We don't want to perform the actual rewrite here, instead we want
+          // to just add the headers associated with the rewrite.
+          dest: undefined,
           has,
           headers,
         };
@@ -1476,6 +1492,7 @@ export async function serverBuild({
     isCorrectNotFoundRoutes,
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
+    isAppClientSegmentCacheEnabled,
   });
 
   await Promise.all(
@@ -1555,6 +1572,7 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
+    isAppClientSegmentCacheEnabled,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1745,6 +1763,10 @@ export async function serverBuild({
     }
   }
 
+  const prefetchSegmentHeader = routesManifest?.rsc?.prefetchSegmentHeader;
+  const prefetchSegmentDirSuffix =
+    routesManifest?.rsc?.prefetchSegmentDirSuffix;
+  const prefetchSegmentSuffix = routesManifest?.rsc?.prefetchSegmentSuffix;
   const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
@@ -1941,6 +1963,14 @@ export async function serverBuild({
                     },
                     continue: true,
                   },
+                ]
+              : []),
+
+            // We only want to add these rewrites before user redirects
+            // when `skipDefaultLocaleRewrite` is not flagged on
+            // and when localeDetection is enabled.
+            ...(!skipDefaultLocaleRewrite || i18n.localeDetection !== false
+              ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory)}$`,
                     dest: `${path.posix.join(
@@ -2063,10 +2093,72 @@ export async function serverBuild({
 
       ...(appDir
         ? [
+            ...(isAppClientSegmentCacheEnabled &&
+            rscPrefetchHeader &&
+            prefetchSegmentHeader &&
+            prefetchSegmentDirSuffix &&
+            prefetchSegmentSuffix
+              ? [
+                  {
+                    src: path.posix.join('/', entryDirectory, '/(?<path>.+)$'),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/$path${prefetchSegmentDirSuffix}/$segmentPath${prefetchSegmentSuffix}`
+                    ),
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
+                        value: '1',
+                      },
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                        value: '1',
+                      },
+                      {
+                        type: 'header',
+                        key: prefetchSegmentHeader,
+                        value: '/(?<segmentPath>.+)',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: path.posix.join('^/', entryDirectory, '$'),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/index${prefetchSegmentDirSuffix}/$segmentPath${prefetchSegmentSuffix}`
+                    ),
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscHeader,
+                        value: '1',
+                      },
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                        value: '1',
+                      },
+                      {
+                        type: 'header',
+                        key: prefetchSegmentHeader,
+                        value: '/(?<segmentPath>.+)',
+                      },
+                    ],
+                    continue: true,
+                    override: true,
+                  },
+                ]
+              : []),
             ...(rscPrefetchHeader && isAppPPREnabled
               ? [
                   {
-                    src: `^${path.posix.join('/', entryDirectory, '/')}`,
+                    src: `^${path.posix.join('/', entryDirectory, '/')}$`,
                     has: [
                       {
                         type: 'header',
@@ -2254,7 +2346,9 @@ export async function serverBuild({
       // to allow checking non-prefixed lambda outputs
       ...(i18n
         ? [
-            ...(i18n.localeDetection === false
+            // When `skipDefaultLocaleRewrite` is flagged on and localeDetection is disabled,
+            // we only want to add the rewrite as the fallback case once routing is complete.
+            ...(skipDefaultLocaleRewrite && i18n.localeDetection === false
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory)}$`,
@@ -2432,6 +2526,30 @@ export async function serverBuild({
                 '/(.*).json'
               )}`,
               dest: '__next_data_catchall',
+            },
+          ]
+        : []),
+
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to the regular RSC request.
+      ...(isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
+              check: true,
             },
           ]
         : []),

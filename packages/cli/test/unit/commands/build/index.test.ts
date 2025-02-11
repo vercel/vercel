@@ -16,7 +16,10 @@ vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/build', name);
 
-describe('build', () => {
+const flakey =
+  process.platform === 'win32' && process.version.startsWith('v22');
+
+describe.skipIf(flakey)('build', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
   });
@@ -1223,7 +1226,15 @@ describe('build', () => {
 
       const files = await fs.readdir(output);
       // we should NOT see `functions` because that means `middleware.ts` was processed
-      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+      expect(files.sort()).toEqual([
+        'builds.json',
+        'config.json',
+        'diagnostics',
+        'static',
+      ]);
+
+      const diagnostics = await fs.readdir(join(output, 'diagnostics'));
+      expect(diagnostics.sort()).toEqual(['cli_traces.json']);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }

@@ -1,5 +1,55 @@
 # @vercel/next
 
+## 4.6.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+### Patch Changes
+
+- Fixed bug where rewrites would be applied twice in some cases ([#13040](https://github.com/vercel/vercel/pull/13040))
+
+- pin fixtures and set up auto updates ([#12979](https://github.com/vercel/vercel/pull/12979))
+
+## 4.5.2
+
+### Patch Changes
+
+- Added new prefetch segments feature for Next.js ([#12897](https://github.com/vercel/vercel/pull/12897))
+
+## 4.5.1
+
+### Patch Changes
+
+- ensure non-locale prefixed route variants come after more specific ones ([#13003](https://github.com/vercel/vercel/pull/13003))
+
+## 4.5.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 4.4.5
+
+### Patch Changes
+
+- Add test case for locale false rewrite ([#12959](https://github.com/vercel/vercel/pull/12959))
+
+## 4.4.4
+
+### Patch Changes
+
+- flag behavior to defer defaultLocale rewrite ([#12941](https://github.com/vercel/vercel/pull/12941))
+
+## 4.4.3
+
+### Patch Changes
+
+- ensure defaultLocale rewrite doesn't conflict with user-defined redirects ([#12916](https://github.com/vercel/vercel/pull/12916))
+
+- Added headers for user-supplied rewrites ([#12847](https://github.com/vercel/vercel/pull/12847))
+
 ## 4.4.2
 
 ### Patch Changes

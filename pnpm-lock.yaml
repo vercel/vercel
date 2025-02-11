@@ -144,10 +144,10 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.4.0
+        specifier: 3.6.1
         version: link:../packages/frameworks
 
   internals/constants:
@@ -201,10 +201,10 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../../packages/routing-utils
     devDependencies:
       '@vercel-internals/tsconfig':
@@ -334,37 +334,37 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       '@vercel/fun':
-        specifier: 1.1.2
-        version: 1.1.2
+        specifier: 1.1.4
+        version: 1.1.4
       '@vercel/go':
         specifier: 3.2.1
         version: link:../go
       '@vercel/hydrogen':
-        specifier: 1.0.11
+        specifier: 1.1.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.4.2
+        specifier: 4.6.0
         version: link:../next
       '@vercel/node':
-        specifier: 5.0.2
+        specifier: 5.1.3
         version: link:../node
       '@vercel/python':
-        specifier: 4.7.0
+        specifier: 4.7.1
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.1.12
+        specifier: 2.2.0
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.0.2
+        specifier: 5.3.0
         version: link:../remix
       '@vercel/ruby':
-        specifier: 2.1.0
+        specifier: 2.2.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.5.41
+        specifier: 2.6.2
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -503,22 +503,22 @@ importers:
         specifier: 1.0.0
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 3.0.4
+        specifier: 3.0.6
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 13.5.4
+        specifier: 15.0.4
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.4.0
+        specifier: 3.6.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.2
+        specifier: 5.3.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       '@vitest/expect':
         specifier: 2.1.3
@@ -758,13 +758,13 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       async-retry:
         specifier: 1.2.3
@@ -940,7 +940,7 @@ importers:
         specifier: 2.5.8
         version: 2.5.8
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       ajv:
         specifier: 6.12.3
@@ -958,10 +958,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.4.0
+        specifier: 3.6.1
         version: link:../frameworks
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       glob:
         specifier: 8.0.3
@@ -998,7 +998,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1053,11 +1053,8 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
-      '@vercel/routing-utils':
-        specifier: 5.0.0
-        version: link:../routing-utils
       esbuild:
         specifier: 0.14.47
         version: 0.14.47
@@ -1083,6 +1080,9 @@ importers:
       '@types/react':
         specifier: 18.0.26
         version: 18.0.26
+      '@vercel/routing-utils':
+        specifier: 5.0.4
+        version: link:../routing-utils
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1120,7 +1120,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1169,7 +1169,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1230,10 +1230,10 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       async-sema:
         specifier: 3.0.1
@@ -1317,7 +1317,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1350,8 +1350,11 @@ importers:
         specifier: 2.6.9
         version: 2.6.9
       path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
+        specifier: 6.1.0
+        version: 6.1.0
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1450,7 +1453,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       cross-env:
         specifier: 7.0.3
@@ -1513,9 +1516,6 @@ importers:
       '@vercel/nft':
         specifier: 0.27.10
         version: 0.27.10
-      '@vercel/routing-utils':
-        specifier: 5.0.0
-        version: link:../routing-utils
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
@@ -1536,8 +1536,11 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
+      '@vercel/routing-utils':
+        specifier: 5.0.4
+        version: link:../routing-utils
       execa:
         specifier: 3.2.0
         version: 3.2.0
@@ -1547,6 +1550,25 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+
+  packages/related-projects:
+    optionalDependencies:
+      ajv:
+        specifier: ^6.12.3
+        version: 6.12.3
+    devDependencies:
+      '@types/jest':
+        specifier: 27.4.1
+        version: 27.4.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/remix:
     dependencies:
@@ -1559,6 +1581,12 @@ importers:
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
+      path-to-regexp:
+        specifier: 6.1.0
+        version: 6.1.0
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1573,7 +1601,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1581,9 +1609,6 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
-      path-to-regexp:
-        specifier: 6.2.1
-        version: 6.2.1
       semver:
         specifier: 7.5.2
         version: 7.5.2
@@ -1596,6 +1621,9 @@ importers:
       path-to-regexp:
         specifier: 6.1.0
         version: 6.1.0
+      path-to-regexp-updated:
+        specifier: npm:path-to-regexp@6.3.0
+        version: /path-to-regexp@6.3.0
     optionalDependencies:
       ajv:
         specifier: ^6.12.3
@@ -1626,7 +1654,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1650,7 +1678,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.63
+        specifier: 2.0.69
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1687,19 +1715,19 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 9.0.1
+        specifier: 9.3.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.4.0
+        specifier: 3.6.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.2
+        specifier: 5.3.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.0
+        specifier: 5.0.4
         version: link:../routing-utils
       execa:
         specifier: 3.2.0
@@ -4605,7 +4633,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-message-util: 29.7.0
       jest-util: 29.7.0
       slash: 3.0.0
@@ -4743,7 +4771,7 @@ packages:
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       collect-v8-coverage: 1.0.2
       exit: 0.1.2
       glob: 7.2.3
@@ -4815,7 +4843,7 @@ packages:
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
       babel-plugin-istanbul: 6.1.1
-      chalk: 4.1.2
+      chalk: 4.1.0
       convert-source-map: 2.0.0
       fast-json-stable-stringify: 2.1.0
       graceful-fs: 4.2.11
@@ -7799,15 +7827,13 @@ packages:
       eslint-visitor-keys: 3.4.3
     dev: true
 
-  /@vercel/fun@1.1.2:
-    resolution: {integrity: sha512-n13RO1BUy8u6+kzDQ2++BRj4Y5EAiQPt+aV+Tb2HNTmToNr4Mu3dE1kFlaTVTxQzAT3hvIRlVEU/OMvF8LCFJw==}
-    engines: {node: '>= 16'}
+  /@vercel/fun@1.1.4:
+    resolution: {integrity: sha512-E23Gyp3iJaLK1o/10dJPsQt186Ux7c06k81o7o6/07KiHSkVS5pQELOJybN+WDhg7x3OLywKjMcCJQhRTkdF0A==}
+    engines: {node: '>= 18'}
     dependencies:
       '@tootallnate/once': 2.0.0
       async-listen: 1.2.0
       debug: 4.3.4
-      execa: 3.2.0
-      fs-extra: 8.1.0
       generic-pool: 3.4.2
       micro: 9.3.5-canary.3
       ms: 2.1.1
@@ -7818,6 +7844,7 @@ packages:
       stat-mode: 0.3.0
       stream-to-promise: 2.2.0
       tar: 4.4.18
+      tinyexec: 0.3.2
       tree-kill: 1.2.2
       uid-promise: 1.0.0
       uuid: 3.3.2
@@ -7875,7 +7902,7 @@ packages:
       '@typescript-eslint/eslint-plugin': 5.62.0(@typescript-eslint/parser@5.62.0)(eslint@8.24.0)(typescript@4.9.4)
       '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.4)
       eslint: 8.24.0
-      eslint-config-prettier: 8.10.0(eslint@8.24.0)
+      eslint-config-prettier: 8.5.0(eslint@8.24.0)
       eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import@2.31.0)(eslint@8.24.0)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.24.0)
@@ -8712,7 +8739,7 @@ packages:
       '@types/babel__core': 7.20.5
       babel-plugin-istanbul: 6.1.1
       babel-preset-jest: 29.6.3(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       graceful-fs: 4.2.11
       slash: 3.0.0
     transitivePeerDependencies:
@@ -9489,7 +9516,7 @@ packages:
     hasBin: true
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-config: 29.7.0(@types/node@14.14.31)
@@ -9508,7 +9535,7 @@ packages:
     hasBin: true
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-config: 29.7.0(@types/node@14.18.33)
@@ -10027,11 +10054,6 @@ packages:
 
   /end-of-stream@1.4.1:
     resolution: {integrity: sha512-1MkrZNvWTKCaigbn+W15elq2BB/L22nqrSY5DKlo3X6+vclJm8Bb5djXJBmEX6fS3+zCh/F4VBK5Z2KxJt4s2Q==}
-    dependencies:
-      once: 1.4.0
-
-  /end-of-stream@1.4.4:
-    resolution: {integrity: sha512-+uw1inIHVPQoaVuHzRyXd21icM+cnt4CzD5rW+NC1wjOUSTOs+Te7FOv7AhN7vS9x/oIyhLP5PR1H+phQAHu5Q==}
     dependencies:
       once: 1.4.0
 
@@ -10569,15 +10591,6 @@ packages:
       esutils: 2.0.3
     optionalDependencies:
       source-map: 0.6.1
-    dev: true
-
-  /eslint-config-prettier@8.10.0(eslint@8.24.0):
-    resolution: {integrity: sha512-SM8AMJdeQqRYT9O9zguiruQZaN7+z+E4eAP9oiLNGKMtomwaB1E9dcgUD6ZAn/eQAb52USbvezbiljfZUhbJcg==}
-    hasBin: true
-    peerDependencies:
-      eslint: '>=7.0.0'
-    dependencies:
-      eslint: 8.24.0
     dev: true
 
   /eslint-config-prettier@8.5.0(eslint@8.24.0):
@@ -11167,6 +11180,7 @@ packages:
       p-finally: 2.0.1
       signal-exit: 3.0.7
       strip-final-newline: 2.0.0
+    dev: true
 
   /execa@5.1.1:
     resolution: {integrity: sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg==}
@@ -11565,6 +11579,7 @@ packages:
       graceful-fs: 4.2.11
       jsonfile: 4.0.0
       universalify: 0.1.2
+    dev: true
 
   /fs-minipass@1.2.7:
     resolution: {integrity: sha512-GWSSJGFy4e9GUeCcbIkED+bgAoFyj7XF1mV8rma3QW4NIqX9Kyx79N/PF61H5udOV3aY1IaMLs6pGbH71nlCTA==}
@@ -12092,6 +12107,7 @@ packages:
   /human-signals@1.1.1:
     resolution: {integrity: sha512-SEQu7vl8KjNL2eoGBLF3+wAjpsNfA9XMlXAYj/3EdaNfAlxKthD1xjEQfGOUhllCGGJVNY34bRr6lPINhNjyZw==}
     engines: {node: '>=8.12.0'}
+    dev: true
 
   /human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
@@ -12490,6 +12506,7 @@ packages:
   /is-stream@2.0.1:
     resolution: {integrity: sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg==}
     engines: {node: '>=8'}
+    dev: true
 
   /is-stream@3.0.0:
     resolution: {integrity: sha512-LnQR4bZ9IADDRSkvpqMGvt/tEJWclzklNgSw48V5EAaAeDd6qGvN8ei6k5p0tvxSR171VmGyHuTiAOfxAbr8kA==}
@@ -12691,7 +12708,7 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       co: 4.6.0
       dedent: 1.5.3
       is-generator-fn: 2.1.0
@@ -12784,7 +12801,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 14.14.31
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12824,7 +12841,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 14.18.33
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12864,7 +12881,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12891,7 +12908,7 @@ packages:
     resolution: {integrity: sha512-m0NvkX55LDt9T4mctTEgnZk3fmEg3NRYutvMPWM/0iPnkFj2wIeF45O1718cMSOFO1vINkqmxqD8vE37uTEbqw==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       diff-sequences: 27.5.1
       jest-get-type: 27.5.1
       pretty-format: 27.5.1
@@ -12901,7 +12918,7 @@ packages:
     resolution: {integrity: sha512-8RqP1B/OXzjjTWkqMX67iqgwBVJRgCyKD3L9nq+6ZqJMdvjE8RgHktqZ6jNrkdMT+dJuYNI3rhQpxaz7drJHfw==}
     engines: {node: ^12.13.0 || ^14.15.0 || ^16.10.0 || >=17.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       diff-sequences: 28.1.1
       jest-get-type: 28.0.2
       pretty-format: 28.1.3
@@ -12929,7 +12946,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-get-type: 29.6.3
       jest-util: 29.7.0
       pretty-format: 29.7.0
@@ -13013,7 +13030,7 @@ packages:
     resolution: {integrity: sha512-kQeJ7qHemKfbzKoGjHHrRKH6atgxMk8Enkk2iPQ3XwO6oE/KYD8lMYOziCkeSB9G4adPM4nR1DE8Tf5JeWH6Bw==}
     engines: {node: ^12.13.0 || ^14.15.0 || ^16.10.0 || >=17.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-diff: 28.1.3
       jest-get-type: 28.0.2
       pretty-format: 28.1.3
@@ -13103,7 +13120,7 @@ packages:
     resolution: {integrity: sha512-IOVhZSrg+UvVAshDSDtHyFCCBUl/Q3AAJv8iZ6ZjnZ74xzvwuzLXid9IIIPgTnY62SJjfuupMKZsZQRsCvxEgA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       graceful-fs: 4.2.11
       jest-haste-map: 29.7.0
       jest-pnp-resolver: 1.2.3(jest-resolve@29.7.0)
@@ -13124,7 +13141,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       emittery: 0.13.1
       graceful-fs: 4.2.11
       jest-docblock: 29.7.0
@@ -13155,7 +13172,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       cjs-module-lexer: 1.4.1
       collect-v8-coverage: 1.0.2
       glob: 7.2.3
@@ -13186,7 +13203,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       babel-preset-current-node-syntax: 1.1.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       expect: 29.7.0
       graceful-fs: 4.2.11
       jest-diff: 29.7.0
@@ -13207,7 +13224,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       graceful-fs: 4.2.11
       picomatch: 2.3.1
@@ -13231,7 +13248,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       camelcase: 6.3.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-get-type: 29.6.3
       leven: 3.1.0
       pretty-format: 29.7.0
@@ -13245,7 +13262,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
       ansi-escapes: 4.3.2
-      chalk: 4.1.2
+      chalk: 4.1.0
       emittery: 0.13.1
       jest-util: 29.7.0
       string-length: 4.0.2
@@ -13782,6 +13799,7 @@ packages:
 
   /merge-stream@2.0.0:
     resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}
+    dev: true
 
   /merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -13859,6 +13877,7 @@ packages:
   /mimic-fn@2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
+    dev: true
 
   /mimic-fn@4.0.0:
     resolution: {integrity: sha512-vqiC06CuhBTUdZH+RYl8sFrL096vA45Ok5ISO6sE/Mr1jRbGH4Csnhi8f3wKVl7x8mO4Au7Ir9D3Oyv1VYMFJw==}
@@ -14259,6 +14278,7 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       path-key: 3.1.1
+    dev: true
 
   /npm-run-path@5.3.0:
     resolution: {integrity: sha512-ppwTtiJZq0O/ai0z7yfudtBpWIoxM8yE6nHi1X47eFR2EWORqfbu6CnPlNsjeN683eT0qG6H/Pyf9fCcvjnnnQ==}
@@ -14373,6 +14393,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       mimic-fn: 2.1.0
+    dev: true
 
   /onetime@6.0.0:
     resolution: {integrity: sha512-1FlR+gjXK7X+AsAHso35MnyN5KqGwJRi/31ft6x0M194ht7S+rWAvd7PHss9xSKMzE0asv1pyIHaJYq+BbacAQ==}
@@ -14460,6 +14481,7 @@ packages:
   /p-finally@2.0.1:
     resolution: {integrity: sha512-vpm09aKwq6H9phqRQzecoDpD8TmVyGw70qmWlyq5onxY7tqyTTFVvxMykxQSQKILBSFlbXpypIw2T1Ml7+DDtw==}
     engines: {node: '>=8'}
+    dev: true
 
   /p-is-promise@2.1.0:
     resolution: {integrity: sha512-Y3W0wlRPK8ZMRbNq97l4M5otioeA5lm1z7bkNkxCka8HSPjR0xRWmpCmc9utiaLP9Jb1eD8BgeIxTW4AIF45Pg==}
@@ -14668,8 +14690,9 @@ packages:
     resolution: {integrity: sha512-h9DqehX3zZZDCEm+xbfU0ZmwCGFCAAraPJWMXJ4+v32NjZJilVg3k1TcKsRgIb8IQ/izZSaydDc1OhJCZvs2Dw==}
     dev: false
 
-  /path-to-regexp@6.2.1:
-    resolution: {integrity: sha512-JLyh7xT1kizaEvcaXOQwOc2/Yhw6KZOvPf1S8401UyLk86CU79LN3vl7ztXGm/pZ+YjoyAJ4rxmHwbkBXJX+yw==}
+  /path-to-regexp@6.3.0:
+    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
+    dev: false
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
@@ -14976,7 +14999,7 @@ packages:
   /pump@3.0.2:
     resolution: {integrity: sha512-tUPXtzlGM8FE3P0ZL6DVs/3P58k9nk8/jZeQCurTJylQA8qFYzHFfhBJkuqyE0FifOsQ0uKWekiZ5g8wtr28cw==}
     dependencies:
-      end-of-stream: 1.4.4
+      end-of-stream: 1.4.1
       once: 1.4.0
 
   /pumpify@1.5.1:
@@ -15613,6 +15636,7 @@ packages:
 
   /signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+    dev: true
 
   /signal-exit@4.0.2:
     resolution: {integrity: sha512-MY2/qGx4enyjprQnFaZsHib3Yadh3IXyV2C321GY0pjGfVBu4un0uDJkwgdxqO+Rdx8JMT8IfJIRwbYVz3Ob3Q==}
@@ -16039,6 +16063,7 @@ packages:
   /strip-final-newline@2.0.0:
     resolution: {integrity: sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA==}
     engines: {node: '>=6'}
+    dev: true
 
   /strip-final-newline@3.0.0:
     resolution: {integrity: sha512-dOESqjYr96iWYylGObzd39EuNTa5VJxyvVAEm5Jnh7KGo75V43Hk1odPQkNDyXNmUR6k+gEiDVXnjB8HJ3crXw==}
@@ -16195,7 +16220,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       bl: 4.1.0
-      end-of-stream: 1.4.4
+      end-of-stream: 1.4.1
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
@@ -16323,6 +16348,10 @@ packages:
   /tinyexec@0.3.1:
     resolution: {integrity: sha512-WiCJLEECkO18gwqIp6+hJg0//p23HXp4S+gGtAKu3mI2F2/sXC4FvHvXvB0zJVVaTPhx1/tOwdbRsa1sOBIKqQ==}
     dev: true
+
+  /tinyexec@0.3.2:
+    resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
+    dev: false
 
   /tinyglobby@0.2.10:
     resolution: {integrity: sha512-Zc+8eJlFMvgatPZTl6A9L/yht8QqdmUNtURHaKZLmKBE12hNPSrqNkUp2cs3M/UKmNVVAMFQYSjYIVHDjW5zew==}

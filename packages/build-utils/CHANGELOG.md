@@ -1,5 +1,38 @@
 # @vercel/build-utils
 
+## 9.3.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+## 9.2.1
+
+### Patch Changes
+
+- Add tracer utility to @vercel/build-utils ([#13013](https://github.com/vercel/vercel/pull/13013))
+
+## 9.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 9.1.1
+
+### Patch Changes
+
+- [cli] shift node 16 deprecation date to 2025-02-03 ([#12981](https://github.com/vercel/vercel/pull/12981))
+
+## 9.1.0
+
+### Minor Changes
+
+- Add `useWebApi` property to `NodejsLambda` class ([#12873](https://github.com/vercel/vercel/pull/12873))
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+
 ## 9.0.1
 
 ### Patch Changes

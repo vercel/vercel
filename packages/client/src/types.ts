@@ -14,7 +14,7 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
-export const VALID_ARCHIVE_FORMATS = ['tgz', 'split-tgz'] as const;
+export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
 export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
 
 export interface VercelClientOptions {

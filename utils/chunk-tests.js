@@ -10,7 +10,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['16', '18', '20', '22'],
+      nodeVersions: ['18', '20', '22'],
     },
   ],
   [
@@ -53,17 +53,6 @@ const runnersMap = new Map([
       runners: ['ubuntu-latest'],
       testScript: 'test',
       nodeVersions: ['18'],
-    },
-  ],
-  [
-    'test-next-local-legacy',
-    {
-      min: 1,
-      max: 5,
-      runners: ['ubuntu-latest'],
-
-      testScript: 'test',
-      nodeVersions: ['16'],
     },
   ],
   [
@@ -156,43 +145,33 @@ async function getChunkedTests() {
           min,
           max,
           testScript,
-          nodeVersions = ['16'],
+          nodeVersions = ['18'],
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
-        return (
-          intoChunks(min, max, sortedTestPaths)
-            .flatMap((chunk, chunkNumber, allChunks) => {
-              return nodeVersions.flatMap(nodeVersion => {
-                return runners.map(runner => {
-                  return {
-                    runner,
-                    packagePath,
-                    packageName,
-                    scriptName,
-                    testScript,
-                    nodeVersion,
-                    testPaths: chunk.map(testFile =>
-                      path.relative(
-                        path.join(__dirname, '../', packagePath),
-                        testFile
-                      )
-                    ),
-                    chunkNumber: chunkNumber + 1,
-                    allChunksLength: allChunks.length,
-                  };
-                });
+        return intoChunks(min, max, sortedTestPaths).flatMap(
+          (chunk, chunkNumber, allChunks) => {
+            return nodeVersions.flatMap(nodeVersion => {
+              return runners.map(runner => {
+                return {
+                  runner,
+                  packagePath,
+                  packageName,
+                  scriptName,
+                  testScript,
+                  nodeVersion,
+                  testPaths: chunk.map(testFile =>
+                    path.relative(
+                      path.join(__dirname, '../', packagePath),
+                      testFile
+                    )
+                  ),
+                  chunkNumber: chunkNumber + 1,
+                  allChunksLength: allChunks.length,
+                };
               });
-            })
-            // Skipping vitest-unit on windows with Node 22
-            .filter(chunk => {
-              const flakeyTest =
-                chunk.nodeVersion === '22' &&
-                chunk.runner === 'windows-latest' &&
-                chunk.scriptName === 'vitest-unit' &&
-                chunk.packagePath === 'packages/cli';
-              return !flakeyTest;
-            })
+            });
+          }
         );
       });
     }
