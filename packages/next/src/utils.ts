@@ -3321,7 +3321,7 @@ export async function getNodeMiddleware({
     },
     files: {
       ...tracedFiles,
-      [path.relative(outputDirectory, middlewareFile)]: new FileFsRef({
+      [path.relative(baseDir, middlewareFile)]: new FileFsRef({
         fsPath: middlewareFile,
       }),
       [path.join(path.relative(baseDir, projectDir), '___next_launcher.cjs')]:
@@ -3495,7 +3495,7 @@ export async function getMiddlewareBundle({
 
     const source: {
       staticRoutes: Route[];
-      dynamicRouteMap: Map<string, RouteSrc>;
+      dynamicRouteMap: Map<string, RouteWithSrc>;
       edgeFunctions: Record<string, EdgeFunction>;
     } = {
       staticRoutes: [],
@@ -3720,7 +3720,7 @@ export function upgradeMiddlewareManifestV2(
  * @returns matchers for the middleware route.
  */
 function getRouteMatchers(
-  info: { matchers: EdgeFunctionInfoV2['matchers'] },
+  info: { matchers: EdgeFunctionInfoV2['matchers']; page?: string },
   { basePath = '', i18n }: RoutesManifest
 ): EdgeFunctionMatcher[] {
   function getRegexp(regexp: string) {

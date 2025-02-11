@@ -24,6 +24,11 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 declare const __NEXT_CONFIG__: any;
 const conf = __NEXT_CONFIG__;
 
+// Next.js expects this to be available on the global same
+// as edge runtime
+(globalThis as any).AsyncLocalStorage =
+  require('async_hooks').AsyncLocalStorage;
+
 const middlewareHandler = require('__NEXT_MIDDLEWARE_PATH__').default;
 
 // Returns a wrapped handler that runs with "@next/request-context"
@@ -31,8 +36,8 @@ const middlewareHandler = require('__NEXT_MIDDLEWARE_PATH__').default;
 const serve = async (request: Request) => {
   try {
     const context = getVercelRequestContext();
-    await withNextRequestContext({ waitUntil: context.waitUntil }, () => {
-      return middlewareHandler({
+    await withNextRequestContext({ waitUntil: context.waitUntil }, async () => {
+      const result = await middlewareHandler({
         request: {
           url: request.url,
           method: request.method,
@@ -46,6 +51,15 @@ const serve = async (request: Request) => {
           waitUntil: context.waitUntil,
         },
       });
+
+      if (result.waitUntil && context.waitUntil) {
+        context.waitUntil(result.waitUntil);
+      }
+
+      // TODO: remove after debugging
+      console.log('got middleware response', result.response.headers);
+
+      return result.response;
     });
   } catch (err) {
     console.error(err);

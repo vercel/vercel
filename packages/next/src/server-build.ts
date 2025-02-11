@@ -1562,7 +1562,7 @@ export async function serverBuild({
   });
 
   const isNextDataServerResolving =
-    middleware.staticRoutes.length > 0 &&
+    (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
   const dynamicRoutes = await getDynamicRoutes({
