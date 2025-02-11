@@ -345,7 +345,8 @@ export default async function main(client: Client): Promise<number> {
         JSON.stringify(reporter.events)
       );
     } catch (err) {
-      // Ignore errors when writing diagnostics
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
     }
 
     // Unset environment variables that were added by dotenv

@@ -1232,6 +1232,9 @@ describe.skipIf(flakey)('build', () => {
         'diagnostics',
         'static',
       ]);
+
+      const diagnostics = await fs.readdir(join(output, 'diagnostics'));
+      expect(diagnostics.sort()).toEqual(['cli_traces.json']);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
