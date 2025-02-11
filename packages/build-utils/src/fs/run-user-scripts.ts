@@ -622,6 +622,8 @@ function getInstallCommandForPackageManager({
     case 'pnpm':
       return {
         prettyCommand: 'pnpm install',
+        // PNPM's install command is similar to NPM's but without the audit nonsense
+        // @see options https://pnpm.io/cli/install
         commandArguments: args
           .filter(a => a !== '--prefer-offline')
           .concat(['install', '--unsafe-perm']),
@@ -629,6 +631,7 @@ function getInstallCommandForPackageManager({
     case 'bun':
       return {
         prettyCommand: 'bun install',
+        // @see options https://bun.sh/docs/cli/install
         commandArguments: ['install', ...args],
       };
     case 'yarn':
