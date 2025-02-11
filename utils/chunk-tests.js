@@ -7,7 +7,7 @@ const runnersMap = new Map([
     'vitest-unit',
     {
       min: 1,
-      max: 1,
+      max: 2,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['18', '20', '22'],
@@ -229,6 +229,15 @@ function intoChunks(minChunks, maxChunks, arr) {
   for (let i = 0; i < maxChunks; i++) {
     chunks.push(arr.slice(i * chunkSize, (i + 1) * chunkSize));
   }
+
+  const indexOfTest = chunks[0].findIndex(
+    file => typeof file === 'string' && file.endsWith('index2.test.ts')
+  );
+  if (indexOfTest >= 0) {
+    const index2Test = chunks[0].splice(indexOfTest, 1);
+    chunks[1].push(index2Test[0]);
+  }
+
   return chunks.filter(x => x.length > 0);
 }
 
