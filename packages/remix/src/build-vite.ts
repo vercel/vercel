@@ -147,7 +147,8 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
-  presetDocumentationLink: '', // TODO waiting on posted documentation
+  presetDocumentationLink:
+    'https://vercel.com/docs/frameworks/react-router#vercel-react-router-preset',
 
   createRenderFunction({
     nodeVersion,
