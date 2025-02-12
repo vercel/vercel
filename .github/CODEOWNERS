@@ -15,7 +15,7 @@
 /examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Timer
 /examples/nextjs                         @ijjk @ztanner @huozhi
 /packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Kikobeats
-/packages/related-projects               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Kikobeats @tknickman @mknichel
+/packages/related-projects               @vercel/turbo-oss @mknichel @emspishak @kitfoster
 
 # Unrestricted Paths
 .changeset/
