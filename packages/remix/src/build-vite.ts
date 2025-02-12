@@ -96,6 +96,7 @@ interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
+  presetDocumentationLink: string;
   slug: string;
   sourceSearchValue: string;
   edge: {
@@ -117,6 +118,8 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
+  presetDocumentationLink:
+    'https://vercel.com/docs/frameworks/remix#vercel-vite-preset',
   slug: 'remix',
   sourceSearchValue: '@remix-run/dev/server-build',
   edge: {
@@ -165,6 +168,8 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
+  presetDocumentationLink:
+    'https://vercel.com/docs/frameworks/react-router#vercel-react-router-preset',
   slug: 'react-router',
   sourceSearchValue: 'virtual:react-router/server-build',
   // React Router uses the same server source for both node and edge
@@ -381,6 +386,9 @@ export const build: BuildV2 = async ({
     const buildDirectory = join(entrypointFsDirname, 'build');
     if (statSync(buildDirectory).isDirectory()) {
       console.warn('WARN: The `vercelPreset()` Preset was not detected.');
+      console.warn(
+        `See ${frameworkSettings.presetDocumentationLink} for more information`
+      );
       buildResult = {
         buildManifest: {
           routes: {
