@@ -27,7 +27,6 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
-  BUILDER_COMPILE_STEP,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -586,8 +585,6 @@ async function doBuild(
         name: builderPkg.name,
       });
 
-      const buildSpan = builderSpan.child(BUILDER_COMPILE_STEP);
-
       const buildOptions: BuildOptions = {
         files: filesMap,
         entrypoint: build.src,
@@ -595,15 +592,15 @@ async function doBuild(
         repoRootPath,
         config: buildConfig,
         meta,
-        span: buildSpan,
+        span: builderSpan,
       };
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
-        buildResult = await buildSpan.trace<BuildResultV2 | BuildResultV3>(() =>
-          builder.build(buildOptions)
+        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
+          () => builder.build(buildOptions)
         );
 
         // If the build result has no routes and the framework has default routes,

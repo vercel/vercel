@@ -203,8 +203,7 @@ function isLegacyNext(nextVersion: string) {
 
 export const build: BuildV2 = async buildOptions => {
   let { workPath, repoRootPath } = buildOptions;
-  const buildSpan =
-    buildOptions.span ?? new Span({ name: BUILDER_COMPILE_STEP });
+  const builderSpan = buildOptions.span ?? new Span({ name: 'vc.builder' });
 
   const {
     files,
@@ -356,12 +355,12 @@ export const build: BuildV2 = async buildOptions => {
     // Case 1: We have a install command which is non zero length
     Boolean(trimmedInstallCommand);
 
-  buildSpan.setAttributes({
+  builderSpan.setAttributes({
     install: JSON.stringify(shouldRunInstallCommand),
   });
 
   if (shouldRunInstallCommand) {
-    await buildSpan
+    await builderSpan
       .child(BUILDER_INSTALLER_STEP, {
         cliType,
         lockfileVersion: lockfileVersion?.toString(),
