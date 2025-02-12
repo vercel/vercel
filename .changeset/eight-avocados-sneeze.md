@@ -1,5 +1,0 @@
----
-
----
-
-Remove dependabot

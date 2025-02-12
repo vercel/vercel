@@ -1,6 +1,6 @@
 import { readFileSync, promises as fs, statSync, existsSync } from 'fs';
 import { basename, dirname, join, relative } from 'path';
-import { isErrnoException } from '@vercel/error-utils';
+import { isErrnoException, errorToString } from '@vercel/error-utils';
 import { nodeFileTrace, type NodeFileTraceResult } from '@vercel/nft';
 import {
   BuildResultV2Typical,
@@ -130,6 +130,7 @@ interface FrameworkSettings {
   primaryPackageName: string;
   buildCommand: string;
   buildResultFilePath: string;
+  presetDocumentationLink: string;
   slug: string;
   sourceSearchValue: string;
   edge: FrameworkEdgeSettings;
@@ -148,6 +149,8 @@ const REMIX_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: '@remix-run/dev',
   buildCommand: 'remix build',
   buildResultFilePath: '.vercel/remix-build-result.json',
+  presetDocumentationLink:
+    'https://vercel.com/docs/frameworks/remix#vercel-vite-preset',
   slug: 'remix',
   sourceSearchValue: '@remix-run/dev/server-build',
   edge: {
@@ -197,8 +200,10 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   primaryPackageName: 'react-router',
   buildCommand: 'react-router build',
   buildResultFilePath: '.vercel/react-router-build-result.json',
+  presetDocumentationLink:
+    'https://vercel.com/docs/frameworks/react-router#vercel-react-router-preset',
   slug: 'react-router',
-  sourceSearchValue: 'ENTRYPOINT_PLACEHOLDER',
+  sourceSearchValue: 'virtual:react-router/server-build',
   // React Router uses the same server source for both node and edge
   edge: {
     ...COMMON_EDGE_RUNTIME_SETTINGS,
@@ -380,6 +385,33 @@ export const build: BuildV2 = async ({
     }
   }
 
+  // If the Build Command or Framework output files according
+  // to the Build Output v3 API, then stop processing here
+  // since the output is already in its final form.
+  const buildOutputPath = join(entrypointFsDirname, '.vercel/output');
+  let buildOutputVersion: undefined | number;
+  try {
+    const boaConfigPath = join(buildOutputPath, 'config.json');
+    const buildResultContents = await fs.readFile(boaConfigPath, 'utf8');
+    buildOutputVersion = JSON.parse(buildResultContents).version;
+  } catch (err: unknown) {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // ENOENT is fine, no need to log
+    } else {
+      debug(
+        `Error reading ".vercel/output/config.json": ${errorToString(err)}`
+      );
+    }
+  }
+  if (buildOutputVersion) {
+    if (buildOutputVersion !== 3) {
+      throw new Error(
+        `The "version" property in ".vercel/output/config.json" must be 3 (received ${buildOutputVersion})`
+      );
+    }
+    return { buildOutputVersion: 3, buildOutputPath };
+  }
+
   const buildResultJsonPath = join(
     entrypointFsDirname,
     frameworkSettings.buildResultFilePath
@@ -398,6 +430,9 @@ export const build: BuildV2 = async ({
     const buildDirectory = join(entrypointFsDirname, 'build');
     if (statSync(buildDirectory).isDirectory()) {
       console.warn('WARN: The `vercelPreset()` Preset was not detected.');
+      console.warn(
+        `See ${frameworkSettings.presetDocumentationLink} for more information`
+      );
       buildResult = {
         buildManifest: {
           routes: {
