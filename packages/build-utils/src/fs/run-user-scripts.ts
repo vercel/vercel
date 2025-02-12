@@ -604,42 +604,59 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
-function getInstallCommandForPackageManager({
+async function runInstallCommand({
   packageManager,
   args,
+  opts,
 }: {
   packageManager: CliType;
   args: string[];
+  opts: SpawnOptionsExtended;
 }) {
-  switch (packageManager) {
-    case 'npm':
-      return {
-        prettyCommand: 'npm install',
-        commandArguments: args
-          .filter(a => a !== '--prefer-offline')
-          .concat(['install', '--no-audit', '--unsafe-perm']),
-      };
-    case 'pnpm':
-      return {
-        prettyCommand: 'pnpm install',
-        // PNPM's install command is similar to NPM's but without the audit nonsense
-        // @see options https://pnpm.io/cli/install
-        commandArguments: args
-          .filter(a => a !== '--prefer-offline')
-          .concat(['install', '--unsafe-perm']),
-      };
-    case 'bun':
-      return {
-        prettyCommand: 'bun install',
-        // @see options https://bun.sh/docs/cli/install
-        commandArguments: ['install', ...args],
-      };
-    case 'yarn':
-      return {
-        prettyCommand: 'yarn install',
-        commandArguments: ['install', ...args],
-      };
+  const getInstallCommandForPackageManager = (
+    packageManager: CliType,
+    args: string[]
+  ) => {
+    switch (packageManager) {
+      case 'npm':
+        return {
+          prettyCommand: 'npm install',
+          commandArguments: args
+            .filter(a => a !== '--prefer-offline')
+            .concat(['install', '--no-audit', '--unsafe-perm']),
+        };
+      case 'pnpm':
+        return {
+          prettyCommand: 'pnpm install',
+          // PNPM's install command is similar to NPM's but without the audit nonsense
+          // @see options https://pnpm.io/cli/install
+          commandArguments: args
+            .filter(a => a !== '--prefer-offline')
+            .concat(['install', '--unsafe-perm']),
+        };
+      case 'bun':
+        return {
+          prettyCommand: 'bun install',
+          // @see options https://bun.sh/docs/cli/install
+          commandArguments: ['install', ...args],
+        };
+      case 'yarn':
+        return {
+          prettyCommand: 'yarn install',
+          commandArguments: ['install', ...args],
+        };
+    }
+  };
+
+  const { commandArguments, prettyCommand } =
+    getInstallCommandForPackageManager(packageManager, args);
+  opts.prettyCommand = prettyCommand;
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArguments.push('--production');
   }
+
+  await spawnAsync(packageManager, commandArguments, opts);
 }
 
 export async function runNpmInstall(
@@ -707,15 +724,11 @@ export async function runNpmInstall(
       turboSupportsCorepackHome,
     });
 
-    const { commandArguments, prettyCommand } =
-      getInstallCommandForPackageManager({ packageManager: cliType, args });
-    opts.prettyCommand = prettyCommand;
-
-    if (process.env.NPM_ONLY_PRODUCTION) {
-      commandArguments.push('--production');
-    }
-
-    await spawnAsync(cliType, commandArguments, opts);
+    await runInstallCommand({
+      packageManager: cliType,
+      args,
+      opts,
+    });
 
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
