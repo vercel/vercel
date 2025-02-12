@@ -1,5 +1,4 @@
 import path from 'path';
-import url from 'url';
 import semver from 'semver';
 import { Sema } from 'async-sema';
 import {
@@ -262,9 +261,46 @@ export async function serverBuild({
         // If this doesn't have a src or dest, we can't modify it.
         if (!rewrite.src || !rewrite.dest) continue;
 
-        // Parse the destination URL to get the protocol, pathname, and query
-        // before we mutate the destination.
-        const { protocol, pathname, query } = url.parse(rewrite.dest);
+        // We're not using the url.parse here because the destination is not
+        // guaranteed to be a valid URL, it's a pattern, where the domain may
+        // include patterns like `https://:subdomain.example.com` that would not
+        // be parsed correctly.
+
+        let protocol: string | null = null;
+        if (rewrite.dest.startsWith('http://')) {
+          protocol = 'http://';
+        } else if (rewrite.dest.startsWith('https://')) {
+          protocol = 'https://';
+        }
+
+        // We only support adding rewrite headers to routes that do not have
+        // a protocol, so don't bother trying to parse the pathname if there is
+        // a protocol.
+        let pathname: string | null = null;
+        let query: string | null = null;
+        if (!protocol) {
+          // Start with the full destination as the pathname. If there's a query
+          // then we'll remove it.
+          pathname = rewrite.dest;
+
+          let index = pathname.indexOf('?');
+          if (index !== -1) {
+            query = pathname.substring(index + 1);
+            pathname = pathname.substring(0, index);
+
+            // If there's a hash, we should remove it.
+            index = query.indexOf('#');
+            if (index !== -1) {
+              query = query.substring(0, index);
+            }
+          } else {
+            // If there's a hash, we should remove it.
+            index = pathname.indexOf('#');
+            if (index !== -1) {
+              pathname = pathname.substring(0, index);
+            }
+          }
+        }
 
         if (isAfterFilesRewrite) {
           // ensures that userland rewrites are still correctly matched to their special outputs
@@ -285,16 +321,12 @@ export async function serverBuild({
             `(?:/)?(?<rscsuff>${rscSuffix})?`
           );
 
-          let destQueryIndex = rewrite.dest.indexOf('?');
-
+          const destQueryIndex = rewrite.dest.indexOf('?');
           if (destQueryIndex === -1) {
-            destQueryIndex = rewrite.dest.length;
+            rewrite.dest = `${rewrite.dest}$rscsuff`;
+          } else {
+            rewrite.dest = `${rewrite.dest.substring(0, destQueryIndex)}$rscsuff${rewrite.dest.substring(destQueryIndex)}`;
           }
-
-          rewrite.dest =
-            rewrite.dest.substring(0, destQueryIndex) +
-            '$rscsuff' +
-            rewrite.dest.substring(destQueryIndex);
         }
 
         // If the rewrite headers are not enabled, we don't need to add the
