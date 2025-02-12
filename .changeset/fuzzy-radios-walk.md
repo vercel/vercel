@@ -2,4 +2,4 @@
 "@vercel/build-utils": patch
 ---
 
-[build-utils] extract package manager specific install command logic into helper
+[build-utils] extract install command specific logic into helper
