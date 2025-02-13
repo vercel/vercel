@@ -671,16 +671,10 @@ function checkIfAlreadyInstalled(
   packageJsonPath: string
 ) {
   const initializedRunNpmInstallSet = initializeSet(runNpmInstallSet);
-
-  if (initializedRunNpmInstallSet.has(packageJsonPath)) {
-    return { alreadyInstalled: true, initializedRunNpmInstallSet };
-  }
+  const alreadyInstalled = initializedRunNpmInstallSet.has(packageJsonPath);
 
   initializedRunNpmInstallSet.add(packageJsonPath);
-  return {
-    alreadyInstalled: false,
-    runNpmInstallSet: initializedRunNpmInstallSet,
-  };
+  return { alreadyInstalled, initializedRunNpmInstallSet };
 }
 
 export async function runNpmInstall(
