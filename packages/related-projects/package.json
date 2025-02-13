@@ -27,5 +27,8 @@
   },
   "optionalDependencies": {
     "ajv": "^6.12.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
