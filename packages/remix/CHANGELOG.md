@@ -1,5 +1,13 @@
 # @vercel/remix-builder
 
+## 5.3.1
+
+### Patch Changes
+
+- [remix] unify render function creation logic between Remix and React Router ([#13023](https://github.com/vercel/vercel/pull/13023))
+
+- [remix] Add link to documentation after vercelPreset() warning ([#12942](https://github.com/vercel/vercel/pull/12942))
+
 ## 5.3.0
 
 ### Minor Changes
