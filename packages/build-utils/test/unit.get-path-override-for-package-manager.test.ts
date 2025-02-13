@@ -20,9 +20,9 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',
-        detectedPackageManager: 'pnpm@10.x',
-        path: '/pnpm10/node_modules/.bin',
-        pnpmVersionRange: '10.x',
+        detectedPackageManager: 'pnpm@9.x',
+        path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
@@ -54,9 +54,9 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',
-        detectedPackageManager: 'pnpm@10.x',
-        path: '/pnpm10/node_modules/.bin',
-        pnpmVersionRange: '10.x',
+        detectedPackageManager: 'pnpm@9.x',
+        path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
   });
