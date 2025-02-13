@@ -23,7 +23,6 @@ import {
   getPackageVersion,
   hasScript,
   logNftWarnings,
-  findConfig,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
@@ -248,20 +247,6 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   },
 };
 
-function determineFrameworkSettings(workPath: string) {
-  const isReactRouter = findConfig(workPath, 'react-router.config', [
-    '.js',
-    '.ts',
-    '.mjs',
-    '.mts',
-  ]);
-
-  if (isReactRouter) {
-    return REACT_ROUTER_FRAMEWORK_SETTINGS;
-  }
-  return REMIX_FRAMEWORK_SETTINGS;
-}
-
 interface HandlerOptions {
   rootDir: string;
   serverBuildPath: string;
@@ -304,7 +289,10 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
-  const frameworkSettings = determineFrameworkSettings(workPath);
+  const frameworkSettings =
+    config.framework === 'react-router'
+      ? REACT_ROUTER_FRAMEWORK_SETTINGS
+      : REMIX_FRAMEWORK_SETTINGS;
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
