@@ -203,8 +203,7 @@ function isLegacyNext(nextVersion: string) {
 
 export const build: BuildV2 = async buildOptions => {
   let { workPath, repoRootPath } = buildOptions;
-  const buildSpan =
-    buildOptions.span ?? new Span({ name: BUILDER_COMPILE_STEP });
+  const builderSpan = buildOptions.span ?? new Span({ name: 'vc.builder' });
 
   const {
     files,
@@ -356,12 +355,12 @@ export const build: BuildV2 = async buildOptions => {
     // Case 1: We have a install command which is non zero length
     Boolean(trimmedInstallCommand);
 
-  buildSpan.setAttributes({
+  builderSpan.setAttributes({
     install: JSON.stringify(shouldRunInstallCommand),
   });
 
   if (shouldRunInstallCommand) {
-    await buildSpan
+    await builderSpan
       .child(BUILDER_INSTALLER_STEP, {
         cliType,
         lockfileVersion: lockfileVersion?.toString(),
@@ -496,44 +495,55 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  await buildSpan
-    .child(BUILDER_COMPILE_STEP, {
-      buildCommand,
-      buildScriptName,
-    })
-    .trace(async () => {
-      if (buildCommand) {
-        // Add `node_modules/.bin` to PATH
-        const nodeBinPaths = getNodeBinPaths({
-          start: entryPath,
-          base: repoRootPath,
-        });
-        const nodeBinPath = nodeBinPaths.join(path.delimiter);
-        env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+  const shouldRunCompileStep =
+    Boolean(buildCommand) || Boolean(buildScriptName);
 
-        // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
-        if (!env.YARN_NODE_LINKER) {
-          env.YARN_NODE_LINKER = 'node-modules';
+  builderSpan.setAttributes({
+    build: JSON.stringify(shouldRunCompileStep),
+  });
+
+  if (shouldRunCompileStep) {
+    await builderSpan
+      .child(BUILDER_COMPILE_STEP, {
+        buildCommand,
+        buildScriptName,
+      })
+      .trace(async () => {
+        if (buildCommand) {
+          // Add `node_modules/.bin` to PATH
+          const nodeBinPaths = getNodeBinPaths({
+            start: entryPath,
+            base: repoRootPath,
+          });
+          const nodeBinPath = nodeBinPaths.join(path.delimiter);
+          env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
+
+          // Yarn v2 PnP mode may be activated, so force "node-modules" linker style
+          if (!env.YARN_NODE_LINKER) {
+            env.YARN_NODE_LINKER = 'node-modules';
+          }
+
+          debug(
+            `Added "${nodeBinPath}" to PATH env because a build command was used.`
+          );
+
+          console.log(`Running "${buildCommand}"`);
+          await execCommand(buildCommand, {
+            ...spawnOpts,
+            cwd: entryPath,
+            env,
+          });
+        } else if (buildScriptName) {
+          await runPackageJsonScript(entryPath, buildScriptName, {
+            ...spawnOpts,
+            env,
+          });
         }
-
-        debug(
-          `Added "${nodeBinPath}" to PATH env because a build command was used.`
-        );
-
-        console.log(`Running "${buildCommand}"`);
-        await execCommand(buildCommand, {
-          ...spawnOpts,
-          cwd: entryPath,
-          env,
-        });
-      } else if (buildScriptName) {
-        await runPackageJsonScript(entryPath, buildScriptName, {
-          ...spawnOpts,
-          env,
-        });
-      }
-    });
-  debug('build command exited');
+      });
+    debug('build command exited');
+  } else {
+    console.log(`Skipping "build" command...`);
+  }
 
   if (buildCallback) {
     await buildCallback(buildOptions);
