@@ -33,34 +33,37 @@ const middlewareHandler = require('__NEXT_MIDDLEWARE_PATH__').default;
 
 // Returns a wrapped handler that runs with "@next/request-context"
 // and will crash the lambda if an error isn't caught.
-const serve = async (request: Request) => {
+const serve = async (request: Request): Promise<Response> => {
   try {
     const context = getVercelRequestContext();
-    await withNextRequestContext({ waitUntil: context.waitUntil }, async () => {
-      const result = await middlewareHandler({
-        request: {
-          url: request.url,
-          method: request.method,
-          headers: toPlainHeaders(request.headers),
-          nextConfig: conf,
-          page: '/middleware',
-          body:
-            request.method !== 'GET' && request.method !== 'HEAD'
-              ? request.body
-              : undefined,
-          waitUntil: context.waitUntil,
-        },
-      });
+    return await withNextRequestContext(
+      { waitUntil: context.waitUntil },
+      async () => {
+        const result = await middlewareHandler({
+          request: {
+            url: request.url,
+            method: request.method,
+            headers: toPlainHeaders(request.headers),
+            nextConfig: conf,
+            page: '/middleware',
+            body:
+              request.method !== 'GET' && request.method !== 'HEAD'
+                ? request.body
+                : undefined,
+            waitUntil: context.waitUntil,
+          },
+        });
 
-      if (result.waitUntil && context.waitUntil) {
-        context.waitUntil(result.waitUntil);
+        if (result.waitUntil && context.waitUntil) {
+          context.waitUntil(result.waitUntil);
+        }
+
+        // TODO: remove after debugging
+        console.log('got middleware response', result.response.headers);
+
+        return result.response;
       }
-
-      // TODO: remove after debugging
-      console.log('got middleware response', result.response.headers);
-
-      return result.response;
-    });
+    );
   } catch (err) {
     console.error(err);
     // crash the lambda immediately to clean up any bad module state,
