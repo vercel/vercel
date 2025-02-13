@@ -27,9 +27,6 @@ import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
 
-// Only allow one `runNpmInstall()` invocation to run concurrently
-const runNpmInstallSema = new Sema(1);
-
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
   detectedPackageManager: undefined,
@@ -658,6 +655,9 @@ async function runInstallCommand({
 
   await spawnAsync(packageManager, commandArguments, opts);
 }
+
+// Only allow one `runNpmInstall()` invocation to run concurrently
+const runNpmInstallSema = new Sema(1);
 
 export async function runNpmInstall(
   destPath: string,
