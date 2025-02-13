@@ -604,6 +604,41 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
+function getInstallCommandForPackageManager(
+  packageManager: CliType,
+  args: string[]
+) {
+  switch (packageManager) {
+    case 'npm':
+      return {
+        prettyCommand: 'npm install',
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--no-audit', '--unsafe-perm']),
+      };
+    case 'pnpm':
+      return {
+        prettyCommand: 'pnpm install',
+        // PNPM's install command is similar to NPM's but without the audit nonsense
+        // @see options https://pnpm.io/cli/install
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--unsafe-perm']),
+      };
+    case 'bun':
+      return {
+        prettyCommand: 'bun install',
+        // @see options https://bun.sh/docs/cli/install
+        commandArguments: ['install', ...args],
+      };
+    case 'yarn':
+      return {
+        prettyCommand: 'yarn install',
+        commandArguments: ['install', ...args],
+      };
+  }
+}
+
 async function runInstallCommand({
   packageManager,
   args,
@@ -613,41 +648,6 @@ async function runInstallCommand({
   args: string[];
   opts: SpawnOptionsExtended;
 }) {
-  const getInstallCommandForPackageManager = (
-    packageManager: CliType,
-    args: string[]
-  ) => {
-    switch (packageManager) {
-      case 'npm':
-        return {
-          prettyCommand: 'npm install',
-          commandArguments: args
-            .filter(a => a !== '--prefer-offline')
-            .concat(['install', '--no-audit', '--unsafe-perm']),
-        };
-      case 'pnpm':
-        return {
-          prettyCommand: 'pnpm install',
-          // PNPM's install command is similar to NPM's but without the audit nonsense
-          // @see options https://pnpm.io/cli/install
-          commandArguments: args
-            .filter(a => a !== '--prefer-offline')
-            .concat(['install', '--unsafe-perm']),
-        };
-      case 'bun':
-        return {
-          prettyCommand: 'bun install',
-          // @see options https://bun.sh/docs/cli/install
-          commandArguments: ['install', ...args],
-        };
-      case 'yarn':
-        return {
-          prettyCommand: 'yarn install',
-          commandArguments: ['install', ...args],
-        };
-    }
-  };
-
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
   opts.prettyCommand = prettyCommand;
