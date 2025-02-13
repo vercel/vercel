@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.6.1
+
+### Patch Changes
+
+- Fix duplicate trace names generated from builders ([#13051](https://github.com/vercel/vercel/pull/13051))
+
 ## 4.6.0
 
 ### Minor Changes

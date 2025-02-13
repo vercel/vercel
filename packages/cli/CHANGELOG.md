@@ -1,5 +1,18 @@
 # vercel
 
+## 41.1.1
+
+### Patch Changes
+
+- Fix duplicate trace names generated from builders ([#13051](https://github.com/vercel/vercel/pull/13051))
+
+- Updated dependencies [[`a8c3efa2f907ff53e751b40121e9d4b986d7bd91`](https://github.com/vercel/vercel/commit/a8c3efa2f907ff53e751b40121e9d4b986d7bd91), [`3688e7b3206f69f2456a9963c9e30077cab3fbd4`](https://github.com/vercel/vercel/commit/3688e7b3206f69f2456a9963c9e30077cab3fbd4), [`d523fd6a92b36c2841b41e55c742099561555bc9`](https://github.com/vercel/vercel/commit/d523fd6a92b36c2841b41e55c742099561555bc9), [`65a501582d22c48f75044eac4c13f1be5bcd2c79`](https://github.com/vercel/vercel/commit/65a501582d22c48f75044eac4c13f1be5bcd2c79), [`c93dbecb641890d2936547395d7744a5c197800a`](https://github.com/vercel/vercel/commit/c93dbecb641890d2936547395d7744a5c197800a)]:
+  - @vercel/next@4.6.1
+  - @vercel/build-utils@9.3.1
+  - @vercel/remix-builder@5.3.1
+  - @vercel/node@5.1.4
+  - @vercel/static-build@2.6.3
+
 ## 41.1.0
 
 ### Minor Changes
