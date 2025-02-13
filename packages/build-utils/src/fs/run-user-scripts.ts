@@ -27,9 +27,6 @@ import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
 
-// Only allow one `runNpmInstall()` invocation to run concurrently
-const runNpmInstallSema = new Sema(1);
-
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
   detectedPackageManager: undefined,
@@ -604,6 +601,41 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
+function getInstallCommandForPackageManager(
+  packageManager: CliType,
+  args: string[]
+) {
+  switch (packageManager) {
+    case 'npm':
+      return {
+        prettyCommand: 'npm install',
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--no-audit', '--unsafe-perm']),
+      };
+    case 'pnpm':
+      return {
+        prettyCommand: 'pnpm install',
+        // PNPM's install command is similar to NPM's but without the audit nonsense
+        // @see options https://pnpm.io/cli/install
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--unsafe-perm']),
+      };
+    case 'bun':
+      return {
+        prettyCommand: 'bun install',
+        // @see options https://bun.sh/docs/cli/install
+        commandArguments: ['install', ...args],
+      };
+    case 'yarn':
+      return {
+        prettyCommand: 'yarn install',
+        commandArguments: ['install', ...args],
+      };
+  }
+}
+
 async function runInstallCommand({
   packageManager,
   args,
@@ -613,41 +645,6 @@ async function runInstallCommand({
   args: string[];
   opts: SpawnOptionsExtended;
 }) {
-  const getInstallCommandForPackageManager = (
-    packageManager: CliType,
-    args: string[]
-  ) => {
-    switch (packageManager) {
-      case 'npm':
-        return {
-          prettyCommand: 'npm install',
-          commandArguments: args
-            .filter(a => a !== '--prefer-offline')
-            .concat(['install', '--no-audit', '--unsafe-perm']),
-        };
-      case 'pnpm':
-        return {
-          prettyCommand: 'pnpm install',
-          // PNPM's install command is similar to NPM's but without the audit nonsense
-          // @see options https://pnpm.io/cli/install
-          commandArguments: args
-            .filter(a => a !== '--prefer-offline')
-            .concat(['install', '--unsafe-perm']),
-        };
-      case 'bun':
-        return {
-          prettyCommand: 'bun install',
-          // @see options https://bun.sh/docs/cli/install
-          commandArguments: ['install', ...args],
-        };
-      case 'yarn':
-        return {
-          prettyCommand: 'yarn install',
-          commandArguments: ['install', ...args],
-        };
-    }
-  };
-
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
   opts.prettyCommand = prettyCommand;
@@ -676,6 +673,9 @@ function checkIfAlreadyInstalled(
   initializedRunNpmInstallSet.add(packageJsonPath);
   return { alreadyInstalled, runNpmInstallSet: initializedRunNpmInstallSet };
 }
+
+// Only allow one `runNpmInstall()` invocation to run concurrently
+const runNpmInstallSema = new Sema(1);
 
 export async function runNpmInstall(
   destPath: string,
@@ -706,7 +706,6 @@ export async function runNpmInstall(
       debug(
         `Skipping dependency installation because no package.json was found for ${destPath}`
       );
-      runNpmInstallSema.release();
       return false;
     }
 
