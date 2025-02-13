@@ -1,5 +1,6 @@
 import fetch, { type Response } from 'node-fetch';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import ua from './ua';
 
 // https://vercel.com/.well-known/openid-configuration
 export const as: {
@@ -30,7 +31,10 @@ export async function deviceAuthorizationRequest(options: {
 }): Promise<Response> {
   return await fetch(as.device_authorization_endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
     body: new URLSearchParams({ client_id: as.client_id, ...options }),
   });
 }
