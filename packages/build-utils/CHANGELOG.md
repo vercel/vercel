@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.0.0
+
+### Major Changes
+
+- Detect v9 pnpm lockfiles as pnpm 10 generated ([#12852](https://github.com/vercel/vercel/pull/12852))
+
 ## 9.3.1
 
 ### Patch Changes
