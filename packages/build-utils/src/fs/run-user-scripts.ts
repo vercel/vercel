@@ -688,7 +688,6 @@ export async function runNpmInstall(
       debug(
         `Skipping dependency installation because no package.json was found for ${destPath}`
       );
-      runNpmInstallSema.release();
       return false;
     }
 
