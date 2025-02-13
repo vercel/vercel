@@ -38,6 +38,44 @@ const NO_OVERRIDE = {
 
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
 
+interface PackageManager {
+  cliType: CliType;
+  prettyInstallCommand: string;
+  prettyRunCommand: (scriptName: string) => string;
+}
+
+const NPM: PackageManager = {
+  cliType: 'npm',
+  prettyInstallCommand: 'npm install',
+  prettyRunCommand: (scriptName: string) => {
+    return `npm run ${scriptName}`;
+  },
+};
+
+const YARN: PackageManager = {
+  cliType: 'yarn',
+  prettyInstallCommand: 'yarn install',
+  prettyRunCommand: (scriptName: string) => {
+    return `yarn run ${scriptName}`;
+  },
+};
+
+const PNPM: PackageManager = {
+  cliType: 'pnpm',
+  prettyInstallCommand: 'pnpm install',
+  prettyRunCommand: (scriptName: string) => {
+    return `pnpm run ${scriptName}`;
+  },
+};
+
+const BUN: PackageManager = {
+  cliType: 'bun',
+  prettyInstallCommand: 'bun install',
+  prettyRunCommand: (scriptName: string) => {
+    return `bun run ${scriptName}`;
+  },
+};
+
 export interface ScanParentDirsResult {
   /**
    * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
@@ -611,14 +649,14 @@ function getInstallCommandForPackageManager(
   switch (packageManager) {
     case 'npm':
       return {
-        prettyCommand: 'npm install',
+        prettyCommand: NPM.prettyInstallCommand,
         commandArguments: args
           .filter(a => a !== '--prefer-offline')
           .concat(['install', '--no-audit', '--unsafe-perm']),
       };
     case 'pnpm':
       return {
-        prettyCommand: 'pnpm install',
+        prettyCommand: PNPM.prettyInstallCommand,
         // PNPM's install command is similar to NPM's but without the audit nonsense
         // @see options https://pnpm.io/cli/install
         commandArguments: args
@@ -627,13 +665,13 @@ function getInstallCommandForPackageManager(
       };
     case 'bun':
       return {
-        prettyCommand: 'bun install',
+        prettyCommand: BUN.prettyInstallCommand,
         // @see options https://bun.sh/docs/cli/install
         commandArguments: ['install', ...args],
       };
     case 'yarn':
       return {
-        prettyCommand: 'yarn install',
+        prettyCommand: YARN.prettyInstallCommand,
         commandArguments: ['install', ...args],
       };
   }
@@ -1271,13 +1309,13 @@ export async function runPackageJsonScript(
   };
 
   if (cliType === 'npm') {
-    opts.prettyCommand = `npm run ${scriptName}`;
+    opts.prettyCommand = NPM.prettyRunCommand(scriptName);
   } else if (cliType === 'pnpm') {
-    opts.prettyCommand = `pnpm run ${scriptName}`;
+    opts.prettyCommand = PNPM.prettyRunCommand(scriptName);
   } else if (cliType === 'bun') {
-    opts.prettyCommand = `bun run ${scriptName}`;
+    opts.prettyCommand = BUN.prettyRunCommand(scriptName);
   } else {
-    opts.prettyCommand = `yarn run ${scriptName}`;
+    opts.prettyCommand = YARN.prettyRunCommand(scriptName);
   }
 
   console.log(`Running "${opts.prettyCommand}"`);
