@@ -287,18 +287,11 @@ export async function serverBuild({
           if (index !== -1) {
             query = pathname.substring(index + 1);
             pathname = pathname.substring(0, index);
+          }
 
-            // If there's a hash, we should remove it.
-            index = query.indexOf('#');
-            if (index !== -1) {
-              query = query.substring(0, index);
-            }
-          } else {
-            // If there's a hash, we should remove it.
-            index = pathname.indexOf('#');
-            if (index !== -1) {
-              pathname = pathname.substring(0, index);
-            }
+          index = pathname.indexOf('#');
+          if (index !== -1) {
+            pathname = pathname.substring(0, index);
           }
         }
 
