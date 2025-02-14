@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.1.0
+
+### Minor Changes
+
+- [envs] add `VERCEL_TARGET_ENV` to prefixed env vars ([#13069](https://github.com/vercel/vercel/pull/13069))
+
 ## 10.0.1
 
 ### Patch Changes
