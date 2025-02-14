@@ -12,6 +12,9 @@ import {
   getInstalledPackageVersion,
   normalizePath,
   NowBuildError,
+  type Reporter,
+  Span,
+  type TraceEvent,
   validateNpmrc,
   type Builder,
   type BuildOptions,
@@ -77,6 +80,7 @@ import { validateConfig } from '../../util/validate-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
+import { mkdir, writeFile } from 'fs/promises';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -117,12 +121,25 @@ export interface BuildsManifest {
   };
 }
 
+class InMemoryReporter implements Reporter {
+  public events: TraceEvent[] = [];
+
+  report(event: TraceEvent) {
+    this.events.push(event);
+  }
+}
+
 export default async function main(client: Client): Promise<number> {
   const telemetryClient = new BuildTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
+
+  // Setup tracer to output into the build directory
+  const reporter = new InMemoryReporter();
+  const rootSpan = new Span({ name: 'vc', reporter });
+
   let { cwd } = client;
 
   // Ensure that `vc build` is not being invoked recursively
@@ -244,6 +261,7 @@ export default async function main(client: Client): Promise<number> {
   const outputDir = parsedArgs.flags['--output']
     ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
+
   await Promise.all([
     fs.remove(outputDir),
     // Also delete `.vercel/output`, in case the script is targeting Build Output API directly
@@ -294,7 +312,14 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    await doBuild(client, project, buildsJson, cwd, outputDir);
+    await rootSpan
+      .child('vc.doBuild')
+      .trace(span =>
+        doBuild(client, project, buildsJson, cwd, outputDir, span)
+      );
+
+    await rootSpan.stop();
+
     return 0;
   } catch (err: any) {
     output.prettyError(err);
@@ -310,6 +335,19 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
+    try {
+      const diagnosticsOutputPath = join(outputDir, 'diagnostics');
+      await mkdir(diagnosticsOutputPath, { recursive: true });
+      // Ensure that all traces have flushed to disk before we exit
+      await writeFile(
+        join(diagnosticsOutputPath, 'cli_traces.json'),
+        JSON.stringify(reporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+
     // Unset environment variables that were added by dotenv
     // (this is mostly for the unit tests)
     for (const key of envToUnset) {
@@ -327,7 +365,8 @@ async function doBuild(
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
   cwd: string,
-  outputDir: string
+  outputDir: string,
+  span: Span
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -541,6 +580,11 @@ async function doBuild(
             nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
+
+      const builderSpan = span.child('vc.builder', {
+        name: builderPkg.name,
+      });
+
       const buildOptions: BuildOptions = {
         files: filesMap,
         entrypoint: build.src,
@@ -548,13 +592,16 @@ async function doBuild(
         repoRootPath,
         config: buildConfig,
         meta,
+        span: builderSpan,
       };
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
-      let buildResult: BuildResultV2 | BuildResultV3 | undefined;
+      let buildResult: BuildResultV2 | BuildResultV3;
       try {
-        buildResult = await builder.build(buildOptions);
+        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
+          () => builder.build(buildOptions)
+        );
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
@@ -575,7 +622,12 @@ async function doBuild(
       } finally {
         // Make sure we don't fail the build
         try {
-          Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
+          const builderDiagnostics = await builderSpan
+            .child('vc.builder.diagnostics')
+            .trace(async () => {
+              return await builder.diagnostics?.(buildOptions);
+            });
+          Object.assign(diagnostics, builderDiagnostics);
         } catch (error) {
           output.error('Collecting diagnostics failed');
           output.debug(error);

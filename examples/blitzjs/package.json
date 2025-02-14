@@ -7,8 +7,7 @@
     "start": "blitz start",
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx .",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "prepare": "husky install"
+    "test:watch": "vitest"
   },
   "prettier": {
     "semi": false,
@@ -39,7 +38,6 @@
     "eslint": "8.27.0",
     "eslint-config-next": "12.3.1",
     "eslint-config-prettier": "8.5.0",
-    "husky": "8.0.2",
     "jsdom": "20.0.3",
     "lint-staged": "13.0.3",
     "prettier": "2.8.8",

@@ -144,7 +144,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.6.1
@@ -201,10 +201,10 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../../packages/routing-utils
     devDependencies:
       '@vercel-internals/tsconfig':
@@ -334,7 +334,7 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.4
@@ -346,10 +346,10 @@ importers:
         specifier: 1.1.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.5.1
+        specifier: 4.6.2
         version: link:../next
       '@vercel/node':
-        specifier: 5.1.2
+        specifier: 5.1.6
         version: link:../node
       '@vercel/python':
         specifier: 4.7.1
@@ -358,13 +358,13 @@ importers:
         specifier: 2.2.0
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.2.3
+        specifier: 5.3.2
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.2.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.6.1
+        specifier: 2.6.5
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -509,7 +509,7 @@ importers:
         specifier: 3.0.6
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 15.0.2
+        specifier: 15.0.7
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -518,10 +518,10 @@ importers:
         specifier: 3.6.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.7
+        specifier: 5.3.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       '@vitest/expect':
         specifier: 2.1.3
@@ -761,13 +761,13 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       async-retry:
         specifier: 1.2.3
@@ -943,7 +943,7 @@ importers:
         specifier: 2.5.8
         version: 2.5.8
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       ajv:
         specifier: 6.12.3
@@ -964,7 +964,7 @@ importers:
         specifier: 3.6.1
         version: link:../frameworks
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       glob:
         specifier: 8.0.3
@@ -1001,7 +1001,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1056,7 +1056,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       esbuild:
         specifier: 0.14.47
@@ -1084,7 +1084,7 @@ importers:
         specifier: 18.0.26
         version: 18.0.26
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       jest-junit:
         specifier: 16.0.0
@@ -1123,7 +1123,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1172,7 +1172,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1233,10 +1233,10 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       async-sema:
         specifier: 3.0.1
@@ -1320,7 +1320,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1456,7 +1456,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       cross-env:
         specifier: 7.0.3
@@ -1539,10 +1539,10 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       execa:
         specifier: 3.2.0
@@ -1553,6 +1553,25 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+
+  packages/related-projects:
+    optionalDependencies:
+      ajv:
+        specifier: ^6.12.3
+        version: 6.12.3
+    devDependencies:
+      '@types/jest':
+        specifier: 27.4.1
+        version: 27.4.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      typescript:
+        specifier: 4.9.5
+        version: 4.9.5
 
   packages/remix:
     dependencies:
@@ -1585,7 +1604,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1638,7 +1657,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1662,7 +1681,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.68
+        specifier: 2.0.72
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1699,7 +1718,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 9.2.1
+        specifier: 10.0.1
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1708,10 +1727,10 @@ importers:
         specifier: 3.6.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.7
+        specifier: 5.3.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.3
+        specifier: 5.0.4
         version: link:../routing-utils
       execa:
         specifier: 3.2.0
@@ -4617,7 +4636,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-message-util: 29.7.0
       jest-util: 29.7.0
       slash: 3.0.0
@@ -4755,7 +4774,7 @@ packages:
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       collect-v8-coverage: 1.0.2
       exit: 0.1.2
       glob: 7.2.3
@@ -4827,7 +4846,7 @@ packages:
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
       babel-plugin-istanbul: 6.1.1
-      chalk: 4.1.2
+      chalk: 4.1.0
       convert-source-map: 2.0.0
       fast-json-stable-stringify: 2.1.0
       graceful-fs: 4.2.11
@@ -8723,7 +8742,7 @@ packages:
       '@types/babel__core': 7.20.5
       babel-plugin-istanbul: 6.1.1
       babel-preset-jest: 29.6.3(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       graceful-fs: 4.2.11
       slash: 3.0.0
     transitivePeerDependencies:
@@ -9500,7 +9519,7 @@ packages:
     hasBin: true
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-config: 29.7.0(@types/node@14.14.31)
@@ -9519,7 +9538,7 @@ packages:
     hasBin: true
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-config: 29.7.0(@types/node@14.18.33)
@@ -12692,7 +12711,7 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       co: 4.6.0
       dedent: 1.5.3
       is-generator-fn: 2.1.0
@@ -12785,7 +12804,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 14.14.31
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12825,7 +12844,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 14.18.33
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12865,7 +12884,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
       babel-jest: 29.7.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       deepmerge: 4.3.1
       glob: 7.2.3
@@ -12892,7 +12911,7 @@ packages:
     resolution: {integrity: sha512-m0NvkX55LDt9T4mctTEgnZk3fmEg3NRYutvMPWM/0iPnkFj2wIeF45O1718cMSOFO1vINkqmxqD8vE37uTEbqw==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       diff-sequences: 27.5.1
       jest-get-type: 27.5.1
       pretty-format: 27.5.1
@@ -12902,7 +12921,7 @@ packages:
     resolution: {integrity: sha512-8RqP1B/OXzjjTWkqMX67iqgwBVJRgCyKD3L9nq+6ZqJMdvjE8RgHktqZ6jNrkdMT+dJuYNI3rhQpxaz7drJHfw==}
     engines: {node: ^12.13.0 || ^14.15.0 || ^16.10.0 || >=17.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       diff-sequences: 28.1.1
       jest-get-type: 28.0.2
       pretty-format: 28.1.3
@@ -12930,7 +12949,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-get-type: 29.6.3
       jest-util: 29.7.0
       pretty-format: 29.7.0
@@ -13014,7 +13033,7 @@ packages:
     resolution: {integrity: sha512-kQeJ7qHemKfbzKoGjHHrRKH6atgxMk8Enkk2iPQ3XwO6oE/KYD8lMYOziCkeSB9G4adPM4nR1DE8Tf5JeWH6Bw==}
     engines: {node: ^12.13.0 || ^14.15.0 || ^16.10.0 || >=17.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-diff: 28.1.3
       jest-get-type: 28.0.2
       pretty-format: 28.1.3
@@ -13104,7 +13123,7 @@ packages:
     resolution: {integrity: sha512-IOVhZSrg+UvVAshDSDtHyFCCBUl/Q3AAJv8iZ6ZjnZ74xzvwuzLXid9IIIPgTnY62SJjfuupMKZsZQRsCvxEgA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      chalk: 4.1.2
+      chalk: 4.1.0
       graceful-fs: 4.2.11
       jest-haste-map: 29.7.0
       jest-pnp-resolver: 1.2.3(jest-resolve@29.7.0)
@@ -13125,7 +13144,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       emittery: 0.13.1
       graceful-fs: 4.2.11
       jest-docblock: 29.7.0
@@ -13156,7 +13175,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       cjs-module-lexer: 1.4.1
       collect-v8-coverage: 1.0.2
       glob: 7.2.3
@@ -13187,7 +13206,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       babel-preset-current-node-syntax: 1.1.0(@babel/core@7.24.4)
-      chalk: 4.1.2
+      chalk: 4.1.0
       expect: 29.7.0
       graceful-fs: 4.2.11
       jest-diff: 29.7.0
@@ -13208,7 +13227,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       ci-info: 3.9.0
       graceful-fs: 4.2.11
       picomatch: 2.3.1
@@ -13232,7 +13251,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       camelcase: 6.3.0
-      chalk: 4.1.2
+      chalk: 4.1.0
       jest-get-type: 29.6.3
       leven: 3.1.0
       pretty-format: 29.7.0
@@ -13246,7 +13265,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 22.5.0
       ansi-escapes: 4.3.2
-      chalk: 4.1.2
+      chalk: 4.1.0
       emittery: 0.13.1
       jest-util: 29.7.0
       string-length: 4.0.2

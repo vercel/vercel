@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+const NUM_OF_MICROSEC_IN_NANOSEC = BigInt('1000');
+
 export type SpanId = string;
 
 export type TraceEvent = {
@@ -13,7 +15,6 @@ export type TraceEvent = {
 };
 
 export type Reporter = {
-  flushAll: (opts?: { end: boolean }) => Promise<void> | void;
   report: (event: TraceEvent) => void;
 };
 
@@ -39,7 +40,8 @@ export class Span {
   private status: 'started' | 'stopped';
 
   // Number of nanoseconds since epoch.
-  private _start: number;
+  private _start: bigint;
+  private now: number;
 
   private _reporter: Reporter | undefined;
 
@@ -60,8 +62,15 @@ export class Span {
     this.status = 'started';
 
     this.id = randomUUID();
-    this._start = Date.now();
     this._reporter = reporter;
+
+    // hrtime cannot be used to reconstruct tracing span's actual start time
+    // since it does not have relation to clock time:
+    // `These times are relative to an arbitrary time in the past, and not related to the time of day and therefore not subject to clock drift`
+    // https://nodejs.org/api/process.html#processhrtimetime
+    // Capturing current datetime as additional metadata for external reconstruction.
+    this.now = Date.now();
+    this._start = process.hrtime.bigint();
   }
 
   stop() {
@@ -71,16 +80,19 @@ export class Span {
 
     this.status = 'stopped';
 
-    const duration = Date.now() - this._start;
+    const end = process.hrtime.bigint();
+    const duration = Number((end - this._start) / NUM_OF_MICROSEC_IN_NANOSEC);
+
+    const timestamp = Number(this._start / NUM_OF_MICROSEC_IN_NANOSEC);
 
     const traceEvent: TraceEvent = {
       name: this.name,
-      duration: Number(duration),
-      timestamp: this._start,
+      duration,
+      timestamp,
       id: this.id,
       parentId: this.parentId,
       tags: this.attrs,
-      startTime: this._start,
+      startTime: this.now,
     };
 
     if (this._reporter) {

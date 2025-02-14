@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.4
+
+### Patch Changes
+
+- [routing-utils] fix dep bundling ([#13026](https://github.com/vercel/vercel/pull/13026))
+
 ## 5.0.3
 
 ### Patch Changes

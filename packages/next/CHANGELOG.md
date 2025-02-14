@@ -1,5 +1,35 @@
 # @vercel/next
 
+## 4.6.2
+
+### Patch Changes
+
+- Handle patterns in rewrite destinations correctly ([#13052](https://github.com/vercel/vercel/pull/13052))
+
+## 4.6.1
+
+### Patch Changes
+
+- Fix duplicate trace names generated from builders ([#13051](https://github.com/vercel/vercel/pull/13051))
+
+## 4.6.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+### Patch Changes
+
+- Fixed bug where rewrites would be applied twice in some cases ([#13040](https://github.com/vercel/vercel/pull/13040))
+
+- pin fixtures and set up auto updates ([#12979](https://github.com/vercel/vercel/pull/12979))
+
+## 4.5.2
+
+### Patch Changes
+
+- Added new prefetch segments feature for Next.js ([#12897](https://github.com/vercel/vercel/pull/12897))
+
 ## 4.5.1
 
 ### Patch Changes
