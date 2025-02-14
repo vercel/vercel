@@ -1226,7 +1226,15 @@ describe.skipIf(flakey)('build', () => {
 
       const files = await fs.readdir(output);
       // we should NOT see `functions` because that means `middleware.ts` was processed
-      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
+      expect(files.sort()).toEqual([
+        'builds.json',
+        'config.json',
+        'diagnostics',
+        'static',
+      ]);
+
+      const diagnostics = await fs.readdir(join(output, 'diagnostics'));
+      expect(diagnostics.sort()).toEqual(['cli_traces.json']);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }

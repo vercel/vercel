@@ -63,7 +63,7 @@ import validatePaths, {
   validateRootDirectory,
 } from '../../util/validate-paths';
 import { help } from '../help';
-import { deployCommand } from './command';
+import { deployCommand, deprecatedArchiveSplitTgz } from './command';
 import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
@@ -215,10 +215,26 @@ export default async (client: Client): Promise<number> => {
     flags: parsedArguments.flags,
   });
 
-  const archive = parsedArguments.flags['--archive'];
-  if (typeof archive === 'string' && !isValidArchive(archive)) {
+  const parsedArchive = parsedArguments.flags['--archive'];
+  if (
+    typeof parsedArchive === 'string' &&
+    !(
+      isValidArchive(parsedArchive) ||
+      parsedArchive === deprecatedArchiveSplitTgz
+    )
+  ) {
     output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
     return 1;
+  }
+  if (parsedArchive === deprecatedArchiveSplitTgz) {
+    output.print(
+      `${prependEmoji(
+        `${param('--archive=tgz')} now has the same behavior as ${param(
+          '--archive=split-tgz'
+        )}. Please use ${param('--archive=tgz')} instead.`,
+        emoji('warning')
+      )}\n`
+    );
   }
 
   // Retrieve `project` and `org` from linked Project.
@@ -534,7 +550,7 @@ export default async (client: Client): Promise<number> => {
       createArgs,
       org,
       !project,
-      archive
+      parsedArchive ? 'tgz' : undefined
     );
 
     if (deployment instanceof NotDomainOwner) {

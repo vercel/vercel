@@ -1,5 +1,23 @@
 # @vercel/routing-utils
 
+## 5.0.4
+
+### Patch Changes
+
+- [routing-utils] fix dep bundling ([#13026](https://github.com/vercel/vercel/pull/13026))
+
+## 5.0.3
+
+### Patch Changes
+
+- better path-to-regexp diff logging ([#12962](https://github.com/vercel/vercel/pull/12962))
+
+## 5.0.2
+
+### Patch Changes
+
+- Update routes schema for new limit of 2048 ([#12968](https://github.com/vercel/vercel/pull/12968))
+
 ## 5.0.1
 
 ### Patch Changes

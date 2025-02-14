@@ -15,6 +15,10 @@ module.exports = {
         destination: 'https://www.google.$1/',
       },
       {
+        source: '/hello/suffix/:suffix',
+        destination: '/:suffix?suffix=:suffix#hash',
+      },
+      {
         source: '/hello/missing',
         destination: '/other',
         missing: [{ type: 'header', key: 'RSC' }],

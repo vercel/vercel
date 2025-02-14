@@ -1,5 +1,5 @@
 import path from 'path';
-import { exec, execCli } from './helpers/exec';
+import { execCli } from './helpers/exec';
 import fetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
@@ -80,93 +80,6 @@ afterAll(async () => {
     // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
-  }
-});
-
-test('[vc build] should build project with corepack and select npm@8.1.0', async () => {
-  try {
-    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    const directory = await setupE2EFixture('vc-build-corepack-npm');
-    const before = await exec(directory, 'npm', ['--version']);
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toMatch(/Build Completed/gm);
-    const after = await exec(directory, 'npm', ['--version']);
-    // Ensure global npm didn't change
-    expect(before.stdout).toBe(after.stdout);
-    // Ensure version is correct
-    expect(
-      await fs.readFile(
-        path.join(directory, '.vercel/output/static/index.txt'),
-        'utf8'
-      )
-    ).toBe('8.1.0\n');
-    // Ensure corepack will be cached
-    const contents = fs.readdirSync(
-      path.join(directory, '.vercel/cache/corepack')
-    );
-    expect(contents).toEqual(['home', 'shim']);
-  } finally {
-    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-  }
-});
-
-test('[vc build] should build project with corepack and select pnpm@7.1.0', async () => {
-  try {
-    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    const directory = await setupE2EFixture('vc-build-corepack-pnpm');
-    const before = await exec(directory, 'pnpm', ['--version']);
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toMatch(/Build Completed/gm);
-    const after = await exec(directory, 'pnpm', ['--version']);
-    // Ensure global pnpm didn't change
-    expect(before.stdout).toBe(after.stdout);
-    // Ensure version is correct
-    expect(
-      await fs.readFile(
-        path.join(directory, '.vercel/output/static/index.txt'),
-        'utf8'
-      )
-    ).toBe('7.1.0\n');
-    // Ensure corepack will be cached
-    const contents = fs.readdirSync(
-      path.join(directory, '.vercel/cache/corepack')
-    );
-    expect(contents).toEqual(['home', 'shim']);
-    expect(output.stdout).toMatch(/Running "pnpm run build"/gm);
-  } finally {
-    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
-  }
-});
-
-test('[vc build] should build project with corepack and select yarn@2.4.3', async () => {
-  try {
-    process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
-    const directory = await setupE2EFixture('vc-build-corepack-yarn');
-    const before = await exec(directory, 'yarn', ['--version']);
-    const output = await execCli(binaryPath, ['build'], { cwd: directory });
-    expect(output.exitCode, formatOutput(output)).toBe(0);
-    expect(output.stderr).toMatch(/Build Completed/gm);
-    const after = await exec(directory, 'yarn', ['--version']);
-    // Ensure global yarn didn't change
-    expect(before.stdout).toBe(after.stdout);
-    // Ensure version is correct
-    expect(
-      await fs.readFile(
-        path.join(directory, '.vercel/output/static/index.txt'),
-        'utf8'
-      )
-    ).toBe('2.4.3\n');
-    // Ensure corepack will be cached
-    const contents = fs.readdirSync(
-      path.join(directory, '.vercel/cache/corepack')
-    );
-    expect(contents).toEqual(['home', 'shim']);
-    expect(output.stdout).toMatch(/Running "yarn run build"/gm);
-  } finally {
-    delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
 });
 

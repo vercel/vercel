@@ -215,7 +215,16 @@ async function getDeployment(host: string) {
 }
 
 describe('frameworks', () => {
-  const skipExamples = ['dojo', 'saber', 'sanity-v3', 'scully', 'solidstart'];
+  const skipExamples = [
+    'dojo',
+    'saber',
+    'gridsome',
+    'sanity-v3',
+    'scully',
+    'solidstart',
+    'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+  ];
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');

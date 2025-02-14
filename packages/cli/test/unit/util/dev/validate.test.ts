@@ -203,7 +203,7 @@ describe('validateConfig', () => {
       })),
     });
     expect(error!.message).toEqual(
-      'Invalid vercel.json - `redirects` should NOT have more than 1024 items.'
+      'Invalid vercel.json - `redirects` should NOT have more than 2048 items.'
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#redirects'

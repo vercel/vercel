@@ -1,5 +1,71 @@
 # @vercel/remix-builder
 
+## 5.3.2
+
+### Patch Changes
+
+- Leverage project settings to determine framework ([#13056](https://github.com/vercel/vercel/pull/13056))
+
+## 5.3.1
+
+### Patch Changes
+
+- [remix] unify render function creation logic between Remix and React Router ([#13023](https://github.com/vercel/vercel/pull/13023))
+
+- [remix] Add link to documentation after vercelPreset() warning ([#12942](https://github.com/vercel/vercel/pull/12942))
+
+## 5.3.0
+
+### Minor Changes
+
+- Add support for custom server entrypoint in React Router apps ([#13043](https://github.com/vercel/vercel/pull/13043))
+
+## 5.2.4
+
+### Patch Changes
+
+- Support "build" script that produces Build Output API ([#13031](https://github.com/vercel/vercel/pull/13031))
+
+## 5.2.3
+
+### Patch Changes
+
+- [remix] extract remaining framework specific settings to FrameworkSettings ([#12992](https://github.com/vercel/vercel/pull/12992))
+
+## 5.2.2
+
+### Patch Changes
+
+- better path-to-regexp diff logging ([#12962](https://github.com/vercel/vercel/pull/12962))
+
+## 5.2.1
+
+### Patch Changes
+
+- [remix] extract common logic for getting files from trace ([#12983](https://github.com/vercel/vercel/pull/12983))
+
+- [remix] extract common handler logic into `determineHandler` function ([#12973](https://github.com/vercel/vercel/pull/12973))
+
+## 5.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 5.1.2
+
+### Patch Changes
+
+- [remix] extract common function options ([#12960](https://github.com/vercel/vercel/pull/12960))
+
+- [remix] extract sourceSearchValue into FrameworkSettings ([#12969](https://github.com/vercel/vercel/pull/12969))
+
+- [remix] extract common edge file tracing logic ([#12953](https://github.com/vercel/vercel/pull/12953))
+
+- [remix] remove check based on never set remixRunVercelPkgJson ([#12971](https://github.com/vercel/vercel/pull/12971))
+
+- [remix] refactor framework slug into FrameworkSettings ([#12958](https://github.com/vercel/vercel/pull/12958))
+
 ## 5.1.1
 
 ### Patch Changes

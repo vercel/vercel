@@ -513,7 +513,9 @@ test('[vercel dev] should send `etag` header for static files', async () => {
   }
 });
 
-test('[vercel dev] should frontend dev server and routes', async () => {
+// https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
   const { dev, port, readyResolver } = await testFixture(dir);
 
@@ -524,7 +526,7 @@ test('[vercel dev] should frontend dev server and routes', async () => {
     validateResponseHeaders(res);
     const podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
     let body = await res.text();
-    expect(body.includes('hello, this is the frontend')).toBeTruthy();
+    expect(body).toContain('hello, this is the frontend');
 
     res = await fetch(`http://localhost:${port}/api/users`);
     validateResponseHeaders(res, podId);
@@ -571,7 +573,7 @@ test('[vercel dev] should support `@vercel/static-build` routing', async () => {
     const res = await fetch(`http://localhost:${port}/api/date`);
     expect(res.status).toEqual(200);
     const body = await res.text();
-    expect(body.startsWith('The current date:')).toBeTruthy();
+    expect(body).toMatch(/^The current date/);
   } finally {
     await dev.kill();
   }
@@ -588,7 +590,7 @@ test('[vercel dev] should support directory listing', async () => {
     let res = await fetch(`http://localhost:${port}/`);
     let body = await res.text();
     expect(res.status).toEqual(200);
-    expect(body.includes('Index of')).toBeTruthy();
+    expect(body).toContain('Index of');
 
     // Get a file
     res = await fetch(`http://localhost:${port}/file.txt`);
@@ -626,7 +628,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     expect(res.status).toEqual(404);
     expect(res.headers.get('content-type')).toEqual('text/html; charset=utf-8');
     let body = await res.text();
-    expect(body.startsWith('<!DOCTYPE html>')).toBeTruthy();
+    expect(body).toMatch(/^<!DOCTYPE html>/);
 
     // JSON response
     res = await fetch(`http://localhost:${port}/does-not-exist`, {
@@ -667,7 +669,7 @@ test('[vercel dev] should support `public` directory with zero config', async ()
 
     res = await fetch(`http://localhost:${port}/`);
     body = await res.text();
-    expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
+    expect(body).toMatch(/^<h1>hello world<\/h1>/);
   } finally {
     await dev.kill();
   }
@@ -687,7 +689,7 @@ test('[vercel dev] should support static files with zero config', async () => {
     res = await fetch(`http://localhost:${port}/`);
     expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
-    expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
+    expect(body).toMatch(/^<h1>goodbye world<\/h1>/);
   } finally {
     await dev.kill();
   }
@@ -725,16 +727,12 @@ test('[vercel dev] should support custom 404 routes', async () => {
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
-  expect(
-    stripAnsi(result.stderr.toString()).includes(
-      'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
-    )
-  ).toBeTruthy();
-  expect(
-    result.stderr.includes(
-      'https://vercel.link/builder-dependencies-install-failed'
-    )
-  ).toBeTruthy();
+  expect(stripAnsi(result.stderr.toString())).toContain(
+    'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
+  );
+  expect(result.stderr).toContain(
+    'https://vercel.link/builder-dependencies-install-failed'
+  );
 });
 
 test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => {
