@@ -656,6 +656,24 @@ async function runInstallCommand({
   await spawnAsync(packageManager, commandArguments, opts);
 }
 
+function initializeSet(set: unknown) {
+  if (!isSet<string>(set)) {
+    return new Set<string>();
+  }
+  return set;
+}
+
+function checkIfAlreadyInstalled(
+  runNpmInstallSet: unknown,
+  packageJsonPath: string
+) {
+  const initializedRunNpmInstallSet = initializeSet(runNpmInstallSet);
+  const alreadyInstalled = initializedRunNpmInstallSet.has(packageJsonPath);
+
+  initializedRunNpmInstallSet.add(packageJsonPath);
+  return { alreadyInstalled, runNpmInstallSet: initializedRunNpmInstallSet };
+}
+
 // Only allow one `runNpmInstall()` invocation to run concurrently
 const runNpmInstallSema = new Sema(1);
 
@@ -693,17 +711,16 @@ export async function runNpmInstall(
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
-    if (meta && packageJsonPath && args.length === 0) {
-      if (!isSet<string>(meta.runNpmInstallSet)) {
-        meta.runNpmInstallSet = new Set<string>();
+    const defaultInstall = args.length === 0;
+    if (meta && packageJsonPath && defaultInstall) {
+      const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
+        meta.runNpmInstallSet,
+        packageJsonPath
+      );
+      if (alreadyInstalled) {
+        return false;
       }
-      if (isSet<string>(meta.runNpmInstallSet)) {
-        if (meta.runNpmInstallSet.has(packageJsonPath)) {
-          return false;
-        } else {
-          meta.runNpmInstallSet.add(packageJsonPath);
-        }
-      }
+      meta.runNpmInstallSet = runNpmInstallSet;
     }
 
     const installTime = Date.now();
