@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.3.2
+
+### Patch Changes
+
+- Leverage project settings to determine framework ([#13056](https://github.com/vercel/vercel/pull/13056))
+
 ## 5.3.1
 
 ### Patch Changes

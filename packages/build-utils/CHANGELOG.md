@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 10.0.1
+
+### Patch Changes
+
+- [build-utils] Move `runNpmInstallSema` closer to where it's used ([#13061](https://github.com/vercel/vercel/pull/13061))
+
+- [build-utils] extract getInstallCommandForPackageManager to module scope ([#13058](https://github.com/vercel/vercel/pull/13058))
+
+- [build-utils] remove redundant sema release ([#13059](https://github.com/vercel/vercel/pull/13059))
+
+- Revert support pnpm 10 ([#13064](https://github.com/vercel/vercel/pull/13064))
+
 ## 10.0.0
 
 ### Major Changes

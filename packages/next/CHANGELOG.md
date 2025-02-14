@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.6.2
+
+### Patch Changes
+
+- Handle patterns in rewrite destinations correctly ([#13052](https://github.com/vercel/vercel/pull/13052))
+
 ## 4.6.1
 
 ### Patch Changes
