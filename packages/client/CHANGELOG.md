@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 15.0.9
+
+### Patch Changes
+
+- fix(cli): catch json parse ([#13071](https://github.com/vercel/vercel/pull/13071))
+
 ## 15.0.8
 
 ### Patch Changes
