@@ -229,9 +229,8 @@ export async function revocationRequest(options: {
 export async function processRevocationResponse(
   response: Response
 ): Promise<[OAuthError | Error] | [null, null]> {
-  const json = await response.json();
-
   if (response.ok) return [null, null];
+  const json = await response.json();
 
   return [new OAuthError('Revocation request failed', json)];
 }
