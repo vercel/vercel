@@ -230,7 +230,9 @@ export async function detectBuilders(
 
     if (
       !hasNextApiFiles &&
-      (fileName.startsWith('pages/api') || fileName.startsWith('src/pages/api'))
+      options.projectSettings?.framework === 'nextjs' &&
+      (fileName.startsWith('pages/api/') ||
+        fileName.startsWith('src/pages/api/'))
     ) {
       hasNextApiFiles = true;
     }
