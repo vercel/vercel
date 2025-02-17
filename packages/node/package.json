@@ -25,7 +25,7 @@
     "@edge-runtime/primitives": "4.1.0",
     "@edge-runtime/vm": "3.2.0",
     "@types/node": "16.18.11",
-    "@vercel/build-utils": "10.0.1",
+    "@vercel/build-utils": "10.1.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/nft": "0.27.10",
     "@vercel/static-config": "3.0.0",

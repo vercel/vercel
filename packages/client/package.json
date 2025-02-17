@@ -39,7 +39,7 @@
     "typescript": "4.9.5"
   },
   "dependencies": {
-    "@vercel/build-utils": "10.0.1",
+    "@vercel/build-utils": "10.1.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/routing-utils": "5.0.4",
     "async-retry": "1.2.3",
