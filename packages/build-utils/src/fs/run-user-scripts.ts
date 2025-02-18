@@ -850,11 +850,11 @@ function detectPnpmVersion(
     case lockfileVersion === 7.0:
       return 'pnpm 9';
     case lockfileVersion === 9.0: {
-      // lockfile version 9 can be generated and used by pnpm 9 or pnpm 10
+      // lockfile v9 can be generated and used by pnpm@9 or pnpm@10
       const hasValidEnginesPnpm =
         enginesPnpmVersionRange && validRange(enginesPnpmVersionRange);
       const safeToUse10 =
-        !hasValidEnginesPnpm || satisfies('10', enginesPnpmVersionRange);
+        !hasValidEnginesPnpm || intersects('10.x', enginesPnpmVersionRange);
       return safeToUse10 ? 'pnpm 10' : 'pnpm 9';
     }
     default:
