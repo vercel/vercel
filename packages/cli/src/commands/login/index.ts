@@ -24,8 +24,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
+import { future } from './future';
 
 export default async function login(client: Client): Promise<number> {
+  if (client.argv.slice(2).includes('--future')) return await future(client);
+
   // user is not currently authenticated on this machine
   const isInitialLogin = !client.authConfig.token;
 
