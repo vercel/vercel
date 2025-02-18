@@ -835,7 +835,8 @@ type DetectedPnpmVersion =
   | 'corepack_enabled';
 
 function detectPnpmVersion(
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  enginesPnpmVersionRange: string | undefined
 ): DetectedPnpmVersion {
   switch (true) {
     case lockfileVersion === undefined:
@@ -848,8 +849,14 @@ function detectPnpmVersion(
       return 'pnpm 8';
     case lockfileVersion === 7.0:
       return 'pnpm 9';
-    case lockfileVersion === 9.0:
-      return 'pnpm 10';
+    case lockfileVersion === 9.0: {
+      // lockfile version 9 can be generated and used by pnpm 9 or pnpm 10
+      const hasValidEnginesPnpm =
+        enginesPnpmVersionRange && validRange(enginesPnpmVersionRange);
+      const safeToUse10 =
+        !hasValidEnginesPnpm || satisfies('10', enginesPnpmVersionRange);
+      return safeToUse10 ? 'pnpm 10' : 'pnpm 9';
+    }
     default:
       return 'not found';
   }
@@ -923,7 +930,11 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
+  const detectedPackageManger = detectPackageManager(
+    cliType,
+    lockfileVersion,
+    packageJsonEngines?.pnpm
+  );
 
   if (!corepackPackageManager || !corepackEnabled) {
     if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
@@ -1053,7 +1064,8 @@ function validateVersionSpecifier(version?: string) {
 
 export function detectPackageManager(
   cliType: CliType,
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  enginesPnpmVersionRange?: string | undefined
 ) {
   switch (cliType) {
     case 'npm':
@@ -1063,7 +1075,7 @@ export function detectPackageManager(
       // of npm that will be used.
       return undefined;
     case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion)) {
+      switch (detectPnpmVersion(lockfileVersion, enginesPnpmVersionRange)) {
         case 'pnpm 7':
           // pnpm 7
           return {
