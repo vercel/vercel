@@ -30,6 +30,13 @@ await Promise.all([
     // make sure the `// @preserve ...` comments we use for code injection stay in the same place
     legalComments: 'inline',
   }),
+  esbuild({
+    entryPoints: ['src/middleware-launcher.ts'],
+    bundle: true,
+    external: ['__NEXT_MIDDLEWARE_PATH__'],
+    // make sure the `// @preserve ...` comments we use for code injection stay in the same place
+    legalComments: 'inline',
+  }),
   buildEdgeFunctionTemplate(),
 ]);
 
