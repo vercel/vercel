@@ -635,6 +635,15 @@ describe('rewrite headers', () => {
     expect(route[0].headers).toBeUndefined();
   });
 
+  it('should strip the hash from the rewritten path', () => {
+    const route = routes.filter(r => r.src?.includes('suffix'));
+    expect(route.length).toBe(2);
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/$1',
+      'x-nextjs-rewritten-query': 'suffix=$1',
+    });
+  });
+
   it('should not add rewrite headers when it is excluded with missing', () => {
     const route = routes.filter(r => r.src?.includes('missing'));
     expect(route.length).toBe(1);

@@ -1,0 +1,127 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/index.segments/_tree.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-world",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/_tree.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-world",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_index"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/_index.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-world",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/blog.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-world",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-world",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world/__PAGE__"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-not-prerendered",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/[slug].segments/_tree.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-not-prerendered",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug].segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    { 
+      "path": "/blog/hello-not-prerendered",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered/__PAGE__"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug]/__PAGE__.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    }
+  ]
+}

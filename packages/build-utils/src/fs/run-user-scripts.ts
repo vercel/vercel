@@ -27,9 +27,6 @@ import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
 
-// Only allow one `runNpmInstall()` invocation to run concurrently
-const runNpmInstallSema = new Sema(1);
-
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
   detectedPackageManager: undefined,
@@ -604,6 +601,82 @@ function isSet<T>(v: any): v is Set<T> {
   return v?.constructor?.name === 'Set';
 }
 
+function getInstallCommandForPackageManager(
+  packageManager: CliType,
+  args: string[]
+) {
+  switch (packageManager) {
+    case 'npm':
+      return {
+        prettyCommand: 'npm install',
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--no-audit', '--unsafe-perm']),
+      };
+    case 'pnpm':
+      return {
+        prettyCommand: 'pnpm install',
+        // PNPM's install command is similar to NPM's but without the audit nonsense
+        // @see options https://pnpm.io/cli/install
+        commandArguments: args
+          .filter(a => a !== '--prefer-offline')
+          .concat(['install', '--unsafe-perm']),
+      };
+    case 'bun':
+      return {
+        prettyCommand: 'bun install',
+        // @see options https://bun.sh/docs/cli/install
+        commandArguments: ['install', ...args],
+      };
+    case 'yarn':
+      return {
+        prettyCommand: 'yarn install',
+        commandArguments: ['install', ...args],
+      };
+  }
+}
+
+async function runInstallCommand({
+  packageManager,
+  args,
+  opts,
+}: {
+  packageManager: CliType;
+  args: string[];
+  opts: SpawnOptionsExtended;
+}) {
+  const { commandArguments, prettyCommand } =
+    getInstallCommandForPackageManager(packageManager, args);
+  opts.prettyCommand = prettyCommand;
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArguments.push('--production');
+  }
+
+  await spawnAsync(packageManager, commandArguments, opts);
+}
+
+function initializeSet(set: unknown) {
+  if (!isSet<string>(set)) {
+    return new Set<string>();
+  }
+  return set;
+}
+
+function checkIfAlreadyInstalled(
+  runNpmInstallSet: unknown,
+  packageJsonPath: string
+) {
+  const initializedRunNpmInstallSet = initializeSet(runNpmInstallSet);
+  const alreadyInstalled = initializedRunNpmInstallSet.has(packageJsonPath);
+
+  initializedRunNpmInstallSet.add(packageJsonPath);
+  return { alreadyInstalled, runNpmInstallSet: initializedRunNpmInstallSet };
+}
+
+// Only allow one `runNpmInstall()` invocation to run concurrently
+const runNpmInstallSema = new Sema(1);
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
@@ -633,23 +706,21 @@ export async function runNpmInstall(
       debug(
         `Skipping dependency installation because no package.json was found for ${destPath}`
       );
-      runNpmInstallSema.release();
       return false;
     }
 
     // Only allow `runNpmInstall()` to run once per `package.json`
     // when doing a default install (no additional args)
-    if (meta && packageJsonPath && args.length === 0) {
-      if (!isSet<string>(meta.runNpmInstallSet)) {
-        meta.runNpmInstallSet = new Set<string>();
+    const defaultInstall = args.length === 0;
+    if (meta && packageJsonPath && defaultInstall) {
+      const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
+        meta.runNpmInstallSet,
+        packageJsonPath
+      );
+      if (alreadyInstalled) {
+        return false;
       }
-      if (isSet<string>(meta.runNpmInstallSet)) {
-        if (meta.runNpmInstallSet.has(packageJsonPath)) {
-          return false;
-        } else {
-          meta.runNpmInstallSet.add(packageJsonPath);
-        }
-      }
+      meta.runNpmInstallSet = runNpmInstallSet;
     }
 
     const installTime = Date.now();
@@ -668,73 +739,13 @@ export async function runNpmInstall(
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
     });
-    let commandArgs: string[];
-    const isPotentiallyBrokenNpm =
-      cliType === 'npm' &&
-      (nodeVersion?.major === 16 ||
-        opts.env.PATH?.includes('/node16/bin-npm7')) &&
-      !args.includes('--legacy-peer-deps') &&
-      spawnOpts?.env?.ENABLE_EXPERIMENTAL_COREPACK !== '1';
 
-    if (cliType === 'npm') {
-      opts.prettyCommand = 'npm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--no-audit', '--unsafe-perm']);
-      if (
-        isPotentiallyBrokenNpm &&
-        spawnOpts?.env?.VERCEL_NPM_LEGACY_PEER_DEPS === '1'
-      ) {
-        // Starting in npm@8.6.0, if you ran `npm install --legacy-peer-deps`,
-        // and then later ran `npm install`, it would fail. So the only way
-        // to safely upgrade npm from npm@8.5.0 is to set this flag. The docs
-        // say this flag is not recommended so its is behind a feature flag
-        // so we can remove it in node@18, which can introduce breaking changes.
-        // See https://docs.npmjs.com/cli/v8/using-npm/config#legacy-peer-deps
-        commandArgs.push('--legacy-peer-deps');
-      }
-    } else if (cliType === 'pnpm') {
-      // PNPM's install command is similar to NPM's but without the audit nonsense
-      // @see options https://pnpm.io/cli/install
-      opts.prettyCommand = 'pnpm install';
-      commandArgs = args
-        .filter(a => a !== '--prefer-offline')
-        .concat(['install', '--unsafe-perm']);
-    } else if (cliType === 'bun') {
-      // @see options https://bun.sh/docs/cli/install
-      opts.prettyCommand = 'bun install';
-      commandArgs = ['install', ...args];
-    } else {
-      opts.prettyCommand = 'yarn install';
-      commandArgs = ['install', ...args];
-    }
+    await runInstallCommand({
+      packageManager: cliType,
+      args,
+      opts,
+    });
 
-    if (process.env.NPM_ONLY_PRODUCTION) {
-      commandArgs.push('--production');
-    }
-
-    try {
-      await spawnAsync(cliType, commandArgs, opts);
-    } catch (err: unknown) {
-      const potentialErrorPath = path.join(
-        process.env.HOME || '/',
-        '.npm',
-        'eresolve-report.txt'
-      );
-      if (
-        isPotentiallyBrokenNpm &&
-        !commandArgs.includes('--legacy-peer-deps') &&
-        fs.existsSync(potentialErrorPath)
-      ) {
-        console.warn(
-          'Warning: Retrying "Install Command" with `--legacy-peer-deps` which may accept a potentially broken dependency and slow install time.'
-        );
-        commandArgs.push('--legacy-peer-deps');
-        await spawnAsync(cliType, commandArgs, opts);
-      } else {
-        throw err;
-      }
-    }
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {

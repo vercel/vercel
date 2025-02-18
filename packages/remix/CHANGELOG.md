@@ -1,5 +1,37 @@
 # @vercel/remix-builder
 
+## 5.3.3
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.15.3 ([#12967](https://github.com/vercel/vercel/pull/12967))
+
+## 5.3.2
+
+### Patch Changes
+
+- Leverage project settings to determine framework ([#13056](https://github.com/vercel/vercel/pull/13056))
+
+## 5.3.1
+
+### Patch Changes
+
+- [remix] unify render function creation logic between Remix and React Router ([#13023](https://github.com/vercel/vercel/pull/13023))
+
+- [remix] Add link to documentation after vercelPreset() warning ([#12942](https://github.com/vercel/vercel/pull/12942))
+
+## 5.3.0
+
+### Minor Changes
+
+- Add support for custom server entrypoint in React Router apps ([#13043](https://github.com/vercel/vercel/pull/13043))
+
+## 5.2.4
+
+### Patch Changes
+
+- Support "build" script that produces Build Output API ([#13031](https://github.com/vercel/vercel/pull/13031))
+
 ## 5.2.3
 
 ### Patch Changes

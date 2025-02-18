@@ -1,5 +1,75 @@
 # vercel
 
+## 41.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`09c9c9fb0bb1ca4c23a7f1547c4d51b05f4eae24`](https://github.com/vercel/vercel/commit/09c9c9fb0bb1ca4c23a7f1547c4d51b05f4eae24), [`cc5320cf19fb5ede870672da1eec5591f7493965`](https://github.com/vercel/vercel/commit/cc5320cf19fb5ede870672da1eec5591f7493965)]:
+  - @vercel/build-utils@10.1.0
+  - @vercel/remix-builder@5.3.3
+  - @vercel/node@5.1.7
+  - @vercel/static-build@2.6.6
+
+## 41.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`5f8cc837c400ee7b493caa03931310637193ed24`](https://github.com/vercel/vercel/commit/5f8cc837c400ee7b493caa03931310637193ed24), [`f25215c31d972cacb29ad254e768f993445e2a07`](https://github.com/vercel/vercel/commit/f25215c31d972cacb29ad254e768f993445e2a07), [`892c9ef08b8dfa462b4f0f1a6a299065f788c98a`](https://github.com/vercel/vercel/commit/892c9ef08b8dfa462b4f0f1a6a299065f788c98a), [`244c4101e68edcc82c920e713172a7d109916f03`](https://github.com/vercel/vercel/commit/244c4101e68edcc82c920e713172a7d109916f03), [`c98677c379b92654b6e9d03bef5f7ec1173cb93d`](https://github.com/vercel/vercel/commit/c98677c379b92654b6e9d03bef5f7ec1173cb93d), [`28e366b9d1b3938635fc0cc40fc838161f018f97`](https://github.com/vercel/vercel/commit/28e366b9d1b3938635fc0cc40fc838161f018f97)]:
+  - @vercel/build-utils@10.0.1
+  - @vercel/next@4.6.2
+  - @vercel/remix-builder@5.3.2
+  - @vercel/node@5.1.6
+  - @vercel/static-build@2.6.5
+
+## 41.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`e4972fa9adbecd19687aff71ec22b46ce0f3a4fb`](https://github.com/vercel/vercel/commit/e4972fa9adbecd19687aff71ec22b46ce0f3a4fb)]:
+  - @vercel/build-utils@10.0.0
+  - @vercel/node@5.1.5
+  - @vercel/static-build@2.6.4
+
+## 41.1.1
+
+### Patch Changes
+
+- Fix duplicate trace names generated from builders ([#13051](https://github.com/vercel/vercel/pull/13051))
+
+- Updated dependencies [[`a8c3efa2f907ff53e751b40121e9d4b986d7bd91`](https://github.com/vercel/vercel/commit/a8c3efa2f907ff53e751b40121e9d4b986d7bd91), [`3688e7b3206f69f2456a9963c9e30077cab3fbd4`](https://github.com/vercel/vercel/commit/3688e7b3206f69f2456a9963c9e30077cab3fbd4), [`d523fd6a92b36c2841b41e55c742099561555bc9`](https://github.com/vercel/vercel/commit/d523fd6a92b36c2841b41e55c742099561555bc9), [`65a501582d22c48f75044eac4c13f1be5bcd2c79`](https://github.com/vercel/vercel/commit/65a501582d22c48f75044eac4c13f1be5bcd2c79), [`c93dbecb641890d2936547395d7744a5c197800a`](https://github.com/vercel/vercel/commit/c93dbecb641890d2936547395d7744a5c197800a)]:
+  - @vercel/next@4.6.1
+  - @vercel/build-utils@9.3.1
+  - @vercel/remix-builder@5.3.1
+  - @vercel/node@5.1.4
+  - @vercel/static-build@2.6.3
+
+## 41.1.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+### Patch Changes
+
+- Fixed bug where rewrites would be applied twice in some cases ([#13040](https://github.com/vercel/vercel/pull/13040))
+
+- Updated dependencies [[`cc0b7194b119f72f59f77f9fba7e7a1188dac03c`](https://github.com/vercel/vercel/commit/cc0b7194b119f72f59f77f9fba7e7a1188dac03c), [`7e1ee69be35db77d7692c07f5eab255ce24399de`](https://github.com/vercel/vercel/commit/7e1ee69be35db77d7692c07f5eab255ce24399de), [`1f1186f26c6189c36098c76e3acda69ccb1790e0`](https://github.com/vercel/vercel/commit/1f1186f26c6189c36098c76e3acda69ccb1790e0), [`6a4c779704d777e11370a19df5bcba168dd6dd48`](https://github.com/vercel/vercel/commit/6a4c779704d777e11370a19df5bcba168dd6dd48)]:
+  - @vercel/build-utils@9.3.0
+  - @vercel/next@4.6.0
+  - @vercel/remix-builder@5.3.0
+  - @vercel/node@5.1.3
+  - @vercel/static-build@2.6.2
+
+## 41.0.3
+
+### Patch Changes
+
+- Added new prefetch segments feature for Next.js ([#12897](https://github.com/vercel/vercel/pull/12897))
+
+- Updated dependencies [[`8c4bcda423836afa051765d6832c57ec7b6d9f6b`](https://github.com/vercel/vercel/commit/8c4bcda423836afa051765d6832c57ec7b6d9f6b), [`1bfe8e56146877a209c7d67e924ef0b0e3b7d030`](https://github.com/vercel/vercel/commit/1bfe8e56146877a209c7d67e924ef0b0e3b7d030)]:
+  - @vercel/next@4.5.2
+  - @vercel/remix-builder@5.2.4
+
 ## 41.0.2
 
 ### Patch Changes

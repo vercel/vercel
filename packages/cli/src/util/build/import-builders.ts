@@ -22,7 +22,7 @@ export interface BuilderWithPkg {
   path: string;
   pkgPath: string;
   builder: BuilderV2 | BuilderV3;
-  pkg: PackageJson;
+  pkg: PackageJson & { name: string };
 }
 
 type ResolveBuildersResult =
@@ -162,7 +162,10 @@ export async function resolveBuilders(
 
       builders.set(spec, {
         builder,
-        pkg: builderPkg,
+        pkg: {
+          name,
+          ...builderPkg,
+        },
         path,
         pkgPath,
       });

@@ -17,6 +17,7 @@ export function getPrefixedEnvVars({
   const allowed = [
     'VERCEL_URL',
     'VERCEL_ENV',
+    'VERCEL_TARGET_ENV',
     'VERCEL_REGION',
     'VERCEL_BRANCH_URL',
     'VERCEL_PROJECT_PRODUCTION_URL',
