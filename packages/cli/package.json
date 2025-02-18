@@ -93,7 +93,7 @@
     "@vercel-internals/constants": "1.0.4",
     "@vercel-internals/get-package-json": "1.0.0",
     "@vercel-internals/types": "3.0.6",
-    "@vercel/client": "15.0.8",
+    "@vercel/client": "15.0.9",
     "@vercel/error-utils": "2.0.3",
     "@vercel/frameworks": "3.6.1",
     "@vercel/fs-detectors": "5.3.8",
