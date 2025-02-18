@@ -42,7 +42,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
     });
 
-    test.only('should return pnpm 10 if engines allows pnpm 10', () => {
+    test('should return pnpm 10 if engines allows pnpm 10', () => {
       const result = getPathOverrideForPackageManager({
         cliType: 'pnpm',
         lockfileVersion: 9.0,
