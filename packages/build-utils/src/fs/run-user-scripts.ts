@@ -70,6 +70,11 @@ export interface ScanParentDirsResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
+  /**
+   * When the project was created based on the `createdAt` field
+   * from `.vercel/project.json` or `undefined` if not found.
+   */
+  projectCreatedAt?: number;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -360,6 +365,7 @@ export async function scanParentDirs(
       pnpmLockPath,
       bunLockTextPath,
       bunLockBinPath,
+      vercelProjectJsonPath,
     ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
@@ -371,8 +377,18 @@ export async function scanParentDirs(
       'pnpm-lock.yaml',
       'bun.lock',
       'bun.lockb',
+      '.vercel/project.json',
     ],
   });
+
+  const vercelProjectJson = vercelProjectJsonPath
+    ? await readConfigFile<{
+        settings: {
+          createdAt?: number;
+        };
+      }>(vercelProjectJsonPath)
+    : null;
+
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
@@ -441,6 +457,7 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
     turboSupportsCorepackHome,
+    projectCreatedAt: vercelProjectJson?.settings?.createdAt,
   };
 }
 
@@ -765,6 +782,7 @@ export function getEnvForPackageManager({
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
+  projectCreatedAt,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -773,6 +791,7 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
+  projectCreatedAt?: number | undefined;
 }) {
   const corepackEnabled = usingCorepack(
     env,
@@ -791,6 +810,7 @@ export function getEnvForPackageManager({
     nodeVersion,
     corepackEnabled,
     packageJsonEngines,
+    projectCreatedAt,
   });
 
   if (corepackEnabled) {
@@ -851,9 +871,11 @@ type DetectedPnpmVersion =
   | 'pnpm 10'
   | 'corepack_enabled';
 
+const PNPM_10_PREFERED_AT = 10;
+
 function detectPnpmVersion(
   lockfileVersion: number | undefined,
-  enginesPnpmVersionRange: string | undefined
+  projectCreatedAt: number | undefined
 ): DetectedPnpmVersion {
   switch (true) {
     case lockfileVersion === undefined:
@@ -867,12 +889,9 @@ function detectPnpmVersion(
     case lockfileVersion === 7.0:
       return 'pnpm 9';
     case lockfileVersion === 9.0: {
-      // lockfile v9 can be generated and used by pnpm@9 or pnpm@10
-      const hasValidEnginesPnpm =
-        enginesPnpmVersionRange && validRange(enginesPnpmVersionRange);
-      const safeToUse10 =
-        !hasValidEnginesPnpm || intersects('10.x', enginesPnpmVersionRange);
-      return safeToUse10 ? 'pnpm 10' : 'pnpm 9';
+      const projectPrefersPnpm10 =
+        projectCreatedAt && projectCreatedAt >= PNPM_10_PREFERED_AT;
+      return projectPrefersPnpm10 ? 'pnpm 10' : 'pnpm 9';
     }
     default:
       return 'not found';
@@ -925,6 +944,7 @@ export function getPathOverrideForPackageManager({
   corepackPackageManager,
   corepackEnabled = true,
   packageJsonEngines,
+  projectCreatedAt,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -932,6 +952,7 @@ export function getPathOverrideForPackageManager({
   nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
   packageJsonEngines?: PackageJson.Engines;
+  projectCreatedAt?: number;
 }): {
   /**
    * Which lockfile was detected.
@@ -950,7 +971,7 @@ export function getPathOverrideForPackageManager({
   const detectedPackageManger = detectPackageManager(
     cliType,
     lockfileVersion,
-    packageJsonEngines?.pnpm
+    projectCreatedAt
   );
 
   if (!corepackPackageManager || !corepackEnabled) {
@@ -1082,7 +1103,7 @@ function validateVersionSpecifier(version?: string) {
 export function detectPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined,
-  enginesPnpmVersionRange?: string | undefined
+  projectCreatedAt?: number
 ) {
   switch (cliType) {
     case 'npm':
@@ -1092,7 +1113,7 @@ export function detectPackageManager(
       // of npm that will be used.
       return undefined;
     case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion, enginesPnpmVersionRange)) {
+      switch (detectPnpmVersion(lockfileVersion, projectCreatedAt)) {
         case 'pnpm 7':
           // pnpm 7
           return {
