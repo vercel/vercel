@@ -488,6 +488,7 @@ export const build: BuildV2 = async ({
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
+      projectCreatedAt,
     } = await scanParentDirs(entrypointDir, true);
 
     spawnOpts.env = getEnvForPackageManager({
@@ -497,6 +498,7 @@ export const build: BuildV2 = async ({
       nodeVersion,
       env: spawnOpts.env || {},
       turboSupportsCorepackHome,
+      projectCreatedAt,
     });
 
     if (meta.isDev) {

@@ -70,6 +70,11 @@ export interface ScanParentDirsResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
+  /**
+   * When the project was created based on the `createdAt` field
+   * from `.vercel/project.json` or `undefined` if not found.
+   */
+  projectCreatedAt?: number;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -360,6 +365,7 @@ export async function scanParentDirs(
       pnpmLockPath,
       bunLockTextPath,
       bunLockBinPath,
+      vercelProjectJsonPath,
     ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
@@ -371,8 +377,18 @@ export async function scanParentDirs(
       'pnpm-lock.yaml',
       'bun.lock',
       'bun.lockb',
+      '.vercel/project.json',
     ],
   });
+
+  const vercelProjectJson = vercelProjectJsonPath
+    ? await readConfigFile<{
+        settings: {
+          createdAt?: number;
+        };
+      }>(vercelProjectJsonPath)
+    : null;
+
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
@@ -441,6 +457,7 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
     turboSupportsCorepackHome,
+    projectCreatedAt: vercelProjectJson?.settings?.createdAt,
   };
 }
 
@@ -700,6 +717,7 @@ export async function runNpmInstall(
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
+      projectCreatedAt,
     } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
@@ -738,6 +756,7 @@ export async function runNpmInstall(
       env,
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
+      projectCreatedAt,
     });
 
     await runInstallCommand({
@@ -765,6 +784,7 @@ export function getEnvForPackageManager({
   env,
   packageJsonEngines,
   turboSupportsCorepackHome,
+  projectCreatedAt,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -773,6 +793,7 @@ export function getEnvForPackageManager({
   env: { [x: string]: string | undefined };
   packageJsonEngines?: PackageJson.Engines;
   turboSupportsCorepackHome?: boolean | undefined;
+  projectCreatedAt?: number | undefined;
 }) {
   const corepackEnabled = usingCorepack(
     env,
@@ -791,6 +812,7 @@ export function getEnvForPackageManager({
     nodeVersion,
     corepackEnabled,
     packageJsonEngines,
+    projectCreatedAt,
   });
 
   if (corepackEnabled) {
@@ -848,10 +870,14 @@ type DetectedPnpmVersion =
   | 'pnpm 7'
   | 'pnpm 8'
   | 'pnpm 9'
+  | 'pnpm 10'
   | 'corepack_enabled';
 
+export const PNPM_10_PREFERRED_AT = new Date('2025-02-24T20:00:00Z');
+
 function detectPnpmVersion(
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  projectCreatedAt: number | undefined
 ): DetectedPnpmVersion {
   switch (true) {
     case lockfileVersion === undefined:
@@ -862,8 +888,13 @@ function detectPnpmVersion(
       return 'pnpm 7';
     case lockfileVersion === 6.0 || lockfileVersion === 6.1:
       return 'pnpm 8';
-    case lockfileVersion === 7.0 || lockfileVersion === 9.0:
+    case lockfileVersion === 7.0:
       return 'pnpm 9';
+    case lockfileVersion === 9.0: {
+      const projectPrefersPnpm10 =
+        projectCreatedAt && projectCreatedAt >= PNPM_10_PREFERRED_AT.getTime();
+      return projectPrefersPnpm10 ? 'pnpm 10' : 'pnpm 9';
+    }
     default:
       return 'not found';
   }
@@ -882,6 +913,8 @@ function validLockfileForPackageManager(
       return true;
     case 'pnpm':
       switch (packageManagerMajorVersion) {
+        case 10:
+          return lockfileVersion === 9.0;
         case 9:
           // bug in pnpm 9.0.0 causes incompatibility with lockfile version 6.0
           if (
@@ -913,6 +946,7 @@ export function getPathOverrideForPackageManager({
   corepackPackageManager,
   corepackEnabled = true,
   packageJsonEngines,
+  projectCreatedAt,
 }: {
   cliType: CliType;
   lockfileVersion: number | undefined;
@@ -920,6 +954,7 @@ export function getPathOverrideForPackageManager({
   nodeVersion: NodeVersion | undefined;
   corepackEnabled?: boolean;
   packageJsonEngines?: PackageJson.Engines;
+  projectCreatedAt?: number;
 }): {
   /**
    * Which lockfile was detected.
@@ -935,7 +970,11 @@ export function getPathOverrideForPackageManager({
    */
   path: string | undefined;
 } {
-  const detectedPackageManger = detectPackageManager(cliType, lockfileVersion);
+  const detectedPackageManger = detectPackageManager(
+    cliType,
+    lockfileVersion,
+    projectCreatedAt
+  );
 
   if (!corepackPackageManager || !corepackEnabled) {
     if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
@@ -1065,7 +1104,8 @@ function validateVersionSpecifier(version?: string) {
 
 export function detectPackageManager(
   cliType: CliType,
-  lockfileVersion: number | undefined
+  lockfileVersion: number | undefined,
+  projectCreatedAt?: number
 ) {
   switch (cliType) {
     case 'npm':
@@ -1075,7 +1115,7 @@ export function detectPackageManager(
       // of npm that will be used.
       return undefined;
     case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion)) {
+      switch (detectPnpmVersion(lockfileVersion, projectCreatedAt)) {
         case 'pnpm 7':
           // pnpm 7
           return {
@@ -1099,6 +1139,14 @@ export function detectPackageManager(
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@9.x',
             pnpmVersionRange: '9.x',
+          };
+        case 'pnpm 10':
+          // pnpm 10
+          return {
+            path: '/pnpm10/node_modules/.bin',
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm@10.x',
+            pnpmVersionRange: '10.x',
           };
         case 'pnpm 6':
           return {
@@ -1219,6 +1267,7 @@ export async function runCustomInstallCommand({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    projectCreatedAt,
   } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
@@ -1228,6 +1277,7 @@ export async function runCustomInstallCommand({
     env: spawnOpts?.env || {},
     packageJsonEngines: packageJson?.engines,
     turboSupportsCorepackHome,
+    projectCreatedAt,
   });
   debug(`Running with $PATH:`, env?.PATH || '');
   await execCommand(installCommand, {
@@ -1250,6 +1300,7 @@ export async function runPackageJsonScript(
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    projectCreatedAt,
   } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,
@@ -1271,6 +1322,7 @@ export async function runPackageJsonScript(
       env: cloneEnv(process.env, spawnOpts?.env),
       packageJsonEngines: packageJson?.engines,
       turboSupportsCorepackHome,
+      projectCreatedAt,
     }),
   };
 

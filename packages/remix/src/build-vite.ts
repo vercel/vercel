@@ -308,6 +308,7 @@ export const build: BuildV2 = async ({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
+    projectCreatedAt,
   } = await scanParentDirs(entrypointFsDirname, true);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -322,6 +323,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
+    projectCreatedAt,
   });
 
   if (typeof installCommand === 'string') {
