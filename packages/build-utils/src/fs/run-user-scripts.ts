@@ -873,12 +873,11 @@ type DetectedPnpmVersion =
   | 'pnpm 10'
   | 'corepack_enabled';
 
-const PNPM_10_PREFERED_AT = 10;
-
 function detectPnpmVersion(
   lockfileVersion: number | undefined,
   projectCreatedAt: number | undefined
 ): DetectedPnpmVersion {
+  const PNPM_10_PREFERRED_AT = new Date('2025-02-24T20:00:00Z');
   switch (true) {
     case lockfileVersion === undefined:
       return 'not found';
@@ -892,7 +891,7 @@ function detectPnpmVersion(
       return 'pnpm 9';
     case lockfileVersion === 9.0: {
       const projectPrefersPnpm10 =
-        projectCreatedAt && projectCreatedAt >= PNPM_10_PREFERED_AT;
+        projectCreatedAt && projectCreatedAt >= PNPM_10_PREFERRED_AT.getTime();
       return projectPrefersPnpm10 ? 'pnpm 10' : 'pnpm 9';
     }
     default:
