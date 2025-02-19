@@ -1,4 +1,7 @@
-import { getPathOverrideForPackageManager } from '../src/fs/run-user-scripts';
+import {
+  getPathOverrideForPackageManager,
+  PNPM_10_PREFERRED_AT,
+} from '../src/fs/run-user-scripts';
 import {
   describe,
   beforeEach,
@@ -20,9 +23,9 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',
-        detectedPackageManager: 'pnpm@10.x',
-        path: '/pnpm10/node_modules/.bin',
-        pnpmVersionRange: '10.x',
+        detectedPackageManager: 'pnpm@9.x',
+        path: '/pnpm9/node_modules/.bin',
+        pnpmVersionRange: '9.x',
       });
     });
 
@@ -39,22 +42,6 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         detectedPackageManager: 'pnpm@9.x',
         path: '/pnpm9/node_modules/.bin',
         pnpmVersionRange: '9.x',
-      });
-    });
-
-    test('should return pnpm 10 if engines allows pnpm 10', () => {
-      const result = getPathOverrideForPackageManager({
-        cliType: 'pnpm',
-        lockfileVersion: 9.0,
-        corepackPackageManager: undefined,
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        packageJsonEngines: { pnpm: '10.x' },
-      });
-      expect(result).toStrictEqual({
-        detectedLockfile: 'pnpm-lock.yaml',
-        detectedPackageManager: 'pnpm@10.x',
-        path: '/pnpm10/node_modules/.bin',
-        pnpmVersionRange: '10.x',
       });
     });
   });
@@ -76,19 +63,39 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
   });
 
   describe('without corepack enabled', () => {
-    test('should return detected package manager', () => {
-      const result = getPathOverrideForPackageManager({
-        cliType: 'pnpm',
-        lockfileVersion: 9.0,
-        corepackPackageManager: 'pnpm@9.5.0',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
-        corepackEnabled: false,
+    describe('with `pnpm-lock.yaml` v9', () => {
+      test('should return pnpm@9 for projects created before PNPM_10_PREFFERRED_AT', () => {
+        const result = getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          corepackPackageManager: 'pnpm@9.5.0',
+          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          corepackEnabled: false,
+          projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() - 1000,
+        });
+        expect(result).toStrictEqual({
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@9.x',
+          path: '/pnpm9/node_modules/.bin',
+          pnpmVersionRange: '9.x',
+        });
       });
-      expect(result).toStrictEqual({
-        detectedLockfile: 'pnpm-lock.yaml',
-        detectedPackageManager: 'pnpm@10.x',
-        path: '/pnpm10/node_modules/.bin',
-        pnpmVersionRange: '10.x',
+
+      test('should return pnpm@10 for projects created after PNPM_10_PREFFERRED_AT', () => {
+        const result = getPathOverrideForPackageManager({
+          cliType: 'pnpm',
+          lockfileVersion: 9.0,
+          corepackPackageManager: 'pnpm@9.5.0',
+          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          corepackEnabled: false,
+          projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
+        });
+        expect(result).toStrictEqual({
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          path: '/pnpm10/node_modules/.bin',
+          pnpmVersionRange: '10.x',
+        });
       });
     });
   });

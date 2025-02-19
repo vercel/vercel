@@ -9,6 +9,7 @@ import {
 } from 'vitest';
 import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
+import { PNPM_10_PREFERRED_AT } from '../src/fs/run-user-scripts';
 
 describe('Test `getEnvForPackageManager()`', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;
@@ -227,6 +228,7 @@ describe('Test `getEnvForPackageManager()`', () => {
             FOO: 'bar',
             PATH: 'foo',
           },
+          projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
         },
         want: {
           FOO: 'bar',
@@ -275,15 +277,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         consoleWarnOutput: null,
       },
     ])('$name', ({ args, want, consoleLogOutput, consoleWarnOutput }) => {
-      expect(
-        getEnvForPackageManager({
-          cliType: args.cliType,
-          lockfileVersion: args.lockfileVersion,
-          packageJsonPackageManager: args.packageJsonPackageManager,
-          nodeVersion: args.nodeVersion,
-          env: args.env,
-        })
-      ).toStrictEqual(want);
+      expect(getEnvForPackageManager({ ...args })).toStrictEqual(want);
 
       // Check console.log output
       if (typeof consoleLogOutput === 'string') {
@@ -355,15 +349,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         consoleWarnOutput: null,
       },
     ])('$name', ({ args, want, consoleLogOutput, consoleWarnOutput }) => {
-      expect(
-        getEnvForPackageManager({
-          cliType: args.cliType,
-          lockfileVersion: args.lockfileVersion,
-          packageJsonPackageManager: args.packageJsonPackageManager,
-          nodeVersion: args.nodeVersion,
-          env: args.env,
-        })
-      ).toStrictEqual(want);
+      expect(getEnvForPackageManager({ ...args })).toStrictEqual(want);
 
       // Check console.log output
       if (typeof consoleLogOutput === 'string') {
