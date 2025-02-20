@@ -45,7 +45,7 @@
     "@vercel/remix-builder": "5.3.3",
     "@vercel/ruby": "2.2.0",
     "@vercel/static-build": "2.6.6",
-    "chokidar": "4.0.0"
+    "chokidar": "4.0.0",
     "jose": "5.9.6"
   },
   "devDependencies": {
