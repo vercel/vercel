@@ -308,7 +308,6 @@ export const build: BuildV2 = async ({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    projectCreatedAt,
   } = await scanParentDirs(entrypointFsDirname, true);
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
@@ -323,7 +322,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
-    projectCreatedAt,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   if (typeof installCommand === 'string') {
@@ -337,7 +336,14 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
   }
 
   // Determine the version of framework:
@@ -362,11 +368,17 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'vercel-build',
-        spawnOpts
+        spawnOpts,
+        config.projectSettings?.createdAt
       );
     } else if (hasScript('build', packageJson)) {
       debug(`Executing "build" script`);
-      await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+      await runPackageJsonScript(
+        entrypointFsDirname,
+        'build',
+        spawnOpts,
+        config.projectSettings?.createdAt
+      );
     } else {
       await execCommand(frameworkSettings.buildCommand, {
         ...spawnOpts,

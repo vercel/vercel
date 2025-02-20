@@ -70,11 +70,6 @@ export interface ScanParentDirsResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
-  /**
-   * When the project was created based on the `createdAt` field
-   * from `.vercel/project.json` or `undefined` if not found.
-   */
-  projectCreatedAt?: number;
 }
 
 export interface TraverseUpDirectoriesProps {
@@ -365,7 +360,6 @@ export async function scanParentDirs(
       pnpmLockPath,
       bunLockTextPath,
       bunLockBinPath,
-      vercelProjectJsonPath,
     ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
@@ -377,17 +371,8 @@ export async function scanParentDirs(
       'pnpm-lock.yaml',
       'bun.lock',
       'bun.lockb',
-      '.vercel/project.json',
     ],
   });
-
-  const vercelProjectJson = vercelProjectJsonPath
-    ? await readConfigFile<{
-        settings: {
-          createdAt?: number;
-        };
-      }>(vercelProjectJsonPath)
-    : null;
 
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
@@ -457,7 +442,6 @@ export async function scanParentDirs(
     lockfileVersion,
     packageJsonPath,
     turboSupportsCorepackHome,
-    projectCreatedAt: vercelProjectJson?.settings?.createdAt,
   };
 }
 
@@ -699,7 +683,8 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  nodeVersion?: NodeVersion
+  nodeVersion?: NodeVersion,
+  projectCreatedAt?: number
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -717,7 +702,6 @@ export async function runNpmInstall(
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
-      projectCreatedAt,
     } = await scanParentDirs(destPath, true);
 
     if (!packageJsonPath) {
@@ -1254,11 +1238,13 @@ export async function runCustomInstallCommand({
   installCommand,
   nodeVersion,
   spawnOpts,
+  projectCreatedAt,
 }: {
   destPath: string;
   installCommand: string;
   nodeVersion: NodeVersion;
   spawnOpts?: SpawnOptions;
+  projectCreatedAt?: number;
 }) {
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const {
@@ -1267,7 +1253,6 @@ export async function runCustomInstallCommand({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    projectCreatedAt,
   } = await scanParentDirs(destPath, true);
   const env = getEnvForPackageManager({
     cliType,
@@ -1290,7 +1275,8 @@ export async function runCustomInstallCommand({
 export async function runPackageJsonScript(
   destPath: string,
   scriptNames: string | Iterable<string>,
-  spawnOpts?: SpawnOptions
+  spawnOpts?: SpawnOptions,
+  projectCreatedAt?: number
 ) {
   assert(path.isAbsolute(destPath));
 
@@ -1300,7 +1286,6 @@ export async function runPackageJsonScript(
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    projectCreatedAt,
   } = await scanParentDirs(destPath, true);
   const scriptName = getScriptName(
     packageJson,

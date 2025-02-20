@@ -272,7 +272,6 @@ export const build: BuildV2 = async buildOptions => {
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-    projectCreatedAt,
   } = await scanParentDirs(entryPath, true);
 
   spawnOpts.env = getEnvForPackageManager({
@@ -282,7 +281,7 @@ export const build: BuildV2 = async buildOptions => {
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
-    projectCreatedAt,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   const nowJsonPath = await findUp(['now.json', 'vercel.json'], {
@@ -381,7 +380,14 @@ export const build: BuildV2 = async buildOptions => {
             cwd: entryPath,
           });
         } else {
-          await runNpmInstall(entryPath, [], spawnOpts, meta, nodeVersion);
+          await runNpmInstall(
+            entryPath,
+            [],
+            spawnOpts,
+            meta,
+            nodeVersion,
+            config.projectSettings?.createdAt
+          );
         }
       });
   } else {
@@ -536,10 +542,15 @@ export const build: BuildV2 = async buildOptions => {
             env,
           });
         } else if (buildScriptName) {
-          await runPackageJsonScript(entryPath, buildScriptName, {
-            ...spawnOpts,
-            env,
-          });
+          await runPackageJsonScript(
+            entryPath,
+            buildScriptName,
+            {
+              ...spawnOpts,
+              env,
+            },
+            config.projectSettings?.createdAt
+          );
         }
       });
     debug('build command exited');
@@ -1067,7 +1078,8 @@ export const build: BuildV2 = async buildOptions => {
       ['--production'],
       spawnOpts,
       meta,
-      nodeVersion
+      nodeVersion,
+      config.projectSettings?.createdAt
     );
   }
 
