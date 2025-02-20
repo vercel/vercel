@@ -38,7 +38,8 @@ export const prepareCache: PrepareCache = async ({
         stdio: 'ignore',
       },
       undefined,
-      nodeVersion
+      nodeVersion,
+      config.projectSettings?.createdAt
     );
 
     const packageJsonPath = join(entrypointFsDirname, 'package.json');
