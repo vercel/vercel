@@ -959,25 +959,32 @@ export function getPathOverrideForPackageManager({
     projectCreatedAt
   );
 
-  if (!corepackPackageManager || !corepackEnabled) {
-    if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
+  const usingCorepack = corepackPackageManager && corepackEnabled;
+  if (usingCorepack) {
+    validateCorepackPackageManager(
+      cliType,
+      lockfileVersion,
+      corepackPackageManager,
+      packageJsonEngines?.pnpm
+    );
+
+    // corepack is going to take care of it; do nothing special
+    return NO_OVERRIDE;
+  }
+
+  if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
+    const usingDetected =
+      detectedPackageManger?.pnpmVersionRange !== '10.x' ||
+      !corepackPackageManager;
+    if (usingDetected) {
       checkEnginesPnpmAgainstDetected(
         packageJsonEngines.pnpm,
         detectedPackageManger
       );
     }
-    return detectedPackageManger ?? NO_OVERRIDE;
   }
 
-  validateCorepackPackageManager(
-    cliType,
-    lockfileVersion,
-    corepackPackageManager,
-    packageJsonEngines?.pnpm
-  );
-
-  // corepack is going to take care of it; do nothing special
-  return NO_OVERRIDE;
+  return detectedPackageManger ?? NO_OVERRIDE;
 }
 
 function checkEnginesPnpmAgainstDetected(

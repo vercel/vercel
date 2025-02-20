@@ -162,6 +162,40 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         );
       });
 
+      describe('with detected pnpm 10', () => {
+        test('should throw engines error if not using package.json#packageManager', () => {
+          expect(() => {
+            getPathOverrideForPackageManager({
+              cliType: 'pnpm',
+              lockfileVersion: 9.0,
+              nodeVersion: { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+              corepackEnabled: false,
+              packageJsonEngines: { pnpm: '9.x' },
+              projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
+            });
+          }).toThrow(
+            'Detected pnpm "10.x" is not compatible with the engines.pnpm "9.x" in your package.json. Either enable corepack with a valid package.json#packageManager value (https://vercel.com/docs/deployments/configure-a-build#corepack) or remove your package.json#engines.pnpm.'
+          );
+        });
+
+        test('should not throw error if using package.json#packageManager', () => {
+          const result = getPathOverrideForPackageManager({
+            cliType: 'pnpm',
+            lockfileVersion: 9.0,
+            nodeVersion: { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+            corepackEnabled: false,
+            packageJsonEngines: { pnpm: '9.x' },
+            corepackPackageManager: 'pnpm@9.5.0',
+            projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
+          });
+          expect(result).toStrictEqual({
+            detectedLockfile: 'pnpm-lock.yaml',
+            detectedPackageManager: 'pnpm@10.x',
+            path: '/pnpm10/node_modules/.bin',
+            pnpmVersionRange: '10.x',
+          });
+        });
+      });
       test('should warn if detected package manager intersects the engine range', () => {
         const consoleWarnSpy = vi.spyOn(console, 'warn');
         getPathOverrideForPackageManager({
