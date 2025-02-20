@@ -102,7 +102,7 @@ describe('Test `detectPackageManager()`', () => {
       },
       {
         name: 'for 9.0 lockfile returns pnpm 10 path after prefer pnpm 10 datetime',
-        args: ['pnpm', 9.0, PNPM_10_PREFERRED_AT.getTime() * 1000],
+        args: ['pnpm', 9.0, PNPM_10_PREFERRED_AT.getTime() + 1000],
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@10.x',
