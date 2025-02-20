@@ -373,7 +373,6 @@ export async function scanParentDirs(
       'bun.lockb',
     ],
   });
-
   let lockfilePath: string | undefined;
   let lockfileVersion: number | undefined;
   let cliType: CliType;
