@@ -1,5 +1,19 @@
 # @vercel/build-utils
 
+## 10.2.0
+
+### Minor Changes
+
+- Detect v9 pnpm lock files as pnpm 10 for new projects ([#13072](https://github.com/vercel/vercel/pull/13072))
+
+### Patch Changes
+
+- Improve build log messages surrounding pnpm 10 ([#13088](https://github.com/vercel/vercel/pull/13088))
+
+- [build-utils] extract checkIfAlreadyInstalled helper to clarify intent ([#13060](https://github.com/vercel/vercel/pull/13060))
+
+- Allow pnpm 10 to use package.json#packageManager without an engines error ([#13083](https://github.com/vercel/vercel/pull/13083))
+
 ## 10.1.0
 
 ### Minor Changes
