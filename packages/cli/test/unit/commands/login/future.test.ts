@@ -45,6 +45,7 @@ beforeEach(() => {
 
 describe('login --future', () => {
   it('successful login', async () => {
+    const _as = await as();
     const accessTokenPayload = { team_id: randomUUID() };
     jwtVerifyMock.mockResolvedValueOnce({
       payload: accessTokenPayload,
@@ -86,7 +87,7 @@ describe('login --future', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      (await as()).device_authorization_endpoint,
+      _as.device_authorization_endpoint,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -116,7 +117,7 @@ describe('login --future', () => {
     for (let i = 2; i <= fetchMock.mock.calls.length; i++) {
       expect(fetchMock).toHaveBeenNthCalledWith(
         i,
-        (await as()).token_endpoint,
+        _as.token_endpoint,
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

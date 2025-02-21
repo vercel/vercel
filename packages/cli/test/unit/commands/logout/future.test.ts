@@ -3,7 +3,7 @@ import { logout } from '../../../../src/commands/logout/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import fetch, { type Response } from 'node-fetch';
-import { as } from '../../../../src/util/oauth';
+import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
 const fetchMock = fetch as unknown as MockInstance<typeof fetch>;
@@ -27,6 +27,7 @@ beforeEach(() => {
 
 describe('logout --future', () => {
   it('successful logout', async () => {
+    const _as = await as();
     fetchMock.mockResolvedValueOnce(mockResponse({}));
 
     client.setArgv('logout', '--future');
@@ -40,7 +41,7 @@ describe('logout --future', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      as.revocation_endpoint,
+      _as.revocation_endpoint,
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -54,7 +55,7 @@ describe('logout --future', () => {
     ).toBe(
       new URLSearchParams({
         token: tokenBefore,
-        client_id: as.client_id,
+        client_id: VERCEL_CLI_CLIENT_ID,
       }).toString()
     );
 
