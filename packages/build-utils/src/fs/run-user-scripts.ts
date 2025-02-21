@@ -522,7 +522,7 @@ export function turboVersionSpecifierSupportsCorepack(
 function detectPackageManagerNameWithoutLockfile(
   packageJsonPackageManager: string | undefined,
   turboSupportsCorepackHome: boolean | undefined
-) {
+): CliType {
   if (
     usingCorepack(
       process.env,
@@ -540,14 +540,14 @@ function detectPackageManagerNameWithoutLockfile(
       case 'bun':
         return corepackPackageManager.packageName;
       case undefined:
-        return 'npm';
+        return 'pnpm';
       default:
         throw new Error(
           `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager: npm, pnpm, yarn, bun.`
         );
     }
   }
-  return 'npm';
+  return 'pnpm';
 }
 
 export function usingCorepack(
