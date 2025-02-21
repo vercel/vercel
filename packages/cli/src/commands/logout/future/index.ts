@@ -52,10 +52,12 @@ export async function future(client: Client): Promise<number> {
   o.debug(`'Revocation response:', ${await revocationResponse.clone().text()}`);
 
   const [revocationError] = await processRevocationResponse(revocationResponse);
-
+  let logoutError = false;
   if (revocationError) {
-    printError(revocationError);
-    return 1;
+    o.error(revocationError.message);
+    o.debug(revocationError.cause);
+    o.error('Failed during logout');
+    logoutError = true;
   }
 
   delete config.currentTeam;
@@ -70,12 +72,14 @@ export async function future(client: Client): Promise<number> {
     writeToConfigFile(config);
     writeToAuthConfigFile(authConfig);
     o.debug('Configuration has been deleted');
+
+    if (!logoutError) {
+      o.success('Logged out!');
+      return 0;
+    }
   } catch (err: unknown) {
     o.debug(errorToString(err));
     o.error('Failed during logout');
-    return 1;
   }
-
-  o.success('Logged out!');
-  return 0;
+  return 1;
 }

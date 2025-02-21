@@ -31,8 +31,8 @@ describe('logout --future', () => {
 
     client.setArgv('logout', '--future');
     client.authConfig.token = randomUUID();
-    client.config.currentTeam = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
     expect(exitCode, 'exit code for "login --future"').toBe(0);
@@ -67,5 +67,37 @@ describe('logout --future', () => {
     expect(teamAfter).toBeUndefined();
   });
 
-  it.todo('failed logout');
+  it('failed logout', async () => {
+    const invalidResponse = {
+      error: 'invalid_request',
+      error_description:
+        'The request is missing a required parameter, includes an unsupported parameter value (other than grant type), repeats a parameter, includes multiple credentials, utilizes more than one mechanism for authenticating the client, or is otherwise malformed.',
+    };
+    fetchMock.mockResolvedValueOnce(mockResponse(invalidResponse, false));
+
+    client.setArgv('logout', '--future', '--debug');
+    client.authConfig.token = randomUUID();
+    const tokenBefore = client.authConfig.token;
+    client.config.currentTeam = randomUUID();
+    const teamBefore = client.config.currentTeam;
+
+    const exitCode = await logout(client);
+    expect(exitCode, 'exit code for "login --future"').toBe(1);
+
+    const output = await client.stderr.getFullOutput();
+    expect(output).toMatch(invalidResponse.error);
+    expect(output).toMatch(invalidResponse.error_description);
+    expect(output).not.toMatch('Logged out!');
+    expect(output).toMatch('Failed during logout');
+
+    // Ensure that even if token revocation fails,
+    // token and team are still deleted
+    const tokenAfter = client.authConfig.token;
+    expect(tokenAfter).not.toBe(tokenBefore);
+    expect(tokenAfter).toBeUndefined();
+
+    const teamAfter = client.config.currentTeam;
+    expect(teamAfter).not.toBe(teamBefore);
+    expect(teamAfter).toBeUndefined();
+  });
 });
