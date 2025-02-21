@@ -18,7 +18,7 @@ export const as: {
     'https://vercel.com/api/login/oauth/device-authorization'
   ),
   token_endpoint: new URL('https://vercel.com/api/login/oauth/token'),
-  jwks_uri: new URL('https://vercel.com/api/login/oauth/jwks'),
+  jwks_uri: new URL('https://vercel.com/.well-known/jwks'),
 };
 
 /**

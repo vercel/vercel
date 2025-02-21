@@ -28,8 +28,6 @@ import o from '../../../output-manager';
 import { LoginTelemetryClient } from '../../../util/telemetry/commands/login';
 
 export async function login(client: Client): Promise<number> {
-  o.warn('This feature is under active development. Do not use!');
-
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
 
   const telemetry = new LoginTelemetryClient({

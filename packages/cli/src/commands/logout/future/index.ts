@@ -20,8 +20,6 @@ import { LogoutTelemetryClient } from '../../../util/telemetry/commands/logout';
 export async function logout(client: Client): Promise<number> {
   const { config, authConfig } = client;
 
-  o.warn('This feature is under active development. Do not use!');
-
   const flagsSpecification = getFlagsSpecification(logoutCommand.options);
 
   const telemetry = new LogoutTelemetryClient({
