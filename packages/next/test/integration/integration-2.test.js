@@ -673,3 +673,53 @@ describe('rewrite headers', () => {
     expect(route[1].headers).toBeUndefined();
   });
 });
+
+describe('cache-control', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(path.join(__dirname, 'use-cache'));
+    buildResult = result.buildResult;
+  });
+
+  it('should add expiration and staleExpiration values for ISR routes with "use cache"', async () => {
+    const { output } = buildResult;
+    const outputEntry = output['index'];
+
+    if (outputEntry.type !== 'Prerender') {
+      throw new Error('Unexpected output type ' + outputEntry.type);
+    }
+
+    // cache life profile "weeks"
+    expect(outputEntry.expiration).toBe(604800); // 1 week
+    expect(outputEntry.staleExpiration).toBe(2592000); // 30 days
+  });
+
+  it('should add expiration and staleExpiration values for PPR fallback routes with "use cache"', async () => {
+    const { output } = buildResult;
+    const outputEntry = output['[slug]'];
+
+    if (outputEntry.type !== 'Prerender') {
+      throw new Error('Unexpected output type ' + outputEntry.type);
+    }
+
+    // cache life profile "weeks"
+    expect(outputEntry.expiration).toBe(604800); // 1 week
+    expect(outputEntry.staleExpiration).toBe(2592000); // 30 days
+  });
+
+  it('should not add a staleExpiration value for static routes', async () => {
+    const { output } = buildResult;
+    const outputEntry = output['static'];
+
+    if (outputEntry.type !== 'Prerender') {
+      throw new Error('Unexpected output type ' + outputEntry.type);
+    }
+
+    expect(outputEntry.expiration).toBe(false);
+    expect(outputEntry.staleExpiration).toBeUndefined();
+  });
+});
