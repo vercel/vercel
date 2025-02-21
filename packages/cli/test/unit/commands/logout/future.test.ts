@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 import fetch, { type Response } from 'node-fetch';
 import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
+import ua from '../../../../src/util/ua';
 
 const fetchMock = fetch as unknown as MockInstance<typeof fetch>;
 
@@ -27,7 +28,17 @@ beforeEach(() => {
 
 describe('logout --future', () => {
   it('successful logout', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({
+        issuer: 'https://vercel.com',
+        device_authorization_endpoint: 'https://vercel.com',
+        token_endpoint: 'https://vercel.com',
+        revocation_endpoint: 'https://vercel.com',
+        jwks_uri: 'https://vercel.com',
+      })
+    );
     const _as = await as();
+
     fetchMock.mockResolvedValueOnce(mockResponse({}));
 
     client.setArgv('logout', '--future');
@@ -39,18 +50,22 @@ describe('logout --future', () => {
     expect(exitCode, 'exit code for "logout --future"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
       _as.revocation_endpoint,
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'user-agent': ua,
+        },
         body: expect.any(URLSearchParams),
       })
     );
 
     expect(
-      fetchMock.mock.calls[0][1]?.body?.toString(),
+      fetchMock.mock.calls[1][1]?.body?.toString(),
       'Requesting token revocation with the correct params'
     ).toBe(
       new URLSearchParams({

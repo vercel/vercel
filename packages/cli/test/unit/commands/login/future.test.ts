@@ -45,6 +45,15 @@ beforeEach(() => {
 
 describe('login --future', () => {
   it('successful login', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({
+        issuer: 'https://vercel.com',
+        device_authorization_endpoint: 'https://vercel.com',
+        token_endpoint: 'https://vercel.com',
+        revocation_endpoint: 'https://vercel.com',
+        jwks_uri: 'https://vercel.com',
+      })
+    );
     const _as = await as();
     const accessTokenPayload = { team_id: randomUUID() };
     jwtVerifyMock.mockResolvedValueOnce({
@@ -83,10 +92,10 @@ describe('login --future', () => {
     expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetchMock).toHaveBeenCalledTimes(pollCount + 2);
+    expect(fetchMock).toHaveBeenCalledTimes(pollCount + 3);
 
     expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
+      2,
       _as.device_authorization_endpoint,
       expect.objectContaining({
         method: 'POST',
@@ -105,7 +114,7 @@ describe('login --future', () => {
     ).toBe(ua);
 
     expect(
-      fetchMock.mock.calls[0][1]?.body?.toString(),
+      fetchMock.mock.calls[1][1]?.body?.toString(),
       'Requesting a device code with the correct params'
     ).toBe(
       new URLSearchParams({
@@ -114,13 +123,16 @@ describe('login --future', () => {
       }).toString()
     );
 
-    for (let i = 2; i <= fetchMock.mock.calls.length; i++) {
+    for (let i = 3; i <= fetchMock.mock.calls.length; i++) {
       expect(fetchMock).toHaveBeenNthCalledWith(
         i,
         _as.token_endpoint,
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'user-agent': ua,
+          },
           body: expect.any(URLSearchParams),
         })
       );
