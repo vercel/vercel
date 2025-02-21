@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.2.0
+
+### Minor Changes
+
+- Detect v9 pnpm lock files as pnpm 10 for new projects ([#13072](https://github.com/vercel/vercel/pull/13072))
+
 ## 1.1.0
 
 ### Minor Changes
