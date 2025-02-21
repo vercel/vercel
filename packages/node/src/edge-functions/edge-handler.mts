@@ -195,7 +195,6 @@ async function createEdgeRuntimeServer(params?: {
       new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.warn(waitUntilWarning(params.entrypointPath));
-          resolve();
         }, WAIT_UNTIL_TIMEOUT_MS);
 
         Promise.all([params.awaiter.awaiting(), server.close()])
