@@ -13,9 +13,9 @@ import { logoutCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
-import { future } from './future';
+import { logout as future } from './future';
 
-export default async function main(client: Client): Promise<number> {
+export default async function logout(client: Client): Promise<number> {
   if (client.argv.slice(2).includes('--future')) return await future(client);
 
   const { authConfig, config } = client;

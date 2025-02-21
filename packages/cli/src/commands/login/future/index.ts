@@ -25,11 +25,16 @@ import {
   verifyJWT,
 } from '../../../util/oauth';
 import o from '../../../output-manager';
+import { LoginTelemetryClient } from '../../../util/telemetry/commands/login';
 
-export async function future(client: Client): Promise<number> {
+export async function login(client: Client): Promise<number> {
   o.warn('This feature is under active development. Do not use!');
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
+
+  const telemetry = new LoginTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
 
   let parsedArgs: ReturnType<
     typeof parseArguments<typeof flagsSpecification>
@@ -43,16 +48,12 @@ export async function future(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('login --future');
     o.print(help(loginCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  const scope = parsedArgs.flags['--scope']?.valueOf() ?? 'openid';
-  o.debug(`Requesting scopes: ${scope?.split(' ').join(', ') ?? 'none'}`);
-
-  const deviceAuthorizationResponse = await deviceAuthorizationRequest({
-    scope,
-  });
+  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(
     `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`

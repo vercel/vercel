@@ -15,13 +15,18 @@ import {
   processRevocationResponse,
 } from '../../../util/oauth';
 import o from '../../../output-manager';
+import { LogoutTelemetryClient } from '../../../util/telemetry/commands/logout';
 
-export async function future(client: Client): Promise<number> {
+export async function logout(client: Client): Promise<number> {
   const { config, authConfig } = client;
 
   o.warn('This feature is under active development. Do not use!');
 
   const flagsSpecification = getFlagsSpecification(logoutCommand.options);
+
+  const telemetry = new LogoutTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
 
   let parsedArgs = null;
   try {
@@ -32,13 +37,14 @@ export async function future(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('logout --future');
     o.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   if (!authConfig.token) {
     o.note(
-      `Not currently logged in, so ${getCommandName('logout')} did nothing`
+      `Not currently logged in, so ${getCommandName('logout --future')} did nothing`
     );
     return 0;
   }

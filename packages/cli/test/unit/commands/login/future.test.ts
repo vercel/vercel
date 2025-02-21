@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, type MockInstance } from 'vitest';
-import { future as loginFuture } from '../../../../src/commands/login/future';
+import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import fetch, { Headers, type Response } from 'node-fetch';
@@ -29,12 +29,22 @@ function mockResponse(data: unknown, ok = true): Response {
   } as unknown as Response;
 }
 
+function simulateTokenPolling(pollCount: number, finalResponse: Response) {
+  for (let i = 0; i < pollCount; i++) {
+    fetchMock.mockResolvedValueOnce(
+      mockResponse({ error: 'authorization_pending' }, false)
+    );
+  }
+  fetchMock.mockResolvedValueOnce(finalResponse);
+  return finalResponse.json();
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
 });
 
 describe('login --future', () => {
-  it('sucessful login', async () => {
+  it('successful login', async () => {
     const accessTokenPayload = { team_id: randomUUID() };
     jwtVerifyMock.mockResolvedValueOnce({
       payload: accessTokenPayload,
@@ -45,32 +55,34 @@ describe('login --future', () => {
       user_code: randomUUID(),
       verification_uri: 'https://vercel.com/device',
       verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
-      expires_in: 1,
-      interval: 1,
+      expires_in: 30,
+      interval: 0.005,
     };
 
     fetchMock.mockResolvedValueOnce(mockResponse(authorizationResult));
 
-    const tokenResult = {
-      access_token: randomUUID(),
-      token_type: 'Bearer',
-      expires_in: 1,
-      scope: 'openid',
-    };
-    fetchMock.mockResolvedValueOnce(mockResponse(tokenResult));
+    const pollCount = 2;
+    const tokenResult = await simulateTokenPolling(
+      pollCount,
+      mockResponse({
+        access_token: randomUUID(),
+        token_type: 'Bearer',
+        expires_in: 1,
+        scope: 'openid',
+      })
+    );
 
     client.setArgv('login', '--future');
+    delete client.authConfig.token;
     const teamBefore = client.config.currentTeam;
+    expect(teamBefore).toBeUndefined();
     const tokenBefore = client.authConfig.token;
 
-    const exitCode = await loginFuture(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    const exitCodePromise = login(client);
+    expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(
-      fetchMock,
-      'Requesting device authorization and polling token once'
-    ).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(pollCount + 2);
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -101,18 +113,20 @@ describe('login --future', () => {
       }).toString()
     );
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      as.token_endpoint,
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: expect.any(URLSearchParams),
-      })
-    );
+    for (let i = 2; i <= fetchMock.mock.calls.length; i++) {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        i,
+        as.token_endpoint,
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: expect.any(URLSearchParams),
+        })
+      );
+    }
 
     expect(
-      fetchMock.mock.calls[1][1]?.body?.toString(),
+      fetchMock.mock.calls[pollCount + 1][1]?.body?.toString(),
       'Polling with the received device code'
     ).toBe(
       new URLSearchParams({
@@ -131,7 +145,19 @@ describe('login --future', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it.todo('/token polling');
+  it('--future --help', async () => {
+    client.setArgv('login', '--future', '--help');
+
+    const exitCode = await login(client);
+    expect(exitCode, 'exit code for "login --future --help"').toBe(2);
+    await expect(client.stderr).toOutput(
+      '--future  Sign in using OAuth Device Authorization.'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:help', value: 'login --future' },
+    ]);
+  });
+
   it.todo('Authorization request error');
   it.todo('Token request error');
 });

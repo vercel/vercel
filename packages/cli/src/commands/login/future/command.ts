@@ -15,14 +15,6 @@ export const loginCommand = {
       type: Boolean,
       deprecated: false,
     },
-    {
-      name: 'scope',
-      description:
-        'Space-delimited list of scopes to determine token permissions.',
-      shorthand: '-s',
-      type: String,
-      deprecated: false,
-    },
   ],
   examples: [
     {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, type MockInstance } from 'vitest';
-import { future as logout } from '../../../../src/commands/logout/future';
+import { logout } from '../../../../src/commands/logout/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import fetch, { type Response } from 'node-fetch';
@@ -35,7 +35,7 @@ describe('logout --future', () => {
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    expect(exitCode, 'exit code for "logout --future"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -99,5 +99,31 @@ describe('logout --future', () => {
     const teamAfter = client.config.currentTeam;
     expect(teamAfter).not.toBe(teamBefore);
     expect(teamAfter).toBeUndefined();
+  });
+
+  it('if no token, do nothing', async () => {
+    client.setArgv('logout', '--future');
+    delete client.authConfig.token;
+    expect(client.authConfig.token).toBeUndefined();
+
+    const exitCode = await logout(client);
+    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    await expect(client.stderr).toOutput(
+      'Not currently logged in, so `vercel logout --future` did nothing'
+    );
+    expect(client.authConfig.token).toBeUndefined();
+  });
+
+  it('--future --help', async () => {
+    client.setArgv('logout', '--future', '--help');
+
+    const exitCode = await logout(client);
+    expect(exitCode, 'exit code for "logout --future --help"').toBe(2);
+    await expect(client.stderr).toOutput(
+      '--future  Sign out by calling the Vercel OAuth Revocation Endpoint.'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'flag:help', value: 'logout --future' },
+    ]);
   });
 });

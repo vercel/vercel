@@ -26,16 +26,14 @@ export const as: {
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
  */
-export async function deviceAuthorizationRequest(options: {
-  scope?: string;
-}): Promise<Response> {
+export async function deviceAuthorizationRequest(): Promise<Response> {
   return await fetch(as.device_authorization_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'user-agent': ua,
     },
-    body: new URLSearchParams({ client_id: as.client_id, ...options }),
+    body: new URLSearchParams({ client_id: as.client_id, scope: 'openid' }),
   });
 }
 
@@ -169,10 +167,9 @@ export async function processDeviceAccessTokenResponse(
       {
         /** The access token issued by the authorization server. */
         access_token: string;
-
         /** The type of the token issued */
         token_type: 'Bearer';
-        /** The lifetime in seconds of the access token.The lifetime in seconds of the access token. */
+        /** The lifetime in seconds of the access token. */
         expires_in: number;
         /** The refresh token, which can be used to obtain new access tokens. */
         refresh_token?: string;
@@ -288,7 +285,6 @@ export class OAuthError extends Error {
 }
 
 export function isOAuthError(error: unknown): error is OAuthError {
-  if (typeof error !== 'object' || error === null) return false;
   return error instanceof OAuthError;
 }
 
