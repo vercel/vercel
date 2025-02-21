@@ -973,6 +973,8 @@ export function getPathOverrideForPackageManager({
   }
 
   if (cliType === 'pnpm' && packageJsonEngines?.pnpm) {
+    // pnpm 10 is special because
+    // https://pnpm.io/npmrc#manage-package-manager-versions
     const usingDetected =
       detectedPackageManger?.pnpmVersionRange !== '10.x' ||
       !corepackPackageManager;
