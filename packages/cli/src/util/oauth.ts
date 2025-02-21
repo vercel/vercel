@@ -2,24 +2,90 @@ import fetch, { type Response } from 'node-fetch';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import ua from './ua';
 
-// https://vercel.com/.well-known/openid-configuration
-export const as: {
-  client_id: string;
+const VERCEL_ISSUER = new URL('https://vercel.com');
+export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
+
+interface AuthorizationServerMetadata {
+  issuer: URL;
   device_authorization_endpoint: URL;
   token_endpoint: URL;
   revocation_endpoint: URL;
   jwks_uri: URL;
-} = {
-  client_id: 'cl_v9RsjXlLr2yv2ZwgOSz1pe0CQvhzRn9W',
-  revocation_endpoint: new URL(
-    'https://vercel.com/api/login/oauth/token/revoke'
-  ),
-  device_authorization_endpoint: new URL(
-    'https://vercel.com/api/login/oauth/device-authorization'
-  ),
-  token_endpoint: new URL('https://vercel.com/api/login/oauth/token'),
-  jwks_uri: new URL('https://vercel.com/.well-known/jwks'),
-};
+}
+
+let _as: AuthorizationServerMetadata;
+export async function as(): Promise<AuthorizationServerMetadata> {
+  if (!_as) {
+    const discoveryResponse = await discoveryEndpointRequest(VERCEL_ISSUER);
+    const [discoveryResponseError, as] =
+      await processDiscoveryEndpointResponse(discoveryResponse);
+
+    if (discoveryResponseError) {
+      throw discoveryResponseError;
+    }
+
+    _as = as;
+  }
+
+  return _as;
+}
+
+/**
+ * Perform the Discovery Endpoint Request
+ *
+ * @see https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest
+ */
+async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
+  return await fetch(new URL('.well-known/openid-configuration', issuer), {
+    headers: { 'Content-Type': 'application/json', 'user-agent': ua },
+  });
+}
+
+/**
+ * Process the Discovery Endpoint request Response
+ *
+ * @see https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse
+ */
+async function processDiscoveryEndpointResponse(
+  response: Response
+): Promise<[Error] | [null, AuthorizationServerMetadata]> {
+  const json = await response.json();
+
+  if (!response.ok) {
+    return [new Error('Discovery endpoint request failed')];
+  }
+
+  if (
+    typeof json !== 'object' ||
+    json === null ||
+    !canParseURL(json.issuer) ||
+    !canParseURL(json.device_authorization_endpoint) ||
+    !canParseURL(json.token_endpoint) ||
+    !canParseURL(json.revocation_endpoint) ||
+    !canParseURL(json.jwks_uri)
+  ) {
+    return [new TypeError('Invalid discovery response')];
+  }
+
+  const issuer = new URL(json.issuer);
+
+  if (issuer.href !== VERCEL_ISSUER.href) {
+    return [new Error('Issuer mismatch')];
+  }
+
+  return [
+    null,
+    {
+      issuer: issuer,
+      device_authorization_endpoint: new URL(
+        json.device_authorization_endpoint
+      ),
+      token_endpoint: new URL(json.token_endpoint),
+      revocation_endpoint: new URL(json.revocation_endpoint),
+      jwks_uri: new URL(json.jwks_uri),
+    },
+  ];
+}
 
 /**
  * Perform the Device Authorization Request
@@ -27,13 +93,16 @@ export const as: {
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
  */
 export async function deviceAuthorizationRequest(): Promise<Response> {
-  return await fetch(as.device_authorization_endpoint, {
+  return await fetch((await as()).device_authorization_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'user-agent': ua,
     },
-    body: new URLSearchParams({ client_id: as.client_id, scope: 'openid' }),
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      scope: 'openid',
+    }),
   });
 }
 
@@ -82,17 +151,18 @@ export async function processDeviceAuthorizationResponse(
 
   if (typeof json !== 'object' || json === null)
     return [new TypeError('Expected response to be an object')];
-  else if (!('device_code' in json) || typeof json.device_code !== 'string')
+  if (!('device_code' in json) || typeof json.device_code !== 'string')
     return [new TypeError('Expected `device_code` to be a string')];
-  else if (!('user_code' in json) || typeof json.user_code !== 'string')
+  if (!('user_code' in json) || typeof json.user_code !== 'string')
     return [new TypeError('Expected `user_code` to be a string')];
-  else if (
+  if (
     !('verification_uri' in json) ||
     typeof json.verification_uri !== 'string' ||
     !canParseURL(json.verification_uri)
   ) {
     return [new TypeError('Expected `verification_uri` to be a string')];
-  } else if (
+  }
+  if (
     !('verification_uri_complete' in json) ||
     typeof json.verification_uri_complete !== 'string' ||
     !canParseURL(json.verification_uri_complete)
@@ -100,9 +170,10 @@ export async function processDeviceAuthorizationResponse(
     return [
       new TypeError('Expected `verification_uri_complete` to be a string'),
     ];
-  } else if (!('expires_in' in json) || typeof json.expires_in !== 'number')
+  }
+  if (!('expires_in' in json) || typeof json.expires_in !== 'number')
     return [new TypeError('Expected `expires_in` to be a number')];
-  else if (!('interval' in json) || typeof json.interval !== 'number')
+  if (!('interval' in json) || typeof json.interval !== 'number')
     return [new TypeError('Expected `interval` to be a number')];
 
   return [
@@ -129,11 +200,14 @@ export async function deviceAccessTokenRequest(options: {
   try {
     return [
       null,
-      await fetch(as.token_endpoint, {
+      await fetch((await as()).token_endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'user-agent': ua,
+        },
         body: new URLSearchParams({
-          client_id: as.client_id,
+          client_id: VERCEL_CLI_CLIENT_ID,
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
@@ -186,18 +260,18 @@ export async function processDeviceAccessTokenResponse(
 
   if (typeof json !== 'object' || json === null)
     return [new TypeError('Expected response to be an object')];
-  else if (!('access_token' in json) || typeof json.access_token !== 'string')
+  if (!('access_token' in json) || typeof json.access_token !== 'string')
     return [new TypeError('Expected `access_token` to be a string')];
-  else if (!('token_type' in json) || json.token_type !== 'Bearer')
+  if (!('token_type' in json) || json.token_type !== 'Bearer')
     return [new TypeError('Expected `token_type` to be "Bearer"')];
-  else if (!('expires_in' in json) || typeof json.expires_in !== 'number')
+  if (!('expires_in' in json) || typeof json.expires_in !== 'number')
     return [new TypeError('Expected `expires_in` to be a number')];
-  else if (
+  if (
     'refresh_token' in json &&
     (typeof json.refresh_token !== 'string' || !json.refresh_token)
   )
     return [new TypeError('Expected `refresh_token` to be a string')];
-  else if ('scope' in json && typeof json.scope !== 'string')
+  if ('scope' in json && typeof json.scope !== 'string')
     return [new TypeError('Expected `scope` to be a string')];
 
   return [null, json];
@@ -211,10 +285,13 @@ export async function processDeviceAccessTokenResponse(
 export async function revocationRequest(options: {
   token: string;
 }): Promise<Response> {
-  return await fetch(as.revocation_endpoint, {
+  return await fetch((await as()).revocation_endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ ...options, client_id: as.client_id }),
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
+    body: new URLSearchParams({ ...options, client_id: VERCEL_CLI_CLIENT_ID }),
   });
 }
 
@@ -256,14 +333,11 @@ interface OAuthErrorResponse {
 function processOAuthErrorResponse(json: unknown): OAuthErrorResponse {
   if (typeof json !== 'object' || json === null)
     throw new TypeError('Expected response to be an object');
-  else if (!('error' in json) || typeof json.error !== 'string')
+  if (!('error' in json) || typeof json.error !== 'string')
     throw new TypeError('Expected `error` to be a string');
-  else if (
-    'error_description' in json &&
-    typeof json.error_description !== 'string'
-  )
+  if ('error_description' in json && typeof json.error_description !== 'string')
     throw new TypeError('Expected `error_description` to be a string');
-  else if ('error_uri' in json && typeof json.error_uri !== 'string')
+  if ('error_uri' in json && typeof json.error_uri !== 'string')
     throw new TypeError('Expected `error_uri` to be a string');
 
   return json as OAuthErrorResponse;
@@ -296,9 +370,8 @@ function canParseURL(url: string) {
   }
 }
 
-const JWKS = createRemoteJWKSet(as.jwks_uri);
-
 export async function verifyJWT(token: string) {
+  const JWKS = createRemoteJWKSet((await as()).jwks_uri);
   const { payload } = await jwtVerify<{ team_id?: string }>(token, JWKS, {
     issuer: 'https://vercel.com',
     audience: ['https://api.vercel.com', 'https://vercel.com/api'],

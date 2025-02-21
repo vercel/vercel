@@ -3,7 +3,7 @@ import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import fetch, { Headers, type Response } from 'node-fetch';
-import { as } from '../../../../src/util/oauth';
+import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
 import ua from '../../../../src/util/ua';
 import { randomUUID } from 'node:crypto';
 import { jwtVerify } from 'jose';
@@ -86,7 +86,7 @@ describe('login --future', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      as.device_authorization_endpoint,
+      (await as()).device_authorization_endpoint,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -108,7 +108,7 @@ describe('login --future', () => {
       'Requesting a device code with the correct params'
     ).toBe(
       new URLSearchParams({
-        client_id: as.client_id,
+        client_id: VERCEL_CLI_CLIENT_ID,
         scope: tokenResult.scope,
       }).toString()
     );
@@ -116,7 +116,7 @@ describe('login --future', () => {
     for (let i = 2; i <= fetchMock.mock.calls.length; i++) {
       expect(fetchMock).toHaveBeenNthCalledWith(
         i,
-        as.token_endpoint,
+        (await as()).token_endpoint,
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -130,7 +130,7 @@ describe('login --future', () => {
       'Polling with the received device code'
     ).toBe(
       new URLSearchParams({
-        client_id: as.client_id,
+        client_id: VERCEL_CLI_CLIENT_ID,
         grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
         device_code: authorizationResult.device_code,
       }).toString()
