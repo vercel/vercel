@@ -3344,7 +3344,6 @@ export async function getNodeMiddleware({
     functionsConfigManifest?.functions['/_middleware'];
 
   if (!middlewareFunctionConfig || !middlewareFunctionConfig.matchers) {
-    console.log('no node middleware');
     return null;
   }
   const routes: RouteWithSrc[] = [];

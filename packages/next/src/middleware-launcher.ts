@@ -58,9 +58,6 @@ const serve = async (request: Request): Promise<Response> => {
           context.waitUntil(result.waitUntil);
         }
 
-        // TODO: remove after debugging
-        console.log('got middleware response', result.response.headers);
-
         return result.response;
       }
     );
