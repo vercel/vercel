@@ -4,6 +4,5 @@ import rootConfig from '../../vitest.config.mjs';
 export default mergeConfig(rootConfig, {
   test: {
     setupFiles: ['./vitest.setup.mts'],
-    coverage: { reporter: ['html'] },
   },
 });
