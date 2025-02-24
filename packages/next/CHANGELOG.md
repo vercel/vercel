@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.1
+
+### Patch Changes
+
+- Add node middleware handling ([#13028](https://github.com/vercel/vercel/pull/13028))
+
 ## 4.7.0
 
 ### Minor Changes
