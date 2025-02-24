@@ -76,7 +76,14 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+  await runNpmInstall(
+    entrypointFsDirname,
+    [],
+    spawnOpts,
+    meta,
+    nodeVersion,
+    config.projectSettings?.createdAt
+  );
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -377,7 +384,8 @@ export const build: BuildV3 = async ({
     entrypointFsDirname,
     // Don't consider "build" script since its intended for frontend code
     ['vercel-build', 'now-build'],
-    spawnOpts
+    spawnOpts,
+    config.projectSettings?.createdAt
   );
 
   const isMiddleware = config.middleware === true;

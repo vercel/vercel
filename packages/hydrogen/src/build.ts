@@ -65,6 +65,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env || {},
     turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   if (typeof installCommand === 'string') {
@@ -78,7 +79,14 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointDir,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
   }
 
   // Copy the edge entrypoint file into `.vercel/cache`
@@ -115,10 +123,20 @@ export const build: BuildV2 = async ({
     );
     if (hasScript('vercel-build', pkg)) {
       debug(`Executing "yarn vercel-build"`);
-      await runPackageJsonScript(entrypointDir, 'vercel-build', spawnOpts);
+      await runPackageJsonScript(
+        entrypointDir,
+        'vercel-build',
+        spawnOpts,
+        config.projectSettings?.createdAt
+      );
     } else if (hasScript('build', pkg)) {
       debug(`Executing "yarn build"`);
-      await runPackageJsonScript(entrypointDir, 'build', spawnOpts);
+      await runPackageJsonScript(
+        entrypointDir,
+        'build',
+        spawnOpts,
+        config.projectSettings?.createdAt
+      );
     } else {
       await execCommand('shopify hydrogen build', {
         ...spawnOpts,

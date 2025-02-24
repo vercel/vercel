@@ -129,6 +129,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   if (typeof installCommand === 'string') {
@@ -142,7 +143,14 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
   }
 
   const isHydrogen2 = Boolean(
@@ -322,7 +330,8 @@ export const build: BuildV2 = async ({
         env: nonCiEnv,
       },
       undefined,
-      nodeVersion
+      nodeVersion,
+      config.projectSettings?.createdAt
     );
   }
 
@@ -420,11 +429,17 @@ module.exports = config;`;
         await runPackageJsonScript(
           entrypointFsDirname,
           'vercel-build',
-          spawnOpts
+          spawnOpts,
+          config.projectSettings?.createdAt
         );
       } else if (hasScript('build', pkg)) {
         debug(`Executing "yarn build"`);
-        await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+        await runPackageJsonScript(
+          entrypointFsDirname,
+          'build',
+          spawnOpts,
+          config.projectSettings?.createdAt
+        );
       } else {
         await execCommand('remix build', {
           ...spawnOpts,

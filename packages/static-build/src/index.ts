@@ -497,6 +497,7 @@ export const build: BuildV2 = async ({
       nodeVersion,
       env: spawnOpts.env || {},
       turboSupportsCorepackHome,
+      projectCreatedAt: config.projectSettings?.createdAt,
     });
 
     if (meta.isDev) {
@@ -512,7 +513,14 @@ export const build: BuildV2 = async ({
 
       if (!config.zeroConfig) {
         debug('Detected "builds" - not zero config');
-        await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
+        await runNpmInstall(
+          entrypointDir,
+          [],
+          spawnOpts,
+          meta,
+          nodeVersion,
+          config.projectSettings?.createdAt
+        );
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
@@ -560,7 +568,14 @@ export const build: BuildV2 = async ({
           isPipInstall = true;
         }
         if (pkg) {
-          await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
+          await runNpmInstall(
+            entrypointDir,
+            [],
+            spawnOpts,
+            meta,
+            nodeVersion,
+            config.projectSettings?.createdAt
+          );
           isNpmInstall = true;
         }
       }
@@ -704,7 +719,8 @@ export const build: BuildV2 = async ({
             : await runPackageJsonScript(
                 entrypointDir,
                 ['vercel-build', 'now-build', 'build'],
-                spawnOpts
+                spawnOpts,
+                config.projectSettings?.createdAt
               );
 
         if (!found) {

@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.4.0
+
+### Minor Changes
+
+- Detect v9 pnpm lock files as pnpm 10 for new projects ([#13072](https://github.com/vercel/vercel/pull/13072))
+
 ## 5.3.3
 
 ### Patch Changes
