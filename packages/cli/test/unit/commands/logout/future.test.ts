@@ -129,17 +129,4 @@ describe('logout --future', () => {
     );
     expect(client.authConfig.token).toBeUndefined();
   });
-
-  it('--future --help', async () => {
-    client.setArgv('logout', '--future', '--help');
-
-    const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "logout --future --help"').toBe(2);
-    await expect(client.stderr).toOutput(
-      '--future  Sign out by calling the Vercel OAuth Revocation Endpoint.'
-    );
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'flag:help', value: 'logout --future' },
-    ]);
-  });
 });

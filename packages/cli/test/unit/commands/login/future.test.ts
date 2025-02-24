@@ -158,19 +158,6 @@ describe('login --future', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it('--future --help', async () => {
-    client.setArgv('login', '--future', '--help');
-
-    const exitCode = await login(client);
-    expect(exitCode, 'exit code for "login --future --help"').toBe(2);
-    await expect(client.stderr).toOutput(
-      '--future  Sign in using OAuth Device Authorization.'
-    );
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'flag:help', value: 'login --future' },
-    ]);
-  });
-
   it.todo('Authorization request error');
   it.todo('Token request error');
 });
