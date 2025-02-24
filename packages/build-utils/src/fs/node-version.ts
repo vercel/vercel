@@ -56,6 +56,10 @@ export const NODE_VERSIONS: NodeVersion[] = [
   }),
 ];
 
+export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
+  return NODE_VERSIONS.find(v => v.major === major);
+}
+
 function getOptions() {
   return NODE_VERSIONS;
 }
