@@ -144,7 +144,7 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
         specifier: 3.6.1
@@ -201,7 +201,7 @@ importers:
         specifier: 1.0.4
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 5.0.4
@@ -334,37 +334,37 @@ importers:
   packages/cli:
     dependencies:
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/fun':
-        specifier: 1.1.4
-        version: 1.1.4
+        specifier: 1.1.5
+        version: 1.1.5
       '@vercel/go':
         specifier: 3.2.1
         version: link:../go
       '@vercel/hydrogen':
-        specifier: 1.1.0
+        specifier: 1.2.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.6.2
+        specifier: 4.7.0
         version: link:../next
       '@vercel/node':
-        specifier: 5.1.7
+        specifier: 5.1.8
         version: link:../node
       '@vercel/python':
         specifier: 4.7.1
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.2.0
+        specifier: 2.3.0
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.3.3
+        specifier: 5.4.0
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.2.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.6.6
+        specifier: 2.7.0
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -509,7 +509,7 @@ importers:
         specifier: 3.0.6
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 15.0.8
+        specifier: 15.1.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -761,7 +761,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1001,7 +1001,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1056,7 +1056,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       esbuild:
         specifier: 0.14.47
@@ -1123,7 +1123,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1172,7 +1172,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1233,7 +1233,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 5.0.4
@@ -1320,7 +1320,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1456,7 +1456,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       cross-env:
         specifier: 7.0.3
@@ -1539,7 +1539,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 5.0.4
@@ -1604,7 +1604,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1657,7 +1657,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1681,7 +1681,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.73
+        specifier: 2.0.74
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1718,7 +1718,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 10.1.0
+        specifier: 10.2.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -7830,8 +7830,8 @@ packages:
       eslint-visitor-keys: 3.4.3
     dev: true
 
-  /@vercel/fun@1.1.4:
-    resolution: {integrity: sha512-E23Gyp3iJaLK1o/10dJPsQt186Ux7c06k81o7o6/07KiHSkVS5pQELOJybN+WDhg7x3OLywKjMcCJQhRTkdF0A==}
+  /@vercel/fun@1.1.5:
+    resolution: {integrity: sha512-vRuR7qlsl8CgdeQIhfgLDtbMEuxqltx6JWFahB7Q5VOKMo/sFZV1rCxIHsHsJP4yYY2hoZqlT/EUkfG1tfPicg==}
     engines: {node: '>= 18'}
     dependencies:
       '@tootallnate/once': 2.0.0
@@ -7846,7 +7846,7 @@ packages:
       semver: 7.5.4
       stat-mode: 0.3.0
       stream-to-promise: 2.2.0
-      tar: 4.4.18
+      tar: 6.2.1
       tinyexec: 0.3.2
       tree-kill: 1.2.2
       uid-promise: 1.0.0
@@ -9260,7 +9260,6 @@ packages:
   /chownr@2.0.0:
     resolution: {integrity: sha512-bIomtDF5KGpdogkLd9VspvFzk9KfpyyGlS8YFVZl7TGPBHL5snIOnxeshwVgPteQ9b4Eydl+pVbIyE1DcvCWgQ==}
     engines: {node: '>=10'}
-    dev: true
 
   /chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
@@ -11584,18 +11583,11 @@ packages:
       universalify: 0.1.2
     dev: true
 
-  /fs-minipass@1.2.7:
-    resolution: {integrity: sha512-GWSSJGFy4e9GUeCcbIkED+bgAoFyj7XF1mV8rma3QW4NIqX9Kyx79N/PF61H5udOV3aY1IaMLs6pGbH71nlCTA==}
-    dependencies:
-      minipass: 2.9.0
-    dev: false
-
   /fs-minipass@2.1.0:
     resolution: {integrity: sha512-V/JgOLFCS+R6Vcq0slCuaeWEdNC3ouDlJMNIsacH2VtALiu9mV4LPrHc5cDl8k5aw6J8jwgWWpiTo5RYhmIzvg==}
     engines: {node: '>= 8'}
     dependencies:
       minipass: 3.3.6
-    dev: true
 
   /fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
@@ -13939,19 +13931,11 @@ packages:
   /minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
-  /minipass@2.9.0:
-    resolution: {integrity: sha512-wxfUjg9WebH+CUDX/CdbRlh5SmfZiy/hpkxaRI16Y9W56Pa75sWgd/rvFilSgrauD9NyFymP/+JFV3KwzIsJeg==}
-    dependencies:
-      safe-buffer: 5.2.1
-      yallist: 3.1.1
-    dev: false
-
   /minipass@3.3.6:
     resolution: {integrity: sha512-DxiNidxSEK+tHG6zOIklvNOwm3hvCrbUrdtzY74U6HKTJxvIDfOUL5W5P2Ghd3DTkhhKPYGqeNUIh5qcM4YBfw==}
     engines: {node: '>=8'}
     dependencies:
       yallist: 4.0.0
-    dev: true
 
   /minipass@4.2.8:
     resolution: {integrity: sha512-fNzuVyifolSLFL4NzpF+wEF4qrgqaaKX0haXPQEdQ7NKAN+WecoKMHV09YcuL/DHxrUsYQOK3MiuDf7Ip2OXfQ==}
@@ -13961,17 +13945,10 @@ packages:
   /minipass@5.0.0:
     resolution: {integrity: sha512-3FnjYuehv9k6ovOEbyOswadCDPX1piCfhV8ncmYtHOjuPwylVWsghTLo7rabjC3Rx5xD4HDx8Wm1xnMF7S5qFQ==}
     engines: {node: '>=8'}
-    dev: true
 
   /minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
-
-  /minizlib@1.3.3:
-    resolution: {integrity: sha512-6ZYMOEnmVsdCeTJVE0W9ZD+pVnE8h9Hma/iOwwRDsdQoePpoX56/8B6z3P9VNwppJuBKNRuFDRNRqRWexT9G9Q==}
-    dependencies:
-      minipass: 2.9.0
-    dev: false
 
   /minizlib@2.1.2:
     resolution: {integrity: sha512-bAxsR8BVfj60DWXHE3u30oHzfl4G7khkSuPW+qvpd7jFRHm7dLxOjUk1EHACJ/hxLY8phGJ0YhYHZo7jil7Qdg==}
@@ -13979,7 +13956,6 @@ packages:
     dependencies:
       minipass: 3.3.6
       yallist: 4.0.0
-    dev: true
 
   /minizlib@3.0.1:
     resolution: {integrity: sha512-umcy022ILvb5/3Djuu8LWeqUa8D68JaBzlttKeMWen48SjabqS3iY5w/vzeMzMUNhLDifyhbOwKDSznB1vvrwg==}
@@ -16233,19 +16209,6 @@ packages:
       readable-stream: 3.6.2
     dev: false
 
-  /tar@4.4.18:
-    resolution: {integrity: sha512-ZuOtqqmkV9RE1+4odd+MhBpibmCxNP6PJhH/h2OqNuotTX7/XHPZQJv2pKvWMplFH9SIZZhitehh6vBH6LO8Pg==}
-    engines: {node: '>=4.5'}
-    dependencies:
-      chownr: 1.1.4
-      fs-minipass: 1.2.7
-      minipass: 2.9.0
-      minizlib: 1.3.3
-      mkdirp: 0.5.6
-      safe-buffer: 5.2.1
-      yallist: 3.1.1
-    dev: false
-
   /tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
@@ -16256,7 +16219,6 @@ packages:
       minizlib: 2.1.2
       mkdirp: 1.0.4
       yallist: 4.0.0
-    dev: true
 
   /tar@7.4.3:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
@@ -18047,6 +18009,7 @@ packages:
 
   /yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
+    dev: true
 
   /yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
