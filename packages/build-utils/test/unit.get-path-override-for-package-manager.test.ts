@@ -11,6 +11,7 @@ import {
   MockInstance,
   afterEach,
 } from 'vitest';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getPathOverrideForPackageManager()`', () => {
   describe('with no corepack package manger', () => {
@@ -19,7 +20,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         cliType: 'pnpm',
         lockfileVersion: 9.0,
         corepackPackageManager: undefined,
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
       });
       expect(result).toStrictEqual({
         detectedLockfile: 'pnpm-lock.yaml',
@@ -36,7 +37,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         cliType: 'pnpm',
         lockfileVersion: undefined,
         corepackPackageManager: 'pnpm@9.5.0',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
       });
       expect(result).toStrictEqual({
         detectedLockfile: undefined,
@@ -53,7 +54,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 9.0,
           corepackPackageManager: 'pnpm@9.5.0',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           corepackEnabled: false,
           projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() - 1000,
         });
@@ -70,7 +71,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 9.0,
           corepackPackageManager: 'pnpm@9.5.0',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           corepackEnabled: false,
           projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
         });
@@ -90,7 +91,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         cliType: 'pnpm',
         lockfileVersion: 9.0,
         corepackPackageManager: 'pnpm@9.5.0',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
       });
       expect(result).toStrictEqual({
         detectedLockfile: undefined,
@@ -108,7 +109,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
             cliType: 'pnpm',
             lockfileVersion: 6.1,
             corepackPackageManager: undefined,
-            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            nodeVersion: getNodeVersionByMajor(16),
             packageJsonEngines: { pnpm: '>=9.0.0' },
           });
         }).toThrow(
@@ -122,7 +123,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
             cliType: 'pnpm',
             lockfileVersion: 6.1,
             corepackPackageManager: 'pnpm@8.15.9',
-            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            nodeVersion: getNodeVersionByMajor(16),
             packageJsonEngines: { pnpm: '>=9.0.0' },
           });
         }).toThrow(
@@ -135,7 +136,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 9.0,
           corepackPackageManager: 'pnpm@9.5.0',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonEngines: { pnpm: '>=9.0.0' },
         });
         expect(result).toStrictEqual({
@@ -152,7 +153,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           getPathOverrideForPackageManager({
             cliType: 'pnpm',
             lockfileVersion: 6.1,
-            nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+            nodeVersion: getNodeVersionByMajor(16),
             corepackEnabled: false,
             packageJsonEngines: { pnpm: '>=9.0.0' },
             corepackPackageManager: undefined,
@@ -168,8 +169,9 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
             getPathOverrideForPackageManager({
               cliType: 'pnpm',
               lockfileVersion: 9.0,
-              nodeVersion: { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+              nodeVersion: getNodeVersionByMajor(20),
               corepackEnabled: false,
+              corepackPackageManager: undefined,
               packageJsonEngines: { pnpm: '9.x' },
               projectCreatedAt: PNPM_10_PREFERRED_AT.getTime() + 1000,
             });
@@ -182,7 +184,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           const result = getPathOverrideForPackageManager({
             cliType: 'pnpm',
             lockfileVersion: 9.0,
-            nodeVersion: { major: 20, range: '20.x', runtime: 'nodejs20.x' },
+            nodeVersion: getNodeVersionByMajor(20),
             corepackEnabled: false,
             packageJsonEngines: { pnpm: '9.x' },
             corepackPackageManager: 'pnpm@9.5.0',
@@ -201,7 +203,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         getPathOverrideForPackageManager({
           cliType: 'pnpm',
           lockfileVersion: 9.0,
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           corepackEnabled: false,
           packageJsonEngines: { pnpm: '>=9.0.0' },
           corepackPackageManager: undefined,
@@ -217,7 +219,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
         getPathOverrideForPackageManager({
           cliType: 'pnpm',
           lockfileVersion: 9.0,
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           corepackEnabled: false,
           packageJsonEngines: { pnpm: '>=9.0.0' },
           corepackPackageManager: undefined,
@@ -247,7 +249,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 5.0,
           corepackPackageManager: 'pnpm@9.5.0',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
         });
       }).toThrow(
         'Detected lockfile "5" which is not compatible with the intended corepack package manager "pnpm@9.5.0". Update your lockfile or change to a compatible corepack version.'
@@ -260,7 +262,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 5.1,
           corepackPackageManager: 'pnpm@8.15.9',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
         })
       ).toThrow(
         'Detected lockfile "5.1" which is not compatible with the intended corepack package manager "pnpm@8.15.9". Update your lockfile or change to a compatible corepack version.'
@@ -273,7 +275,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'npm',
           lockfileVersion: 9.0,
           corepackPackageManager: 'pnpm@9.5.0',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
         })
       ).toThrow(
         'Detected package manager "npm" does not match intended corepack defined package manager "pnpm". Change your lockfile or "package.json#packageManager" value to match.'
@@ -286,7 +288,7 @@ describe('Test `getPathOverrideForPackageManager()`', () => {
           cliType: 'pnpm',
           lockfileVersion: 9.0,
           corepackPackageManager: 'pnpm@invalid',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
         })
       ).toThrow(
         'Intended corepack defined package manager "pnpm@invalid" is not a valid semver value.'
