@@ -1,21 +1,17 @@
 import readline from 'node:readline';
 import chalk from 'chalk';
 import * as open from 'open';
-import type Client from '../../../util/client';
-import { getFlagsSpecification } from '../../../util/get-flags-specification';
-import { parseArguments } from '../../../util/get-args';
-import { printError } from '../../../util/error';
-import { help } from '../../help';
-import { loginCommand } from './command';
-import { updateCurrentTeamAfterLogin } from '../../../util/login/update-current-team-after-login';
+import type Client from '../../util/client';
+import { printError } from '../../util/error';
+import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import {
   writeToAuthConfigFile,
   writeToConfigFile,
-} from '../../../util/config/files';
-import getGlobalPathConfig from '../../../util/config/global-path';
-import { getCommandName } from '../../../util/pkg-name';
-import { emoji, prependEmoji } from '../../../util/emoji';
-import hp from '../../../util/humanize-path';
+} from '../../util/config/files';
+import getGlobalPathConfig from '../../util/config/global-path';
+import { getCommandName } from '../../util/pkg-name';
+import { emoji, prependEmoji } from '../../util/emoji';
+import hp from '../../util/humanize-path';
 import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
@@ -23,34 +19,10 @@ import {
   processDeviceAccessTokenResponse,
   isOAuthError,
   verifyJWT,
-} from '../../../util/oauth';
-import o from '../../../output-manager';
-import { LoginTelemetryClient } from '../../../util/telemetry/commands/login';
+} from '../../util/oauth';
+import o from '../../output-manager';
 
 export async function login(client: Client): Promise<number> {
-  const flagsSpecification = getFlagsSpecification(loginCommand.options);
-
-  const telemetry = new LoginTelemetryClient({
-    opts: { store: client.telemetryEventStore },
-  });
-
-  let parsedArgs: ReturnType<
-    typeof parseArguments<typeof flagsSpecification>
-  > | null = null;
-  try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-    if (!parsedArgs) throw new Error('Could not parse args');
-  } catch (error) {
-    printError(error);
-    return 1;
-  }
-
-  if (parsedArgs.flags['--help']) {
-    telemetry.trackCliFlagHelp('login --future');
-    o.print(help(loginCommand, { columns: client.stderr.columns }));
-    return 2;
-  }
-
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(

@@ -16,8 +16,6 @@ import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 import { logout as future } from './future';
 
 export default async function logout(client: Client): Promise<number> {
-  if (client.argv.slice(2).includes('--future')) return await future(client);
-
   const { authConfig, config } = client;
 
   let parsedArgs = null;
@@ -36,6 +34,10 @@ export default async function logout(client: Client): Promise<number> {
   } catch (error) {
     printError(error);
     return 1;
+  }
+
+  if (parsedArgs.flags['--future']) {
+    return await future(client);
   }
 
   if (parsedArgs.flags['--help']) {

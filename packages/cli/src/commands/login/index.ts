@@ -27,8 +27,6 @@ import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 
 export default async function login(client: Client): Promise<number> {
-  if (client.argv.slice(2).includes('--future')) return await future(client);
-
   // user is not currently authenticated on this machine
   const isInitialLogin = !client.authConfig.token;
 
@@ -48,6 +46,10 @@ export default async function login(client: Client): Promise<number> {
   } catch (error) {
     printError(error);
     return 1;
+  }
+
+  if (parsedArgs.flags['--future']) {
+    return await future(client);
   }
 
   if (parsedArgs.flags['--help']) {
