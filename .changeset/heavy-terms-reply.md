@@ -1,5 +1,5 @@
 ---
-"vercel": patch
+"vercel": minor
 ---
 
-feat(login): `vercel login --future` via OAuth Device Authorization flow
+feat(auth): `vercel login --future` and `vercel logout --future` via OAuth Device Authorization flow
