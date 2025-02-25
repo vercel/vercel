@@ -4,4 +4,4 @@
 "@vercel/routing-utils": patch
 ---
 
-lint ignore
+vendor path-to-regexp
