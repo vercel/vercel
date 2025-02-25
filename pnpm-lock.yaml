@@ -153,7 +153,7 @@ importers:
   internals/constants:
     devDependencies:
       '@vercel-internals/tsconfig':
-        specifier: 1.0.0
+        specifier: workspace:*
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
@@ -171,7 +171,7 @@ importers:
         specifier: 14.14.31
         version: 14.14.31
       '@vercel-internals/tsconfig':
-        specifier: 1.0.0
+        specifier: workspace:*
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
@@ -198,7 +198,7 @@ importers:
         specifier: 14.14.31
         version: 14.14.31
       '@vercel-internals/constants':
-        specifier: 1.0.4
+        specifier: workspace:*
         version: link:../constants
       '@vercel/build-utils':
         specifier: 10.2.0
@@ -208,7 +208,7 @@ importers:
         version: link:../../packages/routing-utils
     devDependencies:
       '@vercel-internals/tsconfig':
-        specifier: 1.0.0
+        specifier: workspace:*
         version: link:../tsconfig
       '@vercel/style-guide':
         specifier: 4.0.2
@@ -497,13 +497,13 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel-internals/constants':
-        specifier: 1.0.4
+        specifier: workspace:*
         version: link:../../internals/constants
       '@vercel-internals/get-package-json':
-        specifier: 1.0.0
+        specifier: workspace:*
         version: link:../../internals/get-package-json
       '@vercel-internals/types':
-        specifier: 3.0.6
+        specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
         specifier: 15.1.0
