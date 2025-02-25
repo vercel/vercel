@@ -874,7 +874,7 @@ type DetectedPnpmVersion =
   | 'pnpm 10'
   | 'corepack_enabled';
 
-export const PNPM_10_PREFERRED_AT = new Date('2025-02-24T20:00:00Z');
+export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
 
 function detectPnpmVersion(
   lockfileVersion: number | undefined,
