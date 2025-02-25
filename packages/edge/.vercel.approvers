@@ -1,0 +1,2 @@
+# Migrated CODEOWNERS rule: /packages/edge @vercel/compute
+@vercel/compute:notify
