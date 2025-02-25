@@ -10,6 +10,7 @@ import {
 import { delimiter } from 'path';
 import { getEnvForPackageManager } from '../src';
 import { PNPM_10_PREFERRED_AT } from '../src/fs/run-user-scripts';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getEnvForPackageManager()`', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;
@@ -44,7 +45,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should do nothing to env for npm < 6 and node < 16',
         args: {
           cliType: 'npm',
-          nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+          nodeVersion: getNodeVersionByMajor(14),
           packageJsonPackageManager: undefined,
           lockfileVersion: 1,
           env: {
@@ -61,7 +62,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not set npm path if corepack enabled',
         args: {
           cliType: 'npm',
-          nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+          nodeVersion: getNodeVersionByMajor(14),
           packageJsonPackageManager: 'npm@10.5.0',
           lockfileVersion: 2,
           env: {
@@ -80,7 +81,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not prepend npm path again if already detected',
         args: {
           cliType: 'npm',
-          nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+          nodeVersion: getNodeVersionByMajor(14),
           packageJsonPackageManager: undefined,
           lockfileVersion: 2,
           env: {
@@ -99,7 +100,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not set path if node is 16 and npm 7+ is detected',
         args: {
           cliType: 'npm',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: undefined,
           lockfileVersion: 2,
           env: {
@@ -161,7 +162,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set path if pnpm 7+ is detected',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: undefined,
           lockfileVersion: 5.4,
           env: {
@@ -181,7 +182,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set path if pnpm 8 is detected',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+          nodeVersion: getNodeVersionByMajor(18),
           packageJsonPackageManager: undefined,
           lockfileVersion: 6.0,
           env: {
@@ -201,7 +202,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set path if pnpm 9 is detected',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+          nodeVersion: getNodeVersionByMajor(18),
           packageJsonPackageManager: undefined,
           lockfileVersion: 7.0,
           env: {
@@ -221,7 +222,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set path if pnpm 10 is detected',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+          nodeVersion: getNodeVersionByMajor(18),
           packageJsonPackageManager: undefined,
           lockfileVersion: 9.0,
           env: {
@@ -242,7 +243,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should detect pnpm 10 with packageManager field pnpm 9',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+          nodeVersion: getNodeVersionByMajor(18),
           packageJsonPackageManager: 'pnpm@9.5.0',
           lockfileVersion: 9.0,
           env: {
@@ -263,7 +264,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not set pnpm path if corepack is enabled',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: 'pnpm@6.35.1',
           lockfileVersion: 5.4,
           env: {
@@ -282,7 +283,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not prepend pnpm path again if already detected',
         args: {
           cliType: 'pnpm',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: undefined,
           lockfileVersion: 5.4,
           env: {
@@ -336,7 +337,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set YARN_NODE_LINKER w/yarn if it is not already defined',
         args: {
           cliType: 'yarn',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: undefined,
           lockfileVersion: 2,
           env: {
@@ -354,7 +355,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should not set YARN_NODE_LINKER if it already exists',
         args: {
           cliType: 'yarn',
-          nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+          nodeVersion: getNodeVersionByMajor(16),
           packageJsonPackageManager: undefined,
           lockfileVersion: 2,
           env: {
@@ -408,7 +409,7 @@ describe('Test `getEnvForPackageManager()`', () => {
         name: 'should set path if bun v1 is detected',
         args: {
           cliType: 'bun',
-          nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+          nodeVersion: getNodeVersionByMajor(18),
           packageJsonPackageManager: undefined,
           lockfileVersion: 0,
           env: {
