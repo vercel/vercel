@@ -1349,12 +1349,6 @@ importers:
       node-fetch:
         specifier: 2.6.9
         version: 2.6.9
-      path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1581,12 +1575,6 @@ importers:
       '@vercel/static-config':
         specifier: 3.0.0
         version: link:../static-config
-      path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
@@ -1617,13 +1605,6 @@ importers:
         version: 2.0.1(@types/node@14.18.33)
 
   packages/routing-utils:
-    dependencies:
-      path-to-regexp:
-        specifier: 6.1.0
-        version: 6.1.0
-      path-to-regexp-updated:
-        specifier: npm:path-to-regexp@6.3.0
-        version: /path-to-regexp@6.3.0
     optionalDependencies:
       ajv:
         specifier: ^6.12.3
@@ -14661,14 +14642,6 @@ packages:
   /path-to-regexp@2.2.1:
     resolution: {integrity: sha512-gu9bD6Ta5bwGrrU8muHzVOBFFREpp2iRkVfhBJahwJ6p6Xw20SjT0MxLnwkjOibQmGSYhiUnf2FLe7k+jcFmGQ==}
     dev: true
-
-  /path-to-regexp@6.1.0:
-    resolution: {integrity: sha512-h9DqehX3zZZDCEm+xbfU0ZmwCGFCAAraPJWMXJ4+v32NjZJilVg3k1TcKsRgIb8IQ/izZSaydDc1OhJCZvs2Dw==}
-    dev: false
-
-  /path-to-regexp@6.3.0:
-    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
-    dev: false
 
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
