@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 10.3.0
+
+### Minor Changes
+
+- Delay pnpm@10 preferred date ([#13100](https://github.com/vercel/vercel/pull/13100))
+
+### Patch Changes
+
+- Type-check tests ([#13096](https://github.com/vercel/vercel/pull/13096))
+
 ## 10.2.0
 
 ### Minor Changes

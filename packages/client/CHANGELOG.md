@@ -1,5 +1,12 @@
 # @vercel/client
 
+## 15.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`5211cd0493b9ec7e352860d1fd238d7fae1e9a5b`](https://github.com/vercel/vercel/commit/5211cd0493b9ec7e352860d1fd238d7fae1e9a5b), [`9143b8ccecbc7d3427a5534acfb00a0493e92fb2`](https://github.com/vercel/vercel/commit/9143b8ccecbc7d3427a5534acfb00a0493e92fb2)]:
+  - @vercel/build-utils@10.3.0
+
 ## 15.1.0
 
 ### Minor Changes
