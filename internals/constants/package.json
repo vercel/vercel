@@ -12,7 +12,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@vercel-internals/tsconfig": "1.0.0",
+    "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"
   }
