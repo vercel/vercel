@@ -476,7 +476,7 @@ export const build: BuildV2 = async ({
 
   if (!buildResult) {
     throw new Error(
-      'Could not determine build output directory. Please configure the `vercelPreset()` Preset from the `@vercel/remix` npm package'
+      `Could not determine build output directory. Please configure the \`vercelPreset()\` Preset from the \`@vercel/${frameworkSettings.slug}\` npm package`
     );
   }
 
