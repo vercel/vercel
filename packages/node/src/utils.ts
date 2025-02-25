@@ -1,7 +1,7 @@
 import { debug, streamToBuffer } from '@vercel/build-utils';
 import type { IncomingMessage } from 'http';
 import { extname } from 'path';
-import { pathToRegexp } from './vendor/path-to-regexp/dist/index';
+import { pathToRegexp } from './vendor/path-to-regexp';
 
 // When exiting this process, wait for Vercel Function server to finish
 // all its work, especially waitUntil promises before exiting this process.

@@ -4,9 +4,7 @@
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
 import { Route, Redirect, Rewrite, HasField, Header } from './types';
-
-// @ts-expect-error
-import { pathToRegexp, Key, compile } from './vendor/path-to-regexp/index.js';
+import { pathToRegexp, Key, compile } from './vendor/path-to-regexp';
 
 const UN_NAMED_SEGMENT = '__UN_NAMED_SEGMENT__';
 

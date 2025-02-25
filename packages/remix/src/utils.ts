@@ -6,7 +6,7 @@ import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
 import type { BaseFunctionConfig } from '@vercel/static-config';
 import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
-import { pathToRegexp } from './vendor/path-to-regexp/dist/index';
+import { pathToRegexp } from './vendor/path-to-regexp';
 
 export const require_ = createRequire(__filename);
 
