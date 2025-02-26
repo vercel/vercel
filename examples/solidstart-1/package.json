@@ -11,7 +11,7 @@
     "@solidjs/meta": "^0.29.2",
     "@solidjs/router": "^0.13.1",
     "@solidjs/start": "^1.0.0-rc.0",
-    "solid-js": "^1.8.16",
+    "solid-js": "^1.9.4",
     "vinxi": "^0.3.10"
   },
   "engines": {
