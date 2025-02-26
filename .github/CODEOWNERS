@@ -2,16 +2,16 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @vercel/ci-cd
-/.github/workflows                       @vercel/ci-cd @ijjk
-/packages/fs-detectors                   @vercel/ci-cd @agadzik @chloetedder
+*                                        @vercel/ci-cd @trek
+/.github/workflows                       @vercel/ci-cd @ijjk @trek
+/packages/fs-detectors                   @vercel/ci-cd @agadzik @chloetedder @trek
 /packages/next                           @vercel/ci-cd @timneutkens @ijjk @ztanner @huozhi
-/packages/routing-utils                  @vercel/ci-cd @ijjk
-/packages/static-build                   @vercel/ci-cd
+/packages/routing-utils                  @vercel/ci-cd @ijjk @trek
+/packages/static-build                   @vercel/ci-cd @trek
 /packages/edge                           @vercel/compute
 /packages/functions                      @vercel/compute
 /packages/firewall                       @cramforce @sueplex
-/examples                                @vercel/ci-cd @leerob
+/examples                                @vercel/ci-cd @leerob @trek
 /examples/create-react-app               @vercel/ci-cd @Timer
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
 /packages/node                           @vercel/ci-cd @Kikobeats
