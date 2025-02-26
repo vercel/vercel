@@ -106,7 +106,7 @@ export default async function remove(client: Client) {
 
     const [deploymentList, projectList] = await Promise.all<any>([
       Promise.all(
-        ids.map(idOrHost => {
+        ids.map(async idOrHost => {
           if (!contextName) {
             throw new Error('Context name is not defined');
           }
