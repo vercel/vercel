@@ -116,6 +116,9 @@ export const routesSchema = {
           isInternal: {
             type: 'boolean',
           },
+          matchUnescapedFirst: {
+            type: 'boolean',
+          },
           status: {
             type: 'integer',
             minimum: 100,
