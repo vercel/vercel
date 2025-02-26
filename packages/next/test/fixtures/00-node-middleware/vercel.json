@@ -120,6 +120,9 @@
       },
       "mustNotContain": "<html>",
       "mustContain": "\"site\":\"subdomain-1\""
+    },
+    {
+      "logMustNotContain": "Unable to find source file for page middleware with"
     }
   ]
 }
