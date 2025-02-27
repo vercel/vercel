@@ -27,6 +27,13 @@ export const loginCommand = {
     },
     { name: 'gitlab', shorthand: null, type: Boolean, deprecated: false },
     { name: 'bitbucket', shorthand: null, type: Boolean, deprecated: false },
+    {
+      name: 'future',
+      description: 'Sign in using OAuth Device Authorization',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
