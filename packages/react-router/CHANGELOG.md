@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.1.0
+
+### Minor Changes
+
+- Use underscore for server bundle ID for compatibility with Vite Environments API ([#13101](https://github.com/vercel/vercel/pull/13101))
+
 ## 1.0.2
 
 ### Patch Changes
