@@ -1,5 +1,13 @@
 # @vercel/frameworks
 
+## 3.6.2
+
+### Patch Changes
+
+- Replace Ember Mascot with Ember Framework Logo ([#13109](https://github.com/vercel/vercel/pull/13109))
+
+- Updates the [Astro](https://astro.build) logo ([#13112](https://github.com/vercel/vercel/pull/13112))
+
 ## 3.6.1
 
 ### Patch Changes

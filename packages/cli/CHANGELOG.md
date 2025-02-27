@@ -1,5 +1,18 @@
 # vercel
 
+## 41.2.3
+
+### Patch Changes
+
+- [errors] improve 'not found' error messaging to include scope ([#13111](https://github.com/vercel/vercel/pull/13111))
+
+- Updated dependencies [[`55008433b9ed9fe565142285f548f6d84cc021cc`](https://github.com/vercel/vercel/commit/55008433b9ed9fe565142285f548f6d84cc021cc), [`7f67b3cd40b3deff5f1736e44ae2ecba78fc5be2`](https://github.com/vercel/vercel/commit/7f67b3cd40b3deff5f1736e44ae2ecba78fc5be2), [`70bec851b77ec3093723da2fbadfd82ea7ffd5f3`](https://github.com/vercel/vercel/commit/70bec851b77ec3093723da2fbadfd82ea7ffd5f3), [`75775324f92672ccf152353400aebbe8f15b5ff2`](https://github.com/vercel/vercel/commit/75775324f92672ccf152353400aebbe8f15b5ff2)]:
+  - @vercel/build-utils@10.3.1
+  - @vercel/next@4.7.2
+  - @vercel/remix-builder@5.4.2
+  - @vercel/node@5.1.10
+  - @vercel/static-build@2.7.2
+
 ## 41.2.2
 
 ### Patch Changes

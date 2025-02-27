@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
@@ -40,7 +40,7 @@
     "@types/semver": "6.0.0",
     "@types/text-table": "0.2.1",
     "@types/webpack-sources": "3.2.0",
-    "@vercel/build-utils": "10.3.0",
+    "@vercel/build-utils": "10.3.1",
     "@vercel/routing-utils": "5.0.4",
     "async-sema": "3.0.1",
     "buffer-crc32": "0.2.13",

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.2
+
+### Patch Changes
+
+- Ensure we lookup middleware function config properly ([#13107](https://github.com/vercel/vercel/pull/13107))
+
 ## 4.7.1
 
 ### Patch Changes
