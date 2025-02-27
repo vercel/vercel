@@ -25,6 +25,8 @@ const skipFixtures: string[] = [
   '41-turborepo-supporting-corepack-home',
   '42-turborepo-not-supporting-corepack-home',
   '43-turborepo-with-comments-in-turbo-json',
+  '44-yarn-v4',
+  '45-yarn-v1',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

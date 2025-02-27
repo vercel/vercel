@@ -713,11 +713,29 @@ it('should return lockfileVersion 2 with npm7', async () => {
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
 
-it('should not return lockfileVersion with yarn', async () => {
+it('should return lockfileVersion with yarn 2', async () => {
   const fixture = path.join(__dirname, 'fixtures', '19-yarn-v2');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('yarn');
-  expect(result.lockfileVersion).toEqual(undefined);
+  expect(result.lockfileVersion).toEqual(4);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should return lockfileVersion with yarn 4', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '44-yarn-v4');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(8);
+  expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
+  expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+});
+
+it('should return lockfileVersion with yarn 1', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '45-yarn-v1');
+  const result = await scanParentDirs(fixture);
+  expect(result.cliType).toEqual('yarn');
+  expect(result.lockfileVersion).toEqual(1);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'yarn.lock'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
