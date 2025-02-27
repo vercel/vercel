@@ -24,6 +24,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
+import { login as future } from './future';
 
 export default async function login(client: Client): Promise<number> {
   // user is not currently authenticated on this machine
@@ -45,6 +46,10 @@ export default async function login(client: Client): Promise<number> {
   } catch (error) {
     printError(error);
     return 1;
+  }
+
+  if (parsedArgs.flags['--future']) {
+    return await future(client);
   }
 
   if (parsedArgs.flags['--help']) {
