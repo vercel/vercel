@@ -216,8 +216,8 @@ module.exports = async ({ github, context, tag } = {}) => {
 
   await createPullRequest(
     github,
-    context?.repo,
     branch,
+    context?.repo,
     newVersion,
     updatedCount
   );

@@ -1,6 +1,7 @@
 import { delimiter } from 'path';
 import { getPathForPackageManager } from '../src';
 import { describe, test, expect } from 'vitest';
+import { getNodeVersionByMajor } from '../src/fs/node-version';
 
 describe('Test `getPathForPackageManager()`', () => {
   test.each<{
@@ -12,7 +13,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should do nothing to env for npm < 6 and node < 16',
       args: {
         cliType: 'npm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        nodeVersion: getNodeVersionByMajor(14),
         lockfileVersion: 1,
         env: {
           FOO: 'bar',

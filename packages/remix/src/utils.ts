@@ -221,16 +221,15 @@ export function* getRouteIterator(
 }
 
 export function getPathFromRoute(
-  route: RouteManifestEntry,
+  input: RouteManifestEntry,
   routes: RouteManifest
 ): ResolvedRoutePaths {
+  let route = input;
   if (
     route.id === 'root' ||
-    (route.parentId === 'root' &&
-      (!route.path || route.path === '/') &&
-      route.index)
+    ((!route.path || route.path === '/') && route.index)
   ) {
-    return { path: 'index', rePath: '/index' };
+    route = { ...route, path: 'index' };
   }
 
   const pathParts: string[] = [];
@@ -256,6 +255,13 @@ export function getPathFromRoute(
         rePathParts.push(part);
       }
     }
+  }
+
+  // If the route is an index route and has a parent, then
+  // we can remove the "index" from the path since it's implied
+  if (pathParts.length > 1 && pathParts[0] === 'index') {
+    pathParts.shift();
+    rePathParts.shift();
   }
 
   const path = pathParts.reverse().join('/');

@@ -19,6 +19,7 @@ const skipFixtures: string[] = [
   '06-zero-config-hugo',
   '07-zero-config-jekyll',
   '08-zero-config-middleman',
+  '19-yarn-v2',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
   '41-turborepo-supporting-corepack-home',

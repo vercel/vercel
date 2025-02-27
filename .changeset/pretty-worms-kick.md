@@ -1,0 +1,4 @@
+---
+---
+
+Fix update-next script

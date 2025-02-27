@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "10.2.0",
+  "version": "10.3.0",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -15,7 +15,7 @@
     "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
     "vitest-run": "vitest -c ../../vitest.config.mts",
     "vitest-unit": "glob --absolute 'test/unit.*test.ts'",
-    "vitest-e2e": "glob --absolute 'test/integration-*.test.ts'",
+    "vitest-e2e": "glob --absolute 'test/integration*.test.ts'",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
