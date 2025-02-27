@@ -136,7 +136,7 @@ export function vercelPreset(): Preset {
       }
 
       config = flattenAndSort(config);
-      const id = `${config.runtime}-${hashConfig(config)}`;
+      const id = `${config.runtime}_${hashConfig(config)}`;
       if (!bundleConfigs.has(id)) {
         bundleConfigs.set(id, config);
       }
