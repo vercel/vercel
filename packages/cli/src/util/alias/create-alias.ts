@@ -74,7 +74,7 @@ async function performCreateAlias(
       if (err.status === 409) {
         return { uid: err.uid, alias: err.alias } as AliasRecord;
       }
-      if (err.code === 'deployment_not_found') {
+      if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
           id: deployment.id,
