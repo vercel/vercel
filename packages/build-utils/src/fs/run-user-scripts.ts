@@ -26,6 +26,7 @@ import {
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
 import json5 from 'json5';
+import yaml from 'js-yaml';
 
 const NO_OVERRIDE = {
   detectedLockfile: undefined,
@@ -378,17 +379,16 @@ export async function scanParentDirs(
   let cliType: CliType;
 
   const bunLockPath = bunLockTextPath ?? bunLockBinPath;
-  const [hasYarnLock, packageLockJson, pnpmLockYaml, bunLock] =
-    await Promise.all([
-      Boolean(yarnLockPath),
-      npmLockPath
-        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-        : null,
-      pnpmLockPath
-        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-        : null,
-      bunLockPath ? fs.readFile(bunLockPath) : null,
-    ]);
+  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock] = await Promise.all([
+    npmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+      : null,
+    pnpmLockPath
+      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+      : null,
+    bunLockPath ? fs.readFile(bunLockPath) : null,
+    yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
+  ]);
 
   const rootProjectInfo = readPackageJson
     ? await readProjectRootInfo({
@@ -406,13 +406,14 @@ export async function scanParentDirs(
     : undefined;
 
   // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
-  if (bunLock && hasYarnLock) {
+  if (bunLock && yarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
     lockfileVersion = bunLockTextPath ? 1 : 0;
-  } else if (hasYarnLock) {
+  } else if (yarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
+    lockfileVersion = parseYarnLockVersion(yarnLock);
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
     lockfilePath = pnpmLockPath;
@@ -442,6 +443,19 @@ export async function scanParentDirs(
     packageJsonPath,
     turboSupportsCorepackHome,
   };
+}
+
+function parseYarnLockVersion(yarnLock: string) {
+  if (!yarnLock.includes('__metadata:')) {
+    return 0; // Yarn 1.x lockfiles had no lockfile version
+  }
+
+  try {
+    const metadata = yaml.load(yarnLock).__metadata;
+    return Number(metadata.version);
+  } catch {
+    return undefined;
+  }
 }
 
 async function checkTurboSupportsCorepack(
