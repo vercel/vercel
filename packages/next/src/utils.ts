@@ -1572,7 +1572,10 @@ async function getSourceFilePathFromPage({
   const usesSrcDir = await usesSrcDirectory(workPath);
   const extensionsToTry = pageExtensions || ['js', 'jsx', 'ts', 'tsx'];
 
-  for (const pageType of ['pages', 'app']) {
+  for (const pageType of [
+    // middleware is not nested in pages/app
+    ...(page === 'middleware' ? [''] : ['pages', 'app']),
+  ]) {
     let fsPath = path.join(workPath, pageType, page);
     if (usesSrcDir) {
       fsPath = path.join(workPath, 'src', pageType, page);
