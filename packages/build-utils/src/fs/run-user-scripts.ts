@@ -447,7 +447,7 @@ export async function scanParentDirs(
 
 function parseYarnLockVersion(yarnLock: string) {
   if (!yarnLock.includes('__metadata:')) {
-    return 0; // Yarn 1.x lockfiles had no lockfile version
+    return 1; // Yarn 1.x lockfiles did not have metadata version
   }
 
   try {
