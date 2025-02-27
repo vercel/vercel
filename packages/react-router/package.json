@@ -1,7 +1,7 @@
 {
   "name": "@vercel/react-router",
   "description": "Vercel platform abstractions for React Router",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "license": "Apache-2.0",
   "type": "module",
   "module": "./index.js",

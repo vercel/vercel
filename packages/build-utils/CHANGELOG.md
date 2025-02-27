@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 10.3.1
+
+### Patch Changes
+
+- Parse yarn.lock file version ([#13114](https://github.com/vercel/vercel/pull/13114))
+
+- [env-vars] expose VERCEL_DEPLOYMENT_ID as NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID ([#13115](https://github.com/vercel/vercel/pull/13115))
+
+- Fix vitest-e2e glob to include integration.test.ts ([#13097](https://github.com/vercel/vercel/pull/13097))
+
 ## 10.3.0
 
 ### Minor Changes
