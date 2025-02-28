@@ -3,6 +3,7 @@ import { Lambda } from './lambda';
 
 interface PrerenderOptions {
   expiration: number | false;
+  staleExpiration?: number;
   lambda?: Lambda;
   fallback: File | null;
   group?: number;
@@ -20,7 +21,17 @@ interface PrerenderOptions {
 
 export class Prerender {
   public type: 'Prerender';
+  /**
+   * `expiration` is `revalidate` in Next.js terms, and `s-maxage` in
+   * `cache-control` terms.
+   */
   public expiration: number | false;
+  /**
+   * `staleExpiration` is `expire` in Next.js terms, and
+   * `stale-while-revalidate` + `s-maxage` in `cache-control` terms. It's
+   * expected to be undefined if `expiration` is `false`.
+   */
+  public staleExpiration?: number;
   public lambda?: Lambda;
   public fallback: File | null;
   public group?: number;
@@ -37,6 +48,7 @@ export class Prerender {
 
   constructor({
     expiration,
+    staleExpiration,
     lambda,
     fallback,
     group,
@@ -53,6 +65,7 @@ export class Prerender {
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
+    this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
 
     this.lambda = lambda;
