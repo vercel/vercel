@@ -135,39 +135,39 @@ describe('Test `detectPackageManager()`', () => {
       want: unknown;
     }>([
       {
-        name: 'yarn 1 does not return a path',
+        name: 'yarn@1.x does not return a path',
         args: ['yarn', 1],
         want: {
           path: undefined,
           detectedLockfile: 'yarn.lock',
-          detectedPackageManager: 'yarn 1',
+          detectedPackageManager: 'yarn@1.x',
         },
       },
       {
-        name: 'yarn 2 does not return a path',
+        name: 'yarn@2.x does not return a path',
         args: ['yarn', 4],
         want: {
           path: undefined,
           detectedLockfile: 'yarn.lock',
-          detectedPackageManager: 'yarn 2',
+          detectedPackageManager: 'yarn@2.x',
         },
       },
       {
-        name: 'does not return a path',
+        name: 'yarn@3.x does not return a path',
         args: ['yarn', 6],
         want: {
           path: undefined,
           detectedLockfile: 'yarn.lock',
-          detectedPackageManager: 'yarn 3',
+          detectedPackageManager: 'yarn@3.x',
         },
       },
       {
-        name: 'does not return a path',
+        name: 'yarn@4.x does not return a path',
         args: ['yarn', 8],
         want: {
           path: undefined,
           detectedLockfile: 'yarn.lock',
-          detectedPackageManager: 'yarn 4',
+          detectedPackageManager: 'yarn@4.x',
         },
       },
     ])('$name', ({ args, want }) => {
