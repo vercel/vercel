@@ -885,8 +885,7 @@ type DetectedPnpmVersion =
   | 'pnpm 7'
   | 'pnpm 8'
   | 'pnpm 9'
-  | 'pnpm 10'
-  | 'corepack_enabled';
+  | 'pnpm 10';
 
 export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
 
