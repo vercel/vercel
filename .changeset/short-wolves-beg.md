@@ -2,4 +2,4 @@
 '@vercel/build-utils': patch
 ---
 
-Fix build-utils type-check
+Fix build-utils test types
