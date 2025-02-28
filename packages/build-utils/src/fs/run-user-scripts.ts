@@ -914,6 +914,21 @@ function detectPnpmVersion(
   }
 }
 
+function detectYarnVersion(lockfileVersion: number | undefined) {
+  if (lockfileVersion) {
+    if ([1].includes(lockfileVersion)) {
+      return 'yarn@1.x';
+    } else if ([4, 5].includes(lockfileVersion)) {
+      return 'yarn@2.x';
+    } else if ([6, 7].includes(lockfileVersion)) {
+      return 'yarn@3.x';
+    } else if ([8].includes(lockfileVersion)) {
+      return 'yarn@4.x';
+    }
+  }
+  return 'unknown yarn';
+}
+
 function validLockfileForPackageManager(
   cliType: CliType,
   lockfileVersion: number,
@@ -1194,7 +1209,7 @@ export function detectPackageManager(
       return {
         path: undefined,
         detectedLockfile: 'yarn.lock',
-        detectedPackageManager: 'yarn',
+        detectedPackageManager: detectYarnVersion(lockfileVersion),
       };
   }
 }
