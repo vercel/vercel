@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.3
+
+### Patch Changes
+
+- Add pnpm 10 detection to next metrics ([#13121](https://github.com/vercel/vercel/pull/13121))
+
 ## 4.7.2
 
 ### Patch Changes

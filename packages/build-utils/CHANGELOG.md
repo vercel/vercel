@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.3.2
+
+### Patch Changes
+
+- Detect yarn version from lockfile version ([#13118](https://github.com/vercel/vercel/pull/13118))
+
 ## 10.3.1
 
 ### Patch Changes
