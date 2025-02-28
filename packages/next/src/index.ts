@@ -344,7 +344,11 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   const { detectedPackageManager } =
-    detectPackageManager(cliType, lockfileVersion) ?? {};
+    detectPackageManager(
+      cliType,
+      lockfileVersion,
+      config.projectSettings?.createdAt
+    ) ?? {};
 
   const trimmedInstallCommand = installCommand?.trim();
 
