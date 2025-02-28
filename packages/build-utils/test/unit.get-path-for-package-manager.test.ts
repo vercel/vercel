@@ -92,7 +92,7 @@ describe('Test `getPathForPackageManager()`', () => {
       },
       want: {
         detectedLockfile: 'yarn.lock',
-        detectedPackageManager: 'yarn',
+        detectedPackageManager: 'unknown yarn',
         path: undefined,
         yarnNodeLinker: 'node-modules',
       },

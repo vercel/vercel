@@ -885,8 +885,7 @@ type DetectedPnpmVersion =
   | 'pnpm 7'
   | 'pnpm 8'
   | 'pnpm 9'
-  | 'pnpm 10'
-  | 'corepack_enabled';
+  | 'pnpm 10';
 
 export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
 
@@ -913,6 +912,21 @@ function detectPnpmVersion(
     default:
       return 'not found';
   }
+}
+
+function detectYarnVersion(lockfileVersion: number | undefined) {
+  if (lockfileVersion) {
+    if ([1].includes(lockfileVersion)) {
+      return 'yarn@1.x';
+    } else if ([4, 5].includes(lockfileVersion)) {
+      return 'yarn@2.x';
+    } else if ([6, 7].includes(lockfileVersion)) {
+      return 'yarn@3.x';
+    } else if ([8].includes(lockfileVersion)) {
+      return 'yarn@4.x';
+    }
+  }
+  return 'unknown yarn';
 }
 
 function validLockfileForPackageManager(
@@ -1195,7 +1209,7 @@ export function detectPackageManager(
       return {
         path: undefined,
         detectedLockfile: 'yarn.lock',
-        detectedPackageManager: 'yarn',
+        detectedPackageManager: detectYarnVersion(lockfileVersion),
       };
   }
 }
