@@ -1021,6 +1021,7 @@ export type NextPrerenderedRoutes = {
   staticRoutes: {
     [route: string]: {
       initialRevalidate: number | false;
+      initialExpire?: number;
       dataRoute: string | null;
       prefetchDataRoute?: string | null;
       srcRoute: string | null;
@@ -1051,6 +1052,7 @@ export type NextPrerenderedRoutes = {
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
       fallbackRevalidate?: number | false;
+      fallbackExpire?: number;
       fallbackRootParams?: string[];
       fallbackSourceRoute?: string;
       routeRegex: string;
@@ -1277,6 +1279,7 @@ export async function getPrerenderManifest(
         routes: {
           [route: string]: {
             initialRevalidateSeconds: number | false;
+            initialExpireSeconds?: number;
             srcRoute: string | null;
             dataRoute: string | null;
             prefetchDataRoute: string | null | undefined;
@@ -1295,6 +1298,7 @@ export async function getPrerenderManifest(
             fallbackStatus?: number;
             fallbackHeaders?: Record<string, string>;
             fallbackRevalidate: number | false | undefined;
+            fallbackExpire?: number;
             fallbackRootParams: string[] | undefined;
             fallbackSourceRoute?: string;
             dataRoute: string | null;
@@ -1394,6 +1398,7 @@ export async function getPrerenderManifest(
         const { initialRevalidateSeconds, dataRoute, srcRoute } =
           manifest.routes[route];
 
+        let initialExpireSeconds: undefined | number;
         let initialStatus: undefined | number;
         let initialHeaders: undefined | Record<string, string>;
         let experimentalBypassFor: undefined | HasField;
@@ -1402,6 +1407,7 @@ export async function getPrerenderManifest(
         let renderingMode: RenderingMode;
 
         if (manifest.version === 4) {
+          initialExpireSeconds = manifest.routes[route].initialExpireSeconds;
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
           experimentalBypassFor = manifest.routes[route].experimentalBypassFor;
@@ -1422,6 +1428,7 @@ export async function getPrerenderManifest(
             initialRevalidateSeconds === false
               ? false
               : Math.max(1, initialRevalidateSeconds),
+          initialExpire: initialExpireSeconds,
           dataRoute,
           prefetchDataRoute,
           srcRoute,
@@ -1443,6 +1450,7 @@ export async function getPrerenderManifest(
         let fallbackHeaders: undefined | Record<string, string>;
         let renderingMode: RenderingMode = RenderingMode.STATIC;
         let fallbackRevalidate: number | false | undefined;
+        let fallbackExpire: number | undefined;
         let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
         let fallbackSourceRoute: undefined | string;
@@ -1464,6 +1472,7 @@ export async function getPrerenderManifest(
               : RenderingMode.STATIC);
           fallbackRevalidate =
             manifest.dynamicRoutes[lazyRoute].fallbackRevalidate;
+          fallbackExpire = manifest.dynamicRoutes[lazyRoute].fallbackExpire;
           fallbackRootParams =
             manifest.dynamicRoutes[lazyRoute].fallbackRootParams;
           allowHeader = manifest.dynamicRoutes[lazyRoute].allowHeader;
@@ -1483,6 +1492,7 @@ export async function getPrerenderManifest(
             prefetchDataRoute,
             prefetchDataRouteRegex,
             fallbackRevalidate,
+            fallbackExpire,
             fallbackRootParams,
             fallbackSourceRoute,
             renderingMode,
@@ -2239,6 +2249,7 @@ export const onPrerenderRoute =
     const isNotFound = prerenderManifest.notFoundRoutes.includes(routeKey);
 
     let initialRevalidate: false | number;
+    let initialExpire: number | undefined;
     let srcRoute: string | null;
     let dataRoute: string | null;
     let prefetchDataRoute: string | null | undefined;
@@ -2281,6 +2292,7 @@ export const onPrerenderRoute =
       const pr = prerenderManifest.staticRoutes[routeKey];
       ({
         initialRevalidate,
+        initialExpire,
         srcRoute,
         dataRoute,
         initialHeaders,
@@ -2305,6 +2317,7 @@ export const onPrerenderRoute =
           fallbackStatus,
           fallbackHeaders,
           fallbackRevalidate,
+          fallbackExpire,
           fallbackSourceRoute,
         } = prerenderManifest.fallbackRoutes[routeKey];
 
@@ -2321,12 +2334,13 @@ export const onPrerenderRoute =
         }
 
         // If we're rendering with PPR and as this is a fallback, we should use
-        // the revalidation time to also apply to the fallback shell.
+        // the revalidate and expire times to also apply to the fallback shell.
         if (
           renderingMode === RenderingMode.PARTIALLY_STATIC &&
           typeof fallbackRevalidate !== 'undefined'
         ) {
           initialRevalidate = fallbackRevalidate;
+          initialExpire = fallbackExpire;
         }
       }
     }
@@ -2729,6 +2743,7 @@ export const onPrerenderRoute =
 
       prerenders[outputPathPage] = new Prerender({
         expiration: initialRevalidate,
+        staleExpiration: initialExpire,
         lambda,
         allowQuery: htmlAllowQuery,
         fallback: htmlFsRef,
@@ -2781,6 +2796,7 @@ export const onPrerenderRoute =
 
         const prerender = new Prerender({
           expiration: initialRevalidate,
+          staleExpiration: initialExpire,
           lambda,
           allowQuery,
           fallback: jsonFsRef,
@@ -2881,6 +2897,7 @@ export const onPrerenderRoute =
 
               prerenders[outputSegmentPath] = new Prerender({
                 expiration: initialRevalidate,
+                staleExpiration: initialExpire,
                 lambda,
                 allowQuery,
                 fallback,

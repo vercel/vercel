@@ -3,7 +3,7 @@ const path = require('path');
 
 async function main(turboRunDirectory, turboRunDirectoryParent) {
   const turboRunDir = path.join(turboRunDirectoryParent, turboRunDirectory);
-  const turboRunFiles = await fs.readdir(turboRunDir);
+  const turboRunFiles = await fs.readdir(turboRunDir).catch(() => []);
 
   let missCount = 0;
 
