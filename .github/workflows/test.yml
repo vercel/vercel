@@ -64,9 +64,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
-
-      # yarn 1.22.21 introduced a Corepack bug when running tests.
-      # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
+declare module '@vercel/build-utils';     const chunkedTarBuffers = await streamToBufferChunks(tarStream);
+files = new Map<string, { names: string[]; data: Buffer; mode: number }>(
+  chunkedTarBuffers.map((chunk: Buffer, index: number) => [
+    hash(chunk),
+    {
+      names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
+      data: chunk,
+      mode: 0o666,
+    },
+  ])
+);
       - name: install yarn@1.22.19
         run: npm i -g yarn@1.22.19
 
