@@ -11,6 +11,10 @@
   ],
   "rewrites": [
     {
+      "source": "/",
+      "destination": "index.html"
+    },
+    {
       "source": "/hello",
       "destination": "index.html"
     },
