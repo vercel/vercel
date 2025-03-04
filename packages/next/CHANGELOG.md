@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.7.3
+
+### Patch Changes
+
+- Add support for expire values in Next.js prerender manifest ([#13087](https://github.com/vercel/vercel/pull/13087))
+
+- Add pnpm 10 detection to next metrics ([#13121](https://github.com/vercel/vercel/pull/13121))
+
 ## 4.7.2
 
 ### Patch Changes
