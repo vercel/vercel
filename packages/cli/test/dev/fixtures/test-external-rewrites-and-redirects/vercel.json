@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/", "destination": "https://vercel.com/robots.txt" },
     { "source": "/rewrite", "destination": "https://vercel.com/robots.txt" }
   ],
   "redirects": [
