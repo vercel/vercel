@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 10.3.2
+
+### Patch Changes
+
+- Add support for expire values in Next.js prerender manifest ([#13087](https://github.com/vercel/vercel/pull/13087))
+
+- Detect yarn version from lockfile version ([#13118](https://github.com/vercel/vercel/pull/13118))
+
 ## 10.3.1
 
 ### Patch Changes
