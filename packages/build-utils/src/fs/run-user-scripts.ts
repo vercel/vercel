@@ -674,7 +674,13 @@ async function runInstallCommand({
     commandArguments.push('--production');
   }
 
-  await spawnAsync(packageManager, commandArguments, opts);
+  try {
+    await spawnAsync(packageManager, commandArguments, opts);
+  } catch (error) {
+    console.error('Install command failed:', error);
+    throw error;
+  }
+  console.log('Install command completed successfully');
 }
 
 function initializeSet(set: unknown) {
