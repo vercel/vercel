@@ -37,7 +37,7 @@ describe('Test `detectPackageManager()`', () => {
           detectedLockfile: 'pnpm-lock.yaml',
           detectedPackageManager: 'pnpm@6.x',
           pnpmVersionRange: '6.x',
-          path: undefined,
+          path: '/pnpm6/node_modules/.bin',
         },
       },
       {
