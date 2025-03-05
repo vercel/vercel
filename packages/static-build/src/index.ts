@@ -894,7 +894,7 @@ export const prepareCache: PrepareCache = async ({
 
   Object.assign(
     cacheFiles,
-    await glob('.yarn/berry/**', process.env.HOME || '')
+    await glob('.yarn/berry/cache/**', process.env.HOME || '')
   );
 
   // Framework cache files
