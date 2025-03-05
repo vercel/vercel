@@ -1188,7 +1188,6 @@ export function detectPackageManager(
           };
         case 'pnpm 6':
           return {
-            // undefined because pnpm@6 is the current default in the build container
             path: '/pnpm6/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@6.x',
