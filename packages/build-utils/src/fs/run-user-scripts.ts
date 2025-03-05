@@ -659,6 +659,13 @@ async function runInstallCommand({
   args: string[];
   opts: SpawnOptionsExtended;
 }) {
+  console.log('at runInstallCommand');
+  console.log({
+    packageManager,
+    args,
+    opts,
+  });
+
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
   opts.prettyCommand = prettyCommand;
