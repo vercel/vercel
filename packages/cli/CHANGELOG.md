@@ -1,5 +1,22 @@
 # vercel
 
+## 41.3.2
+
+### Patch Changes
+
+- Fix `vc domain inspect` when there is no "production" target alias ([#13134](https://github.com/vercel/vercel/pull/13134))
+
+- fix(oauth): improve unexpected error handling #13138 ([#13138](https://github.com/vercel/vercel/pull/13138))
+
+  This is a follow-up on #12098
+
+  In case of an unexpected server response, we will now gracefully exit and log the error response for the user.
+
+- Updated dependencies [[`47e5335cadc62398600c456c09120582adb25c88`](https://github.com/vercel/vercel/commit/47e5335cadc62398600c456c09120582adb25c88)]:
+  - @vercel/build-utils@10.4.0
+  - @vercel/node@5.1.12
+  - @vercel/static-build@2.7.4
+
 ## 41.3.1
 
 ### Patch Changes
