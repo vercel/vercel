@@ -58,7 +58,7 @@ export async function login(client: Client): Promise<number> {
     `
   ▲ Sign in to the Vercel CLI
 
-  Visit ${chalk.bold(o.link(verification_uri, verification_uri_complete, { color: false }))} to enter ${chalk.bold(user_code)}
+  Visit ${chalk.bold(o.link(verification_uri.replace('https://', ''), verification_uri_complete, { color: false }))} to enter ${chalk.bold(user_code)}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
@@ -126,12 +126,19 @@ export async function login(client: Client): Promise<number> {
       client.authConfig.token = token.access_token;
       error = undefined;
 
-      const { team_id } = await verifyJWT(token.access_token);
+      const [accessTokenError, accessToken] = await verifyJWT(
+        token.access_token
+      );
+
+      if (accessTokenError) {
+        return accessTokenError;
+      }
+
       o.debug('access_token verified');
 
-      if (team_id) {
+      if (accessToken.team_id) {
         o.debug('Current team updated');
-        client.config.currentTeam = team_id;
+        client.config.currentTeam = accessToken.team_id;
       } else {
         o.debug('Current team deleted');
         delete client.config.currentTeam;
