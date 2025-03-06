@@ -352,9 +352,9 @@ export class OAuthError extends Error {
   constructor(message: string, response: unknown) {
     const error = processOAuthErrorResponse(response);
     if (error instanceof TypeError) {
-      // This means the server returned an unexpected error response
+      const message = `Unexpected server response: ${JSON.stringify(response)}`;
       super(message);
-      this.cause = new Error(error.message, { cause: response });
+      this.cause = new Error(message, { cause: error });
       this.code = 'server_error';
       return;
     }
