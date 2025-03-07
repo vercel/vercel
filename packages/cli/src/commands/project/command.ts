@@ -30,9 +30,7 @@ export const inspectSubcommand = {
       required: false,
     },
   ],
-  options: [
-    yesOption
-  ],
+  options: [yesOption],
   examples: [
     {
       name: 'Inspect the linked project from the current directory',
@@ -88,7 +86,12 @@ export const projectCommand = {
   aliases: ['projects'],
   description: 'Manage your Vercel projects',
   arguments: [],
-  subcommands: [addSubcommand, inspectSubcommand, listSubcommand, removeSubcommand],
+  subcommands: [
+    addSubcommand,
+    inspectSubcommand,
+    listSubcommand,
+    removeSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;

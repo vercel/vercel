@@ -26,9 +26,14 @@ export default async function getProjectByCwdOrLink({
   }
 
   // ensure the current directory is a linked project
-  const linkedProject = await ensureLink(commandName, client, cwd ?? client.cwd, {
-    autoConfirm,
-  });
+  const linkedProject = await ensureLink(
+    commandName,
+    client,
+    cwd ?? client.cwd,
+    {
+      autoConfirm,
+    }
+  );
 
   if (typeof linkedProject === 'number') {
     const err: NodeJS.ErrnoException = new Error('Link project error');
