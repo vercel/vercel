@@ -11,8 +11,8 @@ import {
   serializeBody,
   entrypointToOutputPath,
   logError,
-  waitUntilWarning,
-  WAIT_UNTIL_TIMEOUT_MS,
+  WAIT_UNTIL_TIMEOUT,
+  waitUntilWarning
 } from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
@@ -134,7 +134,7 @@ async function compileUserCode(
   }
 }
 
-async function createEdgeRuntimeServer(params?: {
+async function createEdgeRuntimeServer(maxDuration: number, params?: {
   userCode: string;
   wasmAssets: WasmAssets;
   nodeCompatBindings: NodeCompatBindings;
@@ -194,9 +194,9 @@ async function createEdgeRuntimeServer(params?: {
     const onExit = () =>
       new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.warn(waitUntilWarning(params.entrypointPath));
+          console.warn(waitUntilWarning(params.entrypointPath, maxDuration));
           resolve();
-        }, WAIT_UNTIL_TIMEOUT_MS);
+        }, maxDuration * 1000);
 
         Promise.all([params.awaiter.awaiting(), server.close()])
           .then(() => resolve())
@@ -218,7 +218,8 @@ export async function createEdgeEventHandler(
   entrypointFullPath: string,
   entrypointRelativePath: string,
   isMiddleware: boolean,
-  isZeroConfig?: boolean
+  isZeroConfig?: boolean,
+  maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: (() => Promise<void>) | undefined;
@@ -228,7 +229,7 @@ export async function createEdgeEventHandler(
     entrypointRelativePath,
     isMiddleware
   );
-  const result = await createEdgeRuntimeServer(userCode);
+  const result = await createEdgeRuntimeServer(maxDuration, userCode);
   const server = result?.server;
   const onExit = result?.onExit;
 
