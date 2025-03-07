@@ -328,6 +328,7 @@ export interface PackageJson {
   readonly private?: boolean;
   readonly publishConfig?: PackageJson.PublishConfig;
   readonly packageManager?: string;
+  readonly type?: string;
 }
 
 export interface ConstructorVersion {
