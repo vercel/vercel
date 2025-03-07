@@ -1664,8 +1664,12 @@ export async function serverBuild({
     }
   }
 
-  const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
-    await getStaticFiles(entryPath, entryDirectory, outputDirectory);
+  const {
+    staticFiles,
+    publicDirectoryFiles,
+    staticDirectoryFiles,
+    staticMetadataFiles,
+  } = await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const normalizeNextDataRoute = (isOverride = false) => {
     return isNextDataServerResolving
@@ -1878,6 +1882,7 @@ export async function serverBuild({
     images: getImagesConfig(imagesManifest),
     output: {
       ...publicDirectoryFiles,
+      ...staticMetadataFiles,
       ...lambdas,
       ...appRscPrefetches,
       ...pagesPlaceholderRscEntries,
