@@ -414,6 +414,17 @@ export async function scanParentDirs(
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
     lockfileVersion = parseYarnLockVersion(yarnLock);
+
+    const maySeeDynamicRequireYarnBug =
+      process.env?.ENABLE_EXPERIMENTAL_COREPACK &&
+      packageJson?.packageManager?.startsWith('yarn') &&
+      packageJson?.type === 'module';
+
+    if (maySeeDynamicRequireYarnBug) {
+      console.warn(
+        `Warning: This project may see "Error: Dynamic require of "util" is not supported". To avoid this error, remove \`"type": "module"\` from your package.json file, or use \`yarnPath\` instead of Corepack. Learn more: https://vercel.com/docs/errors/error-list#yarn-dynamic-require-of-util-is-not-supported`
+      );
+    }
   } else if (pnpmLockYaml) {
     cliType = 'pnpm';
     lockfilePath = pnpmLockPath;
