@@ -42,8 +42,8 @@ async function createEventHandler(
 
   const { maxDuration } = await getLambdaOptionsFromFunction({
     sourceFile: entrypoint,
-    config
-  })
+    config,
+  });
 
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
@@ -70,7 +70,7 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     mode: isStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
-    maxDuration
+    maxDuration,
   });
 }
 

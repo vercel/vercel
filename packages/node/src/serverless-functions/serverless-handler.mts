@@ -143,7 +143,7 @@ export async function createServerlessEventHandler(
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         console.warn(waitUntilWarning(entrypointPath, maxDuration));
-        resolve()
+        resolve();
       }, maxDuration * 1000);
       Promise.all([awaiter.awaiting(), server.onExit()])
         .then(() => resolve())

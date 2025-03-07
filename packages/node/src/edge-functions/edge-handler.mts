@@ -12,7 +12,7 @@ import {
   entrypointToOutputPath,
   logError,
   WAIT_UNTIL_TIMEOUT,
-  waitUntilWarning
+  waitUntilWarning,
 } from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
@@ -134,13 +134,16 @@ async function compileUserCode(
   }
 }
 
-async function createEdgeRuntimeServer(maxDuration: number, params?: {
-  userCode: string;
-  wasmAssets: WasmAssets;
-  nodeCompatBindings: NodeCompatBindings;
-  entrypointPath: string;
-  awaiter: Awaiter;
-}): Promise<
+async function createEdgeRuntimeServer(
+  maxDuration: number,
+  params?: {
+    userCode: string;
+    wasmAssets: WasmAssets;
+    nodeCompatBindings: NodeCompatBindings;
+    entrypointPath: string;
+    awaiter: Awaiter;
+  }
+): Promise<
   { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
 > {
   try {
