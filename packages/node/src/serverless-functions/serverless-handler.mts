@@ -1,9 +1,9 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import {
-  WAIT_UNTIL_TIMEOUT_MS,
-  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT,
   serializeBody,
+  waitUntilWarning,
 } from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
@@ -23,6 +23,7 @@ const toHeaders = buildToHeaders({ Headers });
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
   mode: 'streaming' | 'buffer';
+  maxDuration?: number;
 };
 
 type ServerlessFunctionSignature = (
@@ -86,7 +87,8 @@ async function compileUserCode(
 
 export async function createServerlessEventHandler(
   entrypointPath: string,
-  options: ServerlessServerOptions
+  options: ServerlessServerOptions,
+  maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: () => Promise<void>;
@@ -140,10 +142,9 @@ export async function createServerlessEventHandler(
   const onExit = () =>
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(waitUntilWarning(entrypointPath));
+        console.warn(waitUntilWarning(entrypointPath, maxDuration));
         resolve();
-      }, WAIT_UNTIL_TIMEOUT_MS);
-
+      }, maxDuration * 1000);
       Promise.all([awaiter.awaiting(), server.onExit()])
         .then(() => resolve())
         .catch(reject)
