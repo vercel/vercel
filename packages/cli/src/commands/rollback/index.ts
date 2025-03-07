@@ -67,10 +67,9 @@ export default async (client: Client): Promise<number> => {
       }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
-        autoConfirm: Boolean(parsedArgs.flags['--yes']),
+        autoConfirm: parsedArgs.flags['--yes'],
         client,
         commandName: 'promote',
-        cwd: client.cwd,
         projectNameOrId: parsedArgs.args[2],
       });
 

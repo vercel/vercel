@@ -14,7 +14,7 @@ export default async function getProjectByCwdOrLink({
   autoConfirm?: boolean;
   client: Client;
   commandName: string;
-  cwd: string;
+  cwd?: string;
   projectNameOrId?: string;
 }): Promise<Project> {
   if (projectNameOrId) {
@@ -26,7 +26,7 @@ export default async function getProjectByCwdOrLink({
   }
 
   // ensure the current directory is a linked project
-  const linkedProject = await ensureLink(commandName, client, cwd, {
+  const linkedProject = await ensureLink(commandName, client, cwd ?? client.cwd, {
     autoConfirm,
   });
 

@@ -6,7 +6,7 @@ export default async function removeProject(
   projectNameOrId: string
 ) {
   try {
-    await client.fetch<{}>(`/projects/${encodeURIComponent(projectNameOrId)}`, {
+    await client.fetch(`/projects/${encodeURIComponent(projectNameOrId)}`, {
       method: 'DELETE',
     });
   } catch (error: unknown) {
