@@ -744,7 +744,7 @@ export async function runNpmInstall(
       if (['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) {
         await spawnAsync(
           'yarn',
-          ['set', 'config', 'enableGlobalCache', 'false'],
+          ['config', 'set', 'enableGlobalCache', 'false'],
           { cwd: destPath }
         );
       }
