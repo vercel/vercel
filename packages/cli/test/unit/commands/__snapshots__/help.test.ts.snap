@@ -1055,6 +1055,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
   Options:
 
   -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+  -y,  --yes           Accept default value for all prompts                     
 
 
   Global Options:
@@ -1483,7 +1484,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   list                             Show
                                    all 
-                                   Dom…
+                                   dom…
                                    in a
                                    list
   inspect      domain              Dis…
@@ -1582,7 +1583,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   Commands:
 
-  list                             Show all Domains in a list                  
+  list                             Show all domains in a list                  
   inspect      domain              Displays information related to a domain    
   add          domain project      Add a domain name that you already own to a 
                                    Vercel Team                                 
@@ -1619,7 +1620,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   Commands:
 
-  list                             Show all Domains in a list                                                          
+  list                             Show all domains in a list                                                          
   inspect      domain              Displays information related to a domain                                            
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
@@ -1670,7 +1671,7 @@ exports[`help command > domains help output snapshots > domains list help output
 "
   ▲ vercel domains list [options]
 
-  Show all Domains in a list                                                                                            
+  Show all domains in a list                                                                                            
 
   Options:
 
@@ -2097,6 +2098,11 @@ exports[`help command > git help output snapshots > git connect help output snap
 
   Connect your Vercel Project to your Git repository or provide the remote URL to your Git repository                   
 
+  Options:
+
+  -y,  --yes  Accept default value for all prompts                                                                      
+
+
   Global Options:
 
        --cwd <DIR>            Sets the current working directory for a single run of a command                          
@@ -2128,6 +2134,11 @@ exports[`help command > git help output snapshots > git disconnect help output s
   ▲ vercel git disconnect [options]
 
   Disconnect the Git repository from your Vercel Project                                                                
+
+  Options:
+
+  -y,  --yes  Accept default value for all prompts                                                                      
+
 
   Global Options:
 
@@ -3221,6 +3232,10 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                KEY=value\`…
                                Can appear 
                                many times.
+  -y,  --yes                   Accept     
+                               default    
+                               value for  
+                               all prompts
 
 
   Global Options:
@@ -3297,6 +3312,7 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention 
                                policies (e.g.: \`-p KEY=value\`). Can appear many   
                                times.                                             
+  -y,  --yes                   Accept default value for all prompts               
 
 
   Global Options:
@@ -3347,6 +3363,7 @@ exports[`help command > list help output snapshots > list help column width 120 
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
                                appear many times.                                                                         
+  -y,  --yes                   Accept default value for all prompts                                                       
 
 
   Global Options:
@@ -3557,7 +3574,7 @@ exports[`help command > project help output snapshots > project add help output 
 "
   ▲ vercel project add name
 
-  Add a new Project                                                                                                     
+  Add a new project                                                                                                     
 
   Global Options:
 
@@ -3574,7 +3591,7 @@ exports[`help command > project help output snapshots > project add help output 
 
   Examples:
 
-  - Add a new Project
+  - Add a new project
 
     $ vercel project add my-project
 
@@ -3585,16 +3602,22 @@ exports[`help command > project help output snapshots > project help column widt
 "
   ▲ vercel project [command]
 
-  Manage your Vercel Projects           
+  Manage your Vercel projects           
 
   Commands:
 
-  add     name  Add a new       
-                Project         
-  list          Show all        
-                Projects in the 
-                selected scope  
-  remove  name  Delete a Project
+  add      name    Add a new    
+                   project      
+  inspect  [name]  Displays     
+                   information  
+                   related to a 
+                   project      
+  list             Show all     
+                   projects in  
+                   the selected 
+                   scope        
+  remove   name    Delete a     
+                   project      
 
 
   Global Options:
@@ -3642,13 +3665,14 @@ exports[`help command > project help output snapshots > project help column widt
 "
   ▲ vercel project [command]
 
-  Manage your Vercel Projects                                                   
+  Manage your Vercel projects                                                   
 
   Commands:
 
-  add     name  Add a new Project                                       
-  list          Show all Projects in the selected scope                 
-  remove  name  Delete a Project                                        
+  add      name    Add a new project                                    
+  inspect  [name]  Displays information related to a project            
+  list             Show all projects in the selected scope              
+  remove   name    Delete a project                                     
 
 
   Global Options:
@@ -3672,13 +3696,14 @@ exports[`help command > project help output snapshots > project help column widt
 "
   ▲ vercel project [command]
 
-  Manage your Vercel Projects                                                                                           
+  Manage your Vercel projects                                                                                           
 
   Commands:
 
-  add     name  Add a new Project                                                                               
-  list          Show all Projects in the selected scope                                                         
-  remove  name  Delete a Project                                                                                
+  add      name    Add a new project                                                                            
+  inspect  [name]  Displays information related to a project                                                    
+  list             Show all projects in the selected scope                                                      
+  remove   name    Delete a project                                                                             
 
 
   Global Options:
@@ -3697,11 +3722,48 @@ exports[`help command > project help output snapshots > project help column widt
 "
 `;
 
+exports[`help command > project help output snapshots > project inspect help output snapshots > project inspect help column width 120 1`] = `
+"
+  ▲ vercel project inspect [name] [options]
+
+  Displays information related to a project                                                                             
+
+  Options:
+
+  -y,  --yes  Accept default value for all prompts                                                                      
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Inspect the linked project from the current directory
+
+    $ vercel project inspect
+
+  - Inspect the project named "my-project"
+
+    $ vercel project inspect my-project
+
+"
+`;
+
 exports[`help command > project help output snapshots > project list help output snapshots > project list help column width 120 1`] = `
 "
   ▲ vercel project list [options]
 
-  Show all Projects in the selected scope                                                                               
+  Show all projects in the selected scope                                                                               
 
   Options:
 
@@ -3724,7 +3786,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Examples:
 
-  - Paginate Projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
+  - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel project ls --next 1584722256178
 
@@ -3735,7 +3797,7 @@ exports[`help command > project help output snapshots > project remove help outp
 "
   ▲ vercel project remove name
 
-  Delete a Project                                                                                                      
+  Delete a project                                                                                                      
 
   Global Options:
 
@@ -4462,9 +4524,11 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <TIME>  Time to wait for    
-                     rollback completion 
-                     [3m]                
+       --timeout <TIME>  Time to wait for    
+                         rollback completion 
+                         [3m]                
+  -y,  --yes             Accept default value
+                         for all prompts     
 
 
   Global Options:
@@ -4527,7 +4591,8 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <TIME>  Time to wait for rollback completion [3m]                   
+       --timeout <TIME>  Time to wait for rollback completion [3m]                   
+  -y,  --yes             Accept default value for all prompts                        
 
 
   Global Options:
@@ -4566,7 +4631,8 @@ exports[`help command > rollback help output snapshots > rollback help column wi
 
   Options:
 
-   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
+       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
+  -y,  --yes             Accept default value for all prompts                                                                
 
 
   Global Options:
@@ -4604,7 +4670,8 @@ exports[`help command > rollback help output snapshots > rollback status help ou
 
   Options:
 
-   --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
+       --timeout <TIME>  Time to wait for rollback completion [3m]                                                           
+  -y,  --yes             Accept default value for all prompts                                                                
 
 
   Global Options:
