@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.1.13
+
+### Patch Changes
+
+- [cli] get maxDuration from function configuration ([#13141](https://github.com/vercel/vercel/pull/13141))
+
 ## 5.1.12
 
 ### Patch Changes

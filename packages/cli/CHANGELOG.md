@@ -1,5 +1,12 @@
 # vercel
 
+## 41.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6`](https://github.com/vercel/vercel/commit/a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6)]:
+  - @vercel/node@5.1.13
+
 ## 41.3.2
 
 ### Patch Changes
