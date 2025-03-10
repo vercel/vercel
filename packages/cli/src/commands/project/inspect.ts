@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import frameworkList from '@vercel/frameworks';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectInspectTelemetryClient } from '../../util/telemetry/commands/project/inspect';
 import output from '../../output-manager';
@@ -56,15 +57,38 @@ export default async function inspect(
 
   const org = await getTeamById(client, project.accountId);
   const projectSlugLink = formatProject(org.slug, project.name);
-  console.log(project);
 
   output.log(`Found Project ${projectSlugLink} ${chalk.gray(inspectStamp())}`);
   output.print('\n');
   output.print(chalk.bold('  General\n\n'));
+  output.print(`    ${chalk.cyan('ID')}\t\t\t\t${project.id}\n`);
   output.print(`    ${chalk.cyan('Name')}\t\t\t${project.name}\n`);
+  output.print(`    ${chalk.cyan('Owner')}\t\t\t${org.name}\n`);
   output.print(
     `    ${chalk.cyan('Created At')}\t\t\t${formatDate(project.createdAt)}\n`
   );
+  output.print(
+    `    ${chalk.cyan('Root Directory')}\t\t${project.rootDirectory ?? '.'}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Node.js Version')}\t\t${project.nodeVersion}\n`
+  );
+
+  const framework = frameworkList.find(f => f.slug === project.framework);
+  output.print('\n');
+  output.print(chalk.bold('  Framework Settings\n\n'));
+  output.print(`    ${chalk.cyan('Framework Preset')}\t\t${framework?.name}\n`);
+  output.print(
+    `    ${chalk.cyan('Build Command')}\t\t${project.buildCommand ?? chalk.dim(framework?.settings?.buildCommand.placeholder ?? 'None')}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Output Directory')}\t\t${project.outputDirectory ?? chalk.dim(framework?.settings?.outputDirectory.placeholder ?? 'None')}\n`
+  );
+  output.print(
+    `    ${chalk.cyan('Install Command')}\t\t${project.installCommand ?? chalk.dim(framework?.settings?.installCommand.placeholder ?? 'None')}\n`
+  );
+
+  output.print('\n');
 
   return 0;
 }
