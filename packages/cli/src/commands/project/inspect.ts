@@ -92,11 +92,3 @@ export default async function inspect(
 
   return 0;
 }
-
-/*
-function getLatestProdUrl(project: Project): string {
-    const alias = project.targets?.production?.alias?.[0];
-    if (alias) return `https://${alias}`;
-    return '--';
-}
-*/
