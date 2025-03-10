@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { getCommandName } from '../../util/pkg-name';
 import { ProjectInspectTelemetryClient } from '../../util/telemetry/commands/project/inspect';
 import output from '../../output-manager';
