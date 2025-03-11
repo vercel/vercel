@@ -338,6 +338,32 @@ async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
         body.push(hightlightedDetailsTable);
       }
 
+      if (plan.type === 'prepayment') {
+        // TODO: push information on minimum and maximum amounts
+        const rows: string[][] = [];
+        if (plan.minimumAmount) {
+          rows.push(['Minimum amount', plan.minimumAmount]);
+        }
+        if (plan.maximumAmount) {
+          rows.push(['Maximum amount', plan.maximumAmount]);
+        }
+
+        if (rows.length > 0) {
+          const minimumMaximumTable = formatTable(
+            ['', ''],
+            ['l', 'r'],
+            [
+              {
+                name: 'Addable Funds',
+                rows,
+              },
+            ]
+          );
+
+          body.push(minimumMaximumTable);
+        }
+      }
+
       let planName = plan.name;
       if (plan.cost) {
         planName += ` ${plan.cost}`;
