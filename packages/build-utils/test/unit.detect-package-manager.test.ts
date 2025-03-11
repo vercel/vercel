@@ -111,6 +111,26 @@ describe('Test `detectPackageManager()`', () => {
         },
       },
       {
+        name: 'for 9.0 lockfile, respects engines.pnpm when wanting pnmp 9',
+        args: ['pnpm', 9.0, PNPM_10_PREFERRED_AT.getTime() + 1000, '9.x'],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@9.x',
+          pnpmVersionRange: '9.x',
+          path: '/pnpm9/node_modules/.bin',
+        },
+      },
+      {
+        name: 'for 9.0 lockfile, allows engines.pnpm when allowing pnpm 10',
+        args: ['pnpm', 9.0, PNPM_10_PREFERRED_AT.getTime() + 1000, '>=9.x'],
+        want: {
+          detectedLockfile: 'pnpm-lock.yaml',
+          detectedPackageManager: 'pnpm@10.x',
+          pnpmVersionRange: '10.x',
+          path: '/pnpm10/node_modules/.bin',
+        },
+      },
+      {
         name: 'for undefined lockfile does not return a path',
         args: ['pnpm', -3],
         want: undefined,
@@ -121,9 +141,9 @@ describe('Test `detectPackageManager()`', () => {
         want: undefined,
       },
     ])('$name', ({ args, want }) => {
-      const [cliType, lockfileVersion, preferredAt] = args;
+      const [cliType, lockfileVersion, preferredAt, enginesPnpm] = args;
       expect(
-        detectPackageManager(cliType, lockfileVersion, preferredAt)
+        detectPackageManager(cliType, lockfileVersion, preferredAt, enginesPnpm)
       ).toStrictEqual(want);
     });
   });
