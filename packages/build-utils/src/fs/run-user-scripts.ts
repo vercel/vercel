@@ -738,6 +738,18 @@ export async function runNpmInstall(
       meta.runNpmInstallSet = runNpmInstallSet;
     }
 
+    // if yarn 3 or 4, disable global cache so build cache can cache deps
+    if (cliType === 'yarn') {
+      const yarnVersion = detectYarnVersion(lockfileVersion);
+      if (['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) {
+        await spawnAsync(
+          'yarn',
+          ['config', 'set', 'enableGlobalCache', 'false'],
+          { cwd: destPath }
+        );
+      }
+    }
+
     const installTime = Date.now();
     console.log('Installing dependencies...');
     debug(`Installing to ${destPath}`);
