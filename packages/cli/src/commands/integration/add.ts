@@ -118,22 +118,25 @@ export async function add(client: Client, args: string[]) {
   // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
   // non-storage categories to the dashboard.
   // product.type is the old way of defining categories, while the protocols are the new way.
-  const isPreProtocolStorageProduct = product.type === 'storage';
-  const isPostProtocolStorageProduct =
-    product.protocols?.storage?.status === 'enabled';
-  const isVideoProduct = product.protocols?.video?.status;
-  const isStorageProduct =
-    isPreProtocolStorageProduct || isPostProtocolStorageProduct;
-  const isSupportedProductType = isStorageProduct || isVideoProduct;
+  // const isPreProtocolStorageProduct = product.type === 'storage';
+  // const isPostProtocolStorageProduct =
+  //   product.protocols?.storage?.status === 'enabled';
+  // const isVideoProduct = product.protocols?.video?.status;
+  // const isStorageProduct =
+  //   isPreProtocolStorageProduct || isPostProtocolStorageProduct;
+  // const isSupportedProductType = isStorageProduct || isVideoProduct;
 
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
   // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
   // 3. The product type is supported
-  const provisionResourceViaCLIIsSupported =
-    installation && metadataWizard.isSupported && isSupportedProductType;
+  // const provisionResourceViaCLIIsSupported =
+  //   installation && metadataWizard.isSupported && isSupportedProductType;
 
-  if (!provisionResourceViaCLIIsSupported) {
+  // INC-2151: this functionality is being disabled until the CLI supports the new authorization flow for resource creation
+  const provisionResourceViaCLIIsSupported = false;
+
+  if (!provisionResourceViaCLIIsSupported || !installation) {
     const projectLink = await getOptionalLinkedProject(client);
 
     if (projectLink?.status === 'error') {
