@@ -184,41 +184,55 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
-          await expect(client.stderr).toOutput(
-            'What is the name of the resource?'
-          );
-          client.stdin.write('test-resource\n');
-          await expect(client.stderr).toOutput(
-            'Choose your region (Use arrow keys)'
-          );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            'Choose a billing plan (Use arrow keys)'
-          );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            `Selected product:
-- Name: test-resource
-- Primary Region: us-west-1
-- Plan: Pro Plan
-? Confirm selection? (Y/n)`
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput(
-            'Acme Product successfully provisioned'
-          );
+
+          // INC-2151: forcing all resource creation to the web UI
           await expect(client.stderr).toOutput(
             'Do you want to link this resource to the current project? (Y/n)'
           );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput('Select environments');
-          client.stdin.write('\n');
+          client.stdin.write('n\n');
           await expect(client.stderr).toOutput(
-            'test-resource successfully connected to vercel-integration-add'
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).not.toHaveBeenCalled();
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
+          );
+          //           await expect(client.stderr).toOutput(
+          //             'What is the name of the resource?'
+          //           );
+          //           client.stdin.write('test-resource\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose your region (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose a billing plan (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             `Selected product:
+          // - Name: test-resource
+          // - Primary Region: us-west-1
+          // - Plan: Pro Plan
+          // ? Confirm selection? (Y/n)`
+          //           );
+          //           client.stdin.write('y\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Acme Product successfully provisioned'
+          //           );
+          //           await expect(client.stderr).toOutput(
+          //             'Do you want to link this resource to the current project? (Y/n)'
+          //           );
+          //           client.stdin.write('y\n');
+          //           await expect(client.stderr).toOutput('Select environments');
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             'test-resource successfully connected to vercel-integration-add'
+          //           );
+          //           const exitCode = await exitCodePromise;
+          //           expect(exitCode, 'exit code for "integration"').toEqual(0);
+          //           expect(openMock).not.toHaveBeenCalled();
         });
 
         it('should handle provisioning resource on team-level in project context', async () => {
@@ -234,36 +248,51 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
-          await expect(client.stderr).toOutput(
-            'What is the name of the resource?'
-          );
-          client.stdin.write('test-resource\n');
-          await expect(client.stderr).toOutput(
-            'Choose your region (Use arrow keys)'
-          );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            'Choose a billing plan (Use arrow keys)'
-          );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            `Selected product:
-- Name: test-resource
-- Primary Region: us-west-1
-- Plan: Pro Plan
-? Confirm selection? (Y/n)`
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput(
-            'Acme Product successfully provisioned'
-          );
+
+          // INC-2151: forcing all resource creation to the web UI
           await expect(client.stderr).toOutput(
             'Do you want to link this resource to the current project? (Y/n)'
           );
           client.stdin.write('n\n');
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).not.toHaveBeenCalled();
+          await expect(client.stderr).toOutput(
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
+          );
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
+          );
+
+          //           await expect(client.stderr).toOutput(
+          //             'What is the name of the resource?'
+          //           );
+          //           client.stdin.write('test-resource\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose your region (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose a billing plan (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             `Selected product:
+          // - Name: test-resource
+          // - Primary Region: us-west-1
+          // - Plan: Pro Plan
+          // ? Confirm selection? (Y/n)`
+          //           );
+          //           client.stdin.write('y\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Acme Product successfully provisioned'
+          //           );
+          //           await expect(client.stderr).toOutput(
+          //             'Do you want to link this resource to the current project? (Y/n)'
+          //           );
+          //           client.stdin.write('n\n');
+          //           const exitCode = await exitCodePromise;
+          //           expect(exitCode, 'exit code for "integration"').toEqual(0);
+          //           expect(openMock).not.toHaveBeenCalled();
         });
 
         it('should handle provisioning resource without project context', async () => {
@@ -272,32 +301,43 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+
+          // INC-2151: forcing all resource creation to the web UI
           await expect(client.stderr).toOutput(
-            'What is the name of the resource?'
+            'This resource must be provisioned through the Web UI. Open Vercel Dashboard?'
           );
-          client.stdin.write('test-resource\n');
-          await expect(client.stderr).toOutput(
-            'Choose your region (Use arrow keys)'
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme&productId=acme-product&cmd=add'
           );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            'Choose a billing plan (Use arrow keys)'
-          );
-          client.stdin.write('\n');
-          await expect(client.stderr).toOutput(
-            `Selected product:
-- Name: test-resource
-- Primary Region: us-west-1
-- Plan: Pro Plan
-? Confirm selection? (Y/n)`
-          );
-          client.stdin.write('y\n');
-          await expect(client.stderr).toOutput(
-            'Acme Product successfully provisioned'
-          );
-          const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).not.toHaveBeenCalled();
+
+          //           await expect(client.stderr).toOutput(
+          //             'What is the name of the resource?'
+          //           );
+          //           client.stdin.write('test-resource\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose your region (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Choose a billing plan (Use arrow keys)'
+          //           );
+          //           client.stdin.write('\n');
+          //           await expect(client.stderr).toOutput(
+          //             `Selected product:
+          // - Name: test-resource
+          // - Primary Region: us-west-1
+          // - Plan: Pro Plan
+          // ? Confirm selection? (Y/n)`
+          //           );
+          //           client.stdin.write('y\n');
+          //           await expect(client.stderr).toOutput(
+          //             'Acme Product successfully provisioned'
+          //           );
+          //           const exitCode = await exitCodePromise;
+          //           expect(exitCode, 'exit code for "integration"').toEqual(0);
+          //           expect(openMock).not.toHaveBeenCalled();
         });
 
         it('should require the vercel dashboard for expressions in UI wizard', async () => {
