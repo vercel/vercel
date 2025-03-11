@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 5.1.13
+
+### Patch Changes
+
+- [cli] get maxDuration from function configuration ([#13141](https://github.com/vercel/vercel/pull/13141))
+
+- Updated dependencies [[`ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7`](https://github.com/vercel/vercel/commit/ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7)]:
+  - @vercel/build-utils@10.5.0
+
 ## 5.1.12
 
 ### Patch Changes

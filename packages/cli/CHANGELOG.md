@@ -1,5 +1,22 @@
 # vercel
 
+## 41.4.0
+
+### Minor Changes
+
+- Update `vercel target ls` to more closely match the Vercel dashboard UI ([#13150](https://github.com/vercel/vercel/pull/13150))
+
+- Add `vercel project inspect` subcommand ([#13149](https://github.com/vercel/vercel/pull/13149))
+
+### Patch Changes
+
+- Force all integration resource creation to use web UI for authorization flow ([#13154](https://github.com/vercel/vercel/pull/13154))
+
+- Updated dependencies [[`a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6`](https://github.com/vercel/vercel/commit/a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6), [`ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7`](https://github.com/vercel/vercel/commit/ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7)]:
+  - @vercel/node@5.1.13
+  - @vercel/build-utils@10.5.0
+  - @vercel/static-build@2.7.5
+
 ## 41.3.2
 
 ### Patch Changes
