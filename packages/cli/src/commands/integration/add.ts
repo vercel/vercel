@@ -339,7 +339,6 @@ async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
       }
 
       if (plan.type === 'prepayment') {
-        // TODO: push information on minimum and maximum amounts
         const rows: string[][] = [];
         if (plan.minimumAmount) {
           rows.push(['Minimum amount', plan.minimumAmount]);
