@@ -83,7 +83,7 @@ GEM
     parallel (1.24.0)
     parslet (2.0.0)
     public_suffix (5.0.4)
-    rack (2.2.11)
+    rack (2.2.13)
     rb-fsevent (0.11.2)
     rb-inotify (0.10.1)
       ffi (~> 1.0)
