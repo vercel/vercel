@@ -903,7 +903,8 @@ export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
 
 function detectPnpmVersion(
   lockfileVersion: number | undefined,
-  projectCreatedAt: number | undefined
+  projectCreatedAt: number | undefined,
+  enginesPnpm: string | undefined
 ): DetectedPnpmVersion {
   switch (true) {
     case lockfileVersion === undefined:
@@ -917,6 +918,11 @@ function detectPnpmVersion(
     case lockfileVersion === 7.0:
       return 'pnpm 9';
     case lockfileVersion === 9.0: {
+      const enginesPnpmRange = enginesPnpm ? validRange(enginesPnpm) : null;
+      if (enginesPnpmRange && !intersects(enginesPnpmRange, '10.x')) {
+        return 'pnpm 9';
+      }
+
       const projectPrefersPnpm10 =
         projectCreatedAt && projectCreatedAt >= PNPM_10_PREFERRED_AT.getTime();
       return projectPrefersPnpm10 ? 'pnpm 10' : 'pnpm 9';
@@ -1014,7 +1020,8 @@ export function getPathOverrideForPackageManager({
   const detectedPackageManger = detectPackageManager(
     cliType,
     lockfileVersion,
-    projectCreatedAt
+    projectCreatedAt,
+    packageJsonEngines?.pnpm
   );
 
   const usingCorepack = corepackPackageManager && corepackEnabled;
@@ -1155,7 +1162,8 @@ function validateVersionSpecifier(version?: string) {
 export function detectPackageManager(
   cliType: CliType,
   lockfileVersion: number | undefined,
-  projectCreatedAt?: number
+  projectCreatedAt?: number,
+  enginesPnpm?: string
 ) {
   switch (cliType) {
     case 'npm':
@@ -1165,7 +1173,9 @@ export function detectPackageManager(
       // of npm that will be used.
       return undefined;
     case 'pnpm':
-      switch (detectPnpmVersion(lockfileVersion, projectCreatedAt)) {
+      switch (
+        detectPnpmVersion(lockfileVersion, projectCreatedAt, enginesPnpm)
+      ) {
         case 'pnpm 7':
           // pnpm 7
           return {
