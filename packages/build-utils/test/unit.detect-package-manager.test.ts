@@ -111,7 +111,7 @@ describe('Test `detectPackageManager()`', () => {
         },
       },
       {
-        name: 'for 9.0 lockfile, respects engines.pnpm when wanting pnmp 9',
+        name: 'for 9.0 lockfile, respects engines.pnpm when wanting pnpm 9',
         args: ['pnpm', 9.0, PNPM_10_PREFERRED_AT.getTime() + 1000, '9.x'],
         want: {
           detectedLockfile: 'pnpm-lock.yaml',
