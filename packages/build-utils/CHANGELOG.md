@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.5.0
+
+### Minor Changes
+
+- Disable yarn global cache before installs so build cache caches deps ([#13144](https://github.com/vercel/vercel/pull/13144))
+
 ## 10.4.0
 
 ### Minor Changes
