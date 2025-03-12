@@ -87,6 +87,23 @@ it('should only invoke `runNpmInstall()` once per `package.json` file (parallel)
   });
 });
 
+it('should print warning for yarn dynamic require bug', async () => {
+  const consoleWarnSpy = vi.spyOn(console, 'warn');
+  process.env.ENABLE_EXPERIMENTAL_COREPACK = '1';
+
+  const fixture = path.join(__dirname, 'fixtures', '46-yarn-dynamic-require');
+  await expect(runNpmInstall(fixture, [], undefined, {})).resolves.toBe(true);
+
+  expect(consoleWarnSpy).toHaveBeenCalledWith(
+    expect.stringContaining(
+      'Warning: This project may see "Error: Dynamic require of "util" is not supported". To avoid this error, remove `"type": "module"` from your package.json file, or use `yarnPath` instead of Corepack. Learn more: https://vercel.com/docs/errors/error-list#yarn-dynamic-require-of-util-is-not-supported'
+    )
+  );
+
+  consoleWarnSpy.mockRestore();
+  delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
+});
+
 it('should throw error when install failed - yarn', async () => {
   spawnExitCode = 1;
   const meta: Meta = {};
