@@ -21,9 +21,9 @@ function formatBranchMatcher(
   if (branchMatcher?.type === 'equals') {
     return branchMatcher.pattern;
   } else if (branchMatcher?.type === 'startsWith') {
-    return `${branchMatcher.pattern}*`;
+    return `${branchMatcher.pattern}${chalk.dim('*')}`;
   } else if (branchMatcher?.type === 'endsWith') {
-    return `*${branchMatcher.pattern}`;
+    return `${chalk.dim('*')}${branchMatcher.pattern}`;
   }
   return chalk.dim('No branch configuration');
 }
