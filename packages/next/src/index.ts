@@ -348,7 +348,7 @@ export const build: BuildV2 = async buildOptions => {
       cliType,
       lockfileVersion,
       config.projectSettings?.createdAt,
-      packageJsonEngines?.pnpm
+      pkg.engines?.pnpm
     ) ?? {};
 
   const trimmedInstallCommand = installCommand?.trim();
