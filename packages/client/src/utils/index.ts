@@ -187,6 +187,7 @@ export async function getVercelIgnore(
       '.env.*.local',
       '.venv',
       '.yarn/cache',
+      '.pnp*',
       'npm-debug.log',
       'config.gypi',
       'node_modules',

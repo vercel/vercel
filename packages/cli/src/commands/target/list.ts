@@ -1,14 +1,50 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import table from '../../util/output/table';
-import type Client from '../../util/client';
+import output from '../../output-manager';
 import { targetCommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { ensureLink } from '../../util/link/ensure-link';
 import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
-import type { CustomEnvironment } from '@vercel-internals/types';
-import output from '../../output-manager';
+import type Client from '../../util/client';
+import type {
+  CustomEnvironment,
+  CustomEnvironmentBranchMatcher,
+  CustomEnvironmentType,
+  Project,
+} from '@vercel-internals/types';
+
+function formatBranchMatcher(
+  branchMatcher?: CustomEnvironmentBranchMatcher
+): string {
+  if (branchMatcher?.type === 'equals') {
+    return branchMatcher.pattern;
+  } else if (branchMatcher?.type === 'startsWith') {
+    return `${branchMatcher.pattern}${chalk.dim('*')}`;
+  } else if (branchMatcher?.type === 'endsWith') {
+    return `${chalk.dim('*')}${branchMatcher.pattern}`;
+  }
+  return chalk.dim('No branch configuration');
+}
+
+const TYPE_MAP: Record<CustomEnvironmentType, string> = {
+  production: 'Production',
+  preview: 'Preview',
+  development: 'Development',
+};
+
+const BRANCH_TRACKING_MAP: Record<
+  CustomEnvironmentType,
+  (project: Project, target: CustomEnvironment) => string
+> = {
+  production: project => project.link?.productionBranch ?? 'main',
+  preview: (_, env) =>
+    env.slug === 'preview'
+      ? chalk.dim('All unassigned git branches')
+      : formatBranchMatcher(env.branchMatcher),
+  development: () => chalk.dim('Accessible via CLI'),
+};
 
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
@@ -56,22 +92,15 @@ export default async function list(client: Client, argv: string[]) {
 
   const tablePrint = table(
     [
-      ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
-        header => chalk.bold(chalk.cyan(header))
+      ['Target Name', 'Branch Tracking', 'Type', 'Updated'].map(header =>
+        chalk.bold(chalk.cyan(header))
       ),
       ...result.flatMap(target => {
-        const type =
-          target.type === 'production'
-            ? 'Production'
-            : target.type === 'development'
-              ? 'Development'
-              : 'Preview';
         return [
           [
             formatEnvironment(link.org.slug, link.project.name, target),
-            target.slug,
-            target.id,
-            type,
+            BRANCH_TRACKING_MAP[target.type](link.project, target),
+            TYPE_MAP[target.type],
             chalk.gray(
               target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
             ),
@@ -107,7 +136,6 @@ function withDefaultEnvironmentsIncluded(
       description: '',
       domains: [],
     },
-    ...environments,
     {
       id: 'development',
       slug: 'development',
@@ -117,5 +145,6 @@ function withDefaultEnvironmentsIncluded(
       description: '',
       domains: [],
     },
+    ...environments.slice().sort((a, b) => a.slug.localeCompare(b.slug)),
   ];
 }

@@ -1,5 +1,5 @@
 import fetch, { type Response } from 'node-fetch';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 import ua from './ua';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
@@ -316,7 +316,8 @@ type OAuthErrorCode =
   | 'unauthorized_client'
   | 'unsupported_grant_type'
   | 'invalid_scope'
-  // Device Athorization Response Errors
+  | 'server_error'
+  // Device Authorization Response Errors
   | 'authorization_pending'
   | 'slow_down'
   | 'access_denied'
@@ -330,15 +331,17 @@ interface OAuthErrorResponse {
   error_uri?: string;
 }
 
-function processOAuthErrorResponse(json: unknown): OAuthErrorResponse {
+function processOAuthErrorResponse(
+  json: unknown
+): OAuthErrorResponse | TypeError {
   if (typeof json !== 'object' || json === null)
-    throw new TypeError('Expected response to be an object');
+    return new TypeError('Expected response to be an object');
   if (!('error' in json) || typeof json.error !== 'string')
-    throw new TypeError('Expected `error` to be a string');
+    return new TypeError('Expected `error` to be a string');
   if ('error_description' in json && typeof json.error_description !== 'string')
-    throw new TypeError('Expected `error_description` to be a string');
+    return new TypeError('Expected `error_description` to be a string');
   if ('error_uri' in json && typeof json.error_uri !== 'string')
-    throw new TypeError('Expected `error_uri` to be a string');
+    return new TypeError('Expected `error_uri` to be a string');
 
   return json as OAuthErrorResponse;
 }
@@ -348,6 +351,13 @@ export class OAuthError extends Error {
   cause: Error;
   constructor(message: string, response: unknown) {
     const error = processOAuthErrorResponse(response);
+    if (error instanceof TypeError) {
+      const message = `Unexpected server response: ${JSON.stringify(response)}`;
+      super(message);
+      this.cause = new Error(message, { cause: error });
+      this.code = 'server_error';
+      return;
+    }
     let cause = error.error;
     if (error.error_description) cause += `: ${error.error_description}`;
     if (error.error_uri) cause += ` (${error.error_uri})`;
@@ -370,11 +380,22 @@ function canParseURL(url: string) {
   }
 }
 
-export async function verifyJWT(token: string) {
-  const JWKS = createRemoteJWKSet((await as()).jwks_uri);
-  const { payload } = await jwtVerify<{ team_id?: string }>(token, JWKS, {
-    issuer: 'https://vercel.com',
-    audience: ['https://api.vercel.com', 'https://vercel.com/api'],
-  });
-  return payload;
+interface VercelAccessToken extends JWTPayload {
+  team_id?: string;
+}
+
+export async function verifyJWT(
+  token: string
+): Promise<[Error] | [null, VercelAccessToken]> {
+  try {
+    const JWKS = createRemoteJWKSet((await as()).jwks_uri);
+    const { payload } = await jwtVerify<VercelAccessToken>(token, JWKS, {
+      issuer: 'https://vercel.com',
+      audience: ['https://api.vercel.com', 'https://vercel.com/api'],
+    });
+    return [null, payload];
+  } catch (error) {
+    if (error instanceof Error) return [error];
+    return [new Error('Could not verify JWT.', { cause: error })];
+  }
 }

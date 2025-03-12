@@ -127,3 +127,33 @@ it('should throw error when install failed - npm', async () => {
     message: 'Command "npm install" exited with 1',
   });
 });
+
+it('should disable global cache for yarn 3+', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '44-yarn-v4');
+  expect(await runNpmInstall(fixture, [], undefined, {})).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(2);
+  const yarnConfig = spawnMock.mock.calls[0];
+  expect(yarnConfig[0]).toEqual('yarn');
+  expect(yarnConfig[1]).toEqual([
+    'config',
+    'set',
+    'enableGlobalCache',
+    'false',
+  ]);
+
+  const yarnInstall = spawnMock.mock.calls[1];
+  expect(yarnInstall[0]).toEqual('yarn');
+  expect(yarnInstall[1]).toEqual(['install']);
+});
+
+it('should not disable global cache for yarn 1', async () => {
+  const fixture = path.join(__dirname, 'fixtures', '45-yarn-v1');
+  expect(await runNpmInstall(fixture, [], undefined, {})).toEqual(true);
+
+  expect(spawnMock.mock.calls.length).toBe(1);
+
+  const yarnInstall = spawnMock.mock.calls[0];
+  expect(yarnInstall[0]).toEqual('yarn');
+  expect(yarnInstall[1]).toEqual(['install']);
+});

@@ -738,6 +738,18 @@ export async function runNpmInstall(
       meta.runNpmInstallSet = runNpmInstallSet;
     }
 
+    // if yarn 3 or 4, disable global cache so build cache can cache deps
+    if (cliType === 'yarn') {
+      const yarnVersion = detectYarnVersion(lockfileVersion);
+      if (['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) {
+        await spawnAsync(
+          'yarn',
+          ['config', 'set', 'enableGlobalCache', 'false'],
+          { cwd: destPath }
+        );
+      }
+    }
+
     const installTime = Date.now();
     console.log('Installing dependencies...');
     debug(`Installing to ${destPath}`);
@@ -1199,8 +1211,7 @@ export function detectPackageManager(
           };
         case 'pnpm 6':
           return {
-            // undefined because pnpm@6 is the current default in the build container
-            path: undefined,
+            path: '/pnpm6/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@6.x',
             pnpmVersionRange: '6.x',

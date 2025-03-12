@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 10.5.0
+
+### Minor Changes
+
+- Disable yarn global cache before installs so build cache caches deps ([#13144](https://github.com/vercel/vercel/pull/13144))
+
+## 10.4.0
+
+### Minor Changes
+
+- Expose pnpm6 within the detected package manager path for future versions of the build container ([#13132](https://github.com/vercel/vercel/pull/13132))
+
 ## 10.3.2
 
 ### Patch Changes

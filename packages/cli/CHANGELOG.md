@@ -1,5 +1,39 @@
 # vercel
 
+## 41.4.0
+
+### Minor Changes
+
+- Update `vercel target ls` to more closely match the Vercel dashboard UI ([#13150](https://github.com/vercel/vercel/pull/13150))
+
+- Add `vercel project inspect` subcommand ([#13149](https://github.com/vercel/vercel/pull/13149))
+
+### Patch Changes
+
+- Force all integration resource creation to use web UI for authorization flow ([#13154](https://github.com/vercel/vercel/pull/13154))
+
+- Updated dependencies [[`a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6`](https://github.com/vercel/vercel/commit/a559b72ef9d62ac87b38f11d756b58e8d4f4e7a6), [`ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7`](https://github.com/vercel/vercel/commit/ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7)]:
+  - @vercel/node@5.1.13
+  - @vercel/build-utils@10.5.0
+  - @vercel/static-build@2.7.5
+
+## 41.3.2
+
+### Patch Changes
+
+- Fix `vc domain inspect` when there is no "production" target alias ([#13134](https://github.com/vercel/vercel/pull/13134))
+
+- fix(oauth): improve unexpected error handling #13138 ([#13138](https://github.com/vercel/vercel/pull/13138))
+
+  This is a follow-up on #12098
+
+  In case of an unexpected server response, we will now gracefully exit and log the error response for the user.
+
+- Updated dependencies [[`47e5335cadc62398600c456c09120582adb25c88`](https://github.com/vercel/vercel/commit/47e5335cadc62398600c456c09120582adb25c88)]:
+  - @vercel/build-utils@10.4.0
+  - @vercel/node@5.1.12
+  - @vercel/static-build@2.7.4
+
 ## 41.3.1
 
 ### Patch Changes
