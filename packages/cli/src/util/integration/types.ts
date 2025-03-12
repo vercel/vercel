@@ -105,3 +105,17 @@ export interface BillingPlan {
   }[];
   disabled?: boolean;
 }
+
+export interface MarketplaceBillingAuthorizationState {
+  id: string;
+  ownerId: string;
+  integrationId: string;
+  integrationConfigurationId?: string;
+  billingPlanId?: string;
+  status: 'pending' | 'requires_action' | 'succeeded' | 'failed';
+  paymentIntent?: {
+    clientSecret?: string | null;
+  };
+  createdAt: number;
+  updatedAt: number;
+}
