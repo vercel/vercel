@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.4.3
+
+### Patch Changes
+
+- Fix Edge runtime rendering ([#13155](https://github.com/vercel/vercel/pull/13155))
+
 ## 5.4.2
 
 ### Patch Changes
