@@ -1,5 +1,14 @@
 # @vercel/client
 
+## 15.1.5
+
+### Patch Changes
+
+- Add yarn Plug'n'Play files to default Vercel ignore list ([#13140](https://github.com/vercel/vercel/pull/13140))
+
+- Updated dependencies [[`ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7`](https://github.com/vercel/vercel/commit/ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7)]:
+  - @vercel/build-utils@10.5.0
+
 ## 15.1.4
 
 ### Patch Changes

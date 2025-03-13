@@ -8,7 +8,7 @@ if (!entrypoint) {
 import { join } from 'path';
 import type { Headers } from 'undici';
 import type { VercelProxyResponse } from './types.js';
-import { Config } from '@vercel/build-utils';
+import { Config, getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import {
@@ -40,6 +40,11 @@ async function createEventHandler(
   const runtime = staticConfig?.runtime;
   validateConfiguredRuntime(runtime, entrypoint);
 
+  const { maxDuration } = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
   // `middleware.js`/`middleware.ts` file is always run as
   // an Edge Function, otherwise needs to be opted-in via
   // `export const config = { runtime: 'edge' }`
@@ -48,7 +53,8 @@ async function createEventHandler(
       entrypointPath,
       entrypoint,
       config.middleware || false,
-      config.zeroConfig
+      config.zeroConfig,
+      maxDuration
     );
   }
 
@@ -64,6 +70,7 @@ async function createEventHandler(
   return createServerlessEventHandler(entrypointPath, {
     mode: isStreaming ? 'streaming' : 'buffer',
     shouldAddHelpers: options.shouldAddHelpers,
+    maxDuration,
   });
 }
 

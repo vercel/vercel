@@ -4,10 +4,12 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
+import inspect from './inspect';
 import list from './list';
 import rm from './rm';
 import {
   addSubcommand,
+  inspectSubcommand,
   listSubcommand,
   projectCommand,
   removeSubcommand,
@@ -19,6 +21,7 @@ import { getCommandAliases } from '..';
 import getSubcommand from '../../util/get-subcommand';
 
 const COMMAND_CONFIG = {
+  inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
   add: getCommandAliases(addSubcommand),
   remove: getCommandAliases(removeSubcommand),
@@ -68,6 +71,13 @@ export default async function main(client: Client) {
   }
 
   switch (subcommand) {
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(inspectSubcommand);
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'list':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
