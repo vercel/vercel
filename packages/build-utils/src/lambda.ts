@@ -6,6 +6,7 @@ import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type { Config, Env, Files, FunctionFramework } from './types';
+import { ZIP_FILE_SEMA } from '.';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -224,7 +225,7 @@ export class Lambda {
   }
 }
 
-const sema = new Sema(10);
+const sema = new Sema(ZIP_FILE_SEMA);
 const mtime = new Date(1540000000000);
 
 /**

@@ -4,8 +4,9 @@ import multiStream from 'multistream';
 import path from 'path';
 import Sema from 'async-sema';
 import { FileBase } from './types';
+import { EMFILE_SEMA } from '.';
 
-const semaToPreventEMFILE = new Sema(20);
+const semaToPreventEMFILE = new Sema(EMFILE_SEMA);
 
 interface FileFsRefOptions {
   mode?: number;

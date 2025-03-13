@@ -49,6 +49,7 @@ import { getPrefixedEnvVars } from './get-prefixed-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
+import { cpus } from 'os';
 
 export {
   FileBlob,
@@ -120,3 +121,13 @@ export { NODE_VERSIONS } from './fs/node-version';
 export { getInstalledPackageVersion } from './get-installed-package-version';
 
 export { defaultCachePathGlob } from './default-cache-path-glob';
+
+export const LSTAT_SEMA = process.env.VERCEL_LSTAT_SEMA
+  ? parseInt(process.env.VERCEL_LSTAT_SEMA)
+  : 100;
+export const ZIP_FILE_SEMA = process.env.VERCEL_ZIP_FILE_SEMA
+  ? parseInt(process.env.VERCEL_ZIP_FILE_SEMA)
+  : Math.max(1, cpus().length - 1);
+export const EMFILE_SEMA = process.env.VERCEL_EMFILE_SEMA
+  ? parseInt(process.env.VERCEL_EMFILE_SEMA)
+  : 100;

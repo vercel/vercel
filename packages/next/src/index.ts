@@ -31,6 +31,7 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  LSTAT_SEMA,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -1631,7 +1632,7 @@ export const build: BuildV2 = async buildOptions => {
       }
 
       const nftCache = Object.create(null);
-      const lstatSema = new Sema(25);
+      const lstatSema = new Sema(LSTAT_SEMA);
       const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
       const pathsToTrace = mergedPageKeys.map(page => pages[page].fsPath);
 

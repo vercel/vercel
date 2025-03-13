@@ -13,6 +13,7 @@ import {
   glob,
   Files,
   BuildResultV2Typical as BuildResult,
+  LSTAT_SEMA,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
@@ -482,7 +483,7 @@ export async function serverBuild({
       !!staticPages[path.posix.join(entryDirectory, i18n.defaultLocale, '500')];
   }
 
-  const lstatSema = new Sema(25);
+  const lstatSema = new Sema(LSTAT_SEMA);
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
 
