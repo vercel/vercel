@@ -2272,6 +2272,9 @@ export const build: BuildV2 = async buildOptions => {
       canUsePreviewMode,
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
+      // Relevant Next.js versions will be handled by server-build.ts, which
+      // does correctly configure this variable.
+      shouldSkipVaryHeader: false,
     });
 
     await Promise.all(
