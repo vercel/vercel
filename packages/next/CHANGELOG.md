@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.4
+
+### Patch Changes
+
+- bug: do not emit vary header in next.js >=13.4.6 ([#13011](https://github.com/vercel/vercel/pull/13011))
+
 ## 4.7.3
 
 ### Patch Changes

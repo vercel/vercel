@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 10.5.1
+
+### Patch Changes
+
+- Display warning when yarn dynamic require error may happen ([#13143](https://github.com/vercel/vercel/pull/13143))
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
 ## 10.5.0
 
 ### Minor Changes
