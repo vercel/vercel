@@ -137,7 +137,8 @@ Run the test:
 pnpm test test/fixtures/00-server-build/index.test.js
 ```
 
-> **NOTE:** If you receive a `401` status code while fetching the deployment, you need to disable [Deployment Protection](https://vercel.com/docs/security/deployment-protection) on the project.
+> [!NOTE]
+> If you receive a `401` status code while fetching the deployment, you need to disable [Deployment Protection](https://vercel.com/docs/security/deployment-protection) on the project.
 
 #### @vercel/nft
 
