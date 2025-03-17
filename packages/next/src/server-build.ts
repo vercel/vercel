@@ -522,10 +522,7 @@ export async function serverBuild({
     ...(canUsePreviewMode ? omittedPrerenderRoutes : []),
     ...Object.keys(prerenderManifest.blockingFallbackRoutes),
     ...Object.keys(prerenderManifest.fallbackRoutes),
-    ...Object.keys(prerenderManifest.staticRoutes).map(route => {
-      const staticRoute = prerenderManifest.staticRoutes[route];
-      return staticRoute.srcRoute || route;
-    }),
+    ...Object.keys(prerenderManifest.staticRoutes),
   ]);
 
   const experimentalStreamingLambdaPaths = new Map<

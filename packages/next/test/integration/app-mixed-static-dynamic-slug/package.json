@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "next": "14.2.25",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}

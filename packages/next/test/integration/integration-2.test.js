@@ -461,6 +461,20 @@ it('should not generate lambdas that conflict with static index route in app wit
   expect(lambdas.size).toBe(1);
 });
 
+it('should correct operationType for mixed dynamic/ssg slug', async () => {
+  const {
+    buildResult: { output },
+  } = await runBuildLambda(
+    path.join(__dirname, 'app-mixed-static-dynamic-slug')
+  );
+
+  expect(output['static'].type).toBe('Prerender');
+  expect(output['dynamic']).toBeFalsy();
+
+  expect(output['[...slug]'].type).toBe('Lambda');
+  expect(output['[...slug]'].operationType).toBe('Page');
+});
+
 describe('PPR', () => {
   describe('legacy', () => {
     it('should have the same lambda for revalidation and resume', async () => {
