@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import { relative, basename, dirname } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
+import { register as registerTsConfigPaths } from 'tsconfig-paths';
 import type _ts from 'typescript';
 
 /*
@@ -197,6 +198,14 @@ export function register(opts: Options = {}): Register {
 
     const outFiles = new Map<string, SourceOutput>();
     const config = readConfig(configFileName);
+
+    // Since we early return the cached output, this should run only once.
+    if (config.options?.baseUrl || config.options?.paths) {
+      registerTsConfigPaths({
+        baseUrl: config.options?.baseUrl || '',
+        paths: config.options?.paths || {},
+      });
+    }
 
     /**
      * Create the basic function for transpile only (ts-node --transpileOnly)
