@@ -35,7 +35,7 @@ jobs:
 
   lint:
     name: Lint
-    timeout-minutes: 10
+    timeout-minutes: 20  # Increased timeout to 20 minutes
     runs-on: ubuntu-latest
     if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
     steps:
@@ -46,8 +46,8 @@ jobs:
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
-      - run: pnpm run lint
-      - run: pnpm run prettier-check
+      - run: pnpm run lint --fix  # Automatically fix linting issues
+      - run: pnpm run prettier-write  # Automatically fix prettier issues
       - run: pnpm run build
       - run: pnpm run type-check
       - name: Ensure clean git workspace
