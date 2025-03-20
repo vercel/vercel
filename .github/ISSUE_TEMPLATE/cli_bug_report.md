@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: Vercel CLI Bug report
 about: File a bug report for the `vercel` CLI
 title: ''
 ---
