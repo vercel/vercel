@@ -23,6 +23,9 @@ import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
+import { createAuthorization } from '../../util/integration/create-authorization';
+import sleep from '../../util/sleep';
+import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 
 export async function add(client: Client, args: string[]) {
   const telemetry = new IntegrationAddTelemetryClient({
@@ -118,25 +121,22 @@ export async function add(client: Client, args: string[]) {
   // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
   // non-storage categories to the dashboard.
   // product.type is the old way of defining categories, while the protocols are the new way.
-  // const isPreProtocolStorageProduct = product.type === 'storage';
-  // const isPostProtocolStorageProduct =
-  //   product.protocols?.storage?.status === 'enabled';
-  // const isVideoProduct = product.protocols?.video?.status;
-  // const isStorageProduct =
-  //   isPreProtocolStorageProduct || isPostProtocolStorageProduct;
-  // const isSupportedProductType = isStorageProduct || isVideoProduct;
+  const isPreProtocolStorageProduct = product.type === 'storage';
+  const isPostProtocolStorageProduct =
+    product.protocols?.storage?.status === 'enabled';
+  const isVideoProduct = product.protocols?.video?.status;
+  const isStorageProduct =
+    isPreProtocolStorageProduct || isPostProtocolStorageProduct;
+  const isSupportedProductType = isStorageProduct || isVideoProduct;
 
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
   // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
   // 3. The product type is supported
-  // const provisionResourceViaCLIIsSupported =
-  //   installation && metadataWizard.isSupported && isSupportedProductType;
+  const provisionResourceViaCLIIsSupported =
+    installation && metadataWizard.isSupported && isSupportedProductType;
 
-  // INC-2151: this functionality is being disabled until the CLI supports the new authorization flow for resource creation
-  const provisionResourceViaCLIIsSupported = false;
-
-  if (!provisionResourceViaCLIIsSupported || !installation) {
+  if (!provisionResourceViaCLIIsSupported) {
     const projectLink = await getOptionalLinkedProject(client);
 
     if (projectLink?.status === 'error') {
@@ -151,7 +151,7 @@ export async function add(client: Client, args: string[]) {
     );
 
     if (openInWeb) {
-      privisionResourceViaWebUI(
+      provisionResourceViaWebUI(
         team.id,
         integration.id,
         product.id,
@@ -164,6 +164,7 @@ export async function add(client: Client, args: string[]) {
 
   return provisionResourceViaCLI(
     client,
+    team.id,
     integration,
     installation,
     product,
@@ -194,7 +195,7 @@ async function getOptionalLinkedProject(client: Client) {
   return { status: 'success', project: linkedProject.project };
 }
 
-function privisionResourceViaWebUI(
+function provisionResourceViaWebUI(
   teamId: string,
   integrationId: string,
   productId: string,
@@ -214,6 +215,7 @@ function privisionResourceViaWebUI(
 
 async function provisionResourceViaCLI(
   client: Client,
+  teamId: string,
   integration: Integration,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
@@ -263,6 +265,20 @@ async function provisionResourceViaCLI(
 
   if (!confirmed) {
     return 1;
+  }
+
+  const authorizationReturnCode = await validateAuthorization(
+    client,
+    teamId,
+    installation,
+    product,
+    metadata,
+    billingPlan
+  );
+
+  if (authorizationReturnCode !== 0) {
+    // something unexpected went wrong
+    return authorizationReturnCode;
   }
 
   return provisionStorageProduct(
@@ -378,6 +394,87 @@ async function confirmProductSelection(
   );
 
   return client.input.confirm('Confirm selection?', true);
+}
+
+async function validateAuthorization(
+  client: Client,
+  teamId: string,
+  installation: IntegrationInstallation,
+  product: IntegrationProduct,
+  metadata: Metadata,
+  billingPlan: BillingPlan
+): Promise<number> {
+  output.spinner('Validating payment...', 250);
+
+  const originalAuthorizationState = await createAuthorization(
+    client,
+    installation.id,
+    product.id,
+    billingPlan.id,
+    metadata
+  );
+
+  if (!originalAuthorizationState.authorization) {
+    output.stopSpinner();
+    output.error(
+      'Error during authorization, failed to get an authorization state.'
+    );
+    return 1;
+  }
+
+  let authorization = originalAuthorizationState.authorization;
+
+  while (authorization?.status === 'pending') {
+    await sleep(200);
+    authorization = await fetchAuthorization(
+      client,
+      originalAuthorizationState.authorization.id
+    );
+  }
+
+  output.stopSpinner();
+
+  if (authorization.status === 'succeeded') {
+    output.print('Payment validation complete.');
+    return 0;
+  }
+
+  output.spinner(
+    'Payment validation requires manual action. Please complete the steps in your browser...'
+  );
+
+  handleManualVerificationAction(
+    teamId,
+    installation.id,
+    originalAuthorizationState.authorization.id
+  );
+
+  while (authorization.status !== 'succeeded') {
+    await sleep(200);
+    authorization = await fetchAuthorization(
+      client,
+      originalAuthorizationState.authorization.id
+    );
+  }
+
+  output.stopSpinner();
+
+  output.print('Payment validation complete.');
+  return 0;
+}
+
+function handleManualVerificationAction(
+  teamId: string,
+  installationId: string,
+  authorizationId: string
+) {
+  const url = new URL('/api/marketplace/cli', 'https://vercel.com');
+  url.searchParams.set('teamId', teamId);
+  url.searchParams.set('authorizationId', authorizationId);
+  url.searchParams.set('installationId', installationId);
+  url.searchParams.set('cmd', 'authorize');
+  output.print('Opening the Vercel Dashboard to continue the installation...');
+  open(url.href);
 }
 
 async function provisionStorageProduct(

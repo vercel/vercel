@@ -83,6 +83,7 @@ export interface Integration {
 
 export interface IntegrationInstallation {
   id: string;
+  integrationId: string;
   installationType: InstallationType;
   ownerId: string;
 }
@@ -95,6 +96,7 @@ export interface BillingPlan {
   cost?: string;
   description: string;
   paymentMethodRequired: boolean;
+  preauthorizationAmount?: number;
   details: {
     label: string;
     value?: string;

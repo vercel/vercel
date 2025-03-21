@@ -1,6 +1,7 @@
 import type {
   Configuration,
   Integration,
+  MarketplaceBillingAuthorizationState,
   MetadataSchema,
 } from '../../src/util/integration/types';
 import type { Resource } from '../../src/util/integration-resource/types';
@@ -460,6 +461,17 @@ const resources: { stores: Resource[] } = {
   ],
 };
 
+const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
+  auth_1: {
+    id: 'auth_1',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'succeeded',
+    createdAt: 1,
+    updatedAt: 1,
+  },
+};
+
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
     if (returnError) {
@@ -495,6 +507,31 @@ export function useConfiguration() {
 
     res.json(foundConfigs);
   });
+}
+
+export function usePreauthorization(opts?: {
+  initialStatus?: MarketplaceBillingAuthorizationState['status'];
+}) {
+  client.scenario.post('/v1/integrations/billing/authorization', (req, res) => {
+    res.json({
+      authorization: {
+        ...authorizations.auth_1,
+        status: opts?.initialStatus ?? 'succeeded',
+      },
+    });
+    res.end();
+  });
+
+  client.scenario.get(
+    '/v1/integrations/billing/authorization/:authorizationId',
+    (req, res) => {
+      const { authorizationId } = req.params;
+      const authorization =
+        authorizations[authorizationId ?? 'authorization-no-results'];
+      res.json(authorization);
+      res.end();
+    }
+  );
 }
 
 export function useIntegration({
