@@ -95,6 +95,7 @@
       "jest": true,
       "es6": true
     },
+    "ignorePatterns": "packages/**/vendor/**/*",
     "rules": {
       "no-restricted-syntax": [
         "warn",
