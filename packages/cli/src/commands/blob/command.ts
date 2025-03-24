@@ -111,12 +111,55 @@ export const delSubcommand = {
   examples: [],
 } as const;
 
+export const copySubcommand = {
+  name: 'copy',
+  aliases: ['cp'],
+  description: 'Copy a file from Blob',
+  arguments: [
+    {
+      name: 'from-url',
+      required: true,
+    },
+    {
+      name: 'to-pathname',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'add-random-suffix',
+      shorthand: 'r',
+      type: Boolean,
+      deprecated: false,
+      description: 'Add a random suffix to the file name',
+      argument: 'Boolean',
+    },
+    {
+      name: 'content-type',
+      shorthand: 't',
+      type: String,
+      deprecated: false,
+      description: 'The content type of the blob',
+      argument: 'String',
+    },
+    {
+      name: 'cache-control-max-age',
+      shorthand: 'c',
+      type: Number,
+      deprecated: false,
+      description: 'The max age of the cache control',
+      argument: 'Number',
+    },
+  ],
+  examples: [],
+} as const;
+
 export const blobCommand = {
   name: 'blob',
   aliases: [],
   description: 'Interact with Vercel Blob',
   arguments: [],
-  subcommands: [listSubcommand, putSubcommand, delSubcommand],
+  subcommands: [listSubcommand, putSubcommand, delSubcommand, copySubcommand],
   options: [],
   examples: [],
 } as const;
