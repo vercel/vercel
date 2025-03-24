@@ -2370,6 +2370,7 @@ export const build: BuildV2 = async buildOptions => {
   const mergedDataRoutesLambdaRoutes = [];
   const mergedDynamicRoutesLambdaRoutes = [];
 
+  console.log('Returning ...');
   if (isSharedLambdas) {
     // we need to define the page lambda route immediately after
     // the dynamic route in handle: 'rewrite' so that a matching
