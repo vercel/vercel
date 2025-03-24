@@ -5,14 +5,16 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import list from './list';
-import { blobCommand, listSubcommand } from './command';
+import { blobCommand, listSubcommand, putSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
+import put from './put';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
+  put: getCommandAliases(putSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -62,6 +64,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
+    case 'put':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(putSubcommand);
+        return 2;
+      }
+      return put(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));
