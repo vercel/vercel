@@ -12,6 +12,7 @@ import {
   putSubcommand,
   copySubcommand,
   newStoreSubcommand,
+  removeStoreSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -21,6 +22,7 @@ import put from './put';
 import del from './del';
 import copy from './copy';
 import newStore from './new';
+import removeStore from './remove';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -28,6 +30,7 @@ const COMMAND_CONFIG = {
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
   new: getCommandAliases(newStoreSubcommand),
+  remove: getCommandAliases(removeStoreSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -104,7 +107,14 @@ export default async function main(client: Client) {
         printHelp(newStoreSubcommand);
         return 2;
       }
-      return newStore(client);
+      return newStore(client, args);
+    case 'remove':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(removeStoreSubcommand);
+        return 2;
+      }
+      return removeStore(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

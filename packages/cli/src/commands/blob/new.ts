@@ -5,17 +5,39 @@ import { getLinkedProject } from '../../util/projects/link';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import chalk from 'chalk';
 import { getCommandName } from '../../util/pkg-name';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { newStoreSubcommand } from './command';
 
-export default async function newStore(client: Client): Promise<number> {
-  const name = await client.input.text({
-    message: 'Enter a name for your blob store',
-    validate: value => {
-      if (value.length < 5) {
-        return 'Name must be at least 5 characters long';
-      }
-      return true;
-    },
-  });
+export default async function newStore(
+  client: Client,
+  argv: string[]
+): Promise<number> {
+  const flagsSpecification = getFlagsSpecification(newStoreSubcommand.options);
+
+  let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  let {
+    args: [name],
+  } = parsedArgs;
+
+  if (!name) {
+    name = await client.input.text({
+      message: 'Enter a name for your blob store',
+      validate: value => {
+        if (value.length < 5) {
+          return 'Name must be at least 5 characters long';
+        }
+        return true;
+      },
+    });
+  }
 
   let storeId: string;
   try {
@@ -40,7 +62,7 @@ export default async function newStore(client: Client): Promise<number> {
 
   output.stopSpinner();
 
-  output.success(`Blob store created: ${name}`);
+  output.success(`Blob store created: ${name} (${storeId})`);
 
   const link = await getLinkedProject(client);
   if (link.status === 'linked') {

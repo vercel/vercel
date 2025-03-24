@@ -158,7 +158,26 @@ export const newStoreSubcommand = {
   name: 'new',
   aliases: [],
   description: 'Create a new blob store',
-  arguments: [],
+  arguments: [
+    {
+      name: '<NAME>',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const removeStoreSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove a blob store',
+  arguments: [
+    {
+      name: '<STORE_ID>',
+      required: false,
+    },
+  ],
   options: [],
   examples: [],
 } as const;
