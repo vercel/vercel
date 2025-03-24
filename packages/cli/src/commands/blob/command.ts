@@ -103,7 +103,7 @@ export const delSubcommand = {
   description: 'Delete a file from Blob',
   arguments: [
     {
-      name: '...urls',
+      name: '<URLS>',
       required: true,
     },
   ],
@@ -117,11 +117,11 @@ export const copySubcommand = {
   description: 'Copy a file from Blob',
   arguments: [
     {
-      name: 'from-url',
+      name: '<FROM_URL>',
       required: true,
     },
     {
-      name: 'to-pathname',
+      name: '<TO_PATHNAME>',
       required: true,
     },
   ],
@@ -154,12 +154,27 @@ export const copySubcommand = {
   examples: [],
 } as const;
 
+export const newStoreSubcommand = {
+  name: 'new',
+  aliases: [],
+  description: 'Create a new blob store',
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
 export const blobCommand = {
   name: 'blob',
   aliases: [],
   description: 'Interact with Vercel Blob',
   arguments: [],
-  subcommands: [listSubcommand, putSubcommand, delSubcommand, copySubcommand],
+  subcommands: [
+    listSubcommand,
+    putSubcommand,
+    delSubcommand,
+    copySubcommand,
+    newStoreSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;
