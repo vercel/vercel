@@ -1,8 +1,5 @@
 import type Client from '../../util/client';
-import { createEnvObject } from '../../util/env/diff-env-files';
-import { resolve } from 'path';
 import { printError } from '../../util/error';
-import type { Dictionary } from '@vercel/client';
 import output from '../../output-manager';
 import * as blob from '@vercel/blob';
 import table from '../../util/output/table';
@@ -13,6 +10,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
+import { getBlobRWToken } from '../../util/blob/token';
 
 function isMode(mode: string): mode is 'folded' | 'expanded' {
   return mode === 'folded' || mode === 'expanded';
@@ -22,8 +20,6 @@ export default async function list(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const { print, debug, spinner } = output;
-
   const flagsSpecification = getFlagsSpecification(listSubcommand.options);
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
@@ -36,28 +32,10 @@ export default async function list(
 
   const { flags: opts } = parsedArgs;
 
-  const filename = '.env.local';
-  const fullPath = resolve(client.cwd, filename);
-
-  let env: Dictionary<string | undefined> | undefined;
-  try {
-    env = await createEnvObject(fullPath);
-  } catch (error) {
-    printError(error);
+  const token = await getBlobRWToken(client);
+  if (!token) {
     return 1;
   }
-
-  if (!env) {
-    output.error(`No environment variables found in ${filename}`);
-    return 1;
-  }
-
-  if (!env.BLOB_READ_WRITE_TOKEN) {
-    output.error(`No BLOB_READ_WRITE_TOKEN found in ${filename}`);
-    return 1;
-  }
-
-  spinner('Fetching blobs');
 
   const mode = opts['--mode'] ?? 'expanded';
   if (!isMode(mode)) {
@@ -67,10 +45,11 @@ export default async function list(
 
   let list: blob.ListBlobResult;
   try {
-    debug('Fetching blobs');
+    output.debug('Fetching blobs');
 
+    output.spinner('Fetching blobs');
     list = await blob.list({
-      token: env.BLOB_READ_WRITE_TOKEN,
+      token,
       limit: opts['--limit'] ?? 10,
       cursor: opts['--cursor'],
       mode: mode,
@@ -80,6 +59,8 @@ export default async function list(
     printError(err);
     return 1;
   }
+
+  output.stopSpinner();
 
   const headers = ['Uploaded At', 'Size', 'Pathname', 'URL'];
   const urls: string[] = [];
@@ -98,7 +79,7 @@ export default async function list(
   ).replace(/^/gm, '  ');
 
   if (list.blobs.length > 0) {
-    print(`\n${tablePrint}\n\n`);
+    output.print(`\n${tablePrint}\n\n`);
   }
 
   if (!client.stdout.isTTY) {
