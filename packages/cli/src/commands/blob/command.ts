@@ -97,12 +97,26 @@ export const putSubcommand = {
   examples: [],
 } as const;
 
+export const delSubcommand = {
+  name: 'del',
+  aliases: [],
+  description: 'Delete a file from Blob',
+  arguments: [
+    {
+      name: '...urls',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const blobCommand = {
   name: 'blob',
   aliases: [],
   description: 'Interact with Vercel Blob',
   arguments: [],
-  subcommands: [listSubcommand, putSubcommand],
+  subcommands: [listSubcommand, putSubcommand, delSubcommand],
   options: [],
   examples: [],
 } as const;
