@@ -26,9 +26,10 @@ export default async function put(
     return 1;
   }
 
-  const [fileOrContent] = parsedArgs.args;
-
-  const { flags: opts } = parsedArgs;
+  const {
+    args: [fileOrContent],
+    flags: opts,
+  } = parsedArgs;
 
   const token = await getBlobRWToken(client);
   if (!token) {
