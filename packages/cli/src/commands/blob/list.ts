@@ -80,6 +80,8 @@ export default async function list(
 
   if (list.blobs.length > 0) {
     output.print(`\n${tablePrint}\n\n`);
+  } else {
+    output.log('No blobs in this store');
   }
 
   if (!client.stdout.isTTY) {
