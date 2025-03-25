@@ -676,6 +676,7 @@ async function doBuild(
           localConfig
         ).then(
           override => {
+            console.log('write build result');
             if (override) overrides.push(override);
           },
           err => err
@@ -690,7 +691,7 @@ async function doBuild(
     } finally {
       ops.push(
         download(diagnostics, join(outputDir, 'diagnostics')).then(
-          () => undefined,
+          () => console.log('donwload'),
           err => err
         )
       );
