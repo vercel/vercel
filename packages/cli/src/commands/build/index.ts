@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
@@ -603,6 +605,8 @@ async function doBuild(
           () => builder.build(buildOptions)
         );
 
+        console.log('After build 1');
+
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
         if (
@@ -615,11 +619,14 @@ async function doBuild(
             f => f.slug === buildConfig.framework
           );
           if (framework) {
+            console.log('getFrameworkRoutes before');
             const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            console.log('getFrameworkRoutes after');
             buildResult.routes = defaultRoutes;
           }
         }
       } finally {
+        console.log('After build 2');
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
@@ -690,6 +697,8 @@ async function doBuild(
     }
   }
 
+  console.log('After build 3');
+
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
   }
@@ -747,6 +756,8 @@ async function doBuild(
     }
   }
 
+  console.log('After build 4');
+
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
     buildResults.entries()
   )
@@ -778,6 +789,7 @@ async function doBuild(
 
   const framework = await getFramework(workPath, buildResults);
 
+  console.log('After build 5');
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
@@ -802,6 +814,8 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+
+  console.log('After build 6');
 }
 
 async function getFramework(
