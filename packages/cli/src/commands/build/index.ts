@@ -701,11 +701,13 @@ async function doBuild(
 
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
+    console.log('After build 3 - cleanup corepack');
   }
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
   const errors = await Promise.all(ops);
+  console.log('After build 3 - ops wait');
   for (const error of errors) {
     if (error) {
       throw error;
@@ -716,6 +718,7 @@ async function doBuild(
   const speedInsightsVersion = await getInstalledPackageVersion(
     '@vercel/speed-insights'
   );
+  console.log('After build 3 - ops install packageversion');
   if (speedInsightsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -725,6 +728,7 @@ async function doBuild(
   }
   const webAnalyticsVersion =
     await getInstalledPackageVersion('@vercel/analytics');
+  console.log('After build 3 - analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -734,11 +738,13 @@ async function doBuild(
   }
   if (needBuildsJsonOverride) {
     await writeBuildJson(buildsJson, outputDir);
+    console.log('After build 3 - write build json');
   }
 
   // Merge existing `config.json` file into the one that will be produced
   const configPath = join(outputDir, 'config.json');
   const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
+  console.log('After build 3 - read json');
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
