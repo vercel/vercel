@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import fs from 'fs-extra';
 import mimeTypes from 'mime-types';
 import {
@@ -140,6 +142,7 @@ async function writeBuildResultV2(
   for (const [path, output] of Object.entries(buildResult.output)) {
     const normalizedPath = stripDuplicateSlashes(path);
     if (isLambda(output)) {
+      console.log('Before writeLambda 1');
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -148,6 +151,7 @@ async function writeBuildResultV2(
         undefined,
         existingFunctions
       );
+      console.log('After writeLambda 1');
     } else if (isPrerender(output)) {
       if (!output.lambda) {
         throw new Error(
@@ -155,6 +159,7 @@ async function writeBuildResultV2(
         );
       }
 
+      console.log('Before writeLambda 2');
       await writeLambda(
         repoRootPath,
         outputDir,
@@ -163,6 +168,7 @@ async function writeBuildResultV2(
         undefined,
         existingFunctions
       );
+      console.log('After writeLambda 2');
 
       // Write the fallback file alongside the Lambda directory
       let fallback = output.fallback;
@@ -251,18 +257,21 @@ async function writeBuildResultV3(
     throw new Error(`Expected "build.src" to be a string`);
   }
 
+  console.log('Before getLambdaOptionsFromFunction 1');
   const functionConfiguration = vercelConfig
     ? await getLambdaOptionsFromFunction({
         sourceFile: src,
         config: vercelConfig,
       })
     : {};
+  console.log('Before getLambdaOptionsFromFunction 1');
 
   const ext = extname(src);
   const path = stripDuplicateSlashes(
     build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
   );
   if (isLambda(output)) {
+    console.log('Before getLambdaOptionsFromFunction 2');
     await writeLambda(
       repoRootPath,
       outputDir,
@@ -270,8 +279,11 @@ async function writeBuildResultV3(
       path,
       functionConfiguration
     );
+    console.log('After getLambdaOptionsFromFunction 2');
   } else if (isEdgeFunction(output)) {
+    console.log('Before getLambdaOptionsFromFunction 3');
     await writeEdgeFunction(repoRootPath, outputDir, output, path);
+    console.log('After getLambdaOptionsFromFunction 3');
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
