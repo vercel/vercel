@@ -431,7 +431,7 @@ async function getAuthorizationId(
   output.stopSpinner();
 
   if (authorization.status === 'succeeded') {
-    output.print('Payment validation complete.');
+    output.log('Validation complete.');
     return authorization.id;
   }
 
@@ -455,7 +455,7 @@ async function getAuthorizationId(
 
   output.stopSpinner();
 
-  output.print('Payment validation complete.');
+  output.log('Validation complete.');
   return authorization.id;
 }
 

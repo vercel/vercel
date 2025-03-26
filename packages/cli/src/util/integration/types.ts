@@ -114,7 +114,9 @@ export interface MarketplaceBillingAuthorizationState {
   integrationId: string;
   integrationConfigurationId?: string;
   billingPlanId?: string;
+  amountCent: number;
   status: 'pending' | 'requires_action' | 'succeeded' | 'failed';
+  reason?: string;
   paymentIntent?: {
     clientSecret?: string | null;
   };
