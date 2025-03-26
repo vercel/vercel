@@ -267,7 +267,7 @@ async function provisionResourceViaCLI(
     return 1;
   }
 
-  const authorizationReturnCode = await validateAuthorization(
+  const authorizationId = await getAuthorizationId(
     client,
     teamId,
     installation,
@@ -276,18 +276,14 @@ async function provisionResourceViaCLI(
     billingPlan
   );
 
-  if (authorizationReturnCode !== 0) {
-    // something unexpected went wrong
-    return authorizationReturnCode;
-  }
-
   return provisionStorageProduct(
     client,
     product,
     installation,
     name,
     metadata,
-    billingPlan
+    billingPlan,
+    authorizationId
   );
 }
 
@@ -396,18 +392,18 @@ async function confirmProductSelection(
   return client.input.confirm('Confirm selection?', true);
 }
 
-async function validateAuthorization(
+async function getAuthorizationId(
   client: Client,
   teamId: string,
   installation: IntegrationInstallation,
   product: IntegrationProduct,
   metadata: Metadata,
   billingPlan: BillingPlan
-): Promise<number> {
+): Promise<string> {
   output.spinner('Validating payment...', 250);
-
   const originalAuthorizationState = await createAuthorization(
     client,
+    installation.integrationId,
     installation.id,
     product.id,
     billingPlan.id,
@@ -419,7 +415,7 @@ async function validateAuthorization(
     output.error(
       'Error during authorization, failed to get an authorization state.'
     );
-    return 1;
+    throw new Error('Failed to get an authorization state');
   }
 
   let authorization = originalAuthorizationState.authorization;
@@ -436,7 +432,7 @@ async function validateAuthorization(
 
   if (authorization.status === 'succeeded') {
     output.print('Payment validation complete.');
-    return 0;
+    return authorization.id;
   }
 
   output.spinner(
@@ -460,7 +456,7 @@ async function validateAuthorization(
   output.stopSpinner();
 
   output.print('Payment validation complete.');
-  return 0;
+  return authorization.id;
 }
 
 function handleManualVerificationAction(
@@ -483,7 +479,8 @@ async function provisionStorageProduct(
   installation: IntegrationInstallation,
   name: string,
   metadata: Metadata,
-  billingPlan: BillingPlan
+  billingPlan: BillingPlan,
+  authorizationId: string
 ) {
   output.spinner('Provisioning resource...');
   let storeId: string;
@@ -494,7 +491,8 @@ async function provisionStorageProduct(
       product.id,
       billingPlan.id,
       name,
-      metadata
+      metadata,
+      authorizationId
     );
     storeId = result.store.id;
   } catch (error) {

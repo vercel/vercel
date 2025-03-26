@@ -3,6 +3,7 @@ import type { MarketplaceBillingAuthorizationState, Metadata } from './types';
 
 export async function createAuthorization(
   client: Client,
+  integrationIdOrSlug: string,
   installationId: string,
   productId: string,
   billingPlanId: string,
@@ -16,9 +17,10 @@ export async function createAuthorization(
     json: true,
     body: {
       billingPlanId,
+      integrationIdOrSlug,
       integrationConfigurationId: installationId,
       productId,
-      metadata,
+      metadata: JSON.stringify(metadata),
       prepaymentAmountCents,
     },
   });
