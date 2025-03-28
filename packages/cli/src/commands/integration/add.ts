@@ -424,7 +424,7 @@ async function getAuthorizationId(
 
   let authorization = originalAuthorizationState.authorization;
 
-  while (authorization?.status === 'pending') {
+  while (authorization.status === 'pending') {
     await sleep(200);
     authorization = await fetchAuthorization(
       client,
