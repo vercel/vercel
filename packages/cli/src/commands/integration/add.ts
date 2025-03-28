@@ -267,24 +267,29 @@ async function provisionResourceViaCLI(
     return 1;
   }
 
-  const authorizationId = await getAuthorizationId(
-    client,
-    teamId,
-    installation,
-    product,
-    metadata,
-    billingPlan
-  );
+  try {
+    const authorizationId = await getAuthorizationId(
+      client,
+      teamId,
+      installation,
+      product,
+      metadata,
+      billingPlan
+    );
 
-  return provisionStorageProduct(
-    client,
-    product,
-    installation,
-    name,
-    metadata,
-    billingPlan,
-    authorizationId
-  );
+    return provisionStorageProduct(
+      client,
+      product,
+      installation,
+      name,
+      metadata,
+      billingPlan,
+      authorizationId
+    );
+  } catch (error) {
+    output.error((error as Error).message);
+    return 1;
+  }
 }
 
 async function selectProduct(client: Client, integration: Integration) {
@@ -412,10 +417,9 @@ async function getAuthorizationId(
 
   if (!originalAuthorizationState.authorization) {
     output.stopSpinner();
-    output.error(
-      'Error during authorization, failed to get an authorization state.'
+    throw new Error(
+      'Failed to get an authorization state. If the problem persists, please contact support.'
     );
-    throw new Error('Failed to get an authorization state');
   }
 
   let authorization = originalAuthorizationState.authorization;
