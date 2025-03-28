@@ -2,4 +2,4 @@
 '@vercel/next': patch
 ---
 
-Make prerender groups determanistic for client segment caches
+Make prerender groups deterministic for client segment caches
