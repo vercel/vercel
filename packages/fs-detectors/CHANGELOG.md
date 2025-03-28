@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.3.10
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
 ## 5.3.9
 
 ### Patch Changes

@@ -1,5 +1,20 @@
 # vercel
 
+## 41.4.1
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
+- Formatting tweaks to `vc target ls` ([#13161](https://github.com/vercel/vercel/pull/13161))
+
+- Updated dependencies [[`19cbb5e2702da8d43fc48a22ea5bc7262118894f`](https://github.com/vercel/vercel/commit/19cbb5e2702da8d43fc48a22ea5bc7262118894f), [`9c5bcad83a8e8b75bd7371649d1287890f33bb47`](https://github.com/vercel/vercel/commit/9c5bcad83a8e8b75bd7371649d1287890f33bb47), [`6ada3b30626582e9bad11a450a6b79bb387d6d49`](https://github.com/vercel/vercel/commit/6ada3b30626582e9bad11a450a6b79bb387d6d49), [`9caea7ad77fab8b6be9ebae0710d835a79e26eed`](https://github.com/vercel/vercel/commit/9caea7ad77fab8b6be9ebae0710d835a79e26eed)]:
+  - @vercel/next@4.7.4
+  - @vercel/build-utils@10.5.1
+  - @vercel/remix-builder@5.4.3
+  - @vercel/node@5.1.14
+  - @vercel/static-build@2.7.6
+
 ## 41.4.0
 
 ### Minor Changes

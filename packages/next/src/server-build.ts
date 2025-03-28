@@ -104,6 +104,14 @@ const BUNDLED_SERVER_NEXT_VERSION = 'v13.5.4';
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
 
+// Next.js 13.4.6 removed the need for the vary header because it generates a
+// hash of the request headers and adds that to the request URL.
+//
+// See:
+// https://github.com/vercel/next.js/pull/49140
+// https://github.com/vercel/next.js/pull/50970
+const NEXT_VARY_INERT_VERSION = 'v13.4.6';
+
 export async function serverBuild({
   dynamicPages,
   pagesDir,
@@ -216,6 +224,7 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
+  const shouldSkipVaryHeader = semver.gte(nextVersion, NEXT_VARY_INERT_VERSION);
   const projectDir = requiredServerFilesManifest.relativeAppDir
     ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
     : requiredServerFilesManifest.appDir || entryPath;
@@ -1526,6 +1535,7 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    shouldSkipVaryHeader,
   });
 
   await Promise.all(
@@ -2226,7 +2236,9 @@ export async function serverBuild({
                       entryDirectory,
                       `/__index${RSC_PREFETCH_SUFFIX}`
                     ),
-                    headers: { vary: rscVaryHeader },
+                    headers: shouldSkipVaryHeader
+                      ? undefined
+                      : { vary: rscVaryHeader },
                     continue: true,
                     override: true,
                   },
@@ -2247,7 +2259,9 @@ export async function serverBuild({
                       entryDirectory,
                       `/$1${RSC_PREFETCH_SUFFIX}`
                     ),
-                    headers: { vary: rscVaryHeader },
+                    headers: shouldSkipVaryHeader
+                      ? undefined
+                      : { vary: rscVaryHeader },
                     continue: true,
                     override: true,
                   },
@@ -2262,7 +2276,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
-              headers: { vary: rscVaryHeader },
+              headers: shouldSkipVaryHeader
+                ? undefined
+                : { vary: rscVaryHeader },
               continue: true,
               override: true,
             },
@@ -2279,7 +2295,9 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
-              headers: { vary: rscVaryHeader },
+              headers: shouldSkipVaryHeader
+                ? undefined
+                : { vary: rscVaryHeader },
               continue: true,
               override: true,
             },

@@ -20,7 +20,7 @@ export function formatEnvironment(
   );
   return output.link(
     boldName,
-    `${projectUrl}/settings/environments/${environment.id}`,
+    `${projectUrl}/settings/environments/${environment.slug}`,
     { fallback: () => boldName, color: false }
   );
 }
