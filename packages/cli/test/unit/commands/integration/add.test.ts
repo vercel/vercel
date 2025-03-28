@@ -450,7 +450,7 @@ describe('integration', () => {
           );
         });
 
-        it('should require opening the dashboard to complete preauthorization on when automatic preauthorization fails', async () => {
+        it('should exit the process when automatic preauthorization fails', async () => {
           usePreauthorization({ initialStatus: 'failed' });
           client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
@@ -481,17 +481,12 @@ describe('integration', () => {
 
           await expect(client.stderr).toOutput('Validating payment...');
           await expect(client.stderr).toOutput(
-            'Payment validation requires manual action. Please complete the steps in your browser...'
+            'Error: Payment validation failed. Please change your payment method via the web UI and try again.'
           );
-          await expect(client.stderr).toOutput('Validation complete.');
-          await expect(client.stderr).toOutput(
-            'Acme Product successfully provisioned'
-          );
+
           const exitCode = await exitCodePromise;
-          expect(exitCode, 'exit code for "integration"').toEqual(0);
-          expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=auth_1&installationId=acme-install&cmd=authorize'
-          );
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(openMock).not.toHaveBeenCalled();
         });
       });
 
