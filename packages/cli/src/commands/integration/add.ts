@@ -451,7 +451,6 @@ async function getAuthorizationId(
 
   handleManualVerificationAction(
     teamId,
-    installation.id,
     originalAuthorizationState.authorization.id
   );
 
@@ -471,13 +470,11 @@ async function getAuthorizationId(
 
 function handleManualVerificationAction(
   teamId: string,
-  installationId: string,
   authorizationId: string
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
   url.searchParams.set('authorizationId', authorizationId);
-  url.searchParams.set('installationId', installationId);
   url.searchParams.set('cmd', 'authorize');
   output.print('Opening the Vercel Dashboard to continue the installation...');
   open(url.href);
