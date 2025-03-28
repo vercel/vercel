@@ -2865,7 +2865,10 @@ export const onPrerenderRoute =
       ) {
         const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
         if (fs.existsSync(metaPath)) {
-          const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+          // Important that this is a sync read to avoid races where the
+          // prerender group ID would be incremented before the meta file is
+          // read.
+          const meta: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
           if (
             typeof meta === 'object' &&
             meta !== null &&
@@ -2941,7 +2944,7 @@ export const onPrerenderRoute =
         prerenders[prefetchRscKey] = dummyOutput;
       }
 
-      ++prerenderGroup;
+      prerenderGroup++;
 
       if (routesManifest?.i18n && isBlocking) {
         for (const locale of routesManifest.i18n.locales) {
@@ -2985,7 +2988,7 @@ export const onPrerenderRoute =
               group: prerenderGroup,
             } as Prerender;
           }
-          ++prerenderGroup;
+          prerenderGroup++;
         }
       }
     }
