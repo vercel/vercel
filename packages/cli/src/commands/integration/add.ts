@@ -439,6 +439,12 @@ async function getAuthorizationId(
     return authorization.id;
   }
 
+  if (authorization.status === 'failed') {
+    throw new Error(
+      'Payment validation failed. Please change your payment method via the web UI and try again.'
+    );
+  }
+
   output.spinner(
     'Payment validation requires manual action. Please complete the steps in your browser...'
   );
