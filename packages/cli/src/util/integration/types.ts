@@ -105,3 +105,27 @@ export interface BillingPlan {
   }[];
   disabled?: boolean;
 }
+
+export interface InstallationBalancesAndThresholds {
+  ownerId: string;
+  installationId: string;
+  balances: CreditWithAmount[];
+  thresholds: PrepaymentCreditThreshold[];
+}
+
+export interface CreditWithAmount {
+  resourceId?: string;
+  timestamp: string;
+  credit?: string;
+  nameLabel?: string;
+  currencyValueInCents: number;
+}
+
+export interface PrepaymentCreditThreshold {
+  resourceId?: string;
+  minimumAmountInCents: number;
+  billingPlanId: string;
+  metadata?: string;
+  purchaseAmountInCents: number;
+  maximumAmountPerPeriodInCents?: number;
+}

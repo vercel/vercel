@@ -8,8 +8,10 @@ import getSubcommand from '../../util/get-subcommand';
 import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 import { type Command, help } from '../help';
 import { add } from './add';
+import { balance } from './balance';
 import {
   addSubcommand,
+  balanceSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -23,6 +25,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
 
@@ -82,6 +85,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
+    }
+    case 'balance': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(balanceSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandBalance(subcommandOriginal);
+      return balance(client, subArgs);
     }
     case 'open': {
       if (needHelp) {
