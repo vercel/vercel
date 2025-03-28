@@ -446,7 +446,7 @@ describe('integration', () => {
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=auth_1&installationId=acme-install&cmd=authorize'
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=auth_1&cmd=authorize'
           );
         });
 
