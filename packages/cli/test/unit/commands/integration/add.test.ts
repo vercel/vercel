@@ -301,7 +301,7 @@ describe('integration', () => {
           client.stdin.write('y\n');
 
           await expect(client.stderr).toOutput('Validating payment...');
-          await expect(client.stderr).toOutput('Payment validation complete.');
+          await expect(client.stderr).toOutput('Validation complete.');
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
@@ -397,7 +397,7 @@ describe('integration', () => {
           client.stdin.write('y\n');
 
           await expect(client.stderr).toOutput('Validating payment...');
-          await expect(client.stderr).toOutput('Payment validation complete.');
+          await expect(client.stderr).toOutput('Validation complete.');
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
@@ -439,7 +439,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Payment validation requires manual action. Please complete the steps in your browser...'
           );
-          await expect(client.stderr).toOutput('Payment validation complete.');
+          await expect(client.stderr).toOutput('Validation complete.');
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
@@ -483,7 +483,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Payment validation requires manual action. Please complete the steps in your browser...'
           );
-          await expect(client.stderr).toOutput('Payment validation complete.');
+          await expect(client.stderr).toOutput('Validation complete.');
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
