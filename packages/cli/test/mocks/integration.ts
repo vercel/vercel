@@ -467,6 +467,7 @@ const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
     ownerId: 'team_dummy',
     integrationId: 'acme',
     status: 'succeeded',
+    amountCent: 100,
     createdAt: 1,
     updatedAt: 1,
   },
