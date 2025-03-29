@@ -1,5 +1,6 @@
 export interface Resource {
   id: string;
+  externalResourceId: string;
   type: string;
   name: string;
   status?: string | null;
