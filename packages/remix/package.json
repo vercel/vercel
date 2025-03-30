@@ -38,6 +38,6 @@
     "jest-junit": "16.0.0",
     "path-to-regexp": "6.3.0",
     "semver": "7.5.2",
-    "vitest": "2.0.1"
+    "vitest": "2.1.9"
   }
 }
