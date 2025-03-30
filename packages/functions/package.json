@@ -27,7 +27,7 @@
     "typedoc-plugin-markdown": "4.1.2",
     "typedoc-plugin-mdn-links": "3.2.3",
     "typescript": "4.9.5",
-    "vitest": "2.0.1"
+    "vitest": "2.1.9"
   },
   "peerDependencies": {
     "@aws-sdk/credential-provider-web-identity": "*"
