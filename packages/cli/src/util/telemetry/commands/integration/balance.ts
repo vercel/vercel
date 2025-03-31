@@ -6,7 +6,7 @@ export class IntegrationBalanceTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof balanceSubcommand>
 {
-  trackCliArgumentName(v: string | undefined, known?: boolean) {
+  trackCliArgumentIntegration(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliArgument({
         arg: 'name',

@@ -95,7 +95,10 @@ async function getBalanceInstallationId(
     output.error(`Failed to fetch installations: ${(error as Error).message}`);
     return;
   } finally {
-    telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
+    telemetry.trackCliArgumentIntegration(
+      integrationSlug,
+      knownIntegrationSlug
+    );
   }
 }
 

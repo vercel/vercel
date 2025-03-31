@@ -102,7 +102,7 @@ export const balanceSubcommand = {
     'Shows the balances and thresholds of specified marketplace integration',
   arguments: [
     {
-      name: 'name',
+      name: 'integration',
       required: true,
     },
   ],
