@@ -670,7 +670,7 @@ async function doBuild(
           .child('vc.builder.writeBuildResult', {
             buildOutputLength: String(buildOutputLength),
           })
-          .trace<Promise<Record<string, PathOverride> | undefined | void>>(() =>
+          .trace<Record<string, PathOverride> | undefined | void>(() =>
             writeBuildResult(
               repoRootPath,
               outputDir,
@@ -682,7 +682,7 @@ async function doBuild(
             )
           )
           .then(
-            (override: PathOverride | undefined) => {
+            (override: Record<string, PathOverride> | undefined | void) => {
               if (override) overrides.push(override);
             },
             (err: Error) => err
