@@ -44,21 +44,6 @@ describe('integration', () => {
         useResources();
       });
 
-      // it("should track subcommand usage", async () => {
-      //   usePrepayment("acme-prepayment");
-      // 	client.setArgv("integration", "balance", "acme-prepayment");
-      // 	const exitCode = await integrationCommand(client);
-      // 	expect(exitCode, 'exit code for "integration"').toEqual(0);
-
-      // 	expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      // 		{
-      // 			key: "subcommand:balance",
-      // 			value: "balance",
-      //       teamId: "NO_TEAM_ID",
-      // 		},
-      // 	]);
-      // });
-
       describe('[integration]', () => {
         beforeEach(() => {});
 
