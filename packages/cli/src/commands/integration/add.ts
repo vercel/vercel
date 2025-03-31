@@ -162,7 +162,7 @@ export async function add(client: Client, args: string[]) {
     return 0;
   }
 
-  return provisionResourceViaCLI(
+  return await provisionResourceViaCLI(
     client,
     team.id,
     integration,
@@ -277,7 +277,7 @@ async function provisionResourceViaCLI(
       billingPlan
     );
 
-    return provisionStorageProduct(
+    return await provisionStorageProduct(
       client,
       product,
       installation,
