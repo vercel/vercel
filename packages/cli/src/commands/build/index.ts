@@ -657,22 +657,36 @@ async function doBuild(
       // all builds have completed
       buildResults.set(build, buildResult);
 
+      let buildOutputLength = 0;
+      if ('output' in buildResult) {
+        buildOutputLength = Array.isArray(buildResult.output)
+          ? buildResult.output.length
+          : 1;
+      }
+
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
-        writeBuildResult(
-          repoRootPath,
-          outputDir,
-          buildResult,
-          build,
-          builder,
-          builderPkg,
-          localConfig
-        ).then(
-          override => {
-            if (override) overrides.push(override);
-          },
-          err => err
-        )
+        builderSpan
+          .child('vc.builder.writeBuildResult', {
+            buildOutputLength: String(buildOutputLength),
+          })
+          .trace<Record<string, PathOverride> | undefined | void>(() =>
+            writeBuildResult(
+              repoRootPath,
+              outputDir,
+              buildResult,
+              build,
+              builder,
+              builderPkg,
+              localConfig
+            )
+          )
+          .then(
+            (override: Record<string, PathOverride> | undefined | void) => {
+              if (override) overrides.push(override);
+            },
+            (err: Error) => err
+          )
       );
     } catch (err: any) {
       const buildJsonBuild = buildsJsonBuilds.get(build);
