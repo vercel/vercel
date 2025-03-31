@@ -462,11 +462,20 @@ const resources: { stores: Resource[] } = {
 };
 
 const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
-  auth_1: {
-    id: 'auth_1',
+  'success-case': {
+    id: 'success-case',
     ownerId: 'team_dummy',
     integrationId: 'acme',
     status: 'succeeded',
+    amountCent: 100,
+    createdAt: 1,
+    updatedAt: 1,
+  },
+  'failure-case': {
+    id: 'failure-case',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'failed',
     amountCent: 100,
     createdAt: 1,
     updatedAt: 1,
@@ -511,13 +520,15 @@ export function useConfiguration() {
 }
 
 export function usePreauthorization(opts?: {
+  id?: MarketplaceBillingAuthorizationState['id'];
   initialStatus?: MarketplaceBillingAuthorizationState['status'];
 }) {
   client.scenario.post('/v1/integrations/billing/authorization', (req, res) => {
+    const authorization = authorizations[opts?.id ?? 'success-case'];
     res.json({
       authorization: {
-        ...authorizations.auth_1,
-        status: opts?.initialStatus ?? 'succeeded',
+        ...authorization,
+        status: opts?.initialStatus ?? authorization.status,
       },
     });
     res.end();
@@ -527,8 +538,7 @@ export function usePreauthorization(opts?: {
     '/v1/integrations/billing/authorization/:authorizationId',
     (req, res) => {
       const { authorizationId } = req.params;
-      const authorization =
-        authorizations[authorizationId ?? 'authorization-no-results'];
+      const authorization = authorizations[authorizationId ?? 'success-case'];
       res.json(authorization);
       res.end();
     }

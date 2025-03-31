@@ -446,12 +446,12 @@ describe('integration', () => {
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(0);
           expect(openMock).toHaveBeenCalledWith(
-            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=auth_1&cmd=authorize'
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=success-case&cmd=authorize'
           );
         });
 
         it('should exit the process when automatic preauthorization fails', async () => {
-          usePreauthorization({ initialStatus: 'failed' });
+          usePreauthorization({ id: 'failure-case' });
           client.setArgv('integration', 'add', 'acme');
           const exitCodePromise = integrationCommand(client);
           await expect(client.stderr).toOutput(
@@ -487,6 +487,53 @@ describe('integration', () => {
           const exitCode = await exitCodePromise;
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           expect(openMock).not.toHaveBeenCalled();
+        });
+
+        it('should exit the process when required action preauthorization fails', async () => {
+          usePreauthorization({
+            id: 'failure-case',
+            initialStatus: 'requires_action',
+          });
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: test-resource
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput(
+            'Payment validation requires manual action. Please complete the steps in your browser...'
+          );
+          await expect(client.stderr).toOutput(
+            'Error: Payment validation failed. Please change your payment method via the web UI and try again.'
+          );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=failure-case&cmd=authorize'
+          );
         });
       });
 
