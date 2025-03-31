@@ -667,8 +667,10 @@ async function doBuild(
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
         builderSpan
-          .child('vc.builder.writeBuildResult', { buildOutputLength })
-          .trace<Record<string, PathOverride> | undefined>(() =>
+          .child('vc.builder.writeBuildResult', {
+            buildOutputLength: String(buildOutputLength),
+          })
+          .trace<Promise<Record<string, PathOverride> | undefined | void>>(() =>
             writeBuildResult(
               repoRootPath,
               outputDir,
