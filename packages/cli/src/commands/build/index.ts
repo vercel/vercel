@@ -657,10 +657,17 @@ async function doBuild(
       // all builds have completed
       buildResults.set(build, buildResult);
 
+      let buildOutputLength = 0;
+      if ('output' in buildResult) {
+        buildOutputLength = Array.isArray(buildResult.output)
+          ? buildResult.output.length
+          : 1;
+      }
+
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
         builderSpan
-          .child('vc.builder.writeBuildResult')
+          .child('vc.builder.writeBuildResult', { buildOutputLength })
           .trace<Record<string, PathOverride> | undefined>(() =>
             writeBuildResult(
               repoRootPath,
