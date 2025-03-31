@@ -3066,6 +3066,7 @@ export async function getStaticFiles(
   }
 
   console.timeEnd(collectLabel);
+  console.log('After getStaticFiles');
   return {
     staticFiles,
     staticDirectoryFiles,

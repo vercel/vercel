@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
@@ -603,6 +605,8 @@ async function doBuild(
           () => builder.build(buildOptions)
         );
 
+        console.log('After build 1');
+
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
         if (
@@ -615,11 +619,14 @@ async function doBuild(
             f => f.slug === buildConfig.framework
           );
           if (framework) {
+            console.log('getFrameworkRoutes before');
             const defaultRoutes = await getFrameworkRoutes(framework, workPath);
+            console.log('getFrameworkRoutes after');
             buildResult.routes = defaultRoutes;
           }
         }
       } finally {
+        console.log('After build 2');
         // Make sure we don't fail the build
         try {
           const builderDiagnostics = await builderSpan
@@ -669,6 +676,7 @@ async function doBuild(
           localConfig
         ).then(
           override => {
+            console.log('write build result');
             if (override) overrides.push(override);
           },
           err => err
@@ -683,20 +691,24 @@ async function doBuild(
     } finally {
       ops.push(
         download(diagnostics, join(outputDir, 'diagnostics')).then(
-          () => undefined,
+          () => console.log('donwload'),
           err => err
         )
       );
     }
   }
 
+  console.log('After build 3');
+
   if (corepackShimDir) {
     cleanupCorepack(corepackShimDir);
+    console.log('After build 3 - cleanup corepack');
   }
 
   // Wait for filesystem operations to complete
   // TODO render progress bar?
   const errors = await Promise.all(ops);
+  console.log('After build 3 - ops wait');
   for (const error of errors) {
     if (error) {
       throw error;
@@ -707,6 +719,7 @@ async function doBuild(
   const speedInsightsVersion = await getInstalledPackageVersion(
     '@vercel/speed-insights'
   );
+  console.log('After build 3 - ops install packageversion');
   if (speedInsightsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -716,6 +729,7 @@ async function doBuild(
   }
   const webAnalyticsVersion =
     await getInstalledPackageVersion('@vercel/analytics');
+  console.log('After build 3 - analytics');
   if (webAnalyticsVersion) {
     buildsJson.features = {
       ...(buildsJson.features ?? {}),
@@ -725,11 +739,13 @@ async function doBuild(
   }
   if (needBuildsJsonOverride) {
     await writeBuildJson(buildsJson, outputDir);
+    console.log('After build 3 - write build json');
   }
 
   // Merge existing `config.json` file into the one that will be produced
   const configPath = join(outputDir, 'config.json');
   const existingConfig = await readJSONFile<BuildOutputConfig>(configPath);
+  console.log('After build 3 - read json');
   if (existingConfig instanceof CantParseJSONFile) {
     throw existingConfig;
   }
@@ -746,6 +762,8 @@ async function doBuild(
       }
     }
   }
+
+  console.log('After build 4');
 
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
     buildResults.entries()
@@ -778,6 +796,7 @@ async function doBuild(
 
   const framework = await getFramework(workPath, buildResults);
 
+  console.log('After build 5');
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
   const config: BuildOutputConfig = {
@@ -802,6 +821,8 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+
+  console.log('After build 6');
 }
 
 async function getFramework(
