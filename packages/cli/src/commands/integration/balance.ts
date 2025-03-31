@@ -39,62 +39,120 @@ export async function balance(client: Client, args: string[]) {
     return 1;
   }
 
-  output.spinner('Retrieving balance details...', 500);
+  const installationId = await getBalanceInstallationId(
+    client,
+    integrationSlug,
+    telemetry
+  );
+  if (installationId === undefined) {
+    return 1;
+  }
 
+  const resources = await getResourcesForInstallation(
+    client,
+    installationId,
+    team
+  );
+  if (resources === undefined) {
+    return 1;
+  }
+
+  const prepaymentInfo = await getBalanceInformation(
+    client,
+    installationId,
+    team
+  );
+  if (prepaymentInfo === undefined) {
+    return 1;
+  }
+
+  outputBalanceInformation(prepaymentInfo, resources, integrationSlug);
+}
+
+async function getBalanceInstallationId(
+  client: Client,
+  integrationSlug: string,
+  telemetry: IntegrationBalanceTelemetryClient
+) {
   let knownIntegrationSlug = false;
-  let installationId: string | undefined;
+  output.spinner('Retrieving installation...', 500);
   try {
     const installations = await fetchMarketplaceIntegrations(
       client,
       integrationSlug
     );
-    if (installations.length === 0) {
+
+    if (installations.length === 0 || !installations[0].id) {
       output.stopSpinner();
       output.error('No installations found for this integration');
-      return 1;
+      return;
     }
-    installationId = installations[0].id;
-    if (!installationId) {
-      output.stopSpinner();
-      output.error('No marketplace installation found for this integration');
-      return 1;
-    }
+
     knownIntegrationSlug = true;
+    return installations[0].id;
   } catch (error) {
     output.stopSpinner();
     output.error(`Failed to fetch installations: ${(error as Error).message}`);
-    return 1;
+    return;
   } finally {
     telemetry.trackCliArgumentName(integrationSlug, knownIntegrationSlug);
   }
+}
 
-  let resources: Resource[] | undefined;
+async function getResourcesForInstallation(
+  client: Client,
+  installationId: string,
+  team: { id: string }
+) {
+  output.spinner('Retrieving resources...', 500);
   try {
-    resources = (await getResources(client, team.id)).filter(
+    const resources = (await getResources(client, team.id)).filter(
       resource =>
         resource.product?.integrationConfigurationId === installationId
     );
+
+    output.stopSpinner();
+    return resources;
   } catch (error) {
     output.stopSpinner();
     output.error(`Failed to fetch resources: ${(error as Error).message}`);
-    return 1;
+    return;
   }
+}
 
-  let prepaymentInfo: InstallationBalancesAndThresholds;
+async function getBalanceInformation(
+  client: Client,
+  installationId: string,
+  team: { id: string }
+) {
+  output.spinner('Retrieving balance info...', 500);
   try {
-    prepaymentInfo = await fetchInstallationPrepaymentInfo(
+    const prepaymentInfo = await fetchInstallationPrepaymentInfo(
       client,
       team.id,
       installationId
     );
+
+    output.stopSpinner();
+
+    if (!prepaymentInfo) {
+      output.error('No balance information found for this integration');
+      return;
+    }
+
+    return prepaymentInfo;
   } catch (error) {
     output.stopSpinner();
-    output.error(`Failed to fetch payment info: ${(error as Error).message}`);
-    return 1;
+    output.error(`Failed to fetch balance info: ${(error as Error).message}`);
+    return;
   }
+}
 
-  output.stopSpinner();
-
+function outputBalanceInformation(
+  prepaymentInfo: InstallationBalancesAndThresholds,
+  resources: Resource[],
+  integrationSlug: string
+) {
   const hasBalances = prepaymentInfo.balances.length > 0;
   const hasThresholds = prepaymentInfo.thresholds.length > 0;
 
