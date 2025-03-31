@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { fetchInstallationPrepaymentInfo } from '../../util/integration/fetch-installation-prepayment-info';
-import { fetchMarketplaceIntegrations } from '../../util/integration/fetch-marketplace-integrations';
+import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import type {
   CreditWithAmount,
   InstallationBalancesAndThresholds,
@@ -39,14 +39,15 @@ export async function balance(client: Client, args: string[]) {
     return 1;
   }
 
-  const installationId = await getBalanceInstallationId(
+  const installation = await getBalanceInstallationId(
     client,
     integrationSlug,
     telemetry
   );
-  if (installationId === undefined) {
+  if (installation === undefined) {
     return 1;
   }
+  const installationId = installation.id;
 
   const resources = await getResourcesForInstallation(
     client,
@@ -67,6 +68,8 @@ export async function balance(client: Client, args: string[]) {
   }
 
   outputBalanceInformation(prepaymentInfo, resources, integrationSlug);
+
+  return 0;
 }
 
 async function getBalanceInstallationId(
@@ -75,21 +78,18 @@ async function getBalanceInstallationId(
   telemetry: IntegrationBalanceTelemetryClient
 ) {
   let knownIntegrationSlug = false;
-  output.spinner('Retrieving installation...', 500);
+  output.spinner('Retrieving installation…', 500);
   try {
-    const installations = await fetchMarketplaceIntegrations(
-      client,
-      integrationSlug
-    );
+    const installation = await getFirstConfiguration(client, integrationSlug);
 
-    if (installations.length === 0 || !installations[0].id) {
+    if (!installation) {
       output.stopSpinner();
       output.error('No installations found for this integration');
       return;
     }
 
     knownIntegrationSlug = true;
-    return installations[0].id;
+    return installation;
   } catch (error) {
     output.stopSpinner();
     output.error(`Failed to fetch installations: ${(error as Error).message}`);
@@ -104,7 +104,7 @@ async function getResourcesForInstallation(
   installationId: string,
   team: { id: string }
 ) {
-  output.spinner('Retrieving resources...', 500);
+  output.spinner('Retrieving resources…', 500);
   try {
     const resources = (await getResources(client, team.id)).filter(
       resource =>
@@ -125,7 +125,7 @@ async function getBalanceInformation(
   installationId: string,
   team: { id: string }
 ) {
-  output.spinner('Retrieving balance info...', 500);
+  output.spinner('Retrieving balance info…', 500);
   try {
     const prepaymentInfo = await fetchInstallationPrepaymentInfo(
       client,
@@ -214,7 +214,7 @@ function outputBalanceInformation(
     }
     if (threshold) {
       output.log(
-        `    Threshold: Purchase ${formattedCurrency(threshold.purchaseAmountInCents)} worth of credits if balance goes below ${formattedCurrency(threshold.minimumAmountInCents)}`
+        `    Threshold: Spend ${formattedCurrency(threshold.purchaseAmountInCents)} if balance goes below ${formattedCurrency(threshold.minimumAmountInCents)}`
       );
     }
   }

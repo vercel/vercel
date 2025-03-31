@@ -1,5 +1,6 @@
 import type {
   Configuration,
+  InstallationBalancesAndThresholds,
   Integration,
   MetadataSchema,
 } from '../../src/util/integration/types';
@@ -228,6 +229,21 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-prepayment': {
+    id: 'acme-prepayment',
+    name: 'Acme Prepayment',
+    slug: 'acme-prepayment',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'ai',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-unsupported': {
     id: 'acme',
     name: 'Acme Integration',
@@ -314,6 +330,20 @@ const configurations: Record<string, Configuration[]> = {
       projects: [],
     },
   ],
+  'acme-prepayment': [
+    {
+      id: 'acme-1',
+      integrationId: 'acme-prepayment',
+      ownerId: 'team_dummy',
+      slug: 'acme-prepayment',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
   'acme-no-results': [],
 };
 
@@ -386,6 +416,129 @@ const integrationPlans: Record<string, unknown> = {
         disabled: true,
       },
     ],
+  },
+};
+
+const configurationPrepaymentInformation: Record<
+  string,
+  InstallationBalancesAndThresholds
+> = {
+  'acme-prepayment': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-no-balance': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-no-threshold': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [],
+  },
+  'acme-multiple-balances-and-thresholds': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+      {
+        resourceId: 'store_2',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$12.00',
+        nameLabel: '$',
+        currencyValueInCents: 1200,
+      },
+    ],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+      {
+        resourceId: 'store_2',
+        minimumAmountInCents: 500,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 2000,
+        maximumAmountPerPeriodInCents: 50000,
+      },
+    ],
+  },
+  'acme-prepayment-installation-level': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [
+      {
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-empty': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [],
+    thresholds: [],
   },
 };
 
@@ -500,6 +653,29 @@ export function useConfiguration() {
 
     res.json(foundConfigs);
   });
+}
+
+export function usePrepayment(responseKey: string) {
+  client.scenario.get(
+    '/v1/integrations/installations/:installationId/billing/balance',
+    (req, res) => {
+      if (responseKey === 'error') {
+        res.status(500);
+        res.end();
+        return;
+      }
+
+      const prepaymentInfo = configurationPrepaymentInformation[responseKey];
+
+      if (!prepaymentInfo) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(prepaymentInfo);
+    }
+  );
 }
 
 export function useIntegration({
