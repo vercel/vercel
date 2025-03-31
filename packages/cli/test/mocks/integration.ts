@@ -397,6 +397,7 @@ const resources: { stores: Resource[] } = {
       name: 'foobar',
       status: 'available',
       product: {},
+      externalResourceId: 'ext_store_not_marketplace',
     },
     {
       id: 'store_1',
@@ -412,6 +413,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_1',
     },
     {
       id: 'store_2',
@@ -427,6 +429,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_2',
     },
     {
       id: 'store_3',
@@ -448,6 +451,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_3',
     },
     {
       id: 'store_4',
@@ -456,6 +460,7 @@ const resources: { stores: Resource[] } = {
       status: 'available',
       product: { name: 'Acme', slug: 'acme' },
       projectsMetadata: [],
+      externalResourceId: 'ext_store_4',
     },
   ],
 };
