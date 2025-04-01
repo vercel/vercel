@@ -7,6 +7,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { CONTENTS_PREFIX } from '../../util/env/constants';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -28,8 +29,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
-
-const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
 function readHeadSync(path: string, length: number) {
   const buffer = Buffer.alloc(length);

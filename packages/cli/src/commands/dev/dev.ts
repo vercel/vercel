@@ -10,7 +10,9 @@ import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
+import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { pullEnvRecords } from '../../util/env/get-env-records';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import output from '../../output-manager';
 
 type Options = {
@@ -58,6 +60,7 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
+  let stopRefreshOidcToken = () => {};
   if (link.status === 'linked') {
     const { project, org } = link;
 
@@ -76,6 +79,21 @@ export default async function dev(
 
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
+
+    // Linked environment variables are normally static; however, we want to
+    // refresh VERCEL_OIDC_TOKEN, since it can expire. Therefore, we need to
+    // exclude it from `envValues` passed to DevServer. If we don't, then
+    // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
+    const oidcToken = envValues[VERCEL_OIDC_TOKEN];
+    if (oidcToken) {
+      delete envValues[VERCEL_OIDC_TOKEN];
+      stopRefreshOidcToken = await refreshOidcToken(
+        client,
+        link.project.id,
+        oidcToken,
+        'vercel-cli:dev'
+      );
+    }
   }
 
   const devServer = new DevServer(cwd, {
@@ -85,7 +103,10 @@ export default async function dev(
   });
 
   // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => devServer.stop());
+  process.on('SIGTERM', () => {
+    stopRefreshOidcToken();
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
