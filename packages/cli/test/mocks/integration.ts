@@ -2,6 +2,7 @@ import type {
   Configuration,
   InstallationBalancesAndThresholds,
   Integration,
+  MarketplaceBillingAuthorizationState,
   MetadataSchema,
 } from '../../src/util/integration/types';
 import type { Resource } from '../../src/util/integration-resource/types';
@@ -618,6 +619,27 @@ const resources: { stores: Resource[] } = {
   ],
 };
 
+const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
+  'success-case': {
+    id: 'success-case',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'succeeded',
+    amountCent: 100,
+    createdAt: 1,
+    updatedAt: 1,
+  },
+  'failure-case': {
+    id: 'failure-case',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'failed',
+    amountCent: 100,
+    createdAt: 1,
+    updatedAt: 1,
+  },
+};
+
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
     if (returnError) {
@@ -674,6 +696,32 @@ export function usePrepayment(responseKey: string) {
       }
 
       res.json(prepaymentInfo);
+    }
+  );
+}
+
+export function usePreauthorization(opts?: {
+  id?: MarketplaceBillingAuthorizationState['id'];
+  initialStatus?: MarketplaceBillingAuthorizationState['status'];
+}) {
+  client.scenario.post('/v1/integrations/billing/authorization', (req, res) => {
+    const authorization = authorizations[opts?.id ?? 'success-case'];
+    res.json({
+      authorization: {
+        ...authorization,
+        status: opts?.initialStatus ?? authorization.status,
+      },
+    });
+    res.end();
+  });
+
+  client.scenario.get(
+    '/v1/integrations/billing/authorization/:authorizationId',
+    (req, res) => {
+      const { authorizationId } = req.params;
+      const authorization = authorizations[authorizationId ?? 'success-case'];
+      res.json(authorization);
+      res.end();
     }
   );
 }

@@ -83,6 +83,7 @@ export interface Integration {
 
 export interface IntegrationInstallation {
   id: string;
+  integrationId: string;
   installationType: InstallationType;
   ownerId: string;
 }
@@ -95,6 +96,7 @@ export interface BillingPlan {
   cost?: string;
   description: string;
   paymentMethodRequired: boolean;
+  preauthorizationAmount?: number;
   details: {
     label: string;
     value?: string;
@@ -128,4 +130,20 @@ export interface PrepaymentCreditThreshold {
   metadata?: string;
   purchaseAmountInCents: number;
   maximumAmountPerPeriodInCents?: number;
+}
+
+export interface MarketplaceBillingAuthorizationState {
+  id: string;
+  ownerId: string;
+  integrationId: string;
+  integrationConfigurationId?: string;
+  billingPlanId?: string;
+  amountCent: number;
+  status: 'pending' | 'requires_action' | 'succeeded' | 'failed';
+  reason?: string;
+  paymentIntent?: {
+    clientSecret?: string | null;
+  };
+  createdAt: number;
+  updatedAt: number;
 }
