@@ -1088,6 +1088,18 @@ export type NextPrerenderedRoutes = {
   isLocalePrefixed: boolean;
 };
 
+export async function isTurbopackBuild(
+  outputDirectory: string
+): Promise<boolean> {
+  const isTurbopackBuildFile = path.join(outputDirectory, 'IS_TURBOPACK_BUILD');
+  const isTurbopackBuild: boolean = await fs
+    .access(isTurbopackBuildFile, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+
+  return isTurbopackBuild;
+}
+
 export async function getExportIntent(
   entryPath: string
 ): Promise<false | { trailingSlash: boolean }> {
@@ -3504,6 +3516,7 @@ export async function getMiddlewareBundle({
   prerenderBypassToken,
   nextVersion,
   appPathRoutesManifest,
+  isTurbopackBuildEnabled,
 }: {
   config: Config;
   entryPath: string;
@@ -3513,6 +3526,7 @@ export async function getMiddlewareBundle({
   isCorrectMiddlewareOrder: boolean;
   nextVersion: string;
   appPathRoutesManifest: Record<string, string>;
+  isTurbopackBuildEnabled: boolean;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: ReadonlyMap<string, RouteWithSrc>;
@@ -3640,7 +3654,10 @@ export async function getMiddlewareBundle({
                   slug: 'nextjs',
                   version: nextVersion,
                 },
-                environment: edgeFunction.env,
+                environment: {
+                  ...edgeFunction.env,
+                  ...(isTurbopackBuildEnabled ? { TURBOPACK: '1' } : {}),
+                },
               });
             })(),
             routeMatchers: getRouteMatchers(edgeFunction, routesManifest),
