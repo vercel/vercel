@@ -196,6 +196,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
             try:
                 self.handle_request()
+            except Exception as err:
+                print("error occurred:", err)
             finally:
                 storage.reset(token)
                 send_message({
