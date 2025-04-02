@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.5
+
+### Patch Changes
+
+- Make prerender groups deterministic for client segment caches ([#13205](https://github.com/vercel/vercel/pull/13205))
+
 ## 4.7.4
 
 ### Patch Changes

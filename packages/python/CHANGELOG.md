@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.7.2
+
+### Patch Changes
+
+- Fix bug in WSGI streaming ([#13213](https://github.com/vercel/vercel/pull/13213))
+
 ## 4.7.1
 
 ### Patch Changes
