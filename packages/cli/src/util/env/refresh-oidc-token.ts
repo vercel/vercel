@@ -138,7 +138,7 @@ export async function refreshOidcToken(
     }
 
     // If the OIDC token isn't already expired, patch .env.local.
-    if (oidcToken !== initialOidcToken && expiresAfterMs > 0) {
+    if (oidcToken !== localOidcToken && expiresAfterMs > 0) {
       let result: PatchEnvFileResult | undefined;
 
       try {
