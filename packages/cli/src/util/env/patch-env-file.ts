@@ -7,6 +7,7 @@ import { escapeValue } from './escape-value';
 import { wasCreatedByVercel } from './was-created-by-vercel';
 import { writeEnvFile } from './write-env-file';
 import { addToGitIgnore } from '../link/add-to-gitignore';
+import { buildDeltaString } from './diff-env-files';
 
 async function tryRead(fullPath: string): Promise<string | undefined> {
   try {
@@ -21,6 +22,7 @@ async function tryRead(fullPath: string): Promise<string | undefined> {
 export interface PatchEnvFileResult {
   exists: boolean;
   isGitIgnoreUpdated: boolean;
+  deltaString: string;
 }
 
 /**
@@ -53,7 +55,8 @@ export async function patchEnvFile(
       isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
     }
 
-    return { exists, isGitIgnoreUpdated };
+    const deltaString = buildDeltaString({}, records);
+    return { exists, isGitIgnoreUpdated, deltaString };
   }
 
   let contents = createdByVercel ? ((await tryRead(fullPath)) ?? '') : '';
@@ -66,7 +69,9 @@ export async function patchEnvFile(
     .filter(key => !VARIABLES_TO_IGNORE.includes(key))
     .map(key => [key, escapeValue(records[key])]);
 
-  let shouldWrite = false;
+  const oldEnv: Record<string, string> = {};
+  const newEnv: Record<string, string> = {};
+  let didUpdate = false;
 
   for (const [key, value] of kvs) {
     const regExp = new RegExp(`^ *${key} *= *"(?.*)"? *$`, 'm');
@@ -76,21 +81,25 @@ export async function patchEnvFile(
     if (match?.[1] === value) continue;
 
     const newKv = `${key}="${value}"`;
-    shouldWrite = true;
+    didUpdate = true;
 
     // Case 4.
     const newContents = contents.replace(regExp, newKv);
     if (newContents !== contents) {
       contents = newContents;
+      oldEnv[key] = 'old';
+      newEnv[key] = 'new';
       continue;
     }
 
     // Case 5.
     if (!contents.endsWith('\n')) contents += '\n';
     contents += `${newKv}\n`;
+    newEnv[key] = 'new';
   }
 
-  if (shouldWrite) await outputFile(fullPath, contents);
+  if (didUpdate) await outputFile(fullPath, contents);
 
-  return { exists, isGitIgnoreUpdated };
+  const deltaString = buildDeltaString(oldEnv, newEnv);
+  return { exists, isGitIgnoreUpdated, deltaString };
 }
