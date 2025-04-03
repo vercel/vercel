@@ -708,8 +708,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       tar-fs:
-        specifier: 1.16.3
-        version: 1.16.3
+        specifier: 1.16.4
+        version: 1.16.4
       title:
         specifier: 3.4.1
         version: 3.4.1
@@ -786,8 +786,8 @@ importers:
         specifier: 8.0.1
         version: 8.0.1
       tar-fs:
-        specifier: 1.16.3
-        version: 1.16.3
+        specifier: 1.16.4
+        version: 1.16.4
     devDependencies:
       '@types/async-retry':
         specifier: 1.4.5
@@ -10434,11 +10434,6 @@ packages:
     dependencies:
       once: 1.4.0
 
-  /end-of-stream@1.4.4:
-    resolution: {integrity: sha512-+uw1inIHVPQoaVuHzRyXd21icM+cnt4CzD5rW+NC1wjOUSTOs+Te7FOv7AhN7vS9x/oIyhLP5PR1H+phQAHu5Q==}
-    dependencies:
-      once: 1.4.0
-
   /enhanced-resolve@5.12.0:
     resolution: {integrity: sha512-QHTXI/sZQmko1cbDoNAa3mJ5qhWUUNAq3vR0/YiD379fWQrcfuoX1+HW2S0MTt7XmoPLapdaDKUtelUSPic7hQ==}
     engines: {node: '>=10.13.0'}
@@ -16707,7 +16702,7 @@ packages:
   /pump@3.0.2:
     resolution: {integrity: sha512-tUPXtzlGM8FE3P0ZL6DVs/3P58k9nk8/jZeQCurTJylQA8qFYzHFfhBJkuqyE0FifOsQ0uKWekiZ5g8wtr28cw==}
     dependencies:
-      end-of-stream: 1.4.4
+      end-of-stream: 1.4.1
       once: 1.4.0
 
   /pumpify@1.5.1:
@@ -18078,8 +18073,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /tar-fs@1.16.3:
-    resolution: {integrity: sha512-NvCeXpYx7OsmOh8zIOP/ebG55zZmxLE0etfWRbWok+q2Qo8x/vOR/IJT1taADXPe+jsiu9axDb3X4B+iIgNlKw==}
+  /tar-fs@1.16.4:
+    resolution: {integrity: sha512-u3XczWoYAIVXe5GOKK6+VeWaHjtc47W7hyuTo3+4cNakcCcuDmlkYiiHEsECwTkcI3h1VUgtwBQ54+RvY6cM4w==}
     dependencies:
       chownr: 1.1.4
       mkdirp: 0.5.6
@@ -18111,7 +18106,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       bl: 4.1.0
-      end-of-stream: 1.4.4
+      end-of-stream: 1.4.1
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
