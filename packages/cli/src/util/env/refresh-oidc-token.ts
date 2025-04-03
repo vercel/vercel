@@ -1,5 +1,6 @@
 import { outputFile } from 'fs-extra';
 import { readFile } from 'fs/promises';
+import { decodeJwt } from 'jose';
 import ms from 'ms';
 import { resolve } from 'path';
 import { performance } from 'perf_hooks';
@@ -57,8 +58,8 @@ export async function refreshOidcToken(
 
     const now = clock();
 
-    const exp = getExpFromOidcToken(oidcToken);
-    if (exp === null) {
+    const { exp } = decodeJwt(oidcToken);
+    if (exp === undefined) {
       output.debug(
         `Cannot get "exp" claim from ${VERCEL_OIDC_TOKEN}; will not attempt to refresh it`
       );
@@ -121,35 +122,6 @@ export async function refreshOidcToken(
     controller.abort();
     clearTimeout(timeout);
   };
-}
-
-/**
- * The OIDC token is a JSON Web Token (JWT). Decode the JWT and get its numeric
- * "exp" claim, returning `null` on error.
- */
-function getExpFromOidcToken(oidcToken: string): number | null {
-  const payloadBase64 = oidcToken.split('.')[1];
-  if (!payloadBase64) {
-    return null;
-  }
-
-  let payloadJson: unknown;
-  try {
-    const payloadString = Buffer.from(payloadBase64, 'base64').toString('utf8');
-    payloadJson = JSON.parse(payloadString);
-  } catch (error) {
-    return null;
-  }
-
-  if (typeof payloadJson !== 'object' || payloadJson === null) {
-    return null;
-  }
-
-  if (!('exp' in payloadJson) || typeof payloadJson.exp !== 'number') {
-    return null;
-  }
-
-  return payloadJson.exp;
 }
 
 async function pullEnvValuesUntilSuccessful(
