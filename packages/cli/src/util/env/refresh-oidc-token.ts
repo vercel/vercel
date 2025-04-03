@@ -3,6 +3,7 @@ import { decodeJwt } from 'jose';
 import ms from 'ms';
 import { resolve } from 'path';
 import { performance } from 'perf_hooks';
+import type { Dictionary } from '@vercel/client';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -13,14 +14,42 @@ import {
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
 import stamp from '../../util/output/stamp';
-import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
-import { wasCreatedByVercel } from './was-created-by-vercel';
 import type { DevTelemetryClient } from '../telemetry/commands/dev';
+import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
+import { createEnvObject } from './diff-env-files';
+import { wasCreatedByVercel } from './was-created-by-vercel';
 
 const FILENAME = '.env.local';
-const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
-const THROTTLE_MS = ms('1m');
+
+const REFRESH_BEFORE_EXPIRY_MS = getMs(
+  ms('15m'),
+  process.env.REFRESH_VERCEL_OIDC_TOKEN_BEFORE_EXPIRY_MS
+);
+
+const THROTTLE_MS = getMs(
+  ms('1m'),
+  process.env.REFRESH_VERCEL_OIDC_TOKEN_THROTTLE_MS
+);
+
 const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
+
+function getMs(defaultValue: number, overrideValue?: string): number {
+  if (overrideValue) {
+    const result = ms(overrideValue);
+    if (Number.isFinite(result) && result > 0) return result;
+  }
+  return defaultValue;
+}
+
+export async function safeCreateEnvObject(
+  fullPath: string
+): Promise<Dictionary<string | undefined> | undefined> {
+  try {
+    return await createEnvObject(fullPath);
+  } catch (error) {
+    return undefined;
+  }
+}
 
 export async function refreshOidcToken(
   client: Client,
@@ -42,8 +71,13 @@ export async function refreshOidcToken(
   }
 
   // If the user has OIDC disabled, do nothing.
-  const oidcToken = envValues[VERCEL_OIDC_TOKEN];
-  if (!oidcToken) {
+  const localOidcToken = (await safeCreateEnvObject(fullPath))?.[
+    VERCEL_OIDC_TOKEN
+  ];
+  const remoteOidcToken = envValues[VERCEL_OIDC_TOKEN];
+  const initialOidcToken = localOidcToken ?? remoteOidcToken;
+
+  if (!initialOidcToken) {
     output.debug(`${VERCEL_OIDC_TOKEN} is absent; disabling refreshes`);
     return () => {};
   }
@@ -104,7 +138,7 @@ export async function refreshOidcToken(
     }
 
     // If the OIDC token isn't already expired, patch .env.local.
-    if (expiresAfterMs > 0) {
+    if (oidcToken !== initialOidcToken && expiresAfterMs > 0) {
       let result: PatchEnvFileResult | undefined;
 
       try {
@@ -129,7 +163,7 @@ export async function refreshOidcToken(
       if (result) {
         const { exists, isGitIgnoreUpdated, deltaString } = result;
 
-        output.log('Refreshed VERCEL_OIDC_TOKEN');
+        output.log('Refreshing VERCEL_OIDC_TOKEN');
 
         if (deltaString) output.print('\n' + deltaString);
 
@@ -171,7 +205,7 @@ export async function refreshOidcToken(
     timeout = setTimeout(() => void go(), refreshAfterMs);
   }
 
-  await go(oidcToken);
+  await go(initialOidcToken);
 
   return () => {
     controller.abort();
