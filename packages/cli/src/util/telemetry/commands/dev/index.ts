@@ -46,6 +46,6 @@ export class DevTelemetryClient
   }
 
   trackOidcTokenRefresh(count: number) {
-    this.trackOidcTokenRefresh(count);
+    super.trackOidcTokenRefresh(count);
   }
 }
