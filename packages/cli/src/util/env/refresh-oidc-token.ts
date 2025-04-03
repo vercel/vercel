@@ -13,6 +13,7 @@ import {
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
 import { CONTENTS_PREFIX } from './constants';
+import { wasCreatedByVercel } from './was-created-by-vercel';
 
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
 const THROTTLE_MS = ms('1m');
@@ -185,8 +186,9 @@ async function patchLocalEnv(
   const fullPath = resolve(cwd, filename);
 
   // Case 1.
-  const current = await tryRead(fullPath);
-  if (current === undefined) {
+  const createdByVercel = await wasCreatedByVercel(fullPath);
+  const exists = createdByVercel !== undefined;
+  if (!exists) {
     output.debug(
       `File ${filename} does not exist; creating it and setting ${key}`
     );
@@ -196,7 +198,8 @@ async function patchLocalEnv(
   }
 
   // Case 2.
-  if (!current.startsWith(CONTENTS_PREFIX)) {
+  const current = createdByVercel ? await tryRead(fullPath) : undefined;
+  if (!current?.startsWith(CONTENTS_PREFIX)) {
     output.debug(
       `File ${filename} does not start with "${CONTENTS_PREFIX}"; will not update ${key}`
     );
