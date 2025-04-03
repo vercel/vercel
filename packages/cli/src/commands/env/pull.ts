@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
-import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -16,7 +15,6 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
@@ -29,27 +27,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
-
-function readHeadSync(path: string, length: number) {
-  const buffer = Buffer.alloc(length);
-  const fd = openSync(path, 'r');
-  try {
-    readSync(fd, buffer, 0, buffer.length, null);
-  } finally {
-    closeSync(fd);
-  }
-  return buffer.toString();
-}
-
-function tryReadHeadSync(path: string, length: number) {
-  try {
-    return readHeadSync(path, length);
-  } catch (err: unknown) {
-    if (!isErrnoException(err) || err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-}
+import { wasCreatedByVercel } from '../../util/env/was-created-by-vercel';
 
 const VARIABLES_TO_IGNORE = [
   'VERCEL_ANALYTICS_ID',
@@ -138,10 +116,10 @@ export async function envPullCommandLogic(
   source: EnvRecordsSource
 ) {
   const fullPath = resolve(cwd, filename);
-  const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
-  const exists = typeof head !== 'undefined';
+  const createdByVercel = await wasCreatedByVercel(fullPath);
+  const exists = createdByVercel !== undefined;
 
-  if (head === CONTENTS_PREFIX) {
+  if (createdByVercel) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (
     exists &&
