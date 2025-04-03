@@ -7,6 +7,7 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { CONTENTS_PREFIX } from '../../util/env/constants';
+import { escapeValue } from '../../util/env/escape-value';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -201,12 +202,4 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
-}
-
-function escapeValue(value: string | undefined) {
-  return value
-    ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
-    : '';
 }
