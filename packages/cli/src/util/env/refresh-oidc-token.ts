@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { decodeJwt } from 'jose';
 import ms from 'ms';
 import { resolve } from 'path';
@@ -5,14 +6,17 @@ import { performance } from 'perf_hooks';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
+import stamp from '../../util/output/stamp';
 import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
 import { wasCreatedByVercel } from './was-created-by-vercel';
 
+const FILENAME = '.env.local';
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
 const THROTTLE_MS = ms('1m');
 const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
@@ -23,17 +27,20 @@ export async function refreshOidcToken(
   envValues: Record<string, string>,
   source: EnvRecordsSource
 ): Promise<() => void> {
-  const filename = '.env.local';
-  const fullPath = resolve(client.cwd, filename);
+  const fullPath = resolve(client.cwd, FILENAME);
 
   // If the user has OIDC disabled, do nothing.
   const oidcToken = envValues[VERCEL_OIDC_TOKEN];
   if (!oidcToken) {
+    output.debug(`${VERCEL_OIDC_TOKEN} is absent; disabling refreshes`);
     return () => {};
   }
 
   // If the user is using a custom .env.local file, do nothing.
   if ((await wasCreatedByVercel(fullPath)) === false) {
+    output.debug(
+      `File ${FILENAME} was not created by Vercel; disabling refreshes`
+    );
     return () => {};
   }
 
@@ -46,6 +53,8 @@ export async function refreshOidcToken(
   let timeout: NodeJS.Timeout;
 
   async function go(oidcToken?: string) {
+    const pullStamp = stamp();
+
     // The first time `go` is invoked, `oidcToken` will be defined and so we
     // won't pull environment variables again. We only pull environment
     // variables on subsequent invocations.
@@ -67,9 +76,7 @@ export async function refreshOidcToken(
     }
 
     if (!oidcToken) {
-      output.debug(
-        `${VERCEL_OIDC_TOKEN} is absent from environment variables; will not attempt to refresh it`
-      );
+      output.debug(`${VERCEL_OIDC_TOKEN} is absent; disabling refreshes`);
       return;
     }
 
@@ -77,17 +84,13 @@ export async function refreshOidcToken(
 
     const { exp } = decodeJwt(oidcToken);
     if (exp === undefined) {
-      output.debug(
-        `Cannot get "exp" claim from ${VERCEL_OIDC_TOKEN}; will not attempt to refresh it`
-      );
+      output.debug(`${VERCEL_OIDC_TOKEN} is invalid; disabling refreshes`);
       return;
     }
 
     const expiresAfterMs = exp * 1000 - now;
     if (!Number.isFinite(expiresAfterMs)) {
-      output.debug(
-        `${VERCEL_OIDC_TOKEN} "exp" claim is invalid; will not attempt to refresh it`
-      );
+      output.debug(`${VERCEL_OIDC_TOKEN} is invalid; disabling refreshes`);
       return;
     }
 
@@ -98,23 +101,31 @@ export async function refreshOidcToken(
         result = await patchEnvFile(
           client.cwd,
           link.repoRoot ?? client.cwd,
-          filename,
+          FILENAME,
           {
             [VERCEL_OIDC_TOKEN]: oidcToken,
           }
         );
       } catch (error) {
-        output.debug(`Failed to patch ${VERCEL_OIDC_TOKEN} in ${filename}`);
+        output.debug(`Failed to patch ${VERCEL_OIDC_TOKEN} in ${FILENAME}`);
       }
       if (controller.signal.aborted) {
         return;
       }
       if (result !== undefined) {
-        // TODO(mroberts): Logging.
+        const { exists, isGitIgnoreUpdated } = result;
+        output.print(
+          `${prependEmoji(
+            `${exists ? 'Updated' : 'Created'} ${chalk.bold(FILENAME)} file ${
+              isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
+            } ${chalk.gray(pullStamp())}`,
+            emoji('success')
+          )}\n`
+        );
       }
     } else {
       output.debug(
-        `${VERCEL_OIDC_TOKEN} is already expired; skip writing to ${filename}`
+        `${VERCEL_OIDC_TOKEN} is already expired; skip patching ${FILENAME}`
       );
     }
 
@@ -130,11 +141,11 @@ export async function refreshOidcToken(
 
     if (expiresAfterMs < 0) {
       output.debug(
-        `${VERCEL_OIDC_TOKEN} expired ${Math.abs(expiresAfterMs)} milliseconds ago; attempting to refresh it in ${refreshAfterMs} milliseconds`
+        `${VERCEL_OIDC_TOKEN} expired ${Math.abs(Math.round(expiresAfterMs / 1_000))}s ago; refreshing in ${Math.round(refreshAfterMs / 1_000)}s`
       );
     } else {
       output.debug(
-        `${VERCEL_OIDC_TOKEN} expires in ${expiresAfterMs} milliseconds; will attempt to refresh it in ${refreshAfterMs} milliseconds`
+        `${VERCEL_OIDC_TOKEN} expires in ${Math.round(expiresAfterMs / 1_000)}s; refreshing in ${Math.round(refreshAfterMs / 1_000)}s`
       );
     }
 
@@ -161,7 +172,7 @@ async function pullEnvValuesUntilSuccessful(
       return (await pullEnvRecords(client, projectId, source)).env;
     } catch (error) {
       output.debug(
-        `Failed to download environment variables; trying again in ${ms} milliseconds`
+        `Failed to pull environment; trying again in ${Math.round(ms / 1_000)}s`
       );
       await sleep(ms);
     }
