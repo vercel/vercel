@@ -1,13 +1,10 @@
 import chalk from 'chalk';
-import { outputFile } from 'fs-extra';
 import { resolve } from 'path';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { CONTENTS_PREFIX, VARIABLES_TO_IGNORE } from '../../util/env/constants';
-import { escapeValue } from '../../util/env/escape-value';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -29,6 +26,7 @@ import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
 import { wasCreatedByVercel } from '../../util/env/was-created-by-vercel';
+import { writeEnvFile } from '../../util/env/write-env-file';
 
 export default async function pull(client: Client, argv: string[]) {
   const telemetryClient = new EnvPullTelemetryClient({
@@ -160,16 +158,7 @@ export async function envPullCommandLogic(
     }
   }
 
-  const contents =
-    CONTENTS_PREFIX +
-    Object.keys(records)
-      .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
-      .join('\n') +
-    '\n';
-
-  await outputFile(fullPath, contents, 'utf8');
+  await writeEnvFile(fullPath, records);
 
   if (deltaString) {
     output.print('\n' + deltaString);
