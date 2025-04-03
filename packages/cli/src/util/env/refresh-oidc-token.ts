@@ -29,6 +29,11 @@ export async function refreshOidcToken(
 ): Promise<() => void> {
   const fullPath = resolve(client.cwd, FILENAME);
 
+  // If refreshes are not enabled.
+  if (!process.env.VERCEL_REFRESH_OIDC_TOKEN) {
+    return () => {};
+  }
+
   // If the user has OIDC disabled, do nothing.
   const oidcToken = envValues[VERCEL_OIDC_TOKEN];
   if (!oidcToken) {
