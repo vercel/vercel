@@ -10,7 +10,6 @@ import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
-import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import output from '../../output-manager';
@@ -84,16 +83,12 @@ export default async function dev(
     // refresh VERCEL_OIDC_TOKEN, since it can expire. Therefore, we need to
     // exclude it from `envValues` passed to DevServer. If we don't, then
     // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
-    const oidcToken = envValues[VERCEL_OIDC_TOKEN];
-    if (oidcToken) {
-      delete envValues[VERCEL_OIDC_TOKEN];
-      stopRefreshOidcToken = await refreshOidcToken(
-        client,
-        link.project.id,
-        oidcToken,
-        'vercel-cli:dev'
-      );
-    }
+    stopRefreshOidcToken = await refreshOidcToken(
+      client,
+      link.project.id,
+      envValues,
+      'vercel-cli:dev'
+    );
   }
 
   const devServer = new DevServer(cwd, {

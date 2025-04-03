@@ -12,17 +12,29 @@ import {
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
-import { CONTENTS_PREFIX, VERCEL_OIDC_TOKEN } from './constants';
+import { CONTENTS_PREFIX } from './constants';
 
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
 const THROTTLE_MS = ms('1m');
+const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
 
 export async function refreshOidcToken(
   client: Client,
   projectId: string,
-  oidcToken: string,
+  envValues: Record<string, string>,
   source: EnvRecordsSource
 ): Promise<() => void> {
+  const oidcToken = envValues[VERCEL_OIDC_TOKEN];
+  if (!oidcToken) {
+    return () => {};
+  }
+
+  // Linked environment variables are normally static; however, we want to
+  // refresh VERCEL_OIDC_TOKEN, since it can expire. Therefore, we need to
+  // exclude it from `envValues` passed to DevServer. If we don't, then
+  // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
+  delete envValues[VERCEL_OIDC_TOKEN];
+
   const controller = new AbortController();
   let lastPulledEnvAt: number | undefined;
   let timeout: NodeJS.Timeout;
