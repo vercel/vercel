@@ -74,7 +74,7 @@ export async function patchEnvFile(
   let didUpdate = false;
 
   for (const [key, value] of kvs) {
-    const regExp = new RegExp(`^ *${key} *= *"(?.*)"? *$`, 'm');
+    const regExp = new RegExp(`^ *${key} *= *"?(.*)"? *$`, 'm');
 
     // Case 3.
     const match = contents.match(regExp);

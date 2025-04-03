@@ -116,6 +116,7 @@ export async function refreshOidcToken(
             [VERCEL_OIDC_TOKEN]: oidcToken,
           }
         );
+
         telemetry.trackOidcTokenRefresh(refreshCount);
       } catch (error) {
         output.debug(`Failed to patch ${VERCEL_OIDC_TOKEN} in ${FILENAME}`);
@@ -138,7 +139,7 @@ export async function refreshOidcToken(
               isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
             } ${chalk.gray(pullStamp())}`,
             emoji('success')
-          )}\n`
+          )}\n\n`
         );
       }
     } else {
