@@ -81,10 +81,6 @@ export default async function dev(
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
 
-    // Linked environment variables are normally static; however, we want to
-    // refresh VERCEL_OIDC_TOKEN, since it can expire. Therefore, we need to
-    // exclude it from `envValues` passed to DevServer. If we don't, then
-    // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
     stopRefreshOidcToken = await refreshOidcToken(
       client,
       link,
