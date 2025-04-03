@@ -6,6 +6,7 @@ import { CONTENTS_PREFIX, VARIABLES_TO_IGNORE } from './constants';
 import { escapeValue } from './escape-value';
 import { wasCreatedByVercel } from './was-created-by-vercel';
 import { writeEnvFile } from './write-env-file';
+import { addToGitIgnore } from '../link/add-to-gitignore';
 
 async function tryRead(fullPath: string): Promise<string | undefined> {
   try {
@@ -15,6 +16,11 @@ async function tryRead(fullPath: string): Promise<string | undefined> {
       throw err;
     }
   }
+}
+
+export interface PatchEnvFileResult {
+  exists: boolean;
+  isGitIgnoreUpdated: boolean;
 }
 
 /**
@@ -29,23 +35,31 @@ async function tryRead(fullPath: string): Promise<string | undefined> {
  */
 export async function patchEnvFile(
   cwd: string,
+  rootPath: string,
   filename: string,
   records: Record<string, string>
-): Promise<void> {
+): Promise<PatchEnvFileResult | undefined> {
   const fullPath = resolve(cwd, filename);
   const createdByVercel = await wasCreatedByVercel(fullPath);
   const exists = createdByVercel !== undefined;
+  let isGitIgnoreUpdated = false;
 
   // Case 1.
   if (!exists) {
-    // TODO(mroberts): Update .gitignore.
-    return writeEnvFile(fullPath, records);
+    await writeEnvFile(fullPath, records);
+
+    if (filename === '.env.local') {
+      // See note in src/commands/env/pull.ts.
+      isGitIgnoreUpdated = await addToGitIgnore(rootPath, '.env*.local');
+    }
+
+    return { exists, isGitIgnoreUpdated };
   }
 
   let contents = createdByVercel ? ((await tryRead(fullPath)) ?? '') : '';
 
   // Case 2.
-  if (!contents.startsWith(CONTENTS_PREFIX)) return;
+  if (!contents.startsWith(CONTENTS_PREFIX)) return undefined;
 
   const kvs = Object.keys(records)
     .sort()
@@ -77,4 +91,6 @@ export async function patchEnvFile(
   }
 
   if (shouldWrite) await outputFile(fullPath, contents);
+
+  return { exists, isGitIgnoreUpdated };
 }

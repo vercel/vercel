@@ -1,6 +1,7 @@
 import { decodeJwt } from 'jose';
 import ms from 'ms';
 import { performance } from 'perf_hooks';
+import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import {
@@ -16,7 +17,7 @@ const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
 
 export async function refreshOidcToken(
   client: Client,
-  projectId: string,
+  link: ProjectLinked,
   envValues: Record<string, string>,
   source: EnvRecordsSource
 ): Promise<() => void> {
@@ -46,7 +47,7 @@ export async function refreshOidcToken(
       const envValues = await pullEnvValuesUntilSuccessful(
         controller.signal,
         client,
-        projectId,
+        link.project.id,
         source,
         THROTTLE_MS
       );
@@ -83,11 +84,10 @@ export async function refreshOidcToken(
     }
 
     // If the OIDC token isn't already expired, patch .env.local.
-    // TODO(mroberts): Is this the only file we should care about?
     const filename = '.env.local';
     if (expiresAfterMs > 0) {
       try {
-        await patchEnvFile(client.cwd, filename, {
+        await patchEnvFile(client.cwd, link.repoRoot ?? client.cwd, filename, {
           [VERCEL_OIDC_TOKEN]: oidcToken,
         });
       } catch (error) {

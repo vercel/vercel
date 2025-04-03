@@ -85,7 +85,7 @@ export default async function dev(
     // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
     stopRefreshOidcToken = await refreshOidcToken(
       client,
-      link.project.id,
+      link,
       envValues,
       'vercel-cli:dev'
     );
