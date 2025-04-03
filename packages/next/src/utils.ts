@@ -1037,6 +1037,7 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       routeRegex: string;
       dataRoute: string | null;
+      fallbackRootParams?: string[];
       dataRouteRegex: string | null;
       prefetchDataRoute?: string | null;
       prefetchDataRouteRegex?: string | null;
@@ -1508,6 +1509,7 @@ export async function getPrerenderManifest(
             prefetchDataRouteRegex,
             renderingMode,
             allowHeader,
+            fallbackRootParams,
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
@@ -2736,9 +2738,13 @@ export const onPrerenderRoute =
       // cache key vary based on the route parameters to ensure that we always
       // have a HIT for the fallback page.
       let htmlAllowQuery = allowQuery;
-      if (renderingMode === RenderingMode.PARTIALLY_STATIC && isFallback) {
-        const { fallbackRootParams } =
-          prerenderManifest.fallbackRoutes[routeKey];
+      if (
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        (isFallback || isBlocking)
+      ) {
+        const { fallbackRootParams } = isFallback
+          ? prerenderManifest.fallbackRoutes[routeKey]
+          : prerenderManifest.blockingFallbackRoutes[routeKey];
 
         htmlAllowQuery = fallbackRootParams ?? [];
       }

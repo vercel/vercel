@@ -274,28 +274,24 @@ if 'VERCEL_IPC_PATH' in os.environ:
                             env[key] = wsgi_encoding_dance(value)
                     for k, v in self.headers.items():
                         env['HTTP_' + k.replace('-', '_').upper()] = v
-                    # Response body
-                    body = BytesIO()
 
                     def start_response(status, headers, exc_info=None):
                         self.send_response(int(status.split(' ')[0]))
                         for name, value in headers:
                             self.send_header(name, value)
                         self.end_headers()
-                        return body.write
+                        return self.wfile.write
 
                     # Call the application
                     response = app(env, start_response)
                     try:
                         for data in response:
                             if data:
-                                body.write(data)
+                                self.wfile.write(data)
+                                self.wfile.flush()
                     finally:
                         if hasattr(response, 'close'):
                             response.close()
-                    body = body.getvalue()
-                    self.wfile.write(body)
-                    self.wfile.flush()
         else:
             from urllib.parse import urlparse
             from io import BytesIO

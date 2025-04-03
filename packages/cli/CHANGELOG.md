@@ -1,5 +1,15 @@
 # vercel
 
+## 41.4.2
+
+### Patch Changes
+
+- Add authorization step to cli integration resource creation ([#13192](https://github.com/vercel/vercel/pull/13192))
+  Include default value of hidden metadata properties during resource provisioning
+- Updated dependencies [[`c8d301f78192c33d5a573920059809aade607c2a`](https://github.com/vercel/vercel/commit/c8d301f78192c33d5a573920059809aade607c2a), [`839fb38a007b91b4c5e197fa4bdb2cabb616357d`](https://github.com/vercel/vercel/commit/839fb38a007b91b4c5e197fa4bdb2cabb616357d)]:
+  - @vercel/python@4.7.2
+  - @vercel/next@4.7.5
+
 ## 41.4.1
 
 ### Patch Changes
