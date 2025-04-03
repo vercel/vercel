@@ -1,5 +1,6 @@
 import { decodeJwt } from 'jose';
 import ms from 'ms';
+import { resolve } from 'path';
 import { performance } from 'perf_hooks';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -9,7 +10,8 @@ import {
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
-import { patchEnvFile } from './patch-env-file';
+import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
+import { wasCreatedByVercel } from './was-created-by-vercel';
 
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
 const THROTTLE_MS = ms('1m');
@@ -21,15 +23,22 @@ export async function refreshOidcToken(
   envValues: Record<string, string>,
   source: EnvRecordsSource
 ): Promise<() => void> {
+  const filename = '.env.local';
+  const fullPath = resolve(client.cwd, filename);
+
+  // If the user has OIDC disabled, do nothing.
   const oidcToken = envValues[VERCEL_OIDC_TOKEN];
   if (!oidcToken) {
     return () => {};
   }
 
-  // Linked environment variables are normally static; however, we want to
-  // refresh VERCEL_OIDC_TOKEN, since it can expire. Therefore, we need to
-  // exclude it from `envValues` passed to DevServer. If we don't, then
-  // updating VERCEL_OIDC_TOKEN in .env.local will have no effect.
+  // If the user is using a custom .env.local file, do nothing.
+  if ((await wasCreatedByVercel(fullPath)) === false) {
+    return () => {};
+  }
+
+  // Otherwise, exclude the OIDC token for the `envValues` that will be passed
+  // to DevServer. This ensures we can update them in .env.local.
   delete envValues[VERCEL_OIDC_TOKEN];
 
   const controller = new AbortController();
@@ -42,8 +51,7 @@ export async function refreshOidcToken(
     // variables on subsequent invocations.
     if (!oidcToken) {
       // If we fail to pull environment variables (for example, because we are
-      // temporarily offline), then we will continue trying once every minute
-      // until successful or aborted.
+      // temporarily offline), then we will continue trying until aborted.
       const envValues = await pullEnvValuesUntilSuccessful(
         controller.signal,
         client,
@@ -84,17 +92,25 @@ export async function refreshOidcToken(
     }
 
     // If the OIDC token isn't already expired, patch .env.local.
-    const filename = '.env.local';
     if (expiresAfterMs > 0) {
+      let result: PatchEnvFileResult | undefined;
       try {
-        await patchEnvFile(client.cwd, link.repoRoot ?? client.cwd, filename, {
-          [VERCEL_OIDC_TOKEN]: oidcToken,
-        });
+        result = await patchEnvFile(
+          client.cwd,
+          link.repoRoot ?? client.cwd,
+          filename,
+          {
+            [VERCEL_OIDC_TOKEN]: oidcToken,
+          }
+        );
       } catch (error) {
         output.debug(`Failed to patch ${VERCEL_OIDC_TOKEN} in ${filename}`);
       }
       if (controller.signal.aborted) {
         return;
+      }
+      if (result !== undefined) {
+        // TODO(mroberts): Logging.
       }
     } else {
       output.debug(
@@ -102,10 +118,9 @@ export async function refreshOidcToken(
       );
     }
 
-    // Schedule to refresh the OIDC token shortly before it expires.
+    // Schedule to refresh the OIDC token shortly before it expires, but not
+    // too frequently (wait at least THROTTLE_MS).
     let refreshAfterMs = Math.max(0, expiresAfterMs - REFRESH_BEFORE_EXPIRY_MS);
-
-    // Avoid invoking ourselves too frequently (wait at least one minute).
     if (
       lastPulledEnvAt !== undefined &&
       now + refreshAfterMs - lastPulledEnvAt < THROTTLE_MS
