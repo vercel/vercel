@@ -12,6 +12,7 @@ import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import output from '../../output-manager';
 
 type Options = {
@@ -22,7 +23,8 @@ type Options = {
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: DevTelemetryClient
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -87,7 +89,8 @@ export default async function dev(
       client,
       link,
       envValues,
-      'vercel-cli:dev'
+      'vercel-cli:dev',
+      telemetry
     );
   }
 

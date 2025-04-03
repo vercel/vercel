@@ -15,6 +15,7 @@ import sleep from '../../util/sleep';
 import stamp from '../../util/output/stamp';
 import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
 import { wasCreatedByVercel } from './was-created-by-vercel';
+import type { DevTelemetryClient } from '../telemetry/commands/dev';
 
 const FILENAME = '.env.local';
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
@@ -25,9 +26,14 @@ export async function refreshOidcToken(
   client: Client,
   link: ProjectLinked,
   envValues: Record<string, string>,
-  source: EnvRecordsSource
+  source: EnvRecordsSource,
+  telemetry: DevTelemetryClient
 ): Promise<() => void> {
   const fullPath = resolve(client.cwd, FILENAME);
+  const controller = new AbortController();
+  let lastPulledEnvAt: number | undefined;
+  let refreshCount = 0;
+  let timeout: NodeJS.Timeout;
 
   // If refreshes are not enabled.
   if (!process.env.VERCEL_REFRESH_OIDC_TOKEN) {
@@ -53,10 +59,6 @@ export async function refreshOidcToken(
   // to DevServer. This ensures we can update them in .env.local.
   delete envValues[VERCEL_OIDC_TOKEN];
 
-  const controller = new AbortController();
-  let lastPulledEnvAt: number | undefined;
-  let timeout: NodeJS.Timeout;
-
   async function go(oidcToken?: string) {
     const pullStamp = stamp();
 
@@ -78,6 +80,7 @@ export async function refreshOidcToken(
       }
       oidcToken = envValues[VERCEL_OIDC_TOKEN];
       lastPulledEnvAt = clock();
+      refreshCount++;
     }
 
     if (!oidcToken) {
@@ -111,6 +114,7 @@ export async function refreshOidcToken(
             [VERCEL_OIDC_TOKEN]: oidcToken,
           }
         );
+        telemetry.trackOidcTokenRefresh(refreshCount);
       } catch (error) {
         output.debug(`Failed to patch ${VERCEL_OIDC_TOKEN} in ${FILENAME}`);
       }

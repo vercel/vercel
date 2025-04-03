@@ -44,4 +44,8 @@ export class DevTelemetryClient
       this.trackCliFlag('confirm');
     }
   }
+
+  trackOidcTokenRefresh(count: number) {
+    this.trackOidcTokenRefresh(count);
+  }
 }
