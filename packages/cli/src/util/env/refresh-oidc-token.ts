@@ -16,6 +16,7 @@ import stamp from '../../util/output/stamp';
 import { patchEnvFile, type PatchEnvFileResult } from './patch-env-file';
 import { wasCreatedByVercel } from './was-created-by-vercel';
 import type { DevTelemetryClient } from '../telemetry/commands/dev';
+import { buildDeltaString } from './diff-env-files';
 
 const FILENAME = '.env.local';
 const REFRESH_BEFORE_EXPIRY_MS = ms('15m');
@@ -104,15 +105,14 @@ export async function refreshOidcToken(
 
     // If the OIDC token isn't already expired, patch .env.local.
     if (expiresAfterMs > 0) {
+      const newEnv = { [VERCEL_OIDC_TOKEN]: oidcToken };
       let result: PatchEnvFileResult | undefined;
       try {
         result = await patchEnvFile(
           client.cwd,
           link.repoRoot ?? client.cwd,
           FILENAME,
-          {
-            [VERCEL_OIDC_TOKEN]: oidcToken,
-          }
+          newEnv
         );
         telemetry.trackOidcTokenRefresh(refreshCount);
       } catch (error) {
@@ -122,6 +122,9 @@ export async function refreshOidcToken(
         return;
       }
       if (result !== undefined) {
+        const deltaString = buildDeltaString({}, newEnv);
+        output.print('\n' + deltaString);
+
         const { exists, isGitIgnoreUpdated } = result;
         output.print(
           `${prependEmoji(
