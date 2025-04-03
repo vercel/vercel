@@ -97,6 +97,47 @@ export const disconnectSubcommand = {
   ],
 } as const;
 
+export const createThresholdSubcommand = {
+  name: 'create-threshold',
+  aliases: [],
+  description:
+    'Creates a threshold for a resource (or installation, if the integration uses installation-level thresholds)',
+  arguments: [
+    {
+      name: 'resource',
+      required: true,
+    },
+    {
+      name: 'minimum',
+      required: true,
+    },
+    {
+      name: 'spend',
+      required: true,
+    },
+    {
+      name: 'limit',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when creating a threshold',
+    },
+  ],
+  examples: [
+    {
+      name: 'create threshold',
+      value: [
+        `${packageName} integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]`,
+        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000`,
+        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000 --yes`,
+      ],
+    },
+  ],
+} as const;
+
 export const integrationResourceCommand = {
   name: 'integration-resource',
   aliases: ['ir'],

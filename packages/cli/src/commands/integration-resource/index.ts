@@ -8,16 +8,19 @@ import getSubcommand from '../../util/get-subcommand';
 import { IntegrationResourceTelemetryClient } from '../../util/telemetry/commands/integration-resource';
 import { type Command, help } from '../help';
 import {
+  createThresholdSubcommand,
   disconnectSubcommand,
   integrationResourceCommand,
   removeSubcommand,
 } from './command';
+import { createThreshold } from './create-threshold';
 import { disconnect } from './disconnect';
 import { remove } from './remove-resource';
 
 const COMMAND_CONFIG = {
   remove: getCommandAliases(removeSubcommand),
   disconnect: getCommandAliases(disconnectSubcommand),
+  'create-threshold': getCommandAliases(createThresholdSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -55,6 +58,15 @@ export default async function main(client: Client) {
   }
 
   switch (subcommand) {
+    case 'create-threshold': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
+        printHelp(createThresholdSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandCreateThreshold(subcommandOriginal);
+      return createThreshold(client);
+    }
     case 'remove': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);

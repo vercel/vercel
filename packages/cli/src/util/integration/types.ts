@@ -95,6 +95,9 @@ export interface BillingPlan {
   cost?: string;
   description: string;
   paymentMethodRequired: boolean;
+  preauthorizationAmount?: number;
+  minimumAmount?: string;
+  maximumAmount?: string;
   details: {
     label: string;
     value?: string;

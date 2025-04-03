@@ -1,3 +1,5 @@
+import type { BillingPlan } from '../integration/types';
+
 export interface Resource {
   id: string;
   externalResourceId: string;
@@ -10,6 +12,7 @@ export interface Resource {
     integrationConfigurationId?: string;
   };
   projectsMetadata?: ResourceConnection[];
+  billingPlan?: BillingPlan;
 }
 
 export interface ResourceConnection {
