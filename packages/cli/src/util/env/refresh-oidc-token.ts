@@ -36,7 +36,8 @@ export async function refreshOidcToken(
   let timeout: NodeJS.Timeout;
 
   // If refreshes are not enabled.
-  if (!process.env.VERCEL_REFRESH_OIDC_TOKEN) {
+  if (!process.env.REFRESH_VERCEL_OIDC_TOKEN) {
+    output.debug(`REFRESH_VERCEL_OIDC_TOKEN is not set; disabling refreshes`);
     return () => {};
   }
 
