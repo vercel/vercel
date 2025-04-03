@@ -6,7 +6,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
-import { CONTENTS_PREFIX } from '../../util/env/constants';
+import { CONTENTS_PREFIX, VARIABLES_TO_IGNORE } from '../../util/env/constants';
 import { escapeValue } from '../../util/env/escape-value';
 import {
   type EnvRecordsSource,
@@ -29,12 +29,6 @@ import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
 import { wasCreatedByVercel } from '../../util/env/was-created-by-vercel';
-
-const VARIABLES_TO_IGNORE = [
-  'VERCEL_ANALYTICS_ID',
-  'VERCEL_SPEED_INSIGHTS_ID',
-  'VERCEL_WEB_ANALYTICS_ID',
-];
 
 export default async function pull(client: Client, argv: string[]) {
   const telemetryClient = new EnvPullTelemetryClient({

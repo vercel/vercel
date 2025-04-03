@@ -1,1 +1,7 @@
 export const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
+
+export const VARIABLES_TO_IGNORE = [
+  'VERCEL_ANALYTICS_ID',
+  'VERCEL_SPEED_INSIGHTS_ID',
+  'VERCEL_WEB_ANALYTICS_ID',
+];
