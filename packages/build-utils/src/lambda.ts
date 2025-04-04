@@ -224,7 +224,7 @@ export class Lambda {
   }
 }
 
-const sema = new Sema(10);
+const sema = new Sema(4);
 const mtime = new Date(1540000000000);
 
 /**
