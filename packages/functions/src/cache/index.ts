@@ -13,7 +13,7 @@ export const defaultKeyHashFunction = (key: string) => {
 const defaultNamespaceSeparator = '$';
 
 export const getRuntimeCache = (cacheOptions?: CacheOptions) => {
-  let runtimeCache: RuntimeCache | undefined;
+  let runtimeCache: RuntimeCache;
   if (getContext().cache) {
     runtimeCache = getContext().cache as RuntimeCache;
   } else {
