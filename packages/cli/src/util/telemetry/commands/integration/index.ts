@@ -27,6 +27,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandBalance(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'balance',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
