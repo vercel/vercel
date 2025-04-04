@@ -26,8 +26,6 @@
     "@vercel/error-utils": "2.0.3",
     "@vercel/nft": "0.27.10",
     "@vercel/static-config": "3.0.0",
-    "path-to-regexp-updated": "npm:path-to-regexp@6.3.0",
-    "path-to-regexp": "6.1.0",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
