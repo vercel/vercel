@@ -418,6 +418,75 @@ const integrationPlans: Record<string, unknown> = {
       },
     ],
   },
+  'acme-prepayment': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'prepayment',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description:
+          'Dedicated CPU • 1 GB RAM • 100K MAU • 8 GB database space • 250 GB bandwidth • 100 GB file storage',
+        paymentMethodRequired: true,
+        details: [
+          {
+            label: 'New Project - Micro Compute',
+            value: '$10/m',
+          },
+          {
+            label: 'Pro Plan',
+            value: '$25/m',
+          },
+          {
+            label: 'Compute Credits',
+            value: '-$10/m',
+          },
+        ],
+        highlightedDetails: [],
+      },
+      {
+        id: 'team',
+        type: 'prepayment',
+        name: 'Team Plan',
+        scope: 'installation',
+        description:
+          'SOC2 • SSO for Supabase Dashboard • Priority email support & SLAs • 28-day log retention',
+        paymentMethodRequired: true,
+        details: [
+          {
+            label: 'New Project - Micro Compute',
+            value: '$10/m',
+          },
+          {
+            label: 'Team Plan',
+            value: '$599/m',
+          },
+          {
+            label: 'Compute Credits',
+            value: '-$10/m',
+          },
+        ],
+        highlightedDetails: [],
+      },
+      {
+        id: 'free',
+        type: 'subscription',
+        name: 'Free Plan',
+        scope: 'installation',
+        description:
+          'Unlimited API requests • Shared CPU • 500 MB RAM • 50K MAU • 500 MB database space • 5 GB bandwidth • 1 GB file storage',
+        paymentMethodRequired: false,
+        details: [],
+        highlightedDetails: [
+          {
+            label:
+              'Unavailable - The following members have reached their 2 project Free Plan limit: luka.hartwig@vercel.com. All active projects in Free Plan organizations count towards this limit.',
+          },
+        ],
+        disabled: true,
+      },
+    ],
+  },
 };
 
 const configurationPrepaymentInformation: Record<
