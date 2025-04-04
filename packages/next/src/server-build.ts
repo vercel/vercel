@@ -1362,6 +1362,9 @@ export async function serverBuild({
       };
       const operationType = getOperationType({ group, prerenderManifest });
 
+      const isTurbopackBuildEnabled =
+        requiredServerFilesManifest.config.experimental.isTurbopackBuild;
+
       const options: CreateLambdaFromPseudoLayersOptions = {
         files: {
           ...launcherFiles,
@@ -1379,6 +1382,11 @@ export async function serverBuild({
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
+        environment: isTurbopackBuildEnabled
+          ? {
+              TURBOPACK: '1',
+            }
+          : {},
       };
 
       // the app _not-found output should always be included
@@ -1615,6 +1623,7 @@ export async function serverBuild({
     prerenderBypassToken: prerenderManifest.bypassToken || '',
     nextVersion,
     appPathRoutesManifest: appPathRoutesManifest || {},
+    isTurbopackBuildEnabled,
   });
 
   const isNextDataServerResolving =
