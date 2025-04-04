@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import { fetchInstallationPrepaymentInfo } from '../../util/integration/fetch-installation-prepayment-info';
+import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import type {
   CreditWithAmount,
@@ -119,34 +119,6 @@ async function getResourcesForInstallation(
   } catch (error) {
     output.stopSpinner();
     output.error(`Failed to fetch resources: ${(error as Error).message}`);
-    return;
-  }
-}
-
-async function getBalanceInformation(
-  client: Client,
-  installationId: string,
-  team: { id: string }
-) {
-  output.spinner('Retrieving balance info…', 500);
-  try {
-    const prepaymentInfo = await fetchInstallationPrepaymentInfo(
-      client,
-      team.id,
-      installationId
-    );
-
-    output.stopSpinner();
-
-    if (!prepaymentInfo) {
-      output.error('No balance information found for this integration');
-      return;
-    }
-
-    return prepaymentInfo;
-  } catch (error) {
-    output.stopSpinner();
-    output.error(`Failed to fetch balance info: ${(error as Error).message}`);
     return;
   }
 }
