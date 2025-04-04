@@ -742,15 +742,17 @@ export async function serverBuild({
           requiredFiles[path.relative(baseDir, static404File.fsPath)] =
             static404File;
         }
-      } else {
-        const static404File =
-          staticPages[static404Page] ||
-          new FileFsRef({
-            fsPath: path.join(pagesDir, '/404.html'),
-          });
-        requiredFiles[path.relative(baseDir, static404File.fsPath)] =
-          static404File;
       }
+      // Regardless of the i18n config, we also need to include the top level 404 page
+      // as this is used by app router, when i18n is enabled
+      const static404File =
+        staticPages[static404Page] ||
+        new FileFsRef({
+          fsPath: path.join(pagesDir, '/404.html'),
+        });
+
+      requiredFiles[path.relative(baseDir, static404File.fsPath)] =
+        static404File;
     }
 
     // TODO: move this into Next.js' required server files manifest
@@ -1270,6 +1272,12 @@ export async function serverBuild({
               break;
             }
             case 'server/pages-manifest.json': {
+              // if we're using app router, pages router, and i18n
+              if (i18n && appDir) {
+                for (const locale of i18n.locales) {
+                  manifestData[`/${locale}/404`] = 'pages/404.html';
+                }
+              }
               for (const key of Object.keys(manifestData)) {
                 if (isDynamicRoute(key) && !normalizedPages.has(key)) {
                   delete manifestData[key];
