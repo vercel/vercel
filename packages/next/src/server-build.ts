@@ -116,7 +116,6 @@ export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
-  isTurbopackBuildEnabled,
   functionsConfigManifest,
   privateOutputs,
   baseDir,
@@ -161,7 +160,6 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
-  isTurbopackBuildEnabled: boolean;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
@@ -1363,6 +1361,9 @@ export async function serverBuild({
           new FileBlob({ data: launcherData }),
       };
       const operationType = getOperationType({ group, prerenderManifest });
+
+      const isTurbopackBuildEnabled =
+        requiredServerFilesManifest.config.experimental.isTurbopackBuild;
 
       const options: CreateLambdaFromPseudoLayersOptions = {
         files: {

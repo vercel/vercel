@@ -1088,18 +1088,6 @@ export type NextPrerenderedRoutes = {
   isLocalePrefixed: boolean;
 };
 
-export async function isTurbopackBuild(
-  outputDirectory: string
-): Promise<boolean> {
-  const isTurbopackBuildFile = path.join(outputDirectory, 'IS_TURBOPACK_BUILD');
-  const isTurbopackBuild: boolean = await fs
-    .access(isTurbopackBuildFile, fs.constants.F_OK)
-    .then(() => true)
-    .catch(() => false);
-
-  return isTurbopackBuild;
-}
-
 export async function getExportIntent(
   entryPath: string
 ): Promise<false | { trailingSlash: boolean }> {

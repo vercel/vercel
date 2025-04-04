@@ -98,7 +98,6 @@ import {
   require_,
   getServerlessPages,
   RenderingMode,
-  isTurbopackBuild,
 } from './utils';
 
 export const version = 2;
@@ -1479,11 +1478,8 @@ export const build: BuildV2 = async buildOptions => {
         ]
       );
 
-      const isTurbopackBuildEnabled = await isTurbopackBuild(outputDirectory);
-
       return serverBuild({
         config,
-        isTurbopackBuildEnabled,
         functionsConfigManifest,
         nextVersion,
         trailingSlash,
