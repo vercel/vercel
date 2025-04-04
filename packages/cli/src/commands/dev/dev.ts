@@ -11,6 +11,8 @@ import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import output from '../../output-manager';
 
 type Options = {
@@ -21,7 +23,8 @@ type Options = {
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: DevTelemetryClient
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -58,6 +61,7 @@ export default async function dev(
   let projectSettings: ProjectSettings | undefined;
   let envValues: Record<string, string> = {};
   let repoRoot: string | undefined;
+  let stopRefreshOidcToken = () => {};
   if (link.status === 'linked') {
     const { project, org } = link;
 
@@ -76,6 +80,14 @@ export default async function dev(
 
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
+
+    stopRefreshOidcToken = await refreshOidcToken(
+      client,
+      link,
+      envValues,
+      'vercel-cli:dev',
+      telemetry
+    );
   }
 
   const devServer = new DevServer(cwd, {
@@ -85,7 +97,10 @@ export default async function dev(
   });
 
   // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => devServer.stop());
+  process.on('SIGTERM', () => {
+    stopRefreshOidcToken();
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
