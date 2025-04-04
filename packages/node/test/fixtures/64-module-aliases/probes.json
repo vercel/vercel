@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "FOO:FOO"
+    }
+  ]
+}
