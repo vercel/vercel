@@ -214,6 +214,10 @@ export async function serverBuild({
   const skipDefaultLocaleRewrite = Boolean(
     process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
   );
+  // TODO: Remove this once the issue is fixed in Next.js
+  const addApp404ToPagesManifest = Boolean(
+    process.env.NEXT_ADD_APP_404_TO_PAGES_MANIFEST
+  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -720,13 +724,15 @@ export async function serverBuild({
       fsPath: nextServerFile,
     });
 
+    let static404File: FileFsRef | null = null;
+
     if (static404Page) {
       // ensure static 404 page file is included in all lambdas
       // for notFound GS(S)P support
 
       if (i18n) {
         for (const locale of i18n.locales) {
-          let static404File =
+          static404File =
             staticPages[path.posix.join(entryDirectory, locale, '/404')];
 
           if (!static404File) {
@@ -745,7 +751,7 @@ export async function serverBuild({
       }
       // Regardless of the i18n config, we also need to include the top level 404 page
       // as this is used by app router, when i18n is enabled
-      const static404File =
+      static404File =
         staticPages[static404Page] ||
         new FileFsRef({
           fsPath: path.join(pagesDir, '/404.html'),
@@ -1272,10 +1278,9 @@ export async function serverBuild({
               break;
             }
             case 'server/pages-manifest.json': {
-              // if we're using app router, pages router, and i18n
-              if (i18n && appDir) {
+              if (addApp404ToPagesManifest && i18n && appDir && static404File) {
                 for (const locale of i18n.locales) {
-                  manifestData[`/${locale}/404`] = 'pages/404.html';
+                  manifestData[`/${locale}/404`] = static404File.fsPath;
                 }
               }
               for (const key of Object.keys(manifestData)) {
