@@ -2,4 +2,4 @@
 '@vercel/next': patch
 ---
 
-[next] ensure pages i18n + app dir serves app 404
+[next] ensure app router 404 page is still included in functions when using pages i18n
