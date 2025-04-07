@@ -1,5 +1,20 @@
 # vercel
 
+## 41.5.0
+
+### Minor Changes
+
+- Add simple balance subcommand to review balances & thresholds on a given installation ([#13204](https://github.com/vercel/vercel/pull/13204))
+
+- Add new subcommand `create-threshold` to `integration-resource` command for creating & overwriting automated purchase triggers on prepayment-based integration installations ([#13218](https://github.com/vercel/vercel/pull/13218))
+
+### Patch Changes
+
+- Allow all integration categories for resource provision, send to dashboard on non-subscription plan selection ([#13220](https://github.com/vercel/vercel/pull/13220))
+
+- Updated dependencies [[`4678db252cb14ae3745ed9b691ac2c98fbf6349f`](https://github.com/vercel/vercel/commit/4678db252cb14ae3745ed9b691ac2c98fbf6349f)]:
+  - @vercel/next@4.7.6
+
 ## 41.4.2
 
 ### Patch Changes
