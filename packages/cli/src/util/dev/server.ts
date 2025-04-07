@@ -2221,10 +2221,10 @@ export default class DevServer {
     return this.caseSensitive;
   }
 
-  async runDevCommand() {
+  async runDevCommand(restart: boolean = false) {
     const { devCommand, cwd } = this;
 
-    if (devCommand === this.currentDevCommand) {
+    if (devCommand === this.currentDevCommand && !restart) {
       // `devCommand` has not changed, so don't restart frontend dev process
       return;
     }

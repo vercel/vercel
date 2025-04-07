@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 
@@ -12,6 +13,10 @@ import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
+
+const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
 
 type Options = {
   '--listen': string;
@@ -21,7 +26,8 @@ type Options = {
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: DevTelemetryClient
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -82,6 +88,23 @@ export default async function dev(
     projectSettings,
     envValues,
     repoRoot,
+  });
+
+  setTimeout(async () => {
+    if (!link.project?.id) return;
+
+    let refreshCount = 0;
+    for await (const token of refreshOidcToken(
+      client,
+      link.project?.id,
+      envValues,
+      'vercel-cli:dev'
+    )) {
+      output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+      envValues[VERCEL_OIDC_TOKEN] = token;
+      await devServer.runDevCommand(true);
+      telemetry.trackOidcTokenRefresh(++refreshCount);
+    }
   });
 
   // listen to SIGTERM for graceful shutdown
