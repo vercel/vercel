@@ -730,7 +730,9 @@ export async function serverBuild({
       // ensure static 404 page file is included in all lambdas
       // for notFound GS(S)P support
 
-      if (i18n) {
+      // When using an app with i18n config and app router, only the app router static 404 page is used
+      // so we fallback to the else handling below to ensure it's always included.
+      if (i18n && !appDir) {
         for (const locale of i18n.locales) {
           static404File =
             staticPages[path.posix.join(entryDirectory, locale, '/404')];
@@ -748,17 +750,16 @@ export async function serverBuild({
           requiredFiles[path.relative(baseDir, static404File.fsPath)] =
             static404File;
         }
-      }
-      // Regardless of the i18n config, we also need to include the top level 404 page
-      // as this is used by app router, when i18n is enabled
-      static404File =
-        staticPages[static404Page] ||
-        new FileFsRef({
-          fsPath: path.join(pagesDir, '/404.html'),
-        });
+      } else {
+        static404File =
+          staticPages[static404Page] ||
+          new FileFsRef({
+            fsPath: path.join(pagesDir, '/404.html'),
+          });
 
-      requiredFiles[path.relative(baseDir, static404File.fsPath)] =
-        static404File;
+        requiredFiles[path.relative(baseDir, static404File.fsPath)] =
+          static404File;
+      }
     }
 
     // TODO: move this into Next.js' required server files manifest
