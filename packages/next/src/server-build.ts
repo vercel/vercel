@@ -415,6 +415,11 @@ export async function serverBuild({
           // We don't want to perform the actual rewrite here, instead we want
           // to just add the headers associated with the rewrite.
           dest: undefined,
+          // We don't want to check here, so omit the check property but we do
+          // want to maintain the order of the rewrites, so add the continue
+          // property.
+          check: undefined,
+          continue: true,
           has,
           headers,
         };

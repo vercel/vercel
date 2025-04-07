@@ -674,6 +674,36 @@ describe('rewrite headers', () => {
   });
 });
 
+describe('rewrite headers with rewrite', () => {
+  let routes;
+  beforeAll(async () => {
+    const output = await runBuildLambda(
+      path.join(__dirname, 'rewrite-headers-with-rewrite')
+    );
+    routes = output.buildResult.routes;
+  });
+
+  it('should add rewrite headers before the original rewrite', () => {
+    let route = routes.filter(
+      r => r.src === '^(?:/(en|fi|sv|fr|nb))(?:/)?(?<rscsuff>\\.rsc)?$'
+    );
+    expect(route.length).toBe(2);
+
+    // Header without the actual rewrite.
+    expect(route[0].headers).toEqual({
+      'x-nextjs-rewritten-path': '/$1/landing',
+      'x-nextjs-rewritten-query': undefined,
+    });
+    expect(route[0].continue).toBe(true);
+    expect(route[0].check).toBeUndefined();
+
+    // Actual rewrite.
+    expect(route[1].headers).toBeUndefined();
+    expect(route[1].continue).toBeUndefined();
+    expect(route[1].check).toBe(true);
+  });
+});
+
 describe('cache-control', () => {
   /**
    * @type {import('@vercel/build-utils').BuildResultV2Typical}
