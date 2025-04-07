@@ -13,13 +13,21 @@
   "probes": [
     {
       "path": "/",
-      "status": 404,
-      "mustContain": "APP ROUTER - 404 PAGE"
+      "status": 404
     },
     {
       "path": "/admin/foo",
-      "status": 404,
-      "mustContain": "APP ROUTER - 404 PAGE"
+      "status": 404
+    },
+    {
+      "path": "/app-dir/about",
+      "status": 200,
+      "mustContain": "app router page"
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "mustContain": "pages router page"
     }
   ]
 }

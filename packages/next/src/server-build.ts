@@ -214,10 +214,6 @@ export async function serverBuild({
   const skipDefaultLocaleRewrite = Boolean(
     process.env.NEXT_EXPERIMENTAL_DEFER_DEFAULT_LOCALE_REWRITE
   );
-  // TODO: Remove this once the issue is fixed in Next.js
-  const addApp404ToPagesManifest = Boolean(
-    process.env.NEXT_ADD_APP_404_TO_PAGES_MANIFEST
-  );
 
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
@@ -1279,11 +1275,6 @@ export async function serverBuild({
               break;
             }
             case 'server/pages-manifest.json': {
-              if (addApp404ToPagesManifest && i18n && appDir && static404File) {
-                for (const locale of i18n.locales) {
-                  manifestData[`/${locale}/404`] = static404File.fsPath;
-                }
-              }
               for (const key of Object.keys(manifestData)) {
                 if (isDynamicRoute(key) && !normalizedPages.has(key)) {
                   delete manifestData[key];

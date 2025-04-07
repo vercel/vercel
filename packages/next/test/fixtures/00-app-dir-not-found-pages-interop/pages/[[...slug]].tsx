@@ -1,39 +1,39 @@
-import React from 'react'
+import React from 'react';
 
-export const getStaticProps = (
-  ({params}: {params: {slug: string[]}}) => {
-    try {
-      const slugArray = Array.isArray(params.slug) ? params.slug : [params.slug]
+export const getStaticProps = ({ params }: { params: { slug: string[] } }) => {
+  try {
+    const slugArray = Array.isArray(params.slug) ? params.slug : [params.slug];
 
-      const isValidPath = slugArray.length === 1 && (slugArray[0] === "about" || slugArray[0] === "contact")
+    const isValidPath =
+      slugArray.length === 1 &&
+      (slugArray[0] === 'about' || slugArray[0] === 'contact');
 
-      if (!isValidPath) {
-        return {
-          notFound: true
-        };
-      }
-
+    if (!isValidPath) {
       return {
-        props: {
-          slug: params.slug
-        }
+        notFound: true,
       };
-    } catch (error) {
-      throw error;
     }
+
+    return {
+      props: {
+        slug: params.slug,
+      },
+    };
+  } catch (error) {
+    throw error;
   }
-);
+};
 
 export const getStaticPaths = async () => ({
   paths: [],
-  fallback: "blocking"
+  fallback: 'blocking',
 });
 
 const CatchAll = () => (
   <div>
     <h1>Catch All</h1>
-    <p>This is a catch all page added to the pages router</p>
+    <p>This is a catch all pages router page</p>
   </div>
-)
+);
 
 export default CatchAll;

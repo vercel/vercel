@@ -22,10 +22,10 @@ async function validateSlug(slug: string[]) {
 export default async function CatchAll({
   params,
 }: {
-  params: Promise<{ tool: string[] }>;
+  params: Promise<{ slug: string[] }>;
 }) {
-  const { tool } = await params;
-  const slugArray = Array.isArray(tool) ? tool : [tool];
+  const { slug } = await params;
+  const slugArray = Array.isArray(slug) ? slug : [slug];
 
   // Validate the slug
   const isValid = await validateSlug(slugArray);
@@ -38,7 +38,7 @@ export default async function CatchAll({
   return (
     <div>
       <h1>Catch All</h1>
-      <p>This is a catch all page added to the APP router</p>
+      <p>This is a catch all app router page</p>
     </div>
   );
 }
