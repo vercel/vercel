@@ -5,11 +5,6 @@
       "use": "@vercel/next"
     }
   ],
-  "build": {
-    "env": {
-      "NEXT_ADD_APP_404_TO_PAGES_MANIFEST": "1"
-    }
-  },
   "probes": [
     {
       "path": "/",
