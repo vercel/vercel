@@ -720,8 +720,6 @@ export async function serverBuild({
       fsPath: nextServerFile,
     });
 
-    let static404File: FileFsRef | null = null;
-
     if (static404Page) {
       // ensure static 404 page file is included in all lambdas
       // for notFound GS(S)P support
@@ -730,7 +728,7 @@ export async function serverBuild({
       // so we fallback to the else handling below to ensure it's always included.
       if (i18n && !appDir) {
         for (const locale of i18n.locales) {
-          static404File =
+          let static404File =
             staticPages[path.posix.join(entryDirectory, locale, '/404')];
 
           if (!static404File) {
@@ -747,7 +745,7 @@ export async function serverBuild({
             static404File;
         }
       } else {
-        static404File =
+        const static404File =
           staticPages[static404Page] ||
           new FileFsRef({
             fsPath: path.join(pagesDir, '/404.html'),
