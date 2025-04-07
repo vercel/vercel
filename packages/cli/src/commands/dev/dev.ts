@@ -90,12 +90,12 @@ export default async function dev(
   });
 
   setTimeout(async () => {
-    if (!link.project?.id) return;
+    if (link.status !== 'linked') return;
 
     let refreshCount = 0;
     for await (const token of refreshOidcToken(
       client,
-      link.project?.id,
+      link.project.id,
       envValues,
       'vercel-cli:dev'
     )) {

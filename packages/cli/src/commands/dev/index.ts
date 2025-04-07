@@ -126,7 +126,7 @@ export default async function main(client: Client) {
   }
 
   try {
-    return await dev(client, parsedArgs.flags, args);
+    return await dev(client, parsedArgs.flags, args, telemetry);
   } catch (err) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
       // Error message will look like the following:
