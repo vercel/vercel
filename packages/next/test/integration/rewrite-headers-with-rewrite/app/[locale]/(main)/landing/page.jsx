@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from 'next/link';
 
 export default function Landing() {
   return (
@@ -6,5 +6,5 @@ export default function Landing() {
       Landing
       <Link href="/en/find-home">Find Home</Link>
     </div>
-  )
+  );
 }

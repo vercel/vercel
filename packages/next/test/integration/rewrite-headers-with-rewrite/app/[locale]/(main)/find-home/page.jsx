@@ -1,3 +1,3 @@
 export default function FindHome() {
-  return <div>Find Home</div>
+  return <div>Find Home</div>;
 }
