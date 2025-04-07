@@ -15,8 +15,7 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
-
-const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
+import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 
 type Options = {
   '--listen': string;

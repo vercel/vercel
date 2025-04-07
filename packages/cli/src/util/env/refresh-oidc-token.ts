@@ -8,6 +8,7 @@ import {
   pullEnvRecords,
 } from '../../util/env/get-env-records';
 import sleep from '../../util/sleep';
+import { VERCEL_OIDC_TOKEN } from './constants';
 
 const REFRESH_BEFORE_EXPIRY_MS = getMs(
   ms('15m'),
@@ -18,8 +19,6 @@ const THROTTLE_MS = getMs(
   ms('1m'),
   process.env.REFRESH_VERCEL_OIDC_TOKEN_THROTTLE_MS
 );
-
-const VERCEL_OIDC_TOKEN = 'VERCEL_OIDC_TOKEN';
 
 function getMs(defaultValue: number, overrideValue?: string): number {
   if (overrideValue) {
