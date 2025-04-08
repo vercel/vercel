@@ -116,6 +116,7 @@ export async function serverBuild({
   dynamicPages,
   pagesDir,
   config = {},
+  isTurbopackBuildEnabled,
   functionsConfigManifest,
   privateOutputs,
   baseDir,
@@ -160,6 +161,7 @@ export async function serverBuild({
   dynamicPages: string[];
   trailingSlash: boolean;
   config: Config;
+  isTurbopackBuildEnabled: boolean;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   pagesDir: string;
   baseDir: string;
@@ -1391,6 +1393,11 @@ export async function serverBuild({
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
+        environment: isTurbopackBuildEnabled
+          ? {
+              TURBOPACK: '1',
+            }
+          : {},
       };
 
       // the app _not-found output should always be included
@@ -1627,6 +1634,7 @@ export async function serverBuild({
     prerenderBypassToken: prerenderManifest.bypassToken || '',
     nextVersion,
     appPathRoutesManifest: appPathRoutesManifest || {},
+    isTurbopackBuildEnabled,
   });
 
   const isNextDataServerResolving =
