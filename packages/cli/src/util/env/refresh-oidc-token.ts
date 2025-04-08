@@ -10,14 +10,14 @@ import {
 import sleep from '../../util/sleep';
 import { VERCEL_OIDC_TOKEN } from './constants';
 
-const REFRESH_BEFORE_EXPIRY_MS = getMs(
+const REFRESH_BEFORE_EXPIRY_MILLIS = getMs(
   ms('15m'),
-  process.env.REFRESH_VERCEL_OIDC_TOKEN_BEFORE_EXPIRY_MS
+  process.env.REFRESH_VERCEL_OIDC_TOKEN_BEFORE_EXPIRY_MILLIS
 );
 
-const THROTTLE_MS = getMs(
+const THROTTLE_MILLIS = getMs(
   ms('1m'),
-  process.env.REFRESH_VERCEL_OIDC_TOKEN_THROTTLE_MS
+  process.env.REFRESH_VERCEL_OIDC_TOKEN_THROTTLE_MILLIS
 );
 
 function getMs(defaultValue: number, overrideValue?: string): number {
@@ -48,36 +48,42 @@ export async function* refreshOidcToken(
     // Otherwise, extract the "exp" claim.
     const now = clock();
     const { exp } = decodeJwt(oidcToken);
-    const expiresAfterMs = exp !== undefined ? exp * 1000 - now : undefined;
-    if (expiresAfterMs === undefined || !Number.isFinite(expiresAfterMs)) {
+    const expiresAfterMillis = exp !== undefined ? exp * 1000 - now : undefined;
+    if (
+      expiresAfterMillis === undefined ||
+      !Number.isFinite(expiresAfterMillis)
+    ) {
       output.debug(`${VERCEL_OIDC_TOKEN} is invalid; disabling refreshes`);
       return;
     }
 
     // Skip yielding the initial token, and only yield unexpired tokens.
-    if (refreshCount++ > 0 && expiresAfterMs > 0) {
+    if (refreshCount++ > 0 && expiresAfterMillis > 0) {
       yield oidcToken;
     }
 
     // Schedule to refresh the OIDC token shortly before it expires, but not
-    // too frequently (wait at least THROTTLE_MS).
-    let refreshAfterMs = Math.max(0, expiresAfterMs - REFRESH_BEFORE_EXPIRY_MS);
-    if (now + refreshAfterMs - lastPulledEnvAt < THROTTLE_MS) {
-      refreshAfterMs = THROTTLE_MS;
+    // too frequently (wait at least THROTTLE_MILLIS).
+    let refreshAfterMillis = Math.max(
+      0,
+      expiresAfterMillis - REFRESH_BEFORE_EXPIRY_MILLIS
+    );
+    if (now + refreshAfterMillis - lastPulledEnvAt < THROTTLE_MILLIS) {
+      refreshAfterMillis = THROTTLE_MILLIS;
     }
 
-    const expiresAfterS = Math.abs(Math.round(expiresAfterMs / 1_0000));
-    const refreshAfterS = Math.round(refreshAfterMs / 1_000);
-    if (expiresAfterMs < 0) {
+    const expiresAfterSecs = Math.abs(Math.round(expiresAfterMillis / 1_0000));
+    const refreshAfterSecs = Math.round(refreshAfterMillis / 1_000);
+    if (expiresAfterMillis < 0) {
       output.debug(
-        `${VERCEL_OIDC_TOKEN} expired ${expiresAfterS}s ago; refreshing in ${refreshAfterS}s`
+        `${VERCEL_OIDC_TOKEN} expired ${expiresAfterSecs}s ago; refreshing in ${refreshAfterSecs}s`
       );
     } else {
       output.debug(
-        `${VERCEL_OIDC_TOKEN} expires in ${expiresAfterS}s; refreshing in ${refreshAfterS}s`
+        `${VERCEL_OIDC_TOKEN} expires in ${expiresAfterSecs}s; refreshing in ${refreshAfterSecs}s`
       );
     }
-    await sleep(refreshAfterMs);
+    await sleep(refreshAfterMillis);
 
     // If we fail to pull environment variables (for example, because we are
     // temporarily offline), then we will continue trying until aborted.
@@ -85,7 +91,7 @@ export async function* refreshOidcToken(
       client,
       projectId,
       source,
-      THROTTLE_MS
+      THROTTLE_MILLIS
     );
     lastPulledEnvAt = clock();
   }
