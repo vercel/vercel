@@ -2333,7 +2333,7 @@ export async function serverBuild({
         : []),
 
       // normalize _next/data URL before processing rewrites
-      ...normalizeNextDataRoute(),
+      // ...normalizeNextDataRoute(),
 
       ...(!isNextDataServerResolving
         ? [
@@ -2491,7 +2491,7 @@ export async function serverBuild({
       { handle: 'rewrite' },
 
       // re-build /_next/data URL after resolving
-      ...denormalizeNextDataRoute(),
+      // ...denormalizeNextDataRoute(),
 
       ...(isNextDataServerResolving
         ? dataRoutes.filter(route => {
