@@ -23,13 +23,11 @@ export class InMemoryCache implements RuntimeCache {
       }
       // if tags are specified, update the entry with the new tags
       if (options?.tags) {
-        const newTags = [];
         for (const tag of options.tags) {
           if (!entry.tags?.includes(tag)) {
-            newTags.push(tag);
+            entry.tags = [...(entry.tags ?? []), tag];
           }
         }
-        entry.tags = [...(entry.tags ?? []), ...newTags];
       }
       return entry.value;
     }
