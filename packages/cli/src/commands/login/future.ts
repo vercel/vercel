@@ -58,7 +58,13 @@ export async function login(client: Client): Promise<number> {
     `
   ▲ Sign in to the Vercel CLI
 
-  Visit ${chalk.bold(o.link(verification_uri.replace('https://', ''), verification_uri_complete, { color: false }))} to enter ${chalk.bold(user_code)}
+  Visit ${chalk.bold(
+    o.link(
+      verification_uri.replace('https://', ''),
+      verification_uri_complete,
+      { color: false, fallback: () => verification_uri_complete }
+    )
+  )}${o.supportsHyperlink ? '' : ` to enter ${chalk.bold(user_code)}`}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
