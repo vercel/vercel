@@ -3,10 +3,7 @@ import ms from 'ms';
 import { performance } from 'perf_hooks';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import {
-  type EnvRecordsSource,
-  pullEnvRecords,
-} from '../../util/env/get-env-records';
+import { type EnvRecordsSource, pullEnvRecords } from './get-env-records';
 import sleep from '../../util/sleep';
 import { VERCEL_OIDC_TOKEN } from './constants';
 
@@ -32,8 +29,11 @@ export async function* refreshOidcToken(
   client: Client,
   projectId: string,
   envValues: Record<string, string>,
-  source: EnvRecordsSource
+  source: EnvRecordsSource,
+  throttleMillis?: number
 ): AsyncGenerator<string> {
+  throttleMillis ??= THROTTLE_MILLIS;
+
   let lastPulledEnvAt = clock();
   let refreshCount = 0;
 
@@ -47,8 +47,13 @@ export async function* refreshOidcToken(
 
     // Otherwise, extract the "exp" claim.
     const now = clock();
-    const { exp } = decodeJwt(oidcToken);
-    const expiresAfterMillis = exp !== undefined ? exp * 1000 - now : undefined;
+    let expiresAfterMillis: number | undefined;
+    try {
+      const { exp } = decodeJwt(oidcToken);
+      expiresAfterMillis = exp !== undefined ? exp * 1000 - now : undefined;
+    } catch (error) {
+      // Do nothing.
+    }
     if (
       expiresAfterMillis === undefined ||
       !Number.isFinite(expiresAfterMillis)
@@ -63,13 +68,13 @@ export async function* refreshOidcToken(
     }
 
     // Schedule to refresh the OIDC token shortly before it expires, but not
-    // too frequently (wait at least THROTTLE_MILLIS).
+    // too frequently (wait at least throttleMillis).
     let refreshAfterMillis = Math.max(
       0,
       expiresAfterMillis - REFRESH_BEFORE_EXPIRY_MILLIS
     );
-    if (now + refreshAfterMillis - lastPulledEnvAt < THROTTLE_MILLIS) {
-      refreshAfterMillis = THROTTLE_MILLIS;
+    if (now + refreshAfterMillis - lastPulledEnvAt < throttleMillis) {
+      refreshAfterMillis = throttleMillis;
     }
 
     const expiresAfterSecs = Math.abs(
@@ -93,7 +98,7 @@ export async function* refreshOidcToken(
       client,
       projectId,
       source,
-      THROTTLE_MILLIS
+      throttleMillis
     );
     lastPulledEnvAt = clock();
   }
