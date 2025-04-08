@@ -10,13 +10,26 @@ interface CacheEntry {
 export class InMemoryCache implements RuntimeCache {
   private cache: Record<string, CacheEntry> = {};
 
-  async get(key: string): Promise<unknown | null> {
+  async get(
+    key: string,
+    options?: { tags?: string[] }
+  ): Promise<unknown | null> {
     const entry = this.cache[key];
     if (entry) {
       if (entry.ttl && entry.lastModified + entry.ttl * 1000 < Date.now()) {
         // If the entry is expired, delete it and return null
         await this.delete(key);
         return null;
+      }
+      // if tags are specified, update the entry with the new tags
+      if (options?.tags) {
+        const newTags = [];
+        for (const tag of options.tags) {
+          if (!entry.tags?.includes(tag)) {
+            newTags.push(tag);
+          }
+        }
+        entry.tags = [...(entry.tags ?? []), ...newTags];
       }
       return entry.value;
     }

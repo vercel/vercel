@@ -46,8 +46,8 @@ export const getRuntimeCache = (cacheOptions?: CacheOptions) => {
   };
 
   return Promise.resolve({
-    get: (key: string) => {
-      return runtimeCache.get(makeKey(key));
+    get: (key: string, options?: { tags?: string[] }) => {
+      return runtimeCache.get(makeKey(key), options);
     },
     set: (
       key: string,
