@@ -499,6 +499,7 @@ export async function serverBuild({
   const lstatSema = new Sema(25);
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
+  const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
     const result = onPrerenderRouteInitial(
@@ -513,6 +514,8 @@ export async function serverBuild({
     );
 
     if (result && result.static404Page) {
+      // there can be multiple 404 pages (eg i18n) so we want to keep track of all of them
+      static404Pages.add(result.static404Page);
       static404Page = result.static404Page;
     }
 
@@ -725,36 +728,40 @@ export async function serverBuild({
       fsPath: nextServerFile,
     });
 
-    if (static404Page) {
-      // ensure static 404 page file is included in all lambdas
-      // for notFound GS(S)P support
-
+    if (static404Pages.size > 0) {
+      // If we've generated a static 404 page, it's possible that we also
+      // have a static 404 page for each locale.
       if (i18n) {
         for (const locale of i18n.locales) {
-          let static404File =
-            staticPages[path.posix.join(entryDirectory, locale, '/404')];
+          const static404Page = path.posix.join(entryDirectory, locale, '404');
+          static404Pages.add(static404Page);
+        }
+      }
 
-          if (!static404File) {
+      for (const static404Page of static404Pages) {
+        let static404File = staticPages[static404Page];
+
+        if (!static404File) {
+          // if we have a file ref already, we can use it. Otherwise, we need
+          // to create a new one, but we need to ensure it exists on disk
+          const static404FilePath = path.join(
+            pagesDir,
+            `${static404Page}.html`
+          );
+
+          if (fs.existsSync(static404FilePath)) {
             static404File = new FileFsRef({
-              fsPath: path.join(pagesDir, locale, '/404.html'),
+              fsPath: static404FilePath,
             });
-            if (!fs.existsSync(static404File.fsPath)) {
-              static404File = new FileFsRef({
-                fsPath: path.join(pagesDir, '/404.html'),
-              });
-            }
           }
+        }
+
+        // ensure each static 404 page file is included in all lambdas
+        // for notFound GS(S)P support
+        if (static404File) {
           requiredFiles[path.relative(baseDir, static404File.fsPath)] =
             static404File;
         }
-      } else {
-        const static404File =
-          staticPages[static404Page] ||
-          new FileFsRef({
-            fsPath: path.join(pagesDir, '/404.html'),
-          });
-        requiredFiles[path.relative(baseDir, static404File.fsPath)] =
-          static404File;
       }
     }
 
