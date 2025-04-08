@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.6
+
+### Patch Changes
+
+- Support fallback blocking routes to provide a fallback root params configuration ([#13215](https://github.com/vercel/vercel/pull/13215))
+
 ## 4.7.5
 
 ### Patch Changes
