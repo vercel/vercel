@@ -72,8 +72,10 @@ export async function* refreshOidcToken(
       refreshAfterMillis = THROTTLE_MILLIS;
     }
 
-    const expiresAfterSecs = Math.abs(Math.round(expiresAfterMillis / 1_0000));
-    const refreshAfterSecs = Math.round(refreshAfterMillis / 1_000);
+    const expiresAfterSecs = Math.abs(
+      Math.round(millisToSecs(expiresAfterMillis))
+    );
+    const refreshAfterSecs = Math.round(millisToSecs(refreshAfterMillis));
     if (expiresAfterMillis < 0) {
       output.debug(
         `${VERCEL_OIDC_TOKEN} expired ${expiresAfterSecs}s ago; refreshing in ${refreshAfterSecs}s`
@@ -101,7 +103,7 @@ async function pullEnvValuesUntilSuccessful(
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
-  ms: number
+  millis: number
 ): Promise<Record<string, string>> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -109,13 +111,17 @@ async function pullEnvValuesUntilSuccessful(
       return (await pullEnvRecords(client, projectId, source)).env;
     } catch (error) {
       output.debug(
-        `Failed to pull environment; trying again in ${Math.round(ms / 1_000)}s`
+        `Failed to pull environment; trying again in ${Math.round(millisToSecs(millis))}s`
       );
-      await sleep(ms);
+      await sleep(millis);
     }
   }
 }
 
 function clock(): number {
   return performance.timeOrigin + performance.now();
+}
+
+function millisToSecs(millis: number): number {
+  return millis / 1_000;
 }
