@@ -13,11 +13,13 @@ describe('refreshOidcToken', () => {
   const projectId = 'test';
   const env: Record<string, string> = {};
   const source = 'vercel-cli:dev';
+  let controller: AbortController;
   let exp: number;
   let jwt: string | undefined;
   let omitJwt: boolean;
 
   beforeEach(() => {
+    controller = new AbortController();
     exp = 0;
     jwt = undefined;
     omitJwt = false;
@@ -35,6 +37,7 @@ describe('refreshOidcToken', () => {
 
   it('should do nothing if an initial VERCEL_OIDC_TOKEN is absent', async () => {
     const res = await refreshOidcToken(
+      controller.signal,
       client,
       projectId,
       env,
@@ -51,6 +54,7 @@ describe('refreshOidcToken', () => {
   it('should do nothing if the initial VERCEL_OIDC_TOKEN is invalid', async () => {
     const env = { VERCEL_OIDC_TOKEN: 'foo' };
     const res = await refreshOidcToken(
+      controller.signal,
       client,
       projectId,
       env,
@@ -66,7 +70,14 @@ describe('refreshOidcToken', () => {
 
   it('should issue a debug log when the token is already expired', async () => {
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(exp) };
-    await refreshOidcToken(client, projectId, env, source, 0).next();
+    await refreshOidcToken(
+      controller.signal,
+      client,
+      projectId,
+      env,
+      source,
+      0
+    ).next();
     await expect(client.stderr).toOutput(
       'VERCEL_OIDC_TOKEN expired 1s ago; refreshing in 0s'
     );
@@ -74,7 +85,14 @@ describe('refreshOidcToken', () => {
 
   it('should issue a debug log when the token will be refreshed (within 15 minutes of expiry)', async () => {
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(901) }; // 15 minutes from now
-    await refreshOidcToken(client, projectId, env, source, 0).next();
+    await refreshOidcToken(
+      controller.signal,
+      client,
+      projectId,
+      env,
+      source,
+      0
+    ).next();
     await expect(client.stderr).toOutput(
       'VERCEL_OIDC_TOKEN expires in 900s; refreshing in 0s'
     );
@@ -82,7 +100,14 @@ describe('refreshOidcToken', () => {
 
   it('should issue a debug log when the token will be refreshed (more than 15 minutes until expiry)', async () => {
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(902) }; // 15 minutes and 1 second from now
-    await refreshOidcToken(client, projectId, env, source, 0).next();
+    await refreshOidcToken(
+      controller.signal,
+      client,
+      projectId,
+      env,
+      source,
+      0
+    ).next();
     await expect(client.stderr).toOutput(
       'VERCEL_OIDC_TOKEN expires in 901s; refreshing in 1s'
     );
@@ -92,6 +117,7 @@ describe('refreshOidcToken', () => {
     exp = 2;
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(exp) };
     const res = await refreshOidcToken(
+      controller.signal,
       client,
       projectId,
       env,
@@ -106,6 +132,7 @@ describe('refreshOidcToken', () => {
     omitJwt = true;
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(exp) };
     const res = await refreshOidcToken(
+      controller.signal,
       client,
       projectId,
       env,
@@ -120,6 +147,7 @@ describe('refreshOidcToken', () => {
     const env = { VERCEL_OIDC_TOKEN: mockOidcToken(exp) };
     jwt = 'foo';
     const res = await refreshOidcToken(
+      controller.signal,
       client,
       projectId,
       env,

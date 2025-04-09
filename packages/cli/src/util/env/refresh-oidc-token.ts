@@ -26,6 +26,7 @@ function getMs(defaultValue: number, overrideValue?: string): number {
 }
 
 export async function* refreshOidcToken(
+  signal: AbortSignal,
   client: Client,
   projectId: string,
   envValues: Record<string, string>,
@@ -37,7 +38,7 @@ export async function* refreshOidcToken(
   let lastPulledEnvAt = clock();
   let refreshCount = 0;
 
-  while (true) {
+  while (!signal.aborted) {
     // If the user has OIDC disabled, do nothing.
     const oidcToken = envValues[VERCEL_OIDC_TOKEN];
     if (!oidcToken) {
@@ -94,33 +95,38 @@ export async function* refreshOidcToken(
 
     // If we fail to pull environment variables (for example, because we are
     // temporarily offline), then we will continue trying until aborted.
-    envValues = await pullEnvValuesUntilSuccessful(
+    const envValuesOrNull = await pullEnvValuesUntilSuccessful(
+      signal,
       client,
       projectId,
       source,
       throttleMillis
     );
+    if (!envValuesOrNull) return;
+    envValues = envValuesOrNull;
     lastPulledEnvAt = clock();
   }
 }
 
 async function pullEnvValuesUntilSuccessful(
+  signal: AbortSignal,
   client: Client,
   projectId: string,
   source: EnvRecordsSource,
   millis: number
-): Promise<Record<string, string>> {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+): Promise<Record<string, string> | null> {
+  while (!signal.aborted) {
     try {
       return (await pullEnvRecords(client, projectId, source)).env;
     } catch (error) {
       output.debug(
         `Failed to pull environment; trying again in ${Math.round(millisToSecs(millis))}s`
       );
+      if (signal.aborted) return null;
       await sleep(millis);
     }
   }
+  return null;
 }
 
 function clock(): number {

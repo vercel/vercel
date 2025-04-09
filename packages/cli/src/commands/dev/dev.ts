@@ -89,16 +89,19 @@ export default async function dev(
     repoRoot,
   });
 
+  const controller = new AbortController();
   setTimeout(async () => {
     if (link.status !== 'linked') return;
 
     let refreshCount = 0;
     for await (const token of refreshOidcToken(
+      controller.signal,
       client,
       link.project.id,
       envValues,
       'vercel-cli:dev'
     )) {
+      if (controller.signal.aborted) return;
       output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
       envValues[VERCEL_OIDC_TOKEN] = token;
       await devServer.runDevCommand(true);
@@ -107,7 +110,10 @@ export default async function dev(
   });
 
   // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => devServer.stop());
+  process.on('SIGTERM', () => {
+    controller.abort();
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
