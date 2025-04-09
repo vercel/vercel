@@ -222,7 +222,7 @@ test('should show prompts to set up project during first deploy', async () => {
     const text2 = await res2.text();
     expect(text2).toContain('<h1>custom hello</h1>');
   } finally {
-    process.kill(dev.pid, 'SIGTERM');
+    process.kill(dev.pid!, 'SIGTERM');
   }
 });
 
@@ -1006,7 +1006,7 @@ test('[vc dev] should show prompts to set up project', async () => {
     const text = await response.text();
     expect(text).toContain('<h1>custom hello</h1>');
   } finally {
-    process.kill(dev.pid, 'SIGTERM');
+    process.kill(dev.pid!, 'SIGTERM');
   }
 });
 
@@ -1095,7 +1095,7 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
     expect(body.env.NOW_REGION).toBe('dev1');
   } finally {
-    process.kill(dev.pid, 'SIGTERM');
+    process.kill(dev.pid!, 'SIGTERM');
   }
 });
 

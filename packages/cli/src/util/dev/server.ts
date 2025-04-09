@@ -1002,7 +1002,7 @@ export default class DevServer {
     }
 
     if (devProcess) {
-      ops.push(treeKill(devProcess.pid));
+      ops.push(treeKill(devProcess.pid!));
     }
 
     ops.push(close(this.server));
@@ -2221,10 +2221,10 @@ export default class DevServer {
     return this.caseSensitive;
   }
 
-  async runDevCommand() {
+  async runDevCommand(forceRestart: boolean = false) {
     const { devCommand, cwd } = this;
 
-    if (devCommand === this.currentDevCommand) {
+    if (devCommand === this.currentDevCommand && !forceRestart) {
       // `devCommand` has not changed, so don't restart frontend dev process
       return;
     }
@@ -2236,7 +2236,7 @@ export default class DevServer {
     }
 
     if (this.devProcess) {
-      await treeKill(this.devProcess.pid);
+      await treeKill(this.devProcess.pid!);
     }
 
     output.log(`Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`);
