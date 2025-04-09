@@ -90,7 +90,7 @@ export default async function dev(
   });
 
   const controller = new AbortController();
-  setTimeout(async () => {
+  const timeout = setTimeout(async () => {
     if (link.status !== 'linked') return;
 
     let refreshCount = 0;
@@ -105,12 +105,14 @@ export default async function dev(
       output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
       envValues[VERCEL_OIDC_TOKEN] = token;
       await devServer.runDevCommand(true);
+      if (controller.signal.aborted) return;
       telemetry.trackOidcTokenRefresh(++refreshCount);
     }
   });
 
   // listen to SIGTERM for graceful shutdown
   process.on('SIGTERM', () => {
+    clearTimeout(timeout);
     controller.abort();
     devServer.stop();
   });
