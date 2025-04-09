@@ -1002,7 +1002,7 @@ export default class DevServer {
     }
 
     if (devProcess) {
-      ops.push(treeKill(devProcess.pid));
+      ops.push(treeKill(devProcess.pid!));
     }
 
     ops.push(close(this.server));
@@ -2236,7 +2236,7 @@ export default class DevServer {
     }
 
     if (this.devProcess) {
-      await treeKill(this.devProcess.pid);
+      await treeKill(this.devProcess.pid!);
     }
 
     output.log(`Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`);
