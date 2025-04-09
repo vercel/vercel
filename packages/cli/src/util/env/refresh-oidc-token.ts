@@ -1,10 +1,10 @@
+import { setTimeout } from 'node:timers/promises';
 import { decodeJwt } from 'jose';
 import ms from 'ms';
 import { performance } from 'perf_hooks';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { type EnvRecordsSource, pullEnvRecords } from './get-env-records';
-import sleep from '../../util/sleep';
 import { VERCEL_OIDC_TOKEN } from './constants';
 
 const REFRESH_BEFORE_EXPIRY_MILLIS = getMs(
@@ -91,7 +91,7 @@ export async function* refreshOidcToken(
         `${VERCEL_OIDC_TOKEN} expires in ${expiresAfterSecs}s; refreshing in ${refreshAfterSecs}s`
       );
     }
-    await sleep(refreshAfterMillis);
+    await setTimeout(refreshAfterMillis, undefined, { signal });
 
     // If we fail to pull environment variables (for example, because we are
     // temporarily offline), then we will continue trying until aborted.
@@ -122,8 +122,7 @@ async function pullEnvValuesUntilSuccessful(
       output.debug(
         `Failed to pull environment; trying again in ${Math.round(millisToSecs(millis))}s`
       );
-      if (signal.aborted) return null;
-      await sleep(millis);
+      await setTimeout(millis, undefined, { signal });
     }
   }
   return null;

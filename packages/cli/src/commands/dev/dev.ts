@@ -101,11 +101,9 @@ export default async function dev(
       envValues,
       'vercel-cli:dev'
     )) {
-      if (controller.signal.aborted) return;
       output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
       envValues[VERCEL_OIDC_TOKEN] = token;
       await devServer.runDevCommand(true);
-      if (controller.signal.aborted) return;
       telemetry.trackOidcTokenRefresh(++refreshCount);
     }
   });
