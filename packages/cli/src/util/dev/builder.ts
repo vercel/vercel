@@ -489,7 +489,7 @@ export async function shutdownBuilder(match: BuildMatch): Promise<void> {
   if (match.buildProcess) {
     const { pid } = match.buildProcess;
     output.debug(`Killing builder sub-process with PID ${pid}`);
-    const killPromise = treeKill(pid)
+    const killPromise = treeKill(pid!)
       .then(() => {
         output.debug(`Killed builder with PID ${pid}`);
       })

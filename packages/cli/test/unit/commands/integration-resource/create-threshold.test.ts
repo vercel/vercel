@@ -281,7 +281,7 @@ describe('integration-resource', () => {
 
           await expect(client.stderr).toOutput('Creating threshold…');
           await expect(client.stderr).toOutput(
-            `Success! Threshold for installation Acme Prepayment created successfully.`
+            'Success! Threshold for installation Acme Prepayment created successfully.'
           );
           await expect(exitCodePromise).resolves.toEqual(0);
         });
@@ -344,7 +344,7 @@ describe('integration-resource', () => {
           );
 
           await expect(client.stderr).toOutput(
-            `The installation Acme Prepayment already has a threshold. (minimum: $10, \nspend: $10, limit: $50). Do you want to overwrite it? (Y/n)`
+            'The installation Acme Prepayment already has a threshold. (minimum: $10, \nspend: $10, limit: $50). Do you want to overwrite it? (Y/n)'
           );
           client.stdin.write('n\n');
 
@@ -378,7 +378,7 @@ describe('integration-resource', () => {
           );
 
           await expect(client.stderr).toOutput(
-            `The installation Acme Prepayment already has a threshold. (minimum: $10, \nspend: $10, limit: $50). Do you want to overwrite it? (Y/n)`
+            'The installation Acme Prepayment already has a threshold. (minimum: $10, \nspend: $10, limit: $50). Do you want to overwrite it? (Y/n)'
           );
           client.stdin.write('y\n');
 
@@ -389,7 +389,7 @@ describe('integration-resource', () => {
 
           await expect(client.stderr).toOutput('Creating threshold…');
           await expect(client.stderr).toOutput(
-            `Success! Threshold for installation Acme Prepayment created successfully.`
+            'Success! Threshold for installation Acme Prepayment created successfully.'
           );
           await expect(exitCodePromise).resolves.toEqual(0);
         });

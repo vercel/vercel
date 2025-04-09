@@ -117,24 +117,12 @@ export async function add(client: Client, args: string[]) {
   const metadataSchema = product.metadataSchema;
   const metadataWizard = createMetadataWizard(metadataSchema);
 
-  // At the time of writing, we don't support native integrations besides storage & video products.
-  // However, when we introduce new categories, we avoid breaking this version of the CLI by linking all
-  // non-storage categories to the dashboard.
-  // product.type is the old way of defining categories, while the protocols are the new way.
-  const isPreProtocolStorageProduct = product.type === 'storage';
-  const isPostProtocolStorageProduct =
-    product.protocols?.storage?.status === 'enabled';
-  const isVideoProduct = product.protocols?.video?.status;
-  const isStorageProduct =
-    isPreProtocolStorageProduct || isPostProtocolStorageProduct;
-  const isSupportedProductType = isStorageProduct || isVideoProduct;
-
   // The provisioning via cli is possible when
   // 1. The integration was installed once (terms have been accepted)
   // 2. The provider-defined metadata is supported (does not use metadata expressions etc.)
-  // 3. The product type is supported
+  // 3. The selected billing plan is supported (handled at time of billing plan selection)
   const provisionResourceViaCLIIsSupported =
-    installation && metadataWizard.isSupported && isSupportedProductType;
+    installation && metadataWizard.isSupported;
 
   if (!provisionResourceViaCLIIsSupported) {
     const projectLink = await getOptionalLinkedProject(client);
@@ -255,6 +243,31 @@ async function provisionResourceViaCLI(
     return 1;
   }
 
+  if (billingPlan.type !== 'subscription') {
+    // offer to open the web UI to continue the resource provisioning
+    const projectLink = await getOptionalLinkedProject(client);
+
+    if (projectLink?.status === 'error') {
+      return projectLink.exitCode;
+    }
+
+    const openInWeb = await client.input.confirm(
+      'You have selected a plan that cannot be provisioned through the CLI. Open Vercel Dashboard?',
+      true
+    );
+
+    if (openInWeb) {
+      provisionResourceViaWebUI(
+        teamId,
+        integration.id,
+        product.id,
+        projectLink?.project?.id
+      );
+    }
+
+    return 0;
+  }
+
   const confirmed = await confirmProductSelection(
     client,
     product,
@@ -321,6 +334,12 @@ async function selectBillingPlan(client: Client, billingPlans: BillingPlan[]) {
     separator: true,
     choices: billingPlans.map(plan => {
       const body = [plan.description];
+
+      if (plan.type !== 'subscription') {
+        body.push(
+          'This plan is not subscription-based. Selecting it will prompt you to use the Vercel Dashboard.'
+        );
+      }
 
       if (plan.details?.length) {
         const detailsTable = formatTable(

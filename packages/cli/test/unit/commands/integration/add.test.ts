@@ -361,6 +361,45 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
         });
+
+        it('should require the vercel dashboard for non-subscription billing plan selected in UI wizard', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme-prepayment');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Prepayment under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Do you want to link this resource to the current project? (Y/n)'
+          );
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
+          );
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme-prepayment&productId=acme-product&cmd=add'
+          );
+        });
       });
 
       describe('with preauthorization steps', () => {
