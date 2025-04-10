@@ -164,7 +164,7 @@ export async function login(client: Client): Promise<number> {
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
       o.print(`
-  ${chalk.cyan('Congratulations!')} You are now signed in
+  ${chalk.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
 
