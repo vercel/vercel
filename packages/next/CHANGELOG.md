@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.7.7
+
+### Patch Changes
+
+- Fix for rewrite headers that ensures that we don't check post-non rewrite operations (like adding headers). ([#13229](https://github.com/vercel/vercel/pull/13229))
+
+- [next] ensure app router 404 page is still included in functions when using pages i18n ([#13222](https://github.com/vercel/vercel/pull/13222))
+
+- [next] improve error message for "No Next.js version" ([#13239](https://github.com/vercel/vercel/pull/13239))
+
 ## 4.7.6
 
 ### Patch Changes
