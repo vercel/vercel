@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 0.1.7
+
+### Patch Changes
+
+- fix(readme): updated link to documentation about the SDK ([#13210](https://github.com/vercel/vercel/pull/13210))
+
 ## 0.1.6
 
 ### Patch Changes

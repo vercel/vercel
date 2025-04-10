@@ -1,5 +1,19 @@
 # vercel
 
+## 41.6.0
+
+### Minor Changes
+
+- `vercel dev` will now automatically refresh the `VERCEL_OIDC_TOKEN` environment ([#13226](https://github.com/vercel/vercel/pull/13226))
+  variable and restart the development server before it expires.
+
+### Patch Changes
+
+- fix(auth): fix rendering fallback verification link ([#13232](https://github.com/vercel/vercel/pull/13232))
+
+- Updated dependencies [[`b696b2dc8e6a2bb6c9dc1c6ce99cddf375b61559`](https://github.com/vercel/vercel/commit/b696b2dc8e6a2bb6c9dc1c6ce99cddf375b61559), [`a640944c6e2c69afab5b7f03080d8363ef4bcf5b`](https://github.com/vercel/vercel/commit/a640944c6e2c69afab5b7f03080d8363ef4bcf5b), [`f0730d4b77f158c75b119544ee8756a609f22fdf`](https://github.com/vercel/vercel/commit/f0730d4b77f158c75b119544ee8756a609f22fdf)]:
+  - @vercel/next@4.7.7
+
 ## 41.5.0
 
 ### Minor Changes
