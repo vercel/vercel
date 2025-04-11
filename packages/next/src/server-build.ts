@@ -69,7 +69,7 @@ import prettyBytes from 'pretty-bytes';
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
 const CORRECT_MIDDLEWARE_ORDER_VERSION = 'v12.1.7-canary.29';
-const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
+// const NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION = 'v12.1.7-canary.33';
 const EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION = 'v12.2.0';
 const CORRECTED_MANIFESTS_VERSION = 'v12.2.0';
 
@@ -1629,9 +1629,9 @@ export async function serverBuild({
     appPathRoutesManifest: appPathRoutesManifest || {},
   });
 
-  const isNextDataServerResolving =
-    (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
-    semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
+  const isNextDataServerResolving = false;
+  // (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
+  // semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
@@ -2333,7 +2333,7 @@ export async function serverBuild({
         : []),
 
       // normalize _next/data URL before processing rewrites
-      // ...normalizeNextDataRoute(),
+      ...normalizeNextDataRoute(),
 
       ...(!isNextDataServerResolving
         ? [
@@ -2491,7 +2491,7 @@ export async function serverBuild({
       { handle: 'rewrite' },
 
       // re-build /_next/data URL after resolving
-      // ...denormalizeNextDataRoute(),
+      ...denormalizeNextDataRoute(),
 
       ...(isNextDataServerResolving
         ? dataRoutes.filter(route => {
