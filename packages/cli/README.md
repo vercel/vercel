@@ -6,7 +6,7 @@
   <p align="center">Develop. Preview. Ship.</p>
 </p>
 
-[Join the Vercel Community](https://vercel.community/)
+[Join the Vercel Community](https://community.vercel.com/)
 
 ## Usage
 
