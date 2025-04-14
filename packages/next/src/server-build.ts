@@ -1690,6 +1690,8 @@ export async function serverBuild({
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const normalizeNextDataRoute = (isOverride = false) => {
+    return [];
+
     return isNextDataServerResolving
       ? [
           // strip _next/data prefix for resolving
@@ -1739,6 +1741,8 @@ export async function serverBuild({
   };
 
   const denormalizeNextDataRoute = (isOverride = false) => {
+    return [];
+
     return isNextDataServerResolving
       ? [
           {
