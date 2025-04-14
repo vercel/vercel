@@ -1,5 +1,11 @@
 # vercel
 
+## 41.6.1
+
+### Patch Changes
+
+- fix(cli): address feedback ([#13238](https://github.com/vercel/vercel/pull/13238))
+
 ## 41.6.0
 
 ### Minor Changes
