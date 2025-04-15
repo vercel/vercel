@@ -9,7 +9,7 @@
   "devDependencies": {
     "solid-start-vercel": "^0.2.26",
     "typescript": "^5.0.4",
-    "vite": "^4.5.11"
+    "vite": "^4.5.13"
   },
   "dependencies": {
     "@solidjs/meta": "^0.28.5",
