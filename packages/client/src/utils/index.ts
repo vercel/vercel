@@ -126,13 +126,13 @@ export async function buildFileTree(
         })
       );
 
-      const microFrontendConfigPath = join(
+      const microfrontendConfigPath = join(
         path,
         rootDirectory || '',
         'microfrontends.json'
       );
-      if (await pathExists(microFrontendConfigPath)) {
-        refs.add(microFrontendConfigPath);
+      if (await pathExists(microfrontendConfigPath)) {
+        refs.add(microfrontendConfigPath);
       }
 
       if (refs.size > 0) {
