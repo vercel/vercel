@@ -155,7 +155,7 @@ function normalizePackageJson(
     scripts: {
       ...defaultPackageJson.scripts,
       'now-build':
-        'NODE_OPTIONS=--max_old_space_size=3000 next build --lambdas',
+        'NODE_OPTIONS="--max-old-space-size=14000 --max-semi-space-size=512" next build --lambdas',
     },
   };
 }
