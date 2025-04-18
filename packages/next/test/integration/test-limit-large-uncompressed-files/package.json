@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "15.2.0-canary.33",
+    "next": "https://files-f6e1s2s88-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
