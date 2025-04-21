@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.8
+
+### Patch Changes
+
+- Added support for more specific route keys for prefetch segments ([#13262](https://github.com/vercel/vercel/pull/13262))
+
 ## 4.7.7
 
 ### Patch Changes
