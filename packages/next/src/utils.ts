@@ -226,6 +226,7 @@ type RoutesManifestRoute = {
   prefetchSegmentDataRoutes?: {
     source: string;
     destination: string;
+    routeKeys?: { [named: string]: string };
   }[];
 };
 
@@ -480,13 +481,11 @@ export async function getDynamicRoutes({
                         prefetchSegmentDataRoute.destination
                       )
                     : prefetchSegmentDataRoute.destination
-                }${
-                  routeKeys
-                    ? `?${Object.entries(routeKeys)
-                        .map(([key, value]) => `${value}=$${key}`)
-                        .join('&')}`
-                    : ''
-                }`,
+                }?${Object.entries(
+                  prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {}
+                )
+                  .map(([key, value]) => `${value}=$${key}`)
+                  .join('&')}`,
                 check: true,
               });
             }
