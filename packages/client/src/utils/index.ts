@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
+import { pathExists, readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
 
 type Ignore = ReturnType<typeof ignore>;
@@ -82,7 +82,11 @@ export async function buildFileTree(
     isDirectory,
     prebuilt,
     vercelOutputDir,
-  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'vercelOutputDir'>,
+    rootDirectory,
+  }: Pick<
+    VercelClientOptions,
+    'isDirectory' | 'prebuilt' | 'vercelOutputDir' | 'rootDirectory'
+  >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
@@ -121,6 +125,16 @@ export async function buildFileTree(
           }
         })
       );
+
+      const microfrontendConfigPath = join(
+        path,
+        rootDirectory || '',
+        'microfrontends.json'
+      );
+      if (await pathExists(microfrontendConfigPath)) {
+        refs.add(microfrontendConfigPath);
+      }
+
       if (refs.size > 0) {
         fileList = fileList.concat(Array.from(refs));
       }
