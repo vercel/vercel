@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 15.2.0
+
+### Minor Changes
+
+- Add special case for including microfrontend config ([#13258](https://github.com/vercel/vercel/pull/13258))
+
 ## 15.1.6
 
 ### Patch Changes
