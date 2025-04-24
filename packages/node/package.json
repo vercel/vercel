@@ -66,5 +66,8 @@
     "tree-kill": "1.2.2",
     "vite": "^5.1.6",
     "vitest": "^2.0.1"
+  },
+  "pnpm": {
+    "neverBuiltDependencies": []
   }
 }
