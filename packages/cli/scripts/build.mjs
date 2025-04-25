@@ -32,7 +32,11 @@ const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const externals = Object.keys(pkg.dependencies || {});
 await esbuild({
   bundle: true,
-  external: externals,
+  external: [
+    ...externals,
+    // https://github.com/evanw/esbuild/issues/1619
+    'jsonc-parser',
+  ],
 });
 
 // Copy a few static files into `dist`
