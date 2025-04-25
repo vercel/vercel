@@ -151,7 +151,7 @@ export async function buildFileTree(
           refs.add(microfrontendConfigPath);
         }
       } catch (e) {
-        console.error(`Error finding microfrontend config: ${e}`);
+        debug(`Error detecting microfrontend config: ${e}`);
       }
 
       if (refs.size > 0) {
