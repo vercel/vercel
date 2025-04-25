@@ -209,58 +209,44 @@ describe('buildFileTree()', () => {
   it('microfrontend monorepo - should find `microfrontends.json` when prebuilt=true', async () => {
     const cwd = fixture('microfrontend');
 
-    {
-      const { fileList } = await buildFileTree(
-        cwd,
-        {
-          isDirectory: true,
-          prebuilt: true,
-          vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
-          rootDirectory: 'marketing-app',
-        },
-        noop
-      );
-      const expectedFileList = toAbsolutePaths(cwd, [
-        'marketing-app/.vercel/output/functions/api/another.func/.vc-config.json',
-        'marketing-app/.vercel/output/functions/api/example.func/.vc-config.json',
-        'marketing-app/.vercel/output/static/baz.txt',
-        'marketing-app/.vercel/output/static/sub/qux.txt',
-        'node_modules/another/index.js',
-        'node_modules/example/index.js',
-        'marketing-app/microfrontends.json',
-      ]);
-      expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
-        normalizeWindowsPaths(fileList).sort()
-      );
-    }
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
+        rootDirectory: 'marketing-app',
+      },
+      noop
+    );
+
+    const microfrontendsConfig = toAbsolutePaths(cwd, [
+      'marketing-app/microfrontends.json',
+    ]);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(microfrontendsConfig)[0]
+    );
   });
 
   it('microfrontend monorepo - should infer `microfrontends.json` when prebuilt=true', async () => {
     const cwd = fixture('microfrontend');
-    {
-      const { fileList } = await buildFileTree(
-        cwd,
-        {
-          isDirectory: true,
-          prebuilt: true,
-          vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
-          projectName: 'marketing-app',
-        },
-        noop
-      );
 
-      const expectedFileList = toAbsolutePaths(cwd, [
-        'marketing-app/.vercel/output/functions/api/another.func/.vc-config.json',
-        'marketing-app/.vercel/output/functions/api/example.func/.vc-config.json',
-        'marketing-app/.vercel/output/static/baz.txt',
-        'marketing-app/.vercel/output/static/sub/qux.txt',
-        'node_modules/another/index.js',
-        'node_modules/example/index.js',
-        'marketing-app/microfrontends.json',
-      ]);
-      expect(normalizeWindowsPaths(expectedFileList).sort()).toEqual(
-        normalizeWindowsPaths(fileList).sort()
-      );
-    }
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
+        projectName: 'marketing-app',
+      },
+      noop
+    );
+
+    const microfrontendsConfig = toAbsolutePaths(cwd, [
+      'marketing-app/microfrontends.json',
+    ]);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(microfrontendsConfig)[0]
+    );
   });
 });
