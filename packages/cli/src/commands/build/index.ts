@@ -35,6 +35,7 @@ import {
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
+  detectInstrumentation,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -372,17 +373,25 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  const [pkg, vercelConfig, nowConfig] = await Promise.all([
+  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(
       localConfigPath || join(workPath, 'vercel.json')
     ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
+    detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
   if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
+
+  if (hasInstrumentation) {
+    output.debug(
+      'OpenTelemetry instrumentation detected. Automatic fetch instrumentation will be disabled.'
+    );
+    process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION = '1';
+  }
 
   if (vercelConfig) {
     vercelConfig[fileNameSymbol] = 'vercel.json';
