@@ -33,6 +33,7 @@ const externals = Object.keys(pkg.dependencies || {});
 await esbuild({
   bundle: true,
   external: externals,
+  // https://github.com/evanw/esbuild/issues/1619
   mainFields: ['module', 'main'],
 });
 
