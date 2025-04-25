@@ -2,4 +2,4 @@
 '@vercel/functions': patch
 ---
 
-Add runtime-cache api
+Add Vercel Function Cache api
