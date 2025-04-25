@@ -4,15 +4,15 @@
 
 ### Interfaces
 
+- [FunctionCache](../interfaces/index.FunctionCache.md)
 - [Geo](../interfaces/index.Geo.md)
 - [Request](../interfaces/index.Request.md)
-- [RuntimeCache](../interfaces/index.RuntimeCache.md)
 
 ### Functions
 
 - [geolocation](index.md#geolocation)
 - [getEnv](index.md#getenv)
-- [getRuntimeCache](index.md#getruntimecache)
+- [getFunctionCache](index.md#getfunctioncache)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
@@ -118,11 +118,11 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 ---
 
-### getRuntimeCache
+### getFunctionCache
 
-▸ **getRuntimeCache**(`cacheOptions?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[`RuntimeCache`](../interfaces/index.RuntimeCache.md)\>
+▸ **getFunctionCache**(`cacheOptions?`): [`FunctionCache`](../interfaces/index.FunctionCache.md)
 
-Retrieves the Vercel Runtime Cache.
+Retrieves the Vercel Function Cache.
 
 Keys are hashed to ensure they are unique and consistent. The hashing function can be overridden by providing a custom
 `keyHashFunction` in the `cacheOptions` parameter.
@@ -143,9 +143,9 @@ If no cache is available in the context and `InMemoryCache` cannot be created.
 
 #### Returns
 
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<[`RuntimeCache`](../interfaces/index.RuntimeCache.md)\>
+[`FunctionCache`](../interfaces/index.FunctionCache.md)
 
-A promise that resolves to an instance of the Vercel Runtime Cache.
+An instance of the Vercel Function Cache.
 
 #### Defined in
 

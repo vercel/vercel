@@ -1,4 +1,4 @@
-import { RuntimeCache } from './types';
+import { FunctionCache } from './types';
 
 interface CacheEntry {
   value: unknown;
@@ -7,7 +7,7 @@ interface CacheEntry {
   ttl?: number;
 }
 
-export class InMemoryCache implements RuntimeCache {
+export class InMemoryCache implements FunctionCache {
   private cache: Record<string, CacheEntry> = {};
 
   async get(
@@ -51,7 +51,7 @@ export class InMemoryCache implements RuntimeCache {
     delete this.cache[key];
   }
 
-  async revalidateTag(tag: string | string[]): Promise<void> {
+  async expireTag(tag: string | string[]): Promise<void> {
     const tags = [tag].flat();
     // Iterate over all entries in the cache
     for (const key in this.cache) {

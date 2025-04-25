@@ -1,5 +1,5 @@
 import { getContext } from '../get-context';
-import { CacheOptions, RuntimeCache } from './types';
+import { CacheOptions, FunctionCache } from './types';
 import { InMemoryCache } from './in-memory-cache';
 
 const defaultKeyHashFunction = (key: string) => {
@@ -13,7 +13,7 @@ const defaultKeyHashFunction = (key: string) => {
 const defaultNamespaceSeparator = '$';
 
 /**
- * Retrieves the Vercel Runtime Cache.
+ * Retrieves the Vercel Function Cache.
  *
  * Keys are hashed to ensure they are unique and consistent. The hashing function can be overridden by providing a custom
  * `keyHashFunction` in the `cacheOptions` parameter.
@@ -23,15 +23,15 @@ const defaultNamespaceSeparator = '$';
  * namespaceSeparator can also be customized using the `namespaceSeparator` option.
  *
  * @param cacheOptions - Optional configuration for the cache.
- * @returns A promise that resolves to an instance of the Vercel Runtime Cache.
+ * @returns An instance of the Vercel Function Cache.
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
-export const getRuntimeCache = (cacheOptions?: CacheOptions) => {
-  let runtimeCache: RuntimeCache;
+export const getFunctionCache = (cacheOptions?: CacheOptions) => {
+  let cache: FunctionCache;
   if (getContext().cache) {
-    runtimeCache = getContext().cache as RuntimeCache;
+    cache = getContext().cache as FunctionCache;
   } else {
-    runtimeCache = new InMemoryCache();
+    cache = new InMemoryCache();
   }
 
   const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
@@ -45,22 +45,22 @@ export const getRuntimeCache = (cacheOptions?: CacheOptions) => {
     return `${prefix}${hashFunction(key)}`;
   };
 
-  return Promise.resolve({
+  return {
     get: (key: string, options?: { tags?: string[] }) => {
-      return runtimeCache.get(makeKey(key), options);
+      return cache.get(makeKey(key), options);
     },
     set: (
       key: string,
       value: unknown,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
-      return runtimeCache.set(makeKey(key), value, options);
+      return cache.set(makeKey(key), value, options);
     },
     delete: (key: string) => {
-      return runtimeCache.delete(makeKey(key));
+      return cache.delete(makeKey(key));
     },
-    revalidateTag: (tag: string | string[]) => {
-      return runtimeCache.revalidateTag(tag);
+    expireTag: (tag: string | string[]) => {
+      return cache.expireTag(tag);
     },
-  } as RuntimeCache);
+  } as FunctionCache;
 };

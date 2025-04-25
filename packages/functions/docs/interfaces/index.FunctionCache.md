@@ -1,17 +1,17 @@
-# Interface: RuntimeCache
+# Interface: FunctionCache
 
-[index](../modules/index.md).RuntimeCache
+[index](../modules/index.md).FunctionCache
 
-Interface representing a runtime cache.
+Interface representing the function cache.
 
 ## Table of contents
 
 ### Properties
 
-- [delete](index.RuntimeCache.md#delete)
-- [get](index.RuntimeCache.md#get)
-- [revalidateTag](index.RuntimeCache.md#revalidatetag)
-- [set](index.RuntimeCache.md#set)
+- [delete](index.FunctionCache.md#delete)
+- [expireTag](index.FunctionCache.md#expiretag)
+- [get](index.FunctionCache.md#get)
+- [set](index.FunctionCache.md#set)
 
 ## Properties
 
@@ -43,6 +43,34 @@ A promise that resolves when the value is deleted.
 
 ---
 
+### expireTag
+
+• **expireTag**: (`tag`: `string` \| `string`[]) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Type declaration
+
+▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+Expires cache entries by tag.
+
+##### Parameters
+
+| Name  | Type                   | Description                                     |
+| :---- | :--------------------- | :---------------------------------------------- |
+| `tag` | `string` \| `string`[] | The tag or tags of the cache entries to expire. |
+
+##### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+A promise that resolves when the cache entries expiration request is received.
+
+#### Defined in
+
+[packages/functions/src/cache/types.ts:46](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L46)
+
+---
+
 ### get
 
 • **get**: (`key`: `string`, `options?`: { `tags?`: `string`[] }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
@@ -70,34 +98,6 @@ A promise that resolves to the value, or null if not found.
 #### Defined in
 
 [packages/functions/src/cache/types.ts:21](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L21)
-
----
-
-### revalidateTag
-
-• **revalidateTag**: (`tag`: `string` \| `string`[]) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
-
-#### Type declaration
-
-▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
-
-Revalidates a cache entry by tag.
-
-##### Parameters
-
-| Name  | Type                   | Description                                         |
-| :---- | :--------------------- | :-------------------------------------------------- |
-| `tag` | `string` \| `string`[] | The tag or tags of the cache entries to revalidate. |
-
-##### Returns
-
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
-
-A promise that resolves when the cache entries are revalidated.
-
-#### Defined in
-
-[packages/functions/src/cache/types.ts:46](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L46)
 
 ---
 

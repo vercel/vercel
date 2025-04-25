@@ -1,7 +1,7 @@
 /**
- * Interface representing a runtime cache.
+ * Interface representing the function cache.
  */
-export interface RuntimeCache {
+export interface FunctionCache {
   /**
    * Deletes a value from the cache.
    *
@@ -38,12 +38,12 @@ export interface RuntimeCache {
   ) => Promise<void>;
 
   /**
-   * Revalidates a cache entry by tag.
+   * Expires cache entries by tag.
    *
-   * @param {string | string[]} tag - The tag or tags of the cache entries to revalidate.
-   * @returns {Promise<void>} A promise that resolves when the cache entries are revalidated.
+   * @param {string | string[]} tag - The tag or tags of the cache entries to expire.
+   * @returns {Promise<void>} A promise that resolves when the cache entries expiration request is received.
    */
-  revalidateTag: (tag: string | string[]) => Promise<void>;
+  expireTag: (tag: string | string[]) => Promise<void>;
 }
 
 /**

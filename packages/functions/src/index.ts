@@ -3,5 +3,5 @@ export { geolocation, ipAddress } from './headers';
 export { getEnv } from './get-env';
 export { waitUntil } from './wait-until';
 export { rewrite, next } from './middleware';
-export { getRuntimeCache } from './cache';
-export type { RuntimeCache } from './cache/types';
+export { getFunctionCache } from './cache';
+export type { FunctionCache } from './cache/types';
