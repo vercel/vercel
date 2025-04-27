@@ -4,124 +4,62 @@ import { forceOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
-export const envCommand = {
-  name: 'env',
-  description: 'Interact with environment variables.',
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List all Environment Variables for a Project',
   arguments: [
     {
-      name: 'command',
+      name: 'environment',
+      required: false,
+    },
+    {
+      name: 'git-branch',
       required: false,
     },
   ],
-  subcommands: [
+  options: [],
+  examples: [],
+} as const;
+
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add an Environment Variable (see examples below)',
+  arguments: [
     {
-      name: 'ls',
-      description: 'List all variables for the specified Environment',
-      arguments: [],
-      options: [],
-      examples: [],
+      name: 'name',
+      required: true,
     },
     {
-      name: 'add',
-      description: 'Add an Environment Variable (see examples below)',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'environment',
-          required: false,
-        },
-      ],
-      options: [
-        {
-          name: 'sensitive',
-          description: 'Add a sensitive Environment Variable',
-          shorthand: null,
-          type: String,
-          deprecated: false,
-        },
-        {
-          ...forceOption,
-          description: 'Force overwrites when a command would normally fail',
-          shorthand: null,
-        },
-      ],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove an Environment Variable (see examples below)',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'environment',
-          required: false,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'pull',
-      description:
-        'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
-      arguments: [
-        {
-          name: 'filename',
-          required: false,
-        },
-      ],
-      options: [],
-      examples: [],
+      name: 'environment',
+      required: false,
     },
   ],
   options: [
     {
-      name: 'environment',
-      description:
-        'Set the Environment (development, preview, production) when pulling Environment Variables',
+      name: 'sensitive',
+      description: 'Add a sensitive Environment Variable',
       shorthand: null,
-      type: String,
+      type: Boolean,
       deprecated: false,
     },
     {
-      name: 'git-branch',
-      description:
-        'Specify the Git branch to pull specific Environment Variables for',
+      ...forceOption,
+      description: 'Force overwrites when a command would normally fail',
       shorthand: null,
-      type: String,
-      deprecated: false,
     },
-    {
-      ...yesOption,
-
-      description: 'Skip the confirmation prompt when removing an alias',
-    },
-    { name: 'sensitive', shorthand: null, type: Boolean, deprecated: false },
-    { name: 'force', shorthand: null, type: Boolean, deprecated: false },
   ],
   examples: [
     {
-      name: 'Pull all Development Environment Variables down from the cloud',
-      value: [
-        `${packageName} env pull <file>`,
-        `${packageName} env pull .env.development.local`,
-      ],
-    },
-    {
-      name: 'Add a new variable to multiple Environments',
+      name: 'Add a new variable to all Environments',
       value: [
         `${packageName} env add <name>`,
         `${packageName} env add API_TOKEN`,
       ],
     },
     {
-      name: 'Add a new variable for a specific Environment',
+      name: 'Add a new Environment Variable to a specific Environment',
       value: [
         `${packageName} env add <name> ${targetPlaceholder}`,
         `${packageName} env add DB_PASS production`,
@@ -136,9 +74,9 @@ export const envCommand = {
       value: `${packageName} env add API_TOKEN --sensitive`,
     },
     {
-      name: 'Add a new variable for a specific Environment and Git Branch',
+      name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -150,6 +88,31 @@ export const envCommand = {
         `${packageName} env add API_URL production < url.txt`,
       ],
     },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove an Environment Variable (see examples below)',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'environment',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when removing an Environment Variable',
+    },
+  ],
+  examples: [
     {
       name: 'Remove a variable from multiple Environments',
       value: [
@@ -172,4 +135,65 @@ export const envCommand = {
       ],
     },
   ],
+} as const;
+
+export const pullSubcommand = {
+  name: 'pull',
+  aliases: [],
+  description:
+    'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
+  arguments: [
+    {
+      name: 'filename',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      description: 'Set the Environment when pulling Environment Variables',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to pull specific Environment Variables for',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when removing an environment variable',
+    },
+  ],
+  examples: [
+    {
+      name: 'Pull all Development Environment Variables down from the cloud',
+      value: [
+        `${packageName} env pull <file>`,
+        `${packageName} env pull .env.development.local`,
+      ],
+    },
+  ],
+} as const;
+
+export const envCommand = {
+  name: 'env',
+  aliases: [],
+  description: 'Interact with Environment Variables for a Project',
+  arguments: [],
+  subcommands: [
+    addSubcommand,
+    listSubcommand,
+    pullSubcommand,
+    removeSubcommand,
+  ],
+  options: [],
+  examples: [],
 } as const;

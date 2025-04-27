@@ -1,9 +1,9 @@
-import chalk from 'chalk';
 import ms from 'ms';
-import table from '../../util/output/table';
+import chalk from 'chalk';
 import title from 'title';
+import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import toHost from '../../util/to-host';
 import parseMeta from '../../util/parse-meta';
@@ -11,7 +11,7 @@ import parsePolicy from '../../util/parse-policy';
 import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -22,7 +22,15 @@ import parseTarget from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getDeployment from '../../util/get-deployment';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import type { Deployment } from '@vercel-internals/types';
+import { formatProject } from '../../util/projects/format-project';
+import { formatEnvironment } from '../../util/target/format-environment';
+import { ListTelemetryClient } from '../../util/telemetry/commands/list';
+import type {
+  Deployment,
+  PaginationOptions,
+  Project,
+} from '@vercel-internals/types';
+import output from '../../output-manager';
 
 function toDate(timestamp: number): string {
   const date = new Date(timestamp);
@@ -37,7 +45,7 @@ function toDate(timestamp: number): string {
 }
 
 export default async function list(client: Client) {
-  const { print, log, warn, error, note, debug, spinner } = client.output;
+  const { print, log, warn, error, note, debug, spinner } = output;
 
   let parsedArgs = null;
 
@@ -46,18 +54,20 @@ export default async function list(client: Client) {
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
+  const telemetry = new ListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('list');
     print(help(listCommand, { columns: client.stderr.columns }));
     return 2;
-  }
-
-  if ('--confirm' in parsedArgs.flags) {
-    warn('`--confirm` is deprecated, please use `--yes` instead');
-    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
   if (parsedArgs.args.length > 2) {
@@ -65,21 +75,33 @@ export default async function list(client: Client) {
     return 1;
   }
 
+  telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
+
+  if ('--confirm' in parsedArgs.flags) {
+    telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+    warn('`--confirm` is deprecated, please use `--yes` instead');
+    parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
+  }
+
   const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
   const target = parseTarget({
-    output: client.output,
     flagName: 'environment',
     flags: parsedArgs.flags,
   });
 
-  let project;
-  let pagination;
-  let contextName;
+  let project: Project;
+  let pagination: PaginationOptions | undefined;
+  let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
-  let deployments: Deployment[] = [];
+  const deployments: Deployment[] = [];
   let singleDeployment = false;
 
   if (app) {
@@ -87,6 +109,8 @@ export default async function list(client: Client) {
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
+    telemetry.trackCliArgumentApp(app);
+
     if (app.includes('.')) {
       // `app` looks like a hostname / URL, so fetch the deployment
       // from the API and retrieve the project ID from the deployment
@@ -121,11 +145,12 @@ export default async function list(client: Client) {
       deployments.push(deployment);
       singleDeployment = true;
     }
-    project = await getProjectByNameOrId(client, app);
-    if (project instanceof ProjectNotFound) {
+    const p = await getProjectByNameOrId(client, app);
+    if (p instanceof ProjectNotFound) {
       error(`The provided argument "${app}" is not a valid project name`);
       return 1;
     }
+    project = p;
   } else {
     const link = await ensureLink('list', client, client.cwd, {
       autoConfirm,
@@ -156,12 +181,7 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  const projectUrl = `https://vercel.com/${contextName}/${project.name}`;
-  const projectSlugBold = chalk.bold(`${contextName}/${project.name}`);
-  const projectSlugLink = client.output.link(projectSlugBold, projectUrl, {
-    fallback: () => projectSlugBold,
-    color: false,
-  });
+  const projectSlugLink = formatProject(contextName, project.name);
 
   if (!singleDeployment) {
     spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
@@ -196,13 +216,13 @@ export default async function list(client: Client) {
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
-      log(`No deployments found.`);
+      log('No deployments found.');
       return 0;
     }
 
     log(
       `${
-        target === 'production' ? `Production deployments` : `Deployments`
+        target === 'production' ? 'Production deployments' : 'Deployments'
       } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
     );
   }
@@ -228,7 +248,7 @@ export default async function list(client: Client) {
             Date.now() - (dep?.undeletedAt ?? dep.createdAt)
           );
           const targetName =
-            dep.customEnvironment?.name ||
+            dep.customEnvironment?.slug ||
             (dep.target === 'production' ? 'Production' : 'Preview');
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
@@ -236,11 +256,10 @@ export default async function list(client: Client) {
             chalk.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            client.output.link(
-              targetName,
-              `${projectUrl}/settings/environments/${targetSlug}`,
-              { fallback: () => targetName, color: false }
-            ),
+            formatEnvironment(contextName, project.name, {
+              id: targetSlug,
+              slug: targetName,
+            }),
             ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
             ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
             ...(showPolicy ? [chalk.gray(proposedExp)] : []),
@@ -265,7 +284,7 @@ export default async function list(client: Client) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next']);
     log(
       `To display the next page, run ${getCommandName(
-        `ls${app ? ' ' + app : ''}${flags} --next ${pagination.next}`
+        `ls${app ? ` ${app}` : ''}${flags} --next ${pagination.next}`
       )}`
     );
   }

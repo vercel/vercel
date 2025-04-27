@@ -6,126 +6,56 @@ import {
   yesOption,
 } from '../../util/arg-common';
 
-export const domainsCommand = {
-  name: 'domains',
-  description: 'Manage domains',
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'Show all domains in a list',
+  default: true,
+  arguments: [],
+  options: [limitOption, nextOption],
+  examples: [
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
+      value: `${packageName} domains ls --next 1584722256178`,
+    },
+  ],
+} as const;
+
+export const inspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Displays information related to a domain',
   arguments: [
     {
-      name: 'command',
+      name: 'domain',
       required: true,
     },
   ],
-  subcommands: [
+  options: [],
+  examples: [],
+} as const;
+
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a domain name that you already own to a Vercel Team',
+  arguments: [
     {
-      name: 'ls',
-      description: 'Show all domains in a list',
-      arguments: [],
-      options: [],
-      examples: [],
+      name: 'domain',
+      required: true,
     },
     {
-      name: 'inspect',
-      description: 'Displays information related to a domain',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'add',
-      description: 'Add a new domain that you already own',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'project',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'rm',
-      description: 'Remove a domain',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'buy',
-      description: "Buy a domain that you don't yet own",
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'move',
-      description: 'Move a domain to another scope',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-        {
-          name: 'destination',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
-    },
-    {
-      name: 'transfer-in',
-      description: 'Transfer in a domain to Vercel',
-      arguments: [
-        {
-          name: 'name',
-          required: true,
-        },
-      ],
-      options: [],
-      examples: [],
+      name: 'project',
+      required: true,
     },
   ],
   options: [
     {
-      ...nextOption,
-      description: 'Show next page of results',
-    },
-    {
-      ...yesOption,
-      description: 'Skip the confirmation prompt when removing a domain',
-    },
-    {
-      ...limitOption,
-      description:
-        'Number of results to return per page (default: 20, max: 100)',
-      argument: 'NUMBER',
-    },
-    {
       ...forceOption,
       shorthand: null,
       description:
-        'Force a domain on a project and remove it from an existing one',
+        'Force a domain name for a project and remove it from an existing one',
     },
-    { name: 'code', shorthand: null, type: String, deprecated: false },
   ],
   examples: [
     {
@@ -136,9 +66,101 @@ export const domainsCommand = {
         `NOTE: Running ${packageName} alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')`,
       ],
     },
+  ],
+} as const;
+
+export const removeSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Remove ownership of a domain name from a Vercel Team',
+  arguments: [
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} domains ls--next 1584722256178`,
+      name: 'domain',
+      required: true,
     },
   ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a domain',
+    },
+  ],
+  examples: [],
+} as const;
+
+export const buySubcommand = {
+  name: 'buy',
+  aliases: [],
+  description: 'Purchase a new domain name',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const moveSubcommand = {
+  name: 'move',
+  aliases: [],
+  description: 'Move ownership of a domain name to another Vercel Team',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+    {
+      name: 'destination',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when moving a domain',
+    },
+  ],
+  examples: [],
+} as const;
+
+export const transferInSubcommand = {
+  name: 'transfer-in',
+  aliases: [],
+  description: 'Transfer in a domain name to Vercel',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'code',
+      argument: 'CODE',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
+  ],
+  examples: [],
+} as const;
+
+export const domainsCommand = {
+  name: 'domains',
+  aliases: ['domain'],
+  description: 'Manage domains',
+  arguments: [],
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    addSubcommand,
+    buySubcommand,
+    moveSubcommand,
+    transferInSubcommand,
+    removeSubcommand,
+  ],
+  options: [],
+  examples: [],
 } as const;

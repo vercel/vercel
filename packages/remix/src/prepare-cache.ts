@@ -1,4 +1,5 @@
 import {
+  defaultCachePathGlob,
   getNodeVersion,
   getSpawnOptions,
   glob,
@@ -37,7 +38,8 @@ export const prepareCache: PrepareCache = async ({
         stdio: 'ignore',
       },
       undefined,
-      nodeVersion
+      nodeVersion,
+      config.projectSettings?.createdAt
     );
 
     const packageJsonPath = join(entrypointFsDirname, 'package.json');
@@ -58,8 +60,7 @@ export const prepareCache: PrepareCache = async ({
     );
   }
 
-  // Cache `node_modules`
-  const nodeModulesFiles = await glob('**/node_modules/**', root);
+  const defaultCacheFiles = await glob(defaultCachePathGlob, root);
 
-  return { ...nodeModulesFiles, ...cacheDirFiles };
+  return { ...defaultCacheFiles, ...cacheDirFiles };
 };

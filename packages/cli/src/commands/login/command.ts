@@ -2,6 +2,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const loginCommand = {
   name: 'login',
+  aliases: [],
   description: 'Authenticate using your email or team id.',
   arguments: [
     {
@@ -26,6 +27,13 @@ export const loginCommand = {
     },
     { name: 'gitlab', shorthand: null, type: Boolean, deprecated: false },
     { name: 'bitbucket', shorthand: null, type: Boolean, deprecated: false },
+    {
+      name: 'future',
+      description: 'Sign in using OAuth Device Authorization',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {

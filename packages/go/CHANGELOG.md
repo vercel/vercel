@@ -1,5 +1,29 @@
 # @vercel/go
 
+## 3.2.1
+
+### Patch Changes
+
+- fix bug on go.work in dev missing go version declaration ([#12574](https://github.com/vercel/vercel/pull/12574))
+
+## 3.2.0
+
+### Minor Changes
+
+- Support parse go patch version in go.mod and allows to use specific toolchain ([#11064](https://github.com/vercel/vercel/pull/11064))
+
+## 3.1.3
+
+### Patch Changes
+
+- Support patch versions in go mod ([#12110](https://github.com/vercel/vercel/pull/12110))
+
+## 3.1.2
+
+### Patch Changes
+
+- Added support for Go 1.23 and updated Go patch versions of 1.22 and 1.21 ([#12027](https://github.com/vercel/vercel/pull/12027))
+
 ## 3.1.1
 
 ### Patch Changes

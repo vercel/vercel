@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: install npm@9
         run: npm i -g npm@9
@@ -45,7 +45,6 @@ jobs:
       - name: Build Packages
         run: pnpm build
         env:
-          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Create Release Pull Request or Publish to npm
@@ -58,7 +57,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           NPM_CONFIG_PROVENANCE: 'true'
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
-          GA_TRACKING_ID: ${{ secrets.GA_TRACKING_ID }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Trigger Update (if a Publish Happened)

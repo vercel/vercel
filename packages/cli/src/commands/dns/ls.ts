@@ -2,31 +2,48 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
 import type { DNSRecord } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getDNSRecords, {
-  DomainRecordsItem,
+  type DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
 import getScope from '../../util/get-scope';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
+import { listSubcommand } from './command';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
 
-export default async function ls(
-  client: Client,
-  opts: PaginationOptions,
-  args: string[]
-) {
-  const { output } = client;
+export default async function ls(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+  const { telemetryEventStore } = client;
   const { contextName } = await getScope(client);
+  const telemetry = new DnsLsTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
 
   const [domainName] = args;
   const lsStamp = stamp();
+
+  telemetry.trackCliArgumentDomain(domainName);
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   if (args.length > 1) {
     output.error(
@@ -48,7 +65,6 @@ export default async function ls(
 
   if (domainName) {
     const data = await getDomainDNSRecords(
-      output,
       client,
       domainName,
       4,
@@ -85,7 +101,6 @@ export default async function ls(
   }
 
   const { records: dnsRecords, pagination } = await getDNSRecords(
-    output,
     client,
     contextName,
     ...paginationOptions

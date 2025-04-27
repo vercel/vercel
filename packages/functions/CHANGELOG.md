@@ -1,5 +1,47 @@
 # @vercel/functions
 
+## 2.0.0
+
+### Major Changes
+
+- [cli] Remove support for node@16 ([#12857](https://github.com/vercel/vercel/pull/12857))
+
+## 1.6.0
+
+### Minor Changes
+
+- Add middleware-related helper functions ([#12938](https://github.com/vercel/vercel/pull/12938))
+
+## 1.5.2
+
+### Patch Changes
+
+- [vercel/functions] add geolocation.postalCode ([#12753](https://github.com/vercel/vercel/pull/12753))
+
+## 1.5.1
+
+### Patch Changes
+
+- [@vercel/functions] update headers doc ([#12649](https://github.com/vercel/vercel/pull/12649))
+
+## 1.5.0
+
+### Minor Changes
+
+- ipAddress: accept headers as input ([#12429](https://github.com/vercel/vercel/pull/12429))
+
+## 1.4.2
+
+### Patch Changes
+
+- [functions] decode city name ([#12234](https://github.com/vercel/vercel/pull/12234))
+
+## 1.4.1
+
+### Patch Changes
+
+- Package files in the root folder ([#11982](https://github.com/vercel/vercel/pull/11982))
+
 ## 1.4.0
 
 ### Minor Changes

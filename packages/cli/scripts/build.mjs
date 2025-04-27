@@ -8,9 +8,6 @@ const repoRoot = new URL('../', import.meta.url);
 function createConstants() {
   const filename = new URL('src/util/constants.ts', repoRoot);
   const contents = `// This file is auto-generated
-export const GA_TRACKING_ID: string | undefined = ${envToString(
-    'GA_TRACKING_ID'
-  )};
 export const SENTRY_DSN: string | undefined = ${envToString('SENTRY_DSN')};
 `;
   writeFileSync(filename, contents, 'utf8');
@@ -52,3 +49,4 @@ copyFileSync(
   new URL('src/util/get-latest-version/get-latest-worker.js', repoRoot),
   new URL('get-latest-worker.js', distRoot)
 );
+copyFileSync(new URL('src/vc.js', repoRoot), new URL('vc.js', distRoot));

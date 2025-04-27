@@ -1,6 +1,5 @@
 import { FilesMap } from './hashes';
-import { FetchOptions } from '@zeit/fetch';
-import { nodeFetch, zeitFetch } from './fetch';
+import nodeFetch, { RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -8,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
+import { pathExists, readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
 
 type Ignore = ReturnType<typeof ignore>;
@@ -83,7 +82,11 @@ export async function buildFileTree(
     isDirectory,
     prebuilt,
     vercelOutputDir,
-  }: Pick<VercelClientOptions, 'isDirectory' | 'prebuilt' | 'vercelOutputDir'>,
+    rootDirectory,
+  }: Pick<
+    VercelClientOptions,
+    'isDirectory' | 'prebuilt' | 'vercelOutputDir' | 'rootDirectory'
+  >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
   const ignoreList: string[] = [];
@@ -122,6 +125,16 @@ export async function buildFileTree(
           }
         })
       );
+
+      const microfrontendConfigPath = join(
+        path,
+        rootDirectory || '',
+        'microfrontends.json'
+      );
+      if (await pathExists(microfrontendConfigPath)) {
+        refs.add(microfrontendConfigPath);
+      }
+
       if (refs.size > 0) {
         fileList = fileList.concat(Array.from(refs));
       }
@@ -187,6 +200,8 @@ export async function getVercelIgnore(
       '.env.local',
       '.env.*.local',
       '.venv',
+      '.yarn/cache',
+      '.pnp*',
       'npm-debug.log',
       'config.gypi',
       'node_modules',
@@ -231,7 +246,7 @@ function clearRelative(str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 }
 
-interface FetchOpts extends FetchOptions {
+interface FetchOpts extends RequestInit {
   apiUrl?: string;
   method?: string;
   teamId?: string;
@@ -243,8 +258,7 @@ export const fetch = async (
   url: string,
   token: string,
   opts: FetchOpts = {},
-  debugEnabled?: boolean,
-  useNodeFetch?: boolean
+  debugEnabled?: boolean
 ): Promise<any> => {
   semaphore.acquire();
   const debug = createDebug(debugEnabled);
@@ -278,9 +292,7 @@ export const fetch = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = useNodeFetch
-    ? await nodeFetch(url, opts)
-    : await zeitFetch(url, opts);
+  const res = await nodeFetch(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 

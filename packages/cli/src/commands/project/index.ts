@@ -1,63 +1,107 @@
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
-import getScope from '../../util/get-scope';
-import handleError from '../../util/handle-error';
-import { help } from '../help';
+import { printError } from '../../util/error';
+import { type Command, help } from '../help';
 import add from './add';
+import inspect from './inspect';
 import list from './list';
 import rm from './rm';
-import { projectCommand } from './command';
+import {
+  addSubcommand,
+  inspectSubcommand,
+  listSubcommand,
+  projectCommand,
+  removeSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
+import output from '../../output-manager';
+import { getCommandAliases } from '..';
+import getSubcommand from '../../util/get-subcommand';
 
 const COMMAND_CONFIG = {
-  ls: ['ls', 'list'],
-  add: ['add'],
-  rm: ['rm', 'remove'],
+  inspect: getCommandAliases(inspectSubcommand),
+  list: getCommandAliases(listSubcommand),
+  add: getCommandAliases(addSubcommand),
+  remove: getCommandAliases(removeSubcommand),
 };
 
 export default async function main(client: Client) {
-  let subcommand: string | string[];
+  const telemetry = new ProjectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(projectCommand.options);
-
-  // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
-  const { output } = client;
+  // eslint-disable-next-line prefer-const
+  let { subcommand, args, subcommandOriginal } = getSubcommand(
+    parsedArgs.args.slice(1),
+    COMMAND_CONFIG
+  );
 
-  if (parsedArgs.flags['--help']) {
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('project');
     output.print(help(projectCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
-  parsedArgs.args = parsedArgs.args.slice(1);
-  subcommand = parsedArgs.args[0] || 'list';
-  const args = parsedArgs.args.slice(1);
+  function printHelp(command: Command) {
+    output.print(
+      help(command, { parent: projectCommand, columns: client.stderr.columns })
+    );
+    return 2;
+  }
 
-  const { contextName } = await getScope(client);
+  if (!parsedArgs.args[1]) {
+    subcommand = 'list';
+  }
 
   switch (subcommand) {
-    case 'ls':
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(inspectSubcommand);
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'list':
-      return await list(client, parsedArgs.flags, args, contextName);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(listSubcommand);
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return list(client, args);
     case 'add':
-      return await add(client, args, contextName);
-    case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(addSubcommand);
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client, args);
     case 'remove':
-      return await rm(client, args);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(removeSubcommand);
+      }
+      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      return rm(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      client.output.print(
-        help(projectCommand, { columns: client.stderr.columns })
-      );
+      output.print(help(projectCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }

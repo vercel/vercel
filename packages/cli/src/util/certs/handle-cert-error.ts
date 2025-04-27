@@ -1,13 +1,12 @@
 import ms from 'ms';
-import { parse } from 'psl';
+import { parse } from 'tldts';
 import chalk from 'chalk';
 import * as ERRORS from '../errors-ts';
-import { Output } from '../output';
 import dnsTable from '../format-dns-table';
 import { getCommandName } from '../pkg-name';
+import output from '../../output-manager';
 
 export default function handleCertError<T>(
-  output: Output,
   error:
     | ERRORS.CertError
     | ERRORS.TooManyRequests
@@ -55,7 +54,7 @@ export default function handleCertError<T>(
         `${dnsTable(
           cns.map(cn => {
             const parsed = parse(cn);
-            return !parsed.error && parsed.subdomain
+            return parsed.subdomain
               ? [parsed.subdomain, 'ALIAS', 'alias.vercel.com']
               : ['', 'ALIAS', 'alias.vercel.com'];
           })

@@ -33,6 +33,7 @@ import {
   NodejsLambda,
   BuildV2,
   PrepareCache,
+  defaultCachePathGlob,
 } from '@vercel/build-utils';
 import { nodeFileTrace } from '@vercel/nft';
 import { getTransformedRoutes, Route } from '@vercel/routing-utils';
@@ -79,17 +80,21 @@ export const build: BuildV2 = async ({
   if (!spawnOpts.env) {
     spawnOpts.env = {};
   }
-  const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-    entrypointFsDirname,
-    true
-  );
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
-    packageJsonPackageManager: packageJson?.packageManager,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   if (typeof installCommand === 'string') {
@@ -104,7 +109,14 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
   }
 
   if (meta.isDev) {
@@ -125,10 +137,20 @@ export const build: BuildV2 = async ({
     });
   } else if (hasScript('vercel-build', pkg)) {
     debug(`Executing "yarn vercel-build"`);
-    await runPackageJsonScript(workPath, 'vercel-build', spawnOpts);
+    await runPackageJsonScript(
+      workPath,
+      'vercel-build',
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
   } else if (hasScript('build', pkg)) {
     debug(`Executing "yarn build"`);
-    await runPackageJsonScript(workPath, 'build', spawnOpts);
+    await runPackageJsonScript(
+      workPath,
+      'build',
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
   } else {
     const { devDependencies = {} } = pkg || {};
     const versionRange = devDependencies['@redwoodjs/core'];
@@ -318,5 +340,5 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 }
 
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
-  return glob('**/node_modules/**', repoRootPath || workPath);
+  return glob(defaultCachePathGlob, repoRootPath || workPath);
 };

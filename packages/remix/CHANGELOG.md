@@ -1,5 +1,210 @@
 # @vercel/remix-builder
 
+## 5.4.3
+
+### Patch Changes
+
+- Fix Edge runtime rendering ([#13155](https://github.com/vercel/vercel/pull/13155))
+
+## 5.4.2
+
+### Patch Changes
+
+- Fix build failure when using an index route with a pathless layout ([#13108](https://github.com/vercel/vercel/pull/13108))
+
+## 5.4.1
+
+### Patch Changes
+
+- Use proper npm package name for React Router in Preset error message ([#13103](https://github.com/vercel/vercel/pull/13103))
+
+## 5.4.0
+
+### Minor Changes
+
+- Detect v9 pnpm lock files as pnpm 10 for new projects ([#13072](https://github.com/vercel/vercel/pull/13072))
+
+## 5.3.3
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.15.3 ([#12967](https://github.com/vercel/vercel/pull/12967))
+
+## 5.3.2
+
+### Patch Changes
+
+- Leverage project settings to determine framework ([#13056](https://github.com/vercel/vercel/pull/13056))
+
+## 5.3.1
+
+### Patch Changes
+
+- [remix] unify render function creation logic between Remix and React Router ([#13023](https://github.com/vercel/vercel/pull/13023))
+
+- [remix] Add link to documentation after vercelPreset() warning ([#12942](https://github.com/vercel/vercel/pull/12942))
+
+## 5.3.0
+
+### Minor Changes
+
+- Add support for custom server entrypoint in React Router apps ([#13043](https://github.com/vercel/vercel/pull/13043))
+
+## 5.2.4
+
+### Patch Changes
+
+- Support "build" script that produces Build Output API ([#13031](https://github.com/vercel/vercel/pull/13031))
+
+## 5.2.3
+
+### Patch Changes
+
+- [remix] extract remaining framework specific settings to FrameworkSettings ([#12992](https://github.com/vercel/vercel/pull/12992))
+
+## 5.2.2
+
+### Patch Changes
+
+- better path-to-regexp diff logging ([#12962](https://github.com/vercel/vercel/pull/12962))
+
+## 5.2.1
+
+### Patch Changes
+
+- [remix] extract common logic for getting files from trace ([#12983](https://github.com/vercel/vercel/pull/12983))
+
+- [remix] extract common handler logic into `determineHandler` function ([#12973](https://github.com/vercel/vercel/pull/12973))
+
+## 5.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 5.1.2
+
+### Patch Changes
+
+- [remix] extract common function options ([#12960](https://github.com/vercel/vercel/pull/12960))
+
+- [remix] extract sourceSearchValue into FrameworkSettings ([#12969](https://github.com/vercel/vercel/pull/12969))
+
+- [remix] extract common edge file tracing logic ([#12953](https://github.com/vercel/vercel/pull/12953))
+
+- [remix] remove check based on never set remixRunVercelPkgJson ([#12971](https://github.com/vercel/vercel/pull/12971))
+
+- [remix] refactor framework slug into FrameworkSettings ([#12958](https://github.com/vercel/vercel/pull/12958))
+
+## 5.1.1
+
+### Patch Changes
+
+- log diff between current and updated versions of path-to-regexp ([#12926](https://github.com/vercel/vercel/pull/12926))
+
+## 5.1.0
+
+### Minor Changes
+
+- Add support for React Router v7 ([#12904](https://github.com/vercel/vercel/pull/12904))
+
+- Enable `nativeFetch` when `v3_singleFetch` future flag is enabled ([#12918](https://github.com/vercel/vercel/pull/12918))
+
+### Patch Changes
+
+- [remix] Create an interface for differences remix vs react-router ([#12925](https://github.com/vercel/vercel/pull/12925))
+
+## 5.0.2
+
+### Patch Changes
+
+- Upgrade @vercel/nft to 0.27.10 ([#12109](https://github.com/vercel/vercel/pull/12109))
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+- Update `@remix-run/dev` fork to v2.15.2 ([#12796](https://github.com/vercel/vercel/pull/12796))
+
+## 5.0.1
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 5.0.0
+
+### Major Changes
+
+- Remove `@remix-run/dev` dev dependency ([#12762](https://github.com/vercel/vercel/pull/12762))
+
+## 4.0.0
+
+### Major Changes
+
+- [remix-builder][node][routing-utils] revert path-to-regexp updates ([#12746](https://github.com/vercel/vercel/pull/12746))
+
+## 3.0.0
+
+### Major Changes
+
+- Bump path-to-regexp from 6.2.1 to 6.3.0 ([#12744](https://github.com/vercel/vercel/pull/12744))
+
+## 2.2.14
+
+### Patch Changes
+
+- Updated dependencies [[`79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521`](https://github.com/vercel/vercel/commit/79fbf1c95f4fa9bfe6af17aa3e13cf18424fc521)]:
+  - @vercel/error-utils@2.0.3
+
+## 2.2.13
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.13.1 ([#12334](https://github.com/vercel/vercel/pull/12334))
+
+## 2.2.12
+
+### Patch Changes
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 2.2.11
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 2.2.10
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+## 2.2.9
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.12.0 ([#12124](https://github.com/vercel/vercel/pull/12124))
+
+## 2.2.8
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 2.2.7
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 2.2.6
+
+### Patch Changes
+
+- Update `@remix-run/dev` fork to v2.11.2 ([#11968](https://github.com/vercel/vercel/pull/11968))
+
 ## 2.2.5
 
 ### Patch Changes

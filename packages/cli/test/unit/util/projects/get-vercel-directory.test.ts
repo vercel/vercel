@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { basename, join } from 'path';
 import { getVercelDirectory } from '../../../../src/util/projects/link';
+import assert from 'assert';
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit', name);
@@ -25,6 +26,7 @@ describe('getVercelDirectory', () => {
       getVercelDirectory(cwd);
       throw new Error('Should not happen');
     } catch (_err) {
+      assert(_err instanceof Error);
       err = _err;
     }
     expect(err.message).toEqual(

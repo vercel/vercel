@@ -1,9 +1,9 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import {
-  WAIT_UNTIL_TIMEOUT_MS,
-  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT,
   serializeBody,
+  waitUntilWarning,
 } from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
@@ -23,14 +23,13 @@ const toHeaders = buildToHeaders({ Headers });
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
   mode: 'streaming' | 'buffer';
+  maxDuration?: number;
 };
 
 type ServerlessFunctionSignature = (
   req: IncomingMessage | VercelRequest,
   res: ServerResponse | VercelResponse
 ) => void;
-
-const [NODE_MAJOR] = process.versions.node.split('.').map(v => Number(v));
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
 export const HTTP_METHODS = [
@@ -71,11 +70,6 @@ async function compileUserCode(
   }
 
   if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
-    if (NODE_MAJOR < 18) {
-      throw new Error(
-        'Node.js v18 or above is required to use HTTP method exports in your functions.'
-      );
-    }
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
     return getWebExportsHandler(listener, HTTP_METHODS);
@@ -93,7 +87,8 @@ async function compileUserCode(
 
 export async function createServerlessEventHandler(
   entrypointPath: string,
-  options: ServerlessServerOptions
+  options: ServerlessServerOptions,
+  maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: () => Promise<void>;
@@ -147,10 +142,9 @@ export async function createServerlessEventHandler(
   const onExit = () =>
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(waitUntilWarning(entrypointPath));
+        console.warn(waitUntilWarning(entrypointPath, maxDuration));
         resolve();
-      }, WAIT_UNTIL_TIMEOUT_MS);
-
+      }, maxDuration * 1000);
       Promise.all([awaiter.awaiting(), server.onExit()])
         .then(() => resolve())
         .catch(reject)

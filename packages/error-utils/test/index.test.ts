@@ -8,6 +8,7 @@ import {
   isSpawnError,
   errorToString,
 } from '../src';
+import { describe, test, expect } from 'vitest';
 
 const ARRAY: any[] = [];
 const BIGINT = 1n;

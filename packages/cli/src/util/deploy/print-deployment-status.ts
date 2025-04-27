@@ -1,16 +1,15 @@
 import chalk from 'chalk';
-import type Client from '../client';
 import type { Deployment } from '@vercel-internals/types';
 
 import { isDeploying } from '../../util/deploy/is-deploying';
 import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
+import output from '../../output-manager';
 
 /**
- * Prints (to `client.output`) warnings and errors, if any.
+ * Prints (to `output`) warnings and errors, if any.
  */
 export async function printDeploymentStatus(
-  client: Client,
   {
     readyState,
     aliasError,
@@ -33,8 +32,6 @@ export async function printDeploymentStatus(
   deployStamp: () => string,
   noWait: boolean
 ): Promise<number> {
-  const { output } = client;
-
   indications = indications || [];
 
   let isStillBuilding = false;
@@ -75,7 +72,7 @@ export async function printDeploymentStatus(
   }
 
   const newline = '\n';
-  for (let indication of indications) {
+  for (const indication of indications) {
     const message =
       prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
       newline;

@@ -9,9 +9,9 @@ module.exports = async ({ github, context }, newVersion) => {
 
   const repoRootPath = path.join(__dirname, '..');
   const packagePath = path.join(repoRootPath, 'packages', 'remix');
-  const oldVersion = JSON.parse(
-    fs.readFileSync(path.join(packagePath, 'package.json'), 'utf-8')
-  ).devDependencies['@remix-run/dev'];
+  const pkgPath = path.join(packagePath, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+
   if (newVersion === '') {
     newVersion = execSync('npm view @vercel/remix-run-dev dist-tags.latest', {
       encoding: 'utf-8',
@@ -19,7 +19,7 @@ module.exports = async ({ github, context }, newVersion) => {
   }
   newVersion = newVersion.trim();
 
-  if (oldVersion === newVersion) {
+  if (pkg.VERCEL_REMIX_RUN_DEV_MAX_VERSION === newVersion) {
     // eslint-disable-next-line no-console
     console.log(
       `@vercel/remix-run-dev version ${newVersion} did not change, skipping update.`
@@ -38,9 +38,16 @@ module.exports = async ({ github, context }, newVersion) => {
     return;
   }
 
-  execSync(
-    `pnpm install @remix-run/dev@npm:@vercel/remix-run-dev@${newVersion} --save-exact --save-dev --lockfile-only`,
-    { cwd: packagePath }
+  fs.writeFileSync(
+    pkgPath,
+    JSON.stringify(
+      {
+        ...pkg,
+        VERCEL_REMIX_RUN_DEV_MAX_VERSION: newVersion,
+      },
+      null,
+      2
+    ) + '\n'
   );
 
   const changesetName = path.join(repoRootPath, `.changeset/${branch}.md`);
@@ -74,6 +81,6 @@ Update \`@remix-run/dev\` fork to v${newVersion}
     owner,
     repo,
     issue_number: pr.data.number,
-    labels: ['area: remix', 'semver: patch', 'pr: automerge'],
+    labels: ['area: remix', 'semver: patch'],
   });
 };

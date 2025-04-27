@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CommandOption } from '../../../src/commands/help';
+import type { CommandOption } from '../../../src/commands/help';
 import { getFlagsSpecification } from '../../../src/util/get-flags-specification';
 
 describe('getFlagsSpecification', () => {

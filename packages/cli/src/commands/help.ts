@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { LOGO, NAME } from '@vercel-internals/constants';
-import Table, { CellOptions } from 'cli-table3';
+import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
 import { globalCommandOptions } from '../util/arg-common';
 
@@ -23,6 +23,7 @@ export interface CommandOption {
 export interface CommandArgument {
   readonly name: string;
   readonly required: boolean;
+  readonly multiple?: true;
 }
 export interface CommandExample {
   readonly name: string;
@@ -30,7 +31,10 @@ export interface CommandExample {
 }
 export interface Command {
   readonly name: string;
+  readonly aliases: ReadonlyArray<string>;
   readonly description: string;
+  readonly default?: true;
+  readonly hidden?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
@@ -100,16 +104,33 @@ export function outputArrayToString(outputArray: (string | null)[]) {
  * @param command
  * @returns
  */
-export function buildCommandSynopsisLine(command: Command) {
-  const line: string[] = [
-    INDENT,
-    LOGO,
-    chalk.bold(NAME),
-    chalk.bold(command.name),
-  ];
-  if (command.arguments.length > 0) {
-    for (const argument of command.arguments) {
-      line.push(argument.required ? argument.name : `[${argument.name}]`);
+export function buildCommandSynopsisLine(command: Command, parent?: Command) {
+  const line: string[] = [INDENT, LOGO, chalk.bold(NAME)];
+  if (parent) {
+    line.push(chalk.bold(parent.name));
+  }
+  line.push(chalk.bold(command.name));
+  const args = command.arguments.slice(0);
+
+  // If there are only subcommands, then there is an implicit "command" argument
+  if (
+    args.length === 0 &&
+    command.subcommands &&
+    command.subcommands.length > 0
+  ) {
+    args.push({
+      name: 'command',
+      required: !command.subcommands.some(subcommand => subcommand.default),
+    });
+  }
+
+  if (args.length > 0) {
+    for (const argument of args) {
+      let { name } = argument;
+      if (argument.multiple) {
+        name += ' ...';
+      }
+      line.push(argument.required ? name : `[${name}]`);
     }
   }
   if (command.options.length > 0) {
@@ -123,16 +144,16 @@ export function buildCommandSynopsisLine(command: Command) {
 export function buildCommandOptionLines(
   commandOptions: ReadonlyArray<CommandOption>,
   options: BuildHelpOutputOptions,
-  sectionTitle: String
+  sectionTitle: string
 ) {
-  if (commandOptions.length === 0) {
-    return null;
-  }
-
   // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
     option => !option.deprecated && option.description !== undefined
   );
+
+  if (filteredCommandOptions.length === 0) {
+    return null;
+  }
 
   // Sort command options alphabetically
   filteredCommandOptions.sort((a, b) =>
@@ -205,6 +226,9 @@ export function buildSubcommandLines(
   let maxWidthOfUnwrappedColumns = 0;
   const rows: (string | undefined | _CellOptions)[][] = [];
   for (const command of subcommands) {
+    if (command.hidden) {
+      continue;
+    }
     const nameCell = `${INDENT}${command.name}`;
     let argsCell = INDENT;
 
@@ -255,6 +279,9 @@ export function buildSubcommandLines(
 }
 
 export function buildCommandExampleLines(command: Command) {
+  if (!command.examples?.length) {
+    return null;
+  }
   const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
@@ -285,12 +312,13 @@ function buildDescriptionLine(
   command: Command,
   options: BuildHelpOutputOptions
 ) {
-  let wrapingText = wordWrap(command.description, options.columns);
-  return `${wrapingText}${NEWLINE}`;
+  const wrappingText = wordWrap(command.description, options.columns);
+  return `${wrappingText}${NEWLINE}`;
 }
 
 interface BuildHelpOutputOptions {
   columns: number;
+  parent?: Command;
 }
 
 export function buildHelpOutput(
@@ -299,7 +327,7 @@ export function buildHelpOutput(
 ) {
   const outputArray: (string | null)[] = [
     '',
-    buildCommandSynopsisLine(command),
+    buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
     buildCommandOptionLines(command.options, options, 'Options'),
@@ -313,10 +341,12 @@ export function buildHelpOutput(
 
 export interface HelpOptions {
   columns?: number;
+  parent?: Command;
 }
 
 export function help(command: Command, options: HelpOptions) {
   return buildHelpOutput(command, {
+    ...options,
     columns: options.columns ?? 80,
   });
 }

@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import { TurboDryRun } from './types';
 
 const rootDir = path.join(__dirname, '..');
+const ignoredPackages = ['api', 'examples'];
 
 async function main() {
   const sha = await getSha();
@@ -17,13 +18,13 @@ async function main() {
   );
   const turboJson: TurboDryRun = JSON.parse(turboStdout);
   for (const task of turboJson.tasks) {
+    if (ignoredPackages.includes(task.directory)) {
+      continue;
+    }
+
     const dir = path.join(rootDir, task.directory);
     const packageJsonPath = path.join(dir, 'package.json');
     const originalPackageObj = await fs.readJson(packageJsonPath);
-    // api is not a package that will be published of this repo, but is used when deployed to Vercel
-    if (originalPackageObj.name === 'api') {
-      continue;
-    }
     const packageObj = await fs.readJson(packageJsonPath);
     packageObj.version += `-${sha.trim()}`;
 

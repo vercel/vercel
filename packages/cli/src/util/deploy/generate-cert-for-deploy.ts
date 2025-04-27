@@ -1,28 +1,24 @@
-import psl from 'psl';
+import { parse } from 'tldts';
 import { NowError } from '../now-error';
-import Client from '../client';
+import type Client from '../client';
 import createCertForCns from '../certs/create-cert-for-cns';
 import setupDomain from '../domains/setup-domain';
 import { InvalidDomain } from '../errors-ts';
+import output from '../../output-manager';
 
 export default async function generateCertForDeploy(
   client: Client,
   contextName: string,
   deployURL: string
 ) {
-  const { output } = client;
-  const parsedDomain = psl.parse(deployURL);
-  if (parsedDomain.error) {
-    return new InvalidDomain(deployURL, parsedDomain.error.message);
-  }
-
+  const parsedDomain = parse(deployURL);
   const { domain } = parsedDomain;
   if (!domain) {
     return new InvalidDomain(deployURL);
   }
 
   output.spinner(`Setting custom suffix domain ${domain}`);
-  const result = await setupDomain(output, client, domain, contextName);
+  const result = await setupDomain(client, domain, contextName);
   output.stopSpinner();
   if (result instanceof NowError) {
     return result;

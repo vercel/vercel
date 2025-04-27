@@ -1,19 +1,54 @@
-import chalk from 'chalk';
 import ms from 'ms';
+import chalk from 'chalk';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import output from '../../output-manager';
+import { targetCommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
-import type { ProjectLinked } from '@vercel-internals/types';
-import type { CustomEnvironment } from '../../util/target/types';
+import { ensureLink } from '../../util/link/ensure-link';
+import { formatProject } from '../../util/projects/format-project';
+import { formatEnvironment } from '../../util/target/format-environment';
+import type Client from '../../util/client';
+import type {
+  CustomEnvironment,
+  CustomEnvironmentBranchMatcher,
+  CustomEnvironmentType,
+  Project,
+} from '@vercel-internals/types';
 
-export default async function list(
-  client: Client,
-  argv: any,
-  args: string[],
-  link: ProjectLinked
-) {
-  const { output } = client;
-  if (args.length !== 0) {
+function formatBranchMatcher(
+  branchMatcher?: CustomEnvironmentBranchMatcher
+): string {
+  if (branchMatcher?.type === 'equals') {
+    return branchMatcher.pattern;
+  } else if (branchMatcher?.type === 'startsWith') {
+    return `${branchMatcher.pattern}${chalk.dim('*')}`;
+  } else if (branchMatcher?.type === 'endsWith') {
+    return `${chalk.dim('*')}${branchMatcher.pattern}`;
+  }
+  return chalk.dim('No branch configuration');
+}
+
+const TYPE_MAP: Record<CustomEnvironmentType, string> = {
+  production: 'Production',
+  preview: 'Preview',
+  development: 'Development',
+};
+
+const BRANCH_TRACKING_MAP: Record<
+  CustomEnvironmentType,
+  (project: Project, target: CustomEnvironment) => string
+> = {
+  production: project => project.link?.productionBranch ?? 'main',
+  preview: (_, env) =>
+    env.slug === 'preview'
+      ? chalk.dim('All unassigned git branches')
+      : formatBranchMatcher(env.branchMatcher),
+  development: () => chalk.dim('Accessible via CLI'),
+};
+
+export default async function list(client: Client, argv: string[]) {
+  const { cwd } = client;
+  if (argv.length !== 0) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('target ls')}`
@@ -22,16 +57,13 @@ export default async function list(
     return 2;
   }
 
+  const link = await ensureLink(targetCommand.name, client, cwd);
+  if (typeof link === 'number') {
+    return link;
+  }
+
   const start = Date.now();
-  const projectUrl = `https://vercel.com/${link.org.slug}/${link.project.name}`;
-  const projectSlugLink = output.link(
-    chalk.bold(`${link.org.slug}/${link.project.name}`),
-    projectUrl,
-    {
-      fallback: () => chalk.bold(`${link.org.slug}/${link.project.name}`),
-      color: false,
-    }
-  );
+  const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.spinner(`Fetching custom environments for ${projectSlugLink}`);
 
@@ -60,35 +92,21 @@ export default async function list(
 
   const tablePrint = table(
     [
-      ['Target Name', 'Target Slug', 'Target ID', 'Type', 'Updated'].map(
-        header => chalk.bold(chalk.cyan(header))
+      ['Target Name', 'Branch Tracking', 'Type', 'Updated'].map(header =>
+        chalk.bold(chalk.cyan(header))
       ),
-      ...result
-        .map(target => {
-          const boldName = chalk.bold(target.name);
-          const type =
-            target.type === 'production'
-              ? 'Production'
-              : target.type === 'development'
-                ? 'Development'
-                : 'Preview';
-          return [
-            [
-              output.link(
-                boldName,
-                `${projectUrl}/settings/environments/${target.id}`,
-                { fallback: () => boldName, color: false }
-              ),
-              target.slug,
-              target.id,
-              type,
-              chalk.gray(
-                target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
-              ),
-            ],
-          ];
-        })
-        .flat(),
+      ...result.flatMap(target => {
+        return [
+          [
+            formatEnvironment(link.org.slug, link.project.name, target),
+            BRANCH_TRACKING_MAP[target.type](link.project, target),
+            TYPE_MAP[target.type],
+            chalk.gray(
+              target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
+            ),
+          ],
+        ];
+      }),
     ],
     { hsep: 3 }
   ).replace(/^/gm, '  ');
@@ -107,7 +125,6 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'production',
       description: '',
-      name: 'Production',
       domains: [],
     },
     {
@@ -117,10 +134,8 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'preview',
       description: '',
-      name: 'Preview',
       domains: [],
     },
-    ...environments,
     {
       id: 'development',
       slug: 'development',
@@ -128,8 +143,8 @@ function withDefaultEnvironmentsIncluded(
       updatedAt: 0,
       type: 'development',
       description: '',
-      name: 'Development',
       domains: [],
     },
+    ...environments.slice().sort((a, b) => a.slug.localeCompare(b.slug)),
   ];
 }

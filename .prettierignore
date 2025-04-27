@@ -24,6 +24,7 @@ pnpm-lock.yaml
 .vercel
 coverage
 turbo-cache-key.json
+open-api.yaml
 /examples
 /public
 packages/*/dist

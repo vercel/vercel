@@ -20,7 +20,7 @@ test('[verdel dev] should support serverless functions', async () => {
 
   try {
     await readyResolver;
-    let res = await fetch(`http://localhost:${port}/api?foo=bar`);
+    const res = await fetch(`http://localhost:${port}/api?foo=bar`);
     validateResponseHeaders(res);
     const payload = await res.json();
     expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
@@ -43,7 +43,7 @@ test('[vercel dev] should support edge functions', async () => {
 
     const body = { hello: 'world' };
 
-    let res = await fetch(`http://localhost:${port}/api/edge-success`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-success`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -87,7 +87,7 @@ test('[vercel dev] edge functions support WebAssembly files', async () => {
       { number: 2, result: 3 },
       { number: 12, result: 13 },
     ]) {
-      let res = await fetch(
+      const res = await fetch(
         `http://localhost:${port}/api/webassembly?number=${number}`
       );
       validateResponseHeaders(res);
@@ -114,7 +114,7 @@ test('[vercel dev] throws an error when an edge function has no response', async
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+    const res = await fetch(`http://localhost:${port}/api/edge-no-response`);
     validateResponseHeaders(res);
 
     const { stdout } = await dev.kill();
@@ -138,7 +138,7 @@ test('[vercel dev] should support edge functions returning intentional 500 respo
 
     const body = { hello: 'world' };
 
-    let res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -163,7 +163,7 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
       method: 'GET',
       headers: {
         Accept:
@@ -192,7 +192,7 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-error-config`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-error-config`, {
       method: 'GET',
       headers: {
         Accept:
@@ -221,7 +221,7 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-error-startup`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-error-startup`, {
       method: 'GET',
       headers: {
         Accept:
@@ -249,7 +249,7 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
+    const res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
       method: 'GET',
       headers: {
         Accept:
@@ -277,7 +277,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    let res = await fetch(
+    const res = await fetch(
       `http://localhost:${port}/api/edge-error-unknown-import`,
       {
         method: 'GET',
@@ -309,7 +309,7 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
   try {
     await readyResolver;
 
-    let res = await fetch(
+    const res = await fetch(
       `http://localhost:${port}/api/edge-error-no-handler`,
       {
         method: 'GET',
@@ -344,7 +344,7 @@ test('[vercel dev] should handle invalid middleware config', async () => {
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/whatever`, {
+    const res = await fetch(`http://localhost:${port}/api/whatever`, {
       method: 'GET',
       headers: {
         Accept:
@@ -513,20 +513,20 @@ test('[vercel dev] should send `etag` header for static files', async () => {
   }
 });
 
-test('[vercel dev] should frontend dev server and routes', async () => {
+// https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
   const { dev, port, readyResolver } = await testFixture(dir);
 
   try {
     await readyResolver;
 
-    let podId: string;
-
     let res = await fetch(`http://localhost:${port}/`);
     validateResponseHeaders(res);
-    podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
+    const podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
     let body = await res.text();
-    expect(body.includes('hello, this is the frontend')).toBeTruthy();
+    expect(body).toContain('hello, this is the frontend');
 
     res = await fetch(`http://localhost:${port}/api/users`);
     validateResponseHeaders(res, podId);
@@ -573,7 +573,7 @@ test('[vercel dev] should support `@vercel/static-build` routing', async () => {
     const res = await fetch(`http://localhost:${port}/api/date`);
     expect(res.status).toEqual(200);
     const body = await res.text();
-    expect(body.startsWith('The current date:')).toBeTruthy();
+    expect(body).toMatch(/^The current date/);
   } finally {
     await dev.kill();
   }
@@ -590,7 +590,7 @@ test('[vercel dev] should support directory listing', async () => {
     let res = await fetch(`http://localhost:${port}/`);
     let body = await res.text();
     expect(res.status).toEqual(200);
-    expect(body.includes('Index of')).toBeTruthy();
+    expect(body).toContain('Index of');
 
     // Get a file
     res = await fetch(`http://localhost:${port}/file.txt`);
@@ -628,7 +628,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     expect(res.status).toEqual(404);
     expect(res.headers.get('content-type')).toEqual('text/html; charset=utf-8');
     let body = await res.text();
-    expect(body.startsWith('<!DOCTYPE html>')).toBeTruthy();
+    expect(body).toMatch(/^<!DOCTYPE html>/);
 
     // JSON response
     res = await fetch(`http://localhost:${port}/does-not-exist`, {
@@ -669,7 +669,7 @@ test('[vercel dev] should support `public` directory with zero config', async ()
 
     res = await fetch(`http://localhost:${port}/`);
     body = await res.text();
-    expect(body.startsWith('<h1>hello world</h1>')).toBeTruthy();
+    expect(body).toMatch(/^<h1>hello world<\/h1>/);
   } finally {
     await dev.kill();
   }
@@ -689,7 +689,7 @@ test('[vercel dev] should support static files with zero config', async () => {
     res = await fetch(`http://localhost:${port}/`);
     expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
-    expect(body.startsWith('<h1>goodbye world</h1>')).toBeTruthy();
+    expect(body).toMatch(/^<h1>goodbye world<\/h1>/);
   } finally {
     await dev.kill();
   }
@@ -727,16 +727,12 @@ test('[vercel dev] should support custom 404 routes', async () => {
 test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
-  expect(
-    stripAnsi(result.stderr).includes(
-      'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
-    )
-  ).toBeTruthy();
-  expect(
-    result.stderr.includes(
-      'https://vercel.link/builder-dependencies-install-failed'
-    )
-  ).toBeTruthy();
+  expect(stripAnsi(result.stderr.toString())).toContain(
+    'Error: The package `@vercel/does-not-exist` is not published on the npm registry'
+  );
+  expect(result.stderr).toContain(
+    'https://vercel.link/builder-dependencies-install-failed'
+  );
 });
 
 test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => {

@@ -3,6 +3,7 @@ import { confirmOption, yesOption } from '../../util/arg-common';
 
 export const linkCommand = {
   name: 'link',
+  aliases: [],
   description: 'Link a local directory to a Vercel Project.',
   arguments: [],
   options: [
@@ -26,7 +27,7 @@ export const linkCommand = {
       description:
         'Skip questions when setting up new project using default scope and settings',
     },
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

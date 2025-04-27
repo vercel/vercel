@@ -367,6 +367,15 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('blitzjs');
   });
 
+  it('Detect FastHTML', async () => {
+    const fs = new VirtualFilesystem({
+      'requirements.txt':
+        'tensorflow==2.3.1\nuvicorn==0.12.2\npython-fasthtml==0.5.1',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('fasthtml');
+  });
+
   it('Detect Ember via `ember-source`', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
@@ -455,6 +464,28 @@ describe('detectFramework()', () => {
     });
 
     expect(await detectFramework({ fs, frameworkList })).toBe('remix');
+  });
+
+  it('Should detect React Router v7 as `react-router` via `vite.config.ts`', async () => {
+    const fs = new VirtualFilesystem({
+      'vite.config.ts': 'import { reactRouter } from "@react-router/dev/vite"',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('react-router');
+  });
+
+  it('Should detect React Router v7 as `react-router` via `react-router.config.ts`', async () => {
+    const fs = new VirtualFilesystem({
+      'react-router.config.ts': '',
+    });
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('react-router');
+  });
+
+  it('Should detect Vite + Ionic React as `vite`', async () => {
+    const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'ionic-react'));
+
+    expect(await detectFramework({ fs, frameworkList })).toBe('vite');
   });
 });
 

@@ -2,18 +2,20 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads
-/.github/workflows                       @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @ijjk
-/packages/fs-detectors                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @agadzik @chloetedder
-/packages/next                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @timneutkens @ijjk @ztanner @huozhi
-/packages/routing-utils                  @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @ijjk
-/packages/static-build                   @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads
-/packages/edge                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @vercel/compute
-/packages/functions                      @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @vercel/compute
-/examples                                @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @leerob
-/examples/create-react-app               @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Timer
-/examples/nextjs                         @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @timneutkens @ijjk @ztanner @huozhi
-/packages/node                           @TooTallNate @EndangeredMassa @trek @onsclom @jeffsee55 @erikareads @Kikobeats
+*                                        @vercel/ci-cd @trek
+/.github/workflows                       @vercel/ci-cd @ijjk @trek
+/packages/fs-detectors                   @vercel/ci-cd @agadzik @chloetedder @trek
+/packages/next                           @vercel/ci-cd @timneutkens @ijjk @ztanner @huozhi
+/packages/routing-utils                  @vercel/ci-cd @ijjk @trek
+/packages/static-build                   @vercel/ci-cd @trek
+/packages/edge                           @vercel/ci-cd @vercel/compute
+/packages/functions                      @vercel/ci-cd @vercel/compute
+/packages/firewall                       @vercel/ci-cd @cramforce @sueplex
+/examples                                @vercel/ci-cd @leerob @trek
+/examples/create-react-app               @vercel/ci-cd @Timer
+/examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
+/packages/node                           @vercel/ci-cd @Kikobeats
+/packages/related-projects               @vercel/ci-cd @Kikobeats @mknichel
 
 # Unrestricted Paths
 .changeset/

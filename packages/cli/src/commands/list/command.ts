@@ -3,6 +3,7 @@ import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
 
 export const listCommand = {
   name: 'list',
+  aliases: ['ls'],
   description: 'List app deployments for an app.',
   arguments: [
     {
@@ -15,7 +16,7 @@ export const listCommand = {
       name: 'meta',
       description:
         'Filter deployments by metadata (e.g.: `-m KEY=value`). Can appear many times.',
-      argument: 'KEY=value',
+      argument: 'KEY=VALUE',
       shorthand: 'm',
       type: [String],
       deprecated: false,
@@ -24,7 +25,7 @@ export const listCommand = {
       name: 'policy',
       description:
         'See deployments with provided Deployment Retention policies (e.g.: `-p KEY=value`). Can appear many times.',
-      argument: 'KEY=value',
+      argument: 'KEY=VALUE',
       shorthand: 'p',
       type: [String],
       deprecated: false,
@@ -32,20 +33,16 @@ export const listCommand = {
     {
       name: 'environment',
       description: '',
-      argument: 'production|preview',
+      argument: 'TARGET',
       shorthand: null,
       type: String,
       deprecated: false,
     },
-    {
-      ...nextOption,
-      description: 'Show next page of results',
-      argument: 'MS',
-    },
+    nextOption,
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
-    { ...confirmOption, deprecated: true },
+    confirmOption,
   ],
   examples: [
     {

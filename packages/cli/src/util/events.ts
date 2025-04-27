@@ -6,9 +6,12 @@ import retry from 'async-retry';
 import jsonlines from 'jsonlines';
 import { eraseLines } from 'ansi-escapes';
 
-import Client from './client';
+import type Client from './client';
 import getDeployment from './get-deployment';
 import getScope from './get-scope';
+
+import type { BuildLog } from './logs';
+import output from '../output-manager';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -20,25 +23,18 @@ export interface FindOpts {
 
 export interface PrintEventsOptions {
   mode: 'deploy' | string;
-  onEvent: (event: DeploymentEvent) => void;
+  onEvent: (event: BuildLog) => void;
   quiet?: boolean;
   findOpts: FindOpts;
 }
 
-export interface DeploymentEvent {
-  id: string;
-  created: number;
-  date?: number;
-  serial?: string;
-}
-
 async function printEvents(
   client: Client,
-  deploymentIdOrURL: string,
+  urlOrDeploymentId: string,
   { mode, onEvent, quiet, findOpts }: PrintEventsOptions,
   abortController?: AbortController
 ) {
-  const { log, debug } = client.output;
+  const { log, debug } = output;
   const { contextName } = await getScope(client);
 
   // we keep track of how much we log in case we
@@ -60,7 +56,7 @@ async function printEvents(
       if (findOpts.since) query.set('since', String(findOpts.since));
       if (findOpts.until) query.set('until', String(findOpts.until));
 
-      const eventsUrl = `/v3/now/deployments/${deploymentIdOrURL}/events?${query}`;
+      const eventsUrl = `/v3/now/deployments/${urlOrDeploymentId}/events?${query}`;
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
@@ -85,7 +81,7 @@ async function printEvents(
                     const json = await getDeployment(
                       client,
                       contextName,
-                      deploymentIdOrURL
+                      urlOrDeploymentId
                     );
                     if (json.readyState === 'READY') {
                       stream.end();
@@ -156,7 +152,7 @@ async function printEvents(
               setTimeout(() => {
                 if (abortController?.signal.aborted) return;
                 // retry without maximum amount nor clear past logs etc
-                printEvents(client, deploymentIdOrURL, {
+                printEvents(client, urlOrDeploymentId, {
                   mode,
                   onEvent,
                   quiet,

@@ -1,7 +1,7 @@
 import path from 'path';
 import chalk from 'chalk';
 import { validateRootDirectory } from '../validate-paths';
-import Client from '../client';
+import type Client from '../client';
 
 export async function inputRootDirectory(
   client: Client,
@@ -35,7 +35,6 @@ export async function inputRootDirectory(
 
     if (
       (await validateRootDirectory(
-        client.output,
         cwd,
         fullPath,
         'Please choose a different one.'

@@ -5,9 +5,10 @@ import ms from 'ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';
 import { URLSearchParams } from 'url';
-import Client from '../util/client';
+import type Client from '../util/client';
 import printEvents from './events';
 import { CommandTimeout } from '../commands/logs/command';
+import output from '../output-manager';
 
 type Printer = (l: string) => void;
 
@@ -25,7 +26,7 @@ export function displayBuildLogs(
     deployment.id,
     {
       mode: 'logs',
-      onEvent: (event: any) => printBuildLog(event, client.output.print),
+      onEvent: (event: BuildLog) => printBuildLog(event, output.print),
       quiet: false,
       findOpts: { direction: 'forward', follow },
     },
@@ -60,12 +61,45 @@ export interface RuntimeLog {
   responseStatusCode: number;
 }
 
+export interface BuildLog {
+  created: number;
+  date: number;
+  deploymentId: string;
+  id: string;
+  info: LogInfo;
+  serial: string;
+  text?: string;
+  type: LogType;
+  level?: 'error' | 'warning';
+}
+
+export interface LogInfo {
+  type: string;
+  name: string;
+  entrypoint?: string;
+  path?: string;
+  step?: string;
+  readyState?: string;
+}
+
+export type LogType =
+  | 'command'
+  | 'stdout'
+  | 'stderr'
+  | 'exit'
+  | 'deployment-state'
+  | 'delimiter'
+  | 'middleware'
+  | 'middleware-invocation'
+  | 'edge-function-invocation'
+  | 'fatal';
+
 export async function displayRuntimeLogs(
   client: Client,
   options: DisplayRuntimeLogsOptions,
   abortController: AbortController
 ): Promise<number> {
-  const { log, debug, print, spinner, stopSpinner, warn } = client.output;
+  const { log, debug, print, spinner, stopSpinner, warn } = output;
   const { projectId, deploymentId, parse } = options;
 
   const query = new URLSearchParams({ format: 'lines' });
@@ -116,7 +150,7 @@ export async function displayRuntimeLogs(
     }
 
     const handleData = (data: RuntimeLog | string) => {
-      let log: RuntimeLog = parse ? data : JSON.parse(data as string);
+      const log: RuntimeLog = parse ? data : JSON.parse(data as string);
       stopSpinner();
       if (isRuntimeLimitDelimiter(log)) {
         abortController.abort();
@@ -156,12 +190,12 @@ export async function displayRuntimeLogs(
   });
 }
 
-function printBuildLog(log: any, print: Printer) {
+function printBuildLog(log: BuildLog, print: Printer) {
   if (!log.created) return; // ignore keepalive which are the only logs without a creation date.
 
   const date = new Date(log.created).toISOString();
 
-  for (const line of colorize(sanitize(log)).split('\n')) {
+  for (const line of colorize(sanitize(log), log).split('\n')) {
     print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
   }
 }
@@ -231,7 +265,7 @@ function getSourceIcon(source: string) {
   return ' ';
 }
 
-function sanitize(log: any): string {
+function sanitize(log: BuildLog): string {
   return (
     (log.text || '')
       .replace(/\n$/, '')
@@ -243,25 +277,12 @@ function sanitize(log: any): string {
   );
 }
 
-function colorize(text: string) {
-  if (isError(text)) {
+function colorize(text: string, log: BuildLog): string {
+  if (log.level === 'error') {
     return chalk.red(text);
+  } else if (log.level === 'warning') {
+    return chalk.yellow(text);
   }
-  return isWarning(text) ? chalk.yellow(text) : text;
-}
 
-function isError(text: string) {
-  return (
-    /^(\s+⨯\s+|\s+at\s+|npm err!)/i.test(text) ||
-    /(^| |\[|eval|internal|range|reference|syntax|type|uri|fetch)err(or)?( |:)/i.test(
-      text
-    ) ||
-    /(command not found|module not found|failed to compile|cannot open shared object file|err_pnpm_|please contact vercel.com\/help|exit code 1|elifecycle|exited)/i.test(
-      text
-    )
-  );
-}
-
-function isWarning(text: string) {
-  return /^warn(ing)?(:|!)/i.test(text) && !text.includes('deprecationwarning');
+  return text;
 }

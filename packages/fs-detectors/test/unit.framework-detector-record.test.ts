@@ -191,4 +191,65 @@ describe('detectFrameworkRecord', () => {
     const framework = await detectFrameworkRecord({ fs, frameworkList });
     expect(framework?.slug).toBe('zola');
   });
+
+  describe('Detect Sanity', () => {
+    describe('v2', () => {
+      it('detects', async () => {
+        const fs = new VirtualFilesystem({
+          'sanity.json': '',
+          'package.json': JSON.stringify({
+            scripts: {
+              start: 'sanity start',
+              build: 'sanity build',
+            },
+            dependencies: {
+              '@sanity/core': '^2.26',
+              '@sanity/default-layout': '^2.26',
+              '@sanity/default-login': '^2.26',
+              '@sanity/desk-tool': '^2.26',
+              '@sanity/vision': '^2.26',
+              'prop-types': '^15.7',
+              react: '^17.0',
+              'react-dom': '^17.0',
+              'styled-components': '^5.2',
+            },
+            devDependencies: {
+              '@sanity/cli': '^2.26',
+            },
+          }),
+        });
+
+        const framework = await detectFrameworkRecord({ fs, frameworkList });
+        expect(framework?.slug).toBe('sanity');
+      });
+    });
+
+    describe('v3', () => {
+      it('detects', async () => {
+        const fs = new VirtualFilesystem({
+          'sanity.config.ts': '',
+          'package.json': JSON.stringify({
+            dependencies: {
+              '@sanity/vision': '^3.55.0',
+              react: '^18.2.0',
+              'react-dom': '^18.2.0',
+              'react-icons': '^3.11.0',
+              sanity: '^3.55.0',
+              'styled-components': '^6.1.8',
+            },
+            devDependencies: {
+              '@sanity/eslint-config-studio': '^4.0.0',
+              '@types/react': '^18.0.25',
+              eslint: '^8.6.0',
+              prettier: '^3.0.2',
+              typescript: '^5.1.6',
+            },
+          }),
+        });
+
+        const framework = await detectFrameworkRecord({ fs, frameworkList });
+        expect(framework?.slug).toBe('sanity-v3');
+      });
+    });
+  });
 });

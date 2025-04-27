@@ -11,8 +11,8 @@ import {
   serializeBody,
   entrypointToOutputPath,
   logError,
+  WAIT_UNTIL_TIMEOUT,
   waitUntilWarning,
-  WAIT_UNTIL_TIMEOUT_MS,
 } from '../utils.js';
 import esbuild from 'esbuild';
 import { buildToHeaders } from '@edge-runtime/node-utils';
@@ -134,13 +134,16 @@ async function compileUserCode(
   }
 }
 
-async function createEdgeRuntimeServer(params?: {
-  userCode: string;
-  wasmAssets: WasmAssets;
-  nodeCompatBindings: NodeCompatBindings;
-  entrypointPath: string;
-  awaiter: Awaiter;
-}): Promise<
+async function createEdgeRuntimeServer(
+  maxDuration: number,
+  params?: {
+    userCode: string;
+    wasmAssets: WasmAssets;
+    nodeCompatBindings: NodeCompatBindings;
+    entrypointPath: string;
+    awaiter: Awaiter;
+  }
+): Promise<
   { server: EdgeRuntimeServer; onExit: () => Promise<void> } | undefined
 > {
   try {
@@ -194,9 +197,9 @@ async function createEdgeRuntimeServer(params?: {
     const onExit = () =>
       new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.warn(waitUntilWarning(params.entrypointPath));
+          console.warn(waitUntilWarning(params.entrypointPath, maxDuration));
           resolve();
-        }, WAIT_UNTIL_TIMEOUT_MS);
+        }, maxDuration * 1000);
 
         Promise.all([params.awaiter.awaiting(), server.close()])
           .then(() => resolve())
@@ -218,7 +221,8 @@ export async function createEdgeEventHandler(
   entrypointFullPath: string,
   entrypointRelativePath: string,
   isMiddleware: boolean,
-  isZeroConfig?: boolean
+  isZeroConfig?: boolean,
+  maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: (() => Promise<void>) | undefined;
@@ -228,7 +232,7 @@ export async function createEdgeEventHandler(
     entrypointRelativePath,
     isMiddleware
   );
-  const result = await createEdgeRuntimeServer(userCode);
+  const result = await createEdgeRuntimeServer(maxDuration, userCode);
   const server = result?.server;
   const onExit = result?.onExit;
 
@@ -243,9 +247,10 @@ export async function createEdgeEventHandler(
     }
 
     const body: Buffer | string | undefined = await serializeBody(request);
-
     if (body !== undefined && body.length) {
       request.headers['content-length'] = String(body.length);
+      // Transfer-Encoding is a hop-to-hop header and should not be proxied. It is also not valid when Content-Length is set.
+      request.headers['transfer-encoding'] = undefined;
     }
 
     const url = new URL(request.url ?? '/', server.url);

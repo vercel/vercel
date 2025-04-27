@@ -1,9 +1,10 @@
+import chalk from 'chalk';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
@@ -11,6 +12,10 @@ import { getCommandName } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
+import output from '../../output-manager';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
+import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 
 type Options = {
   '--listen': string;
@@ -20,9 +25,9 @@ type Options = {
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: DevTelemetryClient
 ) {
-  const { output } = client;
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
@@ -46,7 +51,7 @@ export default async function dev(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      client.output.error(
+      output.error(
         `Command ${getCommandName(
           'dev'
         )} requires confirmation. Use option ${param('--yes')} to confirm.`
@@ -74,20 +79,41 @@ export default async function dev(
       cwd = join(cwd, project.rootDirectory);
     }
 
-    envValues = (
-      await pullEnvRecords(output, client, project.id, 'vercel-cli:dev')
-    ).env;
+    envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
+      .env;
   }
 
   const devServer = new DevServer(cwd, {
-    output,
     projectSettings,
     envValues,
     repoRoot,
   });
 
+  const controller = new AbortController();
+  const timeout = setTimeout(async () => {
+    if (link.status !== 'linked') return;
+
+    let refreshCount = 0;
+    for await (const token of refreshOidcToken(
+      controller.signal,
+      client,
+      link.project.id,
+      envValues,
+      'vercel-cli:dev'
+    )) {
+      output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+      envValues[VERCEL_OIDC_TOKEN] = token;
+      await devServer.runDevCommand(true);
+      telemetry.trackOidcTokenRefresh(++refreshCount);
+    }
+  });
+
   // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => devServer.stop());
+  process.on('SIGTERM', () => {
+    clearTimeout(timeout);
+    controller.abort();
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by

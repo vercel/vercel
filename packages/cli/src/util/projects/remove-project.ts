@@ -1,4 +1,4 @@
-import Client from '../client';
+import type Client from '../client';
 import { isAPIError, ProjectNotFound } from '../errors-ts';
 
 export default async function removeProject(
@@ -6,7 +6,7 @@ export default async function removeProject(
   projectNameOrId: string
 ) {
   try {
-    await client.fetch<{}>(`/projects/${encodeURIComponent(projectNameOrId)}`, {
+    await client.fetch(`/projects/${encodeURIComponent(projectNameOrId)}`, {
       method: 'DELETE',
     });
   } catch (error: unknown) {

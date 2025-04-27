@@ -1,34 +1,41 @@
-import fs from 'fs-extra';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import semver from 'semver';
+import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
-import { frameworkList, type Framework } from '@vercel/frameworks';
+import semver from 'semver';
+
 import {
   download,
+  FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
   normalizePath,
-  FileFsRef,
   NowBuildError,
+  type Reporter,
+  Span,
+  type TraceEvent,
   validateNpmrc,
-  type Files,
-  type PackageJson,
-  type BuildOptions,
-  type Config,
-  type Meta,
   type Builder,
+  type BuildOptions,
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type Config,
   type Cron,
+  type Files,
   type FlagDefinitions,
+  type Meta,
+  type PackageJson,
 } from '@vercel/build-utils';
+import type { VercelConfig } from '@vercel/client';
+import { fileNameSymbol } from '@vercel/client';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
+  detectInstrumentation,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -38,43 +45,43 @@ import {
   type MergeRoutesProps,
   type Route,
 } from '@vercel/routing-utils';
-import { fileNameSymbol } from '@vercel/client';
-import type { VercelConfig } from '@vercel/client';
 
-import pull from '../pull';
-import { staticFiles as getFiles } from '../../util/get-files';
-import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import cmd from '../../util/output/cmd';
-import * as cli from '../../util/pkg-name';
-import cliPkg from '../../util/pkg';
-import readJSONFile from '../../util/read-json-file';
-import { CantParseJSONFile } from '../../util/errors-ts';
-import {
-  pickOverrides,
-  readProjectSettings,
-  type ProjectLinkAndSettings,
-} from '../../util/projects/project-settings';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
-import confirm from '../../util/input/confirm';
-import { emoji, prependEmoji } from '../../util/emoji';
-import stamp from '../../util/output/stamp';
+import output from '../../output-manager';
+import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
+import { importBuilders } from '../../util/build/import-builders';
+import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import { scrubArgv } from '../../util/build/scrub-argv';
+import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
   type PathOverride,
 } from '../../util/build/write-build-result';
-import { importBuilders } from '../../util/build/import-builders';
-import { initCorepack, cleanupCorepack } from '../../util/build/corepack';
-import { sortBuilders } from '../../util/build/sort-builders';
-import { handleError, toEnumerableError } from '../../util/error';
-import { validateConfig } from '../../util/validate-config';
-import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
-import { help } from '../help';
-import { buildCommand } from './command';
-import { scrubArgv } from '../../util/build/scrub-argv';
+import type Client from '../../util/client';
+import { emoji, prependEmoji } from '../../util/emoji';
+import { printError, toEnumerableError } from '../../util/error';
+import { CantParseJSONFile } from '../../util/errors-ts';
+import { parseArguments } from '../../util/get-args';
+import { staticFiles as getFiles } from '../../util/get-files';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import cmd from '../../util/output/cmd';
+import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
+import cliPkg from '../../util/pkg';
+import * as cli from '../../util/pkg-name';
+import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  pickOverrides,
+  readProjectSettings,
+  type ProjectLinkAndSettings,
+} from '../../util/projects/project-settings';
+import readJSONFile from '../../util/read-json-file';
+import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
+import { validateConfig } from '../../util/validate-config';
+import { help } from '../help';
+import { pullCommandLogic } from '../pull';
+import { buildCommand } from './command';
+import { mkdir, writeFile } from 'fs/promises';
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -115,9 +122,26 @@ export interface BuildsManifest {
   };
 }
 
+class InMemoryReporter implements Reporter {
+  public events: TraceEvent[] = [];
+
+  report(event: TraceEvent) {
+    this.events.push(event);
+  }
+}
+
 export default async function main(client: Client): Promise<number> {
+  const telemetryClient = new BuildTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  // Setup tracer to output into the build directory
+  const reporter = new InMemoryReporter();
+  const rootSpan = new Span({ name: 'vc', reporter });
+
   let { cwd } = client;
-  const { output } = client;
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -143,12 +167,17 @@ export default async function main(client: Client): Promise<number> {
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    telemetryClient.trackCliOptionOutput(parsedArgs.flags['--output']);
+    telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
+    telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
+    telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
   if (parsedArgs.flags['--help']) {
+    telemetryClient.trackCliFlagHelp('build');
     output.print(help(buildCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -156,7 +185,6 @@ export default async function main(client: Client): Promise<number> {
   // Build `target` influences which environment variables will be used
   const target =
     parseTarget({
-      output,
       flagName: 'target',
       flags: parsedArgs.flags,
     }) || 'preview';
@@ -187,7 +215,7 @@ export default async function main(client: Client): Promise<number> {
     let confirmed = yes;
     if (!confirmed) {
       if (!isTTY) {
-        client.output.print(
+        output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
           )} to retrieve them.`
@@ -195,8 +223,7 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
-      confirmed = await confirm(
-        client,
+      confirmed = await client.input.confirm(
         `No Project Settings found locally. Run ${cli.getCommandName(
           'pull'
         )} for retrieving them?`,
@@ -204,7 +231,7 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      client.output.print(`Canceled. No Project Settings retrieved.\n`);
+      output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
@@ -215,7 +242,13 @@ export default async function main(client: Client): Promise<number> {
       `--environment`,
       target,
     ];
-    const result = await pull(client);
+    const result = await pullCommandLogic(
+      client,
+      client.cwd,
+      Boolean(parsedArgs.flags['--yes']),
+      target,
+      parsedArgs.flags
+    );
     if (result !== 0) {
       return result;
     }
@@ -229,6 +262,7 @@ export default async function main(client: Client): Promise<number> {
   const outputDir = parsedArgs.flags['--output']
     ? resolve(parsedArgs.flags['--output'])
     : defaultOutputDir;
+
   await Promise.all([
     fs.remove(outputDir),
     // Also delete `.vercel/output`, in case the script is targeting Build Output API directly
@@ -253,7 +287,7 @@ export default async function main(client: Client): Promise<number> {
     // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
     const dotenvResult = dotenv.config({
       path: envPath,
-      debug: client.output.isDebugEnabled(),
+      debug: output.isDebugEnabled(),
     });
     if (dotenvResult.error) {
       output.debug(
@@ -279,7 +313,14 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    await doBuild(client, project, buildsJson, cwd, outputDir);
+    await rootSpan
+      .child('vc.doBuild')
+      .trace(span =>
+        doBuild(client, project, buildsJson, cwd, outputDir, span)
+      );
+
+    await rootSpan.stop();
+
     return 0;
   } catch (err: any) {
     output.prettyError(err);
@@ -295,6 +336,19 @@ export default async function main(client: Client): Promise<number> {
 
     return 1;
   } finally {
+    try {
+      const diagnosticsOutputPath = join(outputDir, 'diagnostics');
+      await mkdir(diagnosticsOutputPath, { recursive: true });
+      // Ensure that all traces have flushed to disk before we exit
+      await writeFile(
+        join(diagnosticsOutputPath, 'cli_traces.json'),
+        JSON.stringify(reporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+
     // Unset environment variables that were added by dotenv
     // (this is mostly for the unit tests)
     for (const key of envToUnset) {
@@ -312,23 +366,32 @@ async function doBuild(
   project: ProjectLinkAndSettings,
   buildsJson: BuildsManifest,
   cwd: string,
-  outputDir: string
+  outputDir: string,
+  span: Span
 ): Promise<void> {
-  const { localConfigPath, output } = client;
+  const { localConfigPath } = client;
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  const [pkg, vercelConfig, nowConfig] = await Promise.all([
+  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(
       localConfigPath || join(workPath, 'vercel.json')
     ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
+    detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
   if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
+
+  if (hasInstrumentation) {
+    output.debug(
+      'OpenTelemetry instrumentation detected. Automatic fetch instrumentation will be disabled.'
+    );
+    process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION = '1';
+  }
 
   if (vercelConfig) {
     vercelConfig[fileNameSymbol] = 'vercel.json';
@@ -354,11 +417,11 @@ async function doBuild(
     projectSettings.rootDirectory !== null &&
     projectSettings.rootDirectory !== '.'
   ) {
-    await setMonorepoDefaultSettings(cwd, workPath, projectSettings, output);
+    await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
   // Get a list of source files
-  const files = (await getFiles(workPath, client)).map(f =>
+  const files = (await getFiles(workPath, {})).map(f =>
     normalizePath(relative(workPath, f))
   );
 
@@ -429,7 +492,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, output);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -483,7 +546,7 @@ async function doBuild(
   const buildResults: Map<Builder, BuildResult | BuildOutputConfig> = new Map();
   const overrides: PathOverride[] = [];
   const repoRootPath = cwd;
-  const corepackShimDir = await initCorepack({ repoRootPath }, output);
+  const corepackShimDir = await initCorepack({ repoRootPath });
   const diagnostics: Files = {};
 
   for (const build of sortedBuilders) {
@@ -526,6 +589,11 @@ async function doBuild(
             nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
+
+      const builderSpan = span.child('vc.builder', {
+        name: builderPkg.name,
+      });
+
       const buildOptions: BuildOptions = {
         files: filesMap,
         entrypoint: build.src,
@@ -533,13 +601,16 @@ async function doBuild(
         repoRootPath,
         config: buildConfig,
         meta,
+        span: builderSpan,
       };
       output.debug(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
-      let buildResult: BuildResultV2 | BuildResultV3 | undefined;
+      let buildResult: BuildResultV2 | BuildResultV3;
       try {
-        buildResult = await builder.build(buildOptions);
+        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
+          () => builder.build(buildOptions)
+        );
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
@@ -560,7 +631,12 @@ async function doBuild(
       } finally {
         // Make sure we don't fail the build
         try {
-          Object.assign(diagnostics, await builder.diagnostics?.(buildOptions));
+          const builderDiagnostics = await builderSpan
+            .child('vc.builder.diagnostics')
+            .trace(async () => {
+              return await builder.diagnostics?.(buildOptions);
+            });
+          Object.assign(diagnostics, builderDiagnostics);
         } catch (error) {
           output.error('Collecting diagnostics failed');
           output.debug(error);
@@ -590,22 +666,36 @@ async function doBuild(
       // all builds have completed
       buildResults.set(build, buildResult);
 
+      let buildOutputLength = 0;
+      if ('output' in buildResult) {
+        buildOutputLength = Array.isArray(buildResult.output)
+          ? buildResult.output.length
+          : 1;
+      }
+
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
-        writeBuildResult(
-          repoRootPath,
-          outputDir,
-          buildResult,
-          build,
-          builder,
-          builderPkg,
-          localConfig
-        ).then(
-          override => {
-            if (override) overrides.push(override);
-          },
-          err => err
-        )
+        builderSpan
+          .child('vc.builder.writeBuildResult', {
+            buildOutputLength: String(buildOutputLength),
+          })
+          .trace<Record<string, PathOverride> | undefined | void>(() =>
+            writeBuildResult(
+              repoRootPath,
+              outputDir,
+              buildResult,
+              build,
+              builder,
+              builderPkg,
+              localConfig
+            )
+          )
+          .then(
+            (override: Record<string, PathOverride> | undefined | void) => {
+              if (override) overrides.push(override);
+            },
+            (err: Error) => err
+          )
       );
     } catch (err: any) {
       const buildJsonBuild = buildsJsonBuilds.get(build);
@@ -724,7 +814,7 @@ async function doBuild(
   };
   await fs.writeJSON(join(outputDir, 'config.json'), config, { spaces: 2 });
 
-  await writeFlagsJSON(client, buildResults.values(), outputDir);
+  await writeFlagsJSON(buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
   output.print(
@@ -863,7 +953,6 @@ function mergeWildcard(
  * file. It'll skip flags that already exist.
  */
 async function writeFlagsJSON(
-  { output }: Client,
   buildResults: Iterable<BuildResult | BuildOutputConfig>,
   outputDir: string
 ): Promise<void> {

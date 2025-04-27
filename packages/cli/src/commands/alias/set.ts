@@ -1,15 +1,13 @@
 import chalk from 'chalk';
-import { SetDifference } from 'utility-types';
-import { AliasRecord } from '../../util/alias/create-alias';
-import type { Domain } from '@vercel-internals/types';
-import { Output } from '../../util/output';
+import type { SetDifference } from 'utility-types';
+import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
 import assignAlias from '../../util/alias/assign-alias';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
 import getScope from '../../util/get-scope';
-import setupDomain from '../../util/domains/setup-domain';
+import type setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import { isValidName } from '../../util/is-valid-name';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -17,27 +15,45 @@ import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import toHost from '../../util/to-host';
+import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
+import output from '../../output-manager';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { listSubcommand } from './command';
+import type { Domain } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 
-type Options = {
-  '--debug': boolean;
-  '--local-config': string;
-};
+export default async function set(client: Client, argv: string[]) {
+  let parsedArguments;
 
-export default async function set(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArguments;
+
   const setStamp = stamp();
-  const { output, localConfig } = client;
+  const { localConfig } = client;
+  const telemetryClient = new AliasSetTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagDebug(opts['--debug']);
+  telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
   const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
       `${getCommandName(
-        `alias <deployment> <target>`
+        'alias <deployment> <target>'
       )} accepts at most two arguments`
     );
     return 1;
@@ -59,18 +75,18 @@ export default async function set(
     output.error(
       `To ship to production, optionally configure your domains (${link(
         'https://vercel.link/domain-configuration'
-      )}) and run ${getCommandName(`--prod`)}.`
+      )}) and run ${getCommandName('--prod')}.`
     );
     return 1;
   }
 
   // For `vercel alias set <argument>`
   if (args.length === 1) {
+    const [aliasTarget] = args;
+    telemetryClient.trackCliArgumentAlias(aliasTarget);
     const deployment = handleCertError(
-      output,
       await getDeploymentForAlias(
         client,
-        output,
         args,
         opts['--local-config'],
         user,
@@ -106,17 +122,10 @@ export default async function set(
     for (const target of targets) {
       output.log(`Assigning alias ${target} to deployment ${deployment.url}`);
 
-      const record = await assignAlias(
-        output,
-        client,
-        deployment,
-        target,
-        contextName
-      );
+      const record = await assignAlias(client, deployment, target, contextName);
 
       const handleResult = handleSetupDomainError(
-        output,
-        handleCreateAliasError(output, record)
+        handleCreateAliasError(record)
       );
 
       if (handleResult === 1) {
@@ -134,8 +143,9 @@ export default async function set(
   }
 
   const [deploymentIdOrHost, aliasTarget] = args;
+  telemetryClient.trackCliArgumentDeployment(deploymentIdOrHost);
+  telemetryClient.trackCliArgumentAlias(aliasTarget);
   const deployment = handleCertError(
-    output,
     await getDeployment(client, contextName, deploymentIdOrHost)
   );
 
@@ -154,16 +164,12 @@ export default async function set(
 
   const isWildcard = isWildcardAlias(aliasTarget);
   const record = await assignAlias(
-    output,
     client,
     deployment,
     aliasTarget,
     contextName
   );
-  const handleResult = handleSetupDomainError(
-    output,
-    handleCreateAliasError(output, record)
-  );
+  const handleResult = handleSetupDomainError(handleCreateAliasError(record));
   if (handleResult === 1) {
     return 1;
   }
@@ -183,10 +189,7 @@ type ThenArg<T> = T extends Promise<infer U> ? U : T;
 type SetupDomainResolve = ThenArg<ReturnType<typeof setupDomain>>;
 type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 
-function handleSetupDomainError<T>(
-  output: Output,
-  error: SetupDomainError | T
-): T | 1 {
+function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
       `You don't have permissions over domain ${chalk.underline(
@@ -197,12 +200,12 @@ function handleSetupDomainError<T>(
   }
 
   if (error instanceof ERRORS.UserAborted) {
-    output.error(`User canceled.`);
+    output.error('User canceled.');
     return 1;
   }
 
   if (error instanceof ERRORS.DomainNotFound) {
-    output.error(`You should buy the domain before aliasing.`);
+    output.error('You should buy the domain before aliasing.');
     return 1;
   }
 
@@ -229,13 +232,13 @@ function handleSetupDomainError<T>(
 
   if (error instanceof ERRORS.DomainServiceNotAvailable) {
     output.error(
-      `The domain purchase service is not available. Try again later.`
+      'The domain purchase service is not available. Try again later.'
     );
     return 1;
   }
 
   if (error instanceof ERRORS.UnexpectedDomainPurchaseError) {
-    output.error(`There was an unexpected error while purchasing the domain.`);
+    output.error('There was an unexpected error while purchasing the domain.');
     return 1;
   }
 
@@ -251,7 +254,7 @@ function handleSetupDomainError<T>(
       `The domain ${error.meta.domain} is processing and will be available once the order is completed.`
     );
     output.print(
-      `  An email will be sent upon completion so you can alias to your new domain.\n`
+      '  An email will be sent upon completion so you can alias to your new domain.\n'
     );
     return 1;
   }
@@ -260,7 +263,7 @@ function handleSetupDomainError<T>(
     output.error(
       `You can't purchase the domain you're aliasing to since you have no valid payment method.`
     );
-    output.print(`  Please add a valid payment method and retry.\n`);
+    output.print('  Please add a valid payment method and retry.\n');
     return 1;
   }
 
@@ -268,7 +271,7 @@ function handleSetupDomainError<T>(
     output.error(
       `You can't purchase the domain you're aliasing to since your card was declined.`
     );
-    output.print(`  Please add a valid payment method and retry.\n`);
+    output.print('  Please add a valid payment method and retry.\n');
     return 1;
   }
 
@@ -283,10 +286,9 @@ type RemainingAssignAliasErrors = SetDifference<
 >;
 
 function handleCreateAliasError<T>(
-  output: Output,
   errorOrResult: RemainingAssignAliasErrors | T
 ): 1 | T {
-  const error = handleCertError(output, errorOrResult);
+  const error = handleCertError(errorOrResult);
   if (error === 1) {
     return error;
   }
@@ -310,7 +312,7 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.InvalidAlias) {
     output.error(
-      `Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For \`vercel.app\`, only sub and sub-sub domains are supported.`
+      'Invalid alias. Please confirm that the alias you provided is a valid hostname. Note: For `vercel.app`, only sub and sub-sub domains are supported.'
     );
     return 1;
   }

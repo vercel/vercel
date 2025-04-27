@@ -1,5 +1,187 @@
 # @vercel-internals/types
 
+## 3.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`16b38a92574695f9961c7cc00cf631fe434c26c8`](https://github.com/vercel/vercel/commit/16b38a92574695f9961c7cc00cf631fe434c26c8)]:
+  - @vercel/routing-utils@5.0.1
+
+## 3.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`745404610a836fa6c2068c5c192d2f3e8b86918f`](https://github.com/vercel/vercel/commit/745404610a836fa6c2068c5c192d2f3e8b86918f), [`3a5507fd1459c77b4491f1c9c3a64ad42e4ff009`](https://github.com/vercel/vercel/commit/3a5507fd1459c77b4491f1c9c3a64ad42e4ff009)]:
+  - @vercel/build-utils@9.1.0
+
+## 3.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`e570a1660c2b18a41d8c3985e645a175a44a5ea4`](https://github.com/vercel/vercel/commit/e570a1660c2b18a41d8c3985e645a175a44a5ea4)]:
+  - @vercel/build-utils@9.0.1
+
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da), [`e6b0343585cc3cdf02467fd3264b1f57b2ffb0da`](https://github.com/vercel/vercel/commit/e6b0343585cc3cdf02467fd3264b1f57b2ffb0da)]:
+  - @vercel/build-utils@9.0.0
+
+## 3.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`f031084df97745754da800a8c23a29ae2d58e1e8`](https://github.com/vercel/vercel/commit/f031084df97745754da800a8c23a29ae2d58e1e8)]:
+  - @vercel/routing-utils@5.0.0
+
+## 3.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d`](https://github.com/vercel/vercel/commit/7c3114ff8a1bdf0933c008a83e46c3d8f6dfcf7d), [`0c4ce9cfbf0c6d3108656584d56fa501e3efe15e`](https://github.com/vercel/vercel/commit/0c4ce9cfbf0c6d3108656584d56fa501e3efe15e)]:
+  - @vercel/build-utils@8.8.0
+  - @vercel/routing-utils@4.0.0
+
+## 3.0.0
+
+### Major Changes
+
+- [cli] remove name from CustomEnvironment type ([#12709](https://github.com/vercel/vercel/pull/12709))
+
+### Patch Changes
+
+- Updated dependencies [[`a35f77e5dddc4faa6c4492b2b3c6971e7200749e`](https://github.com/vercel/vercel/commit/a35f77e5dddc4faa6c4492b2b3c6971e7200749e)]:
+  - @vercel/build-utils@8.7.0
+
+## 2.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`d5474ec05886abfb2fc5dd69c54072a7c34498b5`](https://github.com/vercel/vercel/commit/d5474ec05886abfb2fc5dd69c54072a7c34498b5)]:
+  - @vercel/build-utils@8.6.0
+
+## 2.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`a97f3f13ea3f27fd143e7692544bbd4919771a7a`](https://github.com/vercel/vercel/commit/a97f3f13ea3f27fd143e7692544bbd4919771a7a)]:
+  - @vercel/build-utils@8.5.0
+
+## 2.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`5a6605bbd99c3b4c3f06fc315dd3978fe7801d00`](https://github.com/vercel/vercel/commit/5a6605bbd99c3b4c3f06fc315dd3978fe7801d00)]:
+  - @vercel/build-utils@8.4.12
+
+## 2.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`d01c6b98d6f5f2718b69edec71b4aec40822bfe6`](https://github.com/vercel/vercel/commit/d01c6b98d6f5f2718b69edec71b4aec40822bfe6), [`3a2c2529c642cc2efc11d08a18f2da2ff423b15f`](https://github.com/vercel/vercel/commit/3a2c2529c642cc2efc11d08a18f2da2ff423b15f)]:
+  - @vercel/build-utils@8.4.11
+
+## 2.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`6bc94805af7550967ca675194b5b956284da8797`](https://github.com/vercel/vercel/commit/6bc94805af7550967ca675194b5b956284da8797)]:
+  - @vercel/build-utils@8.4.10
+
+## 2.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`dfad4af5c65a565e0afe28731d3918d03d5085b2`](https://github.com/vercel/vercel/commit/dfad4af5c65a565e0afe28731d3918d03d5085b2)]:
+  - @vercel/build-utils@8.4.9
+
+## 2.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`226028a8f205a4f795ce8dfdeffc0265cca8d9e2`](https://github.com/vercel/vercel/commit/226028a8f205a4f795ce8dfdeffc0265cca8d9e2)]:
+  - @vercel/build-utils@8.4.8
+
+## 2.0.11
+
+### Patch Changes
+
+- Updated dependencies [[`a6227a56d7feec77b5355d2cd5fc07f151021d73`](https://github.com/vercel/vercel/commit/a6227a56d7feec77b5355d2cd5fc07f151021d73), [`e312d610177b28cf1592b18ca85b8d4e088ffc05`](https://github.com/vercel/vercel/commit/e312d610177b28cf1592b18ca85b8d4e088ffc05)]:
+  - @vercel/build-utils@8.4.7
+
+## 2.0.10
+
+### Patch Changes
+
+- Add a command for enabling and disabling telemetry. Telemetry collection is not currently enabled and when it is, will be a major version bump for the CLI. ([#12207](https://github.com/vercel/vercel/pull/12207))
+
+- Updated dependencies [[`5431ffd5de6a572f247e63f737576b4a04884f7b`](https://github.com/vercel/vercel/commit/5431ffd5de6a572f247e63f737576b4a04884f7b)]:
+  - @vercel/build-utils@8.4.6
+
+## 2.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`62f434a79fe25009e63fcaefda0abe283c590f58`](https://github.com/vercel/vercel/commit/62f434a79fe25009e63fcaefda0abe283c590f58)]:
+  - @vercel/build-utils@8.4.5
+
+## 2.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`2dab096e952c25521bac2537039ed7ca15675095`](https://github.com/vercel/vercel/commit/2dab096e952c25521bac2537039ed7ca15675095)]:
+  - @vercel/build-utils@8.4.4
+
+## 2.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`f1904566e5c24919425fc2b6c8c84f25f3478e74`](https://github.com/vercel/vercel/commit/f1904566e5c24919425fc2b6c8c84f25f3478e74)]:
+  - @vercel/build-utils@8.4.3
+
+## 2.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`8e90f4156`](https://github.com/vercel/vercel/commit/8e90f415663226411ee6f294e30331a95806e53e)]:
+  - @vercel/build-utils@8.4.2
+
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`04e15410f`](https://github.com/vercel/vercel/commit/04e15410f09453c528c133d1432fd8b183c5097c)]:
+  - @vercel/build-utils@8.4.1
+
+## 2.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`49c95b77a`](https://github.com/vercel/vercel/commit/49c95b77a2cea23c6f98c5e084dbe35d081b40bc)]:
+  - @vercel/build-utils@8.4.0
+
+## 2.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`40b7ee0d2`](https://github.com/vercel/vercel/commit/40b7ee0d297c212961279639d9c73d4fed2312f8), [`78a3be23e`](https://github.com/vercel/vercel/commit/78a3be23edff1e59a09a75a8adc2013a5a53fb1d)]:
+  - @vercel/build-utils@8.3.9
+
+## 2.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`06337ed0b`](https://github.com/vercel/vercel/commit/06337ed0bb1ab4becd1554642c162c75bdcc91c2), [`2fc9e6d81`](https://github.com/vercel/vercel/commit/2fc9e6d8104a3d6308873ef8dafa27c32f0b97be)]:
+  - @vercel/build-utils@8.3.8
+
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`c6d469595`](https://github.com/vercel/vercel/commit/c6d469595372d53398c3f2eb35b644a22c56e4f6)]:
+  - @vercel/build-utils@8.3.7
+
 ## 2.0.0
 
 ### Major Changes

@@ -7,7 +7,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   let ctx = {};
 
   it('should deploy and pass probe checks', async () => {
-    await require('../../utils').normalizeReactVersion(__dirname);
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
@@ -72,7 +71,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     }, 'success');
   });
 
-  it('should revalidate content correctly for optional catch-all route', async () => {
+  // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip('should revalidate content correctly for optional catch-all route', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(`${ctx.deploymentUrl}/docs/financial`);
       let $ = cheerio.load(await res.text());

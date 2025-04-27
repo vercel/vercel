@@ -1,16 +1,87 @@
 import semver from 'semver';
 import { existsSync, readFileSync, promises as fs } from 'fs';
 import { basename, dirname, join, relative, resolve, sep } from 'path';
-import { pathToRegexp, Key } from 'path-to-regexp';
 import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
-import type {
-  ConfigRoute,
-  RouteManifest,
-} from '@remix-run/dev/dist/config/routes';
-import type { RemixConfig } from '@remix-run/dev/dist/config';
 import type { BaseFunctionConfig } from '@vercel/static-config';
+import type { RouteManifestEntry, RouteManifest, RemixConfig } from './types';
+
+/*
+  [START] Temporary double-install of path-to-regexp to compare the impact of the update
+  https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
+*/
+import { pathToRegexp as pathToRegexpCurrent, Key } from 'path-to-regexp';
+import { pathToRegexp as pathToRegexpUpdated } from 'path-to-regexp-updated';
+
+function cloneKeys(keys: Key[] | undefined): Key[] | undefined {
+  if (typeof keys === 'undefined') {
+    return undefined;
+  }
+
+  return keys.slice(0);
+}
+
+function compareKeys(left: Key[] | undefined, right: Key[] | undefined) {
+  const leftSerialized =
+    typeof left === 'undefined' ? 'undefined' : left.toString();
+  const rightSerialized =
+    typeof right === 'undefined' ? 'undefined' : right.toString();
+  return leftSerialized === rightSerialized;
+}
+
+// run the updated version of path-to-regexp, compare the results, and log if different
+export function pathToRegexp(
+  callerId: string,
+  path: string,
+  keys?: Key[],
+  options?: { strict: boolean; sensitive: boolean; delimiter: string }
+) {
+  const newKeys = cloneKeys(keys);
+  const currentRegExp = pathToRegexpCurrent(path, keys, options);
+
+  try {
+    const currentKeys = keys;
+    const newRegExp = pathToRegexpUpdated(path, newKeys, options);
+
+    // FORCE_PATH_TO_REGEXP_LOG can be used to force these logs to render
+    // for verification that they show up in the build logs as expected
+
+    const isDiffRegExp = currentRegExp.toString() !== newRegExp.toString();
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffRegExp) {
+      const message = JSON.stringify({
+        path,
+        currentRegExp: currentRegExp.toString(),
+        newRegExp: newRegExp.toString(),
+      });
+      console.error(`[vc] PATH TO REGEXP PATH DIFF @ #${callerId}: ${message}`);
+    }
+
+    const isDiffKeys = !compareKeys(keys, newKeys);
+    if (process.env.FORCE_PATH_TO_REGEXP_LOG || isDiffKeys) {
+      const message = JSON.stringify({
+        isDiffKeys,
+        currentKeys,
+        newKeys,
+      });
+      console.error(`[vc] PATH TO REGEXP KEYS DIFF @ #${callerId}: ${message}`);
+    }
+  } catch (err) {
+    const error = err as Error;
+    const message = JSON.stringify({
+      path,
+      error: error.message,
+    });
+
+    console.error(`[vc] PATH TO REGEXP ERROR @ #${callerId}: ${message}`);
+  }
+
+  return currentRegExp;
+}
+/*
+  [END] Temporary double-install of path-to-regexp to compare the impact of the update
+  https://linear.app/vercel/issue/ZERO-3067/log-potential-impact-of-path-to-regexpupdate
+*/
 
 export const require_ = createRequire(__filename);
 
@@ -77,9 +148,9 @@ function isEdgeRuntime(runtime: string): boolean {
 }
 
 export function getResolvedRouteConfig(
-  route: ConfigRoute,
+  route: RouteManifestEntry,
   routes: RouteManifest,
-  configs: Map<ConfigRoute, BaseFunctionConfig | null>,
+  configs: Map<RouteManifestEntry, BaseFunctionConfig | null>,
   isHydrogen2: boolean
 ): ResolvedRouteConfig {
   let runtime: ResolvedRouteConfig['runtime'] | undefined;
@@ -129,13 +200,16 @@ export function calculateRouteConfigHash(config: ResolvedRouteConfig): string {
 
 export function isLayoutRoute(
   routeId: string,
-  routes: Pick<ConfigRoute, 'id' | 'parentId'>[]
+  routes: Pick<RouteManifestEntry, 'id' | 'parentId'>[]
 ): boolean {
   return routes.some(r => r.parentId === routeId);
 }
 
-export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
-  let currentRoute: ConfigRoute = route;
+export function* getRouteIterator(
+  route: RouteManifestEntry,
+  routes: RouteManifest
+) {
+  let currentRoute: RouteManifestEntry = route;
   do {
     yield currentRoute;
     if (currentRoute.parentId) {
@@ -147,16 +221,15 @@ export function* getRouteIterator(route: ConfigRoute, routes: RouteManifest) {
 }
 
 export function getPathFromRoute(
-  route: ConfigRoute,
+  input: RouteManifestEntry,
   routes: RouteManifest
 ): ResolvedRoutePaths {
+  let route = input;
   if (
     route.id === 'root' ||
-    (route.parentId === 'root' &&
-      (!route.path || route.path === '/') &&
-      route.index)
+    ((!route.path || route.path === '/') && route.index)
   ) {
-    return { path: 'index', rePath: '/index' };
+    route = { ...route, path: 'index' };
   }
 
   const pathParts: string[] = [];
@@ -184,6 +257,13 @@ export function getPathFromRoute(
     }
   }
 
+  // If the route is an index route and has a parent, then
+  // we can remove the "index" from the path since it's implied
+  if (pathParts.length > 1 && pathParts[0] === 'index') {
+    pathParts.shift();
+    rePathParts.shift();
+  }
+
   const path = pathParts.reverse().join('/');
 
   // Replace "/*" at the end to handle "splat routes"
@@ -196,7 +276,7 @@ export function getPathFromRoute(
 
 export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
-  const re = pathToRegexp(rePath, keys);
+  const re = pathToRegexp('923', rePath, keys);
   return keys.length > 0 ? re : false;
 }
 
@@ -222,8 +302,7 @@ export async function chdirAndReadConfig(
   dir: string,
   packageJsonPath: string
 ) {
-  const { readConfig }: typeof import('@remix-run/dev/dist/config') =
-    await import(join(remixRunDevPath, 'dist/config.js'));
+  const { readConfig } = await import(join(remixRunDevPath, 'dist/config.js'));
 
   const originalCwd = process.cwd();
 
@@ -380,20 +459,19 @@ export function hasScript(scriptName: string, pkg?: PackageJson) {
   return typeof scripts[scriptName] === 'string';
 }
 
-export async function getRemixVersion(
+export async function getPackageVersion(
+  name: string,
   dir: string,
   base: string
 ): Promise<string> {
-  const resolvedPath = require_.resolve('@remix-run/dev', { paths: [dir] });
+  const resolvedPath = require_.resolve(name, { paths: [dir] });
   const pkgPath = await walkParentDirs({
     base,
     start: dirname(resolvedPath),
     filename: 'package.json',
   });
   if (!pkgPath) {
-    throw new Error(
-      `Failed to find \`package.json\` file for "@remix-run/dev"`
-    );
+    throw new Error(`Failed to find \`package.json\` file for "${name}"`);
   }
   const { version } = JSON.parse(
     await fs.readFile(pkgPath, 'utf8')
@@ -430,6 +508,7 @@ export function isVite(dir: string): boolean {
   ]);
   if (!viteConfig) return false;
 
+  // `remix.config` should only exist for non-Vite Remix projects
   const remixConfig = findConfig(dir, 'remix.config');
   if (!remixConfig) return true;
 
@@ -449,6 +528,6 @@ export function isVite(dir: string): boolean {
     return true;
   }
 
-  // If none of those conditions matched, then treat it as a legacy project and print a warning
+  // If none of those conditions matched, then treat it as a legacy project
   return false;
 }

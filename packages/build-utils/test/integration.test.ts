@@ -4,14 +4,14 @@ import {
   testDeployment,
   // @ts-ignore
 } from '../../../test/lib/deployment/test-deployment';
+import { expect, it, vi } from 'vitest';
 
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
 
 // Fixtures that have separate tests and should be skipped in the loop
 const skipFixtures: string[] = [
-  '01-zero-config-api',
   '02-zero-config-api',
   '03-zero-config-angular',
   '04-zero-config-brunch',
@@ -19,10 +19,15 @@ const skipFixtures: string[] = [
   '06-zero-config-hugo',
   '07-zero-config-jekyll',
   '08-zero-config-middleman',
+  '19-yarn-v2',
   '21-npm-workspaces',
   '23-pnpm-workspaces',
-  '41-nx-monorepo',
-  '42-npm-workspace-with-nx',
+  '41-turborepo-supporting-corepack-home',
+  '42-turborepo-not-supporting-corepack-home',
+  '43-turborepo-with-comments-in-turbo-json',
+  '44-yarn-v4',
+  '45-yarn-v1',
+  '46-yarn-dynamic-require',
 ];
 
 // eslint-disable-next-line no-restricted-syntax

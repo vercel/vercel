@@ -1,14 +1,13 @@
 {
   "dependencies": {
-    "next": "canary",
-    "react": "19.0.0-rc-3208e73e-20240730",
-    "react-dom": "19.0.0-rc-3208e73e-20240730"
+    "next": "15.2.0-canary.33",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
-  },
-  "ignoreNextjsUpdates": true
+  }
 }

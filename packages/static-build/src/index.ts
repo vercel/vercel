@@ -37,6 +37,7 @@ import {
   scanParentDirs,
   cloneEnv,
   getInstalledPackageVersion,
+  defaultCachePathGlob,
 } from '@vercel/build-utils';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import * as BuildOutputV1 from './utils/build-output-v1';
@@ -482,17 +483,21 @@ export const build: BuildV2 = async ({
       spawnOpts.env.CI = 'false';
     }
 
-    const { cliType, lockfileVersion, packageJson } = await scanParentDirs(
-      entrypointDir,
-      true
-    );
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(entrypointDir, true);
 
     spawnOpts.env = getEnvForPackageManager({
       cliType,
       lockfileVersion,
-      packageJsonPackageManager: packageJson?.packageManager,
+      packageJsonPackageManager,
       nodeVersion,
       env: spawnOpts.env || {},
+      turboSupportsCorepackHome,
+      projectCreatedAt: config.projectSettings?.createdAt,
     });
 
     if (meta.isDev) {
@@ -508,7 +513,14 @@ export const build: BuildV2 = async ({
 
       if (!config.zeroConfig) {
         debug('Detected "builds" - not zero config');
-        await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
+        await runNpmInstall(
+          entrypointDir,
+          [],
+          spawnOpts,
+          meta,
+          nodeVersion,
+          config.projectSettings?.createdAt
+        );
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
@@ -556,7 +568,14 @@ export const build: BuildV2 = async ({
           isPipInstall = true;
         }
         if (pkg) {
-          await runNpmInstall(entrypointDir, [], spawnOpts, meta, nodeVersion);
+          await runNpmInstall(
+            entrypointDir,
+            [],
+            spawnOpts,
+            meta,
+            nodeVersion,
+            config.projectSettings?.createdAt
+          );
           isNpmInstall = true;
         }
       }
@@ -700,7 +719,8 @@ export const build: BuildV2 = async ({
             : await runPackageJsonScript(
                 entrypointDir,
                 ['vercel-build', 'now-build', 'build'],
-                spawnOpts
+                spawnOpts,
+                config.projectSettings?.createdAt
               );
 
         if (!found) {
@@ -865,7 +885,11 @@ export const prepareCache: PrepareCache = async ({
   // Default cache files
   Object.assign(
     cacheFiles,
-    await glob('**/{.shadow-cljs,node_modules}/**', repoRootPath || workPath)
+    await glob(defaultCachePathGlob, repoRootPath || workPath)
+  );
+  Object.assign(
+    cacheFiles,
+    await glob('**/.shadow-cljs/**', repoRootPath || workPath)
   );
 
   // Framework cache files

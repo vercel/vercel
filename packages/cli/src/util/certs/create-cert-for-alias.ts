@@ -1,13 +1,12 @@
 import { NowError } from '../now-error';
-import { Output } from '../output';
-import Client from '../client';
+import type Client from '../client';
 import createCertForCns from './create-cert-for-cns';
 import getWildcardCnsForAlias from './get-wildcard-cns-for-alias';
 import joinWords from '../output/join-words';
 import stamp from '../output/stamp';
+import output from '../../output-manager';
 
 export default async function createCertificateForAlias(
-  output: Output,
   client: Client,
   context: string,
   alias: string,

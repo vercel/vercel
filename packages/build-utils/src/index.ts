@@ -29,6 +29,7 @@ import {
   getEnvForPackageManager,
   getNodeVersion,
   getPathForPackageManager,
+  detectPackageManager,
   getSpawnOptions,
   getNodeBinPath,
   getNodeBinPaths,
@@ -40,7 +41,7 @@ import {
   getDiscontinuedNodeVersions,
   getSupportedNodeVersion,
 } from './fs/node-version';
-import streamToBuffer from './fs/stream-to-buffer';
+import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -74,6 +75,7 @@ export {
   getNodeBinPath,
   getNodeBinPaths,
   getSupportedNodeVersion,
+  detectPackageManager,
   runNpmInstall,
   runBundleInstall,
   runPipInstall,
@@ -88,6 +90,7 @@ export {
   getPlatformEnv,
   getPrefixedEnvVars,
   streamToBuffer,
+  streamToBufferChunks,
   debug,
   isSymbolicLink,
   isDirectory,
@@ -110,6 +113,10 @@ export * from './schemas';
 export * from './types';
 export * from './errors';
 
+export * from './trace';
+
 export { NODE_VERSIONS } from './fs/node-version';
 
 export { getInstalledPackageVersion } from './get-installed-package-version';
+
+export { defaultCachePathGlob } from './default-cache-path-glob';

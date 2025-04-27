@@ -1,5 +1,278 @@
 # @vercel/build-utils
 
+## 10.5.1
+
+### Patch Changes
+
+- Display warning when yarn dynamic require error may happen ([#13143](https://github.com/vercel/vercel/pull/13143))
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
+## 10.5.0
+
+### Minor Changes
+
+- Disable yarn global cache before installs so build cache caches deps ([#13144](https://github.com/vercel/vercel/pull/13144))
+
+## 10.4.0
+
+### Minor Changes
+
+- Expose pnpm6 within the detected package manager path for future versions of the build container ([#13132](https://github.com/vercel/vercel/pull/13132))
+
+## 10.3.2
+
+### Patch Changes
+
+- Add support for expire values in Next.js prerender manifest ([#13087](https://github.com/vercel/vercel/pull/13087))
+
+- Detect yarn version from lockfile version ([#13118](https://github.com/vercel/vercel/pull/13118))
+
+## 10.3.1
+
+### Patch Changes
+
+- Parse yarn.lock file version ([#13114](https://github.com/vercel/vercel/pull/13114))
+
+- [env-vars] expose VERCEL_DEPLOYMENT_ID as NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID ([#13115](https://github.com/vercel/vercel/pull/13115))
+
+- Fix vitest-e2e glob to include integration.test.ts ([#13097](https://github.com/vercel/vercel/pull/13097))
+
+## 10.3.0
+
+### Minor Changes
+
+- Delay pnpm@10 preferred date ([#13100](https://github.com/vercel/vercel/pull/13100))
+
+### Patch Changes
+
+- Type-check tests ([#13096](https://github.com/vercel/vercel/pull/13096))
+
+## 10.2.0
+
+### Minor Changes
+
+- Detect v9 pnpm lock files as pnpm 10 for new projects ([#13072](https://github.com/vercel/vercel/pull/13072))
+
+### Patch Changes
+
+- Improve build log messages surrounding pnpm 10 ([#13088](https://github.com/vercel/vercel/pull/13088))
+
+- [build-utils] extract checkIfAlreadyInstalled helper to clarify intent ([#13060](https://github.com/vercel/vercel/pull/13060))
+
+- Allow pnpm 10 to use package.json#packageManager without an engines error ([#13083](https://github.com/vercel/vercel/pull/13083))
+
+## 10.1.0
+
+### Minor Changes
+
+- [envs] add `VERCEL_TARGET_ENV` to prefixed env vars ([#13069](https://github.com/vercel/vercel/pull/13069))
+
+## 10.0.1
+
+### Patch Changes
+
+- [build-utils] Move `runNpmInstallSema` closer to where it's used ([#13061](https://github.com/vercel/vercel/pull/13061))
+
+- [build-utils] extract getInstallCommandForPackageManager to module scope ([#13058](https://github.com/vercel/vercel/pull/13058))
+
+- [build-utils] remove redundant sema release ([#13059](https://github.com/vercel/vercel/pull/13059))
+
+- Revert support pnpm 10 ([#13064](https://github.com/vercel/vercel/pull/13064))
+
+## 10.0.0
+
+### Major Changes
+
+- Detect v9 pnpm lockfiles as pnpm 10 generated ([#12852](https://github.com/vercel/vercel/pull/12852))
+
+## 9.3.1
+
+### Patch Changes
+
+- [build-utils] extract install command specific logic into helper ([#13049](https://github.com/vercel/vercel/pull/13049))
+
+- [build-utils] remove dead node 16 check ([#13047](https://github.com/vercel/vercel/pull/13047))
+
+## 9.3.0
+
+### Minor Changes
+
+- Support process tracing ([#12894](https://github.com/vercel/vercel/pull/12894))
+
+## 9.2.1
+
+### Patch Changes
+
+- Add tracer utility to @vercel/build-utils ([#13013](https://github.com/vercel/vercel/pull/13013))
+
+## 9.2.0
+
+### Minor Changes
+
+- Add .yarn/cache to build cache ([#12961](https://github.com/vercel/vercel/pull/12961))
+
+## 9.1.1
+
+### Patch Changes
+
+- [cli] shift node 16 deprecation date to 2025-02-03 ([#12981](https://github.com/vercel/vercel/pull/12981))
+
+## 9.1.0
+
+### Minor Changes
+
+- Add `useWebApi` property to `NodejsLambda` class ([#12873](https://github.com/vercel/vercel/pull/12873))
+
+- [build-utils] convert NodeVersion to class and add state getter ([#12883](https://github.com/vercel/vercel/pull/12883))
+  [ruby] convert RubyVersion to class and add state getter
+
+## 9.0.1
+
+### Patch Changes
+
+- Revert build utils refactor ([#12818](https://github.com/vercel/vercel/pull/12818))
+
+## 9.0.0
+
+### Major Changes
+
+- Change getPathOverrideForPackageManager() to use detectedLockfile argument ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+### Patch Changes
+
+- Refactor build-util usage to reuse detected lockfile ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+- add support for `images.qualities` ([#12813](https://github.com/vercel/vercel/pull/12813))
+
+## 8.8.0
+
+### Minor Changes
+
+- Add bun detection using bun.lock ([#12740](https://github.com/vercel/vercel/pull/12740))
+
+## 8.7.0
+
+### Minor Changes
+
+- Support splitting archive deployments in parts. ([#12671](https://github.com/vercel/vercel/pull/12671))
+
+## 8.6.0
+
+### Minor Changes
+
+- Add support for `NOW_EPHEMERAL_FILES_S3_URL`, `NOW_FILES_CLOUDFRONT_URL` and `NOW_FILES_S3_URL` environment variables ([#12643](https://github.com/vercel/vercel/pull/12643))
+
+## 8.5.0
+
+### Minor Changes
+
+- Remove `VERCEL_ALLOW_NODEJS22` env var check ([#12614](https://github.com/vercel/vercel/pull/12614))
+
+## 8.4.12
+
+### Patch Changes
+
+- Support allowHeader from Next.js for filtering request headers during revalidation ([#12420](https://github.com/vercel/vercel/pull/12420))
+
+## 8.4.11
+
+### Patch Changes
+
+- Improve parsing of `turbo.json` ([#12266](https://github.com/vercel/vercel/pull/12266))
+
+- Fix corepack `packageManager` detection on monorepos ([#12258](https://github.com/vercel/vercel/pull/12258))
+
+## 8.4.10
+
+### Patch Changes
+
+- Parse `turbo.json` as json5 ([#12259](https://github.com/vercel/vercel/pull/12259))
+
+## 8.4.9
+
+### Patch Changes
+
+- Fix special version specifier handling for `turbo` ([#12249](https://github.com/vercel/vercel/pull/12249))
+
+## 8.4.8
+
+### Patch Changes
+
+- Revert "[build-utils] Fix corepack `packageManager` detection on monorepos" ([#12242](https://github.com/vercel/vercel/pull/12242))
+
+## 8.4.7
+
+### Patch Changes
+
+- Disable corepack when Turborepo does not support `COREPACK_HOME` ([#12211](https://github.com/vercel/vercel/pull/12211))
+
+- Fix corepack `packageManager` detection on monorepos ([#12219](https://github.com/vercel/vercel/pull/12219))
+
+## 8.4.6
+
+### Patch Changes
+
+- add support for `images.localPatterns` ([#12195](https://github.com/vercel/vercel/pull/12195))
+
+## 8.4.5
+
+### Patch Changes
+
+- [build-utils] add types for `images.remotePatterns.search` to vercel.json ([#12158](https://github.com/vercel/vercel/pull/12158))
+
+## 8.4.4
+
+### Patch Changes
+
+- Allow Node.js v22 behind env var feature flag ([#12159](https://github.com/vercel/vercel/pull/12159))
+
+## 8.4.3
+
+### Patch Changes
+
+- Introduce new chain configuration types for Partial Prerendering ([#12063](https://github.com/vercel/vercel/pull/12063))
+
+## 8.4.2
+
+### Patch Changes
+
+- Revert "Revert "Revert "Fix corepack `packageManager` detection on monorepos""" ([#12099](https://github.com/vercel/vercel/pull/12099))
+
+## 8.4.1
+
+### Patch Changes
+
+- Revert "Revert "Fix corepack `packageManager` detection on monorepos"" ([#11871](https://github.com/vercel/vercel/pull/11871))
+
+## 8.4.0
+
+### Minor Changes
+
+- Change warnings to errors in invalid corepack package manager states ([#12062](https://github.com/vercel/vercel/pull/12062))
+
+## 8.3.9
+
+### Patch Changes
+
+- Provide help when users get ERR_PNPM_UNSUPPORTED_ENGINE errors without corepack ([#12034](https://github.com/vercel/vercel/pull/12034))
+
+- Fix package-manager-warning-1 to happen only happen in correct cases ([#12050](https://github.com/vercel/vercel/pull/12050))
+
+## 8.3.8
+
+### Patch Changes
+
+- Limit `package.json#packageManager` parsing to concrete versions ([#12025](https://github.com/vercel/vercel/pull/12025))
+
+- Catch PNPM_UNSUPPORTED_ENGINE when corepack is enabled and throw a more helpful error ([#12017](https://github.com/vercel/vercel/pull/12017))
+
+## 8.3.7
+
+### Patch Changes
+
+- Revert "Revert "warn on mismatched corepack and detected package managers"" ([#11887](https://github.com/vercel/vercel/pull/11887))
+
 ## 8.3.6
 
 ### Patch Changes

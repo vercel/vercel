@@ -34,25 +34,26 @@ export class LocalFileSystemDetector extends DetectorFilesystem {
 
   async _readdir(dir: string): Promise<DetectorFilesystemStat[]> {
     const dirPath = this.getFilePath(dir);
-    const files = await fs.readdir(dirPath);
-    return Promise.all(
-      files.map(async name => {
-        const absPath = join(this.rootPath, dir, name);
-        const path = join(this.getRelativeFilePath(dir), name);
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const result = [] as DetectorFilesystemStat[];
+    for (const entry of entries) {
+      let type: DetectorFilesystemStat['type'];
+      if (entry.isFile()) {
+        type = 'file';
+      } else if (entry.isDirectory()) {
+        type = 'dir';
+      } else {
+        // ignore socket, fifo, block device, and character device
+        continue;
+      }
 
-        const stat = await fs.stat(absPath);
-        let type: DetectorFilesystemStat['type'];
-        if (stat.isFile()) {
-          type = 'file';
-        } else if (stat.isDirectory()) {
-          type = 'dir';
-        } else {
-          throw new Error(`Dirent was neither file nor directory: ${path}`);
-        }
-
-        return { name, path, type };
-      })
-    );
+      result.push({
+        name: entry.name,
+        path: join(this.getRelativeFilePath(dir), entry.name),
+        type,
+      });
+    }
+    return result;
   }
 
   _chdir(name: string): DetectorFilesystem {

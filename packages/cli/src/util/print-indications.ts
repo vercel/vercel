@@ -1,10 +1,10 @@
 import chalk from 'chalk';
-import { Response } from 'node-fetch';
-import Client from './client';
+import type { Response } from 'node-fetch';
 import linkStyle from './output/link';
-import { emoji, EmojiLabel, prependEmoji } from './emoji';
+import { emoji, type EmojiLabel, prependEmoji } from './emoji';
+import output from '../output-manager';
 
-export default function printIndications(client: Client, res: Response) {
+export default function printIndications(res: Response) {
   const indications = new Set(['warning', 'notice', 'tip']);
   const regex = /^x-(?:vercel|now)-(warning|notice|tip)-(.*)$/;
 
@@ -24,7 +24,7 @@ export default function printIndications(client: Client, res: Response) {
             chalk.dim(`${action || 'Learn More'}: ${linkStyle(link)}`) +
             newline;
         }
-        client.output.print(message + finalLink);
+        output.print(message + finalLink);
       }
     }
   }

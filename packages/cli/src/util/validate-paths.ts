@@ -1,19 +1,17 @@
 import { lstat } from 'fs-extra';
-import { Output } from './output';
 import chalk from 'chalk';
 import { homedir } from 'os';
-import confirm from './input/confirm';
 import toHumanPath from './humanize-path';
-import Client from './client';
+import type Client from './client';
+import output from '../output-manager';
 
 /**
  * A helper function to validate the `rootDirectory` input.
  */
 export async function validateRootDirectory(
-  output: Output,
   cwd: string,
   path: string,
-  errorSuffix: string
+  errorSuffix = ''
 ) {
   const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
@@ -52,8 +50,6 @@ export default async function validatePaths(
   client: Client,
   paths: string[]
 ): Promise<{ valid: true; path: string } | { valid: false; exitCode: number }> {
-  const { output } = client;
-
   // can't deploy more than 1 path
   if (paths.length > 1) {
     output.error(`Can't deploy more than one path.`);
@@ -80,8 +76,7 @@ export default async function validatePaths(
 
   // ask confirmation if the directory is home
   if (path === homedir()) {
-    const shouldDeployHomeDirectory = await confirm(
-      client,
+    const shouldDeployHomeDirectory = await client.input.confirm(
       `You are deploying your home directory. Do you want to continue?`,
       false
     );

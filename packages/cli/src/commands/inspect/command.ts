@@ -2,10 +2,11 @@ import { packageName } from '../../util/pkg-name';
 
 export const inspectCommand = {
   name: 'inspect',
+  aliases: [],
   description: 'Show information about a deployment.',
   arguments: [
     {
-      name: 'url',
+      name: 'url|deploymentId',
       required: true,
     },
   ],

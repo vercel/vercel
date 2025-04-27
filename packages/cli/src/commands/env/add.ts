@@ -1,12 +1,9 @@
 import chalk from 'chalk';
-import type { Project, ProjectEnvTarget } from '@vercel-internals/types';
-import { Output } from '../../util/output';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import {
-  isValidEnvTarget,
   getEnvTargetPlaceholder,
   envTargetChoices,
 } from '../../util/env/env-target';
@@ -16,22 +13,41 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
+import { getCustomEnvironments } from '../../util/target/get-custom-environments';
+import output from '../../output-manager';
+import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { addSubcommand } from './command';
+import { getLinkedProject } from '../../util/projects/link';
 
-type Options = {
-  '--debug': boolean;
-  '--sensitive': boolean;
-  '--force': boolean;
-};
+export default async function add(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
 
-export default async function add(
-  client: Client,
-  project: Project,
-  opts: Partial<Options>,
-  args: string[],
-  output: Output
-) {
+  const { args, flags: opts } = parsedArgs;
+
   const stdInput = await readStandardInput(client.stdin);
+  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
+
+  const telemetryClient = new EnvAddTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliArgumentName(envName);
+  telemetryClient.trackCliArgumentEnvironment(envTargetArg);
+  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
+  telemetryClient.trackCliFlagForce(opts['--force']);
 
   if (args.length > 3) {
     output.error(
@@ -51,38 +67,64 @@ export default async function add(
     return 1;
   }
 
-  let envTargets: ProjectEnvTarget[] = [];
+  let envTargets: string[] = [];
   if (envTargetArg) {
-    if (!isValidEnvTarget(envTargetArg)) {
-      output.error(
-        `The Environment ${param(
-          envTargetArg
-        )} is invalid. It must be one of: ${getEnvTargetPlaceholder()}.`
-      );
-      return 1;
-    }
     envTargets.push(envTargetArg);
   }
 
   if (!envName) {
     envName = await client.input.text({
-      message: `What’s the name of the variable?`,
+      message: `What's the name of the variable?`,
       validate: val => (val ? true : 'Name cannot be empty'),
     });
   }
 
-  const { envs } = await getEnvRecords(
-    output,
-    client,
-    project.id,
-    'vercel-cli:env:add'
-  );
-  const existing = new Set(
-    envs.filter(r => r.key === envName).map(r => r.target)
-  );
-  const choices = envTargetChoices.filter(c => !existing.has(c.value));
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
+  const { project } = link;
+  const [{ envs }, customEnvironments] = await Promise.all([
+    getEnvRecords(client, project.id, 'vercel-cli:env:add'),
+    getCustomEnvironments(client, project.id),
+  ]);
+  const matchingEnvs = envs.filter(r => r.key === envName);
+  const existingTargets = new Set<string>();
+  const existingCustomEnvs = new Set<string>();
+  for (const env of matchingEnvs) {
+    if (typeof env.target === 'string') {
+      existingTargets.add(env.target);
+    } else if (Array.isArray(env.target)) {
+      for (const target of env.target) {
+        existingTargets.add(target);
+      }
+    }
+    if (env.customEnvironmentIds) {
+      for (const customEnvId of env.customEnvironmentIds) {
+        existingCustomEnvs.add(customEnvId);
+      }
+    }
+  }
+  const choices = [
+    ...envTargetChoices.filter(c => !existingTargets.has(c.value)),
+    ...customEnvironments
+      .filter(c => !existingCustomEnvs.has(c.id))
+      .map(c => ({
+        name: c.slug,
+        value: c.id,
+      })),
+  ];
 
-  if (choices.length === 0 && !opts['--force']) {
+  if (!envGitBranch && choices.length === 0 && !opts['--force']) {
     output.error(
       `The variable ${param(
         envName
@@ -99,7 +141,7 @@ export default async function add(
     envValue = stdInput;
   } else {
     envValue = await client.input.text({
-      message: `What’s the value of ${envName}?`,
+      message: `What's the value of ${envName}?`,
     });
   }
 
@@ -132,7 +174,6 @@ export default async function add(
   try {
     output.spinner('Saving');
     await addEnvRecord(
-      output,
       client,
       project.id,
       upsert,

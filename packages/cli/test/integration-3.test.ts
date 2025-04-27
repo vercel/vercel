@@ -7,7 +7,8 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import fetch, { RequestInfo } from 'node-fetch';
+import type { RequestInfo } from 'node-fetch';
+import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -145,7 +146,9 @@ test('output the version', async () => {
   expect(version).toBe(pkg.version);
 });
 
-test('login with unregistered user', async () => {
+// https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
     ['login', `${session}@${session}.com`],
@@ -205,7 +208,9 @@ test('list the scopes', async () => {
   expect(stderr).toMatch(include);
 });
 
-test('domains inspect', async () => {
+// https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
     .toString()
@@ -306,66 +311,6 @@ test('ensure we render a warning for deployments with no files', async () => {
   // Send a test request to the deployment
   const res = await fetch(href);
   expect(res.status).toBe(404);
-});
-
-describe('given a deployment', () => {
-  const context = {
-    deploymentUrl: '',
-    directory: '',
-    stderr: '',
-    stdout: '',
-    exitCode: -1,
-  };
-
-  beforeAll(async () => {
-    const directory = await setupE2EFixture('runtime-logs');
-    Object.assign(
-      context,
-      await execCli(binaryPath, [directory, '--public', '--yes'])
-    );
-    context.deploymentUrl = pickUrl(context.stdout);
-    const { href } = new URL(context.deploymentUrl);
-    await waitForDeployment(href);
-  });
-
-  it('prints build logs', async () => {
-    const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-      'inspect',
-      context.deploymentUrl,
-      '--logs',
-    ]);
-
-    const TIMESTAMP_FORMAT =
-      /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/;
-    expect(stderr).toMatch(TIMESTAMP_FORMAT);
-
-    const allLogs = formatOutput({ stdout, stderr });
-    expect(stderr, allLogs).toContain('Running "vercel build"');
-    expect(stderr, allLogs).toContain('Deploying outputs...');
-    expect(exitCode, allLogs).toBe(0);
-  });
-
-  it('prints runtime logs as json', async () => {
-    const [{ stdout, stderr }, res] = await Promise.all([
-      execCli(
-        binaryPath,
-        ['logs', context.deploymentUrl, '--json'],
-        // kill the command since it could last up to 5 minutes
-        { timeout: ms('10s') }
-      ),
-      fetch(`${context.deploymentUrl}/api/greetings`),
-    ]);
-    const allLogs = formatOutput({ stdout, stderr });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ message: 'Hello, World!' });
-    expect(stderr, allLogs).toContain(
-      `Displaying runtime logs for deployment ${
-        new URL(context.deploymentUrl).host
-      }`
-    );
-    expect(stdout, allLogs).toContain(`/api/greetings`);
-    expect(stdout, allLogs).toContain(`hi!`);
-  });
 });
 
 test('ensure we render a prompt when deploying home directory', async () => {

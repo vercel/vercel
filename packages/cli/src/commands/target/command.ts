@@ -1,29 +1,25 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption } from '../../util/arg-common';
 
-export const targetCommand = {
-  name: 'target',
-  description: 'Manage your Vercel Project\'s "targets" (custom environments).',
-  arguments: [
-    {
-      name: 'command',
-      required: true,
-    },
-  ],
-  subcommands: [
-    {
-      name: 'ls',
-      description: 'Show all targets in the current project',
-      arguments: [],
-      options: [],
-      examples: [],
-    },
-  ],
-  options: [nextOption],
+export const listSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List targets defined for the current Project',
+  arguments: [],
+  options: [],
   examples: [
     {
-      name: 'List all targets for the current project',
+      name: 'List all targets for the current Project',
       value: `${packageName} target ls my-project`,
     },
   ],
+} as const;
+
+export const targetCommand = {
+  name: 'target',
+  aliases: ['targets'],
+  description: 'Manage your Vercel Project\'s "targets" (custom environments).',
+  arguments: [],
+  subcommands: [listSubcommand],
+  options: [],
+  examples: [],
 } as const;

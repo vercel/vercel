@@ -1,23 +1,24 @@
-import { Deployment } from '@vercel-internals/types';
+import type { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { handleError } from '../../util/error';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { displayRuntimeLogs } from '../../util/logs';
-import type { Output } from '../../util/output';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
 import { help } from '../help';
 import { stateString } from '../list';
 import { logsCommand } from './command';
+import output from '../../output-manager';
 
 const deprecatedFlags = [
   '--follow',
@@ -30,12 +31,12 @@ const deprecatedFlags = [
 export default async function logs(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(logsCommand.options);
-  const { print, error, spinner, stopSpinner } = client.output;
+  const { print, error, spinner, stopSpinner } = output;
 
   try {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    handleError(err);
+    printError(err);
     return 1;
   }
 
@@ -53,7 +54,14 @@ export default async function logs(client: Client) {
     }
   }
 
+  const telemetry = new LogsTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   if (parsedArguments.flags['--help']) {
+    telemetry.trackCliFlagHelp('logs');
     print(help(logsCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -73,6 +81,17 @@ export default async function logs(client: Client) {
     print(help(logsCommand, { columns: client.stderr.columns }));
     return 1;
   }
+
+  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentIdOrHost);
+  telemetry.trackCliFlagJson(asJson);
+  telemetry.trackCliFlagFollow(parsedArguments.flags['--follow']);
+  telemetry.trackCliOptionLimit(parsedArguments.flags['--limit']);
+  telemetry.trackCliOptionSince(parsedArguments.flags['--since']);
+  telemetry.trackCliOptionUntil(parsedArguments.flags['--until']);
+
+  // Note: only send literal values to telemetry for known values
+  const outputMode = parsedArguments.flags['--output'];
+  telemetry.trackCliOptionOutput(outputMode);
 
   let contextName: string | null = null;
 
@@ -117,7 +136,7 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  printDisclaimer(deployment, client.output);
+  printDisclaimer(deployment);
   const abortController = new AbortController();
   return await displayRuntimeLogs(
     client,
@@ -132,12 +151,12 @@ export default async function logs(client: Client) {
 
 const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
 
-function printDisclaimer(deployment: Deployment, { print, warn }: Output) {
+function printDisclaimer(deployment: Deployment) {
   // Could be temporary until users get used to this change
-  warn(
+  output.warn(
     `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
   );
-  print(
+  output.print(
     `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
       deployment.id
     )}) starting from ${chalk.bold(format(Date.now(), dateTimeFormat))}\n\n`

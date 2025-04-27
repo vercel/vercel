@@ -10,7 +10,7 @@ import {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-import { streamToBuffer } from '@vercel/build-utils';
+import { streamToBufferChunks } from '@vercel/build-utils';
 import tar from 'tar-fs';
 import { createGzip } from 'zlib';
 
@@ -99,18 +99,18 @@ export default function buildCreateDeployment() {
             entries: fileList.map(file => relative(workPath, file)),
           })
           .pipe(createGzip());
-        const tarBuffer = await streamToBuffer(tarStream);
-        debug('Packed tarball');
-        files = new Map([
-          [
-            hash(tarBuffer),
+        const chunkedTarBuffers = await streamToBufferChunks(tarStream);
+        debug(`Packed tarball into ${chunkedTarBuffers.length} chunks`);
+        files = new Map(
+          chunkedTarBuffers.map((chunk, index) => [
+            hash(chunk),
             {
-              names: [join(workPath, '.vercel/source.tgz')],
-              data: tarBuffer,
+              names: [join(workPath, `.vercel/source.tgz.part${index + 1}`)],
+              data: chunk,
               mode: 0o666,
             },
-          ],
-        ]);
+          ])
+        );
       } else {
         files = await hashes(fileList);
       }

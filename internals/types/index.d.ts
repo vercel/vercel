@@ -37,8 +37,11 @@ export interface GlobalConfig {
   '// Note'?: string;
   '// Docs'?: string;
   currentTeam?: string;
-  collectMetrics?: boolean;
   api?: string;
+
+  telemetry?: {
+    enabled?: boolean;
+  };
 
   // TODO: legacy - remove
   updateChannel?: string;
@@ -135,7 +138,6 @@ type RouteOrMiddleware =
 
 export interface CustomEnvironment {
   id: string;
-  name: string;
   slug: string;
   type: CustomEnvironmentType;
   description?: string;
@@ -373,6 +375,7 @@ export interface Project extends ProjectSettings {
   targets?: {
     production?: Deployment;
   };
+  customEnvironments?: CustomEnvironment[];
 }
 
 export interface Org {
@@ -442,7 +445,6 @@ export type ProjectLinkedError = {
     | 'TEAM_DELETED'
     | 'PATH_IS_FILE'
     | 'INVALID_ROOT_DIRECTORY'
-    | 'MISSING_PROJECT_SETTINGS'
     | 'TOO_MANY_PROJECTS';
 };
 

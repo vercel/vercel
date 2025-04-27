@@ -18,10 +18,24 @@ await Promise.all([
   esbuild({
     entryPoints: [
       'src/legacy-launcher.ts',
-      'src/server-launcher.ts',
       'src/templated-launcher-shared.ts',
       'src/templated-launcher.ts',
     ],
+  }),
+  // server-launcher imports some modules, so we need to bundle it
+  esbuild({
+    entryPoints: ['src/server-launcher.ts'],
+    bundle: true,
+    external: ['__NEXT_SERVER_PATH__'],
+    // make sure the `// @preserve ...` comments we use for code injection stay in the same place
+    legalComments: 'inline',
+  }),
+  esbuild({
+    entryPoints: ['src/middleware-launcher.ts'],
+    bundle: true,
+    external: ['__NEXT_MIDDLEWARE_PATH__'],
+    // make sure the `// @preserve ...` comments we use for code injection stay in the same place
+    legalComments: 'inline',
   }),
   buildEdgeFunctionTemplate(),
 ]);

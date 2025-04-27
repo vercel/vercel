@@ -2,7 +2,7 @@ import { type Mock, beforeEach } from 'vitest';
 import { URL } from 'url';
 import chance from 'chance';
 import { client } from './client';
-import { Build, Deployment, User } from '@vercel-internals/types';
+import type { Build, Deployment, User } from '@vercel-internals/types';
 import type { Request, Response } from 'express';
 import { defaultProject } from './project';
 
@@ -30,7 +30,7 @@ export function useDeployment({
     | 'READY'
     | 'CANCELED';
   createdAt?: number;
-  project: any; // FIX ME: Use `Project` once PR #9956 is merged
+  project?: any; // FIX ME: Use `Project` once PR #9956 is merged
   target?: Deployment['target'];
 }) {
   setupDeploymentEndpoints();
@@ -76,43 +76,6 @@ export function useDeployment({
   deploymentBuilds.set(deployment, []);
 
   return deployment;
-}
-
-export function useDeploymentMissingProjectSettings() {
-  client.scenario.post('/:version/deployments', (_req, res) => {
-    res.status(400).json({
-      error: {
-        code: 'missing_project_settings',
-        message:
-          'The `projectSettings` object is required for new projects, but is missing in the deployment payload',
-        framework: {
-          name: 'Other',
-          slug: null,
-          logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
-          description: 'No framework or an unoptimized framework.',
-          settings: {
-            installCommand: {
-              placeholder: '`yarn install`, `pnpm install`, or `npm install`',
-            },
-            buildCommand: {
-              placeholder: '`npm run vercel-build` or `npm run build`',
-              value: null,
-            },
-            devCommand: { placeholder: 'None', value: null },
-            outputDirectory: { placeholder: '`public` if it exists, or `.`' },
-          },
-        },
-        projectSettings: {
-          devCommand: null,
-          installCommand: null,
-          buildCommand: null,
-          outputDirectory: null,
-          rootDirectory: null,
-          framework: null,
-        },
-      },
-    });
-  });
 }
 
 export function useBuildLogs({
@@ -211,7 +174,8 @@ function setupDeploymentEndpoints(): void {
   });
 
   client.scenario.get('/:version/deployments/:id/aliases', (req, res) => {
-    const limit = parseInt(req.query.limit);
+    const limit =
+      typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
     res.json({
       aliases: [],
       pagination: { count: limit, total: limit, page: 1, pages: 1 },

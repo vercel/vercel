@@ -15,17 +15,18 @@ import {
   writeToAuthConfigFile,
   writeToConfigFile,
 } from '../../util/config/files';
-import Client from '../../util/client';
-import { LoginResult } from '../../util/login/types';
+import type Client from '../../util/client';
+import type { LoginResult } from '../../util/login/types';
 import { help } from '../help';
 import { loginCommand } from './command';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
+import output from '../../output-manager';
+import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
+import { login as future } from './future';
 
 export default async function login(client: Client): Promise<number> {
-  const { output } = client;
-
   // user is not currently authenticated on this machine
   const isInitialLogin = !client.authConfig.token;
 
@@ -33,15 +34,26 @@ export default async function login(client: Client): Promise<number> {
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
 
+  const telemetry = new LoginTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
-    handleError(error);
+    printError(error);
     return 1;
   }
 
+  if (parsedArgs.flags['--future']) {
+    return await future(client);
+  }
+
   if (parsedArgs.flags['--help']) {
+    telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -89,11 +101,7 @@ export default async function login(client: Client): Promise<number> {
 
   // If we have a brand new login, update `currentTeam`
   if (isInitialLogin) {
-    await updateCurrentTeamAfterLogin(
-      client,
-      output,
-      client.config.currentTeam
-    );
+    await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
   }
 
   writeToAuthConfigFile(client.authConfig);

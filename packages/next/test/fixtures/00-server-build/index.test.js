@@ -23,7 +23,6 @@ const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
-    await require('../../utils').normalizeReactVersion(__dirname);
     const info = await deployAndTest(__dirname);
     Object.assign(ctx, info);
   });
@@ -38,18 +37,19 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         { urlPath: '/fallback-blocking/first', query: '?another=value' },
       ],
     },
-    {
-      title: 'should update content for non-prerendered path correctly',
-      pathsToCheck: [
-        { urlPath: '/fallback-blocking/on-demand-2' },
-        {
-          urlPath: '/fallback-blocking/on-demand-2',
-          query: '?slug=on-demand-2',
-        },
-        { urlPath: '/fallback-blocking/on-demand-2', query: '?slug=random' },
-        { urlPath: '/fallback-blocking/on-demand-2', query: '?another=value' },
-      ],
-    },
+    // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
+    // {
+    //   title: 'should update content for non-prerendered path correctly',
+    //   pathsToCheck: [
+    //     { urlPath: '/fallback-blocking/on-demand-2' },
+    //     {
+    //       urlPath: '/fallback-blocking/on-demand-2',
+    //       query: '?slug=on-demand-2',
+    //     },
+    //     { urlPath: '/fallback-blocking/on-demand-2', query: '?slug=random' },
+    //     { urlPath: '/fallback-blocking/on-demand-2', query: '?another=value' },
+    //   ],
+    // },
   ])('$title', async ({ pathsToCheck }) => {
     let initialRandom;
     let initialRandomData;

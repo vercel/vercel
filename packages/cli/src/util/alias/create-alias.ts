@@ -1,8 +1,8 @@
 import type { Deployment } from '@vercel-internals/types';
-import { Output } from '../output';
 import * as ERRORS from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
+import output from '../../output-manager';
 
 export type AliasRecord = {
   uid: string;
@@ -12,7 +12,6 @@ export type AliasRecord = {
 };
 
 export default async function createAlias(
-  output: Output,
   client: Client,
   contextName: string,
   deployment: Deployment,
@@ -30,7 +29,6 @@ export default async function createAlias(
 
   if (result instanceof ERRORS.CertMissing) {
     const cert = await createCertForAlias(
-      output,
       client,
       contextName,
       alias,
@@ -76,7 +74,7 @@ async function performCreateAlias(
       if (err.status === 409) {
         return { uid: err.uid, alias: err.alias } as AliasRecord;
       }
-      if (err.code === 'deployment_not_found') {
+      if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
           id: deployment.id,

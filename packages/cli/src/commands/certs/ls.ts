@@ -1,25 +1,41 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
-import {
-  PaginationOptions,
-  getPaginationOpts,
-} from '../../util/get-pagination-opts';
+import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
+import output from '../../output-manager';
+import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
+import { listSubcommand } from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 
-async function ls(
-  client: Client,
-  opts: PaginationOptions,
-  args: string[]
-): Promise<number> {
-  const { output } = client;
-  const { contextName } = await getScope(client);
+async function ls(client: Client, argv: string[]): Promise<number> {
+  const { telemetryEventStore } = client;
+  const telemetry = new CertsLsTelemetryClient({
+    opts: {
+      store: telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
+  telemetry.trackCliOptionLimit(opts['--limit']);
+  telemetry.trackCliOptionNext(opts['--next']);
 
   let paginationOptions;
 
@@ -44,6 +60,7 @@ async function ls(
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
+  const { contextName } = await getScope(client);
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'

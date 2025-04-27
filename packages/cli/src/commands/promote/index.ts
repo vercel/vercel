@@ -1,14 +1,16 @@
-import type Client from '../../util/client';
+import ms from 'ms';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import handleError from '../../util/handle-error';
+import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
-import ms from 'ms';
 import requestPromote from './request-promote';
 import promoteStatus from './status';
-import { promoteCommand } from './command';
+import { promoteCommand, statusSubcommand } from './command';
 import { help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { PromoteTelemetryClient } from '../../util/telemetry/commands/promote';
+import output from '../../output-manager';
+import type Client from '../../util/client';
 
 /**
  * `vc promote` command
@@ -16,43 +18,60 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async (client: Client): Promise<number> => {
-  let parsedArgs = null;
-
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(promoteCommand.options);
-
-  // Parse CLI args
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (error) {
-    handleError(error);
+  } catch (err) {
+    printError(err);
     return 1;
   }
 
-  const { output } = client;
+  const telemetry = new PromoteTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
-  if (parsedArgs.flags['--help']) {
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!parsedArgs.args[1] && needHelp) {
+    telemetry.trackCliFlagHelp('promote');
     output.print(help(promoteCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   const yes = parsedArgs.flags['--yes'] ?? false;
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   // validate the timeout
-  let timeout = parsedArgs.flags['--timeout'];
+  const timeout = parsedArgs.flags['--timeout'];
   if (timeout && ms(timeout) === undefined) {
-    client.output.error(`Invalid timeout "${timeout}"`);
+    output.error(`Invalid timeout "${timeout}"`);
     return 1;
   }
+
+  telemetry.trackCliOptionTimeout(parsedArgs.flags['--timeout']);
 
   const actionOrDeployId = parsedArgs.args[1] || 'status';
 
   try {
     if (actionOrDeployId === 'status') {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('promote', 'status');
+        output.print(
+          help(statusSubcommand, {
+            columns: client.stderr.columns,
+            parent: promoteCommand,
+          })
+        );
+        return 2;
+      }
+      telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
-        autoConfirm: Boolean(parsedArgs.flags['--yes']),
+        autoConfirm: parsedArgs.flags['--yes'],
         client,
         commandName: 'promote',
-        cwd: client.cwd,
         projectNameOrId: parsedArgs.args[2],
       });
 
@@ -63,6 +82,7 @@ export default async (client: Client): Promise<number> => {
       });
     }
 
+    telemetry.trackCliArgumentUrlOrDeploymentId(actionOrDeployId);
     return await requestPromote({
       client,
       deployId: actionOrDeployId,
@@ -80,7 +100,7 @@ export default async (client: Client): Promise<number> => {
       }
     }
 
-    client.output.prettyError(err);
+    output.prettyError(err);
     return 1;
   }
 };

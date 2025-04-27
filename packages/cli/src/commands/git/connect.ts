@@ -1,21 +1,27 @@
-import { Dictionary } from '@vercel/client';
+import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import { Org, Project, ProjectLinkData } from '@vercel-internals/types';
-import Client from '../../util/client';
+import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import confirm from '../../util/input/confirm';
-import list, { ListChoice } from '../../util/input/list';
+import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   connectGitProvider,
   disconnectGitProvider,
   formatProvider,
-  RepoInfo,
+  type RepoInfo,
   parseRepoUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
+import output from '../../output-manager';
+import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { connectSubcommand } from './command';
+import { ensureLink } from '../../util/link/ensure-link';
 
 interface GitRepoCheckParams {
   client: Client;
@@ -48,16 +54,32 @@ interface PromptConnectArgParams {
   remoteUrls: Dictionary<string>;
 }
 
-export default async function connect(
-  client: Client,
-  argv: any,
-  args: string[],
-  project: Project | undefined,
-  org: Org | undefined
-) {
-  const { cwd, output } = client;
-  const confirm = Boolean(argv['--yes']);
-  const repoArg = args[0];
+export default async function connect(client: Client, argv: string[]) {
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(connectSubcommand.options);
+  try {
+    parsedArgs = parseArguments(argv, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+  const { args, flags: opts } = parsedArgs;
+
+  const { cwd } = client;
+  const telemetry = new GitConnectTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetry.trackCliFlagConfirm(opts['--confirm']);
+  telemetry.trackCliFlagYes(opts['--yes']);
+
+  if ('--confirm' in opts) {
+    output.warn('`--confirm` is deprecated, please use `--yes` instead');
+    opts['--yes'] = opts['--confirm'];
+  }
+
+  const confirm = Boolean(opts['--yes']);
 
   if (args.length > 1) {
     output.error(
@@ -67,21 +89,24 @@ export default async function connect(
     );
     return 2;
   }
-  if (!project || !org) {
-    output.error(
-      `Can't find \`org\` or \`project\`. Make sure your current directory is linked to a Vercel project by running ${getCommandName(
-        'link'
-      )}.`
-    );
-    return 1;
+
+  const repoArg = args[0];
+  telemetry.trackCliArgumentGitUrl(repoArg);
+
+  const linkedProject = await ensureLink('git', client, client.cwd, {
+    autoConfirm: confirm,
+  });
+  if (typeof linkedProject === 'number') {
+    return linkedProject;
   }
+  const { project, org } = linkedProject;
 
   const gitProviderLink = project.link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   // get project from .git
   const gitConfigPath = join(cwd, '.git/config');
-  const gitConfig = await parseGitConfig(gitConfigPath, output);
+  const gitConfig = await parseGitConfig(gitConfigPath);
 
   if (repoArg) {
     // parse repo arg
@@ -189,10 +214,10 @@ async function connectArg({
   repoInfo,
 }: ConnectArgParams) {
   const { url: repoUrl } = repoInfo;
-  client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
+  output.log(`Connecting Git remote: ${link(repoUrl)}`);
   const parsedRepoArg = parseRepoUrl(repoUrl);
   if (!parsedRepoArg) {
-    client.output.error(
+    output.error(
       `Failed to parse URL "${repoUrl}". Please ensure the URL is valid.`
     );
     return 1;
@@ -213,7 +238,7 @@ async function connectArg({
   if (typeof connect === 'number') {
     return connect;
   }
-  client.output.log(
+  output.log(
     `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
   );
   return 0;
@@ -241,7 +266,7 @@ async function connectArgWithLocalGit({
     if (shouldConnect) {
       const { provider, org: gitOrg, repo, url: repoUrl } = repoInfo;
       const repoPath = `${gitOrg}/${repo}`;
-      client.output.log(`Connecting Git remote: ${link(repoUrl)}`);
+      output.log(`Connecting Git remote: ${link(repoUrl)}`);
       const connect = await checkExistsAndConnect({
         client,
         confirm,
@@ -256,7 +281,7 @@ async function connectArgWithLocalGit({
       if (typeof connect === 'number') {
         return connect;
       }
-      client.output.log(
+      output.log(
         `Connected ${formatProvider(provider)} repository ${chalk.cyan(
           repoPath
         )}!`
@@ -274,15 +299,13 @@ async function promptConnectArg({
   remoteUrls,
 }: PromptConnectArgParams) {
   if (Object.keys(remoteUrls).length > 1) {
-    client.output.log(
-      'Found multiple Git repositories in your local Git config:'
-    );
-    printRemoteUrls(client.output, remoteUrls);
+    output.log('Found multiple Git repositories in your local Git config:');
+    printRemoteUrls(remoteUrls);
   } else {
     const url = Object.values(remoteUrls)[0];
     const repoInfoFromGitConfig = parseRepoUrl(url);
     if (!repoInfoFromGitConfig) {
-      client.output.error(
+      output.error(
         `Failed to parse URL "${url}". Please ensure the URL is valid.`
       );
       return false;
@@ -293,7 +316,7 @@ async function promptConnectArg({
       return true;
     }
 
-    client.output.log(
+    output.log(
       `Found a repository in your local Git Config: ${chalk.cyan(
         Object.values(remoteUrls)[0]
       )}`
@@ -303,13 +326,12 @@ async function promptConnectArg({
   let shouldConnect = yes;
   if (!shouldConnect) {
     const { url: repoUrlFromArg } = repoInfoFromArg;
-    shouldConnect = await confirm(
-      client,
+    shouldConnect = await client.input.confirm(
       `Do you still want to connect ${link(repoUrlFromArg)}?`,
       false
     );
     if (!shouldConnect) {
-      client.output.log('Canceled. Repo not connected.');
+      output.log('Canceled. Repo not connected.');
     }
   }
   return shouldConnect;
@@ -329,7 +351,6 @@ async function checkExistsAndConnect({
   if (!gitProviderLink) {
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -348,7 +369,7 @@ async function checkExistsAndConnect({
       connectedOrg === gitOrg &&
       connectedRepo === repo;
     if (isSameRepo) {
-      client.output.log(
+      output.log(
         `${chalk.cyan(connectedRepoPath)} is already connected to your project.`
       );
       return 1;
@@ -367,7 +388,6 @@ async function checkExistsAndConnect({
     await disconnectGitProvider(client, org, project.id);
     const connect = await connectGitProvider(
       client,
-      org,
       project.id,
       provider,
       repoPath
@@ -386,8 +406,7 @@ async function confirmRepoConnect(
 ) {
   let shouldReplaceProject = yes;
   if (!shouldReplaceProject) {
-    shouldReplaceProject = await confirm(
-      client,
+    shouldReplaceProject = await client.input.confirm(
       `Looks like you already have a ${formatProvider(
         connectedProvider
       )} repository connected: ${chalk.cyan(
@@ -396,7 +415,7 @@ async function confirmRepoConnect(
       true
     );
     if (!shouldReplaceProject) {
-      client.output.log('Canceled. Repo not connected.');
+      output.log('Canceled. Repo not connected.');
     }
   }
   return shouldReplaceProject;
@@ -406,7 +425,7 @@ async function selectRemoteUrl(
   client: Client,
   remoteUrls: Dictionary<string>
 ): Promise<string> {
-  let choices: ListChoice[] = [];
+  const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
       name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,

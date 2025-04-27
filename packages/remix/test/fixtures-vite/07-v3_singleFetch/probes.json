@@ -1,0 +1,10 @@
+{
+  "probes": [
+    {
+      "path": "/api/test",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "{\"success\":true}"
+    }
+  ]
+}

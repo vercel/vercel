@@ -1,6 +1,6 @@
 import { Separator } from '@inquirer/select';
 import stripAnsi from 'strip-ansi';
-import Client from '../client';
+import type Client from '../client';
 import eraseLines from '../output/erase-lines';
 
 interface ListEntry {
@@ -8,6 +8,7 @@ interface ListEntry {
   value: string;
   short: string;
   selected?: boolean;
+  disabled?: boolean;
 }
 
 interface ListSeparator {

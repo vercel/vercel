@@ -203,7 +203,7 @@ describe('validateConfig', () => {
       })),
     });
     expect(error!.message).toEqual(
-      'Invalid vercel.json - `redirects` should NOT have more than 1024 items.'
+      'Invalid vercel.json - `redirects` should NOT have more than 2048 items.'
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#redirects'
@@ -254,12 +254,12 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          memory: 3010,
+          memory: 10241,
         },
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 3009."
+      "Invalid vercel.json - `functions['api/test.js'].memory` should be <= 10240."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'

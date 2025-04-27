@@ -1,9 +1,10 @@
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { Response } from 'node-fetch';
+import type { Response } from 'node-fetch';
 import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
-import Client from '../client';
+import type Client from '../client';
+import output from '../../output-manager';
 
 type JSONResponse = {
   recordIds: string[];
@@ -15,7 +16,7 @@ export default async function importZonefile(
   domain: string,
   zonefilePath: string
 ) {
-  client.output.spinner(
+  output.spinner(
     `Importing Zone file for domain ${domain} under ${chalk.bold(contextName)}`
   );
   const zonefile = readFileSync(resolve(zonefilePath), 'utf8');

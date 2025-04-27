@@ -1,19 +1,16 @@
 import { delimiter, join } from 'path';
-import { PackageJson, spawnAsync } from '@vercel/build-utils';
+import { type PackageJson, spawnAsync } from '@vercel/build-utils';
 import fs from 'fs-extra';
 import { CantParseJSONFile } from '../errors-ts';
 import { VERCEL_DIR } from '../projects/link';
 import readJSONFile from '../read-json-file';
-import { Output } from '../output';
+import output from '../../output-manager';
 
-export async function initCorepack(
-  {
-    repoRootPath,
-  }: {
-    repoRootPath: string;
-  },
-  output: Output
-): Promise<string | null> {
+export async function initCorepack({
+  repoRootPath,
+}: {
+  repoRootPath: string;
+}): Promise<string | null> {
   if (process.env.ENABLE_EXPERIMENTAL_COREPACK !== '1') {
     // Since corepack is experimental, we need to exit early
     // unless the user explicitly enables it with the env var.

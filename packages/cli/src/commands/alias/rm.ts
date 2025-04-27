@@ -1,30 +1,45 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
-import Client from '../../util/client';
+import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
-import confirm from '../../util/input/confirm';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
-
-import type { Alias } from '@vercel-internals/types';
 import { isValidName } from '../../util/is-valid-name';
 import { getCommandName } from '../../util/pkg-name';
+import { AliasRemoveTelemetryClient } from '../../util/telemetry/commands/alias/remove';
+import output from '../../output-manager';
+import type { Alias } from '@vercel-internals/types';
+import { parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { printError } from '../../util/error';
+import { removeSubcommand } from './command';
 
-type Options = {
-  '--yes': boolean;
-};
+export default async function rm(client: Client, argv: string[]) {
+  let parsedArguments;
 
-export default async function rm(
-  client: Client,
-  opts: Partial<Options>,
-  args: string[]
-) {
-  const { output } = client;
+  const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
+
+  try {
+    parsedArguments = parseArguments(argv, flagsSpecification);
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+
+  const { args, flags: opts } = parsedArguments;
+
   const { contextName } = await getScope(client);
+  const telemetryClient = new AliasRemoveTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+  telemetryClient.trackCliFlagYes(opts['--yes']);
 
   const [aliasOrId] = args;
+  telemetryClient.trackCliArgumentAlias(aliasOrId);
 
   if (args.length !== 1) {
     output.error(
@@ -46,7 +61,7 @@ export default async function rm(
     return 1;
   }
 
-  const alias = await findAliasByAliasOrId(output, client, aliasOrId);
+  const alias = await findAliasByAliasOrId(client, aliasOrId);
 
   if (!alias) {
     output.error(
@@ -82,7 +97,7 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
     { hsep: 4 }
   );
 
-  client.output.log(`The following alias will be removed permanently`);
-  client.output.print(`  ${tbl}\n`);
-  return confirm(client, chalk.red('Are you sure?'), false);
+  output.log('The following alias will be removed permanently');
+  output.print(`  ${tbl}\n`);
+  return client.input.confirm(chalk.red('Are you sure?'), false);
 }
