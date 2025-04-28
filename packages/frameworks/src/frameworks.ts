@@ -342,6 +342,41 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Blade',
+    slug: 'blade',
+    demo: 'https://blade-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/blade.svg',
+    tagline: 'Build instant web apps with React.',
+    description: 'A Blade app, created with the Blade CLI.',
+    website: 'https://github.com/ronin-co/blade',
+    envPrefix: 'BLADE_PUBLIC_',
+    detectors: {
+      every: [
+        {
+          matchPackage: '@ronin/blade',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `blade build`',
+        value: 'blade build',
+      },
+      devCommand: {
+        value: 'blade dev --port $PORT',
+        placeholder: 'blade dev',
+      },
+      outputDirectory: {
+        placeholder: 'Blade default',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Hexo',
     slug: 'hexo',
     demo: 'https://hexo-template.vercel.app',
