@@ -359,6 +359,56 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
+export async function getStaticSegmentRoutes({
+  entryDirectory,
+  routesManifest,
+}: {
+  entryDirectory: string;
+  routesManifest: RoutesManifest;
+}): Promise<RouteWithSrc[]> {
+  // When clientSegmentCache is enabled, static routes may output additional
+  // routes to handle segment requests. This is only relevant when PPR is in
+  // incremental mode, because for normal PPR, all routes are part of the
+  // prerender manifest, which has its own handling for this case.
+  // NOTE: We may be able to remove this code if we decide that incremental PPR
+  // + clientSegmentCache is not a supported configuration.
+  switch (routesManifest.version) {
+    case 3:
+    case 4: {
+      const routes: RouteWithSrc[] = [];
+      for (const {
+        routeKeys,
+        prefetchSegmentDataRoutes,
+      } of routesManifest.staticRoutes) {
+        if (prefetchSegmentDataRoutes && prefetchSegmentDataRoutes.length > 0) {
+          for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+            routes.push({
+              src: prefetchSegmentDataRoute.source,
+              dest: getDestinationForSegmentRoute(
+                false,
+                entryDirectory,
+                routeKeys,
+                prefetchSegmentDataRoute
+              ),
+              check: true,
+            });
+          }
+        }
+      }
+      return routes;
+    }
+    default: {
+      // update MIN_ROUTES_MANIFEST_VERSION
+      throw new NowBuildError({
+        message:
+          'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
+          'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
+        code: 'NEXT_VERSION_UPGRADE',
+      });
+    }
+  }
+}
+
 export async function getDynamicRoutes({
   entryPath,
   entryDirectory,
@@ -473,19 +523,12 @@ export async function getDynamicRoutes({
               routes.push({
                 ...route,
                 src: prefetchSegmentDataRoute.source,
-                dest: `${
-                  !isDev
-                    ? path.posix.join(
-                        '/',
-                        entryDirectory,
-                        prefetchSegmentDataRoute.destination
-                      )
-                    : prefetchSegmentDataRoute.destination
-                }?${Object.entries(
-                  prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {}
-                )
-                  .map(([key, value]) => `${value}=$${key}`)
-                  .join('&')}`,
+                dest: getDestinationForSegmentRoute(
+                  isDev === true,
+                  entryDirectory,
+                  routeKeys,
+                  prefetchSegmentDataRoute
+                ),
                 check: true,
               });
             }
@@ -600,6 +643,28 @@ export async function getDynamicRoutes({
     }
   });
   return routes;
+}
+
+function getDestinationForSegmentRoute(
+  isDev: boolean,
+  entryDirectory: string,
+  routeKeys: Record<string, string> | undefined,
+  prefetchSegmentDataRoute: {
+    destination: string;
+    routeKeys?: Record<string, string>;
+  }
+) {
+  return `${
+    !isDev
+      ? path.posix.join(
+          '/',
+          entryDirectory,
+          prefetchSegmentDataRoute.destination
+        )
+      : prefetchSegmentDataRoute.destination
+  }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
+    .map(([key, value]) => `${value}=$${key}`)
+    .join('&')}`;
 }
 
 export function localizeDynamicRoutes(
