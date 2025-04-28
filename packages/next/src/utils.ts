@@ -2360,7 +2360,11 @@ export const onPrerenderRoute =
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
     let didPostpone = false;
-    if (renderingMode === RenderingMode.PARTIALLY_STATIC && appDir) {
+    if (
+      renderingMode === RenderingMode.PARTIALLY_STATIC &&
+      appDir &&
+      !isBlocking
+    ) {
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
       const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
       if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
@@ -2745,7 +2749,11 @@ export const onPrerenderRoute =
           ? prerenderManifest.fallbackRoutes[routeKey]
           : prerenderManifest.blockingFallbackRoutes[routeKey];
 
-        htmlAllowQuery = fallbackRootParams ?? [];
+        if (fallbackRootParams && fallbackRootParams.length > 0) {
+          htmlAllowQuery = fallbackRootParams;
+        } else if (postponedPrerender) {
+          htmlAllowQuery = [];
+        }
       }
 
       prerenders[outputPathPage] = new Prerender({
