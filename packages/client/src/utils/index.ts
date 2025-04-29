@@ -10,7 +10,7 @@ import { Sema } from 'async-sema';
 import { readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
-  findConfig,
+  findConfig as findMicrofrontendsConfig,
   inferMicrofrontendsLocation,
 } from '@vercel/microfrontends/microfrontends/utils';
 
@@ -136,11 +136,11 @@ export async function buildFileTree(
       );
 
       try {
-        let microfrontendConfigPath = findConfig({
+        let microfrontendConfigPath = findMicrofrontendsConfig({
           dir: join(path, rootDirectory || ''),
         });
         if (!microfrontendConfigPath && !rootDirectory && projectName) {
-          microfrontendConfigPath = findConfig({
+          microfrontendConfigPath = findMicrofrontendsConfig({
             dir: inferMicrofrontendsLocation({
               repositoryRoot: path,
               applicationName: projectName,
