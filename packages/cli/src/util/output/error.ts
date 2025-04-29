@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { APIError } from '../errors-ts';
 import renderLink from './link';
 
@@ -11,9 +11,9 @@ export default function error(
     messages = [message];
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
-      messages.push(`${chalk.bold(action)}: ${renderLink(details)}`);
+      messages.push(`${pc.bold(action)}: ${renderLink(details)}`);
     }
   }
 
-  return `${chalk.red('Error:')} ${messages.join('\n')}`;
+  return `${pc.red('Error:')} ${messages.join('\n')}`;
 }

@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from '../../util/output/table';
@@ -44,7 +44,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('certs rm <id or cn>')}`
       )}`
     );
@@ -63,13 +63,11 @@ async function rm(client: Client, argv: string[]): Promise<number> {
   if (certs.length === 0) {
     if (id.includes('.')) {
       output.error(
-        `No custom certificates found for "${id}" under ${chalk.bold(
-          contextName
-        )}`
+        `No custom certificates found for "${id}" under ${pc.bold(contextName)}`
       );
     } else {
       output.error(
-        `No certificates found by id "${id}" under ${chalk.bold(contextName)}`
+        `No certificates found by id "${id}" under ${pc.bold(contextName)}`
       );
     }
     return 1;
@@ -87,9 +85,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
 
   await Promise.all(certs.map(cert => deleteCertById(client, cert.uid)));
   output.success(
-    `${chalk.bold(
-      plural('Certificate', certs.length, true)
-    )} removed ${rmStamp()}`
+    `${pc.bold(plural('Certificate', certs.length, true))} removed ${rmStamp()}`
   );
   return 0;
 }
@@ -119,9 +115,7 @@ function readConfirmation(client: Client, msg: string, certs: Cert[]) {
         hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
-    );
+    output.print(`${pc.bold.red('> Are you sure?')} ${pc.gray('(y/N) ')}`);
     client.stdin
       .on('data', d => {
         process.stdin.pause();
@@ -134,9 +128,9 @@ function readConfirmation(client: Client, msg: string, certs: Cert[]) {
 function formatCertRow(cert: Cert) {
   return [
     cert.uid,
-    chalk.bold(cert.cns ? cert.cns.join(', ') : '–'),
+    pc.bold(cert.cns ? cert.cns.join(', ') : '–'),
     ...(cert.created
-      ? [chalk.gray(`${ms(Date.now() - new Date(cert.created).getTime())} ago`)]
+      ? [pc.gray(`${ms(Date.now() - new Date(cert.created).getTime())} ago`)]
       : []),
   ];
 }

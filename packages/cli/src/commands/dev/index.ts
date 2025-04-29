@@ -1,5 +1,5 @@
 import path from 'path';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { PackageJson } from '@vercel/build-utils';
 
 import { parseArguments } from '../../util/get-args';
@@ -155,7 +155,7 @@ export default async function main(client: Client) {
 function stringifyError(err: any) {
   if (err instanceof NowError) {
     const errMeta = JSON.stringify(err.meta, null, 2).replace(/\\n/g, '\n');
-    return `${chalk.red(err.code)} ${err.message}\n${errMeta}`;
+    return `${pc.red(err.code)} ${err.message}\n${errMeta}`;
   }
   return err.stack;
 }

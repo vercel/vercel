@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import plural from 'pluralize';
 
 import type Client from '../client';
@@ -17,7 +17,7 @@ export default async function purchaseDomainIfAvailable(
   domain: string,
   contextName: string
 ) {
-  output.spinner(`Checking status of ${chalk.bold(domain)}`);
+  output.spinner(`Checking status of ${pc.bold(domain)}`);
   const buyDomainStamp = stamp();
   const { available } = await getDomainStatus(client, domain);
 
@@ -43,14 +43,14 @@ export default async function purchaseDomainIfAvailable(
 
     const { price, period } = domainPrice;
     output.log(
-      `Domain not found, but you can buy it under ${chalk.bold(
+      `Domain not found, but you can buy it under ${pc.bold(
         contextName
       )}! ${buyDomainStamp()}`
     );
 
     if (
       !(await client.input.confirm(
-        `Buy ${chalk.underline(domain)} for ${chalk.bold(
+        `Buy ${pc.underline(domain)} for ${pc.bold(
           `$${price}`
         )} (${plural('yr', period, true)})?`,
         false

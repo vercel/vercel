@@ -1,5 +1,5 @@
-import chalk from 'chalk';
-import type { Response } from 'node-fetch';
+import pc from 'picocolors';
+import type { Response } from 'node:http';
 import linkStyle from './output/link';
 import { emoji, type EmojiLabel, prependEmoji } from './emoji';
 import output from '../output-manager';
@@ -17,12 +17,11 @@ export default function printIndications(res: Response) {
       if (indications.has(type)) {
         const newline = '\n';
         const message =
-          prependEmoji(chalk.dim(payload), emoji(type as EmojiLabel)) + newline;
+          prependEmoji(pc.dim(payload), emoji(type as EmojiLabel)) + newline;
         let finalLink = '';
         if (link) {
           finalLink =
-            chalk.dim(`${action || 'Learn More'}: ${linkStyle(link)}`) +
-            newline;
+            pc.dim(`${action || 'Learn More'}: ${linkStyle(link)}`) + newline;
         }
         output.print(message + finalLink);
       }

@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import plural from 'pluralize';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import type { Domain } from '@vercel-internals/types';
@@ -53,7 +53,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('domains rm <domain>')}`
       )}`
     );
@@ -63,7 +63,7 @@ export default async function rm(client: Client, argv: string[]) {
   const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof DomainNotFound || domain.name !== domainName) {
     output.error(
-      `Domain not found by "${domainName}" under ${chalk.bold(contextName)}`
+      `Domain not found by "${domainName}" under ${pc.bold(contextName)}`
     );
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
@@ -71,7 +71,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (domain instanceof DomainPermissionDenied) {
     output.error(
-      `You don't have access to the domain ${domainName} under ${chalk.bold(
+      `You don't have access to the domain ${domainName} under ${pc.bold(
         contextName
       )}`
     );
@@ -155,16 +155,16 @@ async function removeDomain(
   );
 
   if (removeResult instanceof ERRORS.DomainNotFound) {
-    output.error(`Domain not found under ${chalk.bold(contextName)}`);
+    output.error(`Domain not found under ${pc.bold(contextName)}`);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
 
   if (removeResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
-      `You don't have permissions over domain ${chalk.underline(
+      `You don't have permissions over domain ${pc.underline(
         removeResult.meta.domain
-      )} under ${chalk.bold(removeResult.meta.context)}.`
+      )} under ${pc.bold(removeResult.meta.context)}.`
     );
     return 1;
   }
@@ -212,7 +212,7 @@ async function removeDomain(
 
     if (aliases.length > 0) {
       output.warn(
-        `This domain's ${chalk.bold(
+        `This domain's ${pc.bold(
           plural('alias', aliases.length, true)
         )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
       );
@@ -220,7 +220,7 @@ async function removeDomain(
 
     if (certs.length > 0) {
       output.warn(
-        `This domain's ${chalk.bold(
+        `This domain's ${pc.bold(
           plural('certificate', certs.length, true)
         )} will be removed. Run ${getCommandName(`cert ls`)} to list them.`
       );
@@ -228,7 +228,7 @@ async function removeDomain(
 
     if (suffix) {
       output.warn(
-        `The ${chalk.bold(`custom suffix`)} associated with this domain.`
+        `The ${pc.bold(`custom suffix`)} associated with this domain.`
       );
     }
 
@@ -255,6 +255,6 @@ async function removeDomain(
     );
   }
 
-  output.success(`Domain ${chalk.bold(domain.name)} removed ${removeStamp()}`);
+  output.success(`Domain ${pc.bold(domain.name)} removed ${removeStamp()}`);
   return 0;
 }

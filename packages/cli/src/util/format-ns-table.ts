@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import table from './output/table';
 import chars from './output/chars';
 
@@ -17,21 +17,17 @@ export default function formatNSTable(
 
   for (let i = 0; i < maxLength; i++) {
     rows.push([
-      sortedIntended[i] || chalk.gray('-'),
-      sortedCurrent[i] || chalk.gray('-'),
+      sortedIntended[i] || pc.gray('-'),
+      sortedCurrent[i] || pc.gray('-'),
       sortedIntended[i] === sortedCurrent[i]
-        ? chalk.green(chars.tick)
-        : chalk.red(chars.cross),
+        ? pc.green(chars.tick)
+        : pc.red(chars.cross),
     ]);
   }
 
   return table(
     [
-      [
-        chalk.gray('Intended Nameservers'),
-        chalk.gray('Current Nameservers'),
-        '',
-      ],
+      [pc.gray('Intended Nameservers'), pc.gray('Current Nameservers'), ''],
       ...rows,
     ],
     { hsep: 4 }

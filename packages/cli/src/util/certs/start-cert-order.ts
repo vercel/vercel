@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import output from '../../output-manager';
 
@@ -25,9 +25,9 @@ export default async function startCertOrder(
   contextName: string
 ) {
   output.spinner(
-    `Starting certificate issuance for ${chalk.bold(
+    `Starting certificate issuance for ${pc.bold(
       cns.join(', ')
-    )} under ${chalk.bold(contextName)}`
+    )} under ${pc.bold(contextName)}`
   );
   const order = await client.fetch<CertificateOrder>('/v3/certs', {
     method: 'PATCH',

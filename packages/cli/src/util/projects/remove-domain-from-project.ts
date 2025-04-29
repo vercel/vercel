@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { ProjectAliasTarget } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
@@ -10,7 +10,7 @@ export async function removeDomainFromProject(
   domain: string
 ) {
   output.spinner(
-    `Removing domain ${domain} from project ${chalk.bold(projectNameOrId)}`
+    `Removing domain ${domain} from project ${pc.bold(projectNameOrId)}`
   );
   try {
     const response = await client.fetch<ProjectAliasTarget[]>(

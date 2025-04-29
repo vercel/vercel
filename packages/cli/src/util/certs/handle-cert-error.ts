@@ -1,6 +1,6 @@
 import ms from 'ms';
 import { parse } from 'tldts';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import * as ERRORS from '../errors-ts';
 import dnsTable from '../format-dns-table';
 import { getCommandName } from '../pkg-name';
@@ -43,7 +43,7 @@ export default function handleCertError<T>(
     const { external, cns } = error.meta;
     output.error(
       `We couldn't verify the propagation of the DNS settings for ${error.meta.cns
-        .map(cn => chalk.underline(cn))
+        .map(cn => pc.underline(cn))
         .join(', ')}`
     );
     if (external) {

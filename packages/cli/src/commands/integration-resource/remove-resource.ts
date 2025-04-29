@@ -1,5 +1,5 @@
 import type { Team } from '@vercel-internals/types';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -68,7 +68,7 @@ export async function remove(client: Client) {
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${pc.bold(resourceName)} found.`);
     return 0;
   }
 
@@ -111,7 +111,7 @@ async function handleDeleteResource(
     resource.projectsMetadata && resource.projectsMetadata?.length > 0;
   if (!options?.skipProjectCheck && hasProjects) {
     output.error(
-      `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+      `Cannot delete resource ${pc.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
     );
     return 1;
   }
@@ -127,10 +127,10 @@ async function handleDeleteResource(
   try {
     output.spinner('Deleting resource…', 500);
     await _deleteResource(client, resource, team);
-    output.success(`${chalk.bold(resource.name)} successfully deleted.`);
+    output.success(`${pc.bold(resource.name)} successfully deleted.`);
   } catch (error) {
     output.error(
-      `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`
+      `A problem occurred when attempting to delete ${pc.bold(resource.name)}: ${(error as Error).message}`
     );
     return 1;
   }
@@ -142,6 +142,6 @@ async function confirmDeleteResource(
   client: Client,
   resource: Resource
 ): Promise<boolean> {
-  output.log(`${chalk.bold(resource.name)} will be deleted permanently.`);
-  return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
+  output.log(`${pc.bold(resource.name)} will be deleted permanently.`);
+  return client.input.confirm(`${pc.red('Are you sure?')}`, false);
 }

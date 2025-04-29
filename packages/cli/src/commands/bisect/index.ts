@@ -2,7 +2,7 @@ import open from 'open';
 import execa from 'execa';
 import plural from 'pluralize';
 import { resolve } from 'path';
-import chalk, { type Chalk } from 'chalk';
+import pc from 'picocolors';
 import { URLSearchParams, parse } from 'url';
 
 import box from '../../util/output/box';
@@ -87,9 +87,9 @@ export default async function bisect(client: Client): Promise<number> {
   if (typeof parsed.path === 'string' && parsed.path !== '/') {
     if (subpath && subpath !== parsed.path) {
       output.note(
-        `Ignoring subpath ${chalk.bold(
+        `Ignoring subpath ${pc.bold(
           parsed.path
-        )} in favor of \`--path\` argument ${chalk.bold(subpath)}`
+        )} in favor of \`--path\` argument ${pc.bold(subpath)}`
       );
     } else {
       subpath = parsed.path;
@@ -110,9 +110,9 @@ export default async function bisect(client: Client): Promise<number> {
     subpath !== parsed.path
   ) {
     output.note(
-      `Ignoring subpath ${chalk.bold(
+      `Ignoring subpath ${pc.bold(
         parsed.path
-      )} which does not match ${chalk.bold(subpath)}`
+      )} which does not match ${pc.bold(subpath)}`
     );
   }
 
@@ -140,7 +140,7 @@ export default async function bisect(client: Client): Promise<number> {
     }
     bad = badDeployment.url;
   } else {
-    output.error(`Failed to retrieve ${chalk.bold('bad')} Deployment: ${bad}`);
+    output.error(`Failed to retrieve ${pc.bold('bad')} Deployment: ${bad}`);
     return 1;
   }
 
@@ -159,9 +159,7 @@ export default async function bisect(client: Client): Promise<number> {
     }
     good = goodDeployment.url;
   } else {
-    output.error(
-      `Failed to retrieve ${chalk.bold('good')} Deployment: ${good}`
-    );
+    output.error(`Failed to retrieve ${pc.bold('good')} Deployment: ${good}`);
     return 1;
   }
 
@@ -242,23 +240,23 @@ export default async function bisect(client: Client): Promise<number> {
     const steps = Math.floor(Math.log2(deployments.length));
     const pSteps = plural('step', steps, true);
     output.log(
-      chalk.magenta(
-        `${chalk.bold(
+      pc.magenta(
+        `${pc.bold(
           'Bisecting:'
         )} ${rem} left to test after this (roughly ${pSteps})`
       ),
-      chalk.magenta
+      pc.magenta
     );
     const testUrl = `https://${deployment.url}${subpath}`;
-    output.log(`${chalk.bold('Deployment URL:')} ${link(testUrl)}`);
+    output.log(`${pc.bold('Deployment URL:')} ${link(testUrl)}`);
 
-    output.log(`${chalk.bold('Date:')} ${formatDate(deployment.createdAt)}`);
+    output.log(`${pc.bold('Date:')} ${formatDate(deployment.createdAt)}`);
 
     const commit = getCommit(deployment);
     if (commit) {
       const shortSha = commit.sha.substring(0, 7);
       const firstLine = commit.message?.split('\n')[0];
-      output.log(`${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
+      output.log(`${pc.bold('Commit:')} [${shortSha}] ${firstLine}`);
     }
 
     let action: string;
@@ -280,17 +278,17 @@ export default async function bisect(client: Client): Promise<number> {
       const { exitCode } = proc;
       let color: Chalk;
       if (exitCode === 0) {
-        color = chalk.green;
+        color = pc.green;
         action = 'good';
       } else if (exitCode === 125) {
         action = 'skip';
-        color = chalk.grey;
+        color = pc.grey;
       } else {
         action = 'bad';
-        color = chalk.red;
+        color = pc.red;
       }
       output.log(
-        `Run script returned exit code ${chalk.bold(String(exitCode))}: ${color(
+        `Run script returned exit code ${pc.bold(String(exitCode))}: ${color(
           action
         )}`
       );
@@ -321,21 +319,19 @@ export default async function bisect(client: Client): Promise<number> {
   output.print('\n');
 
   const result = [
-    chalk.bold(
-      `The first bad deployment is: ${link(`https://${lastBad.url}`)}`
-    ),
+    pc.bold(`The first bad deployment is: ${link(`https://${lastBad.url}`)}`),
     '',
-    `   ${chalk.bold('Date:')} ${formatDate(lastBad.createdAt)}`,
+    `   ${pc.bold('Date:')} ${formatDate(lastBad.createdAt)}`,
   ];
 
   const commit = getCommit(lastBad);
   if (commit) {
     const shortSha = commit.sha.substring(0, 7);
     const firstLine = commit.message?.split('\n')[0];
-    result.push(` ${chalk.bold('Commit:')} [${shortSha}] ${firstLine}`);
+    result.push(` ${pc.bold('Commit:')} [${shortSha}] ${firstLine}`);
   }
 
-  result.push(`${chalk.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
+  result.push(`${pc.bold('Inspect:')} ${link(lastBad.inspectorUrl)}`);
 
   output.print(box(result.join('\n')));
   output.print('\n');

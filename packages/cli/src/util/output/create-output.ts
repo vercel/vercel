@@ -1,4 +1,4 @@
-import chalk, { type Chalk } from 'chalk';
+import pc from 'picocolors';
 import * as ansiEscapes from 'ansi-escapes';
 import { supportsHyperlink as detectSupportsHyperlink } from 'supports-hyperlinks';
 import renderLink from './link';
@@ -18,7 +18,7 @@ export interface OutputOptions {
 }
 
 export interface LogOptions {
-  color?: Chalk;
+  color?: (text: string) => string;
 }
 
 export interface LinkOptions {
@@ -26,7 +26,7 @@ export interface LinkOptions {
   fallback?: false | (() => string);
 }
 
-let defaultChalkColorLevel: chalk.Level = 0;
+let defaultChalkColorLevel: pc.Level = 0;
 
 export class Output {
   stream!: tty.WriteStream;
@@ -73,10 +73,10 @@ export class Output {
     if (noColor !== undefined) {
       this.colorDisabled = getNoColor(noColor);
       if (this.colorDisabled) {
-        defaultChalkColorLevel = chalk.level;
-        chalk.level = 0;
+        defaultChalkColorLevel = pc.level;
+        pc.level = 0;
       } else {
-        chalk.level = defaultChalkColorLevel;
+        pc.level = defaultChalkColorLevel;
       }
     }
   }
@@ -93,11 +93,11 @@ export class Output {
     this.stream.write(str);
   };
 
-  log = (str: string, color = chalk.grey) => {
+  log = (str: string, color = pc.grey) => {
     this.print(`${color('>')} ${str}\n`);
   };
 
-  dim = (str: string, color = chalk.grey) => {
+  dim = (str: string, color = pc.grey) => {
     this.print(`${color(`> ${str}`)}\n`);
   };
 
@@ -110,8 +110,8 @@ export class Output {
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
 
     this.print(
-      chalk.yellow(
-        chalk.bold('WARN! ') +
+      pc.yellow(
+        pc.bold('WARN! ') +
           str +
           (details ? `\n${action}: ${renderLink(details)}` : '')
       )
@@ -120,7 +120,7 @@ export class Output {
   };
 
   note = (str: string) => {
-    this.log(chalk`{yellow.bold NOTE:} ${str}`);
+    this.log(`${pc.yellow(pc.bold('NOTE:'))} ${str}`);
   };
 
   error = (
@@ -129,10 +129,10 @@ export class Output {
     link?: string,
     action = 'Learn More'
   ) => {
-    this.print(`${chalk.red(`Error:`)} ${str}\n`);
+    this.print(`${pc.red(`Error:`)} ${str}\n`);
     const details = slug ? `https://err.sh/vercel/${slug}` : link;
     if (details) {
-      this.print(`${chalk.bold(action)}: ${renderLink(details)}\n`);
+      this.print(`${pc.bold(action)}: ${renderLink(details)}\n`);
     }
   };
 
@@ -146,17 +146,17 @@ export class Output {
   };
 
   ready = (str: string) => {
-    this.print(`${chalk.cyan('> Ready!')} ${str}\n`);
+    this.print(`${pc.cyan('> Ready!')} ${str}\n`);
   };
 
   success = (str: string) => {
-    this.print(`${chalk.cyan('> Success!')} ${str}\n`);
+    this.print(`${pc.cyan('> Success!')} ${str}\n`);
   };
 
   debug = (debug: unknown) => {
     if (this.debugEnabled) {
       this.log(
-        `${chalk.bold('[debug]')} ${chalk.gray(
+        `${pc.bold('[debug]')} ${pc.gray(
           `[${new Date().toISOString()}]`
         )} ${debugToString(debug)}`
       );
@@ -215,7 +215,7 @@ export class Output {
       const duration = Date.now() - start;
       const durationPretty =
         duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(2)}s`;
-      this.debug(`${endLabel} ${chalk.gray(`[${durationPretty}]`)}`);
+      this.debug(`${endLabel} ${pc.gray(`[${durationPretty}]`)}`);
       return r;
     }
 
@@ -228,7 +228,7 @@ export class Output {
   link = (
     text: string,
     url: string,
-    { fallback, color = chalk.cyan }: LinkOptions = {}
+    { fallback, color = pc.cyan }: LinkOptions = {}
   ): string => {
     // Based on https://github.com/sindresorhus/terminal-link (MIT license)
     if (!this.supportsHyperlink) {

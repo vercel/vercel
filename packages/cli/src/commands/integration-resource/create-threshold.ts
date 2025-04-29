@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
@@ -69,20 +69,20 @@ export async function createThreshold(client: Client) {
 
   // Assert resource is valid
   if (!targetedResource) {
-    output.log(`The resource ${chalk.bold(resourceName)} was not found.`);
+    output.log(`The resource ${pc.bold(resourceName)} was not found.`);
     return 0;
   }
 
   if (!targetedResource.product?.integrationConfigurationId) {
     output.error(
-      `The resource ${chalk.bold(resourceName)} does not have an integration configuration.`
+      `The resource ${pc.bold(resourceName)} does not have an integration configuration.`
     );
     return 1;
   }
 
   if (targetedResource.billingPlan?.type !== 'prepayment') {
     output.error(
-      `The resource ${chalk.bold(resourceName)} is not a prepayment-based resource.`
+      `The resource ${pc.bold(resourceName)} is not a prepayment-based resource.`
     );
     return 1;
   }
@@ -121,7 +121,7 @@ export async function createThreshold(client: Client) {
 
   if (targetedResource.billingPlan.scope !== 'resource') {
     output.log(
-      `The resource ${chalk.bold(resourceName)} uses an installation-level balance.`
+      `The resource ${pc.bold(resourceName)} uses an installation-level balance.`
     );
 
     return await updateThresholdForInstallation({
@@ -277,21 +277,21 @@ async function handleUpdateThreshold(props: {
 }) {
   if (props.resource.billingPlan?.type !== 'prepayment') {
     output.log(
-      `The resource ${chalk.bold(props.resource.name)} is not a prepayment-based resource.`
+      `The resource ${pc.bold(props.resource.name)} is not a prepayment-based resource.`
     );
     return 0;
   }
 
   if (!props.resource.product?.integrationConfigurationId) {
     output.log(
-      `The resource ${chalk.bold(props.resource.name)} does not have an integration configuration.`
+      `The resource ${pc.bold(props.resource.name)} does not have an integration configuration.`
     );
     return 0;
   }
 
   const entityTextReference = props.isInstallationLevel
-    ? `installation ${chalk.bold(props.resource.product?.name)}`
-    : `resource ${chalk.bold(props.resource.name)}`;
+    ? `installation ${pc.bold(props.resource.product?.name)}`
+    : `resource ${pc.bold(props.resource.name)}`;
   if (props.existingThreshold) {
     const shouldOverwriteThreshold =
       props.skipConfirmWithYes ||

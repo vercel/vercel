@@ -1,5 +1,5 @@
 import type { Dictionary } from '@vercel/client';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { join } from 'path';
 import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
 import type Client from '../../util/client';
@@ -83,7 +83,7 @@ export default async function connect(client: Client, argv: string[]) {
 
   if (args.length > 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('project connect')}`
       )}`
     );
@@ -138,7 +138,7 @@ export default async function connect(client: Client, argv: string[]) {
 
   if (!gitConfig) {
     output.error(
-      `No local Git repository found. Run ${chalk.cyan(
+      `No local Git repository found. Run ${pc.cyan(
         '`git clone <url>`'
       )} to clone a remote Git repository first.`
     );
@@ -147,7 +147,7 @@ export default async function connect(client: Client, argv: string[]) {
   const remoteUrls = pluckRemoteUrls(gitConfig);
   if (!remoteUrls) {
     output.error(
-      `No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${chalk.cyan(
+      `No remote URLs found in your Git config. Make sure you've configured a remote repo in your local Git config. Run ${pc.cyan(
         '`git remote --help`'
       )} for more details.`
     );
@@ -200,7 +200,7 @@ export default async function connect(client: Client, argv: string[]) {
   }
 
   output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
+    `Connected ${formatProvider(provider)} repository ${pc.cyan(repoPath)}!`
   );
 
   return 0;
@@ -239,7 +239,7 @@ async function connectArg({
     return connect;
   }
   output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
+    `Connected ${formatProvider(provider)} repository ${pc.cyan(repoPath)}!`
   );
   return 0;
 }
@@ -282,9 +282,7 @@ async function connectArgWithLocalGit({
         return connect;
       }
       output.log(
-        `Connected ${formatProvider(provider)} repository ${chalk.cyan(
-          repoPath
-        )}!`
+        `Connected ${formatProvider(provider)} repository ${pc.cyan(repoPath)}!`
       );
     }
     return 0;
@@ -317,7 +315,7 @@ async function promptConnectArg({
     }
 
     output.log(
-      `Found a repository in your local Git Config: ${chalk.cyan(
+      `Found a repository in your local Git Config: ${pc.cyan(
         Object.values(remoteUrls)[0]
       )}`
     );
@@ -370,7 +368,7 @@ async function checkExistsAndConnect({
       connectedRepo === repo;
     if (isSameRepo) {
       output.log(
-        `${chalk.cyan(connectedRepoPath)} is already connected to your project.`
+        `${pc.cyan(connectedRepoPath)} is already connected to your project.`
       );
       return 1;
     }
@@ -409,7 +407,7 @@ async function confirmRepoConnect(
     shouldReplaceProject = await client.input.confirm(
       `Looks like you already have a ${formatProvider(
         connectedProvider
-      )} repository connected: ${chalk.cyan(
+      )} repository connected: ${pc.cyan(
         connectedRepoPath
       )}. Do you want to replace it?`,
       true
@@ -428,7 +426,7 @@ async function selectRemoteUrl(
   const choices: ListChoice[] = [];
   for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
     choices.push({
-      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
+      name: `${urlValue} ${pc.gray(`(${urlKey})`)}`,
       value: urlValue,
       short: urlKey,
     });

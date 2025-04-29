@@ -1,6 +1,6 @@
 import type Client from '../client';
 import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { ProjectNotFound } from '../../util/errors-ts';
 import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
@@ -53,7 +53,7 @@ export default async function inputProject(
     // auto-detected a project to link
     if (
       await client.input.confirm(
-        `Found project ${chalk.cyan(
+        `Found project ${pc.cyan(
           `“${org.slug}/${detectedProject.name}”`
         )}. Link to it?`,
         true

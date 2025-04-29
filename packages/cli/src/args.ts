@@ -1,16 +1,16 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { packageName, logo } from './util/pkg-name';
 
 export const help = () => `
-  ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>
+  ${pc.bold(`${logo} ${packageName}`)} [options] <command | path>
 
-  ${chalk.dim('For deploy command help, run `vercel deploy --help`')}
+  ${pc.dim('For deploy command help, run `vercel deploy --help`')}
 
-  ${chalk.dim('Commands:')}
+  ${pc.dim('Commands:')}
 
-    ${chalk.dim('Basic')}
+    ${pc.dim('Basic')}
 
-      deploy               [path]      Performs a deployment ${chalk.bold(
+      deploy               [path]      Performs a deployment ${pc.bold(
         '(default)'
       )}
       build                            Build the project locally into './vercel/output'
@@ -32,7 +32,7 @@ export const help = () => `
       rollback             [url|id]    Quickly revert back to a previous deployment
       switch               [scope]     Switches between different scopes
 
-    ${chalk.dim('Advanced')}
+    ${pc.dim('Advanced')}
 
       alias                [cmd]       Manages your domain aliases
       bisect                           Use binary search to find the deployment that introduced a bug
@@ -45,41 +45,41 @@ export const help = () => `
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
 
-  ${chalk.dim('Global Options:')}
+  ${pc.dim('Global Options:')}
 
     -h, --help                     Output usage information
     -v, --version                  Output the version number
     --cwd                          Current working directory
-    -A ${chalk.bold.underline('FILE')}, --local-config=${chalk.bold.underline(
+    -A ${pc.bold.underline('FILE')}, --local-config=${pc.bold.underline(
       'FILE'
     )}   Path to the local ${'`vercel.json`'} file
-    -Q ${chalk.bold.underline('DIR')}, --global-config=${chalk.bold.underline(
+    -Q ${pc.bold.underline('DIR')}, --global-config=${pc.bold.underline(
       'DIR'
     )}    Path to the global ${'`.vercel`'} directory
     -d, --debug                    Debug mode [off]
     --no-color                     No color mode [off]
     -S, --scope                    Set a custom scope
-    -t ${chalk.underline('TOKEN')}, --token=${chalk.underline(
+    -t ${pc.underline('TOKEN')}, --token=${pc.underline(
       'TOKEN'
     )}        Login token
 
-  ${chalk.dim('Examples:')}
+  ${pc.dim('Examples:')}
 
-  ${chalk.gray('–')} Deploy the current directory
+  ${pc.gray('–')} Deploy the current directory
 
-    ${chalk.cyan(`$ ${packageName}`)}
+    ${pc.cyan(`$ ${packageName}`)}
 
-  ${chalk.gray('–')} Deploy a custom path
+  ${pc.gray('–')} Deploy a custom path
 
-    ${chalk.cyan(`$ ${packageName} /usr/src/project`)}
+    ${pc.cyan(`$ ${packageName} /usr/src/project`)}
 
-  ${chalk.gray('–')} Deploy with Environment Variables
+  ${pc.gray('–')} Deploy with Environment Variables
 
-    ${chalk.cyan(`$ ${packageName} -e NODE_ENV=production`)}
+    ${pc.cyan(`$ ${packageName} -e NODE_ENV=production`)}
 
-  ${chalk.gray('–')} Show the usage information for the sub command ${chalk.dim(
+  ${pc.gray('–')} Show the usage information for the sub command ${pc.dim(
     '`list`'
   )}
 
-    ${chalk.cyan(`$ ${packageName} help list`)}
+    ${pc.cyan(`$ ${packageName} help list`)}
 `;

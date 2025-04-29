@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 import { getCommandName } from '../../util/pkg-name';
 import { disconnectGitProvider } from '../../util/git/connect-git-provider';
@@ -39,7 +39,7 @@ export default async function disconnect(client: Client, argv: string[]) {
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('project disconnect')}`
       )}`
     );
@@ -65,7 +65,7 @@ export default async function disconnect(client: Client, argv: string[]) {
     const confirmDisconnect =
       autoConfirm ||
       (await client.input.confirm(
-        `Are you sure you want to disconnect ${chalk.cyan(
+        `Are you sure you want to disconnect ${pc.cyan(
           `${linkOrg}/${repo}`
         )} from your project?`,
         false
@@ -73,7 +73,7 @@ export default async function disconnect(client: Client, argv: string[]) {
 
     if (confirmDisconnect) {
       await disconnectGitProvider(client, org, project.id);
-      output.log(`Disconnected ${chalk.cyan(`${linkOrg}/${repo}`)}.`);
+      output.log(`Disconnected ${pc.cyan(`${linkOrg}/${repo}`)}.`);
     } else {
       output.log('Canceled');
     }

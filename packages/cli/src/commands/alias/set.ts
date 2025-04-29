@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { SetDifference } from 'utility-types';
 import type { AliasRecord } from '../../util/alias/create-alias';
 import * as ERRORS from '../../util/errors-ts';
@@ -133,7 +133,7 @@ export default async function set(client: Client, argv: string[]) {
       }
 
       output.success(
-        `${chalk.bold(
+        `${pc.bold(
           `${isWildcardAlias(target) ? '' : 'https://'}${handleResult.alias}`
         )} now points to https://${deployment.url} ${setStamp()}`
       );
@@ -177,7 +177,7 @@ export default async function set(client: Client, argv: string[]) {
   const prefix = isWildcard ? '' : 'https://';
 
   output.success(
-    `${chalk.bold(`${prefix}${handleResult.alias}`)} now points to https://${
+    `${pc.bold(`${prefix}${handleResult.alias}`)} now points to https://${
       deployment.url
     } ${setStamp()}`
   );
@@ -192,9 +192,9 @@ type SetupDomainError = Exclude<SetupDomainResolve, Domain>;
 function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
   if (error instanceof ERRORS.DomainPermissionDenied) {
     output.error(
-      `You don't have permissions over domain ${chalk.underline(
+      `You don't have permissions over domain ${pc.underline(
         error.meta.domain
-      )} under ${chalk.bold(error.meta.context)}.`
+      )} under ${pc.bold(error.meta.context)}.`
     );
     return 1;
   }
@@ -295,7 +295,7 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.AliasInUse) {
     output.error(
-      `The alias ${chalk.dim(
+      `The alias ${pc.dim(
         error.meta.alias
       )} is a deployment URL or it's in use by a different team.`
     );
@@ -304,7 +304,7 @@ function handleCreateAliasError<T>(
 
   if (error instanceof ERRORS.DeploymentNotFound) {
     output.error(
-      `Failed to find deployment ${chalk.dim(error.meta.id)} under ${chalk.bold(
+      `Failed to find deployment ${pc.dim(error.meta.id)} under ${pc.bold(
         error.meta.context
       )}`
     );
@@ -318,9 +318,9 @@ function handleCreateAliasError<T>(
   }
   if (error instanceof ERRORS.DeploymentPermissionDenied) {
     output.error(
-      `No permission to access deployment ${chalk.dim(
+      `No permission to access deployment ${pc.dim(
         error.meta.id
-      )} under ${chalk.bold(error.meta.context)}`
+      )} under ${pc.bold(error.meta.context)}`
     );
     return 1;
   }

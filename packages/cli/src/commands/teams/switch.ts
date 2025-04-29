@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { emoji } from '../../util/emoji';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
@@ -68,7 +68,7 @@ export default async function change(client: Client, argv: string[]) {
         const selected = team.id === currentTeam?.id;
 
         if (selected) {
-          title += ` ${chalk.bold('(current)')}`;
+          title += ` ${pc.bold('(current)')}`;
         }
 
         if (team.limited) {
@@ -84,7 +84,7 @@ export default async function change(client: Client, argv: string[]) {
       });
 
     // Add the User scope entry at the top
-    let suffix = personalScopeSelected ? ` ${chalk.bold('(current)')}` : '';
+    let suffix = personalScopeSelected ? ` ${pc.bold('(current)')}` : '';
 
     // SAML tokens can not interact with the user scope
     if (user.limited) {
@@ -145,9 +145,7 @@ export default async function change(client: Client, argv: string[]) {
 
     updateCurrentTeam(config);
 
-    output.success(
-      `Your account (${chalk.bold(user.username)}) is now active!`
-    );
+    output.success(`Your account (${pc.bold(user.username)}) is now active!`);
     return 0;
   }
 
@@ -156,7 +154,7 @@ export default async function change(client: Client, argv: string[]) {
 
   if (!newTeam) {
     output.error(
-      `You do not have permission to access scope ${chalk.bold(desiredSlug)}.`
+      `You do not have permission to access scope ${pc.bold(desiredSlug)}.`
     );
     return 1;
   }
@@ -178,7 +176,7 @@ export default async function change(client: Client, argv: string[]) {
   updateCurrentTeam(config, newTeam);
 
   output.success(
-    `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
+    `The team ${pc.bold(newTeam.name)} (${newTeam.slug}) is now active!`
   );
   return 0;
 }

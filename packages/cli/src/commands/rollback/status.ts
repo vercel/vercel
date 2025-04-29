@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import type {
   Deployment,
@@ -145,7 +145,7 @@ export default async function rollbackStatus({
       // check if we have been running for too long
       if (requestedAt < recentThreshold || Date.now() >= rollbackTimeout) {
         output.log(
-          `The rollback exceeded its deadline - rerun ${chalk.bold(
+          `The rollback exceeded its deadline - rerun ${pc.bold(
             `${packageName} rollback ${toDeploymentId}`
           )} to try again`
         );
@@ -241,19 +241,19 @@ async function renderJobSucceeded({
   let deploymentInfo = '';
   try {
     const deployment = await getDeployment(client, contextName, toDeploymentId);
-    deploymentInfo = `${chalk.bold(deployment.url)} (${toDeploymentId})`;
+    deploymentInfo = `${pc.bold(deployment.url)} (${toDeploymentId})`;
   } catch (err: unknown) {
     output.debug(
       `Failed to get deployment url for ${toDeploymentId}: ${
         err?.toString() || err
       }`
     );
-    deploymentInfo = chalk.bold(toDeploymentId);
+    deploymentInfo = pc.bold(toDeploymentId);
   }
 
   const duration = performingRollback ? elapsed(Date.now() - requestedAt) : '';
   output.log(
-    `Success! ${chalk.bold(
+    `Success! ${pc.bold(
       project.name
     )} was rolled back to ${deploymentInfo} ${duration}`
   );

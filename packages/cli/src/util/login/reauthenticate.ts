@@ -1,4 +1,4 @@
-import { bold } from 'chalk';
+import { bold } from 'picocolors';
 import doSamlLogin from './saml';
 import showLoginPrompt from './prompt';
 import type { LoginResult, SAMLError } from './types';

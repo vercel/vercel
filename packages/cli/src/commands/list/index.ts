@@ -1,5 +1,5 @@
 import ms from 'ms';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import title from 'title';
 import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
@@ -184,7 +184,7 @@ export default async function list(client: Client) {
   const projectSlugLink = formatProject(contextName, project.name);
 
   if (!singleDeployment) {
-    spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    spinner(`Fetching deployments in ${pc.bold(contextName)}`);
     const start = Date.now();
 
     debug('Fetching deployments');
@@ -236,7 +236,7 @@ export default async function list(client: Client) {
 
   const tablePrint = table(
     [
-      headers.map(header => chalk.bold(chalk.cyan(header))),
+      headers.map(header => pc.bold(pc.cyan(header))),
       ...deployments
         .sort(sortByCreatedAt)
         .map(dep => {
@@ -253,16 +253,16 @@ export default async function list(client: Client) {
           const targetSlug =
             dep.customEnvironment?.id || dep.target || 'preview';
           return [
-            chalk.gray(createdAt),
+            pc.gray(createdAt),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
             formatEnvironment(contextName, project.name, {
               id: targetSlug,
               slug: targetName,
             }),
-            ...(!showPolicy ? [chalk.gray(getDeploymentDuration(dep))] : []),
-            ...(!showPolicy ? [chalk.gray(dep.creator?.username)] : []),
-            ...(showPolicy ? [chalk.gray(proposedExp)] : []),
+            ...(!showPolicy ? [pc.gray(getDeploymentDuration(dep))] : []),
+            ...(!showPolicy ? [pc.gray(dep.creator?.username)] : []),
+            ...(showPolicy ? [pc.gray(proposedExp)] : []),
           ];
         })
         .filter(app =>
@@ -311,17 +311,17 @@ export function stateString(s: string) {
     case 'BUILDING':
     case 'DEPLOYING':
     case 'ANALYZING':
-      return chalk.yellow(CIRCLE) + sTitle;
+      return pc.yellow(CIRCLE) + sTitle;
     case 'ERROR':
-      return chalk.red(CIRCLE) + sTitle;
+      return pc.red(CIRCLE) + sTitle;
     case 'READY':
-      return chalk.green(CIRCLE) + sTitle;
+      return pc.green(CIRCLE) + sTitle;
     case 'QUEUED':
-      return chalk.white(CIRCLE) + sTitle;
+      return pc.white(CIRCLE) + sTitle;
     case 'CANCELED':
-      return chalk.gray(sTitle);
+      return pc.gray(sTitle);
     default:
-      return chalk.gray('UNKNOWN');
+      return pc.gray('UNKNOWN');
   }
 }
 

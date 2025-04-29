@@ -1,4 +1,4 @@
-import { Headers } from 'node-fetch';
+// Native Headers is available in Node.js 18+;
 import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
 
 export function nodeHeadersToFetchHeaders(

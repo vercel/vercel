@@ -1,6 +1,6 @@
 import type { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import format from 'date-fns/format';
 import { isReady } from '../../util/build-state';
 import type Client from '../../util/client';
@@ -113,7 +113,7 @@ export default async function logs(client: Client) {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
   spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
+    `Fetching deployment "${deploymentIdOrHost}" in ${pc.bold(contextName)}`
   );
 
   // resolve the deployment, since we might have been given an alias
@@ -157,8 +157,8 @@ function printDisclaimer(deployment: Deployment) {
     `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
   );
   output.print(
-    `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
+    `Displaying runtime logs for deployment ${deployment.url} (${pc.dim(
       deployment.id
-    )}) starting from ${chalk.bold(format(Date.now(), dateTimeFormat))}\n\n`
+    )}) starting from ${pc.bold(format(Date.now(), dateTimeFormat))}\n\n`
   );
 }

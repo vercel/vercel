@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { LinkOptions } from '../output/create-output';
 import output from '../../output-manager';
 
@@ -9,8 +9,8 @@ export function formatProject(
 ) {
   const orgProjectSlug = `${orgSlug}/${projectSlug}`;
   const projectUrl = `https://vercel.com/${orgProjectSlug}`;
-  const projectSlugLink = output.link(chalk.bold(orgProjectSlug), projectUrl, {
-    fallback: () => chalk.bold(orgProjectSlug),
+  const projectSlugLink = output.link(pc.bold(orgProjectSlug), projectUrl, {
+    fallback: () => pc.bold(orgProjectSlug),
     color: false,
     ...options,
   });

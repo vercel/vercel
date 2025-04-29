@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { ProjectAliasTarget } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
@@ -10,7 +10,7 @@ export async function addDomainToProject(
   domain: string
 ) {
   output.spinner(
-    `Adding domain ${domain} to project ${chalk.bold(projectNameOrId)}`
+    `Adding domain ${domain} to project ${pc.bold(projectNameOrId)}`
   );
   try {
     const response = await client.fetch<ProjectAliasTarget[]>(

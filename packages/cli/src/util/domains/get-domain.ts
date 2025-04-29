@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { Domain } from '@vercel-internals/types';
 import { isAPIError } from '../errors-ts';
@@ -13,9 +13,7 @@ export async function getDomain(
   contextName: string,
   domainName: string
 ) {
-  output.spinner(
-    `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
-  );
+  output.spinner(`Fetching domain ${domainName} under ${pc.bold(contextName)}`);
   try {
     const { domain } = await client.fetch<Response>(
       `/v5/domains/${domainName}`

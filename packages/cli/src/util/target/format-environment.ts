@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type {
   CustomEnvironment,
@@ -13,7 +13,7 @@ export function formatEnvironment(
   environment: Pick<CustomEnvironment, 'slug' | 'id'>
 ) {
   const projectUrl = `https://vercel.com/${orgSlug}/${projectSlug}`;
-  const boldName = chalk.bold(
+  const boldName = pc.bold(
     STANDARD_ENVIRONMENTS.includes(environment.slug as CustomEnvironmentType)
       ? title(environment.slug)
       : environment.slug

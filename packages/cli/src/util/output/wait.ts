@@ -1,5 +1,5 @@
 import ora from 'ora';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import eraseLines from './erase-lines';
 
 export interface StopSpinner {
@@ -20,7 +20,7 @@ export default function wait(
 
   const timeout = setTimeout(() => {
     spinner = ora(opts);
-    spinner.text = chalk.gray(text);
+    spinner.text = pc.gray(text);
     spinner.color = 'gray';
     spinner.start();
   }, delay);
@@ -45,7 +45,7 @@ export default function wait(
     set(v: string) {
       text = v;
       if (spinner) {
-        spinner.text = chalk.gray(v);
+        spinner.text = pc.gray(v);
       }
     },
   });

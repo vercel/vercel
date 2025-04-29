@@ -1,4 +1,4 @@
-import { bold, gray } from 'chalk';
+import { bold, gray } from 'picocolors';
 import checkbox from '@inquirer/checkbox';
 import confirm from '@inquirer/confirm';
 import expand from '@inquirer/expand';
@@ -11,12 +11,10 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from 'node-fetch';
+// Native fetch is available in Node.js 18+
+// Using global fetch API types from Node.js 18+
+import type { RequestInit, BodyInit, Response } from './fetch-types';
+import { fetch, Headers } from './fetch-types';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -147,7 +145,14 @@ export default class Client extends EventEmitter implements Stdio {
       }
     }
 
-    const headers = new Headers(opts.headers);
+    const headers = new Headers();
+
+    if (opts.headers) {
+      Object.entries(opts.headers).forEach(([key, value]) => {
+        headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+      });
+    }
+
     headers.set('user-agent', ua);
     if (this.authConfig.token) {
       headers.set('authorization', `Bearer ${this.authConfig.token}`);
@@ -165,14 +170,25 @@ export default class Client extends EventEmitter implements Stdio {
     return output.time(
       res => {
         if (res) {
-          return `#${requestId} ← ${res.status} ${
-            res.statusText
-          }: ${res.headers.get('x-vercel-id')}`;
+          const response = res as Response;
+          return `#${requestId} ← ${response.status} ${
+            response.statusText
+          }: ${response.headers.get('x-vercel-id')}`;
         } else {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url.toString(), {
+        agent: this.agent,
+        ...opts,
+        headers: {
+          ...opts.headers,
+          ...Object.fromEntries(
+            Object.entries(headers).map(([k, v]) => [k, v])
+          ),
+        },
+        body,
+      })
     );
   }
 
@@ -184,8 +200,10 @@ export default class Client extends EventEmitter implements Stdio {
 
       printIndications(res);
 
-      if (!res.ok) {
-        const error = await responseError(res);
+      const response = res as Response;
+
+      if (!response.ok) {
+        const error = await responseError(response);
 
         // we should force reauth only if error has a teamId
         if (isSAMLError(error) && error.teamId) {
@@ -198,7 +216,7 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
-        } else if (res.status >= 400 && res.status < 500) {
+        } else if (response.status >= 400 && response.status < 500) {
           // Any other 4xx should bail without retrying
           return bail(error);
         }
@@ -207,16 +225,20 @@ export default class Client extends EventEmitter implements Stdio {
         throw error;
       }
 
+      const typedRes = res as Response;
+
       if (opts.json === false) {
-        return res;
+        return typedRes;
       }
 
-      const contentType = res.headers.get('content-type');
+      const contentType = typedRes.headers.get('content-type');
       if (!contentType) {
         return null;
       }
 
-      return contentType.includes('application/json') ? res.json() : res;
+      return contentType.includes('application/json')
+        ? typedRes.json()
+        : typedRes;
     }, opts.retry);
   }
 

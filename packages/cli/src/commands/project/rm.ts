@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -32,7 +32,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('project rm <name>')}`
       )}`
     );
@@ -67,7 +67,7 @@ export default async function rm(client: Client, argv: string[]) {
   }
   const elapsed = ms(Date.now() - start);
   output.log(
-    `${chalk.cyan('Success!')} Project ${chalk.bold(name)} removed ${chalk.gray(
+    `${pc.cyan('Success!')} Project ${pc.bold(name)} removed ${pc.gray(
       `[${elapsed}]`
     )}`
   );
@@ -80,14 +80,11 @@ async function readConfirmation(
 ): Promise<boolean> {
   output.print(
     prependEmoji(
-      `The project ${chalk.bold(projectName)} will be removed permanently.\n` +
+      `The project ${pc.bold(projectName)} will be removed permanently.\n` +
         'It will also delete everything under the project including deployments.\n',
       emoji('warning')
     )
   );
 
-  return await client.input.confirm(
-    `${chalk.bold.red('Are you sure?')}`,
-    false
-  );
+  return await client.input.confirm(`${pc.bold.red('Are you sure?')}`, false);
 }

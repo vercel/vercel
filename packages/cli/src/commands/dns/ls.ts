@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import { DomainNotFound } from '../../util/errors-ts';
 import type { DNSRecord } from '@vercel-internals/types';
@@ -47,7 +47,7 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (args.length > 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('dns ls [domain]')}`
       )}`
     );
@@ -72,9 +72,9 @@ export default async function ls(client: Client, argv: string[]) {
     );
     if (data instanceof DomainNotFound) {
       output.error(
-        `The domain ${domainName} can't be found under ${chalk.bold(
+        `The domain ${domainName} can't be found under ${pc.bold(
           contextName
-        )} ${chalk.gray(lsStamp())}`
+        )} ${pc.gray(lsStamp())}`
       );
       return 1;
     }
@@ -84,7 +84,7 @@ export default async function ls(client: Client, argv: string[]) {
     output.log(
       `${
         records.length > 0 ? 'Records' : 'No records'
-      } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
+      } found under ${pc.bold(contextName)} ${pc.gray(lsStamp())}`
     );
     client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
 
@@ -107,9 +107,9 @@ export default async function ls(client: Client, argv: string[]) {
   );
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
-    `${nRecords > 0 ? 'Records' : 'No records'} found under ${chalk.bold(
+    `${nRecords > 0 ? 'Records' : 'No records'} found under ${pc.bold(
       contextName
-    )} ${chalk.gray(lsStamp())}`
+    )} ${pc.gray(lsStamp())}`
   );
   output.log(getDNSRecordsTable(dnsRecords));
   if (pagination && pagination.count === 20) {
@@ -128,7 +128,7 @@ function getDNSRecordsTable(dnsRecords: DomainRecordsItem[]) {
     ['', 'id', 'name', 'type', 'value', 'created'],
     ['l', 'r', 'l', 'l', 'l', 'l'],
     dnsRecords.map(({ domainName, records }) => ({
-      name: chalk.bold(domainName),
+      name: pc.bold(domainName),
       rows: records.map(getDNSRecordRow),
     }))
   );
@@ -146,6 +146,6 @@ function getDNSRecordRow(record: DNSRecord) {
     record.name,
     record.type,
     priority ? `${priority} ${record.value}` : record.value,
-    chalk.gray(isSystemRecord ? 'default' : createdAt),
+    pc.gray(isSystemRecord ? 'default' : createdAt),
   ];
 }

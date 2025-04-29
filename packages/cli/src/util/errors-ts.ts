@@ -1,10 +1,10 @@
 import bytes from 'bytes';
-import type { Response } from 'node-fetch';
+import type { Response } from 'node:http';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
 import { getCommandName } from './pkg-name';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { isError } from '@vercel/error-utils';
 
 /**
@@ -195,7 +195,7 @@ export class DomainNotFound extends NowError<
       code: 'DOMAIN_NOT_FOUND',
       meta: { domain },
       message: `Domain not found by "${domain}"${
-        contextName ? ` under ${chalk.bold(contextName)}` : ''
+        contextName ? ` under ${pc.bold(contextName)}` : ''
       }.`,
     });
   }

@@ -1,7 +1,7 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import type { Response } from 'node-fetch';
+import type { Response } from 'node:http';
 import { DomainNotFound, InvalidDomain, isAPIError } from '../errors-ts';
 import type Client from '../client';
 import output from '../../output-manager';
@@ -17,7 +17,7 @@ export default async function importZonefile(
   zonefilePath: string
 ) {
   output.spinner(
-    `Importing Zone file for domain ${domain} under ${chalk.bold(contextName)}`
+    `Importing Zone file for domain ${domain} under ${pc.bold(contextName)}`
   );
   const zonefile = readFileSync(resolve(zonefilePath), 'utf8');
 

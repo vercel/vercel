@@ -2,9 +2,10 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import fetch, { Headers } from 'node-fetch';
+// Native fetch is available in Node.js 18+
+// Using global fetch API types from Node.js 18+
 import bytes from 'bytes';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
 import { responseError } from './error';
@@ -197,7 +198,7 @@ export default class Now {
       if (sizeExceeded > 0) {
         warn(`${sizeExceeded} of the files exceeded the limit for your plan.`);
         log(
-          `Please upgrade your plan here: ${chalk.cyan(
+          `Please upgrade your plan here: ${pc.cyan(
             'https://vercel.com/account/plan'
           )}`
         );

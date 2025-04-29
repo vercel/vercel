@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 
@@ -101,7 +101,7 @@ export default async function dev(
       envValues,
       'vercel-cli:dev'
     )) {
-      output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+      output.log(`Refreshing ${pc.green(VERCEL_OIDC_TOKEN)}`);
       envValues[VERCEL_OIDC_TOKEN] = token;
       await devServer.runDevCommand(true);
       telemetry.trackOidcTokenRefresh(++refreshCount);

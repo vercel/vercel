@@ -1,5 +1,5 @@
 import ms from 'ms';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import plural from 'pluralize';
 
 import type Client from '../../util/client';
@@ -56,14 +56,14 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('domains ls')}`
       )}`
     );
     return 1;
   }
 
-  output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching Domains under ${pc.bold(contextName)}`);
 
   const { domains, pagination } = await getDomains(
     client,
@@ -71,9 +71,9 @@ export default async function ls(client: Client, argv: string[]) {
   );
 
   output.log(
-    `${plural('Domain', domains.length, true)} found under ${chalk.bold(
+    `${plural('Domain', domains.length, true)} found under ${pc.bold(
       contextName
-    )} ${chalk.gray(lsStamp())}`
+    )} ${pc.gray(lsStamp())}`
   );
 
   if (domains.length > 0) {
@@ -108,7 +108,7 @@ function formatDomainsTable(domains: Domain[]) {
       isDomainExternal(domain) ? 'Third Party' : 'Vercel',
       expiration,
       domain.creator.username,
-      chalk.gray(age),
+      pc.gray(age),
     ];
   });
 

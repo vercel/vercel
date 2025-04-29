@@ -1,5 +1,5 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 export default function highlight(text: string): string {
-  return chalk.bold.underline(text);
+  return pc.bold.underline(text);
 }

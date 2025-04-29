@@ -1,5 +1,5 @@
 import readline from 'node:readline';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
 import type Client from '../../util/client';
@@ -57,14 +57,14 @@ export async function login(client: Client): Promise<number> {
 
   rl.question(
     `
-  Visit ${chalk.bold(
+  Visit ${pc.bold(
     o.link(
       verification_uri.replace('https://', ''),
       verification_uri_complete,
       { color: false, fallback: () => verification_uri_complete }
     )
-  )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
-  ${chalk.grey('Press [ENTER] to open the browser')}
+  )}${o.supportsHyperlink ? ` and enter ${pc.bold(user_code)}` : ''}
+  ${pc.grey('Press [ENTER] to open the browser')}
 `,
     () => {
       open.default(verification_uri_complete);
@@ -164,12 +164,12 @@ export async function login(client: Client): Promise<number> {
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
       o.print(`
-  ${chalk.cyan('Congratulations!')} You are now signed in.
+  ${pc.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
 
   ${emoji('tip')} To deploy every commit automatically,
-  connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+  connect a Git Repository (${pc.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
       return;
     }

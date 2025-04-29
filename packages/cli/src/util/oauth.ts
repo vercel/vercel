@@ -1,4 +1,5 @@
-import fetch, { type Response } from 'node-fetch';
+// Native fetch is available in Node.js 18+
+import type { type Response } from 'node:http';
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 import ua from './ua';
 

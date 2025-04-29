@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { Deployment, Project, Team } from '@vercel-internals/types';
 import getDeployment from '../get-deployment';
@@ -34,7 +34,7 @@ export default async function getProjectByDeployment({
 
   try {
     output?.spinner(
-      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployId}" in ${pc.bold(contextName)}…`
     );
 
     const [teamResult, deploymentResult] = await Promise.allSettled([
@@ -57,14 +57,14 @@ export default async function getProjectByDeployment({
 
     // re-render the spinner text
     output?.log(
-      `Fetching deployment "${deployId}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployId}" in ${pc.bold(contextName)}…`
     );
 
     if (deployment.team?.id) {
       if (!team || deployment.team.id !== team.id) {
         const err: NodeJS.ErrnoException = new Error(
           team
-            ? `Deployment doesn't belong to current team ${chalk.bold(
+            ? `Deployment doesn't belong to current team ${pc.bold(
                 contextName
               )}`
             : `Deployment belongs to a different team`
@@ -74,7 +74,7 @@ export default async function getProjectByDeployment({
       }
     } else if (team) {
       const err: NodeJS.ErrnoException = new Error(
-        `Deployment doesn't belong to current team ${chalk.bold(contextName)}`
+        `Deployment doesn't belong to current team ${pc.bold(contextName)}`
       );
       err.code = 'ERR_INVALID_TEAM';
       throw err;

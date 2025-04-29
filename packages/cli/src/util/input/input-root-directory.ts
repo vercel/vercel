@@ -1,5 +1,5 @@
 import path from 'path';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { validateRootDirectory } from '../validate-paths';
 import type Client from '../client';
 
@@ -17,7 +17,7 @@ export async function inputRootDirectory(
     const rootDirectory = await client.input.text({
       message: `In which directory is your code located?`,
       transformer: (input: string) => {
-        return `${chalk.dim(`./`)}${input}`;
+        return `${pc.dim(`./`)}${input}`;
       },
     });
 

@@ -1,5 +1,5 @@
 import type { Deployment } from '@vercel-internals/types';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { format } from 'date-fns';
 import ms from 'ms';
 import jsonlines from 'jsonlines';
@@ -109,7 +109,7 @@ export async function displayRuntimeLogs(
   const timeout = setTimeout(() => {
     abortController.abort();
     warn(
-      `${chalk.bold(
+      `${pc.bold(
         `Command automatically interrupted after ${CommandTimeout}.`
       )}\n`
     );
@@ -154,7 +154,7 @@ export async function displayRuntimeLogs(
       stopSpinner();
       if (isRuntimeLimitDelimiter(log)) {
         abortController.abort();
-        warn(`${chalk.bold(log.message)}\n`);
+        warn(`${pc.bold(log.message)}\n`);
         return;
       }
       parse
@@ -196,7 +196,7 @@ function printBuildLog(log: BuildLog, print: Printer) {
   const date = new Date(log.created).toISOString();
 
   for (const line of colorize(sanitize(log), log).split('\n')) {
-    print(`${chalk.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
+    print(`${pc.dim(date)}  ${line.replace('[now-builder-debug] ', '')}\n`);
   }
 }
 
@@ -231,9 +231,9 @@ function prettyPrintLogline(
   const date = format(timestampInMs, dateTimeFormat);
   const levelIcon = getLevelIcon(level);
   const sourceIcon = getSourceIcon(source);
-  const detailsLine = `${chalk.dim(date)}  ${levelIcon}  ${chalk.bold(
+  const detailsLine = `${pc.dim(date)}  ${levelIcon}  ${pc.bold(
     method
-  )}  ${chalk.grey(status <= 0 ? '---' : status)}  ${chalk.dim(
+  )}  ${pc.grey(status <= 0 ? '---' : status)}  ${pc.dim(
     domain
   )}  ${sourceIcon}  ${path}`;
   print(
@@ -279,9 +279,9 @@ function sanitize(log: BuildLog): string {
 
 function colorize(text: string, log: BuildLog): string {
   if (log.level === 'error') {
-    return chalk.red(text);
+    return pc.red(text);
   } else if (log.level === 'warning') {
-    return chalk.yellow(text);
+    return pc.yellow(text);
   }
 
   return text;

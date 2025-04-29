@@ -1,4 +1,4 @@
-import gray from 'chalk';
+import gray from 'picocolors';
 
 // listItem('woot') === '- woot'
 // listItem('->', 'woot') === '-> woot'

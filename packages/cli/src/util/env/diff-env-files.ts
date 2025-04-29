@@ -1,7 +1,7 @@
 import type { Dictionary } from '@vercel/client';
 import { readFile } from 'fs-extra';
 import { parseEnv } from '../parse-env';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 
 export async function createEnvObject(
@@ -62,13 +62,11 @@ export function buildDeltaString(
   const { added, changed, removed } = findChanges(oldEnv, newEnv);
 
   let deltaString = '';
-  deltaString += chalk.green(addDeltaSection('+', changed, true));
-  deltaString += chalk.green(addDeltaSection('+', added));
-  deltaString += chalk.red(addDeltaSection('-', removed));
+  deltaString += pc.green(addDeltaSection('+', changed, true));
+  deltaString += pc.green(addDeltaSection('+', added));
+  deltaString += pc.red(addDeltaSection('-', removed));
 
-  return deltaString
-    ? chalk.gray('Changes:\n') + deltaString + '\n'
-    : deltaString;
+  return deltaString ? pc.gray('Changes:\n') + deltaString + '\n' : deltaString;
 }
 
 function addDeltaSection(

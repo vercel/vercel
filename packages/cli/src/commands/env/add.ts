@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import addEnvRecord from '../../util/env/add-env-record';
@@ -195,9 +195,9 @@ export default async function add(client: Client, argv: string[]) {
     `${prependEmoji(
       `${
         opts['--force'] ? 'Overrode' : 'Added'
-      } Environment Variable ${chalk.bold(envName)} to Project ${chalk.bold(
+      } Environment Variable ${pc.bold(envName)} to Project ${pc.bold(
         project.name
-      )} ${chalk.gray(addStamp())}`,
+      )} ${pc.gray(addStamp())}`,
       emoji('success')
     )}\n`
   );

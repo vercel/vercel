@@ -1,5 +1,5 @@
 import { lstat } from 'fs-extra';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { homedir } from 'os';
 import toHumanPath from './humanize-path';
 import type Client from './client';
@@ -18,7 +18,7 @@ export async function validateRootDirectory(
 
   if (!pathStat) {
     output.error(
-      `The provided path ${chalk.cyan(
+      `The provided path ${pc.cyan(
         `“${toHumanPath(path)}”`
       )} does not exist.${suffix}`
     );
@@ -27,7 +27,7 @@ export async function validateRootDirectory(
 
   if (!pathStat.isDirectory()) {
     output.error(
-      `The provided path ${chalk.cyan(
+      `The provided path ${pc.cyan(
         `“${toHumanPath(path)}”`
       )} is a file, but expected a directory.${suffix}`
     );
@@ -36,7 +36,7 @@ export async function validateRootDirectory(
 
   if (!path.startsWith(cwd)) {
     output.error(
-      `The provided path ${chalk.cyan(
+      `The provided path ${pc.cyan(
         `“${toHumanPath(path)}”`
       )} is outside of the project.${suffix}`
     );
@@ -62,7 +62,7 @@ export default async function validatePaths(
   const pathStat = await lstat(path).catch(() => null);
 
   if (!pathStat) {
-    output.error(`Could not find ${chalk.cyan(`“${toHumanPath(path)}”`)}`);
+    output.error(`Could not find ${pc.cyan(`“${toHumanPath(path)}”`)}`);
     return { valid: false, exitCode: 1 };
   }
 

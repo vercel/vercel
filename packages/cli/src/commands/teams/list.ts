@@ -1,6 +1,6 @@
 import chars from '../../util/output/chars';
 import table from '../../util/output/table';
-import { gray } from 'chalk';
+import { gray } from 'picocolors';
 import getUser from '../../util/get-user';
 import getTeams from '../../util/teams/get-teams';
 import { packageName } from '../../util/pkg-name';

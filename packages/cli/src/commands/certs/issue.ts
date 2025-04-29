@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { getSubdomain } from 'tldts';
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
@@ -66,7 +66,7 @@ export default async function issue(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );
       output.print(
-        `  ${chalk.cyan(
+        `  ${pc.cyan(
           getCommandName(
             'certs issue --crt <domain.crt> --key <domain.key> --ca <ca.crt>'
           )
@@ -85,7 +85,7 @@ export default async function issue(
 
     // Print success message
     output.success(
-      `Certificate entry for ${chalk.bold(
+      `Certificate entry for ${pc.bold(
         cert.cns.join(', ')
       )} created ${addStamp()}`
     );
@@ -96,9 +96,7 @@ export default async function issue(
     output.error(
       `Invalid number of arguments to create a custom certificate entry. Usage:`
     );
-    output.print(
-      `  ${chalk.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`
-    );
+    output.print(`  ${pc.cyan(getCommandName('certs issue <cn>[, <cn>]'))}\n`);
     return 1;
   }
   telemetry.trackCliArgumentCn(args[0]);
@@ -136,15 +134,15 @@ export default async function issue(
 
   if (handledResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
-      `You do not have permissions over domain ${chalk.underline(
+      `You do not have permissions over domain ${pc.underline(
         handledResult.meta.domain
-      )} under ${chalk.bold(handledResult.meta.context)}.`
+      )} under ${pc.bold(handledResult.meta.context)}.`
     );
     return 1;
   }
 
   output.success(
-    `Certificate entry for ${chalk.bold(
+    `Certificate entry for ${pc.bold(
       handledResult.cns.join(', ')
     )} created ${addStamp()}`
   );
@@ -175,7 +173,7 @@ async function runStartOrder(
 
   if (pendingChallenges.length === 0) {
     output.log(
-      `A certificate issuance for ${chalk.bold(
+      `A certificate issuance for ${pc.bold(
         cns.join(', ')
       )} has been started ${stamp()}`
     );
@@ -183,13 +181,13 @@ async function runStartOrder(
       `  There are no pending challenges. Finish the issuance by running: \n`
     );
     output.print(
-      `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+      `  ${pc.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
     );
     return 0;
   }
 
   output.log(
-    `A certificate issuance for ${chalk.bold(
+    `A certificate issuance for ${pc.bold(
       cns.join(', ')
     )} has been started ${stamp()}`
   );
@@ -214,7 +212,7 @@ async function runStartOrder(
   client.stdout.write(`${rows.join('\n')}\n\n`);
   output.log(`To issue the certificate once the records are added, run:`);
   output.print(
-    `  ${chalk.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
+    `  ${pc.cyan(getCommandName(`certs issue ${cns.join(' ')}`))}\n`
   );
   output.print(
     '  Read more: https://err.sh/vercel/solve-challenges-manually\n'

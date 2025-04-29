@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
@@ -54,14 +54,14 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (args.length > 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('alias ls')}`
       )}`
     );
     return 1;
   }
 
-  output.spinner(`Fetching aliases under ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching aliases under ${pc.bold(contextName)}`);
 
   // Get the list of alias
   const { aliases, pagination } = await getAliases(
@@ -69,7 +69,7 @@ export default async function ls(client: Client, argv: string[]) {
     undefined,
     ...paginationOptions
   );
-  output.log(`aliases found under ${chalk.bold(contextName)} ${lsStamp()}`);
+  output.log(`aliases found under ${pc.bold(contextName)} ${lsStamp()}`);
   client.stdout.write(printAliasTable(aliases));
 
   if (pagination.count === 20) {
@@ -87,12 +87,12 @@ export default async function ls(client: Client, argv: string[]) {
 function printAliasTable(aliases: Alias[]) {
   return `${table(
     [
-      ['source', 'url', 'age'].map(header => chalk.gray(header)),
+      ['source', 'url', 'age'].map(header => pc.gray(header)),
       ...aliases.map(a => [
         // for legacy reasons, we might have situations
         // where the deployment was deleted and the alias
         // not collected appropriately, and we need to handle it
-        a.deployment?.url ? a.deployment.url : chalk.gray('–'),
+        a.deployment?.url ? a.deployment.url : pc.gray('–'),
         a.alias,
         ms(Date.now() - a.createdAt),
       ]),

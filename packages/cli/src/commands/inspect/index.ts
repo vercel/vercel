@@ -1,6 +1,6 @@
 import type { Build, Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import title from 'title';
 import { URL } from 'url';
@@ -109,7 +109,7 @@ export default async function inspect(client: Client) {
     deploymentIdOrHost = new URL(deploymentIdOrHost).hostname;
   } catch {}
   output.spinner(
-    `Fetching deployment "${deploymentIdOrHost}" in ${chalk.bold(contextName)}`
+    `Fetching deployment "${deploymentIdOrHost}" in ${pc.bold(contextName)}`
   );
 
   // resolve the deployment, since we might have been given an alias
@@ -141,7 +141,7 @@ export default async function inspect(client: Client) {
     }
   }
   if (withLogs) {
-    print(`${chalk.cyan('status')}\t${stateString(deployment.readyState)}\n`);
+    print(`${pc.cyan('status')}\t${stateString(deployment.readyState)}\n`);
   } else {
     await printDetails({ deployment, contextName, client, startTimestamp });
   }
@@ -155,17 +155,17 @@ function stateString(s: Deployment['readyState']) {
   switch (s) {
     case 'INITIALIZING':
     case 'BUILDING':
-      return chalk.yellow(CIRCLE) + sTitle;
+      return pc.yellow(CIRCLE) + sTitle;
     case 'ERROR':
-      return chalk.red(CIRCLE) + sTitle;
+      return pc.red(CIRCLE) + sTitle;
     case 'READY':
-      return chalk.green(CIRCLE) + sTitle;
+      return pc.green(CIRCLE) + sTitle;
     case 'QUEUED':
-      return chalk.gray(CIRCLE) + sTitle;
+      return pc.gray(CIRCLE) + sTitle;
     case 'CANCELED':
-      return chalk.gray(CIRCLE) + sTitle;
+      return pc.gray(CIRCLE) + sTitle;
     default:
-      return chalk.gray('UNKNOWN');
+      return pc.gray('UNKNOWN');
   }
 }
 
@@ -181,7 +181,7 @@ async function printDetails({
   startTimestamp: number;
 }): Promise<void> {
   output.log(
-    `Fetched deployment "${chalk.bold(deployment.url)}" in ${chalk.bold(
+    `Fetched deployment "${pc.bold(deployment.url)}" in ${pc.bold(
       contextName
     )} ${elapsed(Date.now() - startTimestamp)}`
   );
@@ -204,12 +204,12 @@ async function printDetails({
       : { builds: [] };
 
   print('\n');
-  print(chalk.bold('  General\n\n'));
-  print(`    ${chalk.cyan('id')}\t\t${id}\n`);
-  print(`    ${chalk.cyan('name')}\t${name}\n`);
+  print(pc.bold('  General\n\n'));
+  print(`    ${pc.cyan('id')}\t\t${id}\n`);
+  print(`    ${pc.cyan('name')}\t${name}\n`);
   const customEnvironmentSlug = deployment.customEnvironment?.slug;
   const target = customEnvironmentSlug ?? deployment.target ?? 'preview';
-  print(`    ${chalk.cyan('target')}\t`);
+  print(`    ${pc.cyan('target')}\t`);
   // TODO: once custom environments is shipped for all users,
   // make all deployments link to the environment settings page
   print(
@@ -221,11 +221,11 @@ async function printDetails({
         )}\n`
       : `${target}\n`
   );
-  print(`    ${chalk.cyan('status')}\t${stateString(readyState)}\n`);
-  print(`    ${chalk.cyan('url')}\t\thttps://${url}\n`);
+  print(`    ${pc.cyan('status')}\t${stateString(readyState)}\n`);
+  print(`    ${pc.cyan('url')}\t\thttps://${url}\n`);
   if (createdAt) {
     print(
-      `    ${chalk.cyan('created')}\t${new Date(createdAt)} ${elapsed(
+      `    ${pc.cyan('created')}\t${new Date(createdAt)} ${elapsed(
         Date.now() - createdAt,
         true
       )}\n`
@@ -234,10 +234,10 @@ async function printDetails({
   print('\n\n');
 
   if (aliases !== undefined && aliases.length > 0) {
-    print(chalk.bold('  Aliases\n\n'));
+    print(pc.bold('  Aliases\n\n'));
     let aliasList = '';
     for (const alias of aliases) {
-      aliasList += `${chalk.gray('╶')} https://${alias}\n`;
+      aliasList += `${pc.gray('╶')} https://${alias}\n`;
     }
     print(indent(aliasList, 4));
     print('\n\n');
@@ -252,13 +252,13 @@ async function printDetails({
         createdAt && readyStateAt ? elapsed(readyStateAt - createdAt) : null;
     }
 
-    print(chalk.bold('  Builds\n\n'));
+    print(pc.bold('  Builds\n\n'));
     print(indent(buildsList(builds, times).toPrint, 4));
     print('\n\n');
   }
 
   if (Array.isArray(routes) && routes.length > 0) {
-    print(chalk.bold('  Routes\n\n'));
+    print(pc.bold('  Routes\n\n'));
     print(indent(routesList(routes), 4));
     print(`\n\n`);
   }

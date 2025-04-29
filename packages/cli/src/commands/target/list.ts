@@ -1,5 +1,5 @@
 import ms from 'ms';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import { targetCommand } from './command';
@@ -21,11 +21,11 @@ function formatBranchMatcher(
   if (branchMatcher?.type === 'equals') {
     return branchMatcher.pattern;
   } else if (branchMatcher?.type === 'startsWith') {
-    return `${branchMatcher.pattern}${chalk.dim('*')}`;
+    return `${branchMatcher.pattern}${pc.dim('*')}`;
   } else if (branchMatcher?.type === 'endsWith') {
-    return `${chalk.dim('*')}${branchMatcher.pattern}`;
+    return `${pc.dim('*')}${branchMatcher.pattern}`;
   }
-  return chalk.dim('No branch configuration');
+  return pc.dim('No branch configuration');
 }
 
 const TYPE_MAP: Record<CustomEnvironmentType, string> = {
@@ -41,16 +41,16 @@ const BRANCH_TRACKING_MAP: Record<
   production: project => project.link?.productionBranch ?? 'main',
   preview: (_, env) =>
     env.slug === 'preview'
-      ? chalk.dim('All unassigned git branches')
+      ? pc.dim('All unassigned git branches')
       : formatBranchMatcher(env.branchMatcher),
-  development: () => chalk.dim('Accessible via CLI'),
+  development: () => pc.dim('Accessible via CLI'),
 };
 
 export default async function list(client: Client, argv: string[]) {
   const { cwd } = client;
   if (argv.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('target ls')}`
       )}`
     );
@@ -87,13 +87,13 @@ export default async function list(client: Client, argv: string[]) {
   output.log(
     `${result.length} Environment${
       result.length === 1 ? '' : 's'
-    } found under ${projectSlugLink} ${chalk.gray(`[${elapsed}]`)}`
+    } found under ${projectSlugLink} ${pc.gray(`[${elapsed}]`)}`
   );
 
   const tablePrint = table(
     [
       ['Target Name', 'Branch Tracking', 'Type', 'Updated'].map(header =>
-        chalk.bold(chalk.cyan(header))
+        pc.bold(pc.cyan(header))
       ),
       ...result.flatMap(target => {
         return [
@@ -101,7 +101,7 @@ export default async function list(client: Client, argv: string[]) {
             formatEnvironment(link.org.slug, link.project.name, target),
             BRANCH_TRACKING_MAP[target.type](link.project, target),
             TYPE_MAP[target.type],
-            chalk.gray(
+            pc.gray(
               target.updatedAt > 0 ? ms(Date.now() - target.updatedAt) : '-'
             ),
           ],

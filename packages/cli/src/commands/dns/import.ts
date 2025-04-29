@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
@@ -32,7 +32,7 @@ export default async function importZone(client: Client, argv: string[]) {
 
   if (args.length !== 2) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('dns import <domain> <zonefile>')}`
       )}`
     );
@@ -52,16 +52,16 @@ export default async function importZone(client: Client, argv: string[]) {
   );
   if (recordIds instanceof DomainNotFound) {
     output.error(
-      `The domain ${domain} can't be found under ${chalk.bold(
+      `The domain ${domain} can't be found under ${pc.bold(
         contextName
-      )} ${chalk.gray(addStamp())}`
+      )} ${pc.gray(addStamp())}`
     );
     return 1;
   }
 
   if (recordIds instanceof InvalidDomain) {
     output.error(
-      `The domain ${domain} doesn't match with the one found in the Zone file ${chalk.gray(
+      `The domain ${domain} doesn't match with the one found in the Zone file ${pc.gray(
         addStamp()
       )}`
     );
@@ -69,9 +69,9 @@ export default async function importZone(client: Client, argv: string[]) {
   }
 
   output.success(
-    `${recordIds.length} DNS records for domain ${chalk.bold(
+    `${recordIds.length} DNS records for domain ${pc.bold(
       domain
-    )} created under ${chalk.bold(contextName)} ${chalk.gray(addStamp())}`
+    )} created under ${pc.bold(contextName)} ${pc.gray(addStamp())}`
   );
   return 0;
 }

@@ -1,5 +1,5 @@
 import type { Team } from '@vercel-internals/types';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -58,7 +58,7 @@ export async function remove(client: Client) {
   output.stopSpinner();
 
   if (!integrationConfiguration) {
-    output.error(`No integration ${chalk.bold(integrationName)} found.`);
+    output.error(`No integration ${pc.bold(integrationName)} found.`);
     telemetry.trackCliArgumentIntegration(integrationName, false);
     return 0;
   }
@@ -82,14 +82,14 @@ export async function remove(client: Client) {
     await removeIntegration(client, integrationConfiguration, team);
   } catch (error) {
     output.error(
-      chalk.red(
-        `Failed to remove ${chalk.bold(integrationName)}: ${(error as Error).message}`
+      pc.red(
+        `Failed to remove ${pc.bold(integrationName)}: ${(error as Error).message}`
       )
     );
     return 1;
   }
 
-  output.success(`${chalk.bold(integrationName)} successfully removed.`);
+  output.success(`${pc.bold(integrationName)} successfully removed.`);
   return 0;
 }
 
@@ -99,7 +99,7 @@ async function confirmIntegrationRemoval(
   team: Team
 ): Promise<boolean> {
   output.log(
-    `The ${chalk.bold(integration)} integration will be removed permanently from team ${chalk.bold(team.name)}.`
+    `The ${pc.bold(integration)} integration will be removed permanently from team ${pc.bold(team.name)}.`
   );
-  return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
+  return client.input.confirm(`${pc.red('Are you sure?')}`, false);
 }

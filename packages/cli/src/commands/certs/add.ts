@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
@@ -57,7 +57,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );
       output.print(
-        `  ${chalk.cyan(
+        `  ${pc.cyan(
           `${getCommandName(
             'certs add --crt <domain.crt> --key <domain.key> --ca <ca.crt>'
           )}`
@@ -70,9 +70,9 @@ async function add(client: Client, argv: string[]): Promise<number> {
     cert = await createCertFromFile(client, keyPath, crtPath, caPath);
   } else {
     output.warn(
-      `${chalk.cyan(
+      `${pc.cyan(
         getCommandName('certs add')
-      )} will be soon deprecated. Please use ${chalk.cyan(
+      )} will be soon deprecated. Please use ${pc.cyan(
         getCommandName('certs issue <cn> <cns>')
       )} instead`
     );
@@ -81,9 +81,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       output.error(
         `Invalid number of arguments to create a custom certificate entry. Usage:`
       );
-      output.print(
-        `  ${chalk.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`
-      );
+      output.print(`  ${pc.cyan(getCommandName('certs add <cn>[, <cn>]'))}\n`);
       return 1;
     }
 
@@ -92,9 +90,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       (res, item) => res.concat(item.split(',')),
       []
     );
-    output.spinner(
-      `Generating a certificate for ${chalk.bold(cns.join(', '))}`
-    );
+    output.spinner(`Generating a certificate for ${pc.bold(cns.join(', '))}`);
 
     const { contextName } = await getScope(client);
     cert = await createCertForCns(client, cns, contextName);
@@ -107,7 +103,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
   } else {
     // Print success message
     output.success(
-      `Certificate entry for ${chalk.bold(
+      `Certificate entry for ${pc.bold(
         cert.cns.join(', ')
       )} created ${addStamp()}`
     );

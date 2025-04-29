@@ -3,7 +3,7 @@ import { DomainNotFound } from '../errors-ts';
 import type Client from '../client';
 import getDomainDNSRecords from './get-domain-dns-records';
 import getDomains from '../domains/get-domains';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 
 export type DomainRecordsItem = {
@@ -58,7 +58,7 @@ async function getDomainNames(
   contextName: string,
   next?: number
 ) {
-  output.spinner(`Fetching domains under ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching domains under ${pc.bold(contextName)}`);
   const { domains, pagination } = await getDomains(client, next);
   return { domainNames: domains.map(domain => domain.name), pagination };
 }

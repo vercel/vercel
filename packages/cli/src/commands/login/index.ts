@@ -1,5 +1,5 @@
 import { validate as validateEmail } from 'email-validator';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import hp from '../../util/humanize-path';
 import { parseArguments } from '../../util/get-args';
 import prompt from '../../util/login/prompt';
@@ -110,7 +110,7 @@ export default async function login(client: Client): Promise<number> {
   output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
   output.print(
-    `${chalk.cyan('Congratulations!')} ` +
+    `${pc.cyan('Congratulations!')} ` +
       `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`
   );
 

@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 /**
  * Stylize the alias status label.
@@ -7,13 +7,13 @@ import chalk from 'chalk';
  */
 export default function renderAliasStatus(status: string): string {
   if (status === 'completed') {
-    return chalk.green(status);
+    return pc.green(status);
   }
   if (status === 'failed') {
-    return chalk.red(status);
+    return pc.red(status);
   }
   if (status === 'skipped') {
-    return chalk.gray(status);
+    return pc.gray(status);
   }
-  return chalk.yellow(status);
+  return pc.yellow(status);
 }

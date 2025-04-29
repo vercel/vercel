@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import getDeployment from '../get-deployment';
 import getTeamById from '../teams/get-team-by-id';
 import { isValidName } from '../is-valid-name';
@@ -37,7 +37,7 @@ export async function getDeploymentByIdOrURL({
 
   try {
     output.spinner(
-      `Fetching deployment "${deployIdOrUrl}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployIdOrUrl}" in ${pc.bold(contextName)}…`
     );
 
     const [teamResult, deploymentResult] = await Promise.allSettled([
@@ -60,7 +60,7 @@ export async function getDeploymentByIdOrURL({
 
     // re-render the spinner text because it goes so fast
     output.log(
-      `Fetching deployment "${deployIdOrUrl}" in ${chalk.bold(contextName)}…`
+      `Fetching deployment "${deployIdOrUrl}" in ${pc.bold(contextName)}…`
     );
   } finally {
     output.stopSpinner();
@@ -70,9 +70,7 @@ export async function getDeploymentByIdOrURL({
     if (!team || deployment.team.id !== team.id) {
       const err: NodeJS.ErrnoException = new Error(
         team
-          ? `Deployment doesn't belong to current team ${chalk.bold(
-              contextName
-            )}`
+          ? `Deployment doesn't belong to current team ${pc.bold(contextName)}`
           : `Deployment belongs to a different team`
       );
       err.code = 'ERR_INVALID_TEAM';
@@ -80,7 +78,7 @@ export async function getDeploymentByIdOrURL({
     }
   } else if (team) {
     const err: NodeJS.ErrnoException = new Error(
-      `Deployment doesn't belong to current team ${chalk.bold(contextName)}`
+      `Deployment doesn't belong to current team ${pc.bold(contextName)}`
     );
     err.code = 'ERR_INVALID_TEAM';
     throw err;

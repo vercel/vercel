@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import type {
   CustomEnvironment,
@@ -84,11 +84,11 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (envs.length === 0) {
     output.log(
-      `No Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
+      `No Environment Variables found for ${projectSlugLink} ${pc.gray(lsStamp())}`
     );
   } else {
     output.log(
-      `Environment Variables found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
+      `Environment Variables found for ${projectSlugLink} ${pc.gray(lsStamp())}`
     );
     client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
   }
@@ -127,16 +127,16 @@ function getRow(
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
-    value = chalk.gray(ellipsis(singleLineValue, 19));
+    value = pc.gray(ellipsis(singleLineValue, 19));
   } else if (env.type === 'system') {
-    value = chalk.gray.italic(env.value);
+    value = pc.gray.italic(env.value);
   } else {
-    value = chalk.gray.italic('Encrypted');
+    value = pc.gray.italic('Encrypted');
   }
 
   const now = Date.now();
   return [
-    chalk.bold(env.key),
+    pc.bold(env.key),
     value,
     formatEnvironments(link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',

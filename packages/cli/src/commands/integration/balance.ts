@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -171,9 +171,7 @@ function outputBalanceInformation(
     }
   }
 
-  output.log(
-    `${chalk.bold(`Balances and thresholds for ${integrationSlug}`)}:`
-  );
+  output.log(`${pc.bold(`Balances and thresholds for ${integrationSlug}`)}:`);
 
   for (const key in mappings) {
     const mapping = mappings[key];

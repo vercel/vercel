@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type { DNSRecord } from '@vercel-internals/types';
@@ -36,7 +36,7 @@ export default async function rm(client: Client, argv: string[]) {
   const [recordId] = args;
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('dns rm <id>')}`
       )}`
     );
@@ -68,7 +68,7 @@ export default async function rm(client: Client, argv: string[]) {
   const rmStamp = stamp();
   await deleteDNSRecordById(client, domainName, record.id);
   output.success(
-    `Record ${chalk.gray(`${record.id}`)} removed ${chalk.gray(rmStamp())}`
+    `Record ${pc.gray(`${record.id}`)} removed ${pc.gray(rmStamp())}`
   );
   return 0;
 }
@@ -87,9 +87,7 @@ function readConfirmation(
         hsep: 6,
       }).replace(/^(.*)/gm, '  $1')}\n`
     );
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
-    );
+    output.print(`${pc.bold.red('> Are you sure?')} ${pc.gray('(y/N) ')}`);
     client.stdin
       .on('data', d => {
         process.stdin.pause();
@@ -105,10 +103,10 @@ function getDeleteTableRow(domainName: string, record: DNSRecord) {
   }${domainName}`;
   return [
     record.id,
-    chalk.bold(
+    pc.bold(
       `${recordName} ${record.type} ${record.value} ${record.mxPriority || ''}`
     ),
-    chalk.gray(
+    pc.gray(
       `${ms(Date.now() - new Date(Number(record.createdAt)).getTime())} ago`
     ),
   ];

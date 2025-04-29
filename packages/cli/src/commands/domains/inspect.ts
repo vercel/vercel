@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { DomainNotFound, DomainPermissionDenied } from '../../util/errors-ts';
 import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
@@ -51,7 +51,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('domains inspect <domain>')}`
       )}`
     );
@@ -61,9 +61,7 @@ export default async function inspect(client: Client, argv: string[]) {
   output.debug(`Fetching domain info`);
 
   const { contextName } = await getScope(client);
-  output.spinner(
-    `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
-  );
+  output.spinner(`Fetching Domain ${domainName} under ${pc.bold(contextName)}`);
 
   const information = await fetchInformation({
     client,
@@ -78,35 +76,33 @@ export default async function inspect(client: Client, argv: string[]) {
   const { domain, projects, renewalPrice, domainConfig } = information;
 
   output.log(
-    `Domain ${domainName} found under ${chalk.bold(contextName)} ${chalk.gray(
+    `Domain ${domainName} found under ${pc.bold(contextName)} ${pc.gray(
       inspectStamp()
     )}`
   );
   output.print('\n');
-  output.print(chalk.bold('  General\n\n'));
-  output.print(`    ${chalk.cyan('Name')}\t\t\t${domain.name}\n`);
+  output.print(pc.bold('  General\n\n'));
+  output.print(`    ${pc.cyan('Name')}\t\t\t${domain.name}\n`);
   output.print(
-    `    ${chalk.cyan('Registrar')}\t\t\t${getDomainRegistrar(domain)}\n`
+    `    ${pc.cyan('Registrar')}\t\t\t${getDomainRegistrar(domain)}\n`
   );
   output.print(
-    `    ${chalk.cyan('Expiration Date')}\t\t${formatDate(domain.expiresAt)}\n`
+    `    ${pc.cyan('Expiration Date')}\t\t${formatDate(domain.expiresAt)}\n`
   );
+  output.print(`    ${pc.cyan('Creator')}\t\t\t${domain.creator.username}\n`);
   output.print(
-    `    ${chalk.cyan('Creator')}\t\t\t${domain.creator.username}\n`
+    `    ${pc.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
   );
+  output.print(`    ${pc.cyan('Edge Network')}\t\tyes\n`);
   output.print(
-    `    ${chalk.cyan('Created At')}\t\t\t${formatDate(domain.createdAt)}\n`
-  );
-  output.print(`    ${chalk.cyan('Edge Network')}\t\tyes\n`);
-  output.print(
-    `    ${chalk.cyan('Renewal Price')}\t\t${
-      domain.boughtAt && renewalPrice ? `$${renewalPrice} USD` : chalk.gray('-')
+    `    ${pc.cyan('Renewal Price')}\t\t${
+      domain.boughtAt && renewalPrice ? `$${renewalPrice} USD` : pc.gray('-')
     }\n`
   );
 
   output.print('\n');
 
-  output.print(chalk.bold('  Nameservers\n\n'));
+  output.print(pc.bold('  Nameservers\n\n'));
   output.print(
     `${formatNSTable(domain.intendedNameservers, domain.nameservers, {
       extraSpace: '    ',
@@ -115,7 +111,7 @@ export default async function inspect(client: Client, argv: string[]) {
   output.print('\n');
 
   if (Array.isArray(projects) && projects.length > 0) {
-    output.print(chalk.bold('  Projects\n'));
+    output.print(pc.bold('  Projects\n'));
 
     const table = formatTable(
       ['Project', 'Domains'],
@@ -155,13 +151,13 @@ export default async function inspect(client: Client, argv: string[]) {
       null
     );
     output.print(
-      `  ${chalk.grey('a)')} ` +
+      `  ${pc.grey('a)')} ` +
         `Set the following record on your DNS provider to continue: ` +
         `${code(`A ${domainName} 76.76.21.21`)} ` +
-        `${chalk.grey('[recommended]')}\n`
+        `${pc.grey('[recommended]')}\n`
     );
     output.print(
-      `  ${chalk.grey('b)')} ` +
+      `  ${pc.grey('b)')} ` +
         `Change your Domains's nameservers to the intended set detailed above.\n\n`
     );
     output.print(

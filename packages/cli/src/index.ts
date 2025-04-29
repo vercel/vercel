@@ -34,7 +34,7 @@ try {
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdirp } from 'fs-extra';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import epipebomb from 'epipebomb';
 import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
@@ -168,14 +168,14 @@ const main = async () => {
   const betaCommands: string[] = [];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
-      `${chalk.grey(
+      `${pc.grey(
         `${getTitleName()} CLI ${
           pkg.version
         } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
       )}\n`
     );
   } else {
-    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
+    output.print(`${pc.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
   }
 
   // Handle `--version` directly
@@ -847,19 +847,19 @@ main()
         const changelog = 'https://github.com/vercel/vercel/releases';
         const errorMsg =
           exitCode && exitCode !== 2
-            ? chalk.magenta(
-                `\n\nThe latest update ${chalk.italic(
+            ? pc.magenta(
+                `\n\nThe latest update ${pc.italic(
                   'may'
                 )} fix any errors that occurred.`
               )
             : '';
         output.print(
           box(
-            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+            `Update available! ${pc.gray(`v${pkg.version}`)} ≫ ${pc.green(
               `v${latest}`
             )}
 Changelog: ${output.link(changelog, changelog, { fallback: false })}
-Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
+Run ${pc.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
           )
         );
         output.print('\n\n');

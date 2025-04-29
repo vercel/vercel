@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
@@ -50,7 +50,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('certs ls')}`
       )}`
     );
@@ -64,7 +64,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'
-    } found under ${chalk.bold(contextName)} ${lsStamp()}`
+    } found under ${pc.bold(contextName)} ${lsStamp()}`
   );
 
   if (certs.length > 0) {
@@ -92,11 +92,11 @@ function formatCertsTable(certsList: Cert[]) {
 
 function formatCertsTableHead(): string[] {
   return [
-    chalk.dim('id'),
-    chalk.dim('cns'),
-    chalk.dim('expiration'),
-    chalk.dim('renew'),
-    chalk.dim('age'),
+    pc.dim('id'),
+    pc.dim('cns'),
+    pc.dim('expiration'),
+    pc.dim('renew'),
+    pc.dim('age'),
   ];
 }
 
@@ -121,7 +121,7 @@ function formatCertNonFirstCn(cn: string, multiple: boolean): string[] {
 }
 
 function formatCertCn(cn: string, multiple: boolean) {
-  return multiple ? `${chalk.gray('-')} ${chalk.bold(cn)}` : chalk.bold(cn);
+  return multiple ? `${pc.gray('-')} ${pc.bold(cn)}` : pc.bold(cn);
 }
 
 function formatCertFirstCn(
@@ -135,15 +135,13 @@ function formatCertFirstCn(
     formatCertCn(cn, multiple),
     formatExpirationDate(new Date(cert.expiration)),
     cert.autoRenew ? 'yes' : 'no',
-    chalk.gray(ms(time.getTime() - new Date(cert.created).getTime())),
+    pc.gray(ms(time.getTime() - new Date(cert.created).getTime())),
   ];
 }
 
 function formatExpirationDate(date: Date) {
   const diff = date.getTime() - Date.now();
-  return diff < 0
-    ? chalk.gray(`${ms(-diff)} ago`)
-    : chalk.gray(`in ${ms(diff)}`);
+  return diff < 0 ? pc.gray(`${ms(-diff)} ago`) : pc.gray(`in ${ms(diff)}`);
 }
 
 export default ls;

@@ -1,7 +1,7 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 // info('woot') === '> woot'
 // info('woot', 'yay') === '> woot\nyay'
 export default function info(...msgs: string[]) {
-  return `${chalk.gray('>')} ${msgs.join('\n')}`;
+  return `${pc.gray('>')} ${msgs.join('\n')}`;
 }

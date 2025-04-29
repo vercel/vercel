@@ -1,5 +1,5 @@
 import path from 'path';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { User } from '@vercel-internals/types';
 import type { VercelConfig } from '../dev/types';
@@ -35,7 +35,7 @@ export async function getDeploymentForAlias(
   contextName: string,
   localConfig?: VercelConfig
 ) {
-  output.spinner(`Fetching deployment to alias in ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching deployment to alias in ${pc.bold(contextName)}`);
 
   // When there are no args at all we try to get the targets from the config
   if (args.length === 2) {

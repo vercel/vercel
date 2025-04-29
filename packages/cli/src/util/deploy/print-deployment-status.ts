@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { Deployment } from '@vercel-internals/types';
 
 import { isDeploying } from '../../util/deploy/is-deploying';
@@ -74,12 +74,12 @@ export async function printDeploymentStatus(
   const newline = '\n';
   for (const indication of indications) {
     const message =
-      prependEmoji(chalk.dim(indication.payload), emoji(indication.type)) +
+      prependEmoji(pc.dim(indication.payload), emoji(indication.type)) +
       newline;
     let link = '';
     if (indication.link)
       link =
-        chalk.dim(
+        pc.dim(
           `${indication.action || 'Learn More'}: ${linkStyle(indication.link)}`
         ) + newline;
     output.print(message + link);

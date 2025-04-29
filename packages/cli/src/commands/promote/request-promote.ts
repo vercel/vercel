@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
@@ -66,7 +66,7 @@ export default async function requestPromote({
     )) as DeploymentCreateResponsePartial;
 
     output.log(
-      `Successfully created new deployment of ${chalk.bold(project.name)} at ${newDeployment.inspectorUrl}`
+      `Successfully created new deployment of ${pc.bold(project.name)} at ${newDeployment.inspectorUrl}`
     );
     return 0;
   }
@@ -78,7 +78,7 @@ export default async function requestPromote({
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(
-      `Successfully requested promote of ${chalk.bold(project.name)} to ${
+      `Successfully requested promote of ${pc.bold(project.name)} to ${
         deployment.url
       } (${deployment.id})`
     );

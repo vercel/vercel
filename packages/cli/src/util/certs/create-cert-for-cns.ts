@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 import * as ERRORS from '../errors-ts';
 import type Client from '../client';
@@ -11,7 +11,7 @@ export default async function createCertForCns(
   cns: string[],
   context: string
 ) {
-  output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
+  output.spinner(`Issuing a certificate for ${pc.bold(cns.join(', '))}`);
   try {
     const certificate = await issueCert(client, cns);
     return certificate;

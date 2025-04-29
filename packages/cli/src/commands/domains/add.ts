@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
@@ -104,7 +104,7 @@ export default async function add(client: Client, argv: string[]) {
 
   // We can cast the information because we've just added the domain and it should be there
   output.success(
-    `Domain ${chalk.bold(domainName)} added to project ${chalk.bold(
+    `Domain ${pc.bold(domainName)} added to project ${pc.bold(
       projectName
     )}. ${addStamp()}`
   );
@@ -130,13 +130,13 @@ export default async function add(client: Client, argv: string[]) {
       'This domain is not configured properly. To configure it you should either:'
     );
     output.print(
-      `  ${chalk.grey('a)')} ` +
+      `  ${pc.grey('a)')} ` +
         'Set the following record on your DNS provider to continue: ' +
         `${code(`A ${domainName} 76.76.21.21`)} ` +
-        `${chalk.grey('[recommended]')}\n`
+        `${pc.grey('[recommended]')}\n`
     );
     output.print(
-      `  ${chalk.grey('b)')} Change your Domains's nameservers to the intended set`
+      `  ${pc.grey('b)')} Change your Domains's nameservers to the intended set`
     );
     output.print(
       `\n${formatNSTable(

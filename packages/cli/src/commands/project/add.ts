@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
@@ -34,13 +34,13 @@ export default async function add(
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('project add <name>')}`
       )}`
     );
 
     if (args.length > 1) {
-      const example = chalk.cyan(
+      const example = pc.cyan(
         `${getCommandName(`project add "${args.join(' ')}"`)}`
       );
       output.log(
@@ -74,9 +74,9 @@ export default async function add(
 
   const { contextName } = await getScope(client);
   output.log(
-    `${chalk.cyan('Success!')} Project ${chalk.bold(
+    `${pc.cyan('Success!')} Project ${pc.bold(
       name.toLowerCase()
-    )} added (${chalk.bold(contextName)}) ${chalk.gray(`[${elapsed}]`)}`
+    )} added (${pc.bold(contextName)}) ${pc.gray(`[${elapsed}]`)}`
   );
 
   return 0;

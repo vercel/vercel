@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import retry from 'async-retry';
 import { DomainAlreadyExists, InvalidDomain, isAPIError } from '../errors-ts';
 import type { Domain } from '@vercel-internals/types';
@@ -14,7 +14,7 @@ export default async function addDomain(
   domain: string,
   contextName: string
 ) {
-  output.spinner(`Adding domain ${domain} under ${chalk.bold(contextName)}`);
+  output.spinner(`Adding domain ${domain} under ${pc.bold(contextName)}`);
   const addedDomain = await performAddRequest(client, domain);
   return addedDomain;
 }

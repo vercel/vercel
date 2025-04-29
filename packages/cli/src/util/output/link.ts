@@ -1,5 +1,5 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
-const link = chalk.cyan.underline;
+const link = pc.cyan.underline;
 
 export default link;

@@ -15,7 +15,7 @@ import {
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TelemetryTelemetryClient } from '../../util/telemetry/commands/telemetry';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { getCommandAliases } from '..';
@@ -98,7 +98,7 @@ export default async function telemetry(client: Client) {
           ? 'Invalid number of arguments'
           : 'Invalid subcommand';
       output.print(
-        `${chalk.red('Error')}: ${errorMessage}. See help instructions for usage:\n`
+        `${pc.red('Error')}: ${errorMessage}. See help instructions for usage:\n`
       );
       output.print(help(telemetryCommand, { columns: client.stderr.columns }));
       return 2;

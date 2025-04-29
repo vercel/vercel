@@ -1,5 +1,5 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 export default function param(text: string) {
-  return `${chalk.gray('"')}${chalk.bold(text)}${chalk.gray('"')}`;
+  return `${pc.gray('"')}${pc.bold(text)}${pc.gray('"')}`;
 }

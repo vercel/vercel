@@ -1,5 +1,5 @@
 import { createServer } from 'http';
-import { Headers } from 'node-fetch';
+// Native Headers is available in Node.js 18+;
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,

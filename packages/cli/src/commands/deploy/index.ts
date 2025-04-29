@@ -11,7 +11,7 @@ import {
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
 import bytes from 'bytes';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import fs from 'fs-extra';
 import ms from 'ms';
 import { join, resolve } from 'path';
@@ -692,7 +692,7 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
   if (error instanceof DomainVerificationFailed) {
     output.error(
-      `The domain used as a suffix ${chalk.underline(
+      `The domain used as a suffix ${pc.underline(
         error.meta.domain
       )} is not verified and can't be used as custom suffix.`
     );
@@ -700,7 +700,7 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
   if (error instanceof DomainPermissionDenied) {
     output.error(
-      `You don't have permissions to access the domain used as a suffix ${chalk.underline(
+      `You don't have permissions to access the domain used as a suffix ${pc.underline(
         error.meta.domain
       )}.`
     );
@@ -726,7 +726,7 @@ function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
   }
   if (error instanceof DomainNotVerified) {
     output.error(
-      `The domain used as an alias ${chalk.underline(
+      `The domain used as an alias ${pc.underline(
         error.meta.domain
       )} is not verified yet. Please verify it.`
     );
@@ -792,16 +792,16 @@ const addProcessEnv = async (
 
     if (typeof val === 'string') {
       log(
-        `Reading ${chalk.bold(
-          `"${chalk.bold(key)}"`
+        `Reading ${pc.bold(
+          `"${pc.bold(key)}"`
         )} from your env (as no value was specified)`
       );
       // Escape value if it begins with @
       env[key] = val.replace(/^@/, '\\@');
     } else {
       throw new Error(
-        `No value specified for env variable ${chalk.bold(
-          `"${chalk.bold(key)}"`
+        `No value specified for env variable ${pc.bold(
+          `"${pc.bold(key)}"`
         )} and it was not found in your env. If you meant to specify an environment to deploy to, use ${param('--target')}`
       );
     }

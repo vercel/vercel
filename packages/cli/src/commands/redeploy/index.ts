@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -146,14 +146,14 @@ export default async function redeploy(client: Client): Promise<number> {
 
     output.print(
       `${prependEmoji(
-        `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
+        `Inspect: ${pc.bold(deployment.inspectorUrl)} ${deployStamp()}`,
         emoji('inspect')
       )}\n`
     );
 
     output.print(
       prependEmoji(
-        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+        `${isProdDeployment ? 'Production' : 'Preview'}: ${pc.bold(
           previewUrl
         )} ${deployStamp()}`,
         emoji('success')
@@ -234,9 +234,7 @@ export default async function redeploy(client: Client): Promise<number> {
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {
-      output.error(
-        `Use ${chalk.bold('vc switch')} to change your current team`
-      );
+      output.error(`Use ${pc.bold('vc switch')} to change your current team`);
     }
     return 1;
   }

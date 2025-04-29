@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
@@ -105,7 +105,7 @@ export async function ensureRepoLink(
     const shouldLink =
       yes ||
       (await client.input.confirm(
-        `Link Git repository at ${chalk.cyan(
+        `Link Git repository at ${pc.cyan(
           `“${toHumanPath(rootPath)}”`
         )} to your Project(s)?`,
         true
@@ -157,7 +157,7 @@ export async function ensureRepoLink(
       fallback: () => link(repoUrl),
     });
     output.spinner(
-      `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
+      `Fetching Projects for ${repoUrlLink} under ${pc.bold(org.slug)}…`
     );
     let projects: Project[] = [];
     const query = new URLSearchParams({ repoUrl });
@@ -168,15 +168,13 @@ export async function ensureRepoLink(
     for await (const chunk of projectsIterator) {
       projects = projects.concat(chunk.projects);
       if (chunk.pagination.next) {
-        output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
+        output.spinner(`Found ${pc.bold(projects.length)} Projects…`, 0);
       }
     }
 
     if (projects.length === 0) {
       output.log(
-        `No Projects are linked to ${repoUrlLink} under ${chalk.bold(
-          org.slug
-        )}.`
+        `No Projects are linked to ${repoUrlLink} under ${pc.bold(org.slug)}.`
       );
     } else {
       output.log(
@@ -184,7 +182,7 @@ export async function ensureRepoLink(
           'Project',
           projects.length,
           true
-        )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+        )} linked to ${repoUrlLink} under ${pc.bold(org.slug)}`
       );
     }
 
@@ -320,7 +318,7 @@ export async function ensureRepoLink(
           'Project',
           selected.length,
           true
-        )} under ${chalk.bold(org.slug)} (created ${VERCEL_DIR}${
+        )} under ${pc.bold(org.slug)} (created ${VERCEL_DIR}${
           isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')

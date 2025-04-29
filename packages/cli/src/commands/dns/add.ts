@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import {
   DomainNotFound,
   DNSPermissionDenied,
@@ -33,7 +33,7 @@ export default async function add(client: Client, argv: string[]) {
   const parsedParams = parseAddDNSRecordArgs(args);
   if (!parsedParams) {
     output.error(
-      `Invalid number of arguments. See: ${chalk.cyan(
+      `Invalid number of arguments. See: ${pc.cyan(
         `${getCommandName('dns --help')}`
       )} for usage.`
     );
@@ -66,27 +66,25 @@ export default async function add(client: Client, argv: string[]) {
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {
     output.error(
-      `The domain ${domain} can't be found under ${chalk.bold(
+      `The domain ${domain} can't be found under ${pc.bold(
         contextName
-      )} ${chalk.gray(addStamp())}`
+      )} ${pc.gray(addStamp())}`
     );
     return 1;
   }
 
   if (record instanceof DNSPermissionDenied) {
     output.error(
-      `You don't have permissions to add records to domain ${domain} under ${chalk.bold(
+      `You don't have permissions to add records to domain ${domain} under ${pc.bold(
         contextName
-      )} ${chalk.gray(addStamp())}`
+      )} ${pc.gray(addStamp())}`
     );
     return 1;
   }
 
   if (record instanceof DNSInvalidPort) {
     output.error(
-      `Invalid <port> parameter. A number was expected ${chalk.gray(
-        addStamp()
-      )}`
+      `Invalid <port> parameter. A number was expected ${pc.gray(addStamp())}`
     );
     return 1;
   }
@@ -95,7 +93,7 @@ export default async function add(client: Client, argv: string[]) {
     output.error(
       `Invalid <type> parameter "${
         record.meta.type
-      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${chalk.gray(
+      }". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT ${pc.gray(
         addStamp()
       )}`
     );
@@ -108,9 +106,9 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   output.success(
-    `DNS record for domain ${chalk.bold(domain)} ${chalk.gray(
+    `DNS record for domain ${pc.bold(domain)} ${pc.gray(
       `(${record.uid})`
-    )} created under ${chalk.bold(contextName)} ${chalk.gray(addStamp())}`
+    )} created under ${pc.bold(contextName)} ${pc.gray(addStamp())}`
   );
 
   return 0;

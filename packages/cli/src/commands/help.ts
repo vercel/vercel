@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { LOGO, NAME } from '@vercel-internals/constants';
 import Table, { type CellOptions } from 'cli-table3';
 import { noBorderChars } from '../util/output/table';
@@ -105,11 +105,11 @@ export function outputArrayToString(outputArray: (string | null)[]) {
  * @returns
  */
 export function buildCommandSynopsisLine(command: Command, parent?: Command) {
-  const line: string[] = [INDENT, LOGO, chalk.bold(NAME)];
+  const line: string[] = [INDENT, LOGO, pc.bold(NAME)];
   if (parent) {
-    line.push(chalk.bold(parent.name));
+    line.push(pc.bold(parent.name));
   }
-  line.push(chalk.bold(command.name));
+  line.push(pc.bold(command.name));
   const args = command.arguments.slice(0);
 
   // If there are only subcommands, then there is an implicit "command" argument
@@ -203,7 +203,7 @@ export function buildCommandOptionLines(
 
   table.push(...rows);
   return [
-    `${INDENT}${chalk.dim(sectionTitle)}:`,
+    `${INDENT}${pc.dim(sectionTitle)}:`,
     NEWLINE,
     NEWLINE,
     table.toString(),
@@ -269,7 +269,7 @@ export function buildSubcommandLines(
 
   table.push(...rows);
   return [
-    `${INDENT}${chalk.dim('Commands')}:`,
+    `${INDENT}${pc.dim('Commands')}:`,
     NEWLINE,
     NEWLINE,
     table.toString(),
@@ -282,15 +282,15 @@ export function buildCommandExampleLines(command: Command) {
   if (!command.examples?.length) {
     return null;
   }
-  const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
+  const outputArray: string[] = [`${INDENT}${pc.dim('Examples:')}`, ''];
   for (const example of command.examples) {
     const nameLine: string[] = [INDENT];
-    nameLine.push(chalk.gray('-'));
+    nameLine.push(pc.gray('-'));
     nameLine.push(example.name);
     outputArray.push(lineToString(nameLine));
     outputArray.push('');
     const buildValueLine = (value: string) => {
-      return lineToString([INDENT, INDENT, chalk.cyan(`$ ${value}`)]);
+      return lineToString([INDENT, INDENT, pc.cyan(`$ ${value}`)]);
     };
     if (Array.isArray(example.value)) {
       for (const line of example.value) {

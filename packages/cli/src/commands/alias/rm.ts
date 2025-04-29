@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
@@ -43,7 +43,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (args.length !== 1) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('alias rm <alias>')}`
       )}`
     );
@@ -65,7 +65,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   if (!alias) {
     output.error(
-      `Alias not found by "${aliasOrId}" under ${chalk.bold(contextName)}`
+      `Alias not found by "${aliasOrId}" under ${pc.bold(contextName)}`
     );
     output.log(`Run ${getCommandName('alias ls')} to see your aliases.`);
     return 1;
@@ -78,20 +78,18 @@ export default async function rm(client: Client, argv: string[]) {
   }
 
   await removeAliasById(client, alias.uid);
-  output.success(`Alias ${chalk.bold(alias.alias)} removed ${removeStamp()}`);
+  output.success(`Alias ${pc.bold(alias.alias)} removed ${removeStamp()}`);
   return 0;
 }
 
 async function confirmAliasRemove(client: Client, alias: Alias) {
-  const srcUrl = alias.deployment
-    ? chalk.underline(alias.deployment.url)
-    : null;
+  const srcUrl = alias.deployment ? pc.underline(alias.deployment.url) : null;
   const tbl = table(
     [
       [
         ...(srcUrl ? [srcUrl] : []),
-        chalk.underline(alias.alias),
-        chalk.gray(`${ms(Date.now() - alias.createdAt)} ago`),
+        pc.underline(alias.alias),
+        pc.gray(`${ms(Date.now() - alias.createdAt)} ago`),
       ],
     ],
     { hsep: 4 }
@@ -99,5 +97,5 @@ async function confirmAliasRemove(client: Client, alias: Alias) {
 
   output.log('The following alias will be removed permanently');
   output.print(`  ${tbl}\n`);
-  return client.input.confirm(chalk.red('Are you sure?'), false);
+  return client.input.confirm(pc.red('Are you sure?'), false);
 }

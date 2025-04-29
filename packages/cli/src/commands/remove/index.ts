@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import ms from 'ms';
 import plural from 'pluralize';
 import table from '../../util/output/table';
@@ -87,7 +87,7 @@ export default async function remove(client: Client) {
   output.spinner(
     `Fetching deployment(s) ${ids
       .map(id => `"${id}"`)
-      .join(' ')} in ${chalk.bold(contextName)}`
+      .join(' ')} in ${pc.bold(contextName)}`
   );
 
   let aliases: Alias[][];
@@ -173,7 +173,7 @@ export default async function remove(client: Client) {
 
   if (deployments.length === 0 && projects.length === 0) {
     const safeUnaliased = parsedArgs.flags['--safe'] ? 'unaliased' : 'any';
-    const stylizedIds = ids.map(id => chalk.bold(`"${id}"`)).join(', ');
+    const stylizedIds = ids.map(id => pc.bold(`"${id}"`)).join(', ');
     const commandName = getCommandName('projects ls');
     log(
       `Could not find ${safeUnaliased} deployments or projects matching ${stylizedIds}. Run ${commandName} to list.`
@@ -183,7 +183,7 @@ export default async function remove(client: Client) {
 
   log(
     `Found ${deploymentsAndProjects(deployments, projects)} for removal in ` +
-      `${chalk.bold(contextName)} ${elapsed(Date.now() - findStart)}`
+      `${pc.bold(contextName)} ${elapsed(Date.now() - findStart)}`
   );
 
   if (deployments.length > 200) {
@@ -221,12 +221,12 @@ export default async function remove(client: Client) {
 
   deployments.forEach(depl => {
     // consider changing to `output.log`
-    output.print(`${chalk.gray('-')} ${chalk.bold(depl.url)}\n`);
+    output.print(`${pc.gray('-')} ${pc.bold(depl.url)}\n`);
   });
 
   projects.forEach((project: Project) => {
     // consider changing to `output.log`
-    output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
+    output.print(`${pc.gray('-')} ${pc.bold(project.name)}\n`);
   });
 
   return 0;
@@ -248,8 +248,8 @@ function readConfirmation(
 
       const deploymentTable = table(
         deployments.map(depl => {
-          const time = chalk.gray(`${ms(Date.now() - depl.createdAt)} ago`);
-          const url = depl.url ? chalk.underline(`https://${depl.url}`) : '';
+          const time = pc.gray(`${ms(Date.now() - depl.createdAt)} ago`);
+          const url = depl.url ? pc.underline(`https://${depl.url}`) : '';
           return [`  ${depl.id}`, url, time];
         }),
         { align: ['l', 'r', 'l'], hsep: 6 }
@@ -260,8 +260,8 @@ function readConfirmation(
     for (const depl of deployments) {
       for (const { alias } of depl.aliases) {
         output.warn(
-          `${chalk.underline(`https://${alias}`)} is an alias for ` +
-            `${chalk.bold(depl.url)} and will be removed`
+          `${pc.underline(`https://${alias}`)} is an alias for ` +
+            `${pc.bold(depl.url)} and will be removed`
         );
       }
     }
@@ -280,13 +280,11 @@ function readConfirmation(
 
       for (const project of projects) {
         // consider changing to `output.log`
-        output.print(`${chalk.gray('-')} ${chalk.bold(project.name)}\n`);
+        output.print(`${pc.gray('-')} ${pc.bold(project.name)}\n`);
       }
     }
 
-    output.print(
-      `${chalk.bold.red('> Are you sure?')} ${chalk.gray('(y/N) ')}`
-    );
+    output.print(`${pc.bold.red('> Are you sure?')} ${pc.gray('(y/N) ')}`);
 
     process.stdin
       .on('data', d => {

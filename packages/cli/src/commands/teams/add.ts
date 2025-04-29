@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import stamp from '../../util/output/stamp';
 import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
@@ -14,7 +14,7 @@ import output from '../../output-manager';
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
 
-const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
+const teamUrlPrefix = 'Team URL'.padEnd(14) + pc.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
 
 export default async function add(client: Client): Promise<number> {
@@ -23,9 +23,7 @@ export default async function add(client: Client): Promise<number> {
   let elapsed;
 
   output.log(
-    `Pick a team identifier for its URL (e.g.: ${chalk.cyan(
-      '`vercel.com/acme`'
-    )})`
+    `Pick a team identifier for its URL (e.g.: ${pc.cyan('`vercel.com/acme`')})`
   );
   do {
     try {
@@ -61,7 +59,7 @@ export default async function add(client: Client): Promise<number> {
   process.stdout.write(eraseLines(2));
 
   output.success(`Team created ${elapsed()}`);
-  output.log(`${chalk.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
+  output.log(`${pc.cyan(`${chars.tick} `) + teamUrlPrefix + slug}\n`);
   output.log('Pick a display name for your team');
 
   let name;
@@ -91,7 +89,7 @@ export default async function add(client: Client): Promise<number> {
   team = Object.assign(team, res);
 
   output.success(`Team name saved ${elapsed()}`);
-  output.log(`${chalk.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
+  output.log(`${pc.cyan(`${chars.tick} `) + teamNamePrefix + team.name}\n`);
 
   // Update config file
   output.spinner('Saving');

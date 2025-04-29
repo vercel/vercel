@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import stripAnsi from 'strip-ansi';
 
 const border = ['─', '╭', '╮', '│', '│', '╰', '╯'];
@@ -60,7 +60,7 @@ export default function box(
     .split(/\r?\n/)
     .map(line => [line, stripAnsi(line).length]);
   const maxLine = lines.reduce((p, [, len]) => Math.max(p, len), 0);
-  const borderColorFn = (borderColor && chalk[borderColor]) || chalk.yellow;
+  const borderColorFn = (borderColor && pc[borderColor]) || pc.yellow;
   const clampedSidePadding = Math.max(1, padding * 3);
   const narrowMode = maxLine + 2 + clampedSidePadding * 2 > cols;
   const sidePadding = narrowMode ? 0 : clampedSidePadding;

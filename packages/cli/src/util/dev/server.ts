@@ -2,8 +2,8 @@ import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
-import chalk from 'chalk';
-import fetch from 'node-fetch';
+import pc from 'picocolors';
+// Native fetch is available in Node.js 18+;
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -858,11 +858,11 @@ export default class DevServer {
    */
   async _start(...listenSpec: ListenSpec): Promise<void> {
     if (!fs.existsSync(this.cwd)) {
-      throw new Error(`${chalk.bold(this.cwd)} doesn't exist`);
+      throw new Error(`${pc.bold(this.cwd)} doesn't exist`);
     }
 
     if (!fs.lstatSync(this.cwd).isDirectory()) {
-      throw new Error(`${chalk.bold(this.cwd)} is not a directory`);
+      throw new Error(`${pc.bold(this.cwd)} is not a directory`);
     }
 
     const { ig } = await getVercelIgnore(this.cwd);
@@ -879,16 +879,14 @@ export default class DevServer {
             if (typeof listenSpec[0] === 'number') {
               // Increase port and try again
               output.note(
-                `Requested port ${chalk.yellow(
+                `Requested port ${pc.yellow(
                   String(listenSpec[0])
                 )} is already in use`
               );
               listenSpec[0]++;
             } else {
               output.error(
-                `Requested socket ${chalk.cyan(
-                  listenSpec[0]
-                )} is already in use`
+                `Requested socket ${pc.cyan(listenSpec[0])} is already in use`
               );
               process.exit(1);
             }
@@ -1295,7 +1293,7 @@ export default class DevServer {
     }
 
     const method = req.method || 'GET';
-    output.debug(`${chalk.bold(method)} ${req.url}`);
+    output.debug(`${pc.bold(method)} ${req.url}`);
 
     try {
       const vercelConfig = await this.getVercelConfig();
@@ -1471,7 +1469,9 @@ export default class DevServer {
             }
           );
 
-          const middlewareBody = await middlewareRes.buffer();
+          const middlewareBody = await Buffer.from(
+            await middlewareRes.arrayBuffer()
+          );
 
           if (middlewareRes.status === 500 && middlewareBody.byteLength === 0) {
             await this.sendError(
@@ -1570,7 +1570,7 @@ export default class DevServer {
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         if (isSpawnError(err) && err.code === 'ENOENT') {
-          err.message = `Command not found: ${chalk.cyan(
+          err.message = `Command not found: ${pc.cyan(
             err.path,
             ...err.spawnargs
           )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
@@ -1893,7 +1893,7 @@ export default class DevServer {
         // server process exited before sending the port information message
         // (missing dependency at runtime, for example).
         if (isSpawnError(err) && err.code === 'ENOENT') {
-          err.message = `Command not found: ${chalk.cyan(
+          err.message = `Command not found: ${pc.cyan(
             err.path,
             ...err.spawnargs
           )}\nPlease ensure that ${cmd(err.path!)} is properly installed`;
@@ -2239,7 +2239,7 @@ export default class DevServer {
       await treeKill(this.devProcess.pid!);
     }
 
-    output.log(`Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`);
+    output.log(`Running Dev Command ${pc.cyan.bold(`“${devCommand}”`)}`);
 
     const port = await getPort();
 

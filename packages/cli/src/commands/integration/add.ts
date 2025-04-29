@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import open from 'open';
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
@@ -111,7 +111,7 @@ export async function add(client: Client, args: string[]) {
     | undefined;
 
   output.log(
-    `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
+    `Installing ${pc.bold(product.name)} by ${pc.bold(integration.name)} under ${pc.bold(contextName)}`
   );
 
   const metadataSchema = product.metadataSchema;
@@ -403,15 +403,13 @@ async function confirmProductSelection(
   billingPlan: BillingPlan
 ) {
   output.print('Selected product:\n');
-  output.print(`${chalk.dim(`- ${chalk.bold('Name:')} ${name}`)}\n`);
+  output.print(`${pc.dim(`- ${pc.bold('Name:')} ${name}`)}\n`);
   for (const [key, value] of Object.entries(metadata)) {
     output.print(
-      `${chalk.dim(`- ${chalk.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
+      `${pc.dim(`- ${pc.bold(`${product.metadataSchema.properties[key]['ui:label']}:`)} ${value}`)}\n`
     );
   }
-  output.print(
-    `${chalk.dim(`- ${chalk.bold('Plan:')} ${billingPlan.name}`)}\n`
-  );
+  output.print(`${pc.dim(`- ${pc.bold('Plan:')} ${billingPlan.name}`)}\n`);
 
   return client.input.confirm('Confirm selection?', true);
 }
@@ -557,9 +555,7 @@ async function provisionStorageProduct(
     ],
   });
 
-  output.spinner(
-    `Connecting ${chalk.bold(name)} to ${chalk.bold(project.name)}...`
-  );
+  output.spinner(`Connecting ${pc.bold(name)} to ${pc.bold(project.name)}...`);
   try {
     await connectResourceToProject(
       client,
@@ -576,7 +572,7 @@ async function provisionStorageProduct(
     output.stopSpinner();
   }
   output.log(
-    `${chalk.bold(name)} successfully connected to ${chalk.bold(project.name)}
+    `${pc.bold(name)} successfully connected to ${pc.bold(project.name)}
 
 ${indent(`Run ${cmd(`${packageName} env pull`)} to update the environment variables`, 4)}`
   );

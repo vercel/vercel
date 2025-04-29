@@ -1,6 +1,6 @@
 import fs from 'fs';
 import AJV from 'ajv';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { join, relative } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
@@ -328,7 +328,7 @@ export async function linkFolderToProject(
 
   output.print(
     prependEmoji(
-      `Linked to ${chalk.bold(
+      `Linked to ${pc.bold(
         `${orgSlug}/${projectName}`
       )} (created ${VERCEL_DIR}${
         isGitIgnoreUpdated ? ' and added it to .gitignore' : ''

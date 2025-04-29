@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { join } from 'node:path';
 import type Client from '../../util/client';
 import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
@@ -149,9 +149,9 @@ export async function pullCommandLogic(
   const settingsStamp = stamp();
   output.print(
     `${prependEmoji(
-      `Downloaded project settings to ${chalk.bold(
+      `Downloaded project settings to ${pc.bold(
         humanizePath(join(currentDirectory, VERCEL_DIR, VERCEL_DIR_PROJECT))
-      )} ${chalk.gray(settingsStamp())}`,
+      )} ${pc.gray(settingsStamp())}`,
       emoji('success')
     )}\n`
   );

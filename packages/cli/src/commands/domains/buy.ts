@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { parse } from 'tldts';
 import { errorToString } from '@vercel/error-utils';
 import * as ERRORS from '../../util/errors-ts';
@@ -77,7 +77,7 @@ export default async function buy(client: Client, argv: string[]) {
 
   if (!(await getDomainStatus(client, domainName)).available) {
     output.error(
-      `The domain ${param(domainName)} is ${chalk.underline(
+      `The domain ${param(domainName)} is ${pc.underline(
         'unavailable'
       )}! ${availableStamp()}`
     );
@@ -86,9 +86,9 @@ export default async function buy(client: Client, argv: string[]) {
 
   const { period, price } = domainPrice;
   output.log(
-    `The domain ${param(domainName)} is ${chalk.underline(
+    `The domain ${param(domainName)} is ${pc.underline(
       'available'
-    )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
+    )} to buy under ${pc.bold(contextName)}! ${availableStamp()}`
   );
 
   let autoRenew;
@@ -97,7 +97,7 @@ export default async function buy(client: Client, argv: string[]) {
   } else {
     if (
       !(await client.input.confirm(
-        `Buy now for ${chalk.bold(`$${price}`)} (${`${period}yr${
+        `Buy now for ${pc.bold(`$${price}`)} (${`${period}yr${
           period > 1 ? 's' : ''
         }`})?`,
         false
@@ -108,8 +108,8 @@ export default async function buy(client: Client, argv: string[]) {
 
     autoRenew = await client.input.confirm(
       renewalPrice.period === 1
-        ? `Auto renew yearly for ${chalk.bold(`$${price}`)}?`
-        : `Auto renew every ${renewalPrice.period} years for ${chalk.bold(
+        ? `Auto renew yearly for ${pc.bold(`$${price}`)}?`
+        : `Auto renew every ${renewalPrice.period} years for ${pc.bold(
             `$${price}`
           )}?`,
       true

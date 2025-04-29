@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import plural from 'pluralize';
 import * as ERRORS from '../../util/errors-ts';
 import getScope from '../../util/get-scope';
@@ -52,15 +52,15 @@ export default async function move(client: Client, argv: string[]) {
 
   const domain = await getDomainByName(client, contextName, domainName);
   if (domain instanceof ERRORS.DomainNotFound) {
-    output.error(`Domain not found under ${chalk.bold(contextName)}`);
+    output.error(`Domain not found under ${pc.bold(contextName)}`);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
   if (domain instanceof ERRORS.DomainPermissionDenied) {
     output.error(
-      `You don't have permissions over domain ${chalk.underline(
+      `You don't have permissions over domain ${pc.underline(
         domain.meta.domain
-      )} under ${chalk.bold(domain.meta.context)}.`
+      )} under ${pc.bold(domain.meta.context)}.`
     );
     return 1;
   }
@@ -97,7 +97,7 @@ export default async function move(client: Client, argv: string[]) {
     const aliases = await getDomainAliases(client, domainName);
     if (aliases.length > 0) {
       output.warn(
-        `This domain's ${chalk.bold(
+        `This domain's ${pc.bold(
           plural('alias', aliases.length, true)
         )} will be removed. Run ${getCommandName(`alias ls`)} to list them.`
       );
@@ -144,21 +144,21 @@ export default async function move(client: Client, argv: string[]) {
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.DomainNotFound) {
-    output.error(`Domain not found under ${chalk.bold(contextName)}`);
+    output.error(`Domain not found under ${pc.bold(contextName)}`);
     output.log(`Run ${getCommandName(`domains ls`)} to see your domains.`);
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.DomainPermissionDenied) {
     output.error(
-      `You don't have permissions over domain ${chalk.underline(
+      `You don't have permissions over domain ${pc.underline(
         moveTokenResult.meta.domain
-      )} under ${chalk.bold(moveTokenResult.meta.context)}.`
+      )} under ${pc.bold(moveTokenResult.meta.context)}.`
     );
     return 1;
   }
   if (moveTokenResult instanceof ERRORS.InvalidMoveDestination) {
     output.error(
-      `Destination ${chalk.bold(
+      `Destination ${pc.bold(
         destination
       )} is invalid. Please supply a valid username, email, team slug, user id, or team id.`
     );

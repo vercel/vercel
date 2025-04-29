@@ -1,5 +1,5 @@
 import table from './output/table';
-import { gray } from 'chalk';
+import { gray } from 'picocolors';
 
 const HEADER = ['name', 'type', 'value'].map(v => gray(v));
 

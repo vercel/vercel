@@ -1,6 +1,6 @@
 import { URL } from 'url';
 import type Client from '../client';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import link from '../output/link';
 import { isAPIError } from '../errors-ts';
 import type { Dictionary } from '@vercel/client';
@@ -53,13 +53,13 @@ export async function connectGitProvider(
       (err.action === 'Install GitHub App' || err.code === 'repo_not_found')
     ) {
       output.error(
-        `Failed to connect ${chalk.cyan(
+        `Failed to connect ${pc.cyan(
           repo
         )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
       );
     } else if (apiError && err.action === 'Add a Login Connection') {
       output.error(
-        err.message.replace(repo, chalk.cyan(repo)) +
+        err.message.replace(repo, pc.cyan(repo)) +
           `\nVisit ${link(err.link)} for more information.`
       );
     } else {
@@ -121,6 +121,6 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
 
 export function printRemoteUrls(remoteUrls: Dictionary<string>) {
   for (const [name, url] of Object.entries(remoteUrls)) {
-    output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
+    output.print(`  • ${name}: ${pc.cyan(url)}\n`);
   }
 }

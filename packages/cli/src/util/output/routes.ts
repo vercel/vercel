@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { Route } from '@vercel/routing-utils';
 
 const longestProperty = (routes: Route[], name: keyof Route): number => {
@@ -24,11 +24,11 @@ export default function routes(routes: Route[]) {
   const padding = 6;
   const space = ' '.repeat(padding);
   const destSpace = ' '.repeat(longestDest || 10);
-  const arrow = chalk.grey('->');
+  const arrow = pc.grey('->');
 
   for (const item of routes) {
     if ('handle' in item) {
-      toPrint += `${chalk.grey('╶')} ${chalk.cyan(item.handle)}`;
+      toPrint += `${pc.grey('╶')} ${pc.cyan(item.handle)}`;
       continue;
     }
 
@@ -36,11 +36,11 @@ export default function routes(routes: Route[]) {
     const last = routes.indexOf(item) === routes.length - 1;
     const suffix = last ? '' : `\n`;
 
-    const finalSrc = chalk.cyan(src.padEnd(longestSrc + padding));
+    const finalSrc = pc.cyan(src.padEnd(longestSrc + padding));
     const finalDest = dest
       ? `${arrow}${space}${dest}`
       : `  ${space}${destSpace}`;
-    const finalStatus = status ? chalk.grey(`[${status}]`) : '';
+    const finalStatus = status ? pc.grey(`[${status}]`) : '';
 
     let finalHeaders = null;
 
@@ -53,13 +53,13 @@ export default function routes(routes: Route[]) {
         const value = headers[header];
         const last = headerKeys.indexOf(header) === headerKeys.length - 1;
         const suffix = last ? '' : `\n`;
-        const prefix = chalk.grey(last ? '└──' : '├──');
+        const prefix = pc.grey(last ? '└──' : '├──');
 
         finalHeaders += `${prefix} ${header}: ${value}${suffix}`;
       }
     }
 
-    const prefix = chalk.grey(finalHeaders ? '┌' : '╶');
+    const prefix = pc.grey(finalHeaders ? '┌' : '╶');
     const fill = `${finalSrc}${finalDest}${space}${finalStatus}`;
 
     toPrint += `${prefix} ${fill}${finalHeaders || ''}${suffix}`;

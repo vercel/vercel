@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
 import minimatch from 'minimatch';
@@ -819,9 +819,9 @@ async function doBuild(
   const relOutputDir = relative(cwd, outputDir);
   output.print(
     `${prependEmoji(
-      `Build Completed in ${chalk.bold(
+      `Build Completed in ${pc.bold(
         relOutputDir.startsWith('..') ? outputDir : relOutputDir
-      )} ${chalk.gray(buildStamp())}`,
+      )} ${pc.gray(buildStamp())}`,
       emoji('success')
     )}\n`
   );

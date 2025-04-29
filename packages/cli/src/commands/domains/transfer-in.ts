@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -76,17 +76,17 @@ export default async function transferIn(client: Client, argv: string[]) {
   const { price } = domainPrice;
   const { contextName } = await getScope(client);
   output.log(
-    `The domain ${param(domainName)} is ${chalk.underline(
+    `The domain ${param(domainName)} is ${pc.underline(
       'available'
-    )} to transfer under ${chalk.bold(contextName)}! ${availableStamp()}`
+    )} to transfer under ${pc.bold(contextName)}! ${availableStamp()}`
   );
 
   const authCode = await getAuthCode(client, opts['--code']);
 
   const shouldTransfer = await client.input.confirm(
     transferPolicy === 'no-change'
-      ? `Transfer now for ${chalk.bold(`$${price}`)}?`
-      : `Transfer now with 1yr renewal for ${chalk.bold(`$${price}`)}?`,
+      ? `Transfer now for ${pc.bold(`$${price}`)}?`
+      : `Transfer now with 1yr renewal for ${pc.bold(`$${price}`)}?`,
     false
   );
 

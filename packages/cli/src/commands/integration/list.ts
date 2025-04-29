@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
@@ -145,17 +145,17 @@ export async function list(client: Client) {
   }
 
   output.log(
-    `Integrations in ${chalk.bold(contextName)}:\n${table(
+    `Integrations in ${pc.bold(contextName)}:\n${table(
       [
         ['Name', 'Status', 'Product', 'Integration', 'Projects'].map(header =>
-          chalk.bold(chalk.cyan(header))
+          pc.bold(pc.cyan(header))
         ),
         ...results.map(result => [
-          resourceLink(contextName, result) ?? chalk.gray('–'),
+          resourceLink(contextName, result) ?? pc.gray('–'),
           resourceStatus(result.status ?? '–'),
-          result.product ?? chalk.gray('–'),
-          integrationLink(result, team) ?? chalk.gray('–'),
-          chalk.grey(result.projects ? result.projects : '–'),
+          result.product ?? pc.gray('–'),
+          integrationLink(result, team) ?? pc.gray('–'),
+          pc.grey(result.projects ? result.projects : '–'),
         ]),
       ],
       { hsep: 8 }
@@ -170,17 +170,17 @@ function resourceStatus(status: string) {
   const statusTitleCase = title(status);
   switch (status) {
     case 'initializing':
-      return chalk.yellow(CIRCLE) + statusTitleCase;
+      return pc.yellow(CIRCLE) + statusTitleCase;
     case 'error':
-      return chalk.red(CIRCLE) + statusTitleCase;
+      return pc.red(CIRCLE) + statusTitleCase;
     case 'available':
-      return chalk.green(CIRCLE) + statusTitleCase;
+      return pc.green(CIRCLE) + statusTitleCase;
     case 'suspended':
-      return chalk.white(CIRCLE) + statusTitleCase;
+      return pc.white(CIRCLE) + statusTitleCase;
     case 'limits-exceeded-suspended':
-      return `${chalk.white(CIRCLE)}Limits exceeded`;
+      return `${pc.white(CIRCLE)}Limits exceeded`;
     default:
-      return chalk.gray(statusTitleCase);
+      return pc.gray(statusTitleCase);
   }
 }
 
@@ -214,7 +214,7 @@ function integrationLink(
     return integration.integration;
   }
 
-  const boldName = chalk.bold(integration.integration);
+  const boldName = pc.bold(integration.integration);
   const integrationDeepLink = buildSSOLink(team, integration.configurationId);
   return output.link(boldName, integrationDeepLink, {
     fallback: () => boldName,

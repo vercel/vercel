@@ -1,5 +1,5 @@
 import ms from 'ms';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import table from '../../util/output/table';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
@@ -35,7 +35,7 @@ export default async function list(
 
   if (args.length !== 0) {
     output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
+      `Invalid number of arguments. Usage: ${pc.cyan(
         `${getCommandName('project ls')}`
       )}`
     );
@@ -45,7 +45,7 @@ export default async function list(
   const start = Date.now();
 
   const { contextName } = await getScope(client);
-  output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
+  output.spinner(`Fetching projects in ${pc.bold(contextName)}`);
 
   let projectsUrl = '/v9/projects?limit=20';
 
@@ -78,9 +78,9 @@ export default async function list(
   output.log(
     `${
       projectList.length > 0 ? 'Projects' : 'No projects'
-    } found under ${chalk.bold(contextName)} ${
+    } found under ${pc.bold(contextName)} ${
       deprecated ? 'that are using a deprecated Node.js version' : '\b'
-    } ${chalk.gray(`[${elapsed}]`)}`
+    } ${pc.gray(`[${elapsed}]`)}`
   );
 
   if (projectList.length > 0) {
@@ -91,12 +91,12 @@ export default async function list(
           'Latest Production URL',
           'Updated',
           'Node Version',
-        ].map(header => chalk.bold(chalk.cyan(header))),
+        ].map(header => pc.bold(pc.cyan(header))),
         ...projectList.flatMap(project => [
           [
-            chalk.bold(project.name),
+            pc.bold(project.name),
             getLatestProdUrl(project),
-            chalk.gray(ms(Date.now() - project.updatedAt)),
+            pc.gray(ms(Date.now() - project.updatedAt)),
             project.nodeVersion ?? '',
           ],
         ]),

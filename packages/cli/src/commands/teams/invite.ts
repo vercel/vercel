@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
 import stamp from '../../util/output/stamp';
@@ -83,7 +83,7 @@ export default async function invite(
   }
 
   output.log(
-    introMsg || `Inviting team members to ${chalk.bold(currentTeam.name)}`
+    introMsg || `Inviting team members to ${pc.bold(currentTeam.name)}`
   );
 
   telemetry.trackCliArgumentEmail(emails);
@@ -109,12 +109,12 @@ export default async function invite(
         }
 
         output.log(
-          `${chalk.cyan(chars.tick)} ${email}${
+          `${pc.cyan(chars.tick)} ${email}${
             userInfo ? ` (${userInfo})` : ''
           } ${elapsed()}`
         );
       } else {
-        output.log(`${chalk.red(`✖ ${email}`)} ${chalk.gray('[invalid]')}`);
+        output.log(`${pc.red(`✖ ${email}`)} ${pc.gray('[invalid]')}`);
       }
     }
     return 0;
@@ -150,16 +150,15 @@ export default async function invite(
         );
         email = `${email}${username ? ` (${username})` : ''} ${elapsed()}`;
         emails.push(email);
-        output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
+        output.log(`${pc.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         if (hasError) {
           hasError = false;
           process.stderr.write(eraseLines(emails.length + 2));
           output.log(
-            introMsg ||
-              `Inviting team members to ${chalk.bold(currentTeam.name)}`
+            introMsg || `Inviting team members to ${pc.bold(currentTeam.name)}`
           );
           for (const email of emails) {
-            output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+            output.log(`${pc.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
           }
         }
       } catch (err) {
@@ -168,7 +167,7 @@ export default async function invite(
         output.error(errorToString(err));
         hasError = true;
         for (const email of emails) {
-          output.log(`${chalk.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
+          output.log(`${pc.cyan(chars.tick)} ${sentEmailPrefix}${email}`);
         }
       }
     }
@@ -183,7 +182,7 @@ export default async function invite(
   } else {
     output.success(`Invited ${n} teammate${n > 1 ? 's' : ''}`);
     for (const email of emails) {
-      output.log(`${chalk.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
+      output.log(`${pc.cyan(chars.tick)} ${inviteUserPrefix}${email}`);
     }
   }
 

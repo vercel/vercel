@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 import type { Cert } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
@@ -11,7 +11,7 @@ export default async function startCertOrder(
   cns: string[],
   context: string // eslint-disable-line
 ) {
-  output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
+  output.spinner(`Issuing a certificate for ${pc.bold(cns.join(', '))}`);
   try {
     const cert = await client.fetch<Cert>('/v3/certs', {
       method: 'PATCH',

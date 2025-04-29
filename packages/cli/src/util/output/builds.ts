@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import bytes from 'bytes';
 import { isReady, isFailed } from '../build-state';
 import type { Build, BuildOutput } from '@vercel-internals/types';
@@ -44,16 +44,16 @@ const styleBuild = (build: Build, times: Times, longestSource: number) => {
   const { entrypoint, id } = build;
   const time = typeof times[id] === 'string' ? times[id] : '';
 
-  let pathColor = chalk.cyan;
+  let pathColor = pc.cyan;
 
   if (isFailed(build)) {
-    pathColor = chalk.red;
+    pathColor = pc.red;
   }
 
   const entry = entrypoint.padEnd(longestSource + padding);
   const prefix = hasOutput(build) ? '┌' : '╶';
 
-  return `${chalk.grey(prefix)} ${pathColor(entry)}${time}`;
+  return `${pc.grey(prefix)} ${pathColor(entry)}${time}`;
 };
 
 const styleHiddenBuilds = (
@@ -68,17 +68,17 @@ const styleHiddenBuilds = (
   const time = typeof times[id] === 'string' ? times[id] : '';
   const prefix = isHidden === false && buildGroup.some(hasOutput) ? '┌' : '╶';
 
-  let pathColor = chalk.cyan;
+  let pathColor = pc.cyan;
 
   if (buildGroup.every(isFailed)) {
-    pathColor = chalk.red;
+    pathColor = pc.red;
   }
 
   if (isHidden) {
-    pathColor = chalk.grey;
+    pathColor = pc.grey;
   }
 
-  return `${chalk.grey(prefix)} ${pathColor(entry)}${time}`;
+  return `${pc.grey(prefix)} ${pathColor(entry)}${time}`;
 };
 
 const styleOutput = (
@@ -88,29 +88,29 @@ const styleOutput = (
 ) => {
   const { type, path, size, lambda } = output;
   const prefix = type === 'lambda' ? 'λ ' : '';
-  const finalSize = size ? ` ${chalk.grey(`(${bytes(size)})`)}` : '';
+  const finalSize = size ? ` ${pc.grey(`(${bytes(size)})`)}` : '';
 
-  let color = chalk.grey;
+  let color = pc.grey;
   let finalRegion = '';
 
   if (isReady({ readyState })) {
-    color = chalk;
+    color = pc;
   } else if (isFailed({ readyState })) {
-    color = chalk.red;
+    color = pc.red;
   }
 
   if (lambda) {
     const { deployedTo } = lambda;
 
     if (deployedTo && deployedTo.length > 0) {
-      finalRegion = ` ${chalk.grey(`[${deployedTo.join(', ')}]`)}`;
+      finalRegion = ` ${pc.grey(`[${deployedTo.join(', ')}]`)}`;
     }
   }
 
   const corner = isLast ? '└──' : '├──';
   const main = prefix + path + finalSize + finalRegion;
 
-  return `${chalk.grey(corner)} ${color(main)}`;
+  return `${pc.grey(corner)} ${color(main)}`;
 };
 
 const getDirPath = (
@@ -290,7 +290,7 @@ export default (builds: Build[], times: Times) => {
 
     if (outputs.length > MAX_OUTPUTS_PER_GROUP) {
       final.push(
-        chalk.grey(
+        pc.grey(
           `└── ${outputs.length - MAX_OUTPUTS_PER_GROUP} output items hidden\n`
         )
       );

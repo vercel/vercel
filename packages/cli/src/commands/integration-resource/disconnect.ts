@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -88,7 +88,7 @@ export async function disconnect(client: Client) {
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${pc.bold(resourceName)} found.`);
     return 0;
   }
 
@@ -147,7 +147,7 @@ async function handleDisconnectProject(
   );
   if (!project) {
     output.log(
-      `Could not find project ${chalk.bold(projectName)} connected to resource ${chalk.bold(resource.name)}.`
+      `Could not find project ${pc.bold(projectName)} connected to resource ${pc.bold(resource.name)}.`
     );
     return 0;
   }
@@ -164,7 +164,7 @@ async function handleDisconnectProject(
     output.spinner('Disconnecting resource…', 500);
     await disconnectResourceFromProject(client, resource, project);
     output.success(
-      `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
+      `Disconnected ${pc.bold(project.name)} from ${pc.bold(resource.name)}`
     );
   } catch (error) {
     output.error(
@@ -182,7 +182,7 @@ export async function handleDisconnectAllProjects(
   skipConfirmation: boolean
 ): Promise<void> {
   if (resource.projectsMetadata?.length === 0) {
-    output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
+    output.log(`${pc.bold(resource.name)} has no projects to disconnect.`);
     return;
   }
 
@@ -196,9 +196,7 @@ export async function handleDisconnectAllProjects(
   try {
     output.spinner('Disconnecting projects from resource…', 500);
     await disconnectResourceFromAllProjects(client, resource);
-    output.success(
-      `Disconnected all projects from ${chalk.bold(resource.name)}`
-    );
+    output.success(`Disconnected all projects from ${pc.bold(resource.name)}`);
   } catch (error) {
     throw new FailedError(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`
@@ -214,9 +212,9 @@ async function confirmDisconnectProject(
   project: ResourceConnection
 ) {
   output.log(
-    `The resource ${chalk.bold(resource.name)} will be disconnected from project ${chalk.bold(project.name)}.`
+    `The resource ${pc.bold(resource.name)} will be disconnected from project ${pc.bold(project.name)}.`
   );
-  return client.input.confirm(`${chalk.red('Are you sure?')}`, false);
+  return client.input.confirm(`${pc.red('Are you sure?')}`, false);
 }
 
 async function confirmDisconnectAllProjects(
@@ -230,5 +228,5 @@ async function confirmDisconnectAllProjects(
   for (const project of resource.projectsMetadata) {
     output.print(`  ${project.name}\n`);
   }
-  return client.input.confirm(chalk.red('Are you sure?'), false);
+  return client.input.confirm(pc.red('Are you sure?'), false);
 }

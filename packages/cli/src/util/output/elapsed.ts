@@ -1,5 +1,5 @@
 import ms from 'ms';
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 /**
  * Returns a styled string like "[30ms]" based on a number of ms
@@ -8,7 +8,7 @@ import chalk from 'chalk';
  * @param ago  Boolean to indicate if we should append `ago`
  */
 export default function elapsed(time: number, ago: boolean = false): string {
-  return chalk.gray(
+  return pc.gray(
     `[${time < 1000 ? `${time}ms` : ms(time)}${ago ? ' ago' : ''}]`
   );
 }

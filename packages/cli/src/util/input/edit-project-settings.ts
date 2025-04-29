@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
@@ -55,9 +55,7 @@ export async function editProjectSettings(
       const override = localConfigurationOverrides[setting];
       if (override) {
         output.print(
-          `${chalk.dim(
-            `- ${chalk.bold(`${settingMap[setting]}:`)} ${override}`
-          )}\n`
+          `${pc.dim(`- ${pc.bold(`${settingMap[setting]}:`)} ${override}`)}\n`
         );
       }
     }
@@ -87,7 +85,7 @@ export async function editProjectSettings(
   output.print(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`
+      : `Auto-detected Project Settings (${pc.bold(framework.name)}):\n`
   );
 
   settings.framework = framework.slug;
@@ -103,11 +101,11 @@ export async function editProjectSettings(
 
     if (!override && defaultSetting) {
       output.print(
-        `${chalk.dim(
-          `- ${chalk.bold(`${settingMap[setting]}:`)} ${
+        `${pc.dim(
+          `- ${pc.bold(`${settingMap[setting]}:`)} ${
             isSettingValue(defaultSetting)
               ? defaultSetting.value
-              : chalk.italic(`${defaultSetting.placeholder}`)
+              : pc.italic(`${defaultSetting.placeholder}`)
           }`
         )}\n`
       );
@@ -143,7 +141,7 @@ export async function editProjectSettings(
   for (const setting of settingFields) {
     const field = settingMap[setting];
     settings[setting] = await client.input.text({
-      message: `What's your ${chalk.bold(field)}?`,
+      message: `What's your ${pc.bold(field)}?`,
     });
   }
   return settings;

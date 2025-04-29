@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import open from 'open';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
@@ -42,7 +42,7 @@ export async function openIntegration(client: Client, args: string[]) {
     knownIntegrationSlug = !!configuration;
   } catch (error) {
     output.error(
-      `Failed to fetch configuration for ${chalk.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
+      `Failed to fetch configuration for ${pc.bold(`"${integrationSlug}"`)}: ${(error as Error).message}`
     );
     return 1;
   } finally {
@@ -51,12 +51,12 @@ export async function openIntegration(client: Client, args: string[]) {
 
   if (!configuration) {
     output.error(
-      `No configuration found for ${chalk.bold(`"${integrationSlug}"`)}.`
+      `No configuration found for ${pc.bold(`"${integrationSlug}"`)}.`
     );
     return 1;
   }
 
-  output.print(`Opening the ${chalk.bold(integrationSlug)} dashboard...`);
+  output.print(`Opening the ${pc.bold(integrationSlug)} dashboard...`);
 
   open(buildSSOLink(team, configuration.id));
 

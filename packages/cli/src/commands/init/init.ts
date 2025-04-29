@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import tar from 'tar-fs';
-import chalk from 'chalk';
+import pc from 'picocolors';
 
 // @ts-ignore
 import listInput from '../../util/input/list';
@@ -151,9 +151,9 @@ async function extractExample(
         res.body.pipe(extractor);
       });
 
-      const successLog = `Initialized "${chalk.bold(
+      const successLog = `Initialized "${pc.bold(
         name
-      )}" example in ${chalk.bold(toHumanPath(folder))}.`;
+      )}" example in ${pc.bold(toHumanPath(folder))}.`;
       const folderRel = path.relative(client.cwd, folder);
       const deployHint =
         folderRel === ''
@@ -181,14 +181,14 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   if (fs.existsSync(dest)) {
     if (!fs.lstatSync(dest).isDirectory()) {
       throw new Error(
-        `Destination path "${chalk.bold(
+        `Destination path "${pc.bold(
           folder
         )}" already exists and is not a directory.`
       );
     }
     if (!force && fs.readdirSync(dest).length !== 0) {
       throw new Error(
-        `Destination path "${chalk.bold(
+        `Destination path "${pc.bold(
           folder
         )}" already exists and is not an empty directory. You may use ${cmd(
           '--force'
@@ -199,7 +199,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
     try {
       fs.mkdirSync(dest);
     } catch (e) {
-      throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
+      throw new Error(`Could not create directory "${pc.bold(folder)}".`);
     }
   }
 
@@ -211,7 +211,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
  */
 async function guess(client: Client, exampleList: string[], name: string) {
   const GuessError = new Error(
-    `No example found for ${chalk.bold(name)}, run ${getCommandName(
+    `No example found for ${pc.bold(name)}, run ${getCommandName(
       'init'
     )} to see the list of available examples.`
   );
@@ -223,9 +223,7 @@ async function guess(client: Client, exampleList: string[], name: string) {
   const found = didYouMean(name, exampleList, 0.7);
 
   if (typeof found === 'string') {
-    if (
-      await client.input.confirm(`Did you mean ${chalk.bold(found)}?`, false)
-    ) {
+    if (await client.input.confirm(`Did you mean ${pc.bold(found)}?`, false)) {
       return found;
     }
   } else {

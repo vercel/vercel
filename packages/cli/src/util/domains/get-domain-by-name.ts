@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../client';
 import type { Domain } from '@vercel-internals/types';
 import {
@@ -22,7 +22,7 @@ export default async function getDomainByName(
 ) {
   if (!options.ignoreWait) {
     output.spinner(
-      `Fetching domain ${domainName} under ${chalk.bold(contextName)}`
+      `Fetching domain ${domainName} under ${pc.bold(contextName)}`
     );
   }
   try {

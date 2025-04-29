@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import removeEnvRecord from '../../util/env/remove-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
 import formatEnvironments from '../../util/env/format-environments';
@@ -113,7 +113,7 @@ export default async function rm(client: Client, argv: string[]) {
         link,
         env,
         customEnvironments
-      )} in Project ${chalk.bold(project.name)}. Are you sure?`,
+      )} in Project ${pc.bold(project.name)}. Are you sure?`,
       false
     ))
   ) {
@@ -136,7 +136,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   output.print(
     `${prependEmoji(
-      `Removed Environment Variable ${chalk.gray(rmStamp())}`,
+      `Removed Environment Variable ${pc.gray(rmStamp())}`,
       emoji('success')
     )}\n`
   );

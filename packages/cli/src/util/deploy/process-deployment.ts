@@ -7,7 +7,7 @@ import {
 } from '@vercel/client';
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { Agent } from 'http';
 import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
@@ -26,7 +26,7 @@ function printInspectUrl(
 
   output.print(
     prependEmoji(
-      `Inspect: ${chalk.bold(inspectorUrl)} ${deployStamp()}`,
+      `Inspect: ${pc.bold(inspectorUrl)} ${deployStamp()}`,
       emoji('inspect')
     ) + `\n`
   );
@@ -103,7 +103,7 @@ export default async function processDeployment({
 
   const deployingSpinnerVal = isSettingUpProject
     ? 'Setting up project'
-    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+    : `Deploying ${pc.bold(`${org.slug}/${projectName}`)}`;
   output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
@@ -153,7 +153,7 @@ export default async function processDeployment({
             const percent = uploadedBytes / missingSize;
             if (percent >= nextStep) {
               output.spinner(
-                `Uploading ${chalk.reset(
+                `Uploading ${pc.reset(
                   `[${bar}] (${uploadedHuman}/${totalSizeHuman})`
                 )}`,
                 0
@@ -189,7 +189,7 @@ export default async function processDeployment({
 
         output.print(
           prependEmoji(
-            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+            `${isProdDeployment ? 'Production' : 'Preview'}: ${pc.bold(
               previewUrl
             )} ${deployStamp()}`,
             emoji('success')

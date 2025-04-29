@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import table from './output/table';
 import strlen from './strlen';
 
@@ -38,7 +38,7 @@ export default function formatTable(
       out += `${block.name}\n`;
     }
 
-    const rows = [header.map(s => chalk.dim(s))].concat(block.rows);
+    const rows = [header.map(s => pc.dim(s))].concat(block.rows);
 
     if (rows.length > 0) {
       rows[0][0] = ` ${rows[0][0]}`;

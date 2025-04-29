@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
@@ -85,7 +85,7 @@ export default async function setupAndLink(
   const shouldStartSetup =
     autoConfirm ||
     (await client.input.confirm(
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      `${setupMsg} ${pc.cyan(`“${toHumanPath(path)}”`)}?`,
       true
     ));
 

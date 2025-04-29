@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
 import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
@@ -35,7 +35,7 @@ export default async function requestRollback({
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(
-      `Successfully requested rollback of ${chalk.bold(project.name)} to ${
+      `Successfully requested rollback of ${pc.bold(project.name)} to ${
         deployment.url
       } (${deployment.id})`
     );

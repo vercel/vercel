@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
 import { resolve } from 'path';
@@ -143,7 +143,7 @@ export async function envPullCommandLogic(
   const exists = typeof head !== 'undefined';
 
   if (head === CONTENTS_PREFIX) {
-    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
+    output.log(`Overwriting existing ${pc.bold(filename)} file`);
   } else if (
     exists &&
     !skipConfirmation &&
@@ -159,7 +159,7 @@ export async function envPullCommandLogic(
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
   output.log(
-    `Downloading \`${chalk.cyan(
+    `Downloading \`${pc.cyan(
       environment
     )}\` Environment Variables for ${projectSlugLink}`
   );
@@ -218,9 +218,9 @@ export async function envPullCommandLogic(
 
   output.print(
     `${prependEmoji(
-      `${exists ? 'Updated' : 'Created'} ${chalk.bold(filename)} file ${
+      `${exists ? 'Updated' : 'Created'} ${pc.bold(filename)} file ${
         isGitIgnoreUpdated ? 'and added it to .gitignore' : ''
-      } ${chalk.gray(pullStamp())}`,
+      } ${pc.gray(pullStamp())}`,
       emoji('success')
     )}\n`
   );

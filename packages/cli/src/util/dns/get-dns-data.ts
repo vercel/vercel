@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import pc from 'picocolors';
 import type { DNSRecordData } from '@vercel-internals/types';
 import type Client from '../client';
 import output from '../../output-manager';
@@ -34,11 +34,9 @@ export default async function getDNSData(
       const port = await getNumber(client, `- ${type} port: `);
       const target = await getTrimmedString(client, `- ${type} target: `);
       output.log(
-        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${pc.cyan(name)} ${pc.bold(type)} ${pc.cyan(
           `${priority}`
-        )} ${chalk.cyan(`${weight}`)} ${chalk.cyan(`${port}`)} ${chalk.cyan(
-          target
-        )}.`
+        )} ${pc.cyan(`${weight}`)} ${pc.cyan(`${port}`)} ${pc.cyan(target)}.`
       );
       return (await verifyData(client))
         ? {
@@ -58,9 +56,9 @@ export default async function getDNSData(
       const mxPriority = await getNumber(client, `- ${type} priority: `);
       const value = await getTrimmedString(client, `- ${type} host: `);
       output.log(
-        `${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(
+        `${pc.cyan(name)} ${pc.bold(type)} ${pc.cyan(
           `${mxPriority}`
-        )} ${chalk.cyan(value)}`
+        )} ${pc.cyan(value)}`
       );
       return (await verifyData(client))
         ? {
@@ -73,7 +71,7 @@ export default async function getDNSData(
     }
 
     const value = await getTrimmedString(client, `- ${type} value: `);
-    output.log(`${chalk.cyan(name)} ${chalk.bold(type)} ${chalk.cyan(value)}`);
+    output.log(`${pc.cyan(name)} ${pc.bold(type)} ${pc.cyan(value)}`);
     return (await verifyData(client))
       ? {
           name,
