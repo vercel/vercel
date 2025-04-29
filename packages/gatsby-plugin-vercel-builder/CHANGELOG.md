@@ -1,5 +1,11 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.81
+
+### Patch Changes
+
+- Make backwards compatible with pnpm 10 ([#13268](https://github.com/vercel/vercel/pull/13268))
+
 ## 2.0.80
 
 ### Patch Changes

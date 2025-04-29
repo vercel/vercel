@@ -346,10 +346,10 @@ importers:
         specifier: 1.2.0
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.7.8
+        specifier: 4.7.9
         version: link:../next
       '@vercel/node':
-        specifier: 5.1.14
+        specifier: 5.1.15
         version: link:../node
       '@vercel/python':
         specifier: 4.7.2
@@ -364,7 +364,7 @@ importers:
         specifier: 2.2.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.7.6
+        specifier: 2.7.7
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -509,7 +509,7 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 15.2.0
+        specifier: 15.3.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -518,7 +518,7 @@ importers:
         specifier: 3.6.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.11
+        specifier: 5.4.0
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.0.4
@@ -1684,7 +1684,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.80
+        specifier: 2.0.81
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.0.0
@@ -1730,7 +1730,7 @@ importers:
         specifier: 3.6.3
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.3.11
+        specifier: 5.4.0
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.0.4

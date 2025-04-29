@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.1.15
+
+### Patch Changes
+
+- Make backwards compatible with pnpm 10 ([#13268](https://github.com/vercel/vercel/pull/13268))
+
 ## 5.1.14
 
 ### Patch Changes
