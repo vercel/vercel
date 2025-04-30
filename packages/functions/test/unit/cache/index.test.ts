@@ -29,7 +29,7 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the context cache if available', async () => {
-    const cache = await getFunctionCache();
+    const cache = getFunctionCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
@@ -37,7 +37,7 @@ describe('getRuntimeCache', () => {
 
   test('should use InMemoryCache if context cache is not available', async () => {
     (getContext as Mock).mockReturnValue({});
-    const cache = await getFunctionCache();
+    const cache = getFunctionCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
@@ -45,7 +45,7 @@ describe('getRuntimeCache', () => {
 
   test('should use the provided key hash function', async () => {
     const customHashFunction = vitest.fn((key: string) => `custom-${key}`);
-    const cache = await getFunctionCache({
+    const cache = getFunctionCache({
       keyHashFunction: customHashFunction,
     });
     await cache.set('key', 'value');
@@ -53,14 +53,14 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the default key hash function if none is provided', async () => {
-    const cache = await getFunctionCache();
+    const cache = getFunctionCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
   });
 
   test('should use the provided namespace and separator', async () => {
-    const cache = await getFunctionCache({
+    const cache = getFunctionCache({
       namespace: 'test',
       namespaceSeparator: ':',
     });
@@ -70,7 +70,7 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the default namespace separator if none is provided', async () => {
-    const cache = await getFunctionCache({ namespace: 'test' });
+    const cache = getFunctionCache({ namespace: 'test' });
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
