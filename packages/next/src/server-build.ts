@@ -55,6 +55,7 @@ import {
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
+  getStaticSegmentRoutes,
 } from './utils';
 import {
   nodeFileTrace,
@@ -1633,6 +1634,13 @@ export async function serverBuild({
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
+  const staticSegmentRoutes = isAppClientSegmentCacheEnabled
+    ? await getStaticSegmentRoutes({
+        entryDirectory,
+        routesManifest,
+      })
+    : [];
+
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
     entryDirectory,
@@ -2580,6 +2588,8 @@ export async function serverBuild({
             },
           ]
         : []),
+
+      ...staticSegmentRoutes,
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
