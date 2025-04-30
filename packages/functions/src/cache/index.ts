@@ -26,7 +26,9 @@ const defaultNamespaceSeparator = '$';
  * @returns An instance of the Vercel Function Cache.
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
-export const getFunctionCache = (cacheOptions?: CacheOptions) => {
+export const getFunctionCache = (
+  cacheOptions?: CacheOptions
+): FunctionCache => {
   let cache: FunctionCache;
   if (getContext().cache) {
     cache = getContext().cache as FunctionCache;
@@ -62,5 +64,5 @@ export const getFunctionCache = (cacheOptions?: CacheOptions) => {
     expireTag: (tag: string | string[]) => {
       return cache.expireTag(tag);
     },
-  } as FunctionCache;
+  };
 };
