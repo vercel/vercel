@@ -7,7 +7,7 @@ const defaultKeyHashFunction = (key: string) => {
   for (let i = 0; i < key.length; i++) {
     hash = (hash * 33) ^ key.charCodeAt(i);
   }
-  return (hash >>> 0).toString(); // Convert the hash to a string
+  return (hash >>> 0).toString(16); // Convert the hash to a string
 };
 
 const defaultNamespaceSeparator = '$';
