@@ -99,6 +99,7 @@ export default async function processDeployment({
     skipAutoDetectionConfirmation,
     archive,
     agent,
+    projectName,
   };
 
   const deployingSpinnerVal = isSettingUpProject

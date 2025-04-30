@@ -7,8 +7,12 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { pathExists, readFile } from 'fs-extra';
+import { readFile } from 'fs-extra';
 import readdir from './readdir-recursive';
+import {
+  findConfig as findMicrofrontendsConfig,
+  inferMicrofrontendsLocation,
+} from '@vercel/microfrontends/microfrontends/utils';
 
 type Ignore = ReturnType<typeof ignore>;
 
@@ -83,9 +87,14 @@ export async function buildFileTree(
     prebuilt,
     vercelOutputDir,
     rootDirectory,
+    projectName,
   }: Pick<
     VercelClientOptions,
-    'isDirectory' | 'prebuilt' | 'vercelOutputDir' | 'rootDirectory'
+    | 'isDirectory'
+    | 'prebuilt'
+    | 'vercelOutputDir'
+    | 'rootDirectory'
+    | 'projectName'
   >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
@@ -126,13 +135,23 @@ export async function buildFileTree(
         })
       );
 
-      const microfrontendConfigPath = join(
-        path,
-        rootDirectory || '',
-        'microfrontends.json'
-      );
-      if (await pathExists(microfrontendConfigPath)) {
-        refs.add(microfrontendConfigPath);
+      try {
+        let microfrontendConfigPath = findMicrofrontendsConfig({
+          dir: join(path, rootDirectory || ''),
+        });
+        if (!microfrontendConfigPath && !rootDirectory && projectName) {
+          microfrontendConfigPath = findMicrofrontendsConfig({
+            dir: inferMicrofrontendsLocation({
+              repositoryRoot: path,
+              applicationName: projectName,
+            }),
+          });
+        }
+        if (microfrontendConfigPath) {
+          refs.add(microfrontendConfigPath);
+        }
+      } catch (e) {
+        debug(`Error detecting microfrontend config: ${e}`);
       }
 
       if (refs.size > 0) {

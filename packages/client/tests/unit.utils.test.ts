@@ -205,4 +205,48 @@ describe('buildFileTree()', () => {
       normalizeWindowsPaths(ignoreList).sort()
     );
   });
+
+  it('microfrontend monorepo - should find `microfrontends.json` when prebuilt=true', async () => {
+    const cwd = fixture('microfrontend');
+
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
+        rootDirectory: 'marketing-app',
+      },
+      noop
+    );
+
+    const microfrontendsConfig = toAbsolutePaths(cwd, [
+      'marketing-app/microfrontends.json',
+    ]);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(microfrontendsConfig)[0]
+    );
+  });
+
+  it('microfrontend monorepo - should infer `microfrontends.json` when prebuilt=true', async () => {
+    const cwd = fixture('microfrontend');
+
+    const { fileList } = await buildFileTree(
+      cwd,
+      {
+        isDirectory: true,
+        prebuilt: true,
+        vercelOutputDir: join(cwd, 'marketing-app/.vercel/output'),
+        projectName: 'marketing-app',
+      },
+      noop
+    );
+
+    const microfrontendsConfig = toAbsolutePaths(cwd, [
+      'marketing-app/microfrontends.json',
+    ]);
+    expect(normalizeWindowsPaths(fileList)).toContain(
+      normalizeWindowsPaths(microfrontendsConfig)[0]
+    );
+  });
 });

@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.4.0
+
+### Minor Changes
+
+- Adds instrumentation detection to the `build` command ([#13271](https://github.com/vercel/vercel/pull/13271))
+
 ## 5.3.11
 
 ### Patch Changes
