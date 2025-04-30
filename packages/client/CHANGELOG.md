@@ -1,5 +1,17 @@
 # @vercel/client
 
+## 15.3.0
+
+### Minor Changes
+
+- Infer microfrontends.json and microfrontends.jsonc if rootDirectory not specified ([#13263](https://github.com/vercel/vercel/pull/13263))
+
+## 15.2.0
+
+### Minor Changes
+
+- Add special case for including microfrontend config ([#13258](https://github.com/vercel/vercel/pull/13258))
+
 ## 15.1.6
 
 ### Patch Changes

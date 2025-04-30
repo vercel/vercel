@@ -152,5 +152,8 @@
         }
       }
     ]
+  },
+  "pnpm": {
+    "neverBuiltDependencies": []
   }
 }

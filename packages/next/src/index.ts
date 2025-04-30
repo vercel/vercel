@@ -427,7 +427,7 @@ export const build: BuildV2 = async buildOptions => {
     throw new NowBuildError({
       code: 'NEXT_NO_VERSION',
       message:
-        'No Next.js version could be detected in your project. Make sure `"next"` is installed in "dependencies" or "devDependencies"',
+        'No Next.js version detected. Make sure your package.json has "next" in either "dependencies" or "devDependencies". Also check your Root Directory setting matches the directory of your package.json file.',
     });
   }
 

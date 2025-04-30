@@ -1,6 +1,6 @@
 {
   "name": "@vercel/gatsby-plugin-vercel-builder",
-  "version": "2.0.80",
+  "version": "2.0.81",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -34,5 +34,8 @@
     "@vercel/routing-utils": "5.0.4",
     "jest-junit": "16.0.0",
     "typescript": "4.9.5"
+  },
+  "pnpm": {
+    "neverBuiltDependencies": []
   }
 }

@@ -22,6 +22,7 @@ const flakey =
 describe.skipIf(flakey)('build', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
+    delete process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION;
   });
 
   describe('--help', () => {
@@ -869,6 +870,63 @@ describe.skipIf(flakey)('build', () => {
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
   });
+
+  describe.each([
+    {
+      fixtureName: 'with-valid-vercel-otel',
+      dependency: '@vercel/otel',
+      version: '1.11.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-vercel-otel',
+      dependency: '@vercel/otel',
+      version: '1.10.0',
+      expected: false,
+    },
+    {
+      fixtureName: 'with-valid-opentelemetry-sdk',
+      dependency: '@opentelemetry/sdk-trace-node',
+      version: '1.19.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-opentelemetry-sdk',
+      dependency: '@opentelemetry/sdk-trace-node',
+      version: '1.18.0',
+      expected: false,
+    },
+    {
+      fixtureName: 'with-valid-opentelemetry-api',
+      dependency: '@opentelemetry/api',
+      version: '1.7.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-opentelemetry-api',
+      dependency: '@opentelemetry/api',
+      version: '1.6.0',
+      expected: false,
+    },
+  ])(
+    'with instrumentation $dependency',
+    ({ fixtureName, dependency, version, expected }) => {
+      it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
+        const cwd = fixture(fixtureName);
+        const output = join(cwd, '.vercel/output');
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        const env = await fs.readJSON(join(output, 'static', 'env.json'));
+        expect(
+          Object.keys(env).includes(
+            'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
+          )
+        ).toEqual(expected);
+      });
+    }
+  );
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
