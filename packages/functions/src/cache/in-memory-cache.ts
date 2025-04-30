@@ -2,9 +2,9 @@ import { FunctionCache } from './types';
 
 interface CacheEntry {
   value: unknown;
-  lastModified: number;
-  tags?: string[];
-  ttl?: number;
+  tags: Set<string>;
+  lastModified: number; // Timestamp of when the entry was last modified in epoch milliseconds
+  ttl?: number; // Time to live in seconds
 }
 
 export class InMemoryCache implements FunctionCache {
@@ -21,12 +21,10 @@ export class InMemoryCache implements FunctionCache {
         await this.delete(key);
         return null;
       }
-      // if tags are specified, update the entry with the new tags
+      // if tags are specified, add them to the entry's tags set
       if (options?.tags) {
         for (const tag of options.tags) {
-          if (!entry.tags?.includes(tag)) {
-            entry.tags = [...(entry.tags ?? []), tag];
-          }
+          entry.tags.add(tag);
         }
       }
       return entry.value;
@@ -42,8 +40,8 @@ export class InMemoryCache implements FunctionCache {
     this.cache[key] = {
       value,
       lastModified: Date.now(),
-      ttl: options?.ttl ?? undefined,
-      tags: options?.tags,
+      ttl: options?.ttl,
+      tags: new Set(options?.tags || []),
     };
   }
 
@@ -52,13 +50,13 @@ export class InMemoryCache implements FunctionCache {
   }
 
   async expireTag(tag: string | string[]): Promise<void> {
-    const tags = [tag].flat();
+    const tags = Array.isArray(tag) ? tag : [tag];
     // Iterate over all entries in the cache
     for (const key in this.cache) {
       if (Object.prototype.hasOwnProperty.call(this.cache, key)) {
         const entry = this.cache[key];
-        // If the value's tags include the specified tag, delete this entry
-        if (entry.tags?.some((tag: string) => tags.includes(tag))) {
+        // If any of the entry's tags match the specified tags, delete this entry
+        if (tags.some(t => entry.tags.has(t))) {
           delete this.cache[key];
         }
       }
