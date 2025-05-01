@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.0.1
+
+### Patch Changes
+
+- Add Vercel Function Cache api ([#13221](https://github.com/vercel/vercel/pull/13221))
+
 ## 2.0.0
 
 ### Major Changes
