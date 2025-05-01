@@ -3047,10 +3047,10 @@ vite-plugin-solid@^2.7.0:
     solid-refresh "^0.5.0"
     vitefu "^0.2.3"
 
-vite@^4.5.13:
-  version "4.5.13"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-4.5.13.tgz#778534a947112c6c455e89737730fae5d458a294"
-  integrity sha512-Hgp8IF/yZDzKsN1hQWOuQZbrKiaFsbQud+07jJ8h9m9PaHWkpvZ5u55Xw5yYjWRXwRQ4jwFlJvY7T7FUJG9MCA==
+vite@^4.5.14:
+  version "4.5.14"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-4.5.14.tgz#2e652bc1d898265d987d6543ce866ecd65fa4086"
+  integrity sha512-+v57oAaoYNnO3hIu5Z/tJRZjq5aHM2zDve9YZ8HngVHbhk66RStobhb1sqPMIPEleV6cNKYK4eGrAbE9Ulbl2g==
   dependencies:
     esbuild "^0.18.10"
     postcss "^8.4.27"
