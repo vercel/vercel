@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 15.3.1
+
+### Patch Changes
+
+- Rename findConfig to findMicrofrontendsConfig ([#13277](https://github.com/vercel/vercel/pull/13277))
+
 ## 15.3.0
 
 ### Minor Changes
