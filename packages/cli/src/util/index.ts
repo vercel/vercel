@@ -4,7 +4,7 @@ import retry from 'async-retry';
 import ms from './inline/ms';
 // Native fetch is available in Node.js 18+
 // Using global fetch API types from Node.js 18+
-import bytes from 'inline/bytes';
+import bytes from './inline/bytes';
 import pc from 'picocolors';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';

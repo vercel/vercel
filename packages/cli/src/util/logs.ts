@@ -1,7 +1,7 @@
 import type { Deployment } from '@vercel-internals/types';
 import pc from 'picocolors';
 import { format } from 'date-fns';
-import ms from 'inline/ms';
+import ms from './inline/ms';
 import jsonlines from 'jsonlines';
 import split from 'split2';
 import { URLSearchParams } from 'url';

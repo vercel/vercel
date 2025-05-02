@@ -1,4 +1,4 @@
-import bytes from 'inline/bytes';
+import bytes from './inline/bytes';
 import type { Response } from 'node:http';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
