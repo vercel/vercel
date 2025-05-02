@@ -4,7 +4,8 @@
 
 ### Minor Changes
 
-- Dependency optimization: Reduced package size and complexity while maintaining feature parity ([#XXXXX](https://github.com/vercel/vercel/pull/XXXXX))
+- Dependency optimization: Reduced package size and complexity while maintaining feature parity ([#13284](https://github.com/vercel/vercel/pull/13284))
+
   - Replaced `chalk` with `picocolors` (80% smaller, same functionality)
   - Replaced `node-fetch` with native fetch API (available in Node.js 18+)
   - Inlined small utility packages (`ms`, `bytes`, `strip-ansi`, `title`)
@@ -13,14 +14,20 @@
   - Removed deprecated packages (`codecov`, `glob`, `@types/jest-expect-message`)
   - Added modern alternatives (`c8`, `fast-glob`)
 
-### Impact
+- Infer microfrontends.json and microfrontends.jsonc if rootDirectory not specified ([#13263](https://github.com/vercel/vercel/pull/13263))
 
-- Reduced node_modules size from ~125MB to ≤50MB
-- Reduced package count from 194 to ≤115
-- Eliminated all deprecated packages
-- Reduced duplicate versions from 17 to ≤3
-- Maintained permissive license mix with no GPL/copy-left licenses
-- No changes to CLI UX or flags
+- Adds instrumentation detection to the `build` command ([#13271](https://github.com/vercel/vercel/pull/13271))
+
+### Patch Changes
+
+- Use dot directly for Vercel CLI build ([#13267](https://github.com/vercel/vercel/pull/13267))
+
+- Fix segment prefetching for PPR-disabled static routes ([#13275](https://github.com/vercel/vercel/pull/13275))
+
+- Updated dependencies [[`1569176380cf3953051254d535a9f295ae328372`](https://github.com/vercel/vercel/commit/1569176380cf3953051254d535a9f295ae328372), [`a060ae3cbef9fc271b768d9b2f4220c062c7a520`](https://github.com/vercel/vercel/commit/a060ae3cbef9fc271b768d9b2f4220c062c7a520), [`f5b99cc80ce1d15522349b159ea0a0d78533dcc7`](https://github.com/vercel/vercel/commit/f5b99cc80ce1d15522349b159ea0a0d78533dcc7)]:
+  - @vercel/node@5.1.15
+  - @vercel/next@4.7.9
+  - @vercel/static-build@2.7.7
 
 ## 41.6.2
 

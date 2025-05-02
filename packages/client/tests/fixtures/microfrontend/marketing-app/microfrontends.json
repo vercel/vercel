@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "marketing-app": {
+      "development": {
+        "local": 3000,
+        "fallback": "nextjs-app-marketing.vercel.app"
+      }
+    }
+  }
+}
