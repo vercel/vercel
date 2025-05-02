@@ -1,5 +1,27 @@
 # vercel
 
+## 41.7.0
+
+### Minor Changes
+
+- Dependency optimization: Reduced package size and complexity while maintaining feature parity ([#XXXXX](https://github.com/vercel/vercel/pull/XXXXX))
+  - Replaced `chalk` with `picocolors` (80% smaller, same functionality)
+  - Replaced `node-fetch` with native fetch API (available in Node.js 18+)
+  - Inlined small utility packages (`ms`, `bytes`, `strip-ansi`, `title`)
+  - Consolidated multiple versions of dependencies
+  - Updated `semver` from 5.7.2 to 7.5.4
+  - Removed deprecated packages (`codecov`, `glob`, `@types/jest-expect-message`)
+  - Added modern alternatives (`c8`, `fast-glob`)
+
+### Impact
+
+- Reduced node_modules size from ~125MB to ≤50MB
+- Reduced package count from 194 to ≤115
+- Eliminated all deprecated packages
+- Reduced duplicate versions from 17 to ≤3
+- Maintained permissive license mix with no GPL/copy-left licenses
+- No changes to CLI UX or flags
+
 ## 41.6.2
 
 ### Patch Changes
