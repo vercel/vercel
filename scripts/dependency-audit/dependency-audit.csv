@@ -1,0 +1,142 @@
+Package,Version,License,Size,Deprecated,Duplicate Versions,Type,Recommendation
+@vercel/build-utils,10.5.1,Unknown,Unknown,false,,Production,
+@vercel/fun,1.1.5,Unknown,Unknown,false,,Production,
+@vercel/go,3.2.1,Unknown,Unknown,false,,Production,
+@vercel/hydrogen,1.2.0,Unknown,Unknown,false,,Production,
+@vercel/next,4.7.8,Unknown,Unknown,false,,Production,
+@vercel/node,5.1.14,Unknown,Unknown,false,,Production,
+@vercel/python,4.7.2,Unknown,Unknown,false,,Production,
+@vercel/redwood,2.3.0,Unknown,Unknown,false,,Production,
+@vercel/remix-builder,5.4.3,Unknown,Unknown,false,,Production,
+@vercel/ruby,2.2.0,Unknown,Unknown,false,,Production,
+@vercel/static-build,2.7.6,Unknown,Unknown,false,,Production,
+chokidar,4.0.0,Unknown,4.0K,false,,Production,Consider inlining (small)
+jose,5.9.6,Unknown,0,false,,Production,
+@alex_neo/jest-expect-message,1.0.5,Unknown,Unknown,false,,Development,
+@edge-runtime/node-utils,2.3.0,Unknown,Unknown,false,,Development,
+@inquirer/checkbox,2.2.2,Unknown,Unknown,false,,Development,
+@inquirer/confirm,3.1.2,Unknown,Unknown,false,,Development,
+@inquirer/expand,2.1.2,Unknown,Unknown,false,,Development,
+@inquirer/input,2.1.2,Unknown,Unknown,false,,Development,
+@inquirer/select,2.2.2,Unknown,Unknown,false,,Development,
+@next/env,11.1.2,Unknown,Unknown,false,,Development,
+@sentry/node,7.120.1,Unknown,Unknown,false,,Development,
+@sindresorhus/slugify,0.11.0,Unknown,Unknown,false,,Development,
+@swc/core,1.2.218,Unknown,Unknown,false,,Development,
+@tootallnate/once,1.1.2,Unknown,Unknown,false,,Development,
+@types/async-retry,1.2.1,Unknown,Unknown,false,,Development,
+@types/bytes,3.0.0,Unknown,Unknown,false,,Development,
+@types/chance,1.1.3,Unknown,Unknown,false,,Development,
+@types/debug,0.0.31,Unknown,Unknown,false,,Development,
+@types/dotenv,6.1.1,Unknown,Unknown,false,,Development,
+@types/escape-html,0.0.20,Unknown,Unknown,false,,Development,
+@types/fs-extra,9.0.13,Unknown,Unknown,false,,Development,
+@types/glob,7.1.1,Unknown,Unknown,false,,Development,
+@types/http-proxy,1.16.2,Unknown,Unknown,false,,Development,
+@types/ini,1.3.31,Unknown,Unknown,false,,Development,
+@types/jest,27.4.1,Unknown,Unknown,false,,Development,
+@types/jest-expect-message,1.0.3,Unknown,Unknown,false,,Development,
+@types/json-parse-better-errors,1.0.0,Unknown,Unknown,false,,Development,
+@types/load-json-file,2.0.7,Unknown,Unknown,false,,Development,
+@types/mime-types,2.1.0,Unknown,Unknown,false,,Development,
+@types/minimatch,3.0.3,Unknown,Unknown,false,,Development,
+@types/ms,0.7.30,Unknown,Unknown,false,,Development,
+@types/node,18.0.0,Unknown,Unknown,false,,Development,
+@types/node-fetch,2.5.10,Unknown,Unknown,false,,Development,
+@types/npm-package-arg,6.1.0,Unknown,Unknown,false,,Development,
+@types/pluralize,0.0.29,Unknown,Unknown,false,,Development,
+@types/qs,6.9.7,Unknown,Unknown,false,,Development,
+@types/semver,6.0.1,Unknown,Unknown,false,,Development,
+@types/split2,4.2.3,Unknown,Unknown,false,,Development,
+@types/tar-fs,1.16.1,Unknown,Unknown,false,,Development,
+@types/title,3.4.1,Unknown,Unknown,false,,Development,
+@types/update-notifier,5.1.0,Unknown,Unknown,false,,Development,
+@types/which,3.0.0,Unknown,Unknown,false,,Development,
+@types/write-json-file,2.2.1,Unknown,Unknown,false,,Development,
+@types/yauzl-promise,2.1.0,Unknown,Unknown,false,,Development,
+@vercel-internals/constants,workspace:*,Unknown,Unknown,false,,Development,
+@vercel-internals/get-package-json,workspace:*,Unknown,Unknown,false,,Development,
+@vercel-internals/types,workspace:*,Unknown,Unknown,false,,Development,
+@vercel/client,15.2.0,Unknown,Unknown,false,,Development,
+@vercel/error-utils,2.0.3,Unknown,Unknown,false,,Development,
+@vercel/frameworks,3.6.3,Unknown,Unknown,false,,Development,
+@vercel/fs-detectors,5.3.11,Unknown,Unknown,false,,Development,
+@vercel/routing-utils,5.0.4,Unknown,Unknown,false,,Development,
+@vitest/expect,2.1.3,Unknown,Unknown,false,,Development,
+ajv,6.12.3,Unknown,0,false,,Development,
+alpha-sort,2.0.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+ansi-escapes,4.3.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+ansi-regex,5.0.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+arg,5.0.0,Unknown,0,false,,Development,
+async-listen,3.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+async-retry,1.1.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+async-sema,2.1.4,Unknown,4.0K,false,,Development,Consider inlining (small)
+bytes,3.0.0,Unknown,0,false,,Development,
+chalk,4.1.0,Unknown,0,false,,Development,Replace with picocolors (smaller)
+chance,1.1.7,Unknown,4.0K,false,,Development,Consider inlining (small)
+ci-info,4.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+cli-table3,0.6.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+codecov,3.8.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+date-fns,1.29.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+debug,3.1.0,Unknown,0,false,,Development,
+dot,1.1.3,Unknown,0,false,,Development,
+dotenv,4.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+email-validator,1.1.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+epipebomb,1.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+escape-html,1.0.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+esm,3.1.4,Unknown,0,false,,Development,
+execa,3.2.0,Unknown,0,false,,Development,
+expect,29.5.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+express,4.21.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+fast-deep-equal,3.1.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+find-up,4.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+fs-extra,10.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+get-port,5.1.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+git-last-commit,1.0.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+glob,7.1.2,Unknown,0,false,,Development,Replace with native fs.glob
+http-proxy,1.18.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+ini,3.0.0,Unknown,0,false,,Development,
+is-docker,2.2.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+is-port-reachable,3.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+is-url,1.2.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+jaro-winkler,0.2.8,Unknown,4.0K,false,,Development,Consider inlining (small)
+jest-junit,16.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+jest-matcher-utils,29.3.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+json-parse-better-errors,1.0.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+jsonlines,0.1.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+line-async-iterator,3.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+load-json-file,3.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+memfs,4.14.0,Unknown,0,false,,Development,
+mime-types,2.1.24,Unknown,4.0K,false,,Development,Consider inlining (small)
+minimatch,3.1.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+ms,2.1.2,Unknown,0,false,,Development,
+node-fetch,2.6.7,Unknown,4.0K,false,,Development,Replace with native fetch
+npm-package-arg,6.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+open,8.4.0,Unknown,0,false,,Development,
+ora,3.4.0,Unknown,0,false,,Development,
+pcre-to-regexp,1.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+pluralize,7.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+promisepipe,3.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+proxy,2.1.1,Unknown,0,false,,Development,
+proxy-agent,6.4.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+qr-image,3.2.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+raw-body,2.4.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+rimraf,3.0.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+semver,5.7.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+serve-handler,6.1.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+split2,4.2.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+strip-ansi,6.0.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+supports-hyperlinks,3.0.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+tar-fs,1.16.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+title,3.4.1,Unknown,0,false,,Development,
+tldts,6.1.47,Unknown,0,false,,Development,
+tmp-promise,1.0.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+tree-kill,1.2.2,Unknown,4.0K,false,,Development,Consider inlining (small)
+ts-node,10.9.1,Unknown,4.0K,false,,Development,Consider inlining (small)
+utility-types,2.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+vite,^5.1.6,Unknown,4.0K,false,,Development,Consider inlining (small)
+vitest,^2.1.3,Unknown,4.0K,false,,Development,Consider inlining (small)
+which,3.0.0,Unknown,0,false,,Development,
+write-json-file,2.2.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+xdg-app-paths,5.1.0,Unknown,4.0K,false,,Development,Consider inlining (small)
+yauzl-promise,2.1.3,Unknown,4.0K,false,,Development,Consider inlining (small)
