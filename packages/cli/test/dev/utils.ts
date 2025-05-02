@@ -5,7 +5,7 @@ import _execa, { type Options } from 'execa';
 import fetch, { type RequestInit, type Response } from 'node-fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../src/util/inline/strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
 

@@ -1,7 +1,7 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import ms from 'ms';
-import bytes from 'bytes';
+import ms from '../inline/ms';
+import bytes from '../inline/bytes';
 import { delimiter, dirname, join } from 'path';
 import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';

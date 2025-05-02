@@ -7,7 +7,7 @@ import {
 import type { Readable } from 'stream';
 import type { MatcherState } from '@vitest/expect';
 import type { MatcherHintOptions } from 'jest-matcher-utils';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../../src/util/inline/strip-ansi';
 
 export interface ToOutputMatchers<R = unknown> {
   toOutput: (test: string, timeout?: number) => Promise<R>;

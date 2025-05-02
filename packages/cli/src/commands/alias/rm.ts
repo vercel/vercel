@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';

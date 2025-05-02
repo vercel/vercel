@@ -12,7 +12,7 @@ import getDeployment from '../../util/get-deployment';
 import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
 import sleep from '../../util/sleep';

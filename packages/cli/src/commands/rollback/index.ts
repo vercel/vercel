@@ -3,7 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import requestRollback from './request-rollback';
 import rollbackStatus from './status';
 import { help } from '../help';

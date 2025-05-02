@@ -3,7 +3,7 @@ import url from 'url';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { listen } from 'async-listen';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../src/util/inline/strip-ansi';
 import { createServer } from 'http';
 import {
   exec,

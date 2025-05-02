@@ -6,7 +6,7 @@ import {
   createDeployment,
 } from '@vercel/client';
 import { isErrorLike } from '@vercel/error-utils';
-import bytes from 'bytes';
+import bytes from '../inline/bytes';
 import pc from 'picocolors';
 import type { Agent } from 'http';
 import type Now from '../../util';

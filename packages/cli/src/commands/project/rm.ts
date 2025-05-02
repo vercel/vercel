@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isAPIError } from '../../util/errors-ts';

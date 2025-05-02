@@ -1,6 +1,6 @@
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import pc from 'picocolors';
-import title from 'title';
+import title from '../../util/inline/title';
 import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';

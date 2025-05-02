@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../../../src/util/inline/strip-ansi';
 import output from '../../../../src/output-manager';
 
 describe('Output', () => {

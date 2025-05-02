@@ -1,4 +1,4 @@
-import ms from 'ms';
+import ms from './inline/ms';
 import pc from 'picocolors';
 import format from 'date-fns/format';
 

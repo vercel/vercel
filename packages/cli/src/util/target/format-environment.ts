@@ -5,7 +5,7 @@ import type {
   CustomEnvironmentType,
 } from '@vercel-internals/types';
 import { STANDARD_ENVIRONMENTS } from './standard-environments';
-import title from 'title';
+import title from '../inline/title';
 
 export function formatEnvironment(
   orgSlug: string,

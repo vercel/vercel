@@ -1,5 +1,5 @@
 import { Separator } from '@inquirer/select';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../inline/strip-ansi';
 import type Client from '../client';
 import eraseLines from '../output/erase-lines';
 

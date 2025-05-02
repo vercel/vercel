@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import plural from 'pluralize';
 import table from '../../util/output/table';
 import Now from '../../util';

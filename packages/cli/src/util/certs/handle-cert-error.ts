@@ -1,4 +1,4 @@
-import ms from 'ms';
+import ms from '../inline/ms';
 import { parse } from 'tldts';
 import pc from 'picocolors';
 import * as ERRORS from '../errors-ts';

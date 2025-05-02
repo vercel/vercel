@@ -1,4 +1,4 @@
-import ms from 'ms';
+import ms from '../inline/ms';
 import sleep from '../sleep';
 import highlight from '../output/highlight';
 import eraseLines from '../output/erase-lines';

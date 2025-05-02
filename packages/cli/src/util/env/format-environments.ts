@@ -1,4 +1,4 @@
-import title from 'title';
+import title from '../inline/title';
 import { formatEnvironment } from '../target/format-environment';
 import type {
   CustomEnvironment,

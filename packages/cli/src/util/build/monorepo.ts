@@ -6,7 +6,7 @@ import {
   MissingBuildTarget,
 } from '@vercel/fs-detectors';
 import type { ProjectLinkAndSettings } from '../projects/project-settings';
-import title from 'title';
+import title from '../inline/title';
 import type { PartialProjectSettings } from '../input/edit-project-settings';
 import { debug } from '@vercel/build-utils';
 import output from '../../output-manager';

@@ -1,6 +1,6 @@
 import { setTimeout } from 'node:timers/promises';
 import { decodeJwt } from 'jose';
-import ms from 'ms';
+import ms from '../inline/ms';
 import { performance } from 'perf_hooks';
 import output from '../../output-manager';
 import type Client from '../../util/client';

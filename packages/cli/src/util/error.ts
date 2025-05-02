@@ -1,6 +1,6 @@
 import type { Response } from 'node:http';
 import errorOutput from './output/error';
-import bytes from 'bytes';
+import bytes from 'inline/bytes';
 import type { APIError } from './errors-ts';
 import { getCommandName } from './pkg-name';
 import output from '../output-manager';

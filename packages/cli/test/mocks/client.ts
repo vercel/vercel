@@ -13,7 +13,7 @@ import express, { Router } from 'express';
 import { listen } from 'async-listen';
 import type { FetchOptions } from '../../src/util/client';
 import Client from '../../src/util/client';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../src/util/inline/strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import output from '../../src/output-manager';

@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import { DomainNotFound } from '../../util/errors-ts';
 import type { DNSRecord } from '@vercel-internals/types';
 import type Client from '../../util/client';

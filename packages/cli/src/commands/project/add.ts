@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';

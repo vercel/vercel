@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../inline/strip-ansi';
 
 const border = ['─', '╭', '╮', '│', '│', '╰', '╯'];
 const nothing = ['─', '', '', '', '', '', ''];

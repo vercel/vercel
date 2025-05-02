@@ -1,6 +1,6 @@
 import type { MockInstance } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import bytes from 'bytes';
+import bytes from '../../../../src/util/inline/bytes';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { randomBytes } from 'crypto';

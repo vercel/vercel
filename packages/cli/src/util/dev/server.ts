@@ -1,7 +1,7 @@
 import url, { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
-import ms from 'ms';
+import ms from '../inline/ms';
 import pc from 'picocolors';
 // Native fetch is available in Node.js 18+;
 import plural from 'pluralize';

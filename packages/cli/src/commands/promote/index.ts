@@ -1,4 +1,4 @@
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import { parseArguments } from '../../util/get-args';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { printError } from '../../util/error';

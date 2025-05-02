@@ -1,4 +1,4 @@
-import stripAnsi from 'strip-ansi';
+import stripAnsi from '../../src/util/inline/strip-ansi';
 import type { CLIProcess } from './types';
 
 function getPromptErrorDetails(

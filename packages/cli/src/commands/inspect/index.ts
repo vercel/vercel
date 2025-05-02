@@ -1,8 +1,8 @@
 import type { Build, Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import pc from 'picocolors';
-import ms from 'ms';
-import title from 'title';
+import ms from '../../util/inline/ms';
+import title from '../../util/inline/title';
 import { URL } from 'url';
 import type Client from '../../util/client';
 import { isDeploying } from '../../util/deploy/is-deploying';

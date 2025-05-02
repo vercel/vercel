@@ -1,4 +1,4 @@
-import title from 'title';
+import title from 'inline/title';
 import pkg from './pkg';
 import cmd from './output/cmd';
 

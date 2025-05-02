@@ -10,10 +10,10 @@ import {
   type VercelConfig,
 } from '@vercel/client';
 import { errorToString, isError } from '@vercel/error-utils';
-import bytes from 'bytes';
+import bytes from '../../util/inline/bytes';
 import pc from 'picocolors';
 import fs from 'fs-extra';
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import { join, resolve } from 'path';
 import Now, { type CreateOptions } from '../../util';
 import type Client from '../../util/client';

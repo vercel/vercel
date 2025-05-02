@@ -1,4 +1,4 @@
-import ms from 'ms';
+import ms from '../../util/inline/ms';
 import pc from 'picocolors';
 import table from '../../util/output/table';
 import output from '../../output-manager';

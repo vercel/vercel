@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import bytes from 'bytes';
+import bytes from '../inline/bytes';
 import { isReady, isFailed } from '../build-state';
 import type { Build, BuildOutput } from '@vercel-internals/types';
 

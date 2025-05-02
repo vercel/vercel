@@ -9,7 +9,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import table from '../../util/output/table';
-import title from 'title';
+import title from '../../util/inline/title';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
