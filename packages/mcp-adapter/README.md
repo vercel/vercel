@@ -17,7 +17,7 @@ pnpm add @vercel/mcp-adapter
 1. Create an API route for MCP communication:
 
 ```typescript
-// app/api/mcp/route.ts
+// app/api/[transport]/route.ts
 import { initializeMcpApiHandler } from '@vercel/mcp-adapter/next';
 import { z } from 'zod';
 
@@ -40,8 +40,8 @@ const mcpHandler = initializeMcpApiHandler(
   {
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
-    streamableHttpEndpoint: '/api/mcp/stream',
-    sseEndpoint: '/api/mcp/sse',
+    streamableHttpEndpoint: '/api/mcp',
+    sseEndpoint: '/api/sse',
     maxDuration: 60, // Maximum duration in seconds
   }
 );
@@ -56,7 +56,7 @@ export { mcpHandler as GET, mcpHandler as POST };
 import { McpClient } from '@modelcontextprotocol/sdk/client';
 
 const client = new McpClient({
-  transport: new SSEClientTransport('/api/mcp/sse'),
+  transport: new SSEClientTransport('/api//sse'),
 });
 
 // Use the client to make requests
