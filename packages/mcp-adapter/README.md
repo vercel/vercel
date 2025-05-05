@@ -19,14 +19,20 @@ pnpm add @vercel/mcp-adapter
 ```typescript
 // app/api/mcp/route.ts
 import { initializeMcpApiHandler } from '@vercel/mcp-adapter/next';
+import { z } from 'zod';
 
 const mcpHandler = initializeMcpApiHandler(
   server => {
     // Initialize your MCP server here
-    server.addMethod('yourMethod', async params => {
-      // Handle your method
-      return { result: 'success' };
-    });
+    server.tool(
+      'add_numbers',
+      'adds 2 numbers together',
+      { a: z.integer(), b: z.integer() },
+      async params => {
+        // Handle your method
+        return { result: params.a + params.b };
+      }
+    );
   },
   {
     // Optional server options
