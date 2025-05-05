@@ -149,7 +149,7 @@ An instance of the Vercel Function Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:29](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L29)
+[packages/functions/src/cache/index.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
 
 ---
 
