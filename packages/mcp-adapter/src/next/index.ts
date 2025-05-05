@@ -8,6 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
  * @property redisUrl - The URL of the Redis instance to use for the MCP handler.
  * @property streamableHttpEndpoint - The endpoint to use for the streamable HTTP transport.
  * @property sseEndpoint - The endpoint to use for the SSE transport.
+ * @property verboseLogs - If true, enables console logging.
  */
 type Config = {
   /**
@@ -25,6 +26,11 @@ type Config = {
    * @default "/sse"
    */
   sseEndpoint?: string;
+  /**
+   * If true, enables console logging.
+   * @default false
+   */
+  verboseLogs?: boolean;
 };
 
 /**

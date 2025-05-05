@@ -20,6 +20,28 @@ interface SerializedRequest {
   headers: IncomingHttpHeaders;
 }
 
+type LogLevel = 'log' | 'error' | 'warn' | 'info' | 'debug';
+
+function createLogger(verboseLogs = false) {
+  return {
+    log: (...args: unknown[]) => {
+      if (verboseLogs) console.log(...args);
+    },
+    error: (...args: unknown[]) => {
+      if (verboseLogs) console.error(...args);
+    },
+    warn: (...args: unknown[]) => {
+      if (verboseLogs) console.warn(...args);
+    },
+    info: (...args: unknown[]) => {
+      if (verboseLogs) console.info(...args);
+    },
+    debug: (...args: unknown[]) => {
+      if (verboseLogs) console.debug(...args);
+    },
+  };
+}
+
 export function initializeMcpApiHandler(
   initializeServer: (server: McpServer) => void,
   serverOptions: ServerOptions = {},
@@ -28,9 +50,17 @@ export function initializeMcpApiHandler(
     streamableHttpEndpoint?: string;
     sseEndpoint?: string;
     maxDuration?: number;
+    verboseLogs?: boolean;
   } = {}
 ) {
-  const { redisUrl, streamableHttpEndpoint, sseEndpoint, maxDuration } = config;
+  const {
+    redisUrl,
+    streamableHttpEndpoint,
+    sseEndpoint,
+    maxDuration,
+    verboseLogs,
+  } = config;
+  const logger = createLogger(verboseLogs);
   const redis = createClient({
     url: redisUrl,
   });
@@ -38,10 +68,10 @@ export function initializeMcpApiHandler(
     url: redisUrl,
   });
   redis.on('error', err => {
-    console.error('Redis error', err);
+    logger.error('Redis error', err);
   });
   redisPublisher.on('error', err => {
-    console.error('Redis error', err);
+    logger.error('Redis error', err);
   });
   const redisPromise = Promise.all([redis.connect(), redisPublisher.connect()]);
 
@@ -56,7 +86,7 @@ export function initializeMcpApiHandler(
     const url = new URL(req.url || '', 'https://example.com');
     if (url.pathname === streamableHttpEndpoint) {
       if (req.method === 'GET') {
-        console.log('Received GET MCP request');
+        logger.log('Received GET MCP request');
         res.writeHead(405).end(
           JSON.stringify({
             jsonrpc: '2.0',
@@ -70,7 +100,7 @@ export function initializeMcpApiHandler(
         return;
       }
       if (req.method === 'DELETE') {
-        console.log('Received DELETE MCP request');
+        logger.log('Received DELETE MCP request');
         res.writeHead(405).end(
           JSON.stringify({
             jsonrpc: '2.0',
@@ -85,7 +115,7 @@ export function initializeMcpApiHandler(
       }
 
       if (req.method === 'POST') {
-        console.log('Got new MCP connection', req.url, req.method);
+        logger.log('Got new MCP connection', req.url, req.method);
 
         if (!statelessServer) {
           statelessServer = new McpServer(
@@ -118,7 +148,7 @@ export function initializeMcpApiHandler(
         await statelessTransport.handleRequest(incomingRequest, res);
       }
     } else if (url.pathname === sseEndpoint) {
-      console.log('Got new SSE connection');
+      logger.log('Got new SSE connection');
 
       const transport = new SSEServerTransport('/message', res);
       const sessionId = transport.sessionId;
@@ -134,19 +164,19 @@ export function initializeMcpApiHandler(
       servers.push(server);
 
       server.server.onclose = () => {
-        console.log('SSE connection closed');
+        logger.log('SSE connection closed');
         servers = servers.filter(s => s !== server);
       };
 
       let logs: {
-        type: 'log' | 'error';
+        type: LogLevel;
         messages: string[];
       }[] = [];
       // This ensures that we logs in the context of the right invocation since the subscriber
       // is not itself invoked in request context.
 
       // eslint-disable-next-line no-inner-declarations
-      function logInContext(severity: 'log' | 'error', ...messages: string[]) {
+      function logInContext(severity: LogLevel, ...messages: string[]) {
         logs.push({
           type: severity,
           messages,
@@ -155,7 +185,7 @@ export function initializeMcpApiHandler(
 
       // Handles messages originally received via /message
       const handleMessage = async (message: string) => {
-        console.log('Received message from Redis', message);
+        logger.log('Received message from Redis', message);
         logInContext('log', 'Received message from Redis', message);
         const request = JSON.parse(message) as SerializedRequest;
 
@@ -202,13 +232,13 @@ export function initializeMcpApiHandler(
 
       const interval = setInterval(() => {
         for (const log of logs) {
-          console[log.type].call(console, ...log.messages);
+          logger[log.type](...log.messages);
         }
         logs = [];
       }, 100);
 
       await redis.subscribe(`requests:${sessionId}`, handleMessage);
-      console.log(`Subscribed to requests:${sessionId}`);
+      logger.log(`Subscribed to requests:${sessionId}`);
 
       let timeout: NodeJS.Timeout;
       let resolveTimeout: (value: unknown) => void;
@@ -227,7 +257,7 @@ export function initializeMcpApiHandler(
         clearTimeout(timeout);
         clearInterval(interval);
         await redis.unsubscribe(`requests:${sessionId}`, handleMessage);
-        console.log('Done');
+        logger.log('Done');
         res.statusCode = 200;
         res.end();
       }
@@ -237,10 +267,10 @@ export function initializeMcpApiHandler(
 
       await server.connect(transport);
       const closeReason = await waitPromise;
-      console.log(closeReason);
+      logger.log(closeReason);
       await cleanup();
     } else if (url.pathname === '/message') {
-      console.log('Received message');
+      logger.log('Received message');
 
       const body = await req.text();
       let parsedBody: BodyType;
@@ -282,7 +312,7 @@ export function initializeMcpApiHandler(
         `requests:${sessionId}`,
         JSON.stringify(serializedRequest)
       );
-      console.log(`Published requests:${sessionId}`, serializedRequest);
+      logger.log(`Published requests:${sessionId}`, serializedRequest);
 
       const timeout = setTimeout(async () => {
         await redis.unsubscribe(`responses:${sessionId}:${requestId}`);
