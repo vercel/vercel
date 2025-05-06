@@ -14,6 +14,11 @@
       "types": "./dist/next/index.d.ts",
       "import": "./dist/next/index.js",
       "require": "./dist/next/index.cjs"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js",
+      "require": "./dist/node/index.cjs"
     }
   },
   "files": [
@@ -40,15 +45,17 @@
   ],
   "author": "Vercel",
   "license": "Apache-2.0",
-  "dependencies": {},
+  "dependencies": {
+    "raw-body": "2.4.1"
+  },
   "devDependencies": {
     "@types/node": "^22.15.8",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "next": ">=13.0.0",
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "next": ">=13.0.0",
     "redis": "^4.6.0"
   },
   "packageManager": "pnpm@10.7.0+sha1.66453f13fbf9078d3db193718206a8d738afdbdb",
