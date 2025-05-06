@@ -1,4 +1,4 @@
-import createMcpRouteHandler from '../src/next';
+import createMcpRouteHandler from '../dist/next/index';
 
 const handler = createMcpRouteHandler(
   server => {

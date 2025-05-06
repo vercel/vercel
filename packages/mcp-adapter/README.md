@@ -18,26 +18,15 @@ pnpm add @vercel/mcp-adapter
 
 ```typescript
 // app/api/[transport]/route.ts
-import { initializeMcpApiHandler } from '@vercel/mcp-adapter/next';
-import { z } from 'zod';
-
-const mcpHandler = initializeMcpApiHandler(
+import createMcpHandler from '@vercel/mcp-adapter/next';
+const handler = createMcpHandler(
   server => {
-    // Initialize your MCP server here
     server.tool(
-      'add_numbers',
-      'adds 2 numbers together',
+      'add number',
+      'add number',
       { a: z.number(), b: z.number() },
       async ({ a, b }) => {
-        // Handle your method
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `The sum of ${a} and ${b} is ${a + b}.`,
-            },
-          ],
-        };
+        return { content: [{ type: 'text', text: `hello world ${a + b}` }] };
       }
     );
   },
@@ -47,13 +36,14 @@ const mcpHandler = initializeMcpApiHandler(
   {
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
-    streamableHttpEndpoint: '/api/mcp',
-    sseEndpoint: '/api/sse',
-    maxDuration: 60, // Maximum duration in seconds
+    streamableHttpEndpoint: '/mcp',
+    sseEndpoint: '/sse',
+    maxDuration: 60,
+    verboseLogs: true,
   }
 );
 
-export { mcpHandler as GET, mcpHandler as POST };
+export { handler as GET, handler as POST };
 ```
 
 2. Use the MCP client in your application:
