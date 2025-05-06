@@ -51,7 +51,13 @@ export function initializeMcpApiHandler(
     sseEndpoint?: string;
     maxDuration?: number;
     verboseLogs?: boolean;
-  } = {}
+  } = {
+    redisUrl: process.env.REDIS_URL || process.env.KV_URL,
+    streamableHttpEndpoint: '/mcp',
+    sseEndpoint: '/sse',
+    maxDuration: 60,
+    verboseLogs: false,
+  }
 ) {
   const {
     redisUrl,

@@ -42,8 +42,8 @@ type Config = {
  */
 export default function createMcpRouteHandler(
   initializeServer: (server: McpServer) => void,
-  serverOptions: ServerOptions = {},
-  config: Config = {}
+  serverOptions: ServerOptions,
+  config: Config
 ): (request: Request) => Promise<Response> {
   const mcpHandler = initializeMcpApiHandler(
     initializeServer,
