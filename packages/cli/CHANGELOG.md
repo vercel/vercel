@@ -1,5 +1,11 @@
 # vercel
 
+## 41.7.2
+
+### Patch Changes
+
+- Fix linking GitLab repositories that belong to subgroups ([#13295](https://github.com/vercel/vercel/pull/13295))
+
 ## 41.7.1
 
 ### Patch Changes
