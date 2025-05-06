@@ -27,10 +27,17 @@ const mcpHandler = initializeMcpApiHandler(
     server.tool(
       'add_numbers',
       'adds 2 numbers together',
-      { a: z.integer(), b: z.integer() },
-      async params => {
+      { a: z.number(), b: z.number() },
+      async ({ a, b }) => {
         // Handle your method
-        return { result: params.a + params.b };
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `The sum of ${a} and ${b} is ${a + b}.`,
+            },
+          ],
+        };
       }
     );
   },
@@ -56,7 +63,7 @@ export { mcpHandler as GET, mcpHandler as POST };
 import { McpClient } from '@modelcontextprotocol/sdk/client';
 
 const client = new McpClient({
-  transport: new SSEClientTransport('/api//sse'),
+  transport: new SSEClientTransport('/api/sse'),
 });
 
 // Use the client to make requests
