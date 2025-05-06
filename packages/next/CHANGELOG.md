@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.10
+
+### Patch Changes
+
+- Add .next/turbopack file into diagnostics output ([#13293](https://github.com/vercel/vercel/pull/13293))
+
 ## 4.7.9
 
 ### Patch Changes
