@@ -12,6 +12,9 @@ const defaultKeyHashFunction = (key: string) => {
 
 const defaultNamespaceSeparator = '$';
 
+// Singleton instance of InMemoryCache
+let inMemoryCacheInstance: InMemoryCache | null = null;
+
 /**
  * Retrieves the Vercel Function Cache.
  *
@@ -33,7 +36,11 @@ export const getFunctionCache = (
   if (getContext().cache) {
     cache = getContext().cache as FunctionCache;
   } else {
-    cache = new InMemoryCache();
+    // Create InMemoryCache instance only once
+    if (!inMemoryCacheInstance) {
+      inMemoryCacheInstance = new InMemoryCache();
+    }
+    cache = inMemoryCacheInstance;
   }
 
   const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
