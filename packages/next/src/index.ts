@@ -2876,6 +2876,11 @@ export const diagnostics: Diagnostics = async ({
       'trace',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
+    // Collect `.next/turbopack` file
+    ...(await glob(
+      'turbopack',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
   };
 };
 
