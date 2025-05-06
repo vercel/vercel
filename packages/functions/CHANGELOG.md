@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.0.2
+
+### Patch Changes
+
+- Update in memory cache to use a singleton instance ([#13288](https://github.com/vercel/vercel/pull/13288))
+
 ## 2.0.1
 
 ### Patch Changes
