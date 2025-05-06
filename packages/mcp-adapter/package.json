@@ -31,7 +31,7 @@
     "ai"
   ],
   "author": "Vercel",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.15.8",
@@ -43,5 +43,8 @@
     "@modelcontextprotocol/sdk": "^1.10.2",
     "redis": "^4.6.0"
   },
-  "packageManager": "pnpm@10.7.0+sha1.66453f13fbf9078d3db193718206a8d738afdbdb"
+  "packageManager": "pnpm@10.7.0+sha1.66453f13fbf9078d3db193718206a8d738afdbdb",
+  "publishConfig": {
+    "access": "public"
+  }
 }
