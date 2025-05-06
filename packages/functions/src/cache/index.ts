@@ -1,5 +1,5 @@
 import { getContext } from '../get-context';
-import { CacheOptions, FunctionCache } from './types';
+import { CacheOptions, RuntimeCache } from './types';
 import { InMemoryCache } from './in-memory-cache';
 
 const defaultKeyHashFunction = (key: string) => {
@@ -16,7 +16,7 @@ const defaultNamespaceSeparator = '$';
 let inMemoryCacheInstance: InMemoryCache | null = null;
 
 /**
- * Retrieves the Vercel Function Cache.
+ * Retrieves the Vercel Runtime Cache.
  *
  * Keys are hashed to ensure they are unique and consistent. The hashing function can be overridden by providing a custom
  * `keyHashFunction` in the `cacheOptions` parameter.
@@ -26,15 +26,13 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * namespaceSeparator can also be customized using the `namespaceSeparator` option.
  *
  * @param cacheOptions - Optional configuration for the cache.
- * @returns An instance of the Vercel Function Cache.
+ * @returns An instance of the Vercel Runtime Cache.
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
-export const getFunctionCache = (
-  cacheOptions?: CacheOptions
-): FunctionCache => {
-  let cache: FunctionCache;
+export const getRuntimeCache = (cacheOptions?: CacheOptions): RuntimeCache => {
+  let cache: RuntimeCache;
   if (getContext().cache) {
-    cache = getContext().cache as FunctionCache;
+    cache = getContext().cache as RuntimeCache;
   } else {
     // Create InMemoryCache instance only once
     if (!inMemoryCacheInstance) {
