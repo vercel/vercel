@@ -1,8 +1,8 @@
-import { FunctionCache } from './cache/types';
+import { RuntimeCache } from './cache/types';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
-  cache?: FunctionCache;
+  cache?: RuntimeCache;
   headers?: Record<string, string>;
 };
 
