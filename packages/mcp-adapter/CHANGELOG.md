@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.2.3
+
+### Patch Changes
+
+- Update readme and example ([#13307](https://github.com/vercel/vercel/pull/13307))
+
 ## 0.2.2
 
 ### Patch Changes
