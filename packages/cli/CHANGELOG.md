@@ -1,5 +1,11 @@
 # vercel
 
+## 41.7.3
+
+### Patch Changes
+
+- [cli] Remove `glob` as a dev dependency ([#13304](https://github.com/vercel/vercel/pull/13304))
+
 ## 41.7.2
 
 ### Patch Changes
