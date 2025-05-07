@@ -11,6 +11,7 @@
 /packages/edge                           @vercel/ci-cd @vercel/compute
 /packages/functions                      @vercel/ci-cd @vercel/compute
 /packages/firewall                       @vercel/ci-cd @cramforce @sueplex
+/packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
 /examples                                @vercel/ci-cd @leerob
 /examples/create-react-app               @vercel/ci-cd @Timer
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
