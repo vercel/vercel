@@ -18,15 +18,18 @@ pnpm add @vercel/mcp-adapter
 
 ```typescript
 // app/api/[transport]/route.ts
-import createMcpHandler from '@vercel/mcp-adapter/next';
+import createMcpHandler from '@vercel/mcp-adapter';
 const handler = createMcpHandler(
   server => {
     server.tool(
-      'add number',
-      'add number',
-      { a: z.number(), b: z.number() },
-      async ({ a, b }) => {
-        return { content: [{ type: 'text', text: `hello world ${a + b}` }] };
+      'roll_dice',
+      'Rolls an N-sided die',
+      { sides: z.number().int().min(2) },
+      async ({ sides }) => {
+        const value = 1 + Math.floor(Math.random() * sides);
+        return {
+          content: [{ type: 'text', text: `🎲 You rolled a ${value}!` }],
+        };
       }
     );
   },
@@ -42,7 +45,6 @@ const handler = createMcpHandler(
     verboseLogs: true,
   }
 );
-
 export { handler as GET, handler as POST };
 ```
 
