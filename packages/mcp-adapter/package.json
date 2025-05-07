@@ -8,12 +8,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.js"
     },
     "./next": {
       "types": "./dist/next/index.d.ts",
       "import": "./dist/next/index.js",
-      "require": "./dist/next/index.cjs"
+      "require": "./dist/next/index.js"
     }
   },
   "files": [
