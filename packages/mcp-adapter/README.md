@@ -18,7 +18,7 @@ pnpm add @vercel/mcp-adapter
 
 ```typescript
 // app/api/[transport]/route.ts
-import createMcpHandler from '@vercel/mcp-adapter';
+import { createMcpHandler } from '@vercel/mcp-adapter';
 const handler = createMcpHandler(
   server => {
     server.tool(
