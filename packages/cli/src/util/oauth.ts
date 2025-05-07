@@ -1,9 +1,11 @@
 import fetch, { type Response } from 'node-fetch';
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 import ua from './ua';
+import { hostname } from 'os';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
+const userAgent = `${hostname()} @ ${ua}`;
 
 interface AuthorizationServerMetadata {
   issuer: URL;
@@ -37,7 +39,7 @@ export async function as(): Promise<AuthorizationServerMetadata> {
  */
 async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
   return await fetch(new URL('.well-known/openid-configuration', issuer), {
-    headers: { 'Content-Type': 'application/json', 'user-agent': ua },
+    headers: { 'Content-Type': 'application/json', 'user-agent': userAgent },
   });
 }
 
@@ -97,11 +99,11 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid',
+      scope: 'openid offline_access',
     }),
   });
 }
@@ -204,7 +206,7 @@ export async function deviceAccessTokenRequest(options: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'user-agent': ua,
+          'user-agent': userAgent,
         },
         body: new URLSearchParams({
           client_id: VERCEL_CLI_CLIENT_ID,
@@ -289,7 +291,7 @@ export async function revocationRequest(options: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({ ...options, client_id: VERCEL_CLI_CLIENT_ID }),
   });
