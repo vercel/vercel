@@ -25,7 +25,7 @@ export function createServerResponseAdapter(
   });
 
   return new Promise(resolve => {
-    let controller: ReadableStreamController<Uint8Array> | undefined;
+    let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
     let shouldClose = false;
     let wroteHead = false;
 
