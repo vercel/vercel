@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.2.2
+
+### Patch Changes
+
+- Correct file output ([#13305](https://github.com/vercel/vercel/pull/13305))
+
 ## 0.2.1
 
 ### Patch Changes
