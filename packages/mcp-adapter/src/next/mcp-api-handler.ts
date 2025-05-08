@@ -65,6 +65,11 @@ export type Config = {
    */
   sseEndpoint?: string;
   /**
+   * The endpoint to use for the SSE messages transport.
+   * @default "/message"
+   */
+  sseMessageEndpoint?: string;
+  /**
    * The maximum duration of an MCP request in seconds.
    * @default 60
    */
@@ -83,6 +88,7 @@ export function initializeMcpApiHandler(
     redisUrl: process.env.REDIS_URL || process.env.KV_URL,
     streamableHttpEndpoint: '/mcp',
     sseEndpoint: '/sse',
+    sseMessageEndpoint: '/message',
     maxDuration: 60,
     verboseLogs: false,
   }
@@ -91,6 +97,7 @@ export function initializeMcpApiHandler(
     redisUrl,
     streamableHttpEndpoint,
     sseEndpoint,
+    sseMessageEndpoint,
     maxDuration,
     verboseLogs,
   } = config;
@@ -303,7 +310,7 @@ export function initializeMcpApiHandler(
       const closeReason = await waitPromise;
       logger.log(closeReason);
       await cleanup();
-    } else if (url.pathname === '/message') {
+    } else if (url.pathname === sseMessageEndpoint) {
       logger.log('Received message');
 
       const body = await req.text();
