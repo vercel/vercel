@@ -1,5 +1,13 @@
 # @vercel/mcp-adapter
 
+## 0.2.4
+
+### Patch Changes
+
+- update readme with consistent docs ([#13309](https://github.com/vercel/vercel/pull/13309))
+
+- Fix message endpoint not being settable ([#13311](https://github.com/vercel/vercel/pull/13311))
+
 ## 0.2.3
 
 ### Patch Changes
