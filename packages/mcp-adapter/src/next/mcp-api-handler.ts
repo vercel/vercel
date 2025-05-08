@@ -11,6 +11,7 @@ import { Readable } from 'node:stream';
 import type { ServerOptions } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { BodyType } from './server-response-adapter';
+import assert from 'node:assert';
 
 interface SerializedRequest {
   requestId: string;
@@ -190,8 +191,8 @@ export function initializeMcpApiHandler(
       }
     } else if (url.pathname === sseEndpoint) {
       logger.log('Got new SSE connection');
-
-      const transport = new SSEServerTransport('/message', res);
+      assert(sseMessageEndpoint, 'sseMessageEndpoint is required');
+      const transport = new SSEServerTransport(sseMessageEndpoint, res);
       const sessionId = transport.sessionId;
       const server = new McpServer(
         {
