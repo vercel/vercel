@@ -41,9 +41,9 @@ const handler = createMcpHandler(
   {
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
-    // You can now use basePath to automatically derive all endpoints
+    // Set the basePath to where the handler is to automatically derive all endpoints
+    // This base path is for if this snippet is located at: /app/api/[transport]/route.ts 
     basePath: '/api/mcp',
-    // Or specify endpoints explicitly if you prefer
     maxDuration: 60,
     verboseLogs: true,
   }
@@ -71,56 +71,14 @@ const result = await client.request('yourMethod', { param: 'value' });
 The `initializeMcpApiHandler` function accepts the following configuration options:
 
 ```typescript
-type Config = {
-  /**
-   * The URL of the Redis instance to use for the MCP handler.
-   * @default process.env.REDIS_URL || process.env.KV_URL
-   */
-  redisUrl?: string;
-
-  /**
-   * The base path to use for deriving endpoints.
-   * If provided, endpoints will be derived from this path.
-   * For example, if basePath is "/api/mcp", then:
-   * - streamableHttpEndpoint will be "/api/mcp"
-   * - sseEndpoint will be "/api/mcp/sse"
-   * - sseMessageEndpoint will be "/api/mcp/message"
-   */
-  basePath?: string;
-
-  /**
-   * The endpoint to use for the streamable HTTP transport.
-   * @deprecated Use `set basePath` instead.
-   * @default "/mcp" or derived from basePath
-   */
-  streamableHttpEndpoint?: string;
-
-  /**
-   * The endpoint to use for the SSE transport.
-   * @deprecated Use `set basePath` instead.
-   * @default "/sse" or derived from basePath
-   */
-  sseEndpoint?: string;
-
-  /**
-   * The endpoint to use for the SSE messages transport.
-   * @deprecated Use `set basePath` instead.
-   * @default "/message" or derived from basePath
-   */
-  sseMessageEndpoint?: string;
-
-  /**
-   * The maximum duration of an MCP request in seconds.
-   * @default 60
-   */
-  maxDuration?: number;
-
-  /**
-   * If true, enables console logging.
-   * @default false
-   */
-  verboseLogs?: boolean;
-};
+interface Config {
+  redisUrl?: string; // Redis connection URL for pub/sub
+  basePath?: string; // string; // Base path for MCP endpoints
+  ~~streamableHttpEndpoint~~?: string; // Endpoint for streamable HTTP transport
+  ~~sseEndpoint~~?: string; // Endpoint for SSE transport
+  ~~sseMessageEndpoint~~?: string; // Endpoint for SSE message transport
+  maxDuration?: number; // Maximum duration for SSE connections in seconds
+}
 ```
 
 ## Features
