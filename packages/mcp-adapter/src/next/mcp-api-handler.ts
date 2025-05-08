@@ -80,7 +80,36 @@ export type Config = {
    * @default false
    */
   verboseLogs?: boolean;
+  /**
+   * The base path to use for deriving endpoints.
+   * If provided, endpoints will be derived from this path.
+   * For example, if basePath is "/api/mcp", then:
+   * - streamableHttpEndpoint will be "/api/mcp/mcp"
+   * - sseEndpoint will be "/api/mcp/sse"
+   * - sseMessageEndpoint will be "/api/mcp/message"
+   */
+  basePath?: string;
 };
+
+/**
+ * Derives MCP endpoints from a base path.
+ * @param basePath - The base path to derive endpoints from
+ * @returns An object containing the derived endpoints
+ */
+function deriveEndpointsFromBasePath(basePath: string): {
+  streamableHttpEndpoint: string;
+  sseEndpoint: string;
+  sseMessageEndpoint: string;
+} {
+  // Remove trailing slash if present
+  const normalizedBasePath = basePath.replace(/\/$/, '');
+
+  return {
+    streamableHttpEndpoint: `${normalizedBasePath}/mcp`,
+    sseEndpoint: `${normalizedBasePath}/sse`,
+    sseMessageEndpoint: `${normalizedBasePath}/message`,
+  };
+}
 
 export function initializeMcpApiHandler(
   initializeServer: (server: McpServer) => void,
@@ -96,12 +125,23 @@ export function initializeMcpApiHandler(
 ) {
   const {
     redisUrl,
-    streamableHttpEndpoint,
-    sseEndpoint,
-    sseMessageEndpoint,
+    basePath,
+    streamableHttpEndpoint: explicitStreamableHttpEndpoint,
+    sseEndpoint: explicitSseEndpoint,
+    sseMessageEndpoint: explicitSseMessageEndpoint,
     maxDuration,
     verboseLogs,
   } = config;
+
+  // If basePath is provided, derive endpoints from it
+  const { streamableHttpEndpoint, sseEndpoint, sseMessageEndpoint } = basePath
+    ? deriveEndpointsFromBasePath(basePath)
+    : {
+        streamableHttpEndpoint: explicitStreamableHttpEndpoint || '/mcp',
+        sseEndpoint: explicitSseEndpoint || '/sse',
+        sseMessageEndpoint: explicitSseMessageEndpoint || '/message',
+      };
+
   const logger = createLogger(verboseLogs);
   const redis = createClient({
     url: redisUrl,

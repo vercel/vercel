@@ -39,11 +39,12 @@ const handler = createMcpHandler(
   {
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
-    // The endpoint path that that the createMcpHandler is hosted on
-    // If /api/[transport]/route.ts, then /api/mcp
-    streamableHttpEndpoint: '/api/mcp',
-    sseEndpoint: '/api/sse',
-    sseMessageEndpoint: '/api/message',
+    // You can now use basePath to automatically derive all endpoints
+    basePath: '/api/mcp',
+    // Or specify endpoints explicitly if you prefer
+    // streamableHttpEndpoint: '/api/mcp',
+    // sseEndpoint: '/api/sse',
+    // sseMessageEndpoint: '/api/message',
     maxDuration: 60,
     verboseLogs: true,
   }
@@ -58,7 +59,8 @@ export { handler as GET, handler as POST };
 import { McpClient } from '@modelcontextprotocol/sdk/client';
 
 const client = new McpClient({
-  transport: new SSEClientTransport('/api/sse'),
+  // When using basePath, the SSE endpoint will be automatically derived
+  transport: new SSEClientTransport('/api/mcp/sse'),
 });
 
 // Use the client to make requests
@@ -70,13 +72,53 @@ const result = await client.request('yourMethod', { param: 'value' });
 The `initializeMcpApiHandler` function accepts the following configuration options:
 
 ```typescript
-interface Config {
-  redisUrl?: string; // Redis connection URL for pub/sub
-  streamableHttpEndpoint?: string; // Endpoint for streamable HTTP transport
-  sseEndpoint?: string; // Endpoint for SSE transport
-  sseMessageEndpoint?: string; // Endpoint for SSE message transport
-  maxDuration?: number; // Maximum duration for SSE connections in seconds
-}
+type Config = {
+  /**
+   * The URL of the Redis instance to use for the MCP handler.
+   * @default process.env.REDIS_URL || process.env.KV_URL
+   */
+  redisUrl?: string;
+
+  /**
+   * The base path to use for deriving endpoints.
+   * If provided, endpoints will be derived from this path.
+   * For example, if basePath is "/api/mcp", then:
+   * - streamableHttpEndpoint will be "/api/mcp"
+   * - sseEndpoint will be "/api/mcp/sse"
+   * - sseMessageEndpoint will be "/api/mcp/message"
+   */
+  basePath?: string;
+
+  /**
+   * The endpoint to use for the streamable HTTP transport.
+   * @default "/mcp" or derived from basePath
+   */
+  streamableHttpEndpoint?: string;
+
+  /**
+   * The endpoint to use for the SSE transport.
+   * @default "/sse" or derived from basePath
+   */
+  sseEndpoint?: string;
+
+  /**
+   * The endpoint to use for the SSE messages transport.
+   * @default "/message" or derived from basePath
+   */
+  sseMessageEndpoint?: string;
+
+  /**
+   * The maximum duration of an MCP request in seconds.
+   * @default 60
+   */
+  maxDuration?: number;
+
+  /**
+   * If true, enables console logging.
+   * @default false
+   */
+  verboseLogs?: boolean;
+};
 ```
 
 ## Features
