@@ -2,6 +2,8 @@
 
 A Vercel adapter for the Model Context Protocol (MCP), enabling real-time communication between your applications and AI models. Currently supports Next.js with more framework adapters coming soon.
 
+Currently uses `**@modelcontextprotocol/sdk@1.10.2**`
+
 ## Installation
 
 ```bash
@@ -42,9 +44,6 @@ const handler = createMcpHandler(
     // You can now use basePath to automatically derive all endpoints
     basePath: '/api/mcp',
     // Or specify endpoints explicitly if you prefer
-    // streamableHttpEndpoint: '/api/mcp',
-    // sseEndpoint: '/api/sse',
-    // sseMessageEndpoint: '/api/message',
     maxDuration: 60,
     verboseLogs: true,
   }
@@ -52,7 +51,7 @@ const handler = createMcpHandler(
 export { handler as GET, handler as POST };
 ```
 
-2. Use the MCP client in your application:
+1. Use the MCP client in your application:
 
 ```typescript
 // app/components/YourComponent.tsx
@@ -91,18 +90,21 @@ type Config = {
 
   /**
    * The endpoint to use for the streamable HTTP transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/mcp" or derived from basePath
    */
   streamableHttpEndpoint?: string;
 
   /**
    * The endpoint to use for the SSE transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/sse" or derived from basePath
    */
   sseEndpoint?: string;
 
   /**
    * The endpoint to use for the SSE messages transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/message" or derived from basePath
    */
   sseMessageEndpoint?: string;
