@@ -28,8 +28,7 @@
     "url": "https://github.com/vercel/vercel/issues"
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "node ../../utils/build.mjs",
     "test": "jest"
   },
   "keywords": [
@@ -43,7 +42,6 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.15.8",
-    "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {

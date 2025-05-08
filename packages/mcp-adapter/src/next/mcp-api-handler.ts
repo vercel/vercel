@@ -176,7 +176,7 @@ export function initializeMcpApiHandler(
         let bodyContent: BodyType;
         const contentType = req.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
-          bodyContent = await req.json();
+          bodyContent = (await req.json()) as BodyType;
         } else {
           bodyContent = await req.text();
         }
