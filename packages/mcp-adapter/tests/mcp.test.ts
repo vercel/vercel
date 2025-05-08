@@ -50,9 +50,9 @@ describe('calculateEndpoints', () => {
   it('handles missing values gracefully', () => {
     const result = calculateEndpoints({});
     expect(result).toEqual({
-      streamableHttpEndpoint: undefined,
-      sseEndpoint: undefined,
-      sseMessageEndpoint: undefined,
+      streamableHttpEndpoint: '/mcp',
+      sseEndpoint: '/sse',
+      sseMessageEndpoint: '/message',
     });
   });
 

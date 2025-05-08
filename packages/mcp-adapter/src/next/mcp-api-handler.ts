@@ -122,9 +122,9 @@ function deriveEndpointsFromBasePath(basePath: string): {
  */
 export function calculateEndpoints({
   basePath,
-  streamableHttpEndpoint,
-  sseEndpoint,
-  sseMessageEndpoint,
+  streamableHttpEndpoint = '/mcp',
+  sseEndpoint = '/sse',
+  sseMessageEndpoint = '/message',
 }: Config) {
   const {
     streamableHttpEndpoint: fullStreamableHttpEndpoint,
