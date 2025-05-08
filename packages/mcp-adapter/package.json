@@ -53,7 +53,7 @@
   "peerDependencies": {
     "next": ">=13.0.0"
   },
-  "packageManager": "pnpm@10.7.0+sha1.66453f13fbf9078d3db193718206a8d738afdbdb",
+  "packageManager": "pnpm@8.3.1",
   "publishConfig": {
     "access": "public"
   }

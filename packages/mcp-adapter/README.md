@@ -42,7 +42,7 @@ const handler = createMcpHandler(
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
     // Set the basePath to where the handler is to automatically derive all endpoints
-    // This base path is for if this snippet is located at: /app/api/[transport]/route.ts 
+    // This base path is for if this snippet is located at: /app/api/[transport]/route.ts
     basePath: '/api/mcp',
     maxDuration: 60,
     verboseLogs: true,
@@ -74,10 +74,14 @@ The `initializeMcpApiHandler` function accepts the following configuration optio
 interface Config {
   redisUrl?: string; // Redis connection URL for pub/sub
   basePath?: string; // string; // Base path for MCP endpoints
-  ~~streamableHttpEndpoint~~?: string; // Endpoint for streamable HTTP transport
-  ~~sseEndpoint~~?: string; // Endpoint for SSE transport
-  ~~sseMessageEndpoint~~?: string; // Endpoint for SSE message transport
+  // @deprecated use 'basePath' instead
+  streamableHttpEndpoint?: string; // Endpoint for streamable HTTP transport
+  // @deprecated use 'basePath' instead
+  sseEndpoint?: string; // Endpoint for SSE transport
+  // @deprecated use 'basePath' instead
+  sseMessageEndpoint?: string; // Endpoint for SSE message transport
   maxDuration?: number; // Maximum duration for SSE connections in seconds
+  verboseLogs?: boolean; // Log debugging information
 }
 ```
 
