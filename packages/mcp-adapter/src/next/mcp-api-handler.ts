@@ -86,12 +86,12 @@ export type Config = {
   /**
    * The base path to use for deriving endpoints.
    * If provided, endpoints will be derived from this path.
-   * For example, if basePath is "/api/mcp", that means your routing is:
-   *  /app/api/[transport]/route.ts and then:
-   * - streamableHttpEndpoint will be "/api/mcp/mcp"
-   * - sseEndpoint will be "/api/mcp/sse"
-   * - sseMessageEndpoint will be "/api/mcp/message"
-   * @default "/mcp"
+   * For example, if basePath is "/", that means your routing is:
+   *  /app/[transport]/route.ts and then:
+   * - streamableHttpEndpoint will be "/mcp"
+   * - sseEndpoint will be "/sse"
+   * - sseMessageEndpoint will be "/message"
+   * @default ""
    */
   basePath?: string;
 };
