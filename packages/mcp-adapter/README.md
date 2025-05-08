@@ -43,6 +43,7 @@ const handler = createMcpHandler(
     // If /api/[transport]/route.ts, then /api/mcp
     streamableHttpEndpoint: '/api/mcp',
     sseEndpoint: '/api/sse',
+    sseMessageEndpoint: '/api/message',
     maxDuration: 60,
     verboseLogs: true,
   }
@@ -73,6 +74,7 @@ interface Config {
   redisUrl?: string; // Redis connection URL for pub/sub
   streamableHttpEndpoint?: string; // Endpoint for streamable HTTP transport
   sseEndpoint?: string; // Endpoint for SSE transport
+  sseMessageEndpoint?: string; // Endpoint for SSE message transport
   maxDuration?: number; // Maximum duration for SSE connections in seconds
 }
 ```

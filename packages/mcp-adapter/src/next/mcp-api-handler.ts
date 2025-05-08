@@ -11,6 +11,7 @@ import { Readable } from 'node:stream';
 import type { ServerOptions } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { BodyType } from './server-response-adapter';
+import assert from 'node:assert';
 
 interface SerializedRequest {
   requestId: string;
@@ -65,6 +66,11 @@ export type Config = {
    */
   sseEndpoint?: string;
   /**
+   * The endpoint to use for the SSE messages transport.
+   * @default "/message"
+   */
+  sseMessageEndpoint?: string;
+  /**
    * The maximum duration of an MCP request in seconds.
    * @default 60
    */
@@ -83,6 +89,7 @@ export function initializeMcpApiHandler(
     redisUrl: process.env.REDIS_URL || process.env.KV_URL,
     streamableHttpEndpoint: '/mcp',
     sseEndpoint: '/sse',
+    sseMessageEndpoint: '/message',
     maxDuration: 60,
     verboseLogs: false,
   }
@@ -91,6 +98,7 @@ export function initializeMcpApiHandler(
     redisUrl,
     streamableHttpEndpoint,
     sseEndpoint,
+    sseMessageEndpoint,
     maxDuration,
     verboseLogs,
   } = config;
@@ -183,8 +191,8 @@ export function initializeMcpApiHandler(
       }
     } else if (url.pathname === sseEndpoint) {
       logger.log('Got new SSE connection');
-
-      const transport = new SSEServerTransport('/message', res);
+      assert(sseMessageEndpoint, 'sseMessageEndpoint is required');
+      const transport = new SSEServerTransport(sseMessageEndpoint, res);
       const sessionId = transport.sessionId;
       const server = new McpServer(
         {
@@ -303,7 +311,7 @@ export function initializeMcpApiHandler(
       const closeReason = await waitPromise;
       logger.log(closeReason);
       await cleanup();
-    } else if (url.pathname === '/message') {
+    } else if (url.pathname === sseMessageEndpoint) {
       logger.log('Received message');
 
       const body = await req.text();

@@ -21,6 +21,7 @@ const handler = createMcpRouteHandler(
   {
     streamableHttpEndpoint: '/mcp',
     sseEndpoint: '/sse',
+    sseMessageEndpoint: '/message',
     redisUrl: process.env.REDIS_URL,
   }
 );
