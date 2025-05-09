@@ -43,7 +43,7 @@ const handler = createMcpHandler(
     redisUrl: process.env.REDIS_URL,
     // Set the basePath to where the handler is to automatically derive all endpoints
     // This base path is for if this snippet is located at: /app/api/[transport]/route.ts
-    basePath: '/api/mcp',
+    basePath: '/api',
     maxDuration: 60,
     verboseLogs: true,
   }
