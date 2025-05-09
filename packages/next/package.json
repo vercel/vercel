@@ -23,7 +23,7 @@
     "dist"
   ],
   "dependencies": {
-    "@vercel/nft": "0.27.10"
+    "@vercel/nft": "0.29.2"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.19",
