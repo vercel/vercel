@@ -181,6 +181,18 @@ export class TelemetryClient {
       value: subcommand ? `${command}:${subcommand}` : command,
     });
   }
+
+  trackCliFlagFuture(command: string, subcommands?: string | string[]) {
+    let subcommand: string | undefined;
+    if (subcommands) {
+      subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
+    }
+
+    this.track({
+      key: 'flag:future',
+      value: subcommand ? `${command}:${subcommand}` : command,
+    });
+  }
 }
 
 export class TelemetryEventStore {

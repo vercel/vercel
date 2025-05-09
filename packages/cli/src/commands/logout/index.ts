@@ -37,6 +37,7 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--future']) {
+    telemetry.trackCliFlagFuture('logout');
     return await future(client);
   }
 
