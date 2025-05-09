@@ -401,6 +401,7 @@ function canParseURL(url: string) {
 
 interface VercelAccessToken extends JWTPayload {
   team_id?: string;
+  exp: number;
 }
 
 export async function verifyJWT(
@@ -412,6 +413,7 @@ export async function verifyJWT(
       issuer: 'https://vercel.com',
       audience: ['https://api.vercel.com', 'https://vercel.com/api'],
     });
+    if (!payload.exp) throw new Error('Missing `exp` claim in JWT');
     return [null, payload];
   } catch (error) {
     if (error instanceof Error) return [error];

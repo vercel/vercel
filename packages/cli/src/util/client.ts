@@ -153,10 +153,16 @@ export default class Client extends EventEmitter implements Stdio {
     const { authConfig } = this;
 
     // If we have a valid access token, do nothing
-    if (isValidAccessToken(authConfig)) return;
+    if (isValidAccessToken(authConfig)) {
+      output.debug('Valid access token, skipping token refresh.');
+      return;
+    }
 
     // If we don't have a valid refresh token, do nothing
-    if (!isValidRefreshToken(authConfig)) return;
+    if (!isValidRefreshToken(authConfig)) {
+      output.debug('Invalid refresh token, skipping token refresh.');
+      return;
+    }
 
     const tokenResponse = await refreshTokenRequest({
       refresh_token: authConfig.refreshToken,
@@ -165,10 +171,18 @@ export default class Client extends EventEmitter implements Stdio {
     const [tokenError, token] = await processTokenResponse(tokenResponse);
 
     // If we had an error, during the refresh process, silently continue
-    if (tokenError) return;
+    if (tokenError) {
+      output.debug('Error refreshing token, skipping token refresh.');
+      if (output.isDebugEnabled()) output.prettyError(tokenError);
+      return;
+    }
 
     const [accessTokenError] = await verifyJWT(token.access_token);
-    if (accessTokenError) return;
+    if (accessTokenError) {
+      output.debug('Error verifying access token, skipping token refresh.');
+      if (output.isDebugEnabled()) output.prettyError(accessTokenError);
+      return;
+    }
 
     this.updateAuthConfig({
       type: 'oauth',
@@ -180,7 +194,14 @@ export default class Client extends EventEmitter implements Stdio {
       const [refreshTokenError, refreshToken] = await verifyJWT(
         token.refresh_token
       );
-      if (refreshTokenError || !refreshToken.exp) return;
+      if (refreshTokenError) {
+        output.debug(
+          'Error verifying refresh token, skipping refresh token update.'
+        );
+        if (output.isDebugEnabled()) output.prettyError(refreshTokenError);
+        return;
+      }
+
       this.updateAuthConfig({
         refreshToken: token.refresh_token,
         refreshTokenExpiresAt: Date.now() + refreshToken.exp * 1000,
@@ -189,6 +210,8 @@ export default class Client extends EventEmitter implements Stdio {
 
     this.writeToAuthConfigFile();
     this.writeToConfigFile();
+
+    output.debug('Tokens refreshed successfully.');
   }
 
   updateConfig(config: Partial<GlobalConfig>) {

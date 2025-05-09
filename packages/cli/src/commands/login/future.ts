@@ -149,10 +149,15 @@ export async function login(client: Client): Promise<number> {
       client.updateConfig({ currentTeam: accessToken.team_id });
 
       if (token.refresh_token) {
-        const [refreshTokenError] = await verifyJWT(token.refresh_token);
+        const [refreshTokenError, refreshToken] = await verifyJWT(
+          token.refresh_token
+        );
         if (refreshTokenError) return refreshTokenError;
         o.debug('refresh_token verified');
-        client.updateAuthConfig({ refreshToken: token.refresh_token });
+        client.updateAuthConfig({
+          refreshToken: token.refresh_token,
+          refreshTokenExpiresAt: Date.now() + refreshToken.exp * 1000,
+        });
       }
 
       // If we have a brand new login, update `currentTeam`
