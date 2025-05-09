@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.4.4
+
+### Patch Changes
+
+- Bump @vercel/nft to latest ([#13312](https://github.com/vercel/vercel/pull/13312))
+
 ## 5.4.3
 
 ### Patch Changes
