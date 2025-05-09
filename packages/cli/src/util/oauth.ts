@@ -1,6 +1,7 @@
 import fetch, { type Response } from 'node-fetch';
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 import ua from './ua';
+import type { AuthConfig, OAuthAuthConfig } from '@vercel-internals/types';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
@@ -101,7 +102,7 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid',
+      scope: 'openid offline_access',
     }),
   });
 }
@@ -227,31 +228,27 @@ export async function deviceAccessTokenRequest(options: {
   }
 }
 
+interface TokenSet {
+  /** The access token issued by the authorization server. */
+  access_token: string;
+  /** The type of the token issued */
+  token_type: 'Bearer';
+  /** The lifetime in seconds of the access token. */
+  expires_in: number;
+  /** The refresh token, which can be used to obtain new access tokens. */
+  refresh_token?: string;
+  /** The scope of the access token. */
+  scope?: string;
+}
+
 /**
- * Process the Device Access Token request Response
+ * Process the Token request Response
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
  */
-export async function processDeviceAccessTokenResponse(
+export async function processTokenResponse(
   response: Response
-): Promise<
-  | [OAuthError | TypeError]
-  | [
-      null,
-      {
-        /** The access token issued by the authorization server. */
-        access_token: string;
-        /** The type of the token issued */
-        token_type: 'Bearer';
-        /** The lifetime in seconds of the access token. */
-        expires_in: number;
-        /** The refresh token, which can be used to obtain new access tokens. */
-        refresh_token?: string;
-        /** The scope of the access token. */
-        scope?: string;
-      },
-    ]
-> {
+): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
   const json = await response.json();
 
   if (!response.ok) {
@@ -307,6 +304,28 @@ export async function processRevocationResponse(
   const json = await response.json();
 
   return [new OAuthError('Revocation request failed', json)];
+}
+
+/**
+ * Perform Refresh Token Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6749#section-6
+ */
+export async function refreshTokenRequest(options: {
+  refresh_token: string;
+}): Promise<Response> {
+  return await fetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'refresh_token',
+      ...options,
+    }),
+  });
 }
 
 type OAuthErrorCode =
@@ -398,4 +417,23 @@ export async function verifyJWT(
     if (error instanceof Error) return [error];
     return [new Error('Could not verify JWT.', { cause: error })];
   }
+}
+
+export function isOAuthAuth(
+  authConfig: AuthConfig
+): authConfig is OAuthAuthConfig {
+  return authConfig.type === 'oauth';
+}
+
+export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
+  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
+}
+
+export function isValidRefreshToken(
+  authConfig: OAuthAuthConfig
+): authConfig is OAuthAuthConfig & { refreshToken: string } {
+  return (
+    'refreshToken' in authConfig &&
+    (authConfig.refreshTokenExpiresAt ?? 0) >= Date.now()
+  );
 }

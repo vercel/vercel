@@ -22,7 +22,7 @@ import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile } from './config/files';
+import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
 import type {
   AuthConfig,
@@ -39,6 +39,14 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
+import {
+  isOAuthAuth,
+  isValidAccessToken,
+  isValidRefreshToken,
+  processTokenResponse,
+  refreshTokenRequest,
+  verifyJWT,
+} from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -132,7 +140,74 @@ export default class Client extends EventEmitter implements Stdio {
     });
   }
 
-  private _fetch(_url: string, opts: FetchOptions = {}) {
+  /**
+   * When the auth config is of type `OAuthAuthConfig`,
+   * this method silently tries to refresh the access_token if it is expired.
+   *
+   * If the refresh_token is also expired, it will not attempt to refresh it.
+   * If there is any error during the refresh process, it will not throw an error.
+   */
+  private async ensureAuthorized(): Promise<void> {
+    if (!isOAuthAuth(this.authConfig)) return;
+
+    const { authConfig } = this;
+
+    // If we have a valid access token, do nothing
+    if (isValidAccessToken(authConfig)) return;
+
+    // If we don't have a valid refresh token, do nothing
+    if (!isValidRefreshToken(authConfig)) return;
+
+    const tokenResponse = await refreshTokenRequest({
+      refresh_token: authConfig.refreshToken,
+    });
+
+    const [tokenError, token] = await processTokenResponse(tokenResponse);
+
+    // If we had an error, during the refresh process, silently continue
+    if (tokenError) return;
+
+    const [accessTokenError] = await verifyJWT(token.access_token);
+    if (accessTokenError) return;
+
+    this.updateAuthConfig({
+      type: 'oauth',
+      token: token.access_token,
+      expiresAt: Date.now() + token.expires_in * 1000,
+    });
+
+    if (token.refresh_token) {
+      const [refreshTokenError, refreshToken] = await verifyJWT(
+        token.refresh_token
+      );
+      if (refreshTokenError || !refreshToken.exp) return;
+      this.updateAuthConfig({
+        refreshToken: token.refresh_token,
+        refreshTokenExpiresAt: Date.now() + refreshToken.exp * 1000,
+      });
+    }
+
+    this.writeToAuthConfigFile();
+    this.writeToConfigFile();
+  }
+
+  updateConfig(config: Partial<GlobalConfig>) {
+    this.config = { ...this.config, ...config };
+  }
+
+  writeToConfigFile() {
+    writeToConfigFile(this.config);
+  }
+
+  updateAuthConfig(authConfig: Partial<AuthConfig>) {
+    this.authConfig = { ...this.authConfig, ...authConfig };
+  }
+
+  writeToAuthConfigFile() {
+    writeToAuthConfigFile(this.authConfig);
+  }
+
+  private async _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
@@ -149,6 +224,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+
+    await this.ensureAuthorized();
+
     if (this.authConfig.token) {
       headers.set('authorization', `Bearer ${this.authConfig.token}`);
     }
