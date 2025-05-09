@@ -6,11 +6,13 @@
 
 - [Geo](../interfaces/index.Geo.md)
 - [Request](../interfaces/index.Request.md)
+- [RuntimeCache](../interfaces/index.RuntimeCache.md)
 
 ### Functions
 
 - [geolocation](index.md#geolocation)
 - [getEnv](index.md#getenv)
+- [getRuntimeCache](index.md#getruntimecache)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
@@ -113,6 +115,41 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 #### Defined in
 
 [packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
+
+---
+
+### getRuntimeCache
+
+▸ **getRuntimeCache**(`cacheOptions?`): [`RuntimeCache`](../interfaces/index.RuntimeCache.md)
+
+Retrieves the Vercel Runtime Cache.
+
+Keys are hashed to ensure they are unique and consistent. The hashing function can be overridden by providing a custom
+`keyHashFunction` in the `cacheOptions` parameter.
+
+To specify a namespace for the cache keys, you can pass a `namespace` option in the `cacheOptions` parameter. If
+a namespace is provided, the cache keys will be prefixed with the namespace followed by a separator (default is `$`). The
+namespaceSeparator can also be customized using the `namespaceSeparator` option.
+
+**`Throws`**
+
+If no cache is available in the context and `InMemoryCache` cannot be created.
+
+#### Parameters
+
+| Name            | Type           | Description                           |
+| :-------------- | :------------- | :------------------------------------ |
+| `cacheOptions?` | `CacheOptions` | Optional configuration for the cache. |
+
+#### Returns
+
+[`RuntimeCache`](../interfaces/index.RuntimeCache.md)
+
+An instance of the Vercel Runtime Cache.
+
+#### Defined in
+
+[packages/functions/src/cache/index.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
 
 ---
 

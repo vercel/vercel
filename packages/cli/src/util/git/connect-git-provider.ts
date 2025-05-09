@@ -113,9 +113,10 @@ export function parseRepoUrl(originUrl: string): RepoInfo | null {
   const provider = hostParts[hostParts.length - 2];
 
   const pathParts = url.pathname.split('/').filter(Boolean);
-  if (pathParts.length !== 2) return null;
-  const org = pathParts[0];
-  const repo = pathParts[1].replace(/\.git$/, '');
+  if (pathParts.length < 2) return null;
+  const repo = pathParts.pop()?.replace(/\.git$/, '');
+  if (!repo) return null;
+  const org = pathParts.join('/');
   return { url: originUrl, provider, org, repo };
 }
 

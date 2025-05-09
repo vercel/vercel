@@ -1,5 +1,19 @@
 # @vercel/next
 
+## 4.7.10
+
+### Patch Changes
+
+- Add .next/turbopack file into diagnostics output ([#13293](https://github.com/vercel/vercel/pull/13293))
+
+## 4.7.9
+
+### Patch Changes
+
+- Support blocking static shells by not loading a fallback when none is present. Also updated the allowQuery logic to support this case. ([#13272](https://github.com/vercel/vercel/pull/13272))
+
+- Fix segment prefetching for PPR-disabled static routes ([#13275](https://github.com/vercel/vercel/pull/13275))
+
 ## 4.7.8
 
 ### Patch Changes

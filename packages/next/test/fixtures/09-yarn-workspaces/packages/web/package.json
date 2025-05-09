@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@jimmy/common": "^1.0.64",
-    "next": "15.2.0-canary.33",
+    "next": "canary",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
