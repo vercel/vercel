@@ -38,6 +38,7 @@ interface LegacyAuthConfig extends AuthConfigBase {
   token?: string;
   type?: 'legacy';
 }
+
 interface OAuthAuthConfig extends AuthConfigBase {
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
