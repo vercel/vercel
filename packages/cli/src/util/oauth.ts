@@ -1,7 +1,6 @@
 import fetch, { type Response } from 'node-fetch';
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 import ua from './ua';
-import type { AuthConfig, OAuthAuthConfig } from '@vercel-internals/types';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
@@ -419,23 +418,4 @@ export async function verifyJWT(
     if (error instanceof Error) return [error];
     return [new Error('Could not verify JWT.', { cause: error })];
   }
-}
-
-export function isOAuthAuth(
-  authConfig: AuthConfig
-): authConfig is OAuthAuthConfig {
-  return authConfig.type === 'oauth';
-}
-
-export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
-  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
-}
-
-export function isValidRefreshToken(
-  authConfig: OAuthAuthConfig
-): authConfig is OAuthAuthConfig & { refreshToken: string } {
-  return (
-    'refreshToken' in authConfig &&
-    (authConfig.refreshTokenExpiresAt ?? 0) >= Date.now()
-  );
 }

@@ -31,6 +31,7 @@ import type {
   Stdio,
   ReadableTTY,
   PaginationOptions,
+  OAuthAuthConfig,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -39,14 +40,7 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
-import {
-  isOAuthAuth,
-  isValidAccessToken,
-  isValidRefreshToken,
-  processTokenResponse,
-  refreshTokenRequest,
-  verifyJWT,
-} from './oauth';
+import { processTokenResponse, refreshTokenRequest, verifyJWT } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -74,6 +68,25 @@ export interface ClientOptions extends Stdio {
 export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
+
+export function isOAuthAuth(
+  authConfig: AuthConfig
+): authConfig is OAuthAuthConfig {
+  return authConfig.type === 'oauth';
+}
+
+export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
+  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
+}
+
+export function isValidRefreshToken(
+  authConfig: OAuthAuthConfig
+): authConfig is OAuthAuthConfig & { refreshToken: string } {
+  return (
+    'refreshToken' in authConfig &&
+    (authConfig.refreshTokenExpiresAt ?? 0) >= Date.now()
+  );
+}
 
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
