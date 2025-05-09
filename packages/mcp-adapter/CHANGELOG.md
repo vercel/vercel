@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.3.0
+
+### Minor Changes
+
+- pin mcp sdk version, introduce basePath ([#13313](https://github.com/vercel/vercel/pull/13313))
+
 ## 0.2.4
 
 ### Patch Changes
