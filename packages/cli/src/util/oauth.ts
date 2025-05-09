@@ -5,7 +5,7 @@ import { hostname } from 'os';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
-const userAgent = `${hostname()} @ ${ua}`;
+export const userAgent = `${hostname()} @ ${ua}`;
 
 interface AuthorizationServerMetadata {
   issuer: URL;
@@ -103,7 +103,7 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid offline_access',
+      scope: 'openid',
     }),
   });
 }
