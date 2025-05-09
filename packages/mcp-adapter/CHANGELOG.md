@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.3.1
+
+### Patch Changes
+
+- pin exact version rather than any version over ([#13315](https://github.com/vercel/vercel/pull/13315))
+
 ## 0.3.0
 
 ### Minor Changes
