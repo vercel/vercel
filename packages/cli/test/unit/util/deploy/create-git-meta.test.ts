@@ -145,6 +145,15 @@ describe('parseRepoUrl', () => {
     expect(repoInfo?.org).toEqual('gitlab-examples');
     expect(repoInfo?.repo).toEqual('knative-kotlin-app');
   });
+  it('should parse gitlab subgroup https url', () => {
+    const repoInfo = parseRepoUrl(
+      'https://gitlab.com/group/subgroup/project.git'
+    );
+    expect(repoInfo).toBeTruthy();
+    expect(repoInfo?.provider).toEqual('gitlab');
+    expect(repoInfo?.org).toEqual('group/subgroup');
+    expect(repoInfo?.repo).toEqual('project');
+  });
 
   it('should parse bitbucket https url', () => {
     const repoInfo = parseRepoUrl(

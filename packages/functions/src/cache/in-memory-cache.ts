@@ -1,4 +1,4 @@
-import { FunctionCache } from './types';
+import { RuntimeCache } from './types';
 
 interface CacheEntry {
   value: unknown;
@@ -7,7 +7,7 @@ interface CacheEntry {
   ttl?: number; // Time to live in seconds
 }
 
-export class InMemoryCache implements FunctionCache {
+export class InMemoryCache implements RuntimeCache {
   private cache: Record<string, CacheEntry> = {};
 
   async get(

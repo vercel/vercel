@@ -1,17 +1,17 @@
-# Interface: FunctionCache
+# Interface: RuntimeCache
 
-[index](../modules/index.md).FunctionCache
+[index](../modules/index.md).RuntimeCache
 
-Interface representing the function cache.
+Interface representing the runtime cache.
 
 ## Table of contents
 
 ### Properties
 
-- [delete](index.FunctionCache.md#delete)
-- [expireTag](index.FunctionCache.md#expiretag)
-- [get](index.FunctionCache.md#get)
-- [set](index.FunctionCache.md#set)
+- [delete](index.RuntimeCache.md#delete)
+- [expireTag](index.RuntimeCache.md#expiretag)
+- [get](index.RuntimeCache.md#get)
+- [set](index.RuntimeCache.md#set)
 
 ## Properties
 

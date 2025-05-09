@@ -8,7 +8,7 @@ import {
   vitest,
 } from 'vitest';
 
-import { getFunctionCache } from '../../../src/cache/index';
+import { getRuntimeCache } from '../../../src/cache/index';
 import { InMemoryCache } from '../../../src/cache/in-memory-cache';
 import { getContext } from '../../../src/get-context';
 
@@ -31,7 +31,7 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the context cache if available', async () => {
-    const cache = getFunctionCache();
+    const cache = getRuntimeCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
@@ -39,9 +39,32 @@ describe('getRuntimeCache', () => {
     expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
+  test('should return the same cache instance for multiple calls to getRuntimeCache when no context cache is available', async () => {
+    // Mock getContext to return an empty object (no context cache)
+    (getContext as Mock).mockReturnValue({});
+
+    // Get two cache instances
+    const cache1 = getRuntimeCache();
+    const cache2 = getRuntimeCache();
+
+    // Set a value in the first cache
+    await cache1.set('test-key', 'test-value');
+
+    // Verify the second cache has access to the same data
+    const result = await cache2.get('test-key');
+
+    // The second cache should be able to access data set by the first cache
+    expect(result).toBe('test-value');
+
+    // Additional verification: setting a value in cache2 should be visible in cache1
+    await cache2.set('another-key', 'another-value');
+    const anotherResult = await cache1.get('another-key');
+    expect(anotherResult).toBe('another-value');
+  });
+
   test('should use InMemoryCache if context cache is not available', async () => {
     (getContext as Mock).mockReturnValue({});
-    const cache = getFunctionCache();
+    const cache = getRuntimeCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
@@ -49,7 +72,7 @@ describe('getRuntimeCache', () => {
 
   test('should use the provided key hash function', async () => {
     const customHashFunction = vitest.fn((key: string) => `custom-${key}`);
-    const cache = getFunctionCache({
+    const cache = getRuntimeCache({
       keyHashFunction: customHashFunction,
     });
     await cache.set('key', 'value');
@@ -62,7 +85,7 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the default key hash function if none is provided', async () => {
-    const cache = getFunctionCache();
+    const cache = getRuntimeCache();
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
@@ -70,7 +93,7 @@ describe('getRuntimeCache', () => {
   });
 
   test('should use the provided namespace and separator', async () => {
-    const cache = getFunctionCache({
+    const cache = getRuntimeCache({
       namespace: 'test',
       namespaceSeparator: ':',
     });
@@ -87,7 +110,7 @@ describe('getRuntimeCache', () => {
 
   test('should use the default namespace separator if none is provided', async () => {
     const namespace = 'test';
-    const cache = getFunctionCache({ namespace });
+    const cache = getRuntimeCache({ namespace });
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');

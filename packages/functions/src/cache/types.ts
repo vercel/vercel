@@ -1,7 +1,7 @@
 /**
- * Interface representing the function cache.
+ * Interface representing the runtime cache.
  */
-export interface FunctionCache {
+export interface RuntimeCache {
   /**
    * Deletes a value from the cache.
    *

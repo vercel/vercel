@@ -4,15 +4,15 @@
 
 ### Interfaces
 
-- [FunctionCache](../interfaces/index.FunctionCache.md)
 - [Geo](../interfaces/index.Geo.md)
 - [Request](../interfaces/index.Request.md)
+- [RuntimeCache](../interfaces/index.RuntimeCache.md)
 
 ### Functions
 
 - [geolocation](index.md#geolocation)
 - [getEnv](index.md#getenv)
-- [getFunctionCache](index.md#getfunctioncache)
+- [getRuntimeCache](index.md#getruntimecache)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
@@ -118,11 +118,11 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 ---
 
-### getFunctionCache
+### getRuntimeCache
 
-▸ **getFunctionCache**(`cacheOptions?`): [`FunctionCache`](../interfaces/index.FunctionCache.md)
+▸ **getRuntimeCache**(`cacheOptions?`): [`RuntimeCache`](../interfaces/index.RuntimeCache.md)
 
-Retrieves the Vercel Function Cache.
+Retrieves the Vercel Runtime Cache.
 
 Keys are hashed to ensure they are unique and consistent. The hashing function can be overridden by providing a custom
 `keyHashFunction` in the `cacheOptions` parameter.
@@ -143,13 +143,13 @@ If no cache is available in the context and `InMemoryCache` cannot be created.
 
 #### Returns
 
-[`FunctionCache`](../interfaces/index.FunctionCache.md)
+[`RuntimeCache`](../interfaces/index.RuntimeCache.md)
 
-An instance of the Vercel Function Cache.
+An instance of the Vercel Runtime Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:29](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L29)
+[packages/functions/src/cache/index.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
 
 ---
 

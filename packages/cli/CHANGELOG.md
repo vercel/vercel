@@ -1,5 +1,24 @@
 # vercel
 
+## 41.7.3
+
+### Patch Changes
+
+- [cli] Remove `glob` as a dev dependency ([#13304](https://github.com/vercel/vercel/pull/13304))
+
+## 41.7.2
+
+### Patch Changes
+
+- Fix linking GitLab repositories that belong to subgroups ([#13295](https://github.com/vercel/vercel/pull/13295))
+
+## 41.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`12672c836741e24efbe0c02043be0064af2f09ac`](https://github.com/vercel/vercel/commit/12672c836741e24efbe0c02043be0064af2f09ac)]:
+  - @vercel/next@4.7.10
+
 ## 41.7.0
 
 ### Minor Changes

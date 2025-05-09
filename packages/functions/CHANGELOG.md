@@ -1,5 +1,17 @@
 # @vercel/functions
 
+## 2.0.3
+
+### Patch Changes
+
+- Rename FunctionCache / getFunctionCache to RuntimeCache / getRuntimeCache ([#13296](https://github.com/vercel/vercel/pull/13296))
+
+## 2.0.2
+
+### Patch Changes
+
+- Update in memory cache to use a singleton instance ([#13288](https://github.com/vercel/vercel/pull/13288))
+
 ## 2.0.1
 
 ### Patch Changes
