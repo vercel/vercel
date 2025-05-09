@@ -2,6 +2,8 @@
 
 A Vercel adapter for the Model Context Protocol (MCP), enabling real-time communication between your applications and AI models. Currently supports Next.js with more framework adapters coming soon.
 
+Currently uses `**@modelcontextprotocol/sdk@1.10.2**`
+
 ## Installation
 
 ```bash
@@ -39,11 +41,9 @@ const handler = createMcpHandler(
   {
     // Optional configuration
     redisUrl: process.env.REDIS_URL,
-    // The endpoint path that that the createMcpHandler is hosted on
-    // If /api/[transport]/route.ts, then /api/mcp
-    streamableHttpEndpoint: '/api/mcp',
-    sseEndpoint: '/api/sse',
-    sseMessageEndpoint: '/api/message',
+    // Set the basePath to where the handler is to automatically derive all endpoints
+    // This base path is for if this snippet is located at: /app/api/[transport]/route.ts
+    basePath: '/api',
     maxDuration: 60,
     verboseLogs: true,
   }
@@ -51,14 +51,15 @@ const handler = createMcpHandler(
 export { handler as GET, handler as POST };
 ```
 
-2. Use the MCP client in your application:
+1. Use the MCP client in your application:
 
 ```typescript
 // app/components/YourComponent.tsx
 import { McpClient } from '@modelcontextprotocol/sdk/client';
 
 const client = new McpClient({
-  transport: new SSEClientTransport('/api/sse'),
+  // When using basePath, the SSE endpoint will be automatically derived
+  transport: new SSEClientTransport('/api/mcp/sse'),
 });
 
 // Use the client to make requests
@@ -72,10 +73,15 @@ The `initializeMcpApiHandler` function accepts the following configuration optio
 ```typescript
 interface Config {
   redisUrl?: string; // Redis connection URL for pub/sub
+  basePath?: string; // string; // Base path for MCP endpoints
+  // @deprecated use 'basePath' instead
   streamableHttpEndpoint?: string; // Endpoint for streamable HTTP transport
+  // @deprecated use 'basePath' instead
   sseEndpoint?: string; // Endpoint for SSE transport
+  // @deprecated use 'basePath' instead
   sseMessageEndpoint?: string; // Endpoint for SSE message transport
   maxDuration?: number; // Maximum duration for SSE connections in seconds
+  verboseLogs?: boolean; // Log debugging information
 }
 ```
 

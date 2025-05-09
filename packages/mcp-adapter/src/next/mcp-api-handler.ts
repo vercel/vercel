@@ -57,16 +57,19 @@ export type Config = {
   redisUrl?: string;
   /**
    * The endpoint to use for the streamable HTTP transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/mcp"
    */
   streamableHttpEndpoint?: string;
   /**
    * The endpoint to use for the SSE transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/sse"
    */
   sseEndpoint?: string;
   /**
    * The endpoint to use for the SSE messages transport.
+   * @deprecated Use `set basePath` instead.
    * @default "/message"
    */
   sseMessageEndpoint?: string;
@@ -80,7 +83,67 @@ export type Config = {
    * @default false
    */
   verboseLogs?: boolean;
+  /**
+   * The base path to use for deriving endpoints.
+   * If provided, endpoints will be derived from this path.
+   * For example, if basePath is "/", that means your routing is:
+   *  /app/[transport]/route.ts and then:
+   * - streamableHttpEndpoint will be "/mcp"
+   * - sseEndpoint will be "/sse"
+   * - sseMessageEndpoint will be "/message"
+   * @default ""
+   */
+  basePath?: string;
 };
+
+/**
+ * Derives MCP endpoints from a base path.
+ * @param basePath - The base path to derive endpoints from
+ * @returns An object containing the derived endpoints
+ */
+function deriveEndpointsFromBasePath(basePath: string): {
+  streamableHttpEndpoint: string;
+  sseEndpoint: string;
+  sseMessageEndpoint: string;
+} {
+  // Remove trailing slash if present
+  const normalizedBasePath = basePath.replace(/\/$/, '');
+
+  return {
+    streamableHttpEndpoint: `${normalizedBasePath}/mcp`,
+    sseEndpoint: `${normalizedBasePath}/sse`,
+    sseMessageEndpoint: `${normalizedBasePath}/message`,
+  };
+}
+/**
+ * Calculates the endpoints for the MCP handler.
+ * @param config - The configuration for the MCP handler.
+ * @returns An object containing the endpoints for the MCP handler.
+ */
+export function calculateEndpoints({
+  basePath,
+  streamableHttpEndpoint = '/mcp',
+  sseEndpoint = '/sse',
+  sseMessageEndpoint = '/message',
+}: Config) {
+  const {
+    streamableHttpEndpoint: fullStreamableHttpEndpoint,
+    sseEndpoint: fullSseEndpoint,
+    sseMessageEndpoint: fullSseMessageEndpoint,
+  } = basePath != null
+    ? deriveEndpointsFromBasePath(basePath)
+    : {
+        streamableHttpEndpoint,
+        sseEndpoint,
+        sseMessageEndpoint,
+      };
+
+  return {
+    streamableHttpEndpoint: fullStreamableHttpEndpoint,
+    sseEndpoint: fullSseEndpoint,
+    sseMessageEndpoint: fullSseMessageEndpoint,
+  };
+}
 
 export function initializeMcpApiHandler(
   initializeServer: (server: McpServer) => void,
@@ -90,18 +153,30 @@ export function initializeMcpApiHandler(
     streamableHttpEndpoint: '/mcp',
     sseEndpoint: '/sse',
     sseMessageEndpoint: '/message',
+    basePath: '',
     maxDuration: 60,
     verboseLogs: false,
   }
 ) {
   const {
     redisUrl,
-    streamableHttpEndpoint,
-    sseEndpoint,
-    sseMessageEndpoint,
+    basePath,
+    streamableHttpEndpoint: explicitStreamableHttpEndpoint,
+    sseEndpoint: explicitSseEndpoint,
+    sseMessageEndpoint: explicitSseMessageEndpoint,
     maxDuration,
     verboseLogs,
   } = config;
+
+  // If basePath is provided, derive endpoints from it
+  const { streamableHttpEndpoint, sseEndpoint, sseMessageEndpoint } =
+    calculateEndpoints({
+      basePath,
+      streamableHttpEndpoint: explicitStreamableHttpEndpoint,
+      sseEndpoint: explicitSseEndpoint,
+      sseMessageEndpoint: explicitSseMessageEndpoint,
+    });
+
   const logger = createLogger(verboseLogs);
   const redis = createClient({
     url: redisUrl,
