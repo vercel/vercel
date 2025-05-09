@@ -344,7 +344,7 @@ export const frameworks = [
   {
     name: 'Blade',
     slug: 'blade',
-    demo: 'https://blade-template.vercel.app',
+    demo: 'https://blade-example-basic.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/blade.svg',
     tagline: 'Build instant web apps with React.',
     description: 'A Blade app, created with the Blade CLI.',
