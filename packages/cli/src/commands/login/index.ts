@@ -49,6 +49,7 @@ export default async function login(client: Client): Promise<number> {
   }
 
   if (parsedArgs.flags['--future']) {
+    telemetry.trackCliFlagFuture('login');
     return await future(client);
   }
 
