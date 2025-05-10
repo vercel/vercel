@@ -576,4 +576,19 @@ describe('detectFrameworks()', () => {
     );
     expect(slugs).toEqual(['remix']);
   });
+
+  it('Should detect `blade`', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          blade: 'latest',
+        },
+      }),
+    });
+
+    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+      f => f.slug
+    );
+    expect(slugs).toEqual(['blade']);
+  });
 });
