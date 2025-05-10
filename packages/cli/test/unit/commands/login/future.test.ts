@@ -58,7 +58,7 @@ describe('login --future', () => {
       })
     );
     const _as = await as();
-    const accessTokenPayload = { team_id: randomUUID() };
+    const accessTokenPayload = { team_id: randomUUID(), exp: Date.now() };
     jwtVerifyMock.mockResolvedValueOnce({
       payload: accessTokenPayload,
     } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
@@ -81,7 +81,7 @@ describe('login --future', () => {
         access_token: randomUUID(),
         token_type: 'Bearer',
         expires_in: 1,
-        scope: 'openid',
+        scope: 'openid offline_access',
       })
     );
 

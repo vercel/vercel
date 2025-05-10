@@ -103,7 +103,7 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid',
+      scope: 'openid offline_access',
     }),
   });
 }
@@ -229,31 +229,27 @@ export async function deviceAccessTokenRequest(options: {
   }
 }
 
+interface TokenSet {
+  /** The access token issued by the authorization server. */
+  access_token: string;
+  /** The type of the token issued */
+  token_type: 'Bearer';
+  /** The lifetime in seconds of the access token. */
+  expires_in: number;
+  /** The refresh token, which can be used to obtain new access tokens. */
+  refresh_token?: string;
+  /** The scope of the access token. */
+  scope?: string;
+}
+
 /**
- * Process the Device Access Token request Response
+ * Process the Token request Response
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
  */
-export async function processDeviceAccessTokenResponse(
+export async function processTokenResponse(
   response: Response
-): Promise<
-  | [OAuthError | TypeError]
-  | [
-      null,
-      {
-        /** The access token issued by the authorization server. */
-        access_token: string;
-        /** The type of the token issued */
-        token_type: 'Bearer';
-        /** The lifetime in seconds of the access token. */
-        expires_in: number;
-        /** The refresh token, which can be used to obtain new access tokens. */
-        refresh_token?: string;
-        /** The scope of the access token. */
-        scope?: string;
-      },
-    ]
-> {
+): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
   const json = await response.json();
 
   if (!response.ok) {
@@ -309,6 +305,28 @@ export async function processRevocationResponse(
   const json = await response.json();
 
   return [new OAuthError('Revocation request failed', json)];
+}
+
+/**
+ * Perform Refresh Token Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6749#section-6
+ */
+export async function refreshTokenRequest(options: {
+  refresh_token: string;
+}): Promise<Response> {
+  return await fetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'refresh_token',
+      ...options,
+    }),
+  });
 }
 
 type OAuthErrorCode =
@@ -384,6 +402,7 @@ function canParseURL(url: string) {
 
 interface VercelAccessToken extends JWTPayload {
   team_id?: string;
+  exp: number;
 }
 
 export async function verifyJWT(
@@ -395,6 +414,7 @@ export async function verifyJWT(
       issuer: 'https://vercel.com',
       audience: ['https://api.vercel.com', 'https://vercel.com/api'],
     });
+    if (!payload.exp) throw new Error('Missing `exp` claim in JWT');
     return [null, payload];
   } catch (error) {
     if (error instanceof Error) return [error];
