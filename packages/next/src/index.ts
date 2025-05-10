@@ -514,6 +514,8 @@ export const build: BuildV2 = async buildOptions => {
     build: JSON.stringify(shouldRunCompileStep),
   });
 
+  env.NODE_OPTIONS = '--max-old-space-size=14000 --max-semi-space-size=512';
+
   if (shouldRunCompileStep) {
     await builderSpan
       .child(BUILDER_COMPILE_STEP, {
