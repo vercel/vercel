@@ -7,7 +7,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "https://files-2bsfwzvlo-vtest314-ijjk-testing.vercel.app",
+    "next": "https://files-3xr3lltiz-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
