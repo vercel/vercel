@@ -6,6 +6,6 @@
     "build": "parcel build"
   },
   "dependencies": {
-    "parcel": "^2.14.0"
+    "parcel": "^2.15.0"
   }
 }
