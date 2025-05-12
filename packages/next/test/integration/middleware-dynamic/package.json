@@ -4,7 +4,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://files-8j3h5z79b-vtest314-ijjk-testing.vercel.app",
     "react": "latest",
     "react-dom": "latest"
   }
