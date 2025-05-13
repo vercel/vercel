@@ -18,11 +18,11 @@ it('should handle metadata files correctly', async () => {
     path.join(__dirname, '../fixtures/00-metadata-files')
   );
 
-  expect(output['pages/opengraph-image.png']).toBeDefined();
-  expect(output['pages/opengraph-image.png'].type).toBe('FileFsRef');
+  expect(output['opengraph-image.png']).toBeDefined();
+  expect(output['opengraph-image.png'].type).toBe('FileFsRef');
 
-  expect(output['pages/favicon.jpg']).toBeDefined();
-  expect(output['pages/favicon.jpg'].type).toBe('FileFsRef');
+  expect(output['favicon.jpg']).toBeDefined();
+  expect(output['favicon.jpg'].type).toBe('FileFsRef');
 
   expect(output['pages/opengraph-image']).toBeDefined();
   expect(output['pages/opengraph-image'].type).toBe('Lambda');
