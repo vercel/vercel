@@ -24,6 +24,9 @@ it('should handle metadata files correctly', async () => {
   expect(output['favicon.jpg']).toBeDefined();
   expect(output['favicon.jpg'].type).toBe('FileFsRef');
 
+  expect(output['favicon.ico']).toBeDefined();
+  expect(output['favicon.ico'].type).toBe('FileFsRef');
+
   expect(output['pages/opengraph-image']).toBeDefined();
   expect(output['pages/opengraph-image'].type).toBe('Lambda');
 
