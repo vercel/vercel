@@ -3099,13 +3099,11 @@ export const onPrerenderRoute =
   };
 
 export const METADATA_CONVENTIONS = [
-  '/favicon.',
-  '/icon.',
-  '/apple-icon.',
-  '/opengraph-image.',
-  '/twitter-image.',
-  '/sitemap.',
-  '/robots.',
+  'favicon',
+  'icon',
+  'apple-icon',
+  'opengraph-image',
+  'twitter-image',
 ];
 
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
@@ -3117,9 +3115,15 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 export function isMetadataFile(filePath: string): boolean {
   const hasImageExtension = /\.(jpg|jpeg|png)$/i.test(filePath);
 
-  return (
-    hasImageExtension &&
-    METADATA_CONVENTIONS.some(convention => filePath.includes(convention))
+  if (!hasImageExtension) {
+    return false;
+  }
+
+  const fileName = filePath.split('/').pop() || '';
+  const fileNameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+
+  return METADATA_CONVENTIONS.some(
+    convention => fileNameWithoutExt === convention
   );
 }
 
