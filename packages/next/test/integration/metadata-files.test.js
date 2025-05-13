@@ -2,7 +2,7 @@ process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
 const fs = require('fs-extra');
-const builder = require('../../');
+const builder = require('../../dist/index');
 const {
   createRunBuildLambda,
 } = require('../../../../test/lib/run-build-lambda');
