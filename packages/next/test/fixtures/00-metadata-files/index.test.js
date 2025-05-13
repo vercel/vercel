@@ -12,14 +12,14 @@ it('should handle metadata files correctly', async () => {
     path.join(__dirname)
   );
 
-  expect(buildResult.output['pages/opengraph-image.png']).toBeDefined();
-  expect(buildResult.output['pages/opengraph-image.png'].type).toBe('FileFsRef');
+  expect(buildResult.output['opengraph-image.png']).toBeDefined();
+  expect(buildResult.output['opengraph-image.png'].type).toBe('FileFsRef');
   
-  expect(buildResult.output['pages/favicon.jpg']).toBeDefined();
-  expect(buildResult.output['pages/favicon.jpg'].type).toBe('FileFsRef');
+  expect(buildResult.output['favicon.jpg']).toBeDefined();
+  expect(buildResult.output['favicon.jpg'].type).toBe('FileFsRef');
   
-  expect(buildResult.output['pages/opengraph-image']).toBeDefined();
-  expect(buildResult.output['pages/opengraph-image'].type).toBe('Lambda');
+  expect(buildResult.output['opengraph-image']).toBeDefined();
+  expect(buildResult.output['opengraph-image'].type).toBe('Lambda');
   
   const metadataDir = path.join(
     buildResult.workPath,
