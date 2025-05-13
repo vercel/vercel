@@ -1294,9 +1294,9 @@ export async function getPrerenderManifest(
       isLocalePrefixed: false,
     };
   }
-  
+
   const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
-  if (!await fs.pathExists(metadataDir)) {
+  if (!(await fs.pathExists(metadataDir))) {
     await fs.mkdir(metadataDir, { recursive: true });
   }
 
@@ -1407,7 +1407,7 @@ export async function getPrerenderManifest(
         if (isMetadataFile(route)) {
           return;
         }
-        
+
         const { initialRevalidateSeconds, dataRoute, srcRoute } =
           manifest.routes[route];
         ret.staticRoutes[route] = {
@@ -3106,9 +3106,7 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
  * Checks if a file path is a metadata file based on the metadata conventions.
  */
 export function isMetadataFile(filePath: string): boolean {
-  return METADATA_CONVENTIONS.some(convention => 
-    filePath.includes(convention)
-  );
+  return METADATA_CONVENTIONS.some(convention => filePath.includes(convention));
 }
 
 export async function getStaticFiles(
@@ -3173,13 +3171,22 @@ export async function getStaticFiles(
     if (isMetadataFile(file)) {
       metadataDirectoryFiles[path.posix.join(entryDirectory, file)] =
         metadataFiles[file];
-      
-      const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
-      if (!await fs.pathExists(metadataDir)) {
+
+      const metadataDir = path.join(
+        entryPath,
+        outputDirectory,
+        'server/_metadata'
+      );
+      if (!(await fs.pathExists(metadataDir))) {
         await fs.mkdir(metadataDir, { recursive: true });
       }
-      
-      const sourceFile = path.join(entryPath, outputDirectory, 'server/pages', file);
+
+      const sourceFile = path.join(
+        entryPath,
+        outputDirectory,
+        'server/pages',
+        file
+      );
       const destFile = path.join(metadataDir, path.basename(file));
       if (await fs.pathExists(sourceFile)) {
         await fs.copyFile(sourceFile, destFile);

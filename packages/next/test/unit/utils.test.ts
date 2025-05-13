@@ -451,15 +451,15 @@ describe('isMetadataFile', () => {
     expect(isMetadataFile('/apple-icon.jpg')).toBe(true);
     expect(isMetadataFile('/opengraph-image.png')).toBe(true);
     expect(isMetadataFile('/twitter-image.jpg')).toBe(true);
-    
+
     expect(isMetadataFile('/app/favicon.ico')).toBe(true);
     expect(isMetadataFile('/pages/opengraph-image.jpg')).toBe(true);
-    
+
     expect(isMetadataFile('/regular-file.js')).toBe(false);
     expect(isMetadataFile('/app/page.js')).toBe(false);
     expect(isMetadataFile('/pages/index.js')).toBe(false);
   });
-  
+
   it('should match all metadata conventions defined in METADATA_CONVENTIONS', () => {
     METADATA_CONVENTIONS.forEach(convention => {
       expect(isMetadataFile(`${convention}.jpg`)).toBe(true);
