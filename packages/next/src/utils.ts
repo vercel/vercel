@@ -3110,16 +3110,16 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 /**
  * Checks if a file path is a metadata file based on the metadata conventions.
- * Only treats files with image extensions (jpg/png) as static files.
+ * Only treats files with image extensions (jpg/png/ico) as static files.
  */
 export function isMetadataFile(filePath: string): boolean {
-  const hasImageExtension = /\.(jpg|jpeg|png)$/i.test(filePath);
+  const hasImageExtension = /\.(jpg|jpeg|png|ico)$/i.test(filePath);
 
   if (!hasImageExtension) {
     return false;
   }
 
-  const fileName = filePath.split('/').pop() || '';
+  const fileName = path.basename(filePath);
   const fileNameWithoutExt = fileName.replace(/\.[^.]+$/, '');
 
   return METADATA_CONVENTIONS.some(
