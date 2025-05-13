@@ -990,6 +990,7 @@ export interface CreateLambdaFromPseudoLayersOptions
   isStreaming?: boolean;
   nextVersion?: string;
   experimentalAllowBundling?: boolean;
+  files?: Files;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -4045,7 +4046,7 @@ function getRouteMatchers(
   }
 
   function normalizeHas(has: HasField): HasField {
-    return has.map(v =>
+    return has.map((v: any) =>
       v.type === 'header'
         ? {
             ...v,
@@ -4177,7 +4178,7 @@ export async function getServerlessPages(params: {
           glob('**/page.js', appDir),
           glob('**/route.js', appDir),
           glob('**/_not-found.js', appDir),
-        ]).then(items => Object.assign(...items))
+        ]).then(items => Object.assign({}, ...items))
       : Promise.resolve({} as Record<string, FileFsRef>),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
