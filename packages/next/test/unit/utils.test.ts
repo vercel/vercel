@@ -463,7 +463,7 @@ describe('isMetadataFile', () => {
   it('should only identify metadata files with image extensions', () => {
     expect(isMetadataFile('/favicon.png')).toBe(true);
     expect(isMetadataFile('/opengraph-image.jpg')).toBe(true);
-    
+
     expect(isMetadataFile('/favicon.ico')).toBe(false);
     expect(isMetadataFile('/sitemap.xml')).toBe(false);
     expect(isMetadataFile('/robots.txt')).toBe(false);
@@ -474,7 +474,7 @@ describe('isMetadataFile', () => {
     METADATA_CONVENTIONS.forEach(convention => {
       expect(isMetadataFile(`${convention}jpg`)).toBe(true);
       expect(isMetadataFile(`/app${convention}png`)).toBe(true);
-      
+
       expect(isMetadataFile(`${convention}js`)).toBe(false);
       expect(isMetadataFile(`/app${convention}txt`)).toBe(false);
     });

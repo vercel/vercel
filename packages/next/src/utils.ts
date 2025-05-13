@@ -3116,9 +3116,10 @@ export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
  */
 export function isMetadataFile(filePath: string): boolean {
   const hasImageExtension = /\.(jpg|jpeg|png)$/i.test(filePath);
-  
-  return hasImageExtension && METADATA_CONVENTIONS.some(convention => 
-    filePath.includes(convention)
+
+  return (
+    hasImageExtension &&
+    METADATA_CONVENTIONS.some(convention => filePath.includes(convention))
   );
 }
 
