@@ -1297,7 +1297,7 @@ export async function getPrerenderManifest(
 
   const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
   if (!(await fs.pathExists(metadataDir))) {
-    await fs.mkdir(metadataDir, { recursive: true });
+    await fs.mkdirp(metadataDir);
   }
 
   const manifest:
@@ -3192,7 +3192,7 @@ export async function getStaticFiles(
         'server/_metadata'
       );
       if (!(await fs.pathExists(metadataDir))) {
-        await fs.mkdir(metadataDir, { recursive: true });
+        await fs.mkdirp(metadataDir);
       }
 
       const sourceFile = path.join(
