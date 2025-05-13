@@ -1962,8 +1962,6 @@ function normalizeSourceFilePageFromManifest(
     '/robots.',
   ];
 
-  export { metadataConventions as METADATA_CONVENTIONS };
-
   // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
   const isSpecialFile = metadataConventions.some(convention =>
     routeName.startsWith(convention)
@@ -3100,13 +3098,28 @@ export const onPrerenderRoute =
     }
   };
 
+export const METADATA_CONVENTIONS = [
+  '/favicon.',
+  '/icon.',
+  '/apple-icon.',
+  '/opengraph-image.',
+  '/twitter-image.',
+  '/sitemap.',
+  '/robots.',
+];
+
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 /**
  * Checks if a file path is a metadata file based on the metadata conventions.
+ * Only treats files with image extensions (jpg/png) as static files.
  */
 export function isMetadataFile(filePath: string): boolean {
-  return METADATA_CONVENTIONS.some(convention => filePath.includes(convention));
+  const hasImageExtension = /\.(jpg|jpeg|png)$/i.test(filePath);
+  
+  return hasImageExtension && METADATA_CONVENTIONS.some(convention => 
+    filePath.includes(convention)
+  );
 }
 
 export async function getStaticFiles(

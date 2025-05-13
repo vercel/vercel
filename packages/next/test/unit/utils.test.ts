@@ -445,14 +445,14 @@ describe('normalizePrefetches', () => {
 });
 
 describe('isMetadataFile', () => {
-  it('should correctly identify metadata files', () => {
-    expect(isMetadataFile('/favicon.ico')).toBe(true);
+  it('should correctly identify image metadata files', () => {
+    expect(isMetadataFile('/favicon.png')).toBe(true);
     expect(isMetadataFile('/icon.png')).toBe(true);
     expect(isMetadataFile('/apple-icon.jpg')).toBe(true);
     expect(isMetadataFile('/opengraph-image.png')).toBe(true);
     expect(isMetadataFile('/twitter-image.jpg')).toBe(true);
 
-    expect(isMetadataFile('/app/favicon.ico')).toBe(true);
+    expect(isMetadataFile('/app/favicon.png')).toBe(true);
     expect(isMetadataFile('/pages/opengraph-image.jpg')).toBe(true);
 
     expect(isMetadataFile('/regular-file.js')).toBe(false);
@@ -460,10 +460,23 @@ describe('isMetadataFile', () => {
     expect(isMetadataFile('/pages/index.js')).toBe(false);
   });
 
-  it('should match all metadata conventions defined in METADATA_CONVENTIONS', () => {
+  it('should only identify metadata files with image extensions', () => {
+    expect(isMetadataFile('/favicon.png')).toBe(true);
+    expect(isMetadataFile('/opengraph-image.jpg')).toBe(true);
+    
+    expect(isMetadataFile('/favicon.ico')).toBe(false);
+    expect(isMetadataFile('/sitemap.xml')).toBe(false);
+    expect(isMetadataFile('/robots.txt')).toBe(false);
+    expect(isMetadataFile('/opengraph-image.js')).toBe(false);
+  });
+
+  it('should match all metadata conventions with image extensions', () => {
     METADATA_CONVENTIONS.forEach(convention => {
-      expect(isMetadataFile(`${convention}.jpg`)).toBe(true);
-      expect(isMetadataFile(`/app${convention}.png`)).toBe(true);
+      expect(isMetadataFile(`${convention}jpg`)).toBe(true);
+      expect(isMetadataFile(`/app${convention}png`)).toBe(true);
+      
+      expect(isMetadataFile(`${convention}js`)).toBe(false);
+      expect(isMetadataFile(`/app${convention}txt`)).toBe(false);
     });
   });
 });
