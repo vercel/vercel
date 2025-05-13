@@ -1,5 +1,11 @@
 # vercel
 
+## 41.7.6
+
+### Patch Changes
+
+- [cli] Bump @vercel/fun to remove deprecated package warning ([#13330](https://github.com/vercel/vercel/pull/13330))
+
 ## 41.7.5
 
 ### Patch Changes
