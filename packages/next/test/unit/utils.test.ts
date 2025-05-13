@@ -463,8 +463,8 @@ describe('isMetadataFile', () => {
   it('should only identify metadata files with image extensions', () => {
     expect(isMetadataFile('/favicon.png')).toBe(true);
     expect(isMetadataFile('/opengraph-image.jpg')).toBe(true);
+    expect(isMetadataFile('/favicon.ico')).toBe(true);
 
-    expect(isMetadataFile('/favicon.ico')).toBe(false);
     expect(isMetadataFile('/sitemap.xml')).toBe(false);
     expect(isMetadataFile('/robots.txt')).toBe(false);
     expect(isMetadataFile('/opengraph-image.js')).toBe(false);
