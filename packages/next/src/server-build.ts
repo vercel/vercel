@@ -1694,7 +1694,7 @@ export async function serverBuild({
     }
   }
 
-  const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
+  const { staticFiles, publicDirectoryFiles, staticDirectoryFiles, metadataDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const normalizeNextDataRoute = (isOverride = false) => {
@@ -1916,6 +1916,7 @@ export async function serverBuild({
       ...staticPages,
       ...staticFiles,
       ...staticDirectoryFiles,
+      ...metadataDirectoryFiles,
       ...privateOutputs.files,
       ...middleware.edgeFunctions,
       ...nodeMiddleware?.lambdas,

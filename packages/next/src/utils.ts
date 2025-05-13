@@ -1294,6 +1294,11 @@ export async function getPrerenderManifest(
       isLocalePrefixed: false,
     };
   }
+  
+  const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
+  if (!await fs.pathExists(metadataDir)) {
+    await fs.mkdir(metadataDir, { recursive: true });
+  }
 
   const manifest:
     | {
@@ -1399,6 +1404,10 @@ export async function getPrerenderManifest(
       };
 
       routes.forEach(route => {
+        if (isMetadataFile(route)) {
+          return;
+        }
+        
         const { initialRevalidateSeconds, dataRoute, srcRoute } =
           manifest.routes[route];
         ret.staticRoutes[route] = {
@@ -1952,6 +1961,8 @@ function normalizeSourceFilePageFromManifest(
     '/sitemap.',
     '/robots.',
   ];
+
+  export { metadataConventions as METADATA_CONVENTIONS };
 
   // these special metadata files for will not contain `/route` or `/page` suffix, so return the routeName as-is.
   const isSpecialFile = metadataConventions.some(convention =>
@@ -3091,6 +3102,15 @@ export const onPrerenderRoute =
 
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
+/**
+ * Checks if a file path is a metadata file based on the metadata conventions.
+ */
+export function isMetadataFile(filePath: string): boolean {
+  return METADATA_CONVENTIONS.some(convention => 
+    filePath.includes(convention)
+  );
+}
+
 export async function getStaticFiles(
   entryPath: string,
   entryDirectory: string,
@@ -3105,6 +3125,11 @@ export async function getStaticFiles(
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
+
+  const metadataFiles = await glob(
+    '**',
+    path.join(entryPath, outputDirectory, 'server/pages')
+  );
 
   let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};
   let publicFolderPath: string | undefined;
@@ -3127,6 +3152,7 @@ export async function getStaticFiles(
   const staticFiles: Record<string, FileFsRef> = {};
   const staticDirectoryFiles: Record<string, FileFsRef> = {};
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
+  const metadataDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
     staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
@@ -3143,11 +3169,30 @@ export async function getStaticFiles(
       publicFolderFiles[file];
   }
 
+  for (const file of Object.keys(metadataFiles)) {
+    if (isMetadataFile(file)) {
+      metadataDirectoryFiles[path.posix.join(entryDirectory, file)] =
+        metadataFiles[file];
+      
+      const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
+      if (!await fs.pathExists(metadataDir)) {
+        await fs.mkdir(metadataDir, { recursive: true });
+      }
+      
+      const sourceFile = path.join(entryPath, outputDirectory, 'server/pages', file);
+      const destFile = path.join(metadataDir, path.basename(file));
+      if (await fs.pathExists(sourceFile)) {
+        await fs.copyFile(sourceFile, destFile);
+      }
+    }
+  }
+
   console.timeEnd(collectLabel);
   return {
     staticFiles,
     staticDirectoryFiles,
     publicDirectoryFiles,
+    metadataDirectoryFiles,
   };
 }
 
