@@ -37,4 +37,5 @@ it('should handle metadata files correctly', async () => {
     true
   );
   expect(fs.existsSync(path.join(metadataDir, 'favicon.jpg'))).toBe(true);
+  expect(fs.existsSync(path.join(metadataDir, 'favicon.ico'))).toBe(true);
 });
