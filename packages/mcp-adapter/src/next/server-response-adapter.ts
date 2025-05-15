@@ -28,14 +28,15 @@ export function createServerResponseAdapter(
     let controller: ReadableStreamController<Uint8Array> | undefined;
     let shouldClose = false;
     let wroteHead = false;
+    let statusCode = 200;
+    let headers: Record<string, string> | undefined;
 
-    const writeHead = (
-      statusCode: number,
-      headers?: Record<string, string>
-    ) => {
-      if (typeof headers === 'string') {
+    const writeHead = (code: number, headersArg?: Record<string, string>) => {
+      if (typeof headersArg === 'string') {
         throw new Error('Status message of writeHead not supported');
       }
+      statusCode = code;
+      headers = headersArg;
       wroteHead = true;
       writeHeadResolver({
         statusCode,
@@ -57,7 +58,7 @@ export function createServerResponseAdapter(
         throw new Error('Buffer not supported');
       }
       if (!wroteHead) {
-        writeHead(200);
+        writeHead(statusCode, headers);
       }
       if (!controller) {
         bufferedData.push(new TextEncoder().encode(chunk as string));
@@ -91,6 +92,21 @@ export function createServerResponseAdapter(
       on: (event: string, listener: EventListener) => {
         eventEmitter.on(event, listener);
         return fakeServerResponse;
+      },
+      get statusCode() {
+        return statusCode;
+      },
+      set statusCode(code: number) {
+        statusCode = code;
+
+        // If the status code is set after writeHead, we need to call
+        // writeHead again to update the status code.
+        if (wroteHead) {
+          writeHeadResolver({
+            statusCode,
+            headers,
+          });
+        }
       },
     };
 
