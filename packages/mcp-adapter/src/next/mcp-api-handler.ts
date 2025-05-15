@@ -185,7 +185,7 @@ export function initializeMcpApiHandler(
   // Initialize Redis clients only if redisUrl is provided
   let redis: RedisClientType | undefined;
   let redisPublisher: RedisClientType | undefined;
-  let redisPromise: Promise<void[]> | undefined;
+  let redisPromise: Promise<unknown> | undefined;
 
   if (redisUrl) {
     redis = createClient({
