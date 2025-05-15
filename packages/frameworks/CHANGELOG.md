@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.6.4
+
+### Patch Changes
+
+- [frameworks] updated Docusaurus to match out framework naming standards ([#13333](https://github.com/vercel/vercel/pull/13333))
+
 ## 3.6.3
 
 ### Patch Changes
