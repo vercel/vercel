@@ -40,5 +40,5 @@
     "semver": "7.5.2",
     "vitest": "2.0.1"
   },
-  "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.16.5"
+  "VERCEL_REMIX_RUN_DEV_MAX_VERSION": "2.16.6"
 }
