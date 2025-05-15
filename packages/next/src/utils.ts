@@ -990,6 +990,7 @@ export interface CreateLambdaFromPseudoLayersOptions
   isStreaming?: boolean;
   nextVersion?: string;
   experimentalAllowBundling?: boolean;
+  files?: Files;
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -1295,6 +1296,11 @@ export async function getPrerenderManifest(
     };
   }
 
+  const metadataDir = path.join(entryPath, outputDirectory, 'server/_metadata');
+  if (!(await fs.pathExists(metadataDir))) {
+    await fs.mkdirp(metadataDir);
+  }
+
   const manifest:
     | {
         version: 1;
@@ -1399,6 +1405,10 @@ export async function getPrerenderManifest(
       };
 
       routes.forEach(route => {
+        if (isMetadataFile(route)) {
+          return;
+        }
+
         const { initialRevalidateSeconds, dataRoute, srcRoute } =
           manifest.routes[route];
         ret.staticRoutes[route] = {
@@ -3089,7 +3099,34 @@ export const onPrerenderRoute =
     }
   };
 
+export const METADATA_CONVENTIONS = [
+  'favicon',
+  'icon',
+  'apple-icon',
+  'opengraph-image',
+  'twitter-image',
+];
+
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+
+/**
+ * Checks if a file path is a metadata file based on the metadata conventions.
+ * Only treats files with image extensions (jpg/png/ico) as static files.
+ */
+export function isMetadataFile(filePath: string): boolean {
+  const hasImageExtension = /\.(jpg|jpeg|png|ico)$/i.test(filePath);
+
+  if (!hasImageExtension) {
+    return false;
+  }
+
+  const fileName = path.basename(filePath);
+  const fileNameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+
+  return METADATA_CONVENTIONS.some(
+    convention => fileNameWithoutExt === convention
+  );
+}
 
 export async function getStaticFiles(
   entryPath: string,
@@ -3105,6 +3142,11 @@ export async function getStaticFiles(
     path.join(entryPath, outputDirectory, 'static')
   );
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
+
+  const metadataFiles = await glob(
+    '**',
+    path.join(entryPath, outputDirectory, 'server/pages')
+  );
 
   let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};
   let publicFolderPath: string | undefined;
@@ -3127,6 +3169,7 @@ export async function getStaticFiles(
   const staticFiles: Record<string, FileFsRef> = {};
   const staticDirectoryFiles: Record<string, FileFsRef> = {};
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
+  const metadataDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
     staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
@@ -3143,11 +3186,39 @@ export async function getStaticFiles(
       publicFolderFiles[file];
   }
 
+  for (const file of Object.keys(metadataFiles)) {
+    if (isMetadataFile(file)) {
+      metadataDirectoryFiles[path.posix.join(entryDirectory, file)] =
+        metadataFiles[file];
+
+      const metadataDir = path.join(
+        entryPath,
+        outputDirectory,
+        'server/_metadata'
+      );
+      if (!(await fs.pathExists(metadataDir))) {
+        await fs.mkdirp(metadataDir);
+      }
+
+      const sourceFile = path.join(
+        entryPath,
+        outputDirectory,
+        'server/pages',
+        file
+      );
+      const destFile = path.join(metadataDir, path.basename(file));
+      if (await fs.pathExists(sourceFile)) {
+        await fs.copyFile(sourceFile, destFile);
+      }
+    }
+  }
+
   console.timeEnd(collectLabel);
   return {
     staticFiles,
     staticDirectoryFiles,
     publicDirectoryFiles,
+    metadataDirectoryFiles,
   };
 }
 
@@ -3975,7 +4046,7 @@ function getRouteMatchers(
   }
 
   function normalizeHas(has: HasField): HasField {
-    return has.map(v =>
+    return has.map((v: any) =>
       v.type === 'header'
         ? {
             ...v,
@@ -4107,7 +4178,7 @@ export async function getServerlessPages(params: {
           glob('**/page.js', appDir),
           glob('**/route.js', appDir),
           glob('**/_not-found.js', appDir),
-        ]).then(items => Object.assign(...items))
+        ]).then(items => Object.assign({}, ...items))
       : Promise.resolve({} as Record<string, FileFsRef>),
     getMiddlewareManifest(params.entryPath, params.outputDirectory),
   ]);
