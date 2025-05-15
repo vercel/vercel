@@ -5,7 +5,7 @@ import {
   IncomingMessage,
   ServerResponse,
 } from 'node:http';
-import { createClient } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { Socket } from 'node:net';
 import { Readable } from 'node:stream';
 import type { ServerOptions } from '@modelcontextprotocol/sdk/server/index.js';
@@ -52,6 +52,7 @@ function createLogger(verboseLogs = false) {
 export type Config = {
   /**
    * The URL of the Redis instance to use for the MCP handler.
+   * Only required if you need SSE functionality.
    * @default process.env.REDIS_URL || process.env.KV_URL
    */
   redisUrl?: string;
@@ -63,12 +64,14 @@ export type Config = {
   streamableHttpEndpoint?: string;
   /**
    * The endpoint to use for the SSE transport.
+   * Only used when redisUrl is provided.
    * @deprecated Use `set basePath` instead.
    * @default "/sse"
    */
   sseEndpoint?: string;
   /**
    * The endpoint to use for the SSE messages transport.
+   * Only used when redisUrl is provided.
    * @deprecated Use `set basePath` instead.
    * @default "/message"
    */
@@ -178,19 +181,29 @@ export function initializeMcpApiHandler(
     });
 
   const logger = createLogger(verboseLogs);
-  const redis = createClient({
-    url: redisUrl,
-  });
-  const redisPublisher = createClient({
-    url: redisUrl,
-  });
-  redis.on('error', err => {
-    logger.error('Redis error', err);
-  });
-  redisPublisher.on('error', err => {
-    logger.error('Redis error', err);
-  });
-  const redisPromise = Promise.all([redis.connect(), redisPublisher.connect()]);
+
+  // Initialize Redis clients only if redisUrl is provided
+  let redis: RedisClientType | undefined;
+  let redisPublisher: RedisClientType | undefined;
+  let redisPromise: Promise<void[]> | undefined;
+
+  if (redisUrl) {
+    redis = createClient({
+      url: redisUrl,
+    });
+    redisPublisher = createClient({
+      url: redisUrl,
+    });
+
+    redis.on('error', err => {
+      logger.error('Redis error', err);
+    });
+    redisPublisher.on('error', err => {
+      logger.error('Redis error', err);
+    });
+
+    redisPromise = Promise.all([redis.connect(), redisPublisher.connect()]);
+  }
 
   let servers: McpServer[] = [];
 
@@ -199,7 +212,11 @@ export function initializeMcpApiHandler(
     sessionIdGenerator: undefined,
   });
   return async function mcpApiHandler(req: Request, res: ServerResponse) {
-    await redisPromise;
+    // Wait Redis connections if Redis was initialized
+    if (redisPromise) {
+      await redisPromise;
+    }
+
     const url = new URL(req.url || '', 'https://example.com');
     if (url.pathname === streamableHttpEndpoint) {
       if (req.method === 'GET') {
@@ -265,6 +282,15 @@ export function initializeMcpApiHandler(
         await statelessTransport.handleRequest(incomingRequest, res);
       }
     } else if (url.pathname === sseEndpoint) {
+      if (!redisUrl || !redis || !redisPublisher) {
+        logger.log(
+          'SSE endpoint requested but Redis not configured, returning 404'
+        );
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+
       logger.log('Got new SSE connection');
       assert(sseMessageEndpoint, 'sseMessageEndpoint is required');
       const transport = new SSEServerTransport(sseMessageEndpoint, res);
@@ -373,7 +399,9 @@ export function initializeMcpApiHandler(
       async function cleanup() {
         clearTimeout(timeout);
         clearInterval(interval);
-        await redis.unsubscribe(`requests:${sessionId}`, handleMessage);
+        if (redis) {
+          await redis.unsubscribe(`requests:${sessionId}`, handleMessage);
+        }
         logger.log('Done');
         res.statusCode = 200;
         res.end();
@@ -387,6 +415,16 @@ export function initializeMcpApiHandler(
       logger.log(closeReason);
       await cleanup();
     } else if (url.pathname === sseMessageEndpoint) {
+      // Check if Redis is available for SSE functionality
+      if (!redisUrl || !redis || !redisPublisher) {
+        logger.log(
+          'SSE message endpoint requested but Redis not configured, returning 404'
+        );
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+
       logger.log('Received message');
 
       const body = await req.text();
