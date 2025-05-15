@@ -23,7 +23,9 @@ import { getContext } from '../get-context';
  * ```
  */
 export async function getVercelOidcToken(): Promise<string> {
-  const token = getContext().headers?.['x-vercel-oidc-token'] ?? process.env.VERCEL_OIDC_TOKEN;
+  const token =
+    getContext().headers?.['x-vercel-oidc-token'] ??
+    process.env.VERCEL_OIDC_TOKEN;
 
   if (!token) {
     throw new Error(
