@@ -1,5 +1,11 @@
 # @vercel/mcp-adapter
 
+## 0.3.2
+
+### Patch Changes
+
+- unpin exact version of mcp as the newest version has been fixed ([#13315](https://github.com/vercel/vercel/pull/13315))
+
 ## 0.3.1
 
 ### Patch Changes

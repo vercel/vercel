@@ -41,7 +41,7 @@
   "author": "Vercel",
   "license": "Apache-2.0",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.10.2",
+    "@modelcontextprotocol/sdk": "^1.11.2",
     "redis": "^4.6.0"
   },
   "devDependencies": {

@@ -1184,7 +1184,7 @@ importers:
   packages/mcp-adapter:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: 1.10.2
+        specifier: ^1.10.2
         version: 1.10.2
       next:
         specifier: '>=13.0.0'
