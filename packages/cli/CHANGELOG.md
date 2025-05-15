@@ -1,5 +1,11 @@
 # vercel
 
+## 41.7.8
+
+### Patch Changes
+
+- fix(auth): tweak --future telemetry #13318 #13340 ([#13340](https://github.com/vercel/vercel/pull/13340))
+
 ## 41.7.7
 
 ### Patch Changes
