@@ -66,8 +66,9 @@ A function that provides AWS credentials.
 
 Returns the OIDC token from the request context or the environment variable.
 
-This function first checks if the OIDC token is available in the environment variable
-`VERCEL_OIDC_TOKEN`. If it is not found there, it retrieves the token from the request
+This function is used to retrieve the OIDC token from the request context or the environment variable.
+It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+
 context headers.
 
 **`Throws`**
@@ -95,4 +96,4 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:24](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L24)
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L25)
