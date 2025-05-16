@@ -207,6 +207,8 @@ export default class Client extends EventEmitter implements Stdio {
           'Error verifying refresh token, skipping refresh token update.'
         );
         if (output.isDebugEnabled()) output.prettyError(inspectError);
+        this.emptyAuthConfig();
+        this.writeToAuthConfigFile();
         return;
       }
 
