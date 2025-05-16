@@ -1,80 +1,93 @@
-import { describe, expect, it, type MockInstance } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
-import fetch, { type Response } from 'node-fetch';
+import * as _fetch from 'node-fetch';
+import * as jose from 'jose';
 
-import { vi } from 'vitest';
-import { jwtVerify } from 'jose';
-import { as } from '../../../../src/util/oauth';
+import whoami from '../../../../src/commands/whoami';
+import { Chance } from 'chance';
 
-const fetchMock = fetch as unknown as MockInstance<typeof fetch>;
-const jwtVerifyMock = jwtVerify as unknown as MockInstance<typeof jwtVerify>;
-
-vi.mock('jose', async () => ({
-  ...(await vi.importActual('jose')),
-  jwtVerify: vi.fn(),
-}));
-
+const fetch = vi.mocked(_fetch.default);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
 }));
 
-function mockResponse(data: unknown, ok = true): Response {
-  return {
-    ok,
-    clone: () => ({ text: async () => 'called in debug output' }),
-    json: async () => data,
-  } as unknown as Response;
-}
+const decodeJwt = vi.mocked(jose.decodeJwt);
+vi.mock('jose', async () => ({
+  ...(await vi.importActual('jose')),
+  decodeJwt: vi.fn(),
+}));
 
 describe('OAuth Token Refresh', () => {
   it('should refresh the token when it is expired', async () => {
-    const _as = await as();
-
     const refreshToken = randomUUID();
     const accessToken = randomUUID();
     client.authConfig = {
       type: 'oauth',
       token: accessToken,
-      expiresAt: Date.now(),
+      expiresAt: 0,
       refreshToken,
-      refreshTokenExpiresAt: Date.now(),
+      refreshTokenExpiresAt: Number.POSITIVE_INFINITY,
     };
 
-    fetchMock.mockResolvedValueOnce(
-      mockResponse({
-        access_token: randomUUID(),
-        refresh_token: randomUUID(),
-      })
-    );
+    const name = Chance().name();
 
-    // Access token payload
-    jwtVerifyMock.mockResolvedValueOnce({
-      payload: {},
-    } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
+    const newAccessToken = randomUUID();
+    const newRefreshToken = randomUUID();
 
-    // Refresh token payload
-    jwtVerifyMock.mockResolvedValueOnce({
-      payload: {},
-    } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
+    fetch.mockImplementation(init => {
+      const url = init instanceof _fetch.Request ? init.url : init.toString();
 
-    // TODO: Execute a command that triggers an API call
-    // Eg.: cli('whoami');
+      const discovery = {
+        issuer: 'https://vercel.com/',
+        device_authorization_endpoint: 'https://device/',
+        token_endpoint: 'https://token/',
+        revocation_endpoint: 'https://revoke/',
+        jwks_uri: 'https://jwks/',
+      };
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      _as.token_endpoint,
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'user-agent': expect.any(String),
-        },
-        body: expect.any(URLSearchParams),
-      })
-    );
+      // Mock the discovery document
+      if (url.endsWith('.well-known/openid-configuration')) {
+        return json(discovery);
+      }
 
-    expect(client.authConfig.refreshToken).not.toBe(refreshToken);
-    expect(client.authConfig.token).not.toBe(accessToken);
+      // Mock the token endpoint
+      if (url === discovery.token_endpoint) {
+        return json({
+          access_token: newAccessToken,
+          token_type: 'Bearer',
+          expires_in: 3600,
+          refresh_token: newRefreshToken,
+        });
+      }
+
+      // Mock the user endpoint, which gets called during client initialization
+      if (url.endsWith('/v2/user')) {
+        return json({
+          user: { id: randomUUID(), email: Chance().email(), username: name },
+        });
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    decodeJwt.mockResolvedValueOnce({ active: true });
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toBe(0);
+
+    expect(client.stderr).toOutput(name);
+    expect(client.authConfig.token).toBe(newAccessToken);
+    expect(client.authConfig.refreshToken).toBe(newRefreshToken);
   });
 });
+
+function json(data: unknown) {
+  return Promise.resolve(
+    new _fetch.Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  );
+}
