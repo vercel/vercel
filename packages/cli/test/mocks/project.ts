@@ -226,7 +226,7 @@ export function useProject(
     res.json(project);
   });
   client.scenario.get(
-    `/v2/env/pull/${project.id}/:target?/:gitBranch?`,
+    `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {
       const target =
         typeof req.params.target === 'string'
