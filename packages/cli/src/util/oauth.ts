@@ -1,5 +1,5 @@
 import fetch, { type Response } from 'node-fetch';
-import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import ua from './ua';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
@@ -235,7 +235,7 @@ interface TokenSet {
   /** The lifetime in seconds of the access token. */
   expires_in: number;
   /** The refresh token, which can be used to obtain new access tokens. */
-  refresh_token?: string;
+  refresh_token?: string & { _: 'rt' }; // HACK: To distinguish from access_token
   /** The scope of the access token. */
   scope?: string;
 }
@@ -398,24 +398,59 @@ function canParseURL(url: string) {
   }
 }
 
-interface VercelAccessToken extends JWTPayload {
-  team_id?: string;
+/** @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
+interface Token {
+  /**
+   * Integer timestamp, measured in the number of seconds
+   * since January 1 1970 UTC, indicating when this token will expire.
+   */
   exp: number;
+  /** Whether or not the presented token is active. */
+  active: boolean;
 }
 
-export async function verifyJWT(
-  token: string
-): Promise<[Error] | [null, VercelAccessToken]> {
+interface AccessToken extends Token {
+  /** The authorizing principal's team. */
+  team_id: string;
+  token_type: 'access_token';
+}
+interface RefreshToken extends Token {
+  token_type: 'refresh_token';
+}
+
+/**
+ * Inspects and returns the content of a given token.
+ * If the token is invalid, an {@link InspectionError} is returned.
+ */
+export async function inspectToken<
+  T extends TokenSet['access_token'] | NonNullable<TokenSet['refresh_token']>,
+  Payload extends T extends TokenSet['refresh_token']
+    ? RefreshToken
+    : AccessToken,
+>(token: T): Promise<[InspectionError] | [null, Payload]> {
   try {
+    // TODO: Use an [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
+
     const JWKS = createRemoteJWKSet((await as()).jwks_uri);
-    const { payload } = await jwtVerify<VercelAccessToken>(token, JWKS, {
+    const { payload } = await jwtVerify<Payload>(token, JWKS, {
       issuer: 'https://vercel.com',
       audience: ['https://api.vercel.com', 'https://vercel.com/api'],
     });
-    if (!payload.exp) throw new Error('Missing `exp` claim in JWT');
+
+    // TODO: Remove override when we have an introspection endpoint
+    payload.active ??= Boolean(
+      payload.exp && payload.exp < Math.floor(Date.now() / 1000)
+    );
+
+    if (!payload.active) {
+      throw new InspectionError('Token is not active.');
+    }
+
     return [null, payload];
   } catch (error) {
-    if (error instanceof Error) return [error];
-    return [new Error('Could not verify JWT.', { cause: error })];
+    if (error instanceof InspectionError) return [error];
+    return [new InspectionError('Could not inspect token.', { cause: error })];
   }
 }
+
+class InspectionError extends Error {}

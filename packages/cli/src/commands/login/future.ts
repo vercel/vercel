@@ -15,7 +15,7 @@ import {
   deviceAccessTokenRequest,
   processTokenResponse,
   isOAuthError,
-  verifyJWT,
+  inspectToken,
 } from '../../util/oauth';
 import o from '../../output-manager';
 
@@ -101,10 +101,10 @@ export async function login(client: Client): Promise<number> {
         `'Device Access Token response:', ${await tokenResponse.clone().text()}`
       );
 
-      const [tokenError, token] = await processTokenResponse(tokenResponse);
+      const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
-      if (isOAuthError(tokenError)) {
-        const { code } = tokenError;
+      if (isOAuthError(tokensError)) {
+        const { code } = tokensError;
         switch (code) {
           case 'authorization_pending':
             continue;
@@ -115,11 +115,11 @@ export async function login(client: Client): Promise<number> {
             );
             continue;
           default:
-            return tokenError.cause;
+            return tokensError.cause;
         }
       }
 
-      if (tokenError) return tokenError;
+      if (tokensError) return tokensError;
 
       // If we get here, we throw away any possible token errors like polling, or timeouts
       error = undefined;
@@ -129,34 +129,35 @@ export async function login(client: Client): Promise<number> {
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
 
-      const [accessTokenError, accessToken] = await verifyJWT(
-        token.access_token
-      );
+      const [inspectError, payload] = await inspectToken(tokens.access_token);
 
-      if (accessTokenError) return accessTokenError;
+      if (inspectError) return inspectError;
 
-      o.debug('access_token verified');
+      o.debug('access_token inspected');
 
       client.updateAuthConfig({
-        token: token.access_token,
+        token: tokens.access_token,
         type: 'oauth',
-        expiresAt: Date.now() + token.expires_in * 1000,
+        expiresAt: payload.exp,
       });
 
-      if (accessToken.team_id) o.debug('Current team updated');
+      if (payload.team_id) o.debug('Current team updated');
       else o.debug('Current team deleted');
 
-      client.updateConfig({ currentTeam: accessToken.team_id });
+      client.updateConfig({ currentTeam: payload.team_id });
 
-      if (token.refresh_token) {
-        const [refreshTokenError, refreshToken] = await verifyJWT(
-          token.refresh_token
+      if (tokens.refresh_token) {
+        const [inspectError, payload] = await inspectToken(
+          tokens.refresh_token
         );
-        if (refreshTokenError) return refreshTokenError;
-        o.debug('refresh_token verified');
+
+        if (inspectError) return inspectError;
+
+        o.debug('refresh_token inspected');
+
         client.updateAuthConfig({
-          refreshToken: token.refresh_token,
-          refreshTokenExpiresAt: Date.now() + refreshToken.exp * 1000,
+          refreshToken: tokens.refresh_token,
+          refreshTokenExpiresAt: payload.exp,
         });
       }
 

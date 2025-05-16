@@ -40,7 +40,11 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
-import { processTokenResponse, refreshTokenRequest, verifyJWT } from './oauth';
+import {
+  processTokenResponse,
+  refreshTokenRequest,
+  inspectToken,
+} from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -181,43 +185,34 @@ export default class Client extends EventEmitter implements Stdio {
       refresh_token: authConfig.refreshToken,
     });
 
-    const [tokenError, token] = await processTokenResponse(tokenResponse);
+    const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
     // If we had an error, during the refresh process, silently continue
-    if (tokenError) {
+    if (tokensError) {
       output.debug('Error refreshing token, skipping token refresh.');
-      if (output.isDebugEnabled()) output.prettyError(tokenError);
-      return;
-    }
-
-    const [accessTokenError] = await verifyJWT(token.access_token);
-    if (accessTokenError) {
-      output.debug('Error verifying access token, skipping token refresh.');
-      if (output.isDebugEnabled()) output.prettyError(accessTokenError);
+      if (output.isDebugEnabled()) output.prettyError(tokensError);
       return;
     }
 
     this.updateAuthConfig({
       type: 'oauth',
-      token: token.access_token,
-      expiresAt: Date.now() + token.expires_in * 1000,
+      token: tokens.access_token,
+      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
 
-    if (token.refresh_token) {
-      const [refreshTokenError, refreshToken] = await verifyJWT(
-        token.refresh_token
-      );
-      if (refreshTokenError) {
+    if (tokens.refresh_token) {
+      const [inspectError, payload] = await inspectToken(tokens.refresh_token);
+      if (inspectError) {
         output.debug(
           'Error verifying refresh token, skipping refresh token update.'
         );
-        if (output.isDebugEnabled()) output.prettyError(refreshTokenError);
+        if (output.isDebugEnabled()) output.prettyError(inspectError);
         return;
       }
 
       this.updateAuthConfig({
-        refreshToken: token.refresh_token,
-        refreshTokenExpiresAt: Date.now() + refreshToken.exp * 1000,
+        refreshToken: tokens.refresh_token,
+        refreshTokenExpiresAt: payload.exp,
       });
     }
 
@@ -237,6 +232,10 @@ export default class Client extends EventEmitter implements Stdio {
 
   updateAuthConfig(authConfig: Partial<AuthConfig>) {
     this.authConfig = { ...this.authConfig, ...authConfig };
+  }
+
+  emptyAuthConfig() {
+    this.authConfig = {};
   }
 
   writeToAuthConfigFile() {

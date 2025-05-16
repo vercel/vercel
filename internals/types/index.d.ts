@@ -42,10 +42,16 @@ interface LegacyAuthConfig extends AuthConfigBase {
 interface OAuthAuthConfig extends AuthConfigBase {
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
-  /** The absolute time when the {@link OAuthAuthConfig.token} expires */
+  /**
+   * The absolute time (seconds) when the {@link OAuthAuthConfig.token} expires.
+   * Used to optimistically check if the token is still valid.
+   */
   expiresAt?: number;
   refreshToken?: string;
-  /** The absolute time when the {@link OAuthAuthConfig.refreshToken} expires */
+  /**
+   * The absolute time (seconds) when the {@link OAuthAuthConfig.refreshToken} expires.
+   * Used to optimistically check if the token is still valid.
+   */
   refreshTokenExpiresAt?: number;
   type: 'oauth';
 }
@@ -60,12 +66,6 @@ export interface GlobalConfig {
 
   telemetry?: {
     enabled?: boolean;
-  };
-
-  // TODO: legacy - remove
-  updateChannel?: string;
-  desktop?: {
-    teamOrder: any;
   };
 }
 
