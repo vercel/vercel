@@ -36,16 +36,15 @@ describe('OAuth Token Refresh', () => {
     const newAccessToken = randomUUID();
     const newRefreshToken = randomUUID();
 
+    const discovery = {
+      issuer: 'https://vercel.com/',
+      device_authorization_endpoint: 'https://device/',
+      token_endpoint: 'https://token/',
+      revocation_endpoint: 'https://revoke/',
+      jwks_uri: 'https://jwks/',
+    };
     fetch.mockImplementation(init => {
       const url = init instanceof _fetch.Request ? init.url : init.toString();
-
-      const discovery = {
-        issuer: 'https://vercel.com/',
-        device_authorization_endpoint: 'https://device/',
-        token_endpoint: 'https://token/',
-        revocation_endpoint: 'https://revoke/',
-        jwks_uri: 'https://jwks/',
-      };
 
       // Mock the discovery document
       if (url.endsWith('.well-known/openid-configuration')) {
@@ -80,6 +79,52 @@ describe('OAuth Token Refresh', () => {
     expect(client.stderr).toOutput(name);
     expect(client.authConfig.token).toBe(newAccessToken);
     expect(client.authConfig.refreshToken).toBe(newRefreshToken);
+  });
+
+  it('should empty the token config if the refresh token is expired', async () => {
+    client.authConfig = {
+      type: 'oauth',
+      token: randomUUID(),
+      expiresAt: 0,
+      refreshToken: randomUUID(),
+      refreshTokenExpiresAt: 0,
+    };
+
+    const name = Chance().name();
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toBe(0);
+
+    fetch.mockImplementation(init => {
+      const url = init instanceof _fetch.Request ? init.url : init.toString();
+
+      const discovery = {
+        issuer: 'https://vercel.com/',
+        device_authorization_endpoint: 'https://device/',
+        token_endpoint: 'https://token/',
+        revocation_endpoint: 'https://revoke/',
+        jwks_uri: 'https://jwks/',
+      };
+
+      // Mock the discovery document
+      if (url.endsWith('.well-known/openid-configuration')) {
+        return json(discovery);
+      }
+
+      // Mock the user endpoint, which gets called during client initialization
+      if (url.endsWith('/v2/user')) {
+        return json({
+          user: { id: randomUUID(), email: Chance().email(), username: name },
+        });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    expect(client.stderr).toOutput(name);
+    expect(client.authConfig.token).toBeUndefined();
+    expect(client.authConfig.expiresAt).toBeUndefined();
+    expect(client.authConfig.refreshToken).toBeUndefined();
+    expect(client.authConfig.refreshTokenExpiresAt).toBeUndefined();
   });
 });
 
