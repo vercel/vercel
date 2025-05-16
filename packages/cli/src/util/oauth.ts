@@ -1,5 +1,5 @@
 import fetch, { type Response } from 'node-fetch';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { decodeJwt } from 'jose';
 import ua from './ua';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
@@ -430,12 +430,7 @@ export async function inspectToken<
 >(token: T): Promise<[InspectionError] | [null, Payload]> {
   try {
     // TODO: Use an [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
-
-    const JWKS = createRemoteJWKSet((await as()).jwks_uri);
-    const { payload } = await jwtVerify<Payload>(token, JWKS, {
-      issuer: 'https://vercel.com',
-      audience: ['https://api.vercel.com', 'https://vercel.com/api'],
-    });
+    const payload = await decodeJwt<Payload>(token);
 
     // TODO: Remove override when we have an introspection endpoint
     payload.active ??= Boolean(
