@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.1.16
+
+### Patch Changes
+
+- Bump @vercel/nft to latest ([#13312](https://github.com/vercel/vercel/pull/13312))
+
 ## 5.1.15
 
 ### Patch Changes

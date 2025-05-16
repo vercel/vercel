@@ -3,8 +3,11 @@ import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { Headers, type Response } from 'node-fetch';
-import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
-import ua from '../../../../src/util/ua';
+import {
+  as,
+  VERCEL_CLI_CLIENT_ID,
+  userAgent,
+} from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 import * as jose from 'jose';
 
@@ -108,7 +111,7 @@ describe('login --future', () => {
       // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
       new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
       'Passing the correct user agent so the user can verify'
-    ).toBe(ua);
+    ).toBe(userAgent);
 
     expect(
       fetch.mock.calls[1][1]?.body?.toString(),
@@ -128,7 +131,7 @@ describe('login --future', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'user-agent': ua,
+            'user-agent': userAgent,
           },
           body: expect.any(URLSearchParams),
         })

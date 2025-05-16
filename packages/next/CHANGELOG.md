@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.7.11
+
+### Patch Changes
+
+- Bump @vercel/nft to latest ([#13312](https://github.com/vercel/vercel/pull/13312))
+
 ## 4.7.10
 
 ### Patch Changes

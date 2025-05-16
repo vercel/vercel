@@ -3,9 +3,12 @@ import { logout } from '../../../../src/commands/logout/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { type Response } from 'node-fetch';
-import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
+import {
+  as,
+  VERCEL_CLI_CLIENT_ID,
+  userAgent,
+} from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
-import ua from '../../../../src/util/ua';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
@@ -57,7 +60,7 @@ describe('logout --future', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'user-agent': ua,
+          'user-agent': userAgent,
         },
         body: expect.any(URLSearchParams),
       })

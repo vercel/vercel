@@ -29,7 +29,7 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * @returns An instance of the Vercel Runtime Cache.
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
-export const getRuntimeCache = (cacheOptions?: CacheOptions): RuntimeCache => {
+export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
   let cache: RuntimeCache;
   if (getContext().cache) {
     cache = getContext().cache as RuntimeCache;

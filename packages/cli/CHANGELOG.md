@@ -1,5 +1,45 @@
 # vercel
 
+## 41.7.8
+
+### Patch Changes
+
+- fix(auth): tweak --future telemetry #13318 #13340 ([#13340](https://github.com/vercel/vercel/pull/13340))
+
+## 41.7.7
+
+### Patch Changes
+
+- Updated dependencies [[`7df2e61025bbca6bd1a0f261135e0269ec30c628`](https://github.com/vercel/vercel/commit/7df2e61025bbca6bd1a0f261135e0269ec30c628)]:
+  - @vercel/remix-builder@5.4.6
+
+## 41.7.6
+
+### Patch Changes
+
+- [cli] Bump @vercel/fun to remove deprecated package warning ([#13330](https://github.com/vercel/vercel/pull/13330))
+
+## 41.7.5
+
+### Patch Changes
+
+- Updated dependencies [[`048e73278c1649924f076449dcb14eacd7961483`](https://github.com/vercel/vercel/commit/048e73278c1649924f076449dcb14eacd7961483)]:
+  - @vercel/remix-builder@5.4.5
+
+## 41.7.4
+
+### Patch Changes
+
+- add `--future` auth telemetry ([#13318](https://github.com/vercel/vercel/pull/13318))
+
+- feat(vas): add hostname to the device auth user agent ([#13301](https://github.com/vercel/vercel/pull/13301))
+
+- Updated dependencies [[`70df3e80ce0a975852105bd6f58d1307fe302f10`](https://github.com/vercel/vercel/commit/70df3e80ce0a975852105bd6f58d1307fe302f10)]:
+  - @vercel/next@4.7.11
+  - @vercel/node@5.1.16
+  - @vercel/redwood@2.3.1
+  - @vercel/remix-builder@5.4.4
+
 ## 41.7.3
 
 ### Patch Changes
