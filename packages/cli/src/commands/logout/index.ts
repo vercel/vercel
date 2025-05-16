@@ -74,12 +74,6 @@ export default async function logout(client: Client): Promise<number> {
 
   delete config.currentTeam;
 
-  // The new user might have completely different teams, so
-  // we should wipe the order.
-  if (config.desktop) {
-    delete config.desktop.teamOrder;
-  }
-
   delete authConfig.token;
 
   try {
