@@ -178,6 +178,8 @@ export default class Client extends EventEmitter implements Stdio {
     // If we don't have a valid refresh token, do nothing
     if (!isValidRefreshToken(authConfig)) {
       output.debug('Invalid refresh token, skipping token refresh.');
+      this.emptyAuthConfig();
+      this.writeToAuthConfigFile();
       return;
     }
 
@@ -191,6 +193,8 @@ export default class Client extends EventEmitter implements Stdio {
     if (tokensError) {
       output.debug('Error refreshing token, skipping token refresh.');
       if (output.isDebugEnabled()) output.prettyError(tokensError);
+      this.emptyAuthConfig();
+      this.writeToAuthConfigFile();
       return;
     }
 
