@@ -1,21 +1,20 @@
-import { beforeEach, describe, expect, it, type MockInstance } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import fetch, { Headers, type Response } from 'node-fetch';
+import _fetch, { Headers, type Response } from 'node-fetch';
 import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
 import ua from '../../../../src/util/ua';
 import { randomUUID } from 'node:crypto';
-import { jwtVerify } from 'jose';
+import * as jose from 'jose';
 
-const fetchMock = fetch as unknown as MockInstance<typeof fetch>;
-const jwtVerifyMock = jwtVerify as unknown as MockInstance<typeof jwtVerify>;
-
+const decodeJwt = vi.mocked(jose.decodeJwt);
 vi.mock('jose', async () => ({
   ...(await vi.importActual('jose')),
-  jwtVerify: vi.fn(),
+  decodeJwt: vi.fn(),
 }));
 
+const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
@@ -31,11 +30,11 @@ function mockResponse(data: unknown, ok = true): Response {
 
 function simulateTokenPolling(pollCount: number, finalResponse: Response) {
   for (let i = 0; i < pollCount; i++) {
-    fetchMock.mockResolvedValueOnce(
+    fetch.mockResolvedValueOnce(
       mockResponse({ error: 'authorization_pending' }, false)
     );
   }
-  fetchMock.mockResolvedValueOnce(finalResponse);
+  fetch.mockResolvedValueOnce(finalResponse);
   return finalResponse.json();
 }
 
@@ -45,7 +44,7 @@ beforeEach(() => {
 
 describe('login --future', () => {
   it('successful login', async () => {
-    fetchMock.mockResolvedValueOnce(
+    fetch.mockResolvedValueOnce(
       mockResponse({
         issuer: 'https://vercel.com',
         device_authorization_endpoint: 'https://vercel.com',
@@ -55,10 +54,8 @@ describe('login --future', () => {
       })
     );
     const _as = await as();
-    const accessTokenPayload = { team_id: randomUUID(), exp: Date.now() };
-    jwtVerifyMock.mockResolvedValueOnce({
-      payload: accessTokenPayload,
-    } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
+    const accessTokenPayload = { active: true, team_id: randomUUID() };
+    decodeJwt.mockResolvedValueOnce(accessTokenPayload);
 
     const authorizationResult = {
       device_code: randomUUID(),
@@ -69,7 +66,7 @@ describe('login --future', () => {
       interval: 0.005,
     };
 
-    fetchMock.mockResolvedValueOnce(mockResponse(authorizationResult));
+    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
 
     const pollCount = 2;
     const tokenResult = await simulateTokenPolling(
@@ -92,9 +89,9 @@ describe('login --future', () => {
     expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetchMock).toHaveBeenCalledTimes(pollCount + 3);
+    expect(fetch).toHaveBeenCalledTimes(pollCount + 3);
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
+    expect(fetch).toHaveBeenNthCalledWith(
       2,
       _as.device_authorization_endpoint,
       expect.objectContaining({
@@ -109,12 +106,12 @@ describe('login --future', () => {
 
     expect(
       // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
-      new Headers(fetchMock.mock.calls[0][1]?.headers).get('user-agent'),
+      new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
       'Passing the correct user agent so the user can verify'
     ).toBe(ua);
 
     expect(
-      fetchMock.mock.calls[1][1]?.body?.toString(),
+      fetch.mock.calls[1][1]?.body?.toString(),
       'Requesting a device code with the correct params'
     ).toBe(
       new URLSearchParams({
@@ -123,8 +120,8 @@ describe('login --future', () => {
       }).toString()
     );
 
-    for (let i = 3; i <= fetchMock.mock.calls.length; i++) {
-      expect(fetchMock).toHaveBeenNthCalledWith(
+    for (let i = 3; i <= fetch.mock.calls.length; i++) {
+      expect(fetch).toHaveBeenNthCalledWith(
         i,
         _as.token_endpoint,
         expect.objectContaining({
@@ -139,7 +136,7 @@ describe('login --future', () => {
     }
 
     expect(
-      fetchMock.mock.calls[pollCount + 1][1]?.body?.toString(),
+      fetch.mock.calls[pollCount + 1][1]?.body?.toString(),
       'Polling with the received device code'
     ).toBe(
       new URLSearchParams({
