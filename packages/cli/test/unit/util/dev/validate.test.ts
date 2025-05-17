@@ -387,8 +387,8 @@ describe('validateConfig', () => {
 
   it('should error with invalid architecture', () => {
     const error = validateConfig({
-      // @ts-ignore
       functions: {
+        // @ts-ignore
         'api/user.go': { architecture: 'invalid', memory: 128, maxDuration: 5 },
       },
     });
