@@ -1,7 +1,7 @@
 import type FileRef from './file-ref';
 import type FileFsRef from './file-fs-ref';
 import type FileBlob from './file-blob';
-import type { Lambda } from './lambda';
+import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 import type { Span } from './trace';
@@ -385,6 +385,7 @@ export interface Builder {
 
 export interface BuilderFunctions {
   [key: string]: {
+    architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: number;
     runtime?: string;

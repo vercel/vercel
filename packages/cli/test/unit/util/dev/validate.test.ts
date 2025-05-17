@@ -372,4 +372,31 @@ describe('validateConfig', () => {
       'https://vercel.com/docs/concepts/projects/project-configuration#crons'
     );
   });
+
+  it.each(['x86_64', 'arm64'] as const)(
+    'should not error with valid architecture: %s',
+    architecture => {
+      const error = validateConfig({
+        functions: {
+          'api/user.go': { architecture, memory: 128, maxDuration: 5 },
+        },
+      });
+      expect(error).toBeNull();
+    }
+  );
+
+  it('should error with invalid architecture', () => {
+    const error = validateConfig({
+      functions: {
+        // @ts-ignore
+        'api/user.go': { architecture: 'invalid', memory: 128, maxDuration: 5 },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/user.go'].architecture` should be equal to one of the allowed values."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
 });

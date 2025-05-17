@@ -279,12 +279,13 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration'>
+  Pick<LambdaOptions, 'architecture' | 'memory' | 'maxDuration'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
         return {
+          architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
         };

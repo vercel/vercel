@@ -8,6 +8,10 @@ export const functionsSchema = {
       type: 'object',
       additionalProperties: false,
       properties: {
+        architecture: {
+          type: 'string',
+          enum: ['x86_64', 'arm64'],
+        },
         runtime: {
           type: 'string',
           maxLength: 256,

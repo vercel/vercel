@@ -13,6 +13,10 @@ import { validate } from './validation';
 export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
+    architecture: {
+      type: 'string',
+      enum: ['x86_64', 'arm64'],
+    },
     runtime: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },

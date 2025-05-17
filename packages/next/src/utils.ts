@@ -1828,7 +1828,11 @@ export async function getPageLambdaGroups({
     const isPrerenderRoute = prerenderRoutes.has(routeName);
     const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
 
-    let opts: { memory?: number; maxDuration?: number } = {};
+    let opts: {
+      architecture?: NodejsLambda['architecture'];
+      memory?: number;
+      maxDuration?: number;
+    } = {};
 
     if (
       functionsConfigManifest &&
