@@ -41,6 +41,7 @@ export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
  * An entry in the "functions" object in `vercel.json`.
  */
 interface FunctionConfiguration {
+  architecture?: string;
   memory?: number;
   maxDuration?: number;
 }
@@ -469,12 +470,15 @@ async function writeLambda(
     throw new Error('Malformed `Lambda` - no "files" present');
   }
 
+  const architecture =
+    functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
 
   const config = {
     ...lambda,
     handler: normalizePath(lambda.handler),
+    architecture,
     memory,
     maxDuration,
     filePathMap,
