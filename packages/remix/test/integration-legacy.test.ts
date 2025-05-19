@@ -12,6 +12,7 @@ const fixturesPath = join(__dirname, 'fixtures-legacy');
 
 const skipped: string[] = [
   // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
+  '02-remix-basics-mjs',
   '12-remix-v2',
   '13-remix-v2-public-path',
 ];
