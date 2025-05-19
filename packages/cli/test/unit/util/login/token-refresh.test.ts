@@ -80,12 +80,11 @@ describe('OAuth Token Refresh', () => {
     expect(client.authConfig.refreshToken).toBe(newRefreshToken);
   });
 
-  it('should empty the token config if the refresh token is expired', async () => {
+  it('should empty the token config if the refresh token is invalid', async () => {
     client.authConfig = {
       type: 'oauth',
       token: randomUUID(),
       expiresAt: 0,
-      refreshToken: randomUUID(),
     };
 
     const name = Chance().name();
