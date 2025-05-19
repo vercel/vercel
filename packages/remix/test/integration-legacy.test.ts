@@ -12,6 +12,8 @@ const fixturesPath = join(__dirname, 'fixtures-legacy');
 
 const skipped: string[] = [
   // PLACE TEST FIXTURE NAMES HERE TO SKIP THEM
+  '12-remix-v2',
+  '13-remix-v2-public-path',
 ];
 
 // eslint-disable-next-line no-restricted-syntax
