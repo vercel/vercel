@@ -419,22 +419,11 @@ interface AccessToken {
  * If the token is invalid, an {@link InspectionError} is returned.
  * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
  */
-export async function inspectToken(
+export function inspectToken(
   token: TokenSet['access_token']
-): Promise<[InspectionError] | [null, AccessToken]> {
+): [InspectionError] | [null, AccessToken] {
   try {
-    const payload = await decodeJwt<AccessToken>(token);
-
-    // TODO: Remove override when we have an introspection endpoint
-    payload.active ??= Boolean(
-      payload.exp && payload.exp < Math.floor(Date.now() / 1000)
-    );
-
-    if (!payload.active) {
-      throw new InspectionError('Token is not active.');
-    }
-
-    return [null, payload];
+    return [null, decodeJwt<AccessToken>(token)];
   } catch (cause) {
     return [new InspectionError('Could not inspect token.', { cause })];
   }

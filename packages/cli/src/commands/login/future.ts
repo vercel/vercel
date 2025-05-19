@@ -129,7 +129,7 @@ export async function login(client: Client): Promise<number> {
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
 
-      const [inspectError, payload] = await inspectToken(tokens.access_token);
+      const [inspectError, payload] = inspectToken(tokens.access_token);
 
       if (inspectError) return inspectError;
 
