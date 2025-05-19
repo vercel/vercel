@@ -423,6 +423,7 @@ interface RefreshToken extends Token {
 /**
  * Inspects and returns the content of a given token.
  * If the token is invalid, an {@link InspectionError} is returned.
+ * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
  */
 export async function inspectToken<
   T extends TokenSet['access_token'] | NonNullable<TokenSet['refresh_token']>,
@@ -431,7 +432,6 @@ export async function inspectToken<
     : AccessToken,
 >(token: T): Promise<[InspectionError] | [null, Payload]> {
   try {
-    // TODO: Use an [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
     const payload = await decodeJwt<Payload>(token);
 
     // TODO: Remove override when we have an introspection endpoint

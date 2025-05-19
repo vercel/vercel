@@ -40,11 +40,7 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
-import {
-  processTokenResponse,
-  refreshTokenRequest,
-  inspectToken,
-} from './oauth';
+import { processTokenResponse, refreshTokenRequest } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -83,13 +79,10 @@ export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
   return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
 }
 
-export function isValidRefreshToken(
+export function hasRefreshToken(
   authConfig: OAuthAuthConfig
 ): authConfig is OAuthAuthConfig & { refreshToken: string } {
-  return (
-    'refreshToken' in authConfig &&
-    (authConfig.refreshTokenExpiresAt ?? 0) >= Date.now()
-  );
+  return 'refreshToken' in authConfig;
 }
 
 export default class Client extends EventEmitter implements Stdio {
@@ -175,9 +168,9 @@ export default class Client extends EventEmitter implements Stdio {
       return;
     }
 
-    // If we don't have a valid refresh token, do nothing
-    if (!isValidRefreshToken(authConfig)) {
-      output.debug('Invalid refresh token, skipping token refresh.');
+    // If we don't have a refresh token, empty the auth config
+    // to force the user to re-authenticate
+    if (!hasRefreshToken(authConfig)) {
       this.emptyAuthConfig();
       this.writeToAuthConfigFile();
       return;
@@ -189,7 +182,8 @@ export default class Client extends EventEmitter implements Stdio {
 
     const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
-    // If we had an error, during the refresh process, silently continue
+    // If we had an error, during the refresh process, empty the auth config
+    // to force the user to re-authenticate
     if (tokensError) {
       output.debug('Error refreshing token, skipping token refresh.');
       if (output.isDebugEnabled()) output.prettyError(tokensError);
@@ -205,21 +199,7 @@ export default class Client extends EventEmitter implements Stdio {
     });
 
     if (tokens.refresh_token) {
-      const [inspectError, payload] = await inspectToken(tokens.refresh_token);
-      if (inspectError) {
-        output.debug(
-          'Error verifying refresh token, skipping refresh token update.'
-        );
-        if (output.isDebugEnabled()) output.prettyError(inspectError);
-        this.emptyAuthConfig();
-        this.writeToAuthConfigFile();
-        return;
-      }
-
-      this.updateAuthConfig({
-        refreshToken: tokens.refresh_token,
-        refreshTokenExpiresAt: payload.exp,
-      });
+      this.updateAuthConfig({ refreshToken: tokens.refresh_token });
     }
 
     this.writeToAuthConfigFile();

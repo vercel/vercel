@@ -28,7 +28,6 @@ describe('OAuth Token Refresh', () => {
       token: accessToken,
       expiresAt: 0,
       refreshToken,
-      refreshTokenExpiresAt: Number.POSITIVE_INFINITY,
     };
 
     const name = Chance().name();
@@ -87,7 +86,6 @@ describe('OAuth Token Refresh', () => {
       token: randomUUID(),
       expiresAt: 0,
       refreshToken: randomUUID(),
-      refreshTokenExpiresAt: 0,
     };
 
     const name = Chance().name();
@@ -124,7 +122,6 @@ describe('OAuth Token Refresh', () => {
     expect(client.authConfig.token).toBeUndefined();
     expect(client.authConfig.expiresAt).toBeUndefined();
     expect(client.authConfig.refreshToken).toBeUndefined();
-    expect(client.authConfig.refreshTokenExpiresAt).toBeUndefined();
   });
 });
 

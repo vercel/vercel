@@ -147,18 +147,7 @@ export async function login(client: Client): Promise<number> {
       client.updateConfig({ currentTeam: payload.team_id });
 
       if (tokens.refresh_token) {
-        const [inspectError, payload] = await inspectToken(
-          tokens.refresh_token
-        );
-
-        if (inspectError) return inspectError;
-
-        o.debug('refresh_token inspected');
-
-        client.updateAuthConfig({
-          refreshToken: tokens.refresh_token,
-          refreshTokenExpiresAt: payload.exp,
-        });
+        client.updateAuthConfig({ refreshToken: tokens.refresh_token });
       }
 
       // If we have a brand new login, update `currentTeam`

@@ -48,11 +48,6 @@ interface OAuthAuthConfig extends AuthConfigBase {
    */
   expiresAt?: number;
   refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the {@link OAuthAuthConfig.refreshToken} expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  refreshTokenExpiresAt?: number;
   type: 'oauth';
 }
 
