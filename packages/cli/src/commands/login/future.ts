@@ -138,7 +138,7 @@ export async function login(client: Client): Promise<number> {
       client.updateAuthConfig({
         token: tokens.access_token,
         type: 'oauth',
-        expiresAt: payload.exp,
+        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
       });
 
       if (payload.team_id) o.debug('Current team updated');
