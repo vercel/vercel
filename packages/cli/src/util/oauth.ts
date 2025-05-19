@@ -231,13 +231,13 @@ export async function deviceAccessTokenRequest(options: {
 
 interface TokenSet {
   /** The access token issued by the authorization server. */
-  access_token: string;
+  access_token: string & { _: 'at' }; // HACK: To brand the access_token type
   /** The type of the token issued */
   token_type: 'Bearer';
   /** The lifetime in seconds of the access token. */
   expires_in: number;
   /** The refresh token, which can be used to obtain new access tokens. */
-  refresh_token?: string & { _: 'rt' }; // HACK: To distinguish from access_token
+  refresh_token?: string;
   /** The scope of the access token. */
   scope?: string;
 }
@@ -401,7 +401,7 @@ function canParseURL(url: string) {
 }
 
 /** @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
-interface Token {
+interface AccessToken {
   /**
    * Integer timestamp, measured in the number of seconds
    * since January 1 1970 UTC, indicating when this token will expire.
@@ -409,30 +409,21 @@ interface Token {
   exp: number;
   /** Whether or not the presented token is active. */
   active: boolean;
-}
-
-interface AccessToken extends Token {
-  /** The authorizing principal's team. */
-  team_id: string;
   token_type: 'access_token';
-}
-interface RefreshToken extends Token {
-  token_type: 'refresh_token';
+  /** The authorizing principal's team. */
+  team_id?: string;
 }
 
 /**
- * Inspects and returns the content of a given token.
+ * Inspects and returns the content of an access_token.
  * If the token is invalid, an {@link InspectionError} is returned.
  * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
  */
-export async function inspectToken<
-  T extends TokenSet['access_token'] | NonNullable<TokenSet['refresh_token']>,
-  Payload extends T extends TokenSet['refresh_token']
-    ? RefreshToken
-    : AccessToken,
->(token: T): Promise<[InspectionError] | [null, Payload]> {
+export async function inspectToken(
+  token: TokenSet['access_token']
+): Promise<[InspectionError] | [null, AccessToken]> {
   try {
-    const payload = await decodeJwt<Payload>(token);
+    const payload = await decodeJwt<AccessToken>(token);
 
     // TODO: Remove override when we have an introspection endpoint
     payload.active ??= Boolean(
@@ -444,9 +435,8 @@ export async function inspectToken<
     }
 
     return [null, payload];
-  } catch (error) {
-    if (error instanceof InspectionError) return [error];
-    return [new InspectionError('Could not inspect token.', { cause: error })];
+  } catch (cause) {
+    return [new InspectionError('Could not inspect token.', { cause })];
   }
 }
 
