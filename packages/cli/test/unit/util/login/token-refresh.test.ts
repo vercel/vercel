@@ -95,19 +95,6 @@ describe('OAuth Token Refresh', () => {
     fetch.mockImplementation(init => {
       const url = init instanceof _fetch.Request ? init.url : init.toString();
 
-      const discovery = {
-        issuer: 'https://vercel.com/',
-        device_authorization_endpoint: 'https://device/',
-        token_endpoint: 'https://token/',
-        revocation_endpoint: 'https://revoke/',
-        jwks_uri: 'https://jwks/',
-      };
-
-      // Mock the discovery document
-      if (url.endsWith('.well-known/openid-configuration')) {
-        return json(discovery);
-      }
-
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
