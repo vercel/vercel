@@ -171,6 +171,7 @@ export default class Client extends EventEmitter implements Stdio {
     // If we don't have a refresh token, empty the auth config
     // to force the user to re-authenticate
     if (!hasRefreshToken(authConfig)) {
+      output.debug('No refresh token found, emptying auth config.');
       this.emptyAuthConfig();
       this.writeToAuthConfigFile();
       return;
@@ -185,8 +186,7 @@ export default class Client extends EventEmitter implements Stdio {
     // If we had an error, during the refresh process, empty the auth config
     // to force the user to re-authenticate
     if (tokensError) {
-      output.debug('Error refreshing token, skipping token refresh.');
-      if (output.isDebugEnabled()) output.prettyError(tokensError);
+      output.debug('Error refreshing token, emptying auth config.');
       this.emptyAuthConfig();
       this.writeToAuthConfigFile();
       return;
