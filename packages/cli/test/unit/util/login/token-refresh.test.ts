@@ -80,7 +80,7 @@ describe('OAuth Token Refresh', () => {
     expect(client.authConfig.refreshToken).toBe(newRefreshToken);
   });
 
-  it('should empty the token config if the refresh token is invalid', async () => {
+  it('should empty the token config if the refresh token is missing', async () => {
     client.authConfig = {
       type: 'oauth',
       token: randomUUID(),
