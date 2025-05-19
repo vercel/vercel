@@ -2,7 +2,7 @@
   "name": "website-preview",
   "private": true,
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/prs/79260/next",
     "react": "latest",
     "react-dom": "latest"
   }

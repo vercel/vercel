@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/prs/79260/next",
     "react": "latest",
     "react-dom": "latest"
   }
