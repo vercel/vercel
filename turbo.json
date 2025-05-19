@@ -23,11 +23,13 @@
     },
     "vitest-e2e": {
       "dependsOn": ["build"],
-      "outputLogs": "new-only"
+      "outputLogs": "new-only",
+      "cache": false // these tests hit live vercel.com deployments, and thus cannot be cached
     },
     "vitest-e2e-node-20": {
       "dependsOn": ["build"],
-      "outputLogs": "new-only"
+      "outputLogs": "new-only",
+      "cache": false // these tests hit live vercel.com deployments, and thus cannot be cached
     },
     "test-unit": {
       "dependsOn": ["build"],
