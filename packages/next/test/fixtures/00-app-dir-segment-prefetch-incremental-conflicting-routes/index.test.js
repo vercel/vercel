@@ -6,7 +6,15 @@ const ctx = {};
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should deploy and pass probe checks', async () => {
-    const info = await deployAndTest(__dirname);
-    Object.assign(ctx, info);
+    let error = undefined;
+
+    try {
+      const info = await deployAndTest(__dirname);
+      Object.assign(ctx, info);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(err).toBeUndefined();
   });
 });
