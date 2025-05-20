@@ -6,4 +6,3 @@ export default async function Page() {
   return <div>/[id]</div>
 }
 
-export const experimental_ppr = true

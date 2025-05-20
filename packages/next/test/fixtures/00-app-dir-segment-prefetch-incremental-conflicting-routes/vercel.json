@@ -15,7 +15,7 @@
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
-        "x-matched-path": "/dynamic.prefetch.rsc"
+        "x-matched-path": "/dynamic.segments/_tree.segment.rsc"
       }
     }
   ]
