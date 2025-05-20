@@ -2,7 +2,7 @@
   "name": "26-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "https://vercel-packages.vercel.app/next/commits/3fd89163ebfc50464723f6f5ced638c5439ca098/next",
+    "next": "https://vercel-packages.vercel.app/next/commits/cf39ff399205cf5a56bdb3f425b87059af673895/next",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },
