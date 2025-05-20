@@ -15,6 +15,6 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       error = err;
     }
 
-    expect(err).toBeUndefined();
+    expect(error).toBeUndefined();
   });
 });
