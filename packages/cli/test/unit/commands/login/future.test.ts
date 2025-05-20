@@ -3,18 +3,13 @@ import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { Headers, type Response } from 'node-fetch';
-import {
-  as,
-  VERCEL_CLI_CLIENT_ID,
-  userAgent,
-} from '../../../../src/util/oauth';
+import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
-import * as jose from 'jose';
 
-const decodeJwt = vi.mocked(jose.decodeJwt);
-vi.mock('jose', async () => ({
-  ...(await vi.importActual('jose')),
-  decodeJwt: vi.fn(),
+const inspectToken = vi.mocked(oauth.inspectToken);
+vi.mock('../../../../src/util/oauth', async () => ({
+  ...(await vi.importActual('../../../../src/util/oauth')),
+  inspectToken: vi.fn(),
 }));
 
 const fetch = vi.mocked(_fetch);
@@ -56,9 +51,15 @@ describe('login --future', () => {
         jwks_uri: 'https://vercel.com',
       })
     );
-    const _as = await as();
-    const accessTokenPayload = { active: true, team_id: randomUUID() };
-    decodeJwt.mockResolvedValueOnce(accessTokenPayload);
+    const _as = await oauth.as();
+    const accessTokenPayload = {
+      active: true,
+      team_id: randomUUID(),
+      token_type: 'access_token',
+      exp: Number.POSITIVE_INFINITY,
+    } as const;
+
+    inspectToken.mockReturnValueOnce([null, accessTokenPayload]);
 
     const authorizationResult = {
       device_code: randomUUID(),
@@ -111,14 +112,14 @@ describe('login --future', () => {
       // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
       new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
       'Passing the correct user agent so the user can verify'
-    ).toBe(userAgent);
+    ).toBe(oauth.userAgent);
 
     expect(
       fetch.mock.calls[1][1]?.body?.toString(),
       'Requesting a device code with the correct params'
     ).toBe(
       new URLSearchParams({
-        client_id: VERCEL_CLI_CLIENT_ID,
+        client_id: oauth.VERCEL_CLI_CLIENT_ID,
         scope: tokenResult.scope,
       }).toString()
     );
@@ -131,7 +132,7 @@ describe('login --future', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'user-agent': userAgent,
+            'user-agent': oauth.userAgent,
           },
           body: expect.any(URLSearchParams),
         })
@@ -143,7 +144,7 @@ describe('login --future', () => {
       'Polling with the received device code'
     ).toBe(
       new URLSearchParams({
-        client_id: VERCEL_CLI_CLIENT_ID,
+        client_id: oauth.VERCEL_CLI_CLIENT_ID,
         grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
         device_code: authorizationResult.device_code,
       }).toString()

@@ -1,22 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
-import * as _fetch from 'node-fetch';
-import * as jose from 'jose';
+import _fetch, { Request, Response } from 'node-fetch';
 
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
+import { inspectToken as inspectTokenActual } from '../../../../src/util/oauth';
 
-const fetch = vi.mocked(_fetch.default);
+const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
 }));
 
-const decodeJwt = vi.mocked(jose.decodeJwt);
-vi.mock('jose', async () => ({
-  ...(await vi.importActual('jose')),
-  decodeJwt: vi.fn(),
+const inspectToken = vi.mocked(inspectTokenActual);
+vi.mock('../../../../src/util/oauth', async () => ({
+  ...(await vi.importActual('../../../../src/util/oauth')),
+  inspectToken: vi.fn(),
 }));
 
 describe('OAuth Token Refresh', () => {
@@ -43,7 +43,7 @@ describe('OAuth Token Refresh', () => {
       jwks_uri: 'https://jwks/',
     };
     fetch.mockImplementation(init => {
-      const url = init instanceof _fetch.Request ? init.url : init.toString();
+      const url = init instanceof Request ? init.url : init.toString();
 
       // Mock the discovery document
       if (url.endsWith('.well-known/openid-configuration')) {
@@ -70,7 +70,14 @@ describe('OAuth Token Refresh', () => {
       throw new Error(`Unexpected URL: ${url}`);
     });
 
-    decodeJwt.mockResolvedValueOnce({ active: true });
+    inspectToken.mockReturnValueOnce([
+      null,
+      {
+        active: true,
+        token_type: 'access_token',
+        exp: Number.POSITIVE_INFINITY,
+      },
+    ]);
 
     const exitCode = await whoami(client);
     expect(exitCode).toBe(0);
@@ -93,7 +100,7 @@ describe('OAuth Token Refresh', () => {
     expect(exitCode).toBe(0);
 
     fetch.mockImplementation(init => {
-      const url = init instanceof _fetch.Request ? init.url : init.toString();
+      const url = init instanceof Request ? init.url : init.toString();
 
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
@@ -113,7 +120,7 @@ describe('OAuth Token Refresh', () => {
 
 function json(data: unknown) {
   return Promise.resolve(
-    new _fetch.Response(JSON.stringify(data), {
+    new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
