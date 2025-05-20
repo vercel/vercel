@@ -101,7 +101,7 @@ export default async function dev(
       envValues,
       'vercel-cli:dev'
     )) {
-      output.log(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+      output.debug(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
       envValues[VERCEL_OIDC_TOKEN] = token;
       await devServer.runDevCommand(true);
       telemetry.trackOidcTokenRefresh(++refreshCount);
