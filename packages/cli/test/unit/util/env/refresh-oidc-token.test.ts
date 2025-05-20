@@ -26,7 +26,7 @@ describe('refreshOidcToken', () => {
 
     client.setArgv('--debug');
 
-    client.scenario.get(`/v2/env/pull/${projectId}`, (_, res) => {
+    client.scenario.get(`/v3/env/pull/${projectId}`, (_, res) => {
       if (omitJwt) {
         return res.json({ env: {} });
       }
