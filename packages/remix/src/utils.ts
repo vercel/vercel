@@ -1,6 +1,6 @@
 import semver from 'semver';
 import { existsSync, readFileSync, promises as fs } from 'fs';
-import { basename, dirname, join, relative, resolve, sep } from 'path';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'path';
 import { debug, type PackageJson } from '@vercel/build-utils';
 import { walkParentDirs } from '@vercel/build-utils';
 import { createRequire } from 'module';
@@ -445,23 +445,36 @@ async function ensureSymlink(
 
 // Figure out if the `remix.config` file is using ESM syntax
 export async function isESM(remixConfigPath: string): Promise<boolean> {
-  // from this node release then node supports ESM natively
-  if (semver.gte(process.version, '20.19.0')) {
-    const { type } = JSON.parse(
-      await fs.readFile(join(dirname(remixConfigPath), 'package.json'), 'utf8')
-    ) as PackageJson;
-
-    // internally, remix uses `type: 'module'` for its config files
-    if (type === 'module') {
+  switch (extname(remixConfigPath)) {
+    case '.mjs': {
       return true;
     }
-  }
+    case '.cjs': {
+      return false;
+    }
+    default: {
+      // from this node release then node supports ESM natively
+      if (semver.gte(process.version, '20.19.0')) {
+        const { type } = JSON.parse(
+          await fs.readFile(
+            join(dirname(remixConfigPath), 'package.json'),
+            'utf8'
+          )
+        ) as PackageJson;
 
-  try {
-    require_(remixConfigPath);
-    return false;
-  } catch (err: any) {
-    return err.code === 'ERR_REQUIRE_ESM';
+        // internally, remix uses `type: 'module'` for its config files
+        if (type === 'module') {
+          return true;
+        }
+      }
+
+      try {
+        require_(remixConfigPath);
+        return false;
+      } catch (err: any) {
+        return err.code === 'ERR_REQUIRE_ESM';
+      }
+    }
   }
 }
 
