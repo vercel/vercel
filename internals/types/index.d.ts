@@ -2,7 +2,7 @@ import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import type { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
 export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
@@ -26,12 +26,32 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-export interface AuthConfig {
+interface AuthConfigBase {
   '// Note'?: string;
   '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
+
+interface LegacyAuthConfig extends AuthConfigBase {
+  /** An Vercel token retrieved using the legacy authentication flow. */
+  token?: string;
+  type?: 'legacy';
+}
+
+interface OAuthAuthConfig extends AuthConfigBase {
+  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
+  token?: string;
+  /**
+   * The absolute time (seconds) when the {@link OAuthAuthConfig.token} expires.
+   * Used to optimistically check if the token is still valid.
+   */
+  expiresAt?: number;
+  refreshToken?: string;
+  type: 'oauth';
+}
+
+type AuthConfig = LegacyAuthConfig | OAuthAuthConfig;
 
 export interface GlobalConfig {
   '// Note'?: string;
@@ -41,12 +61,6 @@ export interface GlobalConfig {
 
   telemetry?: {
     enabled?: boolean;
-  };
-
-  // TODO: legacy - remove
-  updateChannel?: string;
-  desktop?: {
-    teamOrder: any;
   };
 }
 

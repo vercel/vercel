@@ -22,7 +22,7 @@ import responseError from './response-error';
 import printIndications from './print-indications';
 import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
-import { writeToAuthConfigFile } from './config/files';
+import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
 import type {
   AuthConfig,
@@ -31,6 +31,7 @@ import type {
   Stdio,
   ReadableTTY,
   PaginationOptions,
+  OAuthAuthConfig,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -39,6 +40,7 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
+import { processTokenResponse, refreshTokenRequest } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -66,6 +68,22 @@ export interface ClientOptions extends Stdio {
 export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
+
+export function isOAuthAuth(
+  authConfig: AuthConfig
+): authConfig is OAuthAuthConfig {
+  return authConfig.type === 'oauth';
+}
+
+export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
+  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
+}
+
+export function hasRefreshToken(
+  authConfig: OAuthAuthConfig
+): authConfig is OAuthAuthConfig & { refreshToken: string } {
+  return 'refreshToken' in authConfig;
+}
 
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
@@ -132,7 +150,85 @@ export default class Client extends EventEmitter implements Stdio {
     });
   }
 
-  private _fetch(_url: string, opts: FetchOptions = {}) {
+  /**
+   * When the auth config is of type `OAuthAuthConfig`,
+   * this method silently tries to refresh the access_token if it is expired.
+   *
+   * If the refresh_token is also expired, it will not attempt to refresh it.
+   * If there is any error during the refresh process, it will not throw an error.
+   */
+  private async ensureAuthorized(): Promise<void> {
+    if (!isOAuthAuth(this.authConfig)) return;
+
+    const { authConfig } = this;
+
+    // If we have a valid access token, do nothing
+    if (isValidAccessToken(authConfig)) {
+      output.debug('Valid access token, skipping token refresh.');
+      return;
+    }
+
+    // If we don't have a refresh token, empty the auth config
+    // to force the user to re-authenticate
+    if (!hasRefreshToken(authConfig)) {
+      output.debug('No refresh token found, emptying auth config.');
+      this.emptyAuthConfig();
+      this.writeToAuthConfigFile();
+      return;
+    }
+
+    const tokenResponse = await refreshTokenRequest({
+      refresh_token: authConfig.refreshToken,
+    });
+
+    const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+
+    // If we had an error, during the refresh process, empty the auth config
+    // to force the user to re-authenticate
+    if (tokensError) {
+      output.debug('Error refreshing token, emptying auth config.');
+      this.emptyAuthConfig();
+      this.writeToAuthConfigFile();
+      return;
+    }
+
+    this.updateAuthConfig({
+      type: 'oauth',
+      token: tokens.access_token,
+      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+    });
+
+    if (tokens.refresh_token) {
+      this.updateAuthConfig({ refreshToken: tokens.refresh_token });
+    }
+
+    this.writeToAuthConfigFile();
+    this.writeToConfigFile();
+
+    output.debug('Tokens refreshed successfully.');
+  }
+
+  updateConfig(config: Partial<GlobalConfig>) {
+    this.config = { ...this.config, ...config };
+  }
+
+  writeToConfigFile() {
+    writeToConfigFile(this.config);
+  }
+
+  updateAuthConfig(authConfig: Partial<AuthConfig>) {
+    this.authConfig = { ...this.authConfig, ...authConfig };
+  }
+
+  emptyAuthConfig() {
+    this.authConfig = {};
+  }
+
+  writeToAuthConfigFile() {
+    writeToAuthConfigFile(this.authConfig);
+  }
+
+  private async _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
     if (opts.accountId || opts.useCurrentTeam !== false) {
@@ -149,6 +245,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+
+    await this.ensureAuthorized();
+
     if (this.authConfig.token) {
       headers.set('authorization', `Bearer ${this.authConfig.token}`);
     }

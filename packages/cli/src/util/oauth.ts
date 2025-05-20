@@ -1,5 +1,5 @@
 import fetch, { type Response } from 'node-fetch';
-import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
+import { decodeJwt } from 'jose';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -103,7 +103,7 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid',
+      scope: 'openid offline_access',
     }),
   });
 }
@@ -229,31 +229,27 @@ export async function deviceAccessTokenRequest(options: {
   }
 }
 
+interface TokenSet {
+  /** The access token issued by the authorization server. */
+  access_token: string & { _: 'at' }; // HACK: To brand the access_token type
+  /** The type of the token issued */
+  token_type: 'Bearer';
+  /** The lifetime in seconds of the access token. */
+  expires_in: number;
+  /** The refresh token, which can be used to obtain new access tokens. */
+  refresh_token?: string;
+  /** The scope of the access token. */
+  scope?: string;
+}
+
 /**
- * Process the Device Access Token request Response
+ * Process the Token request Response
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
  */
-export async function processDeviceAccessTokenResponse(
+export async function processTokenResponse(
   response: Response
-): Promise<
-  | [OAuthError | TypeError]
-  | [
-      null,
-      {
-        /** The access token issued by the authorization server. */
-        access_token: string;
-        /** The type of the token issued */
-        token_type: 'Bearer';
-        /** The lifetime in seconds of the access token. */
-        expires_in: number;
-        /** The refresh token, which can be used to obtain new access tokens. */
-        refresh_token?: string;
-        /** The scope of the access token. */
-        scope?: string;
-      },
-    ]
-> {
+): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
   const json = await response.json();
 
   if (!response.ok) {
@@ -309,6 +305,28 @@ export async function processRevocationResponse(
   const json = await response.json();
 
   return [new OAuthError('Revocation request failed', json)];
+}
+
+/**
+ * Perform Refresh Token Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6749#section-6
+ */
+export async function refreshTokenRequest(options: {
+  refresh_token: string;
+}): Promise<Response> {
+  return await fetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'refresh_token',
+      ...options,
+    }),
+  });
 }
 
 type OAuthErrorCode =
@@ -382,22 +400,33 @@ function canParseURL(url: string) {
   }
 }
 
-interface VercelAccessToken extends JWTPayload {
+/** @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
+interface AccessToken {
+  /**
+   * Integer timestamp, measured in the number of seconds
+   * since January 1 1970 UTC, indicating when this token will expire.
+   */
+  exp: number;
+  /** Whether or not the presented token is active. */
+  active: boolean;
+  token_type: 'access_token';
+  /** The authorizing principal's team. */
   team_id?: string;
 }
 
-export async function verifyJWT(
-  token: string
-): Promise<[Error] | [null, VercelAccessToken]> {
+/**
+ * Inspects and returns the content of an access_token.
+ * If the token is invalid, an {@link InspectionError} is returned.
+ * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
+ */
+export function inspectToken(
+  token: TokenSet['access_token']
+): [InspectionError] | [null, AccessToken] {
   try {
-    const JWKS = createRemoteJWKSet((await as()).jwks_uri);
-    const { payload } = await jwtVerify<VercelAccessToken>(token, JWKS, {
-      issuer: 'https://vercel.com',
-      audience: ['https://api.vercel.com', 'https://vercel.com/api'],
-    });
-    return [null, payload];
-  } catch (error) {
-    if (error instanceof Error) return [error];
-    return [new Error('Could not verify JWT.', { cause: error })];
+    return [null, decodeJwt<AccessToken>(token)];
+  } catch (cause) {
+    return [new InspectionError('Could not inspect token.', { cause })];
   }
 }
+
+class InspectionError extends Error {}
