@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "https://vercel-packages.vercel.app/next/commits/253c274ff3d561cb4fb5b6071206bce9f334e09d/next",
+    "next": "https://vercel-packages.vercel.app/next/commits/bc416a0c2470ad97881b2fa6cab351d851838aca/next",
     "react": "latest",
     "react-dom": "latest"
   }
