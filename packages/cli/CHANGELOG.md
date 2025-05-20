@@ -1,5 +1,11 @@
 # vercel
 
+## 42.1.0
+
+### Minor Changes
+
+- Implement token refresh ([#13317](https://github.com/vercel/vercel/pull/13317))
+
 ## 42.0.0
 
 ### Major Changes
