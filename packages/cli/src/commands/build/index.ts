@@ -313,13 +313,15 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    await rootSpan
-      .child('vc.doBuild')
-      .trace(span =>
-        doBuild(client, project, buildsJson, cwd, outputDir, span)
-      );
-
-    await rootSpan.stop();
+    try {
+      await rootSpan
+        .child('vc.doBuild')
+        .trace(span =>
+          doBuild(client, project, buildsJson, cwd, outputDir, span)
+        );
+    } finally {
+      await rootSpan.stop();
+    }
 
     return 0;
   } catch (err: any) {
