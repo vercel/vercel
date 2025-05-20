@@ -443,15 +443,26 @@ async function ensureSymlink(
   debug(`Created symlink for "${pkgName}"`);
 }
 
-export function isESM(path: string): boolean {
-  // Figure out if the `remix.config` file is using ESM syntax
-  let isESM = false;
-  try {
-    require_(path);
-  } catch (err: any) {
-    isESM = err.code === 'ERR_REQUIRE_ESM';
+// Figure out if the `remix.config` file is using ESM syntax
+export async function isESM(remixConfigPath: string): Promise<boolean> {
+  // from this node release then node supports ESM natively
+  if (semver.gte(process.version, '20.19.0')) {
+    const { type } = JSON.parse(
+      await fs.readFile(join(dirname(remixConfigPath), 'package.json'), 'utf8')
+    ) as PackageJson;
+
+    // internally, remix uses `type: 'module'` for its config files
+    if (type === 'module') {
+      return true;
+    }
   }
-  return isESM;
+
+  try {
+    require_(remixConfigPath);
+    return false;
+  } catch (err: any) {
+    return err.code === 'ERR_REQUIRE_ESM';
+  }
 }
 
 export function hasScript(scriptName: string, pkg?: PackageJson) {
