@@ -33,11 +33,11 @@ export default async function doEmailLogin(
   output.print(eraseLines(1));
 
   output.print(
-    `We sent an email to ${highlight(
+    `If you have an account, we sent an email to ${highlight(
       email
     )}. Please follow the steps provided inside it and make sure the security code matches ${highlight(
       securityCode
-    )}.\n`
+    )}. If you do not have an account yet, please sign up: https://vercel.com/signup\n`
   );
 
   output.spinner('Waiting for your confirmation');
