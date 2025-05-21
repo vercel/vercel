@@ -2,7 +2,7 @@
 module.exports = {
   experimental: {
     ppr: 'incremental',
-    dynamicIO: true,
+    dynamicIO: false,
     clientSegmentCache: true,
   },
 };

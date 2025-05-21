@@ -350,10 +350,17 @@ export async function scanParentDirs(
     start: destPath,
     filename: 'package.json',
   });
-  const packageJson: PackageJson | undefined =
-    readPackageJson && pkgJsonPath
-      ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
-      : undefined;
+
+  let packageJson: PackageJson | undefined;
+  if (readPackageJson && pkgJsonPath) {
+    try {
+      packageJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'));
+    } catch (err) {
+      throw new Error(
+        `Could not read ${pkgJsonPath}: ${(err as Error).message}.`
+      );
+    }
+  }
   const {
     paths: [
       yarnLockPath,
