@@ -1961,7 +1961,11 @@ export const build: BuildV2 = async buildOptions => {
               '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
-          let lambdaOptions: { memory?: number; maxDuration?: number } = {};
+          let lambdaOptions: {
+            architecture?: NodejsLambda['architecture'];
+            memory?: number;
+            maxDuration?: number;
+          } = {};
 
           if (config && config.functions) {
             lambdaOptions = await getLambdaOptionsFromFunction({

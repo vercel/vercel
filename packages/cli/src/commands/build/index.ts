@@ -275,6 +275,12 @@ export default async function main(client: Client): Promise<number> {
     argv: scrubArgv(process.argv),
   };
 
+  if (!process.env.VERCEL_BUILD_IMAGE) {
+    output.warn(
+      'Build not running on Vercel. System environment variables will not be available.'
+    );
+  }
+
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
