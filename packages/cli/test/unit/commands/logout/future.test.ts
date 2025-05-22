@@ -51,7 +51,7 @@ describe('logout', () => {
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "logout --future"').toBe(0);
+    expect(exitCode, 'exit code for "logout"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -103,7 +103,7 @@ describe('logout', () => {
     const teamBefore = client.config.currentTeam;
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(1);
+    expect(exitCode, 'exit code for "login"').toBe(1);
 
     const output = await client.stderr.getFullOutput();
     expect(output).toMatch(invalidResponse.error);
@@ -129,9 +129,9 @@ describe('logout', () => {
     expect(client.authConfig.token).toBeUndefined();
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    expect(exitCode, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput(
-      'Not currently logged in, so `vercel logout --future` did nothing'
+      'Not currently logged in, so `vercel logout` did nothing'
     );
     expect(client.authConfig.token).toBeUndefined();
   });
