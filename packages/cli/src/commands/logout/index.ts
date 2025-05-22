@@ -42,8 +42,7 @@ export default async function logout(client: Client): Promise<number> {
     return 2;
   }
 
-  // TODO: Remove the `--future` flag
-  if (authConfig.type === 'oauth' || parsedArgs.flags['--future']) {
+  if (authConfig.type === 'oauth') {
     return await future(client);
   }
 
