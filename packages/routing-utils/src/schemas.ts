@@ -1,3 +1,81 @@
+const conditionValueSchema = {
+  anyOf: [
+    {
+      description:
+        'A string value for backward compatibility (treated as regex)',
+      type: 'string',
+      maxLength: 4096,
+    },
+    {
+      description: 'A condition operation object',
+      type: 'object',
+      additionalProperties: false,
+      minProperties: 1,
+      maxProperties: 1,
+      properties: {
+        eq: {
+          description: 'Equal',
+          anyOf: [{ type: 'string', maxLength: 4096 }, { type: 'number' }],
+        },
+        neq: {
+          description: 'Not equal',
+          type: 'string',
+          maxLength: 4096,
+        },
+        inc: {
+          description: 'In array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          maxItems: 100,
+        },
+        ninc: {
+          description: 'Not in array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          maxItems: 100,
+        },
+        pre: {
+          description: 'Has prefix',
+          type: 'string',
+          maxLength: 4096,
+        },
+        suf: {
+          description: 'Has suffix',
+          type: 'string',
+          maxLength: 4096,
+        },
+        re: {
+          description: 'Match regex pattern',
+          type: 'string',
+          maxLength: 4096,
+        },
+        gt: {
+          description: 'Greater than',
+          type: 'number',
+        },
+        gte: {
+          description: 'Greater than or equal to',
+          type: 'number',
+        },
+        lt: {
+          description: 'Less than',
+          type: 'number',
+        },
+        lte: {
+          description: 'Less than or equal to',
+          type: 'number',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const hasSchema = {
   description: 'An array of requirements that are needed to match',
   type: 'array',
@@ -16,9 +94,8 @@ export const hasSchema = {
           },
           value: {
             description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
+              'A value to match against the request element. Can be a string (treated as regex) or a condition operation object',
+            ...conditionValueSchema,
           },
         },
       },
@@ -40,9 +117,8 @@ export const hasSchema = {
           },
           value: {
             description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
+              'A value to match against the request element. Can be a string (treated as regex) or a condition operation object',
+            ...conditionValueSchema,
           },
         },
       },

@@ -12,6 +12,7 @@ import {
   trailingSlashSchema,
   getTransformedRoutes,
 } from '../src';
+import { collectHasSegments } from '../src/superstatic';
 
 const ajv = new Ajv();
 
@@ -1220,5 +1221,119 @@ describe('getTransformedRoutes', () => {
         src: '^(?:/(.*))$',
       },
     ]);
+  });
+
+  test('should validate condition operations in has and missing arrays', () => {
+    const vercelConfig = {
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: '/backend/:path*',
+          has: [
+            // String values (backward compatibility)
+            { type: 'header', key: 'authorization', value: 'Bearer .*' },
+            { type: 'host', value: 'api\\.example\\.com' },
+
+            // Condition operations
+            { type: 'cookie', key: 'theme', value: { eq: 'dark' } },
+            { type: 'query', key: 'version', value: { neq: 'v1' } },
+            {
+              type: 'header',
+              key: 'role',
+              value: { inc: ['admin', 'moderator'] },
+            },
+            { type: 'query', key: 'type', value: { ninc: ['test', 'debug'] } },
+            { type: 'header', key: 'user-agent', value: { pre: 'Mozilla' } },
+            { type: 'query', key: 'file', value: { suf: '.json' } },
+            { type: 'query', key: 'limit', value: { gt: 10 } },
+            { type: 'query', key: 'offset', value: { lt: 100 } },
+            { type: 'header', key: 'priority', value: { gte: 5 } },
+            { type: 'query', key: 'count', value: { lte: 50 } },
+            { type: 'header', key: 'pattern', value: { re: '(?<id>\\d+)' } },
+            { type: 'query', key: 'numeric', value: { eq: 42 } },
+          ],
+          missing: [
+            { type: 'cookie', key: 'disabled', value: { eq: 'true' } },
+            { type: 'header', key: 'x-skip', value: { neq: 'false' } },
+          ],
+        },
+      ],
+    };
+
+    assertValid(vercelConfig.rewrites, rewritesSchema);
+  });
+
+  test('should fail validation for invalid condition operations', () => {
+    // Multiple operations in one object (should fail)
+    const validate1 = ajv.compile(rewritesSchema);
+    const valid1 = validate1([
+      {
+        source: '/test',
+        destination: '/dest',
+        has: [{ type: 'query', key: 'test', value: { eq: 'one', neq: 'two' } }],
+      },
+    ]);
+    assert.equal(valid1, false);
+    // Should contain maxProperties error
+    assert.ok(validate1.errors?.some(err => err.keyword === 'maxProperties'));
+
+    // Empty condition object (should fail)
+    const validate2 = ajv.compile(rewritesSchema);
+    const valid2 = validate2([
+      {
+        source: '/test',
+        destination: '/dest',
+        has: [{ type: 'query', key: 'test', value: {} }],
+      },
+    ]);
+    assert.equal(valid2, false);
+    // Should contain minProperties error
+    assert.ok(validate2.errors?.some(err => err.keyword === 'minProperties'));
+
+    // Invalid property name (should fail)
+    const validate3 = ajv.compile(rewritesSchema);
+    const valid3 = validate3([
+      {
+        source: '/test',
+        destination: '/dest',
+        has: [{ type: 'query', key: 'test', value: { invalid: 'test' } }],
+      },
+    ]);
+    assert.equal(valid3, false);
+    // Should contain additionalProperties error
+    assert.ok(
+      validate3.errors?.some(err => err.keyword === 'additionalProperties')
+    );
+  });
+});
+
+describe('condition operations functionality', () => {
+  test('should handle regex named groups in condition operations', () => {
+    const has = [
+      {
+        type: 'header' as const,
+        key: 'x-user-id',
+        value: { re: '(?<userId>\\d+)' },
+      },
+      { type: 'query' as const, key: 'token', value: { eq: 'static-value' } },
+      { type: 'host' as const, value: '(?<subdomain>[a-z]+)\\.example\\.com' },
+    ];
+
+    const segments = collectHasSegments(has);
+
+    // Should extract named groups from regex operations and host strings
+    assert.deepEqual(segments.sort(), ['host', 'subdomain', 'userId']);
+  });
+
+  test('should handle backward compatibility with string values', () => {
+    const has = [
+      { type: 'header' as const, key: 'x-user-id', value: '(?<userId>\\d+)' },
+      { type: 'host' as const, value: '(?<subdomain>[a-z]+)\\.example\\.com' },
+    ];
+
+    const segments = collectHasSegments(has);
+
+    // Should work exactly as before for string values
+    assert.deepEqual(segments.sort(), ['host', 'subdomain', 'userId']);
   });
 });

@@ -3,7 +3,14 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
+import {
+  Route,
+  Redirect,
+  Rewrite,
+  HasField,
+  Header,
+  ConditionValue,
+} from './types';
 
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
@@ -302,6 +309,29 @@ const normalizeHasKeys = (hasItems: HasField = []) => {
   return hasItems;
 };
 
+/**
+ * Extracts a string value from a ConditionValue for regex processing.
+ * For string values, returns as-is.
+ * For condition operation objects, returns the string that can contain named groups (primarily 're' operation).
+ */
+function getStringValueForRegex(value: ConditionValue): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  // For condition operations, only regex operations can contain named groups
+  if (typeof value === 'object' && value !== null) {
+    // 're' operation can contain named groups
+    if ('re' in value && typeof value.re === 'string') {
+      return value.re;
+    }
+    // For other operations, there are no named groups to extract
+    return null;
+  }
+
+  return null;
+}
+
 export function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
@@ -311,9 +341,12 @@ export function collectHasSegments(has?: HasField) {
     }
 
     if (hasItem.value) {
-      for (const match of hasItem.value.matchAll(namedGroupsRegex)) {
-        if (match[1]) {
-          hasSegments.add(match[1]);
+      const stringValue = getStringValueForRegex(hasItem.value);
+      if (stringValue) {
+        for (const match of stringValue.matchAll(namedGroupsRegex)) {
+          if (match[1]) {
+            hasSegments.add(match[1]);
+          }
         }
       }
 
