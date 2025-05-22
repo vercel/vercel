@@ -25,6 +25,37 @@ export type ConditionValue =
       lte?: number;
     };
 
+export interface MitigateRateLimit {
+  algo: 'fixed_window' | 'token_bucket';
+  window: number;
+  limit: number;
+  keys: string[];
+  action?: 'log' | 'challenge' | 'deny' | 'rate_limit' | null;
+}
+
+export interface MitigateRedirect {
+  location: string;
+  permanent: boolean;
+}
+
+export type MitigateActionType =
+  | 'log'
+  | 'challenge'
+  | 'deny'
+  | 'bypass'
+  | 'rate_limit'
+  | 'redirect';
+
+export interface MitigateAction {
+  mitigate?: {
+    action: MitigateActionType;
+    rateLimit?: MitigateRateLimit | null;
+    redirect?: MitigateRedirect | null;
+    actionDuration?: string | null;
+    bypassSystem?: boolean | null;
+  };
+}
+
 export type HasField = Array<
   | {
       type: 'host';
@@ -50,6 +81,7 @@ export type RouteWithSrc = {
   status?: number;
   has?: HasField;
   missing?: HasField;
+  mitigate?: MitigateAction['mitigate'];
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;

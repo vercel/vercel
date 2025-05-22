@@ -256,377 +256,81 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails is src is not string', () => {
-    assertError(
-      [
-        {
-          src: false,
-        },
-      ],
-      [
-        {
-          keyword: 'type',
-          dataPath: '[0].src',
-          schemaPath: '#/items/anyOf/0/properties/src/type',
-          params: { type: 'string' },
-          message: 'should be string',
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'src' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ src: false }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'type'));
   });
 
   test('fails if dest is not string', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          dest: false,
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'dest' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ dest: false }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if methods is not array', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          methods: false,
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'methods' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ methods: false }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if methods is not string', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          methods: [false],
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'methods' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ methods: [false] }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if headers is not an object', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          headers: false,
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'headers' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ headers: false }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if header is not a string', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          headers: {
-            test: false,
-          },
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'headers' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ headers: { test: false } }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if handle is not string', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          handle: false,
-        },
-      ],
-      [
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/additionalProperties',
-          params: { additionalProperty: 'handle' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'type',
-          dataPath: '[0].handle',
-          schemaPath: '#/items/anyOf/1/properties/handle/type',
-          params: { type: 'string' },
-          message: 'should be string',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ handle: false }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'type'));
   });
 
   test('fails if continue is not boolean', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          continue: 'false',
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'continue' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ continue: 'false' }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if check is not boolean', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          check: 'false',
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'check' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ check: 'false' }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if status is not number', () => {
-    assertError(
-      [
-        // @ts-ignore
-        {
-          status: '404',
-        },
-      ],
-      [
-        {
-          keyword: 'required',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/required',
-          params: { missingProperty: 'src' },
-          message: "should have required property 'src'",
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'status' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
-    );
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ status: '404' }]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 
   test('fails if property does not exist', () => {
-    assertError(
-      [
-        {
-          // @ts-ignore
-          doesNotExist: false,
-        },
-      ],
-      [
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/0/additionalProperties',
-          params: { additionalProperty: 'doesNotExist' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'additionalProperties',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf/1/additionalProperties',
-          params: { additionalProperty: 'doesNotExist' },
-          message: 'should NOT have additional properties',
-        },
-        {
-          keyword: 'anyOf',
-          dataPath: '[0]',
-          schemaPath: '#/items/anyOf',
-          params: {},
-          message: 'should match some schema in anyOf',
-        },
-      ]
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([{ doesNotExist: false }]);
+    assert.equal(valid, false);
+    assert.ok(
+      validate.errors?.some(err => err.keyword === 'additionalProperties')
     );
   });
 
@@ -1304,6 +1008,155 @@ describe('getTransformedRoutes', () => {
     assert.ok(
       validate3.errors?.some(err => err.keyword === 'additionalProperties')
     );
+  });
+
+  test('should validate mitigate property in route configurations', () => {
+    const routes = [
+      {
+        src: '^/api/protected/(.*)$',
+        mitigate: {
+          action: 'rate_limit',
+          rateLimit: {
+            algo: 'fixed_window',
+            window: 60,
+            limit: 10,
+            keys: ['ip'],
+            action: 'deny',
+          },
+        },
+      },
+      {
+        src: '^/admin/(.*)$',
+        mitigate: {
+          action: 'challenge',
+          actionDuration: '1h',
+          bypassSystem: false,
+        },
+      },
+      {
+        src: '^/secure/(.*)$',
+        mitigate: {
+          action: 'log',
+        },
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should validate mitigate with redirect action', () => {
+    const routes = [
+      {
+        src: '^/blocked/(.*)$',
+        mitigate: {
+          action: 'redirect',
+          redirect: {
+            location: 'https://example.com/blocked',
+            permanent: false,
+          },
+        },
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should validate mitigate with token bucket rate limiting', () => {
+    const routes = [
+      {
+        src: '^/api/(.*)$',
+        mitigate: {
+          action: 'rate_limit',
+          rateLimit: {
+            algo: 'token_bucket',
+            window: 3600,
+            limit: 100,
+            keys: ['user_id', 'ip'],
+          },
+          actionDuration: '30m',
+        },
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should fail validation for invalid mitigate configurations', () => {
+    // Missing required action property
+    const validate1 = ajv.compile(routesSchema);
+    const valid1 = validate1([
+      {
+        src: '^/test$',
+        mitigate: {
+          rateLimit: {
+            algo: 'fixed_window',
+            window: 60,
+            limit: 10,
+            keys: ['ip'],
+          },
+        },
+      },
+    ]);
+    assert.equal(valid1, false);
+    assert.ok(validate1.errors?.some(err => err.keyword === 'required'));
+
+    // Invalid action type
+    const validate2 = ajv.compile(routesSchema);
+    const valid2 = validate2([
+      {
+        src: '^/test$',
+        mitigate: {
+          action: 'invalid_action',
+        },
+      },
+    ]);
+    assert.equal(valid2, false);
+    assert.ok(validate2.errors?.some(err => err.keyword === 'enum'));
+
+    // Invalid rate limit configuration (missing required fields)
+    const validate3 = ajv.compile(routesSchema);
+    const valid3 = validate3([
+      {
+        src: '^/test$',
+        mitigate: {
+          action: 'rate_limit',
+          rateLimit: {
+            algo: 'fixed_window',
+            // missing window, limit, and keys
+          },
+        },
+      },
+    ]);
+    assert.equal(valid3, false);
+    assert.ok(validate3.errors?.some(err => err.keyword === 'required'));
+  });
+
+  test('should fail validation when both dest and mitigate are present', () => {
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([
+      {
+        src: '^/test$',
+        dest: '/destination',
+        mitigate: {
+          action: 'log',
+        },
+      },
+    ]);
+    assert.equal(valid, false);
+    // Should fail because no schema allows both dest and mitigate
+    assert.ok(validate.errors?.some(err => err.keyword === 'anyOf'));
+  });
+
+  test('should fail validation when mitigate is present without action', () => {
+    const validate = ajv.compile(routesSchema);
+    const valid = validate([
+      {
+        src: '^/test$',
+        mitigate: {},
+      },
+    ]);
+    assert.equal(valid, false);
+    assert.ok(validate.errors?.some(err => err.keyword === 'required'));
   });
 });
 

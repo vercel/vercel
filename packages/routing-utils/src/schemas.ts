@@ -76,6 +76,104 @@ const conditionValueSchema = {
   ],
 } as const;
 
+const mitigateSchema = {
+  description: 'Mitigation action configuration',
+  type: 'object',
+  additionalProperties: false,
+  required: ['action'],
+  properties: {
+    action: {
+      description: 'The mitigation action to take',
+      type: 'string',
+      enum: ['log', 'challenge', 'deny', 'bypass', 'rate_limit', 'redirect'],
+    },
+    rateLimit: {
+      description: 'Rate limiting configuration',
+      anyOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          additionalProperties: false,
+          required: ['algo', 'window', 'limit', 'keys'],
+          properties: {
+            algo: {
+              description: 'Rate limiting algorithm',
+              type: 'string',
+              enum: ['fixed_window', 'token_bucket'],
+            },
+            window: {
+              description: 'Time window in seconds',
+              type: 'number',
+              minimum: 1,
+            },
+            limit: {
+              description: 'Request limit within the window',
+              type: 'number',
+              minimum: 1,
+            },
+            keys: {
+              description: 'Keys to group rate limiting by',
+              type: 'array',
+              items: {
+                type: 'string',
+                maxLength: 256,
+              },
+              maxItems: 10,
+              minItems: 1,
+            },
+            action: {
+              description: 'Action to take when rate limit is exceeded',
+              anyOf: [
+                { type: 'null' },
+                {
+                  type: 'string',
+                  enum: ['log', 'challenge', 'deny', 'rate_limit'],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    redirect: {
+      description: 'Redirect configuration',
+      anyOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          additionalProperties: false,
+          required: ['location', 'permanent'],
+          properties: {
+            location: {
+              description: 'Redirect destination URL',
+              type: 'string',
+              maxLength: 4096,
+            },
+            permanent: {
+              description: 'Whether the redirect is permanent',
+              type: 'boolean',
+            },
+          },
+        },
+      ],
+    },
+    actionDuration: {
+      description: 'Duration for the mitigation action',
+      anyOf: [
+        { type: 'null' },
+        {
+          type: 'string',
+          maxLength: 256,
+        },
+      ],
+    },
+    bypassSystem: {
+      description: 'Whether to bypass the system mitigation',
+      anyOf: [{ type: 'null' }, { type: 'boolean' }],
+    },
+  },
+} as const;
+
 export const hasSchema = {
   description: 'An array of requirements that are needed to match',
   type: 'array',
@@ -129,6 +227,104 @@ export const hasSchema = {
 /**
  * An ajv schema for the routes array
  */
+const routeBaseProperties = {
+  src: {
+    type: 'string',
+    maxLength: 4096,
+  },
+  headers: {
+    type: 'object',
+    additionalProperties: false,
+    minProperties: 1,
+    maxProperties: 100,
+    patternProperties: {
+      '^.{1,256}$': {
+        type: 'string',
+        maxLength: 4096,
+      },
+    },
+  },
+  methods: {
+    type: 'array',
+    maxItems: 10,
+    items: {
+      type: 'string',
+      maxLength: 32,
+    },
+  },
+  caseSensitive: {
+    type: 'boolean',
+  },
+  important: {
+    type: 'boolean',
+  },
+  user: {
+    type: 'boolean',
+  },
+  continue: {
+    type: 'boolean',
+  },
+  override: {
+    type: 'boolean',
+  },
+  check: {
+    type: 'boolean',
+  },
+  isInternal: {
+    type: 'boolean',
+  },
+  status: {
+    type: 'integer',
+    minimum: 100,
+    maximum: 999,
+  },
+  locale: {
+    type: 'object',
+    additionalProperties: false,
+    minProperties: 1,
+    properties: {
+      redirect: {
+        type: 'object',
+        additionalProperties: false,
+        minProperties: 1,
+        maxProperties: 100,
+        patternProperties: {
+          '^.{1,256}$': {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+      },
+      value: {
+        type: 'string',
+        maxLength: 4096,
+      },
+      path: {
+        type: 'string',
+        maxLength: 4096,
+      },
+      cookie: {
+        type: 'string',
+        maxLength: 4096,
+      },
+      default: {
+        type: 'string',
+        maxLength: 4096,
+      },
+    },
+  },
+  middleware: { type: 'number' },
+  middlewarePath: { type: 'string' },
+  middlewareRawSrc: {
+    type: 'array',
+    items: {
+      type: 'string',
+    },
+  },
+  has: hasSchema,
+  missing: hasSchema,
+} as const;
+
 export const routesSchema = {
   type: 'array',
   maxItems: 2048,
@@ -143,105 +339,20 @@ export const routesSchema = {
         required: ['src'],
         additionalProperties: false,
         properties: {
-          src: {
-            type: 'string',
-            maxLength: 4096,
-          },
+          ...routeBaseProperties,
           dest: {
             type: 'string',
             maxLength: 4096,
           },
-          headers: {
-            type: 'object',
-            additionalProperties: false,
-            minProperties: 1,
-            maxProperties: 100,
-            patternProperties: {
-              '^.{1,256}$': {
-                type: 'string',
-                maxLength: 4096,
-              },
-            },
-          },
-          methods: {
-            type: 'array',
-            maxItems: 10,
-            items: {
-              type: 'string',
-              maxLength: 32,
-            },
-          },
-          caseSensitive: {
-            type: 'boolean',
-          },
-          important: {
-            type: 'boolean',
-          },
-          user: {
-            type: 'boolean',
-          },
-          continue: {
-            type: 'boolean',
-          },
-          override: {
-            type: 'boolean',
-          },
-          check: {
-            type: 'boolean',
-          },
-          isInternal: {
-            type: 'boolean',
-          },
-          status: {
-            type: 'integer',
-            minimum: 100,
-            maximum: 999,
-          },
-          locale: {
-            type: 'object',
-            additionalProperties: false,
-            minProperties: 1,
-            properties: {
-              redirect: {
-                type: 'object',
-                additionalProperties: false,
-                minProperties: 1,
-                maxProperties: 100,
-                patternProperties: {
-                  '^.{1,256}$': {
-                    type: 'string',
-                    maxLength: 4096,
-                  },
-                },
-              },
-              value: {
-                type: 'string',
-                maxLength: 4096,
-              },
-              path: {
-                type: 'string',
-                maxLength: 4096,
-              },
-              cookie: {
-                type: 'string',
-                maxLength: 4096,
-              },
-              default: {
-                type: 'string',
-                maxLength: 4096,
-              },
-            },
-          },
-          middleware: { type: 'number' },
-          middlewarePath: { type: 'string' },
-          middlewareRawSrc: {
-            type: 'array',
-            items: {
-              type: 'string',
-            },
-          },
-          has: hasSchema,
-          missing: hasSchema,
+        },
+      },
+      {
+        type: 'object',
+        required: ['src', 'mitigate'],
+        additionalProperties: false,
+        properties: {
+          ...routeBaseProperties,
+          mitigate: mitigateSchema,
         },
       },
       {
