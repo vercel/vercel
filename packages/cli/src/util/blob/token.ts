@@ -2,7 +2,7 @@ import type { Dictionary } from '@vercel/client';
 import output from '../../output-manager';
 import { resolve } from 'node:path';
 import { createEnvObject } from '../env/diff-env-files';
-import { printError } from '../error';
+
 import type Client from '../client';
 
 export async function getBlobRWToken(
@@ -15,7 +15,7 @@ export async function getBlobRWToken(
   try {
     env = await createEnvObject(fullPath);
   } catch (error) {
-    printError(error);
+    output.error(`Couldn't read .env.local file. Please check if it exists.`);
     return;
   }
 

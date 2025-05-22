@@ -39,7 +39,9 @@ export default async function list(
 
   const mode = opts['--mode'] ?? 'expanded';
   if (!isMode(mode)) {
-    output.error(`Invalid mode: ${mode}`);
+    output.error(
+      `Invalid mode: ${mode} has to be either 'folded' or 'expanded'`
+    );
     return 1;
   }
 
