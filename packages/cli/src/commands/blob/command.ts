@@ -1,7 +1,7 @@
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List all Blobs for a Project',
+  description: 'List all files in the Blob store',
   arguments: [],
   options: [
     {
@@ -18,7 +18,7 @@ export const listSubcommand = {
       shorthand: 'c',
       type: String,
       deprecated: false,
-      description: 'Cursor to start listing from',
+      description: 'Cursor from previous page to start listing from',
       argument: 'STRING',
     },
     {
@@ -45,10 +45,10 @@ export const listSubcommand = {
 export const putSubcommand = {
   name: 'put',
   aliases: [],
-  description: 'Upload a file to Blob',
+  description: 'Upload a file to the Blob store',
   arguments: [
     {
-      name: 'file',
+      name: 'pathToFile',
       required: true,
     },
   ],
@@ -74,7 +74,8 @@ export const putSubcommand = {
       shorthand: 'u',
       type: Boolean,
       deprecated: false,
-      description: 'Whether to use multipart upload',
+      description:
+        'If true upload the file in multiple smaller chunks. Default: true',
       argument: 'Boolean',
     },
     {
@@ -82,7 +83,8 @@ export const putSubcommand = {
       shorthand: 't',
       type: String,
       deprecated: false,
-      description: 'The content type of the blob',
+      description:
+        'Overwrite the content-type. Will be infered from the file extension if not provided',
       argument: 'String',
     },
     {
@@ -90,8 +92,16 @@ export const putSubcommand = {
       shorthand: 'c',
       type: Number,
       deprecated: false,
-      description: 'The max age of the cache control',
+      description: 'Max-age of the cache-control header directive',
       argument: 'Number',
+    },
+    {
+      name: 'force',
+      shorthand: 'f',
+      type: Boolean,
+      deprecated: false,
+      description: 'Overwrite the file if it already exists',
+      argument: 'Boolean',
     },
   ],
   examples: [],
@@ -100,7 +110,7 @@ export const putSubcommand = {
 export const delSubcommand = {
   name: 'del',
   aliases: [],
-  description: 'Delete a file from Blob',
+  description: 'Delete a file from the Blob store',
   arguments: [
     {
       name: '<URLS>',
@@ -114,14 +124,14 @@ export const delSubcommand = {
 export const copySubcommand = {
   name: 'copy',
   aliases: ['cp'],
-  description: 'Copy a file from Blob',
+  description: 'Copy a file in the Blob store',
   arguments: [
     {
-      name: '<FROM_URL>',
+      name: 'fromUrl',
       required: true,
     },
     {
-      name: '<TO_PATHNAME>',
+      name: 'toPathname',
       required: true,
     },
   ],
@@ -157,10 +167,10 @@ export const copySubcommand = {
 export const newStoreSubcommand = {
   name: 'new',
   aliases: [],
-  description: 'Create a new blob store',
+  description: 'Create a new Blob store',
   arguments: [
     {
-      name: '<NAME>',
+      name: 'name',
       required: false,
     },
   ],
@@ -171,10 +181,10 @@ export const newStoreSubcommand = {
 export const removeStoreSubcommand = {
   name: 'remove',
   aliases: ['rm'],
-  description: 'Remove a blob store',
+  description: 'Remove a Blob store',
   arguments: [
     {
-      name: '<STORE_ID>',
+      name: 'storeId',
       required: false,
     },
   ],

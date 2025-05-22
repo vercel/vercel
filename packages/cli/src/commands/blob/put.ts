@@ -27,7 +27,7 @@ export default async function put(
   }
 
   const {
-    args: [fileOrContent],
+    args: [filePath],
     flags: opts,
   } = parsedArgs;
 
@@ -36,27 +36,30 @@ export default async function put(
     return 1;
   }
 
-  let putBody: string | Buffer | undefined;
-  let pathname: string | undefined;
+  let putBody: string | Buffer;
+  let pathname: string;
 
   try {
-    const stats = statSync(fileOrContent);
+    const stats = statSync(filePath);
     const isFile = stats.isFile();
 
     if (isFile) {
-      putBody = readFileSync(fileOrContent);
-      pathname = basename(fileOrContent);
+      putBody = readFileSync(filePath);
+      pathname = opts['--pathname'] ?? basename(filePath);
+    } else {
+      output.error('Path to upload is not a file');
+      return 1;
     }
   } catch (err) {
-    if (!isErrnoException(err)) {
-      printError(err);
+    output.debug(`Error reading file: ${err}`);
+
+    if (isErrnoException(err)) {
+      output.error(`File doesn't exist at '${filePath}'`);
       return 1;
     }
 
-    if (err.code === 'ENOENT') {
-      pathname = opts['--pathname'];
-      putBody = fileOrContent;
-    }
+    output.error('Error while reading file');
+    return 1;
   }
 
   if (!pathname || !putBody) {
@@ -78,12 +81,13 @@ export default async function put(
       token,
       access: 'public',
       addRandomSuffix: opts['--add-random-suffix'] ?? false,
-      multipart: opts['--multipart'] ?? false,
+      multipart: opts['--multipart'] ?? true,
       contentType: opts['--content-type'],
       cacheControlMaxAge: opts['--cache-control-max-age'],
+      allowOverwrite: opts['--force'] ?? false,
     });
   } catch (err) {
-    printError(err);
+    output.error(`Error uploading blob: ${err}`);
     return 1;
   }
 
