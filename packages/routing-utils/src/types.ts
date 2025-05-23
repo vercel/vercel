@@ -25,6 +25,20 @@ export type ConditionValue =
       lte?: number;
     };
 
+export type MitigateAction =
+  | 'log'
+  | 'challenge'
+  | 'deny'
+  | 'bypass'
+  | 'rate_limit';
+
+export type EdgeRateLimit = {
+  algo: 'fixed_window' | 'token_bucket';
+  window: number;
+  limit: number;
+  keys: string[];
+};
+
 export type HasField = Array<
   | {
       type: 'host';
@@ -50,6 +64,10 @@ export type RouteWithSrc = {
   status?: number;
   has?: HasField;
   missing?: HasField;
+  mitigate?: {
+    action: MitigateAction;
+    erl?: EdgeRateLimit;
+  };
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;

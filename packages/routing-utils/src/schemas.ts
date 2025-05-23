@@ -1,3 +1,63 @@
+export const mitigateSchema = {
+  description: 'Mitigation action to take on a route',
+  type: 'object',
+  additionalProperties: false,
+  required: ['action'],
+  properties: {
+    action: {
+      description: 'The mitigation action to take',
+      type: 'string',
+      enum: ['log', 'challenge', 'deny', 'bypass', 'rate_limit', 'redirect'],
+    },
+    erl: {
+      description: 'Edge rate limit configuration',
+      type: 'object',
+      additionalProperties: false,
+      required: ['algo', 'window', 'limit', 'keys'],
+      properties: {
+        algo: {
+          description: 'The rate limiting algorithm to use',
+          type: 'string',
+          enum: ['fixed_window', 'token_bucket'],
+        },
+        window: {
+          description: 'Time window for rate limit in seconds',
+          type: 'number',
+          minimum: 10,
+          maximum: 600,
+          default: 60,
+        },
+        limit: {
+          description: 'Request limit.',
+          type: 'number',
+          minimum: 1,
+          maximum: 10_000_000,
+          default: 100,
+        },
+        keys: {
+          description: 'Keys to rate limit by',
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          minItems: 1,
+          maxItems: 3,
+        },
+      },
+    },
+  },
+  if: {
+    properties: {
+      action: {
+        const: 'rate_limit',
+      },
+    },
+  },
+  then: {
+    required: ['action', 'erl'],
+  },
+} as const;
+
 export const conditionValueSchema = {
   anyOf: [
     {
@@ -246,6 +306,7 @@ export const routesSchema = {
           },
           has: hasSchema,
           missing: hasSchema,
+          mitigate: mitigateSchema,
         },
       },
       {
