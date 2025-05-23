@@ -2763,6 +2763,11 @@ export const onPrerenderRoute =
         chain = {
           outputPath: pathnameToOutputName(entryDirectory, routeKey),
           headers: routesManifest.ppr.chain.headers,
+          response: {
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+            },
+          },
         };
       } else if (
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
@@ -2801,6 +2806,11 @@ export const onPrerenderRoute =
         chain = {
           outputPath: paths.output,
           headers: { 'x-matched-path': paths.pathname },
+          response: {
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+            },
+          },
         };
       }
 

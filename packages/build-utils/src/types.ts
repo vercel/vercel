@@ -599,4 +599,14 @@ export interface Chain {
    * The headers to send when making the request to append to the response.
    */
   headers: Record<string, string>;
+
+  /**
+   * The response configuration, currently only headers are supported.
+   */
+  response?: {
+    /**
+     * The headers to set on the response prior to chaining.
+     */
+    headers: Record<string, string>;
+  };
 }
