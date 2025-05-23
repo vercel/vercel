@@ -2,7 +2,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
-import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import list from './list';
 import {
@@ -11,8 +10,7 @@ import {
   listSubcommand,
   putSubcommand,
   copySubcommand,
-  newStoreSubcommand,
-  removeStoreSubcommand,
+  storeSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -21,16 +19,15 @@ import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
 import put from './put';
 import del from './del';
 import copy from './copy';
-import newStore from './new';
-import removeStore from './remove';
+import { store } from './store';
+import { printError } from '../../util/error';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   put: getCommandAliases(putSubcommand),
   del: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
-  new: getCommandAliases(newStoreSubcommand),
-  remove: getCommandAliases(removeStoreSubcommand),
+  store: getCommandAliases(storeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -78,6 +75,7 @@ export default async function main(client: Client) {
         printHelp(listSubcommand);
         return 2;
       }
+
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
     case 'put':
@@ -86,6 +84,8 @@ export default async function main(client: Client) {
         printHelp(putSubcommand);
         return 2;
       }
+
+      telemetry.trackCliSubcommandPut(subcommandOriginal);
       return put(client, args);
     case 'del':
       if (needHelp) {
@@ -100,21 +100,12 @@ export default async function main(client: Client) {
         printHelp(copySubcommand);
         return 2;
       }
+
+      telemetry.trackCliSubcommandCopy(subcommandOriginal);
       return copy(client, args);
-    case 'new':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
-        printHelp(newStoreSubcommand);
-        return 2;
-      }
-      return newStore(client, args);
-    case 'remove':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
-        printHelp(removeStoreSubcommand);
-        return 2;
-      }
-      return removeStore(client, args);
+    case 'store':
+      telemetry.trackCliSubcommandStore(subcommandOriginal);
+      return store(client);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

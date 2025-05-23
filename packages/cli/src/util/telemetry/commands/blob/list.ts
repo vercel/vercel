@@ -10,7 +10,7 @@ export class BlobListTelemetryClient
     if (limit) {
       this.trackCliOption({
         option: 'limit',
-        value: this.redactedValue,
+        value: String(limit),
       });
     }
   }
@@ -19,7 +19,25 @@ export class BlobListTelemetryClient
     if (cursor) {
       this.trackCliOption({
         option: 'cursor',
-        value: this.redactedValue,
+        value: cursor,
+      });
+    }
+  }
+
+  trackCliOptionPrefix(prefix: string | undefined) {
+    if (prefix) {
+      this.trackCliOption({
+        option: 'prefix',
+        value: prefix,
+      });
+    }
+  }
+
+  trackCliOptionMode(mode: string | undefined) {
+    if (mode) {
+      this.trackCliOption({
+        option: 'mode',
+        value: mode,
       });
     }
   }

@@ -6,11 +6,18 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { putSubcommand } from './command';
 import { getBlobRWToken } from '../../util/blob/token';
+import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 
 export default async function copy(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const telemetryClient = new BlobCopyTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   const flagsSpecification = getFlagsSpecification(putSubcommand.options);
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
@@ -23,8 +30,18 @@ export default async function copy(
 
   const {
     args: [fromUrl, toPathname],
-    flags: opts,
+    flags: {
+      '--add-random-suffix': addRandomSuffix,
+      '--content-type': contentType,
+      '--cache-control-max-age': cacheControlMaxAge,
+    },
   } = parsedArgs;
+
+  telemetryClient.trackCliArgumentFromUrlOrPathname(fromUrl);
+  telemetryClient.trackCliArgumentToPathname(toPathname);
+  telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
+  telemetryClient.trackCliOptionContentType(contentType);
+  telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
 
   const token = await getBlobRWToken(client);
   if (!token) {
@@ -40,9 +57,9 @@ export default async function copy(
     result = await blob.copy(fromUrl, toPathname, {
       token,
       access: 'public',
-      addRandomSuffix: opts['--add-random-suffix'] ?? false,
-      contentType: opts['--content-type'],
-      cacheControlMaxAge: opts['--cache-control-max-age'],
+      addRandomSuffix: addRandomSuffix ?? false,
+      contentType,
+      cacheControlMaxAge,
     });
   } catch (err) {
     printError(err);

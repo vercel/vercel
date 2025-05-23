@@ -34,7 +34,8 @@ export const listSubcommand = {
       shorthand: 'm',
       type: String,
       deprecated: false,
-      description: 'Mode to filter Blobs by either folded or expanded',
+      description:
+        'Mode to filter Blobs by either folded or expanded (default: expanded)',
       argument: 'String',
       choices: ['folded', 'expanded'],
     },
@@ -58,7 +59,7 @@ export const putSubcommand = {
       shorthand: 'r',
       type: Boolean,
       deprecated: false,
-      description: 'Add a random suffix to the file name',
+      description: 'Add a random suffix to the file name (default: false)',
       argument: 'Boolean',
     },
     {
@@ -66,7 +67,7 @@ export const putSubcommand = {
       shorthand: 'p',
       type: String,
       deprecated: false,
-      description: 'Pathname to upload the file to',
+      description: 'Pathname to upload the file to (default: filename)',
       argument: 'String',
     },
     {
@@ -75,7 +76,7 @@ export const putSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'If true upload the file in multiple smaller chunks. Default: true',
+        'If true upload the file in multiple small chunks for performance and reliability (default: true)',
       argument: 'Boolean',
     },
     {
@@ -84,7 +85,7 @@ export const putSubcommand = {
       type: String,
       deprecated: false,
       description:
-        'Overwrite the content-type. Will be infered from the file extension if not provided',
+        'Overwrite the content-type. Will be inferred from the file extension if not provided',
       argument: 'String',
     },
     {
@@ -92,7 +93,8 @@ export const putSubcommand = {
       shorthand: 'c',
       type: Number,
       deprecated: false,
-      description: 'Max-age of the cache-control header directive',
+      description:
+        'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
     },
     {
@@ -100,7 +102,7 @@ export const putSubcommand = {
       shorthand: 'f',
       type: Boolean,
       deprecated: false,
-      description: 'Overwrite the file if it already exists',
+      description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
   ],
@@ -113,7 +115,7 @@ export const delSubcommand = {
   description: 'Delete a file from the Blob store',
   arguments: [
     {
-      name: '<URLS>',
+      name: 'urlsOrPathnames',
       required: true,
     },
   ],
@@ -127,7 +129,7 @@ export const copySubcommand = {
   description: 'Copy a file in the Blob store',
   arguments: [
     {
-      name: 'fromUrl',
+      name: 'fromUrlOrPathname',
       required: true,
     },
     {
@@ -149,7 +151,8 @@ export const copySubcommand = {
       shorthand: 't',
       type: String,
       deprecated: false,
-      description: 'The content type of the blob',
+      description:
+        'Overwrite the content-type. Will be inferred from the file extension if not provided',
       argument: 'String',
     },
     {
@@ -157,17 +160,18 @@ export const copySubcommand = {
       shorthand: 'c',
       type: Number,
       deprecated: false,
-      description: 'The max age of the cache control',
+      description:
+        'Max-age of the cache-control header directive (default: 2592000 = 30 days)',
       argument: 'Number',
     },
   ],
   examples: [],
 } as const;
 
-export const newStoreSubcommand = {
-  name: 'new',
+export const addStoreSubcommand = {
+  name: 'add',
   aliases: [],
-  description: 'Create a new Blob store',
+  description: 'Add a new Blob store',
   arguments: [
     {
       name: 'name',
@@ -192,6 +196,16 @@ export const removeStoreSubcommand = {
   examples: [],
 } as const;
 
+export const storeSubcommand = {
+  name: 'store',
+  aliases: [],
+  description: 'Interact with Blob stores',
+  arguments: [],
+  subcommands: [addStoreSubcommand, removeStoreSubcommand],
+  options: [],
+  examples: [],
+} as const;
+
 export const blobCommand = {
   name: 'blob',
   aliases: [],
@@ -202,7 +216,7 @@ export const blobCommand = {
     putSubcommand,
     delSubcommand,
     copySubcommand,
-    newStoreSubcommand,
+    storeSubcommand,
   ],
   options: [],
   examples: [],

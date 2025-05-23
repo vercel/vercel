@@ -1,5 +1,4 @@
 import type Client from '../../util/client';
-import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
@@ -7,13 +6,21 @@ import chalk from 'chalk';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
-import { newStoreSubcommand } from './command';
+import { addStoreSubcommand } from './command';
+import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
+import { printError } from '../../util/error';
 
-export default async function newStore(
+export default async function addStore(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const flagsSpecification = getFlagsSpecification(newStoreSubcommand.options);
+  const telemetryClient = new BlobAddStoreTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  const flagsSpecification = getFlagsSpecification(addStoreSubcommand.options);
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
@@ -26,6 +33,8 @@ export default async function newStore(
   let {
     args: [name],
   } = parsedArgs;
+
+  telemetryClient.trackCliArgumentName(name);
 
   if (!name) {
     name = await client.input.text({

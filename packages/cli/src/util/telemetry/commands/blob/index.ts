@@ -12,4 +12,32 @@ export class BlobTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandPut(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'put',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDel(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'del',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandCopy(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'copy',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'store',
+      value: actual,
+    });
+  }
 }
