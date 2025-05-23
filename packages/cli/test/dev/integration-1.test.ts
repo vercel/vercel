@@ -1088,7 +1088,7 @@ test(
 
 test(
   '[vercel dev] should return plain text 404 for internal asset files /_next/static/',
-  testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
+  testFixtureStdio('10-nextjs-node', async (testPath: any) => {
     // Test that a request to a non-existent static asset returns a plain text 404
     const path = '/_next/static/chunks/non-existent-file.js';
     await testPath(404, path, /NOT_FOUND/);
