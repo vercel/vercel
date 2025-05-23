@@ -18,7 +18,7 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
-import type { CustomEnvironment } from '@vercel-internals/types';
+import type { CustomEnvironment, Deployment } from '@vercel-internals/types';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
@@ -58,7 +58,7 @@ export default async function redeploy(client: Client): Promise<number> {
   if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
-        `redeploy <deployment-id-or-url>`
+        'redeploy <deployment-id-or-url>'
       )}`
     );
     return 1;
@@ -122,18 +122,21 @@ export default async function redeploy(client: Client): Promise<number> {
     const deployStamp = stamp();
     output.spinner(`Redeploying project ${fromDeployment.id}`, 0);
 
-    let deployment = await client.fetch<any>(`/v13/deployments?forceNew=1`, {
-      body: {
-        deploymentId: fromDeployment.id,
-        meta: {
-          action: 'redeploy',
+    let deployment = await client.fetch<Deployment>(
+      '/v13/deployments?forceNew=1',
+      {
+        body: {
+          deploymentId: fromDeployment.id,
+          meta: {
+            action: 'redeploy',
+          },
+          name: fromDeployment.name,
+          target,
+          customEnvironmentSlugOrId,
         },
-        name: fromDeployment.name,
-        target,
-        customEnvironmentSlugOrId,
-      },
-      method: 'POST',
-    });
+        method: 'POST',
+      }
+    );
 
     output.stopSpinner();
 
@@ -152,12 +155,12 @@ export default async function redeploy(client: Client): Promise<number> {
     );
 
     output.print(
-      prependEmoji(
+      `${prependEmoji(
         `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
           previewUrl
         )} ${deployStamp()}`,
         emoji('success')
-      ) + `\n`
+      )}\n`
     );
 
     if (!client.stdout.isTTY) {
