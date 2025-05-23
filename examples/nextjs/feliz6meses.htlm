@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Feliz 6 Meses</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to top, #ffe6e6, #fff);
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+    }
+
+    .tree {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .heart {
+      position: absolute;
+      color: red;
+      font-size: 24px;
+      animation: fall 5s linear forwards;
+      opacity: 0.8;
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    .message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      color: #b30000;
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tree">
+    <div style="font-size: 100px; text-align: center;">❤</div>
+  </div>
+
+  <div class="message" id="message">Te amo mucho Brini<br>Feliz 6 meses</div>
+
+  <script>
+    const totalHearts = 30;
+    const body = document.body;
+
+    for (let i = 0; i < totalHearts; i++) {
+      let heart = document.createElement('div');
+      heart.className = 'heart';
+      heart.innerHTML = '❤';
+      heart.style.left = Math.random() * window.innerWidth + 'px';
+      heart.style.fontSize = (16 + Math.random() * 20) + 'px';
+      heart.style.animationDuration = (3 + Math.random() * 3) + 's';
+      heart.style.top = '-' + (Math.random() * 100) + 'px';
+      body.appendChild(heart);
+    }
+
+    setTimeout(() => {
+      document.getElementById('message').style.display = 'block';
+    }, 6000); // después de 6 segundos muestra el mensaje
+  </script>
+
+</body>
+</html>
