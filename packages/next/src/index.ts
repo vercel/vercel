@@ -102,12 +102,7 @@ import {
 } from './utils';
 
 export const version = 2;
-// When bots like Googlebot crawl a site, they get the asset paths /_next/static/... from the <link> and <script> tags.
-// As those asset paths may change over time, when Googlebot tries to sync the resources, it reaches a 404 page.
-// The problem is that Next.js returns an HTML 404 page, which lets bots consider that they have found an invalid 404 page.
-// Returning plain text instead prevents search engines from considering these internal routes as not found pages.
 export const htmlContentType = 'text/html; charset=utf-8';
-export const plainTextContentType = 'text/plain; charset=utf-8';
 const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 // related PR: https://github.com/vercel/next.js/pull/25418
 const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
@@ -2684,7 +2679,7 @@ export const build: BuildV2 = async buildOptions => {
         check: true,
         dest: '$0',
         headers: {
-          'content-type': plainTextContentType,
+          'content-type': 'text/plain; charset=utf-8',
         },
       },
 
