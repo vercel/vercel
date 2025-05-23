@@ -1091,6 +1091,7 @@ test(
   testFixtureStdio('10-nextjs-node', async (testPath: any) => {
     // Test that a request to a non-existent static asset returns a plain text 404
     const path = '/_next/static/chunks/non-existent-file.js';
+    
     await testPath(404, path, /NOT_FOUND/);
     
     const res = await fetch(`http://localhost:${port}${path}`);
@@ -1099,5 +1100,6 @@ test(
     
     const body = await res.text();
     expect(body).not.toMatch(/^<!DOCTYPE html>/);
+    expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
   })
 );
