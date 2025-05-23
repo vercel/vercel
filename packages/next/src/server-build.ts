@@ -15,7 +15,7 @@ import {
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
-import { MAX_AGE_ONE_YEAR } from '.';
+import { MAX_AGE_ONE_YEAR, plainTextContentType } from '.';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -2400,6 +2400,9 @@ export async function serverBuild({
         status: 404,
         check: true,
         dest: '$0',
+        headers: {
+          'content-type': plainTextContentType,
+        },
       },
 
       // remove locale prefixes to check public files and
