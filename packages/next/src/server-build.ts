@@ -15,7 +15,7 @@ import {
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle } from '@vercel/routing-utils';
-import { MAX_AGE_ONE_YEAR, plainTextContentType } from '.';
+import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
   NextImagesManifest,
@@ -2435,7 +2435,7 @@ export async function serverBuild({
         check: true,
         dest: '$0',
         headers: {
-          'content-type': plainTextContentType,
+          'content-type': 'text/plain; charset=utf-8',
         },
       },
 
