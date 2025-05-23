@@ -102,6 +102,7 @@ import {
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
+export const plainTextContentType = 'text/plain; charset=utf-8';
 const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 // related PR: https://github.com/vercel/next.js/pull/25418
 const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
@@ -2679,6 +2680,9 @@ export const build: BuildV2 = async buildOptions => {
         status: 404,
         check: true,
         dest: '$0',
+        headers: {
+          'content-type': plainTextContentType,
+        },
       },
 
       // remove locale prefixes to check public files
