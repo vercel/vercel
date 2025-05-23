@@ -9,15 +9,31 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
+export type ConditionValue =
+  | string
+  | {
+      eq?: string | number;
+      neq?: string;
+      inc?: string[];
+      ninc?: string[];
+      pre?: string;
+      suf?: string;
+      re?: string;
+      gt?: number;
+      gte?: number;
+      lt?: number;
+      lte?: number;
+    };
+
 export type HasField = Array<
   | {
       type: 'host';
-      value: string;
+      value: ConditionValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: string;
+      value?: ConditionValue;
     }
 >;
 
