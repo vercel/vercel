@@ -1,16 +1,23 @@
 import type Client from '../../util/client';
-import { printError } from '../../util/error';
 import output from '../../output-manager';
 import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { delSubcommand } from './command';
 import { getBlobRWToken } from '../../util/blob/token';
+import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
+import { printError } from '../../util/error';
 
 export default async function del(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const telemetryClient = new BlobDelTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   const flagsSpecification = getFlagsSpecification(delSubcommand.options);
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
@@ -23,6 +30,8 @@ export default async function del(
 
   const { args } = parsedArgs;
 
+  telemetryClient.trackCliArgumentUrlsOrPathnames(args[0]);
+
   const token = await getBlobRWToken(client);
   if (!token) {
     return 1;
@@ -33,11 +42,9 @@ export default async function del(
 
     output.spinner('Deleting blob');
 
-    await blob.del(args, {
-      token,
-    });
+    await blob.del(args, { token });
   } catch (err) {
-    printError(err);
+    output.error(`Error deleting blob: ${err}`);
     return 1;
   }
 

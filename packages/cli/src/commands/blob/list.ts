@@ -1,5 +1,4 @@
 import type Client from '../../util/client';
-import { printError } from '../../util/error';
 import output from '../../output-manager';
 import * as blob from '@vercel/blob';
 import table from '../../util/output/table';
@@ -11,6 +10,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
 import { getBlobRWToken } from '../../util/blob/token';
+import { BlobListTelemetryClient } from '../../util/telemetry/commands/blob/list';
+import { printError } from '../../util/error';
 
 function isMode(mode: string): mode is 'folded' | 'expanded' {
   return mode === 'folded' || mode === 'expanded';
@@ -20,8 +21,13 @@ export default async function list(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  const telemetryClient = new BlobListTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
+  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -30,18 +36,30 @@ export default async function list(
     return 1;
   }
 
-  const { flags: opts } = parsedArgs;
+  const { flags } = parsedArgs;
+  const {
+    '--limit': limit,
+    '--cursor': cursor,
+    '--prefix': prefix,
+    '--mode': modeFlag,
+  } = flags;
+
+  telemetryClient.trackCliOptionLimit(limit);
+  telemetryClient.trackCliOptionCursor(cursor);
+  telemetryClient.trackCliOptionPrefix(prefix);
+  telemetryClient.trackCliOptionMode(modeFlag);
 
   const token = await getBlobRWToken(client);
   if (!token) {
     return 1;
   }
 
-  const mode = opts['--mode'] ?? 'expanded';
+  const mode = modeFlag ?? 'expanded';
   if (!isMode(mode)) {
     output.error(
       `Invalid mode: ${mode} has to be either 'folded' or 'expanded'`
     );
+
     return 1;
   }
 
@@ -50,13 +68,7 @@ export default async function list(
     output.debug('Fetching blobs');
 
     output.spinner('Fetching blobs');
-    list = await blob.list({
-      token,
-      limit: opts['--limit'] ?? 10,
-      cursor: opts['--cursor'],
-      mode: mode,
-      prefix: opts['--prefix'],
-    });
+    list = await blob.list({ token, limit: limit ?? 10, cursor, mode, prefix });
   } catch (err) {
     printError(err);
     return 1;
@@ -92,10 +104,10 @@ export default async function list(
   }
 
   if (list.cursor) {
-    const flags = getCommandFlags(opts, ['_', '--cursor']);
+    const nextFlags = getCommandFlags(flags, ['_', '--cursor']);
     output.log(
       `To display the next page run ${getCommandName(
-        `blob list${flags} --cursor ${list.cursor}`
+        `blob list${nextFlags} --cursor ${list.cursor}`
       )}`
     );
   }

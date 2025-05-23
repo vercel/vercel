@@ -1,23 +1,29 @@
 import type Client from '../../util/client';
-import { printError } from '../../util/error';
 import output from '../../output-manager';
 import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { putSubcommand } from './command';
 import { getBlobRWToken } from '../../util/blob/token';
-import { readFileSync, statSync } from 'fs';
+import { readFileSync, statSync } from 'node:fs';
 import { isErrnoException } from '@vercel/error-utils';
-import { basename } from 'path';
+import { basename } from 'node:path';
 import { getCommandName } from '../../util/pkg-name';
 import chalk from 'chalk';
+import { BlobPutTelemetryClient } from '../../util/telemetry/commands/blob/put';
+import { printError } from '../../util/error';
 
 export default async function put(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const flagsSpecification = getFlagsSpecification(putSubcommand.options);
+  const telemetryClient = new BlobPutTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
 
+  const flagsSpecification = getFlagsSpecification(putSubcommand.options);
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -27,9 +33,24 @@ export default async function put(
   }
 
   const {
+    flags,
     args: [filePath],
-    flags: opts,
   } = parsedArgs;
+  const {
+    '--add-random-suffix': addRandomSuffix,
+    '--pathname': pathnameFlag,
+    '--multipart': multipart,
+    '--content-type': contentType,
+    '--cache-control-max-age': cacheControlMaxAge,
+    '--force': force,
+  } = flags;
+
+  telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
+  telemetryClient.trackCliOptionPathname(pathnameFlag);
+  telemetryClient.trackCliFlagMultipart(multipart);
+  telemetryClient.trackCliOptionContentType(contentType);
+  telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
+  telemetryClient.trackCliFlagForce(force);
 
   const token = await getBlobRWToken(client);
   if (!token) {
@@ -45,7 +66,7 @@ export default async function put(
 
     if (isFile) {
       putBody = readFileSync(filePath);
-      pathname = opts['--pathname'] ?? basename(filePath);
+      pathname = pathnameFlag ?? basename(filePath);
     } else {
       output.error('Path to upload is not a file');
       return 1;
@@ -80,14 +101,14 @@ export default async function put(
     result = await blob.put(pathname, putBody, {
       token,
       access: 'public',
-      addRandomSuffix: opts['--add-random-suffix'] ?? false,
-      multipart: opts['--multipart'] ?? true,
-      contentType: opts['--content-type'],
-      cacheControlMaxAge: opts['--cache-control-max-age'],
-      allowOverwrite: opts['--force'] ?? false,
+      addRandomSuffix: addRandomSuffix ?? false,
+      multipart: multipart ?? true,
+      contentType,
+      cacheControlMaxAge,
+      allowOverwrite: force ?? false,
     });
   } catch (err) {
-    output.error(`Error uploading blob: ${err}`);
+    printError(err);
     return 1;
   }
 
