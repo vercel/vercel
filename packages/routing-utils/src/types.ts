@@ -9,15 +9,45 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
+export type ConditionValue =
+  | string
+  | {
+      eq?: string | number;
+      neq?: string;
+      inc?: string[];
+      ninc?: string[];
+      pre?: string;
+      suf?: string;
+      re?: string;
+      gt?: number;
+      gte?: number;
+      lt?: number;
+      lte?: number;
+    };
+
+export type MitigateAction =
+  | 'log'
+  | 'challenge'
+  | 'deny'
+  | 'bypass'
+  | 'rate_limit';
+
+export type EdgeRateLimit = {
+  algo: 'fixed_window' | 'token_bucket';
+  window: number;
+  limit: number;
+  keys: string[];
+};
+
 export type HasField = Array<
   | {
       type: 'host';
-      value: string;
+      value: ConditionValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: string;
+      value?: ConditionValue;
     }
 >;
 
@@ -34,6 +64,10 @@ export type RouteWithSrc = {
   status?: number;
   has?: HasField;
   missing?: HasField;
+  mitigate?: {
+    action: MitigateAction;
+    erl?: EdgeRateLimit;
+  };
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;

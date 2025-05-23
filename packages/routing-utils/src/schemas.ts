@@ -1,3 +1,145 @@
+export const mitigateSchema = {
+  description: 'Mitigation action to take on a route',
+  type: 'object',
+  additionalProperties: false,
+  required: ['action'],
+  properties: {
+    action: {
+      description: 'The mitigation action to take',
+      type: 'string',
+      enum: ['log', 'challenge', 'deny', 'bypass', 'rate_limit', 'redirect'],
+    },
+    erl: {
+      description: 'Edge rate limit configuration',
+      type: 'object',
+      additionalProperties: false,
+      required: ['algo', 'window', 'limit', 'keys'],
+      properties: {
+        algo: {
+          description: 'The rate limiting algorithm to use',
+          type: 'string',
+          enum: ['fixed_window', 'token_bucket'],
+        },
+        window: {
+          description: 'Time window for rate limit in seconds',
+          type: 'number',
+          minimum: 10,
+          maximum: 600,
+          default: 60,
+        },
+        limit: {
+          description: 'Request limit.',
+          type: 'number',
+          minimum: 1,
+          maximum: 10_000_000,
+          default: 100,
+        },
+        keys: {
+          description: 'Keys to rate limit by',
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          minItems: 1,
+          maxItems: 3,
+        },
+      },
+    },
+  },
+  if: {
+    properties: {
+      action: {
+        const: 'rate_limit',
+      },
+    },
+  },
+  then: {
+    required: ['action', 'erl'],
+  },
+} as const;
+
+export const conditionValueSchema = {
+  anyOf: [
+    {
+      description: 'A string value (treated as regex)',
+      type: 'string',
+      maxLength: 4096,
+    },
+    {
+      description: 'A condition operation object',
+      type: 'object',
+      additionalProperties: false,
+      minProperties: 1,
+      properties: {
+        eq: {
+          description: 'Equal to',
+          anyOf: [
+            {
+              type: 'string',
+              maxLength: 4096,
+            },
+            {
+              type: 'number',
+            },
+          ],
+        },
+        neq: {
+          description: 'Not equal',
+          type: 'string',
+          maxLength: 4096,
+        },
+        inc: {
+          description: 'In array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+        ninc: {
+          description: 'Not in array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+        pre: {
+          description: 'Starts with',
+          type: 'string',
+          maxLength: 4096,
+        },
+        suf: {
+          description: 'Ends with',
+          type: 'string',
+          maxLength: 4096,
+        },
+        re: {
+          description: 'Regex',
+          type: 'string',
+          maxLength: 4096,
+        },
+        gt: {
+          description: 'Greater than',
+          type: 'number',
+        },
+        gte: {
+          description: 'Greater than or equal to',
+          type: 'number',
+        },
+        lt: {
+          description: 'Less than',
+          type: 'number',
+        },
+        lte: {
+          description: 'Less than or equal to',
+          type: 'number',
+        },
+      },
+    },
+  ],
+};
+
 export const hasSchema = {
   description: 'An array of requirements that are needed to match',
   type: 'array',
@@ -16,9 +158,8 @@ export const hasSchema = {
           },
           value: {
             description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
+              'A value to match against. Can be a string (regex) or a condition operation object',
+            ...conditionValueSchema,
           },
         },
       },
@@ -40,9 +181,8 @@ export const hasSchema = {
           },
           value: {
             description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
+              'A value to match against. Can be a string (regex) or a condition operation object',
+            ...conditionValueSchema,
           },
         },
       },
@@ -166,6 +306,7 @@ export const routesSchema = {
           },
           has: hasSchema,
           missing: hasSchema,
+          mitigate: mitigateSchema,
         },
       },
       {

@@ -11,6 +11,7 @@ import {
   cleanUrlsSchema,
   trailingSlashSchema,
   getTransformedRoutes,
+  hasSchema,
 } from '../src';
 
 const ajv = new Ajv();
@@ -1076,6 +1077,15 @@ describe('getTransformedRoutes', () => {
     assertValid(vercelConfig.redirects, redirectsSchema);
     assertValid(vercelConfig.headers, headersSchema);
     assertValid(vercelConfig.trailingSlashSchema, trailingSlashSchema);
+    for (const item of [
+      ...vercelConfig.rewrites,
+      ...vercelConfig.redirects,
+      ...vercelConfig.headers,
+    ]) {
+      if (item.has) {
+        assertValid(item.has, hasSchema);
+      }
+    }
   });
 
   test('should return null routes if no transformations are performed', () => {
@@ -1220,5 +1230,258 @@ describe('getTransformedRoutes', () => {
         src: '^(?:/(.*))$',
       },
     ]);
+  });
+
+  test('should validate condition operations for has and missing', () => {
+    const vercelConfig = {
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: '/backend/:path*',
+          has: [
+            { type: 'header', key: 'authorization', value: 'Bearer .*' },
+            { type: 'host', value: 'api\\.example\\.com' },
+            { type: 'cookie', key: 'theme', value: { inc: ['light', 'dark'] } },
+            { type: 'query', key: 'page', value: { neq: '1' } },
+            {
+              type: 'header',
+              key: 'x-role',
+              value: { ninc: ['admin', 'superadmin'], pre: 'user-' },
+            },
+          ],
+          missing: [{ type: 'cookie', key: 'disabled', value: { eq: 'true' } }],
+        },
+      ],
+    };
+
+    assertValid(vercelConfig.rewrites, rewritesSchema);
+  });
+
+  test('it should fail validation for empty condition operation objects', () => {
+    assertError(
+      [
+        {
+          type: 'header',
+          key: 'x-test',
+          value: {},
+        },
+      ],
+      [
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/additionalProperties',
+          params: { additionalProperty: 'key' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'type',
+          dataPath: '[0].value',
+          schemaPath: '#/items/anyOf/1/properties/value/anyOf/0/type',
+          params: { type: 'string' },
+          message: 'should be string',
+        },
+        {
+          keyword: 'minProperties',
+          dataPath: '[0].value',
+          schemaPath: '#/items/anyOf/1/properties/value/anyOf/1/minProperties',
+          params: { limit: 1 },
+          message: 'should NOT have fewer than 1 properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0].value',
+          schemaPath: '#/items/anyOf/1/properties/value/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ],
+      hasSchema
+    );
+  });
+
+  test('should fail validation for invalid properties in condition operation objects', () => {
+    assertError(
+      [
+        {
+          type: 'header',
+          key: 'x-test',
+          value: {
+            invalid: 'invalid',
+          },
+        },
+      ],
+      [
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'key' },
+          schemaPath: '#/items/anyOf/0/additionalProperties',
+        },
+        {
+          dataPath: '[0].value',
+          keyword: 'type',
+          message: 'should be string',
+          params: { type: 'string' },
+          schemaPath: '#/items/anyOf/1/properties/value/anyOf/0/type',
+        },
+        {
+          dataPath: '[0].value',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'invalid' },
+          schemaPath:
+            '#/items/anyOf/1/properties/value/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0].value',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf/1/properties/value/anyOf',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      hasSchema
+    );
+  });
+  test('should validate mitigate property in route configuration', () => {
+    const routes = [
+      {
+        src: '/api/protected/(.*)',
+        mitigate: {
+          action: 'challenge',
+        },
+      },
+      {
+        src: '/api/testy/(.*)',
+        mitigate: {
+          action: 'log',
+        },
+      },
+      {
+        src: '/api/testy/(.*)',
+        mitigate: {
+          action: 'rate_limit',
+          erl: {
+            algo: 'fixed_window',
+            window: 60,
+            limit: 100,
+            keys: ['ip', 'ja4'],
+          },
+        },
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should fail validation when missing erl for rate_limit action', () => {
+    const routes = [
+      {
+        src: '/source',
+        mitigate: {
+          action: 'rate_limit',
+        },
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].mitigate',
+          keyword: 'required',
+          message: "should have required property '.erl'",
+          params: { missingProperty: '.erl' },
+          schemaPath: '#/items/anyOf/0/properties/mitigate/then/required',
+        },
+        {
+          dataPath: '[0].mitigate',
+          keyword: 'if',
+          message: 'should match "then" schema',
+          params: { failingKeyword: 'then' },
+          schemaPath: '#/items/anyOf/0/properties/mitigate/if',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should fail validation for invalid mitigate action', () => {
+    const routes = [
+      {
+        src: '/api/protected/(.*)',
+        mitigate: {
+          action: 'invalid',
+        },
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].mitigate.action',
+          keyword: 'enum',
+          message: 'should be equal to one of the allowed values',
+          params: {
+            allowedValues: [
+              'log',
+              'challenge',
+              'deny',
+              'bypass',
+              'rate_limit',
+              'redirect',
+            ],
+          },
+          schemaPath:
+            '#/items/anyOf/0/properties/mitigate/properties/action/enum',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
   });
 });

@@ -3,7 +3,14 @@
  * See https://github.com/firebase/superstatic#configuration
  */
 import { parse as parseUrl, format as formatUrl } from 'url';
-import { Route, Redirect, Rewrite, HasField, Header } from './types';
+import {
+  Route,
+  Redirect,
+  Rewrite,
+  HasField,
+  Header,
+  ConditionValue,
+} from './types';
 
 /*
   [START] Temporary double-install of path-to-regexp to compare the impact of the update
@@ -302,6 +309,21 @@ const normalizeHasKeys = (hasItems: HasField = []) => {
   return hasItems;
 };
 
+function getStringValueForRegex(value: ConditionValue): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    if ('re' in value && typeof value.re === 'string') {
+      return value.re;
+    }
+    return null;
+  }
+
+  return null;
+}
+
 export function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
@@ -311,9 +333,12 @@ export function collectHasSegments(has?: HasField) {
     }
 
     if (hasItem.value) {
-      for (const match of hasItem.value.matchAll(namedGroupsRegex)) {
-        if (match[1]) {
-          hasSegments.add(match[1]);
+      const stringValue = getStringValueForRegex(hasItem.value);
+      if (stringValue) {
+        for (const match of stringValue.matchAll(namedGroupsRegex)) {
+          if (match[1]) {
+            hasSegments.add(match[1]);
+          }
         }
       }
 
