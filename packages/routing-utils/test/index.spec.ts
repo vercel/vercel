@@ -1359,4 +1359,129 @@ describe('getTransformedRoutes', () => {
       hasSchema
     );
   });
+  test('should validate mitigate property in route configuration', () => {
+    const routes = [
+      {
+        src: '/api/protected/(.*)',
+        mitigate: {
+          action: 'challenge',
+        },
+      },
+      {
+        src: '/api/testy/(.*)',
+        mitigate: {
+          action: 'log',
+        },
+      },
+      {
+        src: '/api/testy/(.*)',
+        mitigate: {
+          action: 'rate_limit',
+          erl: {
+            algo: 'fixed_window',
+            window: 60,
+            limit: 100,
+            keys: ['ip', 'ja4'],
+          },
+        },
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should fail validation when missing erl for rate_limit action', () => {
+    const routes = [
+      {
+        src: '/source',
+        mitigate: {
+          action: 'rate_limit',
+        },
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].mitigate',
+          keyword: 'required',
+          message: "should have required property '.erl'",
+          params: { missingProperty: '.erl' },
+          schemaPath: '#/items/anyOf/0/properties/mitigate/then/required',
+        },
+        {
+          dataPath: '[0].mitigate',
+          keyword: 'if',
+          message: 'should match "then" schema',
+          params: { failingKeyword: 'then' },
+          schemaPath: '#/items/anyOf/0/properties/mitigate/if',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should fail validation for invalid mitigate action', () => {
+    const routes = [
+      {
+        src: '/api/protected/(.*)',
+        mitigate: {
+          action: 'invalid',
+        },
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].mitigate.action',
+          keyword: 'enum',
+          message: 'should be equal to one of the allowed values',
+          params: {
+            allowedValues: [
+              'log',
+              'challenge',
+              'deny',
+              'bypass',
+              'rate_limit',
+              'redirect',
+            ],
+          },
+          schemaPath:
+            '#/items/anyOf/0/properties/mitigate/properties/action/enum',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
 });
