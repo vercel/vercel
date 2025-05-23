@@ -1085,3 +1085,19 @@ test(
     { skipDeploy: true }
   )
 );
+
+test(
+  '[vercel dev] should return plain text 404 for internal asset files /_next/static/',
+  testFixtureStdio('30-next-image-optimization', async (testPath: any) => {
+    // Test that a request to a non-existent static asset returns a plain text 404
+    const path = '/_next/static/chunks/non-existent-file.js';
+    await testPath(404, path, /NOT_FOUND/);
+    
+    const res = await fetch(`http://localhost:${port}${path}`);
+    expect(res.status).toEqual(404);
+    expect(res.headers.get('content-type')).toEqual('text/plain; charset=utf-8');
+    
+    const body = await res.text();
+    expect(body).not.toMatch(/^<!DOCTYPE html>/);
+  })
+);
