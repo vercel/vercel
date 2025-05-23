@@ -1308,6 +1308,18 @@ describe.skipIf(flakey)('build', () => {
     expect(exitCode, 'exit code for "build"').toEqual(1);
   });
 
+  it('should build successfully when vercel.json has allowUseNodeVersion enabled', async () => {
+    const cwd = fixture('allow-npmrc-use-node-version');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // Verify that no error is recorded in builds.json
+    const builds = await fs.readJSON(join(output, 'builds.json'));
+    expect(builds.error).toBeUndefined();
+  });
+
   it('should ignore `.env` for static site', async () => {
     const cwd = fixture('static-env');
     const output = join(cwd, '.vercel/output');

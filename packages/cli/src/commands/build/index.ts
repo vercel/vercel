@@ -191,13 +191,6 @@ export default async function main(client: Client): Promise<number> {
 
   const yes = Boolean(parsedArgs.flags['--yes']);
 
-  try {
-    await validateNpmrc(cwd);
-  } catch (err) {
-    output.prettyError(err);
-    return 1;
-  }
-
   // If repo linked, update `cwd` to the repo root
   const link = await getProjectLink(client, cwd);
   const projectRootDirectory = link?.projectRootDirectory ?? '';
@@ -404,6 +397,10 @@ async function doBuild(
 
   if (validateError) {
     throw validateError;
+  }
+
+  if (!localConfig.allowUseNodeVersion) {
+    await validateNpmrc(cwd);
   }
 
   const projectSettings = {

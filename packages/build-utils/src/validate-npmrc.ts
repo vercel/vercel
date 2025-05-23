@@ -20,7 +20,7 @@ export async function validateNpmrc(cwd: string): Promise<void> {
   const nodeRegExp = /(?<!#.*)use-node-version/;
   if (npmrc?.match(nodeRegExp)) {
     throw new Error(
-      'Detected unsupported "use-node-version" in your ".npmrc". Please use "engines" in your "package.json" instead.'
+      'Detected unsupported "use-node-version" in your ".npmrc". Please use "engines" in your "package.json" instead, or set`"allowUseNodeVersion": true` in your `vercel.json` to suppress this error.'
     );
   }
 }
