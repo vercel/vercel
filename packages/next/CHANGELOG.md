@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.8.0
+
+### Minor Changes
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
+### Patch Changes
+
+- reinstate Vary header ([#13359](https://github.com/vercel/vercel/pull/13359))
+
 ## 4.7.11
 
 ### Patch Changes

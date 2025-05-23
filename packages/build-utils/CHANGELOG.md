@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 10.6.0
+
+### Minor Changes
+
+- provide a more verbose error when package.json is not valid ([#13346](https://github.com/vercel/vercel/pull/13346))
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
 ## 10.5.1
 
 ### Patch Changes
