@@ -29,13 +29,9 @@ createConstants();
 // Compile the `doT.js` template files for `vercel dev`
 await compileDevTemplates();
 
-const pkgPath = join(process.cwd(), 'package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-const externals = Object.keys(pkg.dependencies || {});
 const require = createRequire(import.meta.url);
 await esbuild({
   bundle: true,
-  external: externals,
   plugins: [
     // plugin required to handle jsonc-parser
     // https://github.com/evanw/esbuild/issues/1619
