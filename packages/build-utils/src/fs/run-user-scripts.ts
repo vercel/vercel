@@ -356,8 +356,12 @@ export async function scanParentDirs(
     try {
       packageJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'));
     } catch (err) {
+      const pattern = new RegExp(`(${destPath}+)$`, 'g');
+      const path = pkgJsonPath.match(pattern);
+      console.log(destPath);
+      console.log(packageJson);
       throw new Error(
-        `Could not read ${pkgJsonPath}: ${(err as Error).message}.`
+        `Could not read ${path && path[0] ? path[0] : pkgJsonPath}: ${(err as Error).message}.`
       );
     }
   }
