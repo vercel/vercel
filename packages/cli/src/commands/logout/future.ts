@@ -9,7 +9,7 @@ export async function logout(client: Client): Promise<number> {
 
   if (!authConfig.token) {
     o.note(
-      `Not currently logged in, so ${getCommandName('logout --future')} did nothing`
+      `Not currently logged in, so ${getCommandName('logout')} did nothing`
     );
     return 0;
   }
