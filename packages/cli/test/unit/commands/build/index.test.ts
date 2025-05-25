@@ -1318,6 +1318,11 @@ describe.skipIf(flakey)('build', () => {
     // Verify that no error is recorded in builds.json
     const builds = await fs.readJSON(join(output, 'builds.json'));
     expect(builds.error).toBeUndefined();
+
+    // Confirm that .npmrc in the static output does not contain "use-node-version"
+    const npmrcPath = join(output, 'static', '.npmrc');
+    const npmrcContent = await fs.readFile(npmrcPath, 'utf8');
+    expect(npmrcContent).not.toMatch(/use-node-version/);
   });
 
   it('should ignore `.env` for static site', async () => {

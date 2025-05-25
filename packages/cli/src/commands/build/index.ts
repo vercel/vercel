@@ -586,6 +586,8 @@ async function doBuild(
             nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
+      // This option is used in packages/cli/src/util/build/static-builder.ts.
+      buildConfig.allowUseNodeVersion = localConfig.allowUseNodeVersion;
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,
