@@ -42,6 +42,7 @@ exports[`base level help output > help 1`] = `
       rm | remove          [id]        Removes a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
+      blob                 [cmd]       Manages your Blob stores and files
 
   Global Options:
 
