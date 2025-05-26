@@ -267,7 +267,10 @@
     {
       "path": "/ssg",
       "status": 200,
-      "mustContain": "hello from /ssg"
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      }
     },
     {
       "path": "/client-nested",
@@ -294,6 +297,9 @@
     {
       "path": "/ssg",
       "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      },
       "headers": {
         "RSC": "1"
       },
@@ -304,6 +310,7 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
         "content-type": "text/x-component"
       },
       "headers": {
@@ -336,11 +343,17 @@
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
-      "mustContain": "hello from app/dashboard/deployments/[id]/settings"
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      }
     },
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      },
       "headers": {
         "RSC": "1"
       },
@@ -350,11 +363,17 @@
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
-      "mustContain": "catchall"
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      }
     },
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      },
       "headers": {
         "RSC": "1"
       },
@@ -364,7 +383,10 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      }
     },
     {
       "path": "/dashboard",
@@ -382,7 +404,8 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component"
+        "content-type": "text/x-component",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
       }
     },
     {
