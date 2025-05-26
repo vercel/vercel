@@ -48,6 +48,8 @@ export default async function addStore(
     });
   }
 
+  const link = await getLinkedProject(client);
+
   let storeId: string;
   try {
     output.debug('Creating new blob store');
@@ -60,6 +62,7 @@ export default async function addStore(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
+        accountId: link.status === 'linked' ? link.org.id : undefined,
       }
     );
 
@@ -73,11 +76,10 @@ export default async function addStore(
 
   output.success(`Blob store created: ${name} (${storeId})`);
 
-  const link = await getLinkedProject(client);
   if (link.status === 'linked') {
     const res = await client.input.confirm(
       `Would you like to link this blob store to ${link.project.name}?`,
-      false
+      true
     );
 
     if (res) {
@@ -98,13 +100,14 @@ export default async function addStore(
         client,
         link.project.id,
         storeId,
-        environments
+        environments,
+        link.org.id
       );
 
       output.success(
         `Blob store ${chalk.bold(name)} linked to ${chalk.bold(
           link.project.name
-        )}. Make sure to update the environment variables again using ${getCommandName('env pull')}`
+        )}. Make sure to pull the new environment variables using ${getCommandName('env pull')}`
       );
     }
   }

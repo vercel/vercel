@@ -4,6 +4,7 @@ import output from '../../output-manager';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { removeStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
+import { getLinkedProject } from '../../util/projects/link';
 
 export default async function removeStore(
   client: Client,
@@ -42,9 +43,14 @@ export default async function removeStore(
 
     output.spinner('Deleting blob store');
 
+    const link = await getLinkedProject(client);
+
     await client.fetch<{ store: { id: string } }>(
       `/v1/storage/stores/blob/${storeId}`,
-      { method: 'DELETE' }
+      {
+        method: 'DELETE',
+        accountId: link.status === 'linked' ? link.org.id : undefined,
+      }
     );
   } catch (err) {
     printError(err);
