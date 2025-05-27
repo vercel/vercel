@@ -9,7 +9,7 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
-export type ConditionValue =
+export type HasConditionValue =
   | string
   | {
       eq?: string | number;
@@ -30,12 +30,12 @@ export type MitigateAction = 'log' | 'challenge' | 'deny';
 export type HasField = Array<
   | {
       type: 'host';
-      value: ConditionValue;
+      value: HasConditionValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: ConditionValue;
+      value?: HasConditionValue;
     }
 >;
 
