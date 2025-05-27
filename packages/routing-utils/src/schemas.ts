@@ -7,7 +7,7 @@ const mitigateSchema = {
     action: {
       description: 'The mitigation action to take',
       type: 'string',
-      enum: ['log', 'challenge', 'deny'],
+      enum: ['challenge', 'deny'],
     },
   },
 } as const;

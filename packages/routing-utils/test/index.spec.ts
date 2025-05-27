@@ -1403,12 +1403,6 @@ describe('getTransformedRoutes', () => {
       {
         src: '/api/testy/(.*)',
         mitigate: {
-          action: 'log',
-        },
-      },
-      {
-        src: '/api/testy/(.*)',
-        mitigate: {
           action: 'deny',
         },
       },
@@ -1435,7 +1429,7 @@ describe('getTransformedRoutes', () => {
           keyword: 'enum',
           message: 'should be equal to one of the allowed values',
           params: {
-            allowedValues: ['log', 'challenge', 'deny'],
+            allowedValues: ['challenge', 'deny'],
           },
           schemaPath:
             '#/items/anyOf/0/properties/mitigate/properties/action/enum',
