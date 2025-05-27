@@ -1396,14 +1396,7 @@ describe('getTransformedRoutes', () => {
           keyword: 'enum',
           message: 'should be equal to one of the allowed values',
           params: {
-            allowedValues: [
-              'log',
-              'challenge',
-              'deny',
-              'bypass',
-              'rate_limit',
-              'redirect',
-            ],
+            allowedValues: ['log', 'challenge', 'deny'],
           },
           schemaPath:
             '#/items/anyOf/0/properties/mitigate/properties/action/enum',
