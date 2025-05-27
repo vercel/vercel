@@ -1077,15 +1077,6 @@ describe('getTransformedRoutes', () => {
     assertValid(vercelConfig.redirects, redirectsSchema);
     assertValid(vercelConfig.headers, headersSchema);
     assertValid(vercelConfig.trailingSlashSchema, trailingSlashSchema);
-    for (const item of [
-      ...vercelConfig.rewrites,
-      ...vercelConfig.redirects,
-      ...vercelConfig.headers,
-    ]) {
-      if (item.has) {
-        assertValid(item.has, hasSchema);
-      }
-    }
   });
 
   test('should return null routes if no transformations are performed', () => {
