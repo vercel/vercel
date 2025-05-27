@@ -1,4 +1,4 @@
-export const mitigateSchema = {
+const mitigateSchema = {
   description: 'Mitigation action to take on a route',
   type: 'object',
   additionalProperties: false,
@@ -12,7 +12,7 @@ export const mitigateSchema = {
   },
 } as const;
 
-export const hasConditionValueSchema = {
+const matchableValueSchema = {
   description:
     'A value to match against. Can be a string (regex) or a condition operation object',
   anyOf: [
@@ -113,7 +113,7 @@ export const hasSchema = {
             type: 'string',
             enum: ['host'],
           },
-          value: hasConditionValueSchema,
+          value: matchableValueSchema,
         },
       },
       {
@@ -132,7 +132,7 @@ export const hasSchema = {
             type: 'string',
             maxLength: 4096,
           },
-          value: hasConditionValueSchema,
+          value: matchableValueSchema,
         },
       },
     ],

@@ -1223,7 +1223,7 @@ describe('getTransformedRoutes', () => {
     ]);
   });
 
-  test('should validate condition operations for has and missing', () => {
+  test('should validate all condition operations for has and missing', () => {
     const vercelConfig = {
       rewrites: [
         {
@@ -1232,15 +1232,57 @@ describe('getTransformedRoutes', () => {
           has: [
             { type: 'header', key: 'authorization', value: 'Bearer .*' },
             { type: 'host', value: 'api\\.example\\.com' },
+            { type: 'header', key: 'x-string-eq', value: { eq: 'test' } },
+            { type: 'header', key: 'x-number-eq', value: { eq: 123 } },
+            { type: 'header', key: 'x-neq', value: { neq: 'test' } },
             { type: 'cookie', key: 'theme', value: { inc: ['light', 'dark'] } },
-            { type: 'query', key: 'page', value: { neq: '1' } },
             {
               type: 'header',
               key: 'x-role',
-              value: { ninc: ['admin', 'superadmin'], pre: 'user-' },
+              value: { ninc: ['admin', 'superadmin'] },
+            },
+            { type: 'header', key: 'x-prefix', value: { pre: 'test-' } },
+            { type: 'header', key: 'x-suffix', value: { suf: '-test' } },
+            { type: 'header', key: 'x-regex', value: { re: '^test.*' } },
+            { type: 'header', key: 'x-gt', value: { gt: 10 } },
+            { type: 'header', key: 'x-gte', value: { gte: 10 } },
+            { type: 'header', key: 'x-lt', value: { lt: 10 } },
+            { type: 'header', key: 'x-lte', value: { lte: 10 } },
+            {
+              type: 'header',
+              key: 'x-multi-condition',
+              value: {
+                pre: 'test-',
+                suf: '-end',
+                inc: ['a', 'b'],
+                ninc: ['c', 'd'],
+              },
             },
           ],
-          missing: [{ type: 'cookie', key: 'disabled', value: { eq: 'true' } }],
+          missing: [
+            { type: 'header', key: 'x-missing-header', value: 'test' },
+            { type: 'cookie', key: 'missing-cookie', value: 'test' },
+            { type: 'query', key: 'missing-query', value: 'test' },
+            { type: 'host', value: 'missing.example.com' },
+
+            {
+              type: 'header',
+              key: 'x-missing-all',
+              value: {
+                eq: 'test',
+                neq: 'wrong',
+                inc: ['a', 'b'],
+                ninc: ['c', 'd'],
+                pre: 'test-',
+                suf: '-test',
+                re: '^test',
+                gt: 10,
+                gte: 10,
+                lt: 20,
+                lte: 20,
+              },
+            },
+          ],
         },
       ],
     };
@@ -1362,6 +1404,12 @@ describe('getTransformedRoutes', () => {
         src: '/api/testy/(.*)',
         mitigate: {
           action: 'log',
+        },
+      },
+      {
+        src: '/api/testy/(.*)',
+        mitigate: {
+          action: 'deny',
         },
       },
     ];
