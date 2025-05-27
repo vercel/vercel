@@ -1,6 +1,6 @@
 {
   "name": "@vercel/firewall",
-  "description": "[Experimental] Programming rate limits powered by the Vercel Firewall",
+  "description": "Rate limiting via the Vercel Firewall",
   "homepage": "https://vercel.com",
   "exports": {
     ".": {
