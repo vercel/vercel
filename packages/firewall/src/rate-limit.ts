@@ -26,7 +26,7 @@
  * ```
  *
  */
-export async function unstable_checkRateLimit(
+export async function checkRateLimit(
   rateLimitId: string,
   options?: {
     /** The host name on which the rate limit rules are defined */
@@ -147,6 +147,8 @@ export async function unstable_checkRateLimit(
     `Unexpected rate-limit API response status '${rateLimitId}': ${response.status}`
   );
 }
+
+export { checkRateLimit as unstable_checkRateLimit };
 
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
