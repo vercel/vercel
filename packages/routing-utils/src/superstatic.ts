@@ -9,7 +9,7 @@ import {
   Rewrite,
   HasField,
   Header,
-  ConditionValue,
+  HasConditionValue,
 } from './types';
 
 /*
@@ -309,7 +309,7 @@ const normalizeHasKeys = (hasItems: HasField = []) => {
   return hasItems;
 };
 
-function getStringValueForRegex(value: ConditionValue): string | null {
+function getStringValueForRegex(value: HasConditionValue): string | null {
   if (typeof value === 'string') {
     return value;
   }
@@ -318,7 +318,6 @@ function getStringValueForRegex(value: ConditionValue): string | null {
     if ('re' in value && typeof value.re === 'string') {
       return value.re;
     }
-    return null;
   }
 
   return null;
