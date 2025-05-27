@@ -12,7 +12,9 @@ export const mitigateSchema = {
   },
 } as const;
 
-export const conditionValueSchema = {
+export const hasConditionValueSchema = {
+  description:
+    'A value to match against. Can be a string (regex) or a condition operation object',
   anyOf: [
     {
       description: 'A string value (treated as regex)',
@@ -111,9 +113,7 @@ export const hasSchema = {
             enum: ['host'],
           },
           value: {
-            description:
-              'A value to match against. Can be a string (regex) or a condition operation object',
-            ...conditionValueSchema,
+            ...hasConditionValueSchema,
           },
         },
       },
@@ -134,9 +134,7 @@ export const hasSchema = {
             maxLength: 4096,
           },
           value: {
-            description:
-              'A value to match against. Can be a string (regex) or a condition operation object',
-            ...conditionValueSchema,
+            ...hasConditionValueSchema,
           },
         },
       },
