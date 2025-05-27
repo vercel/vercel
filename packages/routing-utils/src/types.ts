@@ -27,13 +27,6 @@ export type ConditionValue =
 
 export type MitigateAction = 'log' | 'challenge' | 'deny';
 
-export type EdgeRateLimit = {
-  algo: 'fixed_window' | 'token_bucket';
-  window: number;
-  limit: number;
-  keys: string[];
-};
-
 export type HasField = Array<
   | {
       type: 'host';
