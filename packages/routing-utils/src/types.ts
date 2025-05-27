@@ -9,7 +9,7 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
-export type HasConditionValue =
+type MatchableValue =
   | string
   | {
       eq?: string | number;
@@ -25,17 +25,17 @@ export type HasConditionValue =
       lte?: number;
     };
 
-export type MitigateAction = 'log' | 'challenge' | 'deny';
+type MitigateAction = 'log' | 'challenge' | 'deny';
 
 export type HasField = Array<
   | {
       type: 'host';
-      value: HasConditionValue;
+      value: MatchableValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: HasConditionValue;
+      value?: MatchableValue;
     }
 >;
 
