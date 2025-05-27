@@ -17,7 +17,8 @@ export const hasConditionValueSchema = {
     'A value to match against. Can be a string (regex) or a condition operation object',
   anyOf: [
     {
-      description: 'A string value (treated as regex)',
+      description:
+        'A regular expression used to match thev value. Named groups can be used in the destination.',
       type: 'string',
       maxLength: 4096,
     },
@@ -112,9 +113,7 @@ export const hasSchema = {
             type: 'string',
             enum: ['host'],
           },
-          value: {
-            ...hasConditionValueSchema,
-          },
+          value: hasConditionValueSchema,
         },
       },
       {
@@ -133,9 +132,7 @@ export const hasSchema = {
             type: 'string',
             maxLength: 4096,
           },
-          value: {
-            ...hasConditionValueSchema,
-          },
+          value: hasConditionValueSchema,
         },
       },
     ],
