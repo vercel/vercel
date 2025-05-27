@@ -25,7 +25,7 @@ type MatchableValue =
       lte?: number;
     };
 
-type MitigateAction = 'log' | 'challenge' | 'deny';
+type MitigateAction = 'challenge' | 'deny';
 
 export type HasField = Array<
   | {
