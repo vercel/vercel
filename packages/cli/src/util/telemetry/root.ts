@@ -187,6 +187,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandRollingRelease(actual: string) {
+    this.trackCliCommand({
+      command: 'rolling-release',
+      value: actual,
+    });
+  }
+
   trackCliCommandRedeploy(actual: string) {
     this.trackCliCommand({
       command: 'redeploy',
