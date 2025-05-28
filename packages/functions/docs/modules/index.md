@@ -64,7 +64,7 @@ The location information of the request, in this way:
 
 #### Defined in
 
-[packages/functions/src/headers.ts:180](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L180)
+[packages/functions/src/headers.ts:180](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L180)
 
 ---
 
@@ -99,7 +99,7 @@ An instance of the Vercel Runtime Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
+[packages/functions/src/cache/index.ts:32](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
 
 ---
 
@@ -149,7 +149,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
+[packages/functions/src/get-env.ts:6](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/get-env.ts#L6)
 
 ---
 
@@ -184,7 +184,7 @@ The IP address of the request.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:131](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L131)
+[packages/functions/src/headers.ts:131](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L131)
 
 ---
 
@@ -232,7 +232,7 @@ export default function middleware(_req: Request) {
 
 #### Defined in
 
-[packages/functions/src/middleware.ts:145](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L145)
+[packages/functions/src/middleware.ts:145](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/middleware.ts#L145)
 
 ---
 
@@ -294,7 +294,7 @@ export const config = { matcher: '/api/users/:path*' };
 
 #### Defined in
 
-[packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L101)
+[packages/functions/src/middleware.ts:101](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/middleware.ts#L101)
 
 ---
 
@@ -331,4 +331,4 @@ export function GET(request) {
 
 #### Defined in
 
-[packages/functions/src/wait-until.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
+[packages/functions/src/wait-until.ts:19](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/wait-until.ts#L19)
