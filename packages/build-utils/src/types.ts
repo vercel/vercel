@@ -49,14 +49,30 @@ export interface Config {
 export type HasField = Array<
   | {
       type: 'host';
-      value: string;
+      value: MatchableValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: string;
+      value?: MatchableValue;
     }
 >;
+
+type MatchableValue =
+  | string
+  | {
+      eq?: string | number;
+      neq?: string;
+      inc?: string[];
+      ninc?: string[];
+      pre?: string;
+      suf?: string;
+      re?: string;
+      gt?: number;
+      gte?: number;
+      lt?: number;
+      lte?: number;
+    };
 
 export interface Meta {
   isDev?: boolean;
