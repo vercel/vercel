@@ -3,15 +3,18 @@ import React, { useState, useCallback } from 'react';
 import FileTree from '../components/FileTree';
 import AIChat from '../components/AIChat';
 import ConsolePanel from '../components/ConsolePanel';
-import dynamic from 'next/dynamic';
-
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+import UIRenderPreview from '../components/UIRenderPreview';
+import ConfirmationModal from '../components/ConfirmationModal'; // Import ConfirmationModal
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [fileName, setFileName] = useState<string>("");
   const [code, setCode] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uiPreviewCode, setUiPreviewCode] = useState<string>("");
+  const [isUIRenderPreviewVisible, setIsUIRenderPreviewVisible] = useState<boolean>(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
+  const [confirmationData, setConfirmationData] = useState<{ current: string; suggested: string; fileName?: string } | null>(null);
 
   const handleFileSelect = useCallback(async (filePath: string) => {
     setLoading(true);
@@ -20,33 +23,56 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
       const data = await res.json();
       setCode(data.content);
-    } catch (e) {
+    } catch { // Remove unused _e
       setCode("// Error loading file");
     }
     setLoading(false);
   }, []);
 
-  const handleSave = useCallback(async (newCode?: string) => {
+  const handleSave = useCallback(async (contentToSave?: string) => { // Renamed for clarity, will use contentToSave or current code
     if (!fileName) return;
     setSaving(true);
     try {
       await fetch(`/api/file?path=${encodeURIComponent(fileName)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newCode ?? code }),
+        body: JSON.stringify({ content: contentToSave ?? code }), // Use contentToSave if provided
       });
-      if (newCode !== undefined) setCode(newCode);
+      if (contentToSave !== undefined && contentToSave !== code) { // Update internal code state if contentToSave is different
+        setCode(contentToSave);
+      }
     } finally {
       setSaving(false);
     }
   }, [fileName, code]);
 
-  const handleApplyCode = useCallback((newCode: string) => {
-    setCode(newCode);
-    handleSave(newCode);
-  }, [handleSave]);
+  const handleApplyCode = useCallback((suggestedNewCode: string) => {
+    setConfirmationData({
+      current: code, // Current code from editor state
+      suggested: suggestedNewCode,
+      fileName: fileName // Current fileName from state
+    });
+    setIsConfirmModalOpen(true);
+  }, [code, fileName]); // Add `code` and `fileName` to dependencies
+
+  const handleConfirmCodeChange = useCallback(() => {
+    if (confirmationData) {
+      setCode(confirmationData.suggested);
+      handleSave(confirmationData.suggested);
+    }
+    setIsConfirmModalOpen(false);
+    setConfirmationData(null);
+  }, [confirmationData, handleSave]);
+
+  const handleCancelCodeChange = useCallback(() => {
+    setIsConfirmModalOpen(false);
+    setConfirmationData(null);
+  }, []);
 
   const handleApplyMultiFileChange = useCallback(async (changes: { path: string; content: string }[]) => {
+    // For multi-file changes, we might bypass the single-file confirmation
+    // or implement a different multi-file review UI.
+    // For now, applying directly as per original logic.
     for (const change of changes) {
       await fetch(`/api/file?path=${encodeURIComponent(change.path)}`, {
         method: "POST",
@@ -63,6 +89,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }, [fileName]);
 
+  const handleShowUIRenderPreview = useCallback((previewCode: string) => {
+    setUiPreviewCode(previewCode);
+    setIsUIRenderPreviewVisible(true);
+  }, []);
+
+  const handleHideUIRenderPreview = useCallback(() => {
+    setIsUIRenderPreviewVisible(false);
+    setUiPreviewCode("");
+  }, []);
+
   return (
     <html lang="en">
       <body className="h-screen w-screen overflow-hidden bg-gray-950 text-gray-100">
@@ -71,12 +107,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <aside className="w-80 bg-gray-900 border-r border-gray-800 flex flex-col">
             <div className="p-4 font-bold text-lg border-b border-gray-800">AI Agent</div>
             <div className="flex-1 overflow-y-auto p-2">
-              <AIChat onApplyCode={handleApplyCode} onApplyMultiFileChange={handleApplyMultiFileChange} />
+              <AIChat
+                onApplyCode={handleApplyCode}
+                onApplyMultiFileChange={handleApplyMultiFileChange}
+                activeFileContent={code}
+                activeFileName={fileName}
+                onShowUIRenderPreview={handleShowUIRenderPreview}
+                // onHideUIRenderPreview={handleHideUIRenderPreview} // Not strictly needed by AIChat directly
+              />
             </div>
           </aside>
 
           {/* File Tree Sidebar */}
-          <aside className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col">
+          <aside className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col shrink-0"> {/* Added shrink-0 */}
             <div className="p-4 font-bold text-lg border-b border-gray-800">Files</div>
             <div className="flex-1 overflow-y-auto p-2">
               <FileTree onFileSelect={handleFileSelect} />
@@ -84,41 +127,50 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </aside>
 
           {/* Main Code Editor and Console */}
-          <main className="flex-1 flex flex-col">
-            <div className="flex-1 flex flex-col">
-              <div className="flex items-center px-4 py-2 border-b border-gray-800 bg-gray-950 gap-2">
-                <span className="font-mono text-sm text-gray-400 flex-1 truncate">{fileName || "Select a file from the sidebar"}</span>
-                <button
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded disabled:opacity-50"
-                  onClick={() => handleSave()}
-                  disabled={!fileName || saving}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
-              <div className="flex-1 min-h-0">
-                <MonacoEditor
-                  height="100%"
-                  language={fileName.endsWith('.ts') || fileName.endsWith('.tsx') ? "typescript" : "javascript"}
-                  value={code}
-                  theme="vs-dark"
-                  onChange={value => setCode(value || "")}
-                  options={{
-                    fontSize: 14,
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                    readOnly: loading || !fileName,
-                  }}
-                />
-              </div>
-            </div>
-            <div className="h-40 bg-gray-900 border-t border-gray-800 p-2 overflow-y-auto">
+          <main className="flex-1 flex flex-col min-w-0"> {/* Added min-w-0 to prevent flexbox shrinkage issues */}
+            {React.Children.map(children, child =>
+              React.isValidElement(child) ? React.cloneElement(child as React.ReactElement<{
+                fileName: string;
+                code: string;
+                loading: boolean;
+                saving: boolean;
+                setCode: (newCode: string) => void;
+                handleSave: (content?: string) => Promise<void>;
+              }>, {
+                fileName,
+                code,
+                loading,
+                saving,
+                setCode,
+                handleSave,
+              }) : child
+            )}
+            <div className="h-40 bg-gray-900 border-t border-gray-800 p-2 overflow-y-auto shrink-0"> {/* Added shrink-0 */}
               <ConsolePanel />
             </div>
           </main>
+
+          {/* UI Render Preview Panel */}
+          {isUIRenderPreviewVisible && (
+            <aside className="w-1/3 bg-gray-850 border-l border-gray-800 flex flex-col shrink-0">
+              <UIRenderPreview
+                codeToPreview={uiPreviewCode}
+                isVisible={isUIRenderPreviewVisible}
+                onClose={handleHideUIRenderPreview}
+              />
+            </aside>
+          )}
         </div>
+        {isConfirmModalOpen && confirmationData && (
+          <ConfirmationModal
+            isOpen={isConfirmModalOpen}
+            currentCode={confirmationData.current}
+            suggestedCode={confirmationData.suggested}
+            fileName={confirmationData.fileName}
+            onConfirm={handleConfirmCodeChange}
+            onCancel={handleCancelCodeChange}
+          />
+        )}
       </body>
     </html>
   );

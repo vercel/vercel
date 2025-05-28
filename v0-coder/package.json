@@ -16,6 +16,7 @@
     "next-auth": "4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-diff-viewer": "^3.1.1",
     "ws": "^8.15.1",
     "zustand": "^5.0.5"
   },
