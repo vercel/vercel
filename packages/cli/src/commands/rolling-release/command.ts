@@ -2,12 +2,7 @@ export const rollingReleaseCommand = {
   name: 'rolling-release',
   aliases: ['rr'],
   description: "Manage your project's rolling release.",
-  arguments: [
-    {
-      name: 'project-path',
-      required: false,
-    },
-  ],
+  arguments: [],
   options: [
     {
       name: 'name',

@@ -6,37 +6,6 @@ export class RollingReleaseTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof rollingReleaseCommand>
 {
-  trackCliArgumentProjectPath(projectPaths: string | undefined) {
-    if (projectPaths) {
-      this.trackCliArgument({
-        arg: 'project-path',
-        value: this.redactedValue,
-      });
-    }
-  }
-
-  trackCliSubcommandStatus() {
-    this.trackCliSubcommand({
-      subcommand: 'status',
-      value: 'status',
-    });
-  }
-
-  trackCliOptionTimeout(time: string | undefined) {
-    if (time) {
-      this.trackCliOption({
-        option: 'timeout',
-        value: '[TIME]',
-      });
-    }
-  }
-
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
-    }
-  }
-
   trackCliOptionAction(value: string | undefined) {
     this.trackCliOption({
       option: 'action',
