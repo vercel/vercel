@@ -1,5 +1,18 @@
 # @vercel/remix-builder
 
+## 5.4.8
+
+### Patch Changes
+
+- Updated dependencies [[`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/static-config@3.1.0
+
+## 5.4.7
+
+### Patch Changes
+
+- Fix issue with remix v2 ESM support on node 20 ([#13355](https://github.com/vercel/vercel/pull/13355))
+
 ## 5.4.6
 
 ### Patch Changes

@@ -1,5 +1,31 @@
 # vercel
 
+## 42.2.0
+
+### Minor Changes
+
+- Warn when system environment variables are not available ([#13357](https://github.com/vercel/vercel/pull/13357))
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
+### Patch Changes
+
+- Updated dependencies [[`36cd6a44bf4daf429babb430c7f1e3f7130d30ee`](https://github.com/vercel/vercel/commit/36cd6a44bf4daf429babb430c7f1e3f7130d30ee), [`3bfdaa067780bfb4dfc4190a8e2a736a02d8d403`](https://github.com/vercel/vercel/commit/3bfdaa067780bfb4dfc4190a8e2a736a02d8d403), [`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/build-utils@10.6.0
+  - @vercel/next@4.8.0
+  - @vercel/node@5.2.0
+  - @vercel/hydrogen@1.2.1
+  - @vercel/redwood@2.3.2
+  - @vercel/remix-builder@5.4.8
+  - @vercel/static-build@2.7.8
+
+## 42.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`53496486606e7159a9267b923ff5f6dd2446a953`](https://github.com/vercel/vercel/commit/53496486606e7159a9267b923ff5f6dd2446a953)]:
+  - @vercel/remix-builder@5.4.7
+
 ## 42.1.0
 
 ### Minor Changes

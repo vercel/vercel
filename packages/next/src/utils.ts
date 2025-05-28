@@ -1828,7 +1828,11 @@ export async function getPageLambdaGroups({
     const isPrerenderRoute = prerenderRoutes.has(routeName);
     const isExperimentalPPR = experimentalPPRRoutes?.has(routeName) ?? false;
 
-    let opts: { memory?: number; maxDuration?: number } = {};
+    let opts: {
+      architecture?: NodejsLambda['architecture'];
+      memory?: number;
+      maxDuration?: number;
+    } = {};
 
     if (
       functionsConfigManifest &&
@@ -2224,7 +2228,6 @@ type OnPrerenderRouteArgs = {
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
-  shouldSkipVaryHeader: boolean;
 };
 let prerenderGroup = 1;
 
@@ -2263,7 +2266,6 @@ export const onPrerenderRoute =
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
       isAppClientSegmentCacheEnabled,
-      shouldSkipVaryHeader,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2847,7 +2849,7 @@ export const onPrerenderRoute =
           ? {
               initialHeaders: {
                 ...initialHeaders,
-                ...(shouldSkipVaryHeader ? {} : { vary: rscVaryHeader }),
+                vary: rscVaryHeader,
               },
             }
           : {}),
@@ -2895,7 +2897,7 @@ export const onPrerenderRoute =
             ? {
                 initialHeaders: {
                   ...initialHeaders,
-                  ...(shouldSkipVaryHeader ? {} : { vary: rscVaryHeader }),
+                  vary: rscVaryHeader,
                   ...((outputPathData || outputPathPrefetchData)?.endsWith(
                     '.json'
                   )
