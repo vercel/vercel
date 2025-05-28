@@ -669,7 +669,6 @@ export interface Stdio {
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
 }
-
 export interface ProjectRollingReleaseStage {
   /** The percentage of traffic to serve to the new deployment */
   targetPercentage: number;
