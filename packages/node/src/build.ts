@@ -485,7 +485,7 @@ export const build: BuildV3 = async ({
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
-      regions: normalizeLambdaRequestedRegions(
+      regions: normalizeRequestedRegions(
         staticConfig?.preferredRegion ?? staticConfig?.regions
       ),
     });
@@ -494,7 +494,7 @@ export const build: BuildV3 = async ({
   return { routes, output };
 };
 
-function normalizeLambdaRequestedRegions(
+function normalizeRequestedRegions(
   regions: BaseFunctionConfig['regions'] | BaseFunctionConfig['preferredRegion']
 ): NodejsLambda['regions'] {
   if (regions === 'all') {
