@@ -390,6 +390,7 @@ export interface Project extends ProjectSettings {
     production?: Deployment;
   };
   customEnvironments?: CustomEnvironment[];
+  rollingRelease?: ProjectRollingRelease;
 }
 
 export interface Org {
@@ -667,4 +668,50 @@ export interface Stdio {
   stdin: ReadableTTY;
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
+}
+export interface ProjectRollingReleaseStage {
+  /** The percentage of traffic to serve to the new deployment */
+  targetPercentage: number;
+  /** duration is the total time to serve a stage, at the given targetPercentage. */
+  duration?: number;
+}
+
+export interface ProjectRollingRelease {
+  enabled: boolean;
+  advancementType: RollingReleaseAdvancementType;
+  stages?: ProjectRollingReleaseStage[] | null;
+}
+
+export type RollingReleaseState = 'ACTIVE' | 'COMPLETE' | 'ABORTED';
+export type RollingReleaseAdvancementType = 'manual-approval' | 'automatic';
+
+export interface RollingReleaseDeploymentSummary {
+  id: string;
+  name: string;
+  url: string;
+  readyState: string;
+  readyStateAt: number;
+  source: string;
+  target: string;
+  createdAt: string;
+}
+export interface RollingReleaseStageSummary {
+  index: number;
+  isFinalStage: boolean;
+  targetPercentage: number;
+  requreApproval: boolean;
+  duration: number | undefined;
+}
+
+export interface RollingReleaseDocument {
+  canaryDeployment: RollingReleaseDeploymentSummary;
+  currentDeployment: RollingReleaseDeploymentSummary;
+  activeStageApproved: boolean;
+  activeStageIndex: number;
+  activeStage: RollingReleaseStageSummary;
+  nextStage: RollingReleaseStageSummary;
+  stages: RollingReleaseDeploymentSummary[];
+  startedAt: number;
+  updatedAt: number;
+  state: RollingReleaseState;
 }
