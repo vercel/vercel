@@ -1961,7 +1961,11 @@ export const build: BuildV2 = async buildOptions => {
               '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
-          let lambdaOptions: { memory?: number; maxDuration?: number } = {};
+          let lambdaOptions: {
+            architecture?: NodejsLambda['architecture'];
+            memory?: number;
+            maxDuration?: number;
+          } = {};
 
           if (config && config.functions) {
             lambdaOptions = await getLambdaOptionsFromFunction({
@@ -2272,9 +2276,6 @@ export const build: BuildV2 = async buildOptions => {
       canUsePreviewMode,
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
-      // Relevant Next.js versions will be handled by server-build.ts, which
-      // does correctly configure this variable.
-      shouldSkipVaryHeader: false,
     });
 
     await Promise.all(

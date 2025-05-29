@@ -1,5 +1,12 @@
 # @vercel/hydrogen
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/static-config@3.1.0
+
 ## 1.2.0
 
 ### Minor Changes
