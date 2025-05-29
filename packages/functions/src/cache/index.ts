@@ -30,15 +30,15 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
 export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
-  let cache: RuntimeCache;
+  let runtimeCache: RuntimeCache;
   if (getContext().cache) {
-    cache = getContext().cache as RuntimeCache;
+    runtimeCache = getContext().cache as RuntimeCache;
   } else {
     // Create InMemoryCache instance only once
     if (!inMemoryCacheInstance) {
       inMemoryCacheInstance = new InMemoryCache();
     }
-    cache = inMemoryCacheInstance;
+    runtimeCache = inMemoryCacheInstance;
   }
 
   const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
@@ -53,21 +53,36 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
   };
 
   return {
-    get: (key: string, options?: { tags?: string[] }) => {
-      return cache.get(makeKey(key), options);
+    cache: async (
+      key: string,
+      fn: (...args: any[]) => Promise<unknown>,
+      options?: { tags?: string[]; ttl?: number }
+    ) => {
+      return runtimeCache.get(makeKey(key), options).then(val => {
+        if (val == null) {
+          return fn().then(result => {
+            runtimeCache.set(makeKey(key), result, options);
+            return result;
+          });
+        }
+        return Promise.resolve(val);
+      });
+    },
+    get: (key: string, options?: { tags?: string[]; ttl?: number }) => {
+      return runtimeCache.get(makeKey(key), options);
     },
     set: (
       key: string,
       value: unknown,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
-      return cache.set(makeKey(key), value, options);
+      return runtimeCache.set(makeKey(key), value, options);
     },
     delete: (key: string) => {
-      return cache.delete(makeKey(key));
+      return runtimeCache.delete(makeKey(key));
     },
     expireTag: (tag: string | string[]) => {
-      return cache.expireTag(tag);
+      return runtimeCache.expireTag(tag);
     },
   };
 };
