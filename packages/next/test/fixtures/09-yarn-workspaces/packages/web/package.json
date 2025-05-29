@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@jimmy/common": "^1.0.64",
-    "next": "https://vercel-packages.vercel.app/next/commits/1d4aa13e8f2f89136fcd941c169781d377af4fe7/next",
+    "next": "https://vercel-packages.vercel.app/next/commits/f8017ce39b7d3f974a624d6423580101106732ea/next",
     "react": "18.2.0",
     "react-dom": "18.2.0"
   },
