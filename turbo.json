@@ -54,7 +54,7 @@
       "outputLogs": "new-only"
     },
     "type-check": {
-      "dependsOn": ["source"]
+      "dependsOn": ["source", "^build"]
     },
     "source": {
       "dependsOn": ["^source"]
