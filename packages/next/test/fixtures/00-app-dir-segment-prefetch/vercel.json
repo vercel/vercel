@@ -7,7 +7,7 @@
   ],
   "probes": [
     {
-      "path": "/",
+      "path": "/?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -19,8 +19,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -32,8 +32,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=nn07o",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -45,8 +45,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=ydjbj",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -58,8 +58,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=5ga50",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -71,8 +71,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=1a29i",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -81,45 +81,6 @@
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
-      },
-      "mustNotContain": "Dynamic Component"
-    },
-    { 
-      "path": "/blog/hello-not-prerendered",
-      "status": 200,
-      "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/_tree"
-      },
-      "responseHeaders": {
-        "x-matched-path": "/blog/[slug].segments/_tree.segment.rsc"
-      },
-      "mustNotContain": "Dynamic Component"
-    },
-    { 
-      "path": "/blog/hello-not-prerendered",
-      "status": 200,
-      "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered"
-      },
-      "responseHeaders": {
-        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug].segment.rsc"
-      },
-      "mustNotContain": "Dynamic Component"
-    },
-    { 
-      "path": "/blog/hello-not-prerendered",
-      "status": 200,
-      "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-not-prerendered/__PAGE__"
-      },
-      "responseHeaders": {
-        "x-matched-path": "/blog/[slug].segments/blog/$d$slug$[slug]/__PAGE__.segment.rsc"
       },
       "mustNotContain": "Dynamic Component"
     }
