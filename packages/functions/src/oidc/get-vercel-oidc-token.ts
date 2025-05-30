@@ -1,5 +1,4 @@
 import { getContext } from '../get-context';
-import { getEnv } from '../get-env';
 
 /**
  * Returns the OIDC token from the request context or the environment variable.
@@ -25,9 +24,9 @@ import { getEnv } from '../get-env';
  * ```
  */
 export async function getVercelOidcToken(): Promise<string> {
-  const env = getEnv(process.env);
   const token =
-    getContext().headers?.['x-vercel-oidc-token'] ?? env.VERCEL_OIDC_TOKEN;
+    getContext().headers?.['x-vercel-oidc-token'] ??
+    process.env.VERCEL_OIDC_TOKEN;
 
   if (!token) {
     throw new Error(
@@ -35,7 +34,7 @@ export async function getVercelOidcToken(): Promise<string> {
     );
   }
 
-  if (env.VERCEL_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'production') {
     const { createRemoteJWKSet, jwtVerify, errors } = await import('jose');
     try {
       const jwks = createRemoteJWKSet(new URL('https://oidc.vercel.com'));
