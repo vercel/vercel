@@ -53,6 +53,11 @@
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
-    "type-check": {}
+    "type-check": {
+      "dependsOn": ["source", "^build"]
+    },
+    "source": {
+      "dependsOn": ["^source"]
+    }
   }
 }
