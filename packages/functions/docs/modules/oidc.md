@@ -77,7 +77,7 @@ If the `x-vercel-oidc-token` header is missing from the request context and the 
 
 **`Throws`**
 
-If `NODE_ENV` is not set to 'production' and the OIDC token is invalid.
+If `NODE_ENV` is not set to `'production'` and the OIDC token is not valid.
 
 **`Example`**
 
