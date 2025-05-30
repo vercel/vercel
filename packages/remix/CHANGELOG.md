@@ -1,5 +1,12 @@
 # @vercel/remix-builder
 
+## 5.4.9
+
+### Patch Changes
+
+- Updated dependencies [[`6c8e763ab63c79e12c7d5455fd79cf158f43cc77`](https://github.com/vercel/vercel/commit/6c8e763ab63c79e12c7d5455fd79cf158f43cc77)]:
+  - @vercel/static-config@3.1.1
+
 ## 5.4.8
 
 ### Patch Changes

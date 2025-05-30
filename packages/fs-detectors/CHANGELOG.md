@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.4.2
+
+### Patch Changes
+
+- Detect turbo.jsonc for Turborepo ([#13388](https://github.com/vercel/vercel/pull/13388))
+
+- Updated dependencies [[`9e783f33df5181f93ff259b5f3c19e8cacf68afc`](https://github.com/vercel/vercel/commit/9e783f33df5181f93ff259b5f3c19e8cacf68afc)]:
+  - @vercel/routing-utils@5.0.5
+
 ## 5.4.1
 
 ### Patch Changes

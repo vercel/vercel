@@ -1,5 +1,14 @@
 # @vercel/node
 
+## 5.2.1
+
+### Patch Changes
+
+- support `config.regions` and `config.preferredRegion` in functions ([#13386](https://github.com/vercel/vercel/pull/13386))
+
+- Updated dependencies [[`6c8e763ab63c79e12c7d5455fd79cf158f43cc77`](https://github.com/vercel/vercel/commit/6c8e763ab63c79e12c7d5455fd79cf158f43cc77)]:
+  - @vercel/static-config@3.1.1
+
 ## 5.2.0
 
 ### Minor Changes
