@@ -10,7 +10,7 @@ import { getContext } from '../get-context';
  *
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
- * @throws {Error} If `NODE_ENV` is not set to 'development' and the OIDC token is invalid.
+ * @throws {Error} If `NODE_ENV` is not set to 'production' and the OIDC token is invalid.
  *
  * @example
  *
