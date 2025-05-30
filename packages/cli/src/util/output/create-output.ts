@@ -97,6 +97,10 @@ export class Output {
     this.print(`${color('>')} ${str}\n`);
   };
 
+  event = (event: string, payload: object) => {
+    this.print(`[event][${event}][${JSON.stringify(payload)}]\n`);
+  };
+
   dim = (str: string, color = chalk.grey) => {
     this.print(`${color(`> ${str}`)}\n`);
   };
