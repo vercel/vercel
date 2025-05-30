@@ -7,7 +7,7 @@
   ],
   "probes": [
     {
-      "path": "/dynamic",
+      "path": "/dynamic?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
