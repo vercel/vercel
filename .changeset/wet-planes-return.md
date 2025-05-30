@@ -1,5 +1,0 @@
----
-
----
-
-Fix type-check task
