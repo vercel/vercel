@@ -3523,10 +3523,17 @@ export async function getNodeMiddleware({
     }
   });
   const reasons = new Map();
-  const tracedFiles: Record<string, FileFsRef> = {};
 
-  await Promise.all(
-    fileList.map(collectTracedFiles(baseDir, lstatResults, lstatSema, reasons))
+  const tracedFiles: {
+    [filePath: string]: FileFsRef;
+  } = Object.fromEntries(
+    (
+      await Promise.all(
+        fileList.map(
+          collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+        )
+      )
+    ).filter((entry): entry is [string, FileFsRef] => !!entry)
   );
 
   const launcherData = (
