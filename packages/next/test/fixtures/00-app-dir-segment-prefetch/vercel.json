@@ -7,7 +7,7 @@
   ],
   "probes": [
     {
-      "path": "/",
+      "path": "/?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -19,8 +19,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -32,8 +32,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=nn07o",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -45,8 +45,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=ydjbj",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -58,8 +58,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=5ga50",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -71,8 +71,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-world",
+    {
+      "path": "/blog/hello-world?_rsc=1a29i",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -84,8 +84,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-not-prerendered",
+    {
+      "path": "/blog/hello-not-prerendered?_rsc=1r34m",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -97,8 +97,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-not-prerendered",
+    {
+      "path": "/blog/hello-not-prerendered?_rsc=a13a3",
       "status": 200,
       "headers": {
         "RSC": "1",
@@ -110,8 +110,8 @@
       },
       "mustNotContain": "Dynamic Component"
     },
-    { 
-      "path": "/blog/hello-not-prerendered",
+    {
+      "path": "/blog/hello-not-prerendered?_rsc=capjw",
       "status": 200,
       "headers": {
         "RSC": "1",
