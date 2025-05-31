@@ -904,8 +904,7 @@ export const collectTracedFiles =
     baseDir: string,
     lstatResults: { [key: string]: ReturnType<typeof lstat> },
     lstatSema: Sema,
-    reasons: NodeFileTraceReasons,
-    files: { [filePath: string]: FileFsRef }
+    reasons: NodeFileTraceReasons
   ) =>
   async (file: string) => {
     const reason = reasons.get(file);
@@ -923,10 +922,13 @@ export const collectTracedFiles =
     }
     const { mode } = await lstatResults[filePath];
 
-    files[file] = new FileFsRef({
-      fsPath: path.join(baseDir, file),
-      mode,
-    });
+    return [
+      file,
+      new FileFsRef({
+        fsPath: path.join(baseDir, file),
+        mode,
+      }),
+    ];
   };
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
@@ -3521,12 +3523,17 @@ export async function getNodeMiddleware({
     }
   });
   const reasons = new Map();
-  const tracedFiles: Record<string, FileFsRef> = {};
 
-  await Promise.all(
-    fileList.map(
-      collectTracedFiles(baseDir, lstatResults, lstatSema, reasons, tracedFiles)
-    )
+  const tracedFiles: {
+    [filePath: string]: FileFsRef;
+  } = Object.fromEntries(
+    (
+      await Promise.all(
+        fileList.map(
+          collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+        )
+      )
+    ).filter((entry): entry is [string, FileFsRef] => !!entry)
   );
 
   const launcherData = (
