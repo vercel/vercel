@@ -1,5 +1,11 @@
 # vercel
 
+## 42.3.1
+
+### Patch Changes
+
+- [cli] add try/catch around login prompt attempts ([#13399](https://github.com/vercel/vercel/pull/13399))
+
 ## 42.3.0
 
 ### Minor Changes
