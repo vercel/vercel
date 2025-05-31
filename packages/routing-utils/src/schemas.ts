@@ -1,3 +1,102 @@
+const mitigateSchema = {
+  description: 'Mitigation action to take on a route',
+  type: 'object',
+  additionalProperties: false,
+  required: ['action'],
+  properties: {
+    action: {
+      description: 'The mitigation action to take',
+      type: 'string',
+      enum: ['challenge', 'deny'],
+    },
+  },
+} as const;
+
+const matchableValueSchema = {
+  description:
+    'A value to match against. Can be a string (regex) or a condition operation object',
+  anyOf: [
+    {
+      description:
+        'A regular expression used to match thev value. Named groups can be used in the destination.',
+      type: 'string',
+      maxLength: 4096,
+    },
+    {
+      description: 'A condition operation object',
+      type: 'object',
+      additionalProperties: false,
+      minProperties: 1,
+      properties: {
+        eq: {
+          description: 'Equal to',
+          anyOf: [
+            {
+              type: 'string',
+              maxLength: 4096,
+            },
+            {
+              type: 'number',
+            },
+          ],
+        },
+        neq: {
+          description: 'Not equal',
+          type: 'string',
+          maxLength: 4096,
+        },
+        inc: {
+          description: 'In array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+        ninc: {
+          description: 'Not in array',
+          type: 'array',
+          items: {
+            type: 'string',
+            maxLength: 4096,
+          },
+        },
+        pre: {
+          description: 'Starts with',
+          type: 'string',
+          maxLength: 4096,
+        },
+        suf: {
+          description: 'Ends with',
+          type: 'string',
+          maxLength: 4096,
+        },
+        re: {
+          description: 'Regex',
+          type: 'string',
+          maxLength: 4096,
+        },
+        gt: {
+          description: 'Greater than',
+          type: 'number',
+        },
+        gte: {
+          description: 'Greater than or equal to',
+          type: 'number',
+        },
+        lt: {
+          description: 'Less than',
+          type: 'number',
+        },
+        lte: {
+          description: 'Less than or equal to',
+          type: 'number',
+        },
+      },
+    },
+  ],
+};
+
 export const hasSchema = {
   description: 'An array of requirements that are needed to match',
   type: 'array',
@@ -14,12 +113,7 @@ export const hasSchema = {
             type: 'string',
             enum: ['host'],
           },
-          value: {
-            description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
-          },
+          value: matchableValueSchema,
         },
       },
       {
@@ -38,12 +132,7 @@ export const hasSchema = {
             type: 'string',
             maxLength: 4096,
           },
-          value: {
-            description:
-              'A regular expression used to match the value. Named groups can be used in the destination',
-            type: 'string',
-            maxLength: 4096,
-          },
+          value: matchableValueSchema,
         },
       },
     ],
@@ -166,6 +255,7 @@ export const routesSchema = {
           },
           has: hasSchema,
           missing: hasSchema,
+          mitigate: mitigateSchema,
         },
       },
       {

@@ -9,15 +9,33 @@ export type RouteApiError = {
   errors?: string[]; // array of all error messages
 };
 
+type MatchableValue =
+  | string
+  | {
+      eq?: string | number;
+      neq?: string;
+      inc?: string[];
+      ninc?: string[];
+      pre?: string;
+      suf?: string;
+      re?: string;
+      gt?: number;
+      gte?: number;
+      lt?: number;
+      lte?: number;
+    };
+
+type MitigateAction = 'challenge' | 'deny';
+
 export type HasField = Array<
   | {
       type: 'host';
-      value: string;
+      value: MatchableValue;
     }
   | {
       type: 'header' | 'cookie' | 'query';
       key: string;
-      value?: string;
+      value?: MatchableValue;
     }
 >;
 
@@ -34,6 +52,9 @@ export type RouteWithSrc = {
   status?: number;
   has?: HasField;
   missing?: HasField;
+  mitigate?: {
+    action: MitigateAction;
+  };
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
