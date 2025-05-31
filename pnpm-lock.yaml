@@ -267,6 +267,9 @@ importers:
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
+      '@vercel/routing-utils':
+        specifier: 5.0.4
+        version: link:../routing-utils
       aggregate-error:
         specifier: 3.0.1
         version: 3.0.1

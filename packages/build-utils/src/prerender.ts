@@ -120,7 +120,11 @@ export class Prerender {
             // host doesn't need a key
             (field.type !== 'host' && typeof field.key !== 'string') ||
             typeof field.type !== 'string' ||
-            (field.value !== undefined && typeof field.value !== 'string')
+            (field.value !== undefined &&
+              typeof field.value !== 'string' &&
+              (typeof field.value !== 'object' ||
+                field.value === null ||
+                Array.isArray(field.value)))
         )
       ) {
         throw new Error(
