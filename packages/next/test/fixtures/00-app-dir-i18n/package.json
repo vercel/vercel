@@ -6,7 +6,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/commits/cb09c19aa73c3ccf0635c0df5f05a0fdea938f09/next",
     "react": "latest",
     "react-dom": "latest"
   }
