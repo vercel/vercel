@@ -99,6 +99,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { PassThrough } from 'stream';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -202,6 +203,7 @@ function isLegacyNext(nextVersion: string) {
 }
 
 export const build: BuildV2 = async buildOptions => {
+  console.log('LOCAL TEST');
   let { workPath, repoRootPath } = buildOptions;
   const builderSpan = buildOptions.span ?? new Span({ name: 'vc.builder' });
 
@@ -514,6 +516,12 @@ export const build: BuildV2 = async buildOptions => {
     build: JSON.stringify(shouldRunCompileStep),
   });
 
+  const buildStream = new PassThrough();
+  buildStream.setEncoding('utf8');
+  buildStream.on('data', (chunk: string) => {
+    console.log(`Received from build stream: ${chunk.toString()}`);
+  });
+
   if (shouldRunCompileStep) {
     await builderSpan
       .child(BUILDER_COMPILE_STEP, {
@@ -540,9 +548,11 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           console.log(`Running "${buildCommand}"`);
+
           await execCommand(buildCommand, {
             ...spawnOpts,
             cwd: entryPath,
+            stdoutStream: buildStream,
             env,
           });
         } else if (buildScriptName) {
@@ -1648,7 +1658,6 @@ export const build: BuildV2 = async buildOptions => {
       );
 
       for (const page of mergedPageKeys) {
-        const tracedFiles: { [key: string]: FileFsRef } = {};
         const fileList = parentFilesMap.get(
           path.relative(baseDir, pages[page].fsPath)
         );
@@ -1660,16 +1669,16 @@ export const build: BuildV2 = async buildOptions => {
         }
         const reasons = result.reasons;
 
-        await Promise.all(
-          Array.from(fileList).map(
-            collectTracedFiles(
-              baseDir,
-              lstatResults,
-              lstatSema,
-              reasons,
-              tracedFiles
+        const tracedFiles: {
+          [filePath: string]: FileFsRef;
+        } = Object.fromEntries(
+          (
+            await Promise.all(
+              Array.from(fileList).map(
+                collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+              )
             )
-          )
+          ).filter((entry): entry is [string, FileFsRef] => !!entry)
         );
         pageTraces[page] = tracedFiles;
       }
