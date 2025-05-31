@@ -67,5 +67,8 @@
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "jose": "5.9.6"
   }
 }

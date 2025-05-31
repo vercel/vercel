@@ -75,6 +75,10 @@ context headers.
 
 If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
 
+**`Throws`**
+
+If `NODE_ENV` is not set to `'production'` and the OIDC token is not valid.
+
 **`Example`**
 
 ```js
@@ -96,4 +100,4 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L25)
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:26](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L26)
