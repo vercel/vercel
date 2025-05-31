@@ -8,13 +8,29 @@ interface CacheEntry {
 }
 
 export class InMemoryCache implements RuntimeCache {
-  private cache: Record<string, CacheEntry> = {};
+  private runtimeCache: Record<string, CacheEntry> = {};
+
+  async cache(
+    key: string,
+    fn: (...args: any[]) => Promise<unknown>,
+    options?: { tags?: string[]; ttl?: number }
+  ): Promise<unknown | null> {
+    return this.get(key, options).then(val => {
+      if (val == null) {
+        return fn().then(result => {
+          this.set(key, result, options);
+          return result;
+        });
+      }
+      return Promise.resolve(val);
+    });
+  }
 
   async get(
     key: string,
-    options?: { tags?: string[] }
+    options?: { tags?: string[]; ttl?: number }
   ): Promise<unknown | null> {
-    const entry = this.cache[key];
+    const entry = this.runtimeCache[key];
     if (entry) {
       if (entry.ttl && entry.lastModified + entry.ttl * 1000 < Date.now()) {
         // If the entry is expired, delete it and return null
@@ -37,7 +53,7 @@ export class InMemoryCache implements RuntimeCache {
     value: unknown,
     options?: { ttl?: number; tags?: string[] }
   ): Promise<void> {
-    this.cache[key] = {
+    this.runtimeCache[key] = {
       value,
       lastModified: Date.now(),
       ttl: options?.ttl,
@@ -46,18 +62,18 @@ export class InMemoryCache implements RuntimeCache {
   }
 
   async delete(key: string): Promise<void> {
-    delete this.cache[key];
+    delete this.runtimeCache[key];
   }
 
   async expireTag(tag: string | string[]): Promise<void> {
     const tags = Array.isArray(tag) ? tag : [tag];
     // Iterate over all entries in the cache
-    for (const key in this.cache) {
+    for (const key in this.runtimeCache) {
       if (Object.prototype.hasOwnProperty.call(this.cache, key)) {
-        const entry = this.cache[key];
+        const entry = this.runtimeCache[key];
         // If any of the entry's tags match the specified tags, delete this entry
         if (tags.some(t => entry.tags.has(t))) {
-          delete this.cache[key];
+          delete this.runtimeCache[key];
         }
       }
     }
