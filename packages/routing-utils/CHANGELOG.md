@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.5
+
+### Patch Changes
+
+- Revert "[routing-utils] Support Conditions and Mitigate in vercel.json" ([#13400](https://github.com/vercel/vercel/pull/13400))
+
 ## 5.0.4
 
 ### Patch Changes
