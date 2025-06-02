@@ -203,7 +203,6 @@ function isLegacyNext(nextVersion: string) {
 }
 
 export const build: BuildV2 = async buildOptions => {
-  console.log('LOCAL TEST');
   let { workPath, repoRootPath } = buildOptions;
   const builderSpan = buildOptions.span ?? new Span({ name: 'vc.builder' });
 
