@@ -36,15 +36,14 @@ export default async function logout(client: Client): Promise<number> {
     return 1;
   }
 
-  if (parsedArgs.flags['--future']) {
-    telemetry.trackCliFlagFuture('logout');
-    return await future(client);
-  }
-
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
+  }
+
+  if (authConfig.type === 'oauth') {
+    return await future(client);
   }
 
   if (!authConfig.token) {
