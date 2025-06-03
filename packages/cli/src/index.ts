@@ -387,21 +387,26 @@ const main = async () => {
   ) {
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
-      const result = await doLoginPrompt(client);
+      try {
+        const result = await doLoginPrompt(client);
 
-      // The login function failed, so it returned an exit code
-      if (typeof result === 'number') {
-        return result;
+        // The login function failed, so it returned an exit code
+        if (typeof result === 'number') {
+          return result;
+        }
+
+        // When `result` is a string it's the user's authentication token.
+        // It needs to be saved to the configuration file.
+        client.authConfig.token = result.token;
+
+        await updateCurrentTeamAfterLogin(client, result.teamId);
+
+        configFiles.writeToAuthConfigFile(client.authConfig);
+        configFiles.writeToConfigFile(client.config);
+      } catch (error) {
+        printError(error);
+        return 1;
       }
-
-      // When `result` is a string it's the user's authentication token.
-      // It needs to be saved to the configuration file.
-      client.authConfig.token = result.token;
-
-      await updateCurrentTeamAfterLogin(client, result.teamId);
-
-      configFiles.writeToAuthConfigFile(client.authConfig);
-      configFiles.writeToConfigFile(client.config);
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
@@ -693,6 +698,10 @@ const main = async () => {
         case 'rollback':
           telemetry.trackCliCommandRollback(userSuppliedSubCommand);
           func = require('./commands/rollback').default;
+          break;
+        case 'rolling-release':
+          telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
+          func = require('./commands/rolling-release').default;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);

@@ -1,5 +1,18 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.83
+
+### Patch Changes
+
+- Revert "[gatsby-plugin-vercel-builder] Use Route type from @vercel/routing-utils" ([#13402](https://github.com/vercel/vercel/pull/13402))
+
+## 2.0.82
+
+### Patch Changes
+
+- Updated dependencies [[`36cd6a44bf4daf429babb430c7f1e3f7130d30ee`](https://github.com/vercel/vercel/commit/36cd6a44bf4daf429babb430c7f1e3f7130d30ee), [`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/build-utils@10.6.0
+
 ## 2.0.81
 
 ### Patch Changes

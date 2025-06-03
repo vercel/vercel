@@ -1,5 +1,15 @@
 # @vercel/firewall
 
+## 1.0.0
+
+### Major Changes
+
+- Mark checkRateLimit as stable ([#13382](https://github.com/vercel/vercel/pull/13382))
+
+### Patch Changes
+
+- Updated description ([#13384](https://github.com/vercel/vercel/pull/13384))
+
 ## 0.1.7
 
 ### Patch Changes

@@ -10,8 +10,8 @@
   "dependencies": {
     "@types/node": "14.14.31",
     "@vercel-internals/constants": "workspace:*",
-    "@vercel/build-utils": "10.5.1",
-    "@vercel/routing-utils": "5.0.4"
+    "@vercel/build-utils": "10.6.0",
+    "@vercel/routing-utils": "5.0.5"
   },
   "devDependencies": {
     "@vercel-internals/tsconfig": "workspace:*",

@@ -37,7 +37,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 import {
@@ -478,14 +478,34 @@ export const build: BuildV3 = async ({
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
+      regions: normalizeRequestedRegions(
+        staticConfig?.preferredRegion ?? staticConfig?.regions
+      ),
     });
   }
 
   return { routes, output };
 };
+
+function normalizeRequestedRegions(
+  regions: BaseFunctionConfig['regions'] | BaseFunctionConfig['preferredRegion']
+): NodejsLambda['regions'] {
+  if (regions === 'all') {
+    return ['all'];
+  } else if (regions === 'auto' || regions === 'default') {
+    return undefined;
+  }
+
+  if (typeof regions === 'string') {
+    return [regions];
+  }
+
+  return regions;
+}
