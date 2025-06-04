@@ -13,6 +13,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
+import { getLinkedProject } from '../../util/projects/link';
+import { getCommandName } from '../../util/pkg-name';
 
 export default async (client: Client): Promise<number> => {
   const telemetry = new RollingReleaseTelemetryClient({
@@ -22,13 +24,37 @@ export default async (client: Client): Promise<number> => {
   });
   let parsedArguments = null;
 
-  const flagsSpecification = getFlagsSpecification(
-    rollingReleaseCommand.options
+  // Get the subcommand, accounting for both full command name and aliases
+  const args = client.argv.slice(2);
+  const firstArg = args[0];
+
+  // Check if first arg is the command name or an alias
+  const isCommandOrAlias = firstArg === 'rolling-release' || firstArg === 'rr';
+  const subcommand = isCommandOrAlias ? args[1] : firstArg;
+  const subcommandConfig = rollingReleaseCommand.subcommands.find(
+    cmd => cmd.name === subcommand
   );
+
+  if (!subcommand || !subcommandConfig) {
+    output.print(
+      help(rollingReleaseCommand, { columns: client.stderr.columns })
+    );
+    return 2;
+  }
+
+  // Get flags specification for the specific subcommand plus global options
+  const flagsSpecification = getFlagsSpecification([
+    ...rollingReleaseCommand.options,
+    ...subcommandConfig.options,
+  ]);
 
   // #region Argument Parsing
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
+    // Parse arguments after the subcommand, accounting for command/alias
+    parsedArguments = parseArguments(
+      args.slice(isCommandOrAlias ? 2 : 1),
+      flagsSpecification
+    );
   } catch (error) {
     printError(error);
     return 1;
@@ -40,8 +66,21 @@ export default async (client: Client): Promise<number> => {
     );
     return 2;
   }
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
+    output.error(
+      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
+        'link'
+      )} to begin.`
+    );
+    return 1;
+  }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
 
-  const projectNameOrId = parsedArguments.flags['--name'];
+  const projectNameOrId = link.project.name;
   const currentStageIndex = parsedArguments.flags['--currentStageIndex'];
   const activeStageIndex = parseInt(currentStageIndex ?? '');
   const deployId = parsedArguments.flags['--deployId'];
@@ -49,7 +88,7 @@ export default async (client: Client): Promise<number> => {
   let cfg = undefined;
 
   telemetry.trackCliOptionName(projectNameOrId);
-  telemetry.trackCliOptionAction(parsedArguments.flags['--action']);
+  telemetry.trackCliOptionAction(subcommand);
   telemetry.trackCliOptionDeployId(deployId);
   telemetry.trackCliOptionCfg(cfgString);
   telemetry.trackCliOptionCurrentStageIndex(currentStageIndex);
@@ -62,7 +101,7 @@ export default async (client: Client): Promise<number> => {
     projectNameOrId,
   });
 
-  switch (parsedArguments.flags['--action']) {
+  switch (subcommand) {
     case 'configure':
       if (cfgString === undefined) {
         output.error('configuring a rolling release requires --cfg option.');
@@ -165,7 +204,10 @@ export default async (client: Client): Promise<number> => {
       );
       break;
     default:
-      output.log('Need to supply --action');
+      output.print(
+        help(rollingReleaseCommand, { columns: client.stderr.columns })
+      );
+      return 2;
   }
 
   return 0;
