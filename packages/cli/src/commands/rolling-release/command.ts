@@ -20,7 +20,7 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'cfg',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: "The project's rolling release configuration",
@@ -41,7 +41,7 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'deployId',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The deploymentId to target for the rolling release',
@@ -62,14 +62,14 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'deployId',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The deploymentId of the rolling release',
         },
         {
           name: 'currentStageIndex',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The current stage of a rolling release to approve',
@@ -90,7 +90,7 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'deployId',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The deploymentId of the rolling release to abort',
@@ -111,7 +111,7 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'deployId',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The deploymentId of the rolling release to complete',
@@ -132,7 +132,7 @@ export const rollingReleaseCommand = {
       options: [
         {
           name: 'deployId',
-          shorthand: undefined,
+          shorthand: null,
           deprecated: false,
           type: String,
           description: 'The deploymentId of the rolling release to fetch',
