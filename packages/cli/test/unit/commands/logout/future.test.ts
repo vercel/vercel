@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { logout } from '../../../../src/commands/logout/future';
+import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { type Response } from 'node-fetch';
@@ -26,9 +26,10 @@ function mockResponse(data: unknown, ok = true): Response {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  client.emptyAuthConfig();
 });
 
-describe('logout --future', () => {
+describe('logout', () => {
   it('successful logout', async () => {
     fetch.mockResolvedValueOnce(
       mockResponse({
@@ -43,13 +44,14 @@ describe('logout --future', () => {
 
     fetch.mockResolvedValueOnce(mockResponse({}));
 
-    client.setArgv('logout', '--future');
+    client.setArgv('logout');
+    client.authConfig.type = 'oauth';
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "logout --future"').toBe(0);
+    expect(exitCode, 'exit code for "logout"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -93,14 +95,15 @@ describe('logout --future', () => {
     };
     fetch.mockResolvedValueOnce(mockResponse(invalidResponse, false));
 
-    client.setArgv('logout', '--future', '--debug');
+    client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();
+    client.authConfig.type = 'oauth';
     const tokenBefore = client.authConfig.token;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(1);
+    expect(exitCode, 'exit code for "login"').toBe(1);
 
     const output = await client.stderr.getFullOutput();
     expect(output).toMatch(invalidResponse.error);
@@ -120,14 +123,15 @@ describe('logout --future', () => {
   });
 
   it('if no token, do nothing', async () => {
-    client.setArgv('logout', '--future');
+    client.setArgv('logout');
     delete client.authConfig.token;
+    client.authConfig.type = 'oauth';
     expect(client.authConfig.token).toBeUndefined();
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    expect(exitCode, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput(
-      'Not currently logged in, so `vercel logout --future` did nothing'
+      'Not currently logged in, so `vercel logout` did nothing'
     );
     expect(client.authConfig.token).toBeUndefined();
   });
