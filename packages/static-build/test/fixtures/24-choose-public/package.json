@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p public && echo 'mypage' > public/index.txt"
-  }
-}

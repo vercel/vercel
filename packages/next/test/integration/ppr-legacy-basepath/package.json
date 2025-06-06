@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "next": "v15.0.0-canary.141",
-    "react": "latest",
-    "react-dom": "latest"
-  },
-  "ignoreNextjsUpdates": true
-}

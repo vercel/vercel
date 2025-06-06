@@ -1,9 +1,0 @@
-{
-  "name": "server-build-legacy-monorepo",
-  "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/*"
-    ]
-  }
-}

@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "vercel-build": "mkdir dist && node build.js"
-  }
-}

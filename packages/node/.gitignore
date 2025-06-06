@@ -1,3 +1,0 @@
-/dist
-/test/fixtures/**/types.d.ts
-!test/cache-fixtures/**

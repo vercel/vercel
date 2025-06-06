@@ -1,7 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Svelte app" },
-    { "path": "/bundle.js", "mustContain": "Hello" },
-    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "Svelte app" }
-  ]
-}

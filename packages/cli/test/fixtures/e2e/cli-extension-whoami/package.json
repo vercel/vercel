@@ -1,6 +1,0 @@
-{
-  "name": "cli-extension-whoami",
-  "bin": {
-    "vercel-mywhoami": "bin.js"
-  }
-}

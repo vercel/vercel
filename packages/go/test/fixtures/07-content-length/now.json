@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "*.go", "use": "@vercel/go" }],
-  "env": {
-    "RANDOMNESS_ENV_VAR": "RANDOMNESS_PLACEHOLDER"
-  }
-}

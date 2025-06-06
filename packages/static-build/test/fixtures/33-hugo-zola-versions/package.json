@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "mkdir public && hugo version > public/hugo.txt && zola --version > public/zola.txt && gutenberg --version > public/gutenberg.txt"
-  }
-}

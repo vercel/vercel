@@ -1,5 +1,0 @@
-{
-  "name": "only-module",
-  "private": true,
-  "module": "dist-module.js"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "esm-js-edge-no-module",
-  "dependencies": {
-    "leap-year": "4.0.0"
-  },
-  "private": true
-}

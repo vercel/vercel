@@ -1,9 +1,0 @@
-{
-  "probes": [{
-    "path": "/api",
-    "mustContain": "RANDOMNESS_PLACEHOLDER",
-    "notResponseHeaders": {
-      "content-type": "application/octet-stream"
-    }
-  }]
-}

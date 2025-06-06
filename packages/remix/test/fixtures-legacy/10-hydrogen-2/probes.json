@@ -1,6 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Mock.shop" },
-    { "path": "/bad", "mustContain": "/bad not found" }
-  ]
-}

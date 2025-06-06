@@ -1,7 +1,0 @@
-{
-  "name": "20-npm-7",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "mkdir -p public && (printf \"npm version: \" && npm -v) > public/index.txt"
-  }
-}

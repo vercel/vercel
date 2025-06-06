@@ -1,4 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "pages/index.js", "use": "@vercel/next" }]
-}

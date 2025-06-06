@@ -1,8 +1,0 @@
-{
-  "name": "@builders-typescript-test/lib",
-  "main": "src/index",
-  "version": "1.0.0",
-  "devDependencies": {
-    "typescript": "^3.4.5"
-  }
-}

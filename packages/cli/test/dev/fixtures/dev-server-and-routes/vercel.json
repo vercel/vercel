@@ -1,3 +1,0 @@
-{
-  "devCommand": "next dev --port $PORT"
-}

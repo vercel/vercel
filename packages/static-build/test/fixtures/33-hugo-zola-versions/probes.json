@@ -1,7 +1,0 @@
-{
-  "probes": [
-    { "path": "/hugo.txt", "mustContain": "0.58.1" },
-    { "path": "/zola.txt", "mustContain": "0.7.0" },
-    { "path": "/gutenberg.txt", "mustContain": "0.4.1" }
-  ]
-}

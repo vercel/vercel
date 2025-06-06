@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "routes": [
-    { "src": "/exact", "status": 404, "dest": "/exact-404.html" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "status": 404, "dest": "/user-404.html" }
-  ]
-}

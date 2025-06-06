@@ -1,7 +1,0 @@
-{
-  "probes": [
-    { "path": "/jekyll.txt", "mustContain": "not found" },
-    { "path": "/middleman.txt", "mustContain": "not found" },
-    { "path": "/dimples.txt", "mustContain": "dimples" }
-  ]
-}

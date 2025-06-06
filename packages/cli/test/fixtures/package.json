@@ -1,5 +1,0 @@
-{
-  "private": true,
-  "name": "cli-test-fixtures",
-  "description": "We created package.json here to avoid reading the monorepo package.json during testing"
-}

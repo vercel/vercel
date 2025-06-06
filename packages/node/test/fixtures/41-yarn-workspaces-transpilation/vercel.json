@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "api/**/index.js", "use": "@vercel/node" }],
-  "probes": [{ "path": "/api/", "mustContain": "api:RANDOMNESS_PLACEHOLDER" }]
-}

@@ -1,7 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Hello World" },
-    { "path": "/", "mustContain": "Hexo" },
-    { "path": "/archives", "mustContain": "Hello World" }
-  ]
-}

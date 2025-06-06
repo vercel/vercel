@@ -1,3 +1,0 @@
-# Hello VitePress
-
-Lorem ipsum

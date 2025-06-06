@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "api/nested/*.go", "use": "@vercel/go" }],
-  "probes": [{ "path": "/api/nested", "mustContain": "RANDOMNESS_PLACEHOLDER" }]
-}

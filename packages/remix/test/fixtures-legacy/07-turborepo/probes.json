@@ -1,8 +1,0 @@
-{
-  "probes": [
-    {
-      "path": "/",
-      "mustContain": "<h1>Welcome to Remix Turborepo Vercel example</h1><button>Boop</button>"
-    }
-  ]
-}

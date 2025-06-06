@@ -1,8 +1,0 @@
-{
-  "extends": "./node_modules/aurelia-tools/.eslintrc.json",
-  "parserOptions": {
-    "ecmaFeatures": {
-      "legacyDecorators": true
-    }
-  }
-}

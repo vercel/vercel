@@ -1,3 +1,0 @@
-{
-  "buildCommand": "mkdir -p output && echo 3 > output/index.txt"
-}

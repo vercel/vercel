@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/*.txt": {
-      "runtime": "txt-builder@0.0.0"
-    }
-  }
-}

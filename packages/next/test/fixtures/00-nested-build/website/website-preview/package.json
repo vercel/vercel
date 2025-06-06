@@ -1,9 +1,0 @@
-{
-  "name": "website-preview",
-  "private": true,
-  "dependencies": {
-    "next": "canary",
-    "react": "latest",
-    "react-dom": "latest"
-  }
-}

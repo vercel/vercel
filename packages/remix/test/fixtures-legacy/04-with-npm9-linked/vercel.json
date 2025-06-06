@@ -1,8 +1,0 @@
-{
-  "installCommand": "npm install && ln -sf broken 'node_modules/@remix-run/server-runtime'",
-  "build": {
-    "env": {
-      "ENABLE_EXPERIMENTAL_COREPACK": "1"
-    }
-  }
-}

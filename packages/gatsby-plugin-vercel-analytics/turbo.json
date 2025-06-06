@@ -1,9 +1,0 @@
-{
-  "$schema": "https://turborepo.org/schema.json",
-  "extends": ["//"],
-  "tasks": {
-    "build": {
-      "outputs": ["gatsby-browser.js", "web-vitals.js", "index.js"]
-    }
-  }
-}

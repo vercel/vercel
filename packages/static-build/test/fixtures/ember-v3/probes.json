@@ -1,6 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Site" },
-    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "Site" }
-  ]
-}

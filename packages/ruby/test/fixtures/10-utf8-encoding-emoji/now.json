@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "builds": [{ "src": "index.rb", "use": "@vercel/ruby" }],
-  "probes": [{ "path": "/", "mustContain": "🐄RANDOMNESS_PLACEHOLDER" }]
-}

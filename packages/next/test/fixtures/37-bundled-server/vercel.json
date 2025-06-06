@@ -1,7 +1,0 @@
-{
-  "build": {
-    "env": {
-      "VERCEL_NEXT_BUNDLED_SERVER": "1"
-    }
-  }
-}

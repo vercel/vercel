@@ -1,7 +1,0 @@
-{
-  "name": "@builders-typescript-test/api",
-  "dependencies": {
-    "@builders-typescript-test/lib": "*"
-  },
-  "version": "1.0.0"
-}

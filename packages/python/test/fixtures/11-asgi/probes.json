@@ -1,9 +1,0 @@
-{
-  "probes": [{
-    "path": "/api",
-    "mustContain": "asgi:RANDOMNESS_PLACEHOLDER",
-    "responseHeaders": {
-      "content-type": "text/plain; charset=utf-8"
-    }
-  }]
-}

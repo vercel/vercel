@@ -1,8 +1,0 @@
-{
-  "name": "node-low-starting-range",
-  "version": "1.0.0",
-  "private": true,
-  "engines": {
-    "node": ">10"
-  }
-}

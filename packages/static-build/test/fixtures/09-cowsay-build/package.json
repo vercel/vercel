@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "cowsay": "^1.3.1"
-  },
-  "scripts": {
-    "build": "mkdir public && cowsay cow:RANDOMNESS_PLACEHOLDER > public/index.txt"
-  }
-}

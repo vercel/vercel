@@ -1,8 +1,0 @@
-{
-  "orgId": ".",
-  "projectId": ".",
-  "settings": {
-    "framework": "next",
-    "rootDirectory": "apps/nextjs"
-  }
-}

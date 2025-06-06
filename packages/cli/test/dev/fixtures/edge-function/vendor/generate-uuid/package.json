@@ -1,6 +1,0 @@
-{
-  "name": "generate-uuid",
-  "private": true,
-  "main": "index-node.js",
-  "browser": "index-browser.js"
-}

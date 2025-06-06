@@ -1,9 +1,0 @@
-{
-  "extends": "@vercel-internals/tsconfig",
-  "compilerOptions": {
-    "outDir": "dist",
-    "declaration": true,
-    "emitDeclarationOnly": true
-  },
-  "include": ["src/**/*"]
-}

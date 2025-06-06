@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "yodasay": "^1.1.6"
-  },
-  "scripts": {
-    "now-build": "mkdir dist && yodasay yoda:RANDOMNESS_PLACEHOLDER > dist/index.txt"
-  }
-}

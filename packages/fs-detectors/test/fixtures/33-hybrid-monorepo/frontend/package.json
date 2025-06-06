@@ -1,9 +1,0 @@
-{
-  "name": "21-npm-workspaces",
-  "version": "1.0.0",
-  "private": true,
-  "workspaces": [
-    "a",
-    "b"
-  ]
-}

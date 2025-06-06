@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p output && echo 1 > output/index.txt"
-  }
-}

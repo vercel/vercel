@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "build": "mkdir -p dist && echo hello > dist/index.txt"
-  },
-  "dependencies": {
-    "umi": "3.2.1"
-  }
-}

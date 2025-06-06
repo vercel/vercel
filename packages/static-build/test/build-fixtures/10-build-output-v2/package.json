@@ -1,7 +1,0 @@
-{
-  "name": "10-build-output-v2",
-  "private": true,
-  "scripts": {
-    "build": "node build.js"
-  }
-}

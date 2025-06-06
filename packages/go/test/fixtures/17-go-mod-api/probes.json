@@ -1,8 +1,0 @@
-{
-  "probes": [
-    {
-      "path": "/api/v1/routes/someroute",
-      "mustContain": "version:go1.13.15:Dependency:RANDOMNESS_PLACEHOLDER"
-    }
-  ]
-}

@@ -1,7 +1,0 @@
-{
-  "projectSettings": {
-    "framework": "remix",
-    "rootDirectory": "site",
-    "sourceFilesOutsideRootDirectory": true
-  }
-}

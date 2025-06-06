@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "build": "node env.js"
-  },
-  "dependencies": {
-    "@opentelemetry/api": "1.6.0"
-  }
-}

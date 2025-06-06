@@ -1,6 +1,0 @@
-{
-  "name": "dashboard",
-  "scripts": {
-    "build": "mkdir -p dist && echo dashboard > dist/index.txt"
-  }
-}

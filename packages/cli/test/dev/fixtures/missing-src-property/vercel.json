@@ -1,7 +1,0 @@
-{
-  "builds": [
-    {
-      "use": "@vercel/static"
-    }
-  ]
-}

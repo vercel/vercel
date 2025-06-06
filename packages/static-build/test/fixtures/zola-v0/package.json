@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "zola build"
-  },
-  "engines": {
-    "node": "18.x"
-  }
-}

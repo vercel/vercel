@@ -1,9 +1,0 @@
-{
-  "build": {
-    "env": {
-      "HUGO_VERSION": "0.58.1",
-      "ZOLA_VERSION": "0.7.0",
-      "GUTENBERG_VERSION": "0.4.1"
-    }
-  }
-}

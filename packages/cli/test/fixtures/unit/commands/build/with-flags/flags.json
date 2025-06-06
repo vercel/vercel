@@ -1,7 +1,0 @@
-{
-  "definitions": {
-    "my-next-flag": {
-      "options": [{ "value": true }, { "value": false }]
-    }
-  }
-}

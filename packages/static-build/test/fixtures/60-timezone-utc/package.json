@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "build": "node offset.js > index.txt"
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "probes": [
-    {
-      "path": "/",
-      "mustContain": "Welcome to Remix"
-    }
-  ]
-}

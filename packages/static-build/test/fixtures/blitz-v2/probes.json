@@ -1,5 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "mustContain": "Blitz" }
-  ]
-}

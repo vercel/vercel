@@ -1,5 +1,0 @@
-{
-  "name": "only-browser",
-  "private": true,
-  "browser": "dist-browser.js"
-}
