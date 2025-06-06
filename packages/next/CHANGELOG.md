@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.9.0
+
+### Minor Changes
+
+- make the output of collectTracedFiles deterministic ([#13410](https://github.com/vercel/vercel/pull/13410))
+
 ## 4.8.0
 
 ### Minor Changes
