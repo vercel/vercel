@@ -30,9 +30,11 @@ import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { whoamiCommand } from './whoami/command';
 import type { Command } from './help';
+import { blobCommand } from './blob/command';
 
 const commandsStructs = [
   aliasCommand,
+  blobCommand,
   bisectCommand,
   buildCommand,
   certsCommand,

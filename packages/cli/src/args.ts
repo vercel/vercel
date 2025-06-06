@@ -44,6 +44,7 @@ export const help = () => `
       rm | remove          [id]        Removes a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
+      blob                 [cmd]       Manages your Blob stores and files
 
   ${chalk.dim('Global Options:')}
 

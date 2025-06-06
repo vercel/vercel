@@ -325,7 +325,7 @@ const main = async () => {
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
-  let userSuppliedSubCommand: string = '';
+  let userSuppliedSubCommand = '';
   // Check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(cwd, targetOrSubcommand);
@@ -601,6 +601,10 @@ const main = async () => {
         case 'bisect':
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
+          break;
+        case 'blob':
+          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
+          func = require('./commands/blob').default;
           break;
         case 'build':
           telemetry.trackCliCommandBuild(userSuppliedSubCommand);
