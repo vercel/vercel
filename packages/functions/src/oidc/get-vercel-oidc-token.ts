@@ -10,6 +10,7 @@ import { getContext } from '../get-context';
  *
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
+ * @throws {Error} If `NODE_ENV` is not set to `'production'` and the OIDC token is not valid.
  *
  * @example
  *
@@ -29,8 +30,24 @@ export async function getVercelOidcToken(): Promise<string> {
 
   if (!token) {
     throw new Error(
-      `The 'x-vercel-oidc-token' header is missing from the request. Do you have the OIDC option enabled in the Vercel project settings?`
+      `The Vercel OIDC token is missing in your environment. Do you have the OIDC option enabled in the Vercel project settings?`
     );
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const { createRemoteJWKSet, jwtVerify, errors } = await import('jose');
+    try {
+      const jwks = createRemoteJWKSet(new URL('https://oidc.vercel.com'));
+      await jwtVerify(token, jwks);
+    } catch (error) {
+      if (error instanceof errors.JOSEError) {
+        console.warn(
+          'Invalid Vercel OIDC Token. Do you have multiple `.env.*` files with `VERCEL_OIDC_TOKEN` defined?',
+          error
+        );
+      }
+      throw error;
+    }
   }
 
   return token;
