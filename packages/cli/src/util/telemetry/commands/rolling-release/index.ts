@@ -42,4 +42,46 @@ export class RollingReleaseTelemetryClient
       value: value ?? '',
     });
   }
+
+  trackCliSubcommandConfigure(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'configure',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStart(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'start',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandApprove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'approve',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAbort(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'abort',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandComplete(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'complete',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandFetch(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'fetch',
+      value: actual,
+    });
+  }
 }
