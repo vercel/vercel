@@ -14,11 +14,9 @@ export interface RuntimeCache {
    * Retrieves a value from the cache.
    *
    * @param {string} key - The key of the value to retrieve.
-   * @param {Object} [options] - Optional settings for the cache entry.
-   * @param {string[]} [options.tags] - Optional tags to associate wit the cache entry.
    * @returns {Promise<unknown | null>} A promise that resolves to the value, or null if not found.
    */
-  get: (key: string, options?: { tags?: string[] }) => Promise<unknown | null>;
+  get: (key: string) => Promise<unknown | null>;
 
   /**
    * Sets a value in the cache.
@@ -67,4 +65,11 @@ export interface CacheOptions {
    * Optional separator string for the namespace.
    */
   namespaceSeparator?: string;
+
+  /**
+   * This function can be used to add cache tags that will be used for cache invalidation.
+   *
+   * @param {(tags: string|string[]) => void} [addCacheTags] - Function to add cache tags.
+   */
+  addCacheTags?: (tags: string | string[]) => void;
 }
