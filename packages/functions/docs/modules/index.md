@@ -70,7 +70,7 @@ The location information of the request, in this way:
 
 ### getCache
 
-▸ **getCache**(`cacheOptions?`): [`RuntimeCache`](../interfaces/index.RuntimeCache.md)
+▸ **getCache**<`T`\>(`cacheOptions?`): [`RuntimeCache`](../interfaces/index.RuntimeCache.md)<`T`\>
 
 Retrieves the Vercel Runtime Cache.
 
@@ -85,6 +85,12 @@ namespaceSeparator can also be customized using the `namespaceSeparator` option.
 
 If no cache is available in the context and `InMemoryCache` cannot be created.
 
+#### Type parameters
+
+| Name | Type      |
+| :--- | :-------- |
+| `T`  | `unknown` |
+
 #### Parameters
 
 | Name            | Type           | Description                           |
@@ -93,7 +99,7 @@ If no cache is available in the context and `InMemoryCache` cannot be created.
 
 #### Returns
 
-[`RuntimeCache`](../interfaces/index.RuntimeCache.md)
+[`RuntimeCache`](../interfaces/index.RuntimeCache.md)<`T`\>
 
 An instance of the Vercel Runtime Cache.
 

@@ -1,7 +1,7 @@
 /**
  * Interface representing the runtime cache.
  */
-export interface RuntimeCache {
+export interface RuntimeCache<T = unknown> {
   /**
    * Deletes a value from the cache.
    *
@@ -16,15 +16,15 @@ export interface RuntimeCache {
    * @param {string} key - The key of the value to retrieve.
    * @param {Object} [options] - Optional settings for the cache entry.
    * @param {string[]} [options.tags] - Optional tags to associate wit the cache entry.
-   * @returns {Promise<unknown | null>} A promise that resolves to the value, or null if not found.
+   * @returns {Promise<T | null>} A promise that resolves to the value, or null if not found.
    */
-  get: (key: string, options?: { tags?: string[] }) => Promise<unknown | null>;
+  get: (key: string, options?: { tags?: string[] }) => Promise<T | null>;
 
   /**
    * Sets a value in the cache.
    *
    * @param {string} key - The key of the value to set.
-   * @param {unknown} value - The value to set.
+   * @param {T} value - The value to set.
    * @param {Object} [options] - Optional settings for the cache entry.
    * @param {string} [options.name] - Optional user-friendly name for the cache entry used for o11y.
    * @param {string[]} [options.tags] - Optional tags to associate with the cache entry.
@@ -33,7 +33,7 @@ export interface RuntimeCache {
    */
   set: (
     key: string,
-    value: unknown,
+    value: T,
     options?: { name?: string; tags?: string[]; ttl?: number }
   ) => Promise<void>;
 

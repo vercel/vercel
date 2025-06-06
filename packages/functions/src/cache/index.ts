@@ -29,16 +29,17 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * @returns An instance of the Vercel Runtime Cache.
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
-export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
-  let cache: RuntimeCache;
+export const getCache = <T = unknown>(
+  cacheOptions?: CacheOptions
+): RuntimeCache<T> => {
+  let cache: RuntimeCache<T>;
   if (getContext().cache) {
-    cache = getContext().cache as RuntimeCache;
+    cache = getContext().cache as RuntimeCache<T>;
   } else {
-    // Create InMemoryCache instance only once
     if (!inMemoryCacheInstance) {
       inMemoryCacheInstance = new InMemoryCache();
     }
-    cache = inMemoryCacheInstance;
+    cache = inMemoryCacheInstance as RuntimeCache<T>;
   }
 
   const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
@@ -58,7 +59,7 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
     },
     set: (
       key: string,
-      value: unknown,
+      value: T,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
       return cache.set(makeKey(key), value, options);

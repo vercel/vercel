@@ -1,8 +1,14 @@
-# Interface: RuntimeCache
+# Interface: RuntimeCache<T\>
 
 [index](../modules/index.md).RuntimeCache
 
 Interface representing the runtime cache.
+
+## Type parameters
+
+| Name | Type      |
+| :--- | :-------- |
+| `T`  | `unknown` |
 
 ## Table of contents
 
@@ -67,43 +73,43 @@ A promise that resolves when the cache entries expiration request is received.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:46](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L46)
+[packages/functions/src/cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
 
 ---
 
 ### get
 
-• **get**: (`key`: `string`, `options?`: { `tags?`: `string`[] }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
+• **get**: (`key`: `string`, `options?`: { `tags?`: `string`[] }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`null` \| `T`\>
 
 #### Type declaration
 
-▸ (`key`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
+▸ (`key`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`null` \| `T`\>
 
 Retrieves a value from the cache.
 
 ##### Parameters
 
-| Name            | Type       | Description                                     |
-| :-------------- | :--------- | :---------------------------------------------- |
-| `key`           | `string`   | The key of the value to retrieve.               |
-| `options?`      | `Object`   | Optional settings for the cache entry.          |
-| `options.tags?` | `string`[] | Optional tags to associate wit the cache entry. |
+| Name            | Type       | Description                       |
+| :-------------- | :--------- | :-------------------------------- |
+| `key`           | `string`   | The key of the value to retrieve. |
+| `options?`      | `Object`   | -                                 |
+| `options.tags?` | `string`[] | -                                 |
 
 ##### Returns
 
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`null` \| `T`\>
 
 A promise that resolves to the value, or null if not found.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:21](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L21)
+[packages/functions/src/cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
 
 ---
 
 ### set
 
-• **set**: (`key`: `string`, `value`: `unknown`, `options?`: { `name?`: `string` ; `tags?`: `string`[] ; `ttl?`: `number` }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+• **set**: (`key`: `string`, `value`: `T`, `options?`: { `name?`: `string` ; `tags?`: `string`[] ; `ttl?`: `number` }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
 
 #### Type declaration
 
@@ -116,7 +122,7 @@ Sets a value in the cache.
 | Name            | Type       | Description                                                    |
 | :-------------- | :--------- | :------------------------------------------------------------- |
 | `key`           | `string`   | The key of the value to set.                                   |
-| `value`         | `unknown`  | The value to set.                                              |
+| `value`         | `T`        | The value to set.                                              |
 | `options?`      | `Object`   | Optional settings for the cache entry.                         |
 | `options.name?` | `string`   | Optional user-friendly name for the cache entry used for o11y. |
 | `options.tags?` | `string`[] | Optional tags to associate with the cache entry.               |
@@ -130,4 +136,4 @@ A promise that resolves when the value is set.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:34](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L34)
+[packages/functions/src/cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)

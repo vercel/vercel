@@ -1,19 +1,16 @@
 import { RuntimeCache } from './types';
 
-interface CacheEntry {
-  value: unknown;
+interface CacheEntry<T = unknown> {
+  value: T;
   tags: Set<string>;
   lastModified: number; // Timestamp of when the entry was last modified in epoch milliseconds
   ttl?: number; // Time to live in seconds
 }
 
-export class InMemoryCache implements RuntimeCache {
-  private cache: Record<string, CacheEntry> = {};
+export class InMemoryCache<T = unknown> implements RuntimeCache<T> {
+  private cache: Record<string, CacheEntry<T>> = {};
 
-  async get(
-    key: string,
-    options?: { tags?: string[] }
-  ): Promise<unknown | null> {
+  async get(key: string, options?: { tags?: string[] }): Promise<T | null> {
     const entry = this.cache[key];
     if (entry) {
       if (entry.ttl && entry.lastModified + entry.ttl * 1000 < Date.now()) {
@@ -34,7 +31,7 @@ export class InMemoryCache implements RuntimeCache {
 
   async set(
     key: string,
-    value: unknown,
+    value: T,
     options?: { ttl?: number; tags?: string[] }
   ): Promise<void> {
     this.cache[key] = {
