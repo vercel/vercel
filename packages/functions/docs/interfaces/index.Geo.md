@@ -27,7 +27,7 @@ The city that the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:59](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L59)
+[packages/functions/src/headers.ts:59](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L59)
 
 ---
 
@@ -39,7 +39,7 @@ The country that the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:62](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L62)
+[packages/functions/src/headers.ts:62](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L62)
 
 ---
 
@@ -52,7 +52,7 @@ See [docs](https://vercel.com/docs/concepts/edge-network/headers#x-vercel-ip-cou
 
 #### Defined in
 
-[packages/functions/src/headers.ts:73](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L73)
+[packages/functions/src/headers.ts:73](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L73)
 
 ---
 
@@ -64,7 +64,7 @@ The flag emoji for the country the request originated from.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:65](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L65)
+[packages/functions/src/headers.ts:65](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L65)
 
 ---
 
@@ -76,7 +76,7 @@ The latitude of the client.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:76](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L76)
+[packages/functions/src/headers.ts:76](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L76)
 
 ---
 
@@ -88,7 +88,7 @@ The longitude of the client.
 
 #### Defined in
 
-[packages/functions/src/headers.ts:79](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L79)
+[packages/functions/src/headers.ts:79](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L79)
 
 ---
 
@@ -100,7 +100,7 @@ The postal code of the client
 
 #### Defined in
 
-[packages/functions/src/headers.ts:82](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L82)
+[packages/functions/src/headers.ts:82](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L82)
 
 ---
 
@@ -112,4 +112,4 @@ The [Vercel Edge Network region](https://vercel.com/docs/concepts/edge-network/r
 
 #### Defined in
 
-[packages/functions/src/headers.ts:68](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L68)
+[packages/functions/src/headers.ts:68](https://github.com/R3n3gade-ai/vercel/blob/main/packages/functions/src/headers.ts#L68)
