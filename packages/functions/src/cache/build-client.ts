@@ -105,7 +105,7 @@ export class BuildCache {
       });
 
       if (res.status !== 200) {
-        throw new Error(`Failed to set cache: ${res.statusText}`);
+        throw new Error(`Failed to set cache: ${res.status} ${res.statusText}`);
       }
     } catch (error: any) {
       this.onError?.(error);

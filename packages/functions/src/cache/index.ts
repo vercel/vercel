@@ -56,7 +56,7 @@ function wrapWithKeyTransformation(
   makeKey: (key: string) => string
 ): RuntimeCache {
   return {
-    get: key => cache.get(makeKey(key)) as Promise<unknown | null>,
+    get: key => cache.get(makeKey(key)),
     set: (key, value, options) =>
       cache.set(makeKey(key), value as unknown, options),
     delete: key => cache.delete(makeKey(key)),
