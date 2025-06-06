@@ -2,7 +2,7 @@ import { packageName } from '../../util/pkg-name';
 
 export const rollingReleaseCommand = {
   name: 'rolling-release',
-  aliases: ['rr'],
+  aliases: ['rr', 'release'],
   description: "Manage your project's rolling release.",
   arguments: [],
   subcommands: [
