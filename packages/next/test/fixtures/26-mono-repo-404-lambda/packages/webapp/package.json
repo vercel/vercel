@@ -2,7 +2,7 @@
   "name": "26-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/commits/65fd63c2dec7a541997e0ca571d3b4752757b517/next",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },
