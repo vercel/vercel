@@ -22,6 +22,7 @@ export function getPrefixedEnvVars({
     'VERCEL_BRANCH_URL',
     'VERCEL_PROJECT_PRODUCTION_URL',
     'VERCEL_DEPLOYMENT_ID',
+    'VERCEL_PROJECT_ID',
   ];
   const newEnvs: Envs = {};
   if (envPrefix && envs.VERCEL_URL) {
