@@ -10,6 +10,7 @@
 
 - [awsCredentialsProvider](oidc.md#awscredentialsprovider)
 - [getVercelOidcToken](oidc.md#getverceloidctoken)
+- [getVercelOidcTokenSync](oidc.md#getverceloidctokensync)
 
 ## Functions
 
@@ -97,3 +98,38 @@ A promise that resolves to the OIDC token.
 #### Defined in
 
 [packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L25)
+
+---
+
+### getVercelOidcTokenSync
+
+▸ **getVercelOidcTokenSync**(): `string`
+
+Returns the OIDC token from the request context or the environment variable.
+
+This function is used to retrieve the OIDC token from the request context or the environment variable.
+It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+
+context headers.
+
+**`Throws`**
+
+If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
+
+**`Example`**
+
+```js
+// Using the OIDC token
+const token = getVercelOidcToken();
+console.log('OIDC Token:', token);
+```
+
+#### Returns
+
+`string`
+
+The OIDC token.
+
+#### Defined in
+
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L50)
