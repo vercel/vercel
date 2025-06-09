@@ -283,6 +283,12 @@ type RoutesManifestOld = {
      * Suffix for the prefetch segment data route directory.
      */
     prefetchSegmentDirSuffix?: string;
+
+    /**
+     * When enabled, RSC requests that encounter a redirect will return a special status code (278)
+     * instead of the normal redirect status code.
+     */
+    enableRscRedirectProtocol?: boolean;
   };
   rewriteHeaders?: {
     pathHeader: string;

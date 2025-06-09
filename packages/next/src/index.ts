@@ -691,6 +691,27 @@ export const build: BuildV2 = async buildOptions => {
       case 4: {
         redirects.push(...convertRedirects(routesManifest.redirects));
 
+        // When a RSC request encounters a redirect, we return a special status code
+        // when Next.js supports it (to know if it supports it, we check enableRscRedirectProtocol)
+        const rscHeader = routesManifest.rsc?.header;
+        if (routesManifest.rsc?.enableRscRedirectProtocol && rscHeader) {
+          const rscRedirects = redirects
+            .filter((r): r is RouteWithSrc => r && !('handle' in r))
+            .map(r => ({
+              ...r,
+              has: [
+                ...(r.has || []),
+                {
+                  type: 'header' as const,
+                  key: rscHeader,
+                },
+              ],
+              status: 278,
+            }));
+
+          redirects.push(...rscRedirects);
+        }
+
         if (Array.isArray(routesManifest.rewrites)) {
           afterFilesRewrites.push(
             ...convertRewrites(
@@ -2664,7 +2685,8 @@ export const build: BuildV2 = async buildOptions => {
       { src: path.join('/', entryDirectory, '.*'), status: 404 },
 
       // We need to make sure to 404 for /_next after handle: miss since
-      // handle: miss is called before rewrites and to prevent rewriting /_next
+      // handle: miss is called before rewrites and to prevent rewriting
+      // /_next
       { handle: 'miss' },
       {
         src: path.join(
