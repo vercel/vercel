@@ -70,8 +70,6 @@ Returns the OIDC token from the request context or the environment variable.
 This function is used to retrieve the OIDC token from the request context or the environment variable.
 It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
 
-context headers.
-
 **`Throws`**
 
 If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
@@ -88,6 +86,10 @@ getVercelOidcToken()
     console.error('Error:', error.message);
   });
 ```
+
+**`Deprecated`**
+
+use [getVercelOidcTokenSync](oidc.md#getverceloidctokensync) instead
 
 #### Returns
 
@@ -110,8 +112,6 @@ Returns the OIDC token from the request context or the environment variable.
 This function is used to retrieve the OIDC token from the request context or the environment variable.
 It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
 
-context headers.
-
 **`Throws`**
 
 If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
@@ -120,7 +120,7 @@ If the `x-vercel-oidc-token` header is missing from the request context and the 
 
 ```js
 // Using the OIDC token
-const token = getVercelOidcToken();
+const token = getVercelOidcTokenSync();
 console.log('OIDC Token:', token);
 ```
 
@@ -132,4 +132,4 @@ The OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L50)
+[packages/functions/src/oidc/get-vercel-oidc-token.ts:46](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L46)
