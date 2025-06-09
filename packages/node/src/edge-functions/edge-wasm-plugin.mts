@@ -57,6 +57,7 @@ export function createEdgeWasmPlugin() {
         const resolvedPath = await b.resolve(wasmFile, {
           importer: data.importer,
           resolveDir: data.resolveDir,
+          kind: "entry-point",
         });
 
         if (!resolvedPath.path) {
