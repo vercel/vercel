@@ -35,12 +35,12 @@ export const rollingReleaseCommand = {
       examples: [
         {
           name: 'Start a rolling release',
-          value: `${packageName} rolling-release start --deployId=dpl_123`,
+          value: `${packageName} rolling-release start --dpl=dpl_123`,
         },
       ],
       options: [
         {
-          name: 'deployId',
+          name: 'dpl',
           shorthand: null,
           deprecated: false,
           type: String,
@@ -56,12 +56,12 @@ export const rollingReleaseCommand = {
       examples: [
         {
           name: 'Approve the current stage of an active rolling release',
-          value: `${packageName} rolling-release approve --currentStageIndex=0 --deployId=dpl_123`,
+          value: `${packageName} rolling-release approve --currentStageIndex=0 --dpl=dpl_123`,
         },
       ],
       options: [
         {
-          name: 'deployId',
+          name: 'dpl',
           shorthand: null,
           deprecated: false,
           type: String,
@@ -84,12 +84,12 @@ export const rollingReleaseCommand = {
       examples: [
         {
           name: 'Abort an active rolling release',
-          value: `${packageName} rolling-release abort --deployId=dpl_123`,
+          value: `${packageName} rolling-release abort --dpl=dpl_123`,
         },
       ],
       options: [
         {
-          name: 'deployId',
+          name: 'dpl',
           shorthand: null,
           deprecated: false,
           type: String,
@@ -105,12 +105,12 @@ export const rollingReleaseCommand = {
       examples: [
         {
           name: 'Complete an active rolling release',
-          value: `${packageName} rolling-release complete --deployId=dpl_123`,
+          value: `${packageName} rolling-release complete --dpl=dpl_123`,
         },
       ],
       options: [
         {
-          name: 'deployId',
+          name: 'dpl',
           shorthand: null,
           deprecated: false,
           type: String,
@@ -126,12 +126,12 @@ export const rollingReleaseCommand = {
       examples: [
         {
           name: 'Fetch details about a rolling release',
-          value: `${packageName} rolling-release fetch --deployId=dpl_123`,
+          value: `${packageName} rolling-release fetch --dpl=dpl_123`,
         },
       ],
       options: [
         {
-          name: 'deployId',
+          name: 'dpl',
           shorthand: null,
           deprecated: false,
           type: String,
@@ -160,19 +160,19 @@ export const rollingReleaseCommand = {
     },
     {
       name: 'Start a rolling release',
-      value: `${packageName} rolling-release start --deployId=dpl_123`,
+      value: `${packageName} rolling-release start --dpl=dpl_123`,
     },
     {
       name: 'Approve an active rolling release stage',
-      value: `${packageName} rolling-release approve --currentStageIndex=0 --deployId=dpl_123`,
+      value: `${packageName} rolling-release approve --currentStageIndex=0 --dpl=dpl_123`,
     },
     {
       name: 'Abort an active rolling release.',
-      value: `${packageName} rolling-release abort --deployId=dpl_123`,
+      value: `${packageName} rolling-release abort --dpl=dpl_123`,
     },
     {
       name: 'Complete an active rolling release.',
-      value: `${packageName} rolling-release complete --deployId=dpl_123`,
+      value: `${packageName} rolling-release complete --dpl=dpl_123`,
     },
   ],
 } as const;

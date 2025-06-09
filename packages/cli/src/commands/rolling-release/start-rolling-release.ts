@@ -10,18 +10,18 @@ import output from '../../output-manager';
  */
 export default async function startRollingRelease({
   client,
-  deployId,
+  dpl,
   projectId,
   teamId,
 }: {
   client: Client;
-  deployId: string;
+  dpl: string;
   projectId: string;
   teamId: string;
 }): Promise<number> {
   // request the promotion
   await client.fetch(
-    `/v10/projects/${projectId}/promote/${deployId}?teamId=${teamId}`,
+    `/v10/projects/${projectId}/promote/${dpl}?teamId=${teamId}`,
     {
       body: {}, // required
       json: false,

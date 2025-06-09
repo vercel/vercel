@@ -12,18 +12,18 @@ export default async function completeRollingRelease({
   client,
   projectId,
   teamId,
-  deployId,
+  dpl,
 }: {
   client: Client;
   projectId: string;
   teamId: string;
-  deployId: string;
+  dpl: string;
 }): Promise<number> {
   // request the completion
   await client.fetch(
     `/v1/projects/${projectId}/rolling-release/complete?teamId=${teamId}`,
     {
-      body: { canaryDeploymentId: deployId }, // required
+      body: { canaryDeploymentId: dpl }, // required
       json: true,
       method: 'POST',
     }

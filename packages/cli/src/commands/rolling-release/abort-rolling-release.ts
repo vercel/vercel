@@ -11,17 +11,17 @@ import output from '../../output-manager';
 export default async function abortRollingRelease({
   client,
   projectId,
-  deployId,
+  dpl,
   teamId,
 }: {
   client: Client;
   projectId: string;
-  deployId: string;
+  dpl: string;
   teamId: string;
 }): Promise<number> {
   // create the rollback
   await client.fetch(
-    `/v9/projects/${projectId}/rollback/${deployId}?teamId=${teamId}`,
+    `/v9/projects/${projectId}/rollback/${dpl}?teamId=${teamId}`,
     {
       body: {}, // required
       method: 'POST',

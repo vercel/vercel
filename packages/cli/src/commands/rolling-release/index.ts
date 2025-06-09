@@ -83,13 +83,13 @@ export default async (client: Client): Promise<number> => {
   const projectNameOrId = link.project.name;
   const currentStageIndex = parsedArguments.flags['--currentStageIndex'];
   const activeStageIndex = parseInt(currentStageIndex ?? '');
-  const deployId = parsedArguments.flags['--deployId'];
+  const dpl = parsedArguments.flags['--dpl'];
   const cfgString = parsedArguments.flags['--cfg'];
   let cfg = undefined;
 
   telemetry.trackCliOptionName(projectNameOrId);
   telemetry.trackCliOptionAction(subcommand);
-  telemetry.trackCliOptionDeployId(deployId);
+  telemetry.trackCliOptionDpl(dpl);
   telemetry.trackCliOptionCfg(cfgString);
   telemetry.trackCliOptionCurrentStageIndex(currentStageIndex);
   // #endregion
@@ -130,32 +130,32 @@ export default async (client: Client): Promise<number> => {
 
       break;
     case 'start':
-      if (deployId === undefined) {
-        output.error('starting a rolling release requires --deployId option.');
+      if (dpl === undefined) {
+        output.error('starting a rolling release requires --dpl option.');
         break;
       }
       await startRollingRelease({
         client,
-        deployId,
+        dpl,
         projectId: project.id,
         teamId: project.accountId,
       });
       break;
     case 'abort':
-      if (deployId === undefined) {
-        output.error('aborting a rolling release requires --deployId option.');
+      if (dpl === undefined) {
+        output.error('aborting a rolling release requires --dpl option.');
         break;
       }
       await abortRollingRelease({
         client,
         projectId: project.id,
-        deployId,
+        dpl,
         teamId: project.accountId,
       });
       break;
     case 'approve':
-      if (deployId === undefined) {
-        output.error('approving a rolling release requires --deployId option.');
+      if (dpl === undefined) {
+        output.error('approving a rolling release requires --dpl option.');
         break;
       }
       if (currentStageIndex === undefined) {
@@ -175,21 +175,19 @@ export default async (client: Client): Promise<number> => {
         projectId: project.id,
         teamId: project.accountId,
         activeStageIndex,
-        deployId,
+        dpl,
       });
       break;
     case 'complete':
-      if (deployId === undefined) {
-        output.error(
-          'completing a rolling release requires --deployId option.'
-        );
+      if (dpl === undefined) {
+        output.error('completing a rolling release requires --dpl option.');
         break;
       }
       await completeRollingRelease({
         client,
         projectId: project.id,
         teamId: project.accountId,
-        deployId,
+        dpl,
       });
       break;
     case 'fetch':

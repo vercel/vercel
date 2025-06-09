@@ -29,9 +29,9 @@ export class RollingReleaseTelemetryClient
     });
   }
 
-  trackCliOptionDeployId(value: string | undefined) {
+  trackCliOptionDpl(value: string | undefined) {
     this.trackCliOption({
-      option: 'deployId',
+      option: 'dpl',
       value: value ?? '',
     });
   }
