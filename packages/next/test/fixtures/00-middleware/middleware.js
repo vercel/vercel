@@ -237,7 +237,6 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/fetch-subrequest')) {
-    const ALLOWED_DOMAINS = ['example.vercel.sh', 'api.example.com'];
     const userProvidedUrl = url.searchParams.get('url');
     let destinationUrl = 'https://example.vercel.sh'; // Default safe URL
 
