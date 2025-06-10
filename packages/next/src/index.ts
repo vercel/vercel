@@ -959,6 +959,35 @@ export const build: BuildV2 = async buildOptions => {
       'Notice: detected `next export`, this de-opts some Next.js features\nSee more info: https://nextjs.org/docs/advanced-features/static-html-export'
     );
 
+    // If a redirect should be returned to an RSC request, we should instead send a 278 status code.
+    // See PR for context: https://github.com/vercel/next.js/pull/80187
+    // We check enableRscRedirectProtocol to know if Next.js supports this feature.
+    const getRscRedirects = (redirects: Route[]) => {
+      if (!routesManifest?.rsc?.enableRscRedirectProtocol) {
+        return [];
+      }
+
+      const rscHeader = routesManifest.rsc?.header;
+
+      if (!rscHeader) {
+        return [];
+      }
+
+      return redirects
+        .filter((r): r is RouteWithSrc => r && !('handle' in r))
+        .map(r => ({
+          ...r,
+          has: [
+            ...(r.has || []),
+            {
+              type: 'header' as const,
+              key: rscHeader,
+            },
+          ],
+          status: 278,
+        }));
+    };
+
     return {
       output,
       images: getImagesConfig(imagesManifest),
@@ -968,6 +997,8 @@ export const build: BuildV2 = async buildOptions => {
         ...headers,
 
         ...redirects,
+
+        ...getRscRedirects(redirects),
 
         ...beforeFilesRewrites,
 
@@ -2664,7 +2695,8 @@ export const build: BuildV2 = async buildOptions => {
       { src: path.join('/', entryDirectory, '.*'), status: 404 },
 
       // We need to make sure to 404 for /_next after handle: miss since
-      // handle: miss is called before rewrites and to prevent rewriting /_next
+      // handle: miss is called before rewrites and to prevent rewriting
+      // /_next
       { handle: 'miss' },
       {
         src: path.join(
