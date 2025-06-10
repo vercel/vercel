@@ -1,5 +1,5 @@
 packages:
   - 'packages/*'
   - 'api'
-  - 'examples'
+  - 'examples/*'
   - 'internals/*'
