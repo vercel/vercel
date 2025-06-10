@@ -230,7 +230,6 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/fetch-subrequest')) {
-    const ALLOWED_URLS = ['https://example.vercel.sh', 'https://api.example.com'];
     const userProvidedUrl = url.searchParams.get('url');
     const destinationUrl = ALLOWED_URLS.includes(userProvidedUrl)
       ? userProvidedUrl
