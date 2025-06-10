@@ -230,8 +230,29 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/fetch-subrequest')) {
-    const destinationUrl =
-      url.searchParams.get('url') || 'https://example.vercel.sh';
+    const userProvidedUrl = url.searchParams.get('url');
+    const userProvidedUrlString = url.searchParams.get('url');
+    let isValidAndAllowed = false;
+    if (userProvidedUrlString) {
+      try {
+        const parsedUserUrl = new URL(userProvidedUrlString);
+        // Assuming ALLOWED_URLS contains origins like 'https://example.com'
+        if (ALLOWED_URLS.includes(parsedUserUrl.origin)) {
+          isValidAndAllowed = true;
+        }
+      } catch (e) {
+        // Invalid URL string, isValidAndAllowed remains false.
+        // Consider logging `e.message` for debugging if appropriate.
+      }
+    }
+    const destinationUrl = isValidAndAllowed ? userProvidedUrlString : 'https://example.vercel.sh';
+      const parsedUrl = new URL(userProvidedUrl);
+      if (ALLOWED_URLS.includes(parsedUrl.origin)) {
+        destinationUrl = parsedUrl.toString();
+      }
+    } catch (error) {
+      console.error('Invalid URL provided:', userProvidedUrl);
+    }
     return fetch(destinationUrl, { headers: request.headers });
   }
 
