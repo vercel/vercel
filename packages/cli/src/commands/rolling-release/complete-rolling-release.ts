@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 
 /**
  * Requests a rolling release document.
@@ -19,11 +20,15 @@ export default async function completeRollingRelease({
   teamId: string;
   dpl: string;
 }): Promise<number> {
+  const { deployment } = await getProjectByDeployment({
+    client,
+    deployId: dpl,
+  });
   // request the completion
   await client.fetch(
     `/v1/projects/${projectId}/rolling-release/complete?teamId=${teamId}`,
     {
-      body: { canaryDeploymentId: dpl }, // required
+      body: { canaryDeploymentId: deployment.id }, // required
       json: true,
       method: 'POST',
     }

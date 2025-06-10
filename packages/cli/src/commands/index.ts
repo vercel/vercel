@@ -30,6 +30,7 @@ import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { whoamiCommand } from './whoami/command';
 import type { Command } from './help';
+import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
@@ -74,7 +75,15 @@ export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
 export const commands = new Map();
 for (const command of commandsStructs) {
   const aliases = getCommandAliases(command);
+  output.debug(
+    `Registering command ${command.name} with aliases: ${JSON.stringify(aliases)}`
+  );
   for (const alias of aliases) {
+    output.debug(`Setting alias ${alias} -> ${command.name}`);
     commands.set(alias, command.name);
   }
 }
+
+output.debug(
+  `All registered commands: ${JSON.stringify(Array.from(commands.entries()))}`
+);
