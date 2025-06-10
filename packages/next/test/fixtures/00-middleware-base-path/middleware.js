@@ -261,9 +261,10 @@ export function middleware(request) {
       );
     }
     
-    const sanitizedHeaders = Object.fromEntries(
-      Object.entries(request.headers).filter(([key]) => key.toLowerCase() !== 'host')
-    );
+const headersToOmit = ['host', 'cookie', 'authorization'];
+const sanitizedHeaders = Object.fromEntries(
+  Object.entries(request.headers).filter(([key]) => !headersToOmit.includes(key.toLowerCase()))
+);
     
     return fetch(destinationUrl, { headers: sanitizedHeaders });
   }
