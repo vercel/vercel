@@ -242,6 +242,12 @@ export function middleware(request) {
     const ALLOWED_DOMAINS = ['example.vercel.sh', 'api.example.com'];
     try {
       const parsedUrl = new URL(destinationUrl);
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return NextResponse.json(
+          { error: 'Invalid protocol' },
+          { status: 400 }
+        );
+      }
       if (!ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
         return NextResponse.json(
           { error: 'Invalid URL' },
