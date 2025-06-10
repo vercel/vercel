@@ -237,6 +237,30 @@ export function middleware(request) {
   if (pathname.startsWith('/fetch-subrequest')) {
     const destinationUrl =
       url.searchParams.get('url') || 'https://example.vercel.sh';
+    
+    // Allowlist of permitted domains
+    const ALLOWED_DOMAINS = ['example.vercel.sh', 'api.example.com'];
+    try {
+      const parsedUrl = new URL(destinationUrl);
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return NextResponse.json(
+          { error: 'Invalid protocol' },
+          { status: 400 }
+        );
+      }
+      if (!ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
+        return NextResponse.json(
+          { error: 'Invalid URL' },
+          { status: 400 }
+        );
+      }
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Malformed URL' },
+        { status: 400 }
+      );
+    }
+    
     return fetch(destinationUrl, { headers: request.headers });
   }
 
