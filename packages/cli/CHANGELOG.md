@@ -1,5 +1,22 @@
 # vercel
 
+## 42.3.0
+
+### Minor Changes
+
+- Version bump to respect dependency updates ([#13390](https://github.com/vercel/vercel/pull/13390))
+
+- Adding support for rolling-releases ([#13387](https://github.com/vercel/vercel/pull/13387))
+
+### Patch Changes
+
+- Updated dependencies [[`6c8e763ab63c79e12c7d5455fd79cf158f43cc77`](https://github.com/vercel/vercel/commit/6c8e763ab63c79e12c7d5455fd79cf158f43cc77)]:
+  - @vercel/node@5.2.1
+  - @vercel/redwood@2.3.3
+  - @vercel/static-build@2.7.9
+  - @vercel/hydrogen@1.2.2
+  - @vercel/remix-builder@5.4.9
+
 ## 42.2.0
 
 ### Minor Changes

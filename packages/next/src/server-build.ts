@@ -550,10 +550,6 @@ export async function serverBuild({
 
     console.time(initialTracingLabel);
 
-    const initialTracedFiles: {
-      [filePath: string]: FileFsRef;
-    } = {};
-
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
@@ -657,16 +653,21 @@ export async function serverBuild({
     }
 
     debug('collecting initial Next.js server files');
-    await Promise.all(
-      initialFileList.map(
-        collectTracedFiles(
-          baseDir,
-          lstatResults,
-          lstatSema,
-          initialFileReasons,
-          initialTracedFiles
+    const initialTracedFiles: {
+      [filePath: string]: FileFsRef;
+    } = Object.fromEntries(
+      (
+        await Promise.all(
+          initialFileList.map(
+            collectTracedFiles(
+              baseDir,
+              lstatResults,
+              lstatSema,
+              initialFileReasons
+            )
+          )
         )
-      )
+      ).filter((entry): entry is [string, FileFsRef] => !!entry)
     );
 
     debug('creating initial pseudo layer');
@@ -965,7 +966,6 @@ export async function serverBuild({
     }
 
     for (const page of mergedPageKeys) {
-      const tracedFiles: { [key: string]: FileFsRef } = {};
       const originalPagePath = getOriginalPagePath(page);
       const pageBuildTrace = getBuildTraceFile(originalPagePath);
       let fileList: string[];
@@ -1035,17 +1035,18 @@ export async function serverBuild({
         reasons = traceResult?.reasons || new Map();
       }
 
-      await Promise.all(
-        fileList.map(
-          collectTracedFiles(
-            baseDir,
-            lstatResults,
-            lstatSema,
-            reasons,
-            tracedFiles
+      const tracedFiles: {
+        [filePath: string]: FileFsRef;
+      } = Object.fromEntries(
+        (
+          await Promise.all(
+            fileList.map(
+              collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+            )
           )
-        )
+        ).filter((entry): entry is [string, FileFsRef] => !!entry)
       );
+
       pageTraces[page] = tracedFiles;
       compressedPages[page] = (
         await createPseudoLayer({
