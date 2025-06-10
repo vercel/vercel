@@ -689,28 +689,32 @@ export const build: BuildV2 = async buildOptions => {
       case 2:
       case 3:
       case 4: {
-        redirects.push(...convertRedirects(routesManifest.redirects));
+        let redirectsToConvert = routesManifest.redirects;
 
         // When a RSC request encounters a redirect, we return a special status code
         // when Next.js supports it (to know if it supports it, we check enableRscRedirectProtocol)
         const rscHeader = routesManifest.rsc?.header;
         if (routesManifest.rsc?.enableRscRedirectProtocol && rscHeader) {
-          const rscRedirects = redirects
-            .filter((r): r is RouteWithSrc => r && !('handle' in r))
-            .map(r => ({
-              ...r,
-              has: [
-                ...(r.has || []),
-                {
-                  type: 'header' as const,
-                  key: rscHeader,
-                },
-              ],
-              status: 278,
-            }));
+          // Create RSC-aware versions of all redirects
+          const rscRedirects = routesManifest.redirects.map(redirect => ({
+            ...redirect,
+            has: [
+              ...(redirect.has || []),
+              {
+                type: 'header' as const,
+                key: rscHeader,
+              },
+            ],
+            // Override status code for RSC redirects
+            statusCode: 278,
+            permanent: undefined, // Clear permanent to avoid conflicts with statusCode
+          }));
 
-          redirects.push(...rscRedirects);
+          // Combine original redirects with RSC redirects
+          redirectsToConvert = [...routesManifest.redirects, ...rscRedirects];
         }
+
+        redirects.push(...convertRedirects(redirectsToConvert));
 
         if (Array.isArray(routesManifest.rewrites)) {
           afterFilesRewrites.push(
