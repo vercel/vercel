@@ -25,7 +25,7 @@ export class BlobPutTelemetryClient
     if (pathname) {
       this.trackCliOption({
         option: 'pathname',
-        value: pathname,
+        value: this.redactedValue,
       });
     }
   }

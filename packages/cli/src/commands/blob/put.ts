@@ -52,6 +52,7 @@ export default async function put(
     '--force': force,
   } = flags;
 
+  telemetryClient.trackCliArgumentPathToFile(filePath);
   telemetryClient.trackCliFlagAddRandomSuffix(addRandomSuffix);
   telemetryClient.trackCliOptionPathname(pathnameFlag);
   telemetryClient.trackCliFlagMultipart(multipart);
