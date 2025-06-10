@@ -261,7 +261,12 @@ export function middleware(request) {
       );
     }
     
-    return fetch(destinationUrl, { headers: request.headers });
+const headersToOmit = ['host', 'cookie', 'authorization'];
+const sanitizedHeaders = Object.fromEntries(
+  Object.entries(request.headers).filter(([key]) => !headersToOmit.includes(key.toLowerCase()))
+);
+    
+    return fetch(destinationUrl, { headers: sanitizedHeaders });
   }
 
   if (url.pathname === '/dynamic/greet') {
