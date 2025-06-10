@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 
 /**
  * Requests a rolling release document.
@@ -11,17 +12,21 @@ import output from '../../output-manager';
 export default async function abortRollingRelease({
   client,
   projectId,
-  deployId,
+  dpl,
   teamId,
 }: {
   client: Client;
   projectId: string;
-  deployId: string;
+  dpl: string;
   teamId: string;
 }): Promise<number> {
+  const { deployment } = await getProjectByDeployment({
+    client,
+    deployId: dpl,
+  });
   // create the rollback
   await client.fetch(
-    `/v9/projects/${projectId}/rollback/${deployId}?teamId=${teamId}`,
+    `/v9/projects/${projectId}/rollback/${deployment.id}?teamId=${teamId}`,
     {
       body: {}, // required
       method: 'POST',
