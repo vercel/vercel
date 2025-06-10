@@ -98,11 +98,6 @@ export default async function list(
     output.log('No blobs in this store');
   }
 
-  if (!client.stdout.isTTY) {
-    client.stdout.write(urls.join('\n'));
-    client.stdout.write('\n');
-  }
-
   if (list.cursor) {
     const nextFlags = getCommandFlags(flags, ['_', '--cursor']);
     output.log(
