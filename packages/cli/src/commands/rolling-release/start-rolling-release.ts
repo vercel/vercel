@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 
 /**
  * Requests a rolling release document.
@@ -19,9 +20,13 @@ export default async function startRollingRelease({
   projectId: string;
   teamId: string;
 }): Promise<number> {
+  const { deployment } = await getProjectByDeployment({
+    client,
+    deployId: dpl,
+  });
   // request the promotion
   await client.fetch(
-    `/v10/projects/${projectId}/promote/${dpl}?teamId=${teamId}`,
+    `/v10/projects/${projectId}/promote/${deployment.id}?teamId=${teamId}`,
     {
       body: {}, // required
       json: false,
