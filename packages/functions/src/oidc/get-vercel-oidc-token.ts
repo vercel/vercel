@@ -1,7 +1,9 @@
 import { getContext } from '../get-context';
 
 /**
- * Returns the OIDC token from the request context or the environment variable.
+ * Gets the current OIDC token from the request context or the environment variable.
+ *
+ * Do not cache this value, as it is subject to change in production!
  *
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
@@ -19,15 +21,15 @@ import { getContext } from '../get-context';
  *   console.error('Error:', error.message);
  * });
  * ```
- *
- * @deprecated use {@link getVercelOidcTokenSync} instead
  */
 export async function getVercelOidcToken(): Promise<string> {
   return getVercelOidcTokenSync();
 }
 
 /**
- * Returns the OIDC token from the request context or the environment variable.
+ * Gets the current OIDC token from the request context or the environment variable.
+ *
+ * Do not cache this value, as it is subject to change in production!
  *
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
