@@ -140,7 +140,7 @@ export const fetchSubcommand = {
 
 export const rollingReleaseCommand = {
   name: 'rolling-release',
-  aliases: ['rr', 'release'],
+  aliases: ['rr'],
   description: "Manage your project's rolling release.",
   arguments: [],
   subcommands: [
