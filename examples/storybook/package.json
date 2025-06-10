@@ -6,7 +6,9 @@
     "start": "next start",
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "migrate": "next migrate",
+    "prebuild": "pnpm run migrate"
   },
   "dependencies": {
     "@types/node": "20.2.5",
@@ -18,14 +20,14 @@
     "typescript": "5.1.3"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^7.0.18",
-    "@storybook/addon-interactions": "^7.0.18",
-    "@storybook/addon-links": "^7.0.18",
-    "@storybook/blocks": "^7.0.18",
-    "@storybook/nextjs": "^7.0.18",
-    "@storybook/react": "^7.0.18",
-    "@storybook/testing-library": "^0.1.0",
-    "storybook": "^7.0.18"
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-links": "^8.6.14",
+    "@storybook/blocks": "^8.6.14",
+    "@storybook/nextjs": "^8.6.14",
+    "@storybook/react": "^8.6.14",
+    "@storybook/addon-interactions": "^8.6.14",
+    "@storybook/test": "^8.6.14",
+    "storybook": "^8.6.14"
   },
   "engines": {
     "node": ">=18"
