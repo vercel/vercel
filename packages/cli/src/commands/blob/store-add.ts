@@ -34,8 +34,6 @@ export default async function addStore(
     args: [name],
   } = parsedArgs;
 
-  telemetryClient.trackCliArgumentName(name);
-
   if (!name) {
     name = await client.input.text({
       message: 'Enter a name for your blob store',
@@ -47,6 +45,8 @@ export default async function addStore(
       },
     });
   }
+
+  telemetryClient.trackCliArgumentName(name);
 
   const link = await getLinkedProject(client);
 
