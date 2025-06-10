@@ -231,9 +231,16 @@ export function middleware(request) {
 
   if (pathname.startsWith('/fetch-subrequest')) {
     const userProvidedUrl = url.searchParams.get('url');
-    const destinationUrl = ALLOWED_URLS.includes(userProvidedUrl)
-      ? userProvidedUrl
-      : 'https://example.vercel.sh';
+    let destinationUrl = 'https://example.vercel.sh';
+
+    try {
+      const parsedUrl = new URL(userProvidedUrl);
+      if (ALLOWED_URLS.includes(parsedUrl.origin)) {
+        destinationUrl = parsedUrl.toString();
+      }
+    } catch (error) {
+      console.error('Invalid URL provided:', userProvidedUrl);
+    }
     return fetch(destinationUrl, { headers: request.headers });
   }
 
