@@ -244,8 +244,15 @@ export function middleware(request) {
     if (userProvidedUrl) {
       try {
         const parsedUrl = new URL(userProvidedUrl);
-        if (ALLOWED_DOMAINS.includes(parsedUrl.hostname)) {
+        // Validate scheme, hostname, and port
+        if (
+          parsedUrl.protocol === 'https:' &&
+          ALLOWED_DOMAINS.includes(parsedUrl.hostname) &&
+          (parsedUrl.port === '' || parsedUrl.port === '443') // Allow default HTTPS port
+        ) {
           destinationUrl = parsedUrl.toString();
+        } else {
+          console.error('Invalid or disallowed URL provided:', userProvidedUrl);
         }
       } catch (e) {
         console.error('Invalid URL provided:', userProvidedUrl);
