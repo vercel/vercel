@@ -4,9 +4,10 @@ import output from '../../output-manager';
 import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { putSubcommand } from './command';
+import { copySubcommand } from './command';
 import { getBlobRWToken } from '../../util/blob/token';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
+import { getCommandName } from '../../util/pkg-name';
 
 export default async function copy(
   client: Client,
@@ -18,13 +19,22 @@ export default async function copy(
     },
   });
 
-  const flagsSpecification = getFlagsSpecification(putSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(copySubcommand.options);
 
   let parsedArgs: ReturnType<typeof parseArguments<typeof flagsSpecification>>;
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
+    return 1;
+  }
+
+  if (!parsedArgs.args.length) {
+    printError(
+      `Missing required arguments: ${getCommandName(
+        'blob copy fromUrlOrPathname toPathname'
+      )}`
+    );
     return 1;
   }
 

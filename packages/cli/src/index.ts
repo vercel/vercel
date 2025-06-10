@@ -325,7 +325,7 @@ const main = async () => {
   // Gets populated to the subcommand name when a built-in is
   // provided, otherwise it remains undefined for an extension
   let subcommand: string | undefined = undefined;
-  let userSuppliedSubCommand = '';
+  let userSuppliedSubCommand: string = '';
   // Check if we are deploying something
   if (targetOrSubcommand) {
     const targetPath = join(cwd, targetOrSubcommand);

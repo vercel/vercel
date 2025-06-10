@@ -32,6 +32,13 @@ export default async function put(
     return 1;
   }
 
+  if (!parsedArgs.args.length) {
+    printError(
+      `Missing required arguments: ${getCommandName('blob put pathToFile')}`
+    );
+    return 1;
+  }
+
   const {
     flags,
     args: [filePath],

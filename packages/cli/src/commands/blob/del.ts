@@ -7,6 +7,7 @@ import { delSubcommand } from './command';
 import { getBlobRWToken } from '../../util/blob/token';
 import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
 import { printError } from '../../util/error';
+import { getCommandName } from '../../util/pkg-name';
 
 export default async function del(
   client: Client,
@@ -25,6 +26,13 @@ export default async function del(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
+    return 1;
+  }
+
+  if (!parsedArgs.args.length) {
+    printError(
+      `Missing required arguments: ${getCommandName('blob del urlOrPathname')}`
+    );
     return 1;
   }
 
