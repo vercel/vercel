@@ -237,8 +237,27 @@ export function middleware(request) {
   }
 
   if (pathname.startsWith('/fetch-subrequest')) {
-    const destinationUrl =
-      url.searchParams.get('url') || 'https://example.vercel.sh';
+    const userProvidedUrl = url.searchParams.get('url');
+    let destinationUrl = 'https://example.vercel.sh'; // Default safe URL
+
+    if (userProvidedUrl) {
+      try {
+        const parsedUrl = new URL(userProvidedUrl);
+        // Validate scheme, hostname, and port
+        if (
+          parsedUrl.protocol === 'https:' &&
+          ALLOWED_DOMAINS.includes(parsedUrl.hostname) &&
+          (parsedUrl.port === '' || parsedUrl.port === '443') // Allow default HTTPS port
+        ) {
+          destinationUrl = parsedUrl.toString();
+        } else {
+          console.error('Invalid or disallowed URL provided:', userProvidedUrl);
+        }
+      } catch (e) {
+        console.error('Invalid URL provided:', userProvidedUrl);
+      }
+    }
+
     return fetch(destinationUrl, { headers: request.headers });
   }
 
