@@ -724,9 +724,7 @@ test('[vercel dev] should support custom 404 routes', async () => {
   }
 });
 
-// Test is correctly showing broken behavior, skipping to unblock all PRs until we get time to fix
-// eslint-disable-next-line jest/no-disabled-tests
-test.skip('[vercel dev] prints `npm install` errors', async () => {
+test('[vercel dev] prints `npm install` errors', async () => {
   const dir = fixture('runtime-not-installed');
   const result = await exec(dir);
   expect(stripAnsi(result.stderr.toString())).toContain(
