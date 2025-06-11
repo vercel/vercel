@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.6
+
+### Patch Changes
+
+- Adds support for conditionValues for `has` and `missing` and `mitigate` in your `vercel.json` file. ([#13409](https://github.com/vercel/vercel/pull/13409))
+
 ## 5.0.5
 
 ### Patch Changes

@@ -699,6 +699,8 @@ const main = async () => {
           telemetry.trackCliCommandRollback(userSuppliedSubCommand);
           func = require('./commands/rollback').default;
           break;
+        case 'rr':
+        case 'release':
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = require('./commands/rolling-release').default;
