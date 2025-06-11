@@ -103,10 +103,10 @@ export class TelemetryClient {
     });
   }
 
-  protected trackCliFlag(flag: string) {
+  trackCliFlag(flag: string, command?: string) {
     this.track({
       key: `flag:${flag}`,
-      value: 'TRUE',
+      value: command ?? 'TRUE',
     });
   }
 

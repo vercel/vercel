@@ -1,6 +1,5 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
@@ -63,44 +62,32 @@ export default async function main(client: Client) {
     output.print(
       help(command, { parent: envCommand, columns: client.stderr.columns })
     );
+    return 2;
+  }
+
+  if (needHelp && subcommand) {
+    telemetry.trackCliFlagHelp('env', subcommandOriginal);
   }
 
   switch (subcommand) {
     case 'ls':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('env', subcommandOriginal);
-        printHelp(listSubcommand);
-        return 2;
-      }
+      if (needHelp) return printHelp(listSubcommand);
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
     case 'add':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('env', subcommandOriginal);
-        printHelp(addSubcommand);
-        return 2;
-      }
+      if (needHelp) return printHelp(addSubcommand);
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     case 'rm':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('env', subcommandOriginal);
-        printHelp(removeSubcommand);
-        return 2;
-      }
+      if (needHelp) return printHelp(removeSubcommand);
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
     case 'pull':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('env', subcommandOriginal);
-        printHelp(pullSubcommand);
-        return 2;
-      }
+      if (needHelp) return printHelp(pullSubcommand);
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(envCommand, { columns: client.stderr.columns }));
-      return 2;
+      telemetry.trackCliFlag('--memory', 'env');
+      return pull(client, args.concat('--memory'));
   }
 }

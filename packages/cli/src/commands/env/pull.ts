@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import * as os from 'node:os';
 import chalk from 'chalk';
 import { outputFile } from 'fs-extra';
 import { closeSync, openSync, readSync } from 'fs';
@@ -76,7 +78,7 @@ export default async function pull(client: Client, argv: string[]) {
 
   const { args, flags: opts } = parsedArgs;
 
-  if (args.length > 1) {
+  if (!opts['--memory'] && args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
     );
@@ -122,7 +124,9 @@ export default async function pull(client: Client, argv: string[]) {
     link,
     gitBranch,
     client.cwd,
-    'vercel-cli:env:pull'
+    'vercel-cli:env:pull',
+    opts['--memory'],
+    args
   );
 
   return 0;
@@ -136,7 +140,9 @@ export async function envPullCommandLogic(
   link: ProjectLinked,
   gitBranch: string | undefined,
   cwd: string,
-  source: EnvRecordsSource
+  source: EnvRecordsSource,
+  memory: boolean = false,
+  args: string[] = []
 ) {
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
@@ -174,6 +180,70 @@ export async function envPullCommandLogic(
     })
   ).env;
 
+  const environmentVariables: Record<string, string> = {};
+
+  for (const key of Object.keys(records)
+    .sort()
+    .filter(key => !VARIABLES_TO_IGNORE.includes(key))) {
+    environmentVariables[key] = escapeValue(records[key]);
+  }
+
+  if (memory) {
+    output.stopSpinner();
+
+    if (!args.length) {
+      output.error(
+        `No command provided to run.
+
+       Example: ${getCommandName(`env next dev`)}
+       Or check out ${getCommandName(`env --help`)} for more information.`
+      );
+      return 1;
+    }
+
+    const [command, ...rest] = args;
+
+    const child = spawn(command, rest, {
+      env: { ...process.env, ...environmentVariables },
+      stdio: 'inherit',
+    });
+
+    return new Promise(resolve => {
+      let settled = false;
+      function finish(code: number) {
+        if (!settled) {
+          settled = true;
+          resolve(code);
+        }
+      }
+
+      child
+        .on('error', err => {
+          output.debug(err);
+          output.error(`Failed to start process: ${err.message}`);
+          finish(1);
+        })
+        .on('exit', (code, signal) => {
+          if (signal) {
+            output.error(`Process was killed by signal: ${signal}`);
+            const signalCode = 128 + (os.constants.signals[signal] ?? 0);
+            return finish(signalCode);
+          } else {
+            finish(code ?? 1);
+          }
+        });
+    });
+  }
+
+  const contents =
+    CONTENTS_PREFIX +
+    Object.entries(environmentVariables)
+      .map(entry => entry.join('='))
+      .join('\n') +
+    '\n';
+
+  await outputFile(fullPath, contents, 'utf8');
+
   let deltaString = '';
   let oldEnv;
   if (exists) {
@@ -187,18 +257,6 @@ export async function envPullCommandLogic(
       deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
-
-  const contents =
-    CONTENTS_PREFIX +
-    Object.keys(records)
-      .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
-      .join('\n') +
-    '\n';
-
-  await outputFile(fullPath, contents, 'utf8');
-
   if (deltaString) {
     output.print('\n' + deltaString);
   } else if (oldEnv && exists) {
