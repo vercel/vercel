@@ -62,28 +62,39 @@ export default async function main(client: Client) {
     output.print(
       help(command, { parent: envCommand, columns: client.stderr.columns })
     );
-    return 2;
-  }
-
-  if (needHelp && subcommand) {
-    telemetry.trackCliFlagHelp('env', subcommandOriginal);
   }
 
   switch (subcommand) {
     case 'ls':
-      if (needHelp) return printHelp(listSubcommand);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);
     case 'add':
-      if (needHelp) return printHelp(addSubcommand);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(addSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
     case 'rm':
-      if (needHelp) return printHelp(removeSubcommand);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(removeSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
     case 'pull':
-      if (needHelp) return printHelp(pullSubcommand);
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(pullSubcommand);
+        return 2;
+      }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
