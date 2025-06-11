@@ -108,7 +108,11 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      output.debug(`Failed to refresh OIDC token: ${error}`);
+      // Throw any error aside from an abort error.
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        throw error;
+      }
+      output.debug('OIDC token refresh was aborted');
     }
   });
 
