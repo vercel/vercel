@@ -241,15 +241,6 @@ export async function envPullCommandLogic(
     });
   }
 
-  const contents =
-    CONTENTS_PREFIX +
-    Object.entries(environmentVariables)
-      .map(([key, value]) => `${key}="${value}"`)
-      .join('\n') +
-    '\n';
-
-  await outputFile(fullPath, contents, 'utf8');
-
   let deltaString = '';
   let oldEnv;
   if (exists) {
@@ -263,11 +254,21 @@ export async function envPullCommandLogic(
       deltaString = buildDeltaString(oldEnv, newEnv);
     }
   }
+
   if (deltaString) {
     output.print('\n' + deltaString);
   } else if (oldEnv && exists) {
     output.log('No changes found.');
   }
+
+  const contents =
+    CONTENTS_PREFIX +
+    Object.entries(environmentVariables)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join('\n') +
+    '\n';
+
+  await outputFile(fullPath, contents, 'utf8');
 
   let isGitIgnoreUpdated = false;
   if (filename === '.env.local') {
