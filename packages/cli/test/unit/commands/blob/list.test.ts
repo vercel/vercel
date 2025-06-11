@@ -23,7 +23,10 @@ describe('blob list', () => {
     client.reset();
 
     // Default successful mocks
-    mockedGetBlobRWToken.mockResolvedValue('test-token');
+    mockedGetBlobRWToken.mockResolvedValue({
+      token: 'test-token',
+      success: true,
+    });
     mockedBlob.list.mockResolvedValue({
       blobs: [
         {
@@ -326,7 +329,10 @@ describe('blob list', () => {
     });
 
     it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue(undefined);
+      mockedGetBlobRWToken.mockResolvedValue({
+        error: 'No token found',
+        success: false,
+      });
 
       const exitCode = await list(client, []);
 

@@ -23,7 +23,10 @@ describe('blob put', () => {
     client.reset();
 
     // Default successful mocks
-    mockedGetBlobRWToken.mockResolvedValue('test-token');
+    mockedGetBlobRWToken.mockResolvedValue({
+      token: 'test-token',
+      success: true,
+    });
     mockedBlob.put.mockResolvedValue({
       url: 'https://example.com/uploaded-file.txt',
       downloadUrl: 'https://example.com/uploaded-file.txt',
@@ -212,7 +215,10 @@ describe('blob put', () => {
     });
 
     it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue(undefined);
+      mockedGetBlobRWToken.mockResolvedValue({
+        error: 'No token found',
+        success: false,
+      });
 
       const exitCode = await put(client, ['test-file.txt']);
 

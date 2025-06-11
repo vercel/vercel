@@ -61,7 +61,8 @@ export default async function put(
   telemetryClient.trackCliFlagForce(force);
 
   const token = await getBlobRWToken(client);
-  if (!token) {
+  if (!token.success) {
+    printError(token.error);
     return 1;
   }
 
@@ -107,7 +108,7 @@ export default async function put(
     output.spinner('Uploading blob');
 
     result = await blob.put(pathname, putBody, {
-      token,
+      token: token.token,
       access: 'public',
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,

@@ -54,7 +54,8 @@ export default async function copy(
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
 
   const token = await getBlobRWToken(client);
-  if (!token) {
+  if (!token.success) {
+    printError(token.error);
     return 1;
   }
 
@@ -65,7 +66,7 @@ export default async function copy(
     output.spinner('Copying blob');
 
     result = await blob.copy(fromUrl, toPathname, {
-      token,
+      token: token.token,
       access: 'public',
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,

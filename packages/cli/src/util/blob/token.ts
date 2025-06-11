@@ -1,5 +1,4 @@
 import type { Dictionary } from '@vercel/client';
-import output from '../../output-manager';
 import { resolve } from 'node:path';
 import { createEnvObject } from '../env/diff-env-files';
 
@@ -7,7 +6,9 @@ import type Client from '../client';
 
 export async function getBlobRWToken(
   client: Client
-): Promise<string | undefined> {
+): Promise<
+  { token: string; success: true } | { error: string; success: false }
+> {
   const filename = '.env.local';
   const fullPath = resolve(client.cwd, filename);
 
@@ -15,19 +16,25 @@ export async function getBlobRWToken(
   try {
     env = await createEnvObject(fullPath);
   } catch (error) {
-    output.error(`Couldn't read .env.local file. Please check if it exists.`);
-    return;
+    return {
+      error: "Couldn't read .env.local file. Please check if it exists.",
+      success: false,
+    };
   }
 
   if (!env) {
-    output.error(`No environment variables found in ${filename}`);
-    return;
+    return {
+      error: `No environment variables found in ${filename}`,
+      success: false,
+    };
   }
 
   if (!env.BLOB_READ_WRITE_TOKEN) {
-    output.error(`No BLOB_READ_WRITE_TOKEN found in ${filename}`);
-    return;
+    return {
+      error: `No BLOB_READ_WRITE_TOKEN found in ${filename}`,
+      success: false,
+    };
   }
 
-  return env.BLOB_READ_WRITE_TOKEN;
+  return { token: env.BLOB_READ_WRITE_TOKEN, success: true };
 }

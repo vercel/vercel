@@ -41,7 +41,8 @@ export default async function del(
   telemetryClient.trackCliArgumentUrlsOrPathnames(args[0]);
 
   const token = await getBlobRWToken(client);
-  if (!token) {
+  if (!token.success) {
+    printError(token.error);
     return 1;
   }
 
@@ -50,7 +51,7 @@ export default async function del(
 
     output.spinner('Deleting blob');
 
-    await blob.del(args, { token });
+    await blob.del(args, { token: token.token });
   } catch (err) {
     output.error(`Error deleting blob: ${err}`);
     return 1;

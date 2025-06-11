@@ -196,12 +196,26 @@ export const removeStoreSubcommand = {
   examples: [],
 } as const;
 
+export const getStoreSubcommand = {
+  name: 'get',
+  aliases: [],
+  description: 'Get a Blob store',
+  arguments: [
+    {
+      name: 'storeId',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const storeSubcommand = {
   name: 'store',
   aliases: [],
   description: 'Interact with Blob stores',
   arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand],
+  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
   options: [],
   examples: [],
 } as const;

@@ -50,7 +50,8 @@ export default async function list(
   telemetryClient.trackCliOptionMode(modeFlag);
 
   const token = await getBlobRWToken(client);
-  if (!token) {
+  if (!token.success) {
+    printError(token.error);
     return 1;
   }
 
@@ -68,7 +69,13 @@ export default async function list(
     output.debug('Fetching blobs');
 
     output.spinner('Fetching blobs');
-    list = await blob.list({ token, limit: limit ?? 10, cursor, mode, prefix });
+    list = await blob.list({
+      token: token.token,
+      limit: limit ?? 10,
+      cursor,
+      mode,
+      prefix,
+    });
   } catch (err) {
     printError(err);
     return 1;

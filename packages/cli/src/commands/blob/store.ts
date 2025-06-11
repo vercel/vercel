@@ -5,6 +5,7 @@ import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import {
   addStoreSubcommand,
+  getStoreSubcommand,
   removeStoreSubcommand,
   storeSubcommand,
 } from './command';
@@ -15,10 +16,12 @@ import addStore from './store-add';
 import removeStore from './store-remove';
 import { BlobStoreTelemetryClient } from '../../util/telemetry/commands/blob/store';
 import { printError } from '../../util/error';
+import getStore from './store-get';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addStoreSubcommand),
   remove: getCommandAliases(removeStoreSubcommand),
+  get: getCommandAliases(getStoreSubcommand),
 };
 
 export async function store(client: Client) {
@@ -78,6 +81,15 @@ export async function store(client: Client) {
 
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return removeStore(client, args);
+    case 'get':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob store', subcommandOriginal);
+        printHelp(getStoreSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandGet(subcommandOriginal);
+      return getStore(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(storeSubcommand, { columns: client.stderr.columns }));

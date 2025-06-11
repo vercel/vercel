@@ -20,7 +20,10 @@ describe('blob copy', () => {
     client.reset();
 
     // Default successful mocks
-    mockedGetBlobRWToken.mockResolvedValue('test-token');
+    mockedGetBlobRWToken.mockResolvedValue({
+      token: 'test-token',
+      success: true,
+    });
     mockedBlob.copy.mockResolvedValue({
       url: 'https://example.com/copied-file.txt',
       downloadUrl: 'https://example.com/copied-file.txt',
@@ -150,7 +153,10 @@ describe('blob copy', () => {
     });
 
     it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue(undefined);
+      mockedGetBlobRWToken.mockResolvedValue({
+        error: 'No token found',
+        success: false,
+      });
 
       const exitCode = await copy(client, ['source.txt', 'dest.txt']);
 
