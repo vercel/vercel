@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "https://files-k0fjcajga-vtest314-ijjk-testing.vercel.app",
+    "next": "https://vercel-packages.vercel.app/next/commits/32f91e2f512657c8aeb319c396f3f36eea99a6e8/next",
     "react": "latest",
     "react-dom": "latest"
   }
