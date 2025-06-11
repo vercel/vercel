@@ -93,18 +93,26 @@ export default async function dev(
   const timeout = setTimeout(async () => {
     if (link.status !== 'linked') return;
 
-    let refreshCount = 0;
-    for await (const token of refreshOidcToken(
-      controller.signal,
-      client,
-      link.project.id,
-      envValues,
-      'vercel-cli:dev'
-    )) {
-      output.debug(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
-      envValues[VERCEL_OIDC_TOKEN] = token;
-      await devServer.runDevCommand(true);
-      telemetry.trackOidcTokenRefresh(++refreshCount);
+    try {
+      let refreshCount = 0;
+      for await (const token of refreshOidcToken(
+        controller.signal,
+        client,
+        link.project.id,
+        envValues,
+        'vercel-cli:dev'
+      )) {
+        output.debug(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+        envValues[VERCEL_OIDC_TOKEN] = token;
+        await devServer.runDevCommand(true);
+        telemetry.trackOidcTokenRefresh(++refreshCount);
+      }
+    } catch (error) {
+      // Throw any error aside from an abort error.
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        throw error;
+      }
+      output.debug('OIDC token refresh was aborted');
     }
   });
 
@@ -126,5 +134,10 @@ export default async function dev(
     }
   }
 
-  await devServer.start(...listen);
+  try {
+    await devServer.start(...listen);
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+  }
 }
