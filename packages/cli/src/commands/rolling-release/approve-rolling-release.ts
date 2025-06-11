@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import getProjectByDeployment from '../../util/projects/get-project-by-deployment';
 
 /**
  * Requests a rolling release document.
@@ -13,14 +14,18 @@ export default async function approveRollingRelease({
   projectId,
   teamId,
   activeStageIndex,
-  deployId,
+  dpl,
 }: {
   client: Client;
   projectId: string;
   teamId: string;
   activeStageIndex: number;
-  deployId: string;
+  dpl: string;
 }): Promise<number> {
+  const { deployment } = await getProjectByDeployment({
+    client,
+    deployId: dpl,
+  });
   await client.fetch(
     `/v1/projects/${projectId}/rolling-release/approve-stage?teamId=${teamId}`,
     {
@@ -29,7 +34,7 @@ export default async function approveRollingRelease({
       body: {
         activeStageIndex,
         nextStageIndex: activeStageIndex + 1,
-        canaryDeploymentId: deployId,
+        canaryDeploymentId: deployment.id,
       },
     }
   );
