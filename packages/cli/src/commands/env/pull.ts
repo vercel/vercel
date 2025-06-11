@@ -78,6 +78,14 @@ export default async function pull(client: Client, argv: string[]) {
 
   const { args, flags: opts } = parsedArgs;
 
+  if (opts['--memory']) {
+    telemetryClient.trackCliFlagMemory();
+
+    if (args.length) {
+      telemetryClient.trackCliArgumentProcess(args[0]);
+    }
+  }
+
   if (!opts['--memory'] && args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`

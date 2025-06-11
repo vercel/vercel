@@ -87,7 +87,6 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
-      telemetry.trackCliFlag('--memory', 'env');
       return pull(client, args.concat('--memory'));
   }
 }
