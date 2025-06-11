@@ -93,6 +93,14 @@ export default async function pull(client: Client, argv: string[]) {
     return 1;
   }
 
+  if (opts['--memory'] && !args.length) {
+    output.error(
+      `Invalid number of arguments. Usage: ${getCommandName(`env next dev`)}
+       See also: ${getCommandName(`env --help`)}`
+    );
+    return 1;
+  }
+
   // handle relative or absolute filename
   const [rawFilename] = args;
   const filename = rawFilename || '.env.local';
@@ -198,16 +206,6 @@ export async function envPullCommandLogic(
 
   if (memory) {
     output.stopSpinner();
-
-    if (!args.length) {
-      output.error(
-        `No command provided to run.
-
-       Example: ${getCommandName(`env next dev`)}
-       Or check out ${getCommandName(`env --help`)} for more information.`
-      );
-      return 1;
-    }
 
     const [command, ...rest] = args;
 
