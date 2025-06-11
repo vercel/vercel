@@ -95,7 +95,7 @@ export default async function pull(client: Client, argv: string[]) {
 
   if (opts['--memory'] && !args.length) {
     output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(`env next dev`)}
+      `Invalid number of arguments. Usage: ${getCommandName(`env <process>`)}
        See also: ${getCommandName(`env --help`)}`
     );
     return 1;
@@ -244,7 +244,7 @@ export async function envPullCommandLogic(
   const contents =
     CONTENTS_PREFIX +
     Object.entries(environmentVariables)
-      .map(entry => entry.join('='))
+      .map(([key, value]) => `${key}="${value}"`)
       .join('\n') +
     '\n';
 
