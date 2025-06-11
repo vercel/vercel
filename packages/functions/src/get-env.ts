@@ -155,6 +155,12 @@ export const getEnv = (
    * @example "23"
    */
   VERCEL_GIT_PULL_REQUEST_ID: get(env, 'VERCEL_GIT_PULL_REQUEST_ID'),
+
+  /**
+   * The OIDC token issued by Vercel for the deployment.
+   * @see https://vercel.com/docs/oidc
+   */
+  VERCEL_OIDC_TOKEN: get(env, 'VERCEL_OIDC_TOKEN'),
 });
 
 const get = (
