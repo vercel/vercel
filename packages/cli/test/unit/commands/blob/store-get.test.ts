@@ -4,11 +4,13 @@ import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
+import dfns from 'date-fns';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
+const formatSpy = vi.spyOn(dfns, 'format');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetBlobRWToken = vi.mocked(getBlobRWTokenModule.getBlobRWToken);
@@ -52,6 +54,8 @@ describe('blob store get', () => {
       },
       org: { id: 'org_123', slug: 'my-org', type: 'user' },
     });
+
+    formatSpy.mockImplementation(date => new Date(date).toISOString());
   });
 
   describe('successful store retrieval', () => {
@@ -180,8 +184,16 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 01/01/2022 01:00:00.00\nUpdated At: 01/01/2023 01:00:00.00'
+          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
         )
+      );
+      expect(formatSpy).toHaveBeenCalledWith(
+        new Date(1640995200000),
+        'MM/DD/YYYY HH:mm:ss.SS'
+      );
+      expect(formatSpy).toHaveBeenCalledWith(
+        new Date(1672531200000),
+        'MM/DD/YYYY HH:mm:ss.SS'
       );
     });
 
