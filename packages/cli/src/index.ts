@@ -602,6 +602,10 @@ const main = async () => {
           telemetry.trackCliCommandBisect(userSuppliedSubCommand);
           func = require('./commands/bisect').default;
           break;
+        case 'blob':
+          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
+          func = require('./commands/blob').default;
+          break;
         case 'build':
           telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
