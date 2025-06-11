@@ -70,7 +70,9 @@ export default async function pull(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(pullSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(argv, flagsSpecification, {
+      permissive: argv.includes('--memory'),
+    });
   } catch (err) {
     printError(err);
     return 1;
