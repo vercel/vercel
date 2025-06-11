@@ -2,26 +2,42 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import removeStore from '../../../../src/commands/blob/store-remove';
 import * as linkModule from '../../../../src/util/projects/link';
+import * as blobTokenModule from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
+vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedGetBlobRWToken = vi.mocked(blobTokenModule.getBlobRWToken);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store remove', () => {
   const textInputMock = vi.fn().mockResolvedValue('store_1234567890123456');
+  const confirmInputMock = vi.fn().mockResolvedValue(true);
 
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
 
-    // Default successful mocks
-    client.fetch = vi.fn().mockResolvedValue({});
+    // Default successful mocks - mock different responses for GET and DELETE
+    client.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        store: { id: 'store_1234567890123456', name: 'Test Store' },
+      }) // GET response
+      .mockResolvedValueOnce({}); // DELETE response
 
     client.input.text = textInputMock;
+    client.input.confirm = confirmInputMock;
+
+    // Mock blob token - default to unsuccessful so it doesn't interfere
+    mockedGetBlobRWToken.mockResolvedValue({
+      success: false,
+      error: 'No token',
+    });
 
     // Default linked project mock
     mockedGetLinkedProject.mockResolvedValue({
@@ -46,13 +62,33 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
       expect(mockedGetLinkedProject).toHaveBeenCalledWith(client);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should first fetch store details
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+
+      // Should show confirmation prompt
+      expect(confirmInputMock).toHaveBeenCalledWith(
+        'Are you sure you want to remove Test Store (store_1234567890123456)? This action cannot be undone.',
+        false
+      );
+
+      // Should then delete the store
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${storeId}`,
         {
           method: 'DELETE',
           accountId: 'org_123',
         }
       );
+
       expect(mockedOutput.debug).toHaveBeenCalledWith('Deleting blob store');
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
@@ -69,7 +105,20 @@ describe('blob store remove', () => {
         message: 'Enter the ID of the blob store you want to remove',
         validate: expect.any(Function),
       });
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should first fetch store details
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/v1/storage/stores/store_1234567890123456',
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+
+      // Should then delete the store
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         '/v1/storage/stores/blob/store_1234567890123456',
         {
           method: 'DELETE',
@@ -84,7 +133,18 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, [storeId]);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should use accountId for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${storeId}`,
         {
           method: 'DELETE',
@@ -104,11 +164,80 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, [storeId]);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should not include accountId for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: undefined,
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${storeId}`,
         {
           method: 'DELETE',
           accountId: undefined,
+        }
+      );
+    });
+
+    it('should not delete store when user declines confirmation', async () => {
+      confirmInputMock.mockResolvedValueOnce(false);
+      const storeId = 'store_declined_test_123';
+
+      const exitCode = await removeStore(client, [storeId]);
+
+      expect(exitCode).toBe(0);
+
+      // Should fetch store details
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+
+      // Should show confirmation prompt
+      expect(confirmInputMock).toHaveBeenCalledWith(
+        'Are you sure you want to remove Test Store (store_1234567890123456)? This action cannot be undone.',
+        false
+      );
+
+      // Should NOT make delete request
+      expect(client.fetch).toHaveBeenCalledTimes(1);
+
+      expect(mockedOutput.success).toHaveBeenCalledWith(
+        'Blob store not removed'
+      );
+    });
+
+    it('should derive store ID from token when no ID provided and token is available', async () => {
+      mockedGetBlobRWToken.mockResolvedValue({
+        success: true,
+        token: 'blob_rw_token_xyz789_additional_data',
+      });
+
+      client.setArgv('blob', 'store', 'remove');
+
+      const exitCode = await removeStore(client, []);
+
+      expect(exitCode).toBe(0);
+
+      // Should NOT prompt for store ID since it's derived from token
+      expect(textInputMock).not.toHaveBeenCalled();
+
+      // Should use derived store ID
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/v1/storage/stores/store_xyz789',
+        {
+          method: 'GET',
+          accountId: 'org_123',
         }
       );
     });
@@ -125,18 +254,6 @@ describe('blob store remove', () => {
 
       const exitCode = await removeStore(client, ['--invalid-flag']);
       expect(exitCode).toBe(1);
-    });
-
-    it('should return 1 when store deletion fails', async () => {
-      const apiError = new Error('Store deletion failed');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
-
-      const exitCode = await removeStore(client, ['store_1234567890123456']);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-      expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
     it('should handle API errors gracefully', async () => {
@@ -168,16 +285,56 @@ describe('blob store remove', () => {
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
+
+    it('should return 1 when store fetch fails', async () => {
+      const fetchError = new Error('Store fetch failed');
+      client.fetch = vi.fn().mockRejectedValueOnce(fetchError);
+
+      const exitCode = await removeStore(client, ['store_fetch_fail_123']);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.success).not.toHaveBeenCalled();
+      // Should not attempt DELETE since GET failed
+      expect(client.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return 1 when deletion fails after successful fetch', async () => {
+      client.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          store: { id: 'store_123', name: 'Test Store' },
+        }) // GET succeeds
+        .mockRejectedValueOnce(new Error('Delete failed')); // DELETE fails
+
+      const exitCode = await removeStore(client, ['store_delete_fail_123']);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.success).not.toHaveBeenCalled();
+      expect(client.fetch).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('API call behavior', () => {
-    it('should make DELETE request to correct endpoint', async () => {
+    it('should make GET and DELETE requests to correct endpoints', async () => {
       const storeId = 'store_endpoint_test_12345';
 
       const exitCode = await removeStore(client, [storeId]);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should first make GET request
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+
+      // Should then make DELETE request
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${storeId}`,
         {
           method: 'DELETE',
@@ -203,7 +360,18 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, [storeId]);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should use different org ID for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${storeId}`,
+        {
+          method: 'GET',
+          accountId: 'org_different_456',
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${storeId}`,
         {
           method: 'DELETE',
@@ -222,9 +390,26 @@ describe('blob store remove', () => {
       ];
 
       for (const storeId of storeIdFormats) {
+        // Reset mocks for each iteration
+        client.fetch = vi
+          .fn()
+          .mockResolvedValueOnce({ store: { id: storeId, name: 'Test Store' } })
+          .mockResolvedValueOnce({});
+
         const exitCode = await removeStore(client, [storeId]);
         expect(exitCode).toBe(0);
-        expect(client.fetch).toHaveBeenCalledWith(
+
+        // Should make both GET and DELETE requests
+        expect(client.fetch).toHaveBeenNthCalledWith(
+          1,
+          `/v1/storage/stores/${storeId}`,
+          {
+            method: 'GET',
+            accountId: 'org_123',
+          }
+        );
+        expect(client.fetch).toHaveBeenNthCalledWith(
+          2,
           `/v1/storage/stores/blob/${storeId}`,
           {
             method: 'DELETE',
@@ -253,7 +438,18 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, []);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should use prompted store ID for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        `/v1/storage/stores/${promptedStoreId}`,
+        {
+          method: 'GET',
+          accountId: 'org_123',
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         `/v1/storage/stores/blob/${promptedStoreId}`,
         {
           method: 'DELETE',
@@ -271,17 +467,6 @@ describe('blob store remove', () => {
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
       expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
-    });
-
-    it('should not stop spinner on deletion error', async () => {
-      const deleteError = new Error('Deletion failed');
-      client.fetch = vi.fn().mockRejectedValue(deleteError);
-
-      const exitCode = await removeStore(client, ['store_error_test_123']);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
     });
 
     it('should show debug output', async () => {
@@ -309,7 +494,18 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, ['store_team_test_123456']);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should use team account ID for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/v1/storage/stores/store_team_test_123456',
+        {
+          method: 'GET',
+          accountId: 'team_123',
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         '/v1/storage/stores/blob/store_team_test_123456',
         {
           method: 'DELETE',
@@ -334,7 +530,18 @@ describe('blob store remove', () => {
       const exitCode = await removeStore(client, ['store_personal_test123']);
 
       expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith(
+
+      // Should use personal account ID for both GET and DELETE
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/v1/storage/stores/store_personal_test123',
+        {
+          method: 'GET',
+          accountId: 'user_123',
+        }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
         '/v1/storage/stores/blob/store_personal_test123',
         {
           method: 'DELETE',

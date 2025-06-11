@@ -28,7 +28,7 @@ export class BlobListTelemetryClient
     if (prefix) {
       this.trackCliOption({
         option: 'prefix',
-        value: prefix,
+        value: this.redactedValue,
       });
     }
   }

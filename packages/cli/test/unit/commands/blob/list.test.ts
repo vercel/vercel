@@ -70,7 +70,7 @@ describe('blob list', () => {
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
       expect(mockedOutput.print).toHaveBeenCalledWith(
-        '\nmocked table output\n\n'
+        '\n  mocked table output\n\n'
       );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
@@ -117,7 +117,7 @@ describe('blob list', () => {
         },
         {
           key: 'option:cursor',
-          value: '[REDACTED]',
+          value: 'cursor_123',
         },
         {
           key: 'option:prefix',
@@ -220,7 +220,7 @@ describe('blob list', () => {
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
-        'To display the next page run vercel blob list --limit 5 --cursor next_cursor_123'
+        'To display the next page run `vercel blob list --limit 5 --cursor next_cursor_123`'
       );
     });
 
@@ -384,7 +384,7 @@ describe('blob list', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:cursor',
-          value: '[REDACTED]',
+          value: 'test_cursor_123',
         },
       ]);
     });
@@ -490,7 +490,7 @@ describe('blob list', () => {
         pathname: `file${i}.txt`,
         size: 1000 + i,
         uploadedAt: new Date(
-          `2023-01-${String(i + 1).padStart(2, '0')}T12:00:00Z`
+          `2023-01-${String((i % 30) + 1).padStart(2, '0')}T12:00:00Z`
         ),
       }));
 
