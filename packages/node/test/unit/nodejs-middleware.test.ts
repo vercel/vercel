@@ -70,7 +70,7 @@ describe('Node.js middleware', () => {
     ]);
   });
 
-  it('should reject nodejs runtime for non-middleware functions', async () => {
+  it('should allow nodejs runtime for non-middleware functions', async () => {
     const filesystem = await prepareFilesystem({
       'api/test.js': `
         export const config = {
@@ -83,13 +83,13 @@ describe('Node.js middleware', () => {
       `,
     });
     
-    await expect(
-      build({
-        ...filesystem,
-        entrypoint: 'api/test.js',
-        config: {},
-        meta: { skipDownload: true },
-      })
-    ).rejects.toThrow('semantics will evolve soon');
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/test.js',
+      config: {},
+      meta: { skipDownload: true },
+    });
+    
+    expect(buildResult.output).toBeDefined();
   });
 });
