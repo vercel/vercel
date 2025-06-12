@@ -69,42 +69,33 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
     inMemoryCacheInstance = new InMemoryCache();
   }
 
-  if (process.env.SUSPENSE_CACHE_DISABLE_BUILD_CACHE === 'true') {
+  if (process.env.RUNTIME_CACHE_DISABLE_BUILD_CACHE === 'true') {
     debug && console.log('Using InMemoryCache as build cache is disabled');
     return inMemoryCacheInstance;
   }
 
-  const {
-    SUSPENSE_CACHE_AUTH_TOKEN,
-    SUSPENSE_CACHE_URL,
-    SUSPENSE_CACHE_URL_OVERRIDE,
-    SUSPENSE_CACHE_BASEPATH,
-  } = process.env;
+  const { RUNTIME_CACHE_ENDPOINT, RUNTIME_CACHE_HEADERS } = process.env;
 
   if (debug) {
-    console.log('Suspense cache environment variables:', {
-      SUSPENSE_CACHE_AUTH_TOKEN,
-      SUSPENSE_CACHE_URL,
-      SUSPENSE_CACHE_BASEPATH,
+    console.log('Runtime cache environment variables:', {
+      RUNTIME_CACHE_ENDPOINT,
+      RUNTIME_CACHE_HEADERS,
     });
   }
 
-  if (!SUSPENSE_CACHE_AUTH_TOKEN || !SUSPENSE_CACHE_URL) {
+  if (!RUNTIME_CACHE_ENDPOINT || !RUNTIME_CACHE_HEADERS) {
     debug &&
       console.log(
-        'No suspense cache auth token or URL - defaulting to InMemoryCache'
+        'No runtime cache configuration found - defaulting to InMemoryCache'
       );
     return inMemoryCacheInstance;
   }
 
   if (!buildCacheInstance) {
     buildCacheInstance = new BuildCache({
-      scBasepath: SUSPENSE_CACHE_BASEPATH || '',
-      scHost: SUSPENSE_CACHE_URL_OVERRIDE || SUSPENSE_CACHE_URL,
-      scHeaders: { Authorization: `Bearer ${SUSPENSE_CACHE_AUTH_TOKEN}` },
-      client: 'BUILD',
-      onError: error =>
-        debug && console.error('RuntimeCacheClient error:', error),
+      endpoint: RUNTIME_CACHE_ENDPOINT,
+      headers: JSON.parse(RUNTIME_CACHE_HEADERS),
+      onError: (error: Error) => console.error(error),
     });
   }
 

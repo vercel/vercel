@@ -1,52 +1,26 @@
-const DefaultHost = '';
-const DefaultHeaders: Record<string, string> = {};
-const DefaultBasepath = '';
-const DefaultProtocol = 'https';
-
 export class BuildCache {
-  private readonly onError: ((error: Error) => void) | undefined;
-  private readonly host: string;
+  private readonly endpoint: string;
   private readonly headers: Record<string, string>;
-  private readonly basepath;
-  private readonly protocol;
+  private readonly onError?: (error: Error) => void | undefined;
 
   constructor({
-    scBasepath,
-    scHost,
-    scHeaders,
-    scProtocol,
+    endpoint,
+    headers,
     onError,
-    client,
   }: {
-    scBasepath?: string | null;
-    scHost?: string | null;
-    scHeaders?: Record<string, string>;
-    scProtocol?: string | null;
+    endpoint: string;
+    headers: Record<string, string>;
     onError?: (error: Error) => void;
-    client?: string | null;
-  } = {}) {
+  }) {
+    this.endpoint = endpoint;
+    this.headers = headers;
     this.onError = onError;
-    this.basepath = scBasepath ?? DefaultBasepath;
-    this.host = scHost ?? DefaultHost;
-    this.protocol = scProtocol ?? DefaultProtocol;
-    this.headers = scHeaders ?? DefaultHeaders;
-    this.headers['x-vercel-internal-sc-client-origin'] = 'RUNTIME_CACHE';
-    this.headers['x-vercel-internal-sc-client-name'] = client ?? 'BUILD';
   }
-
-  private getUrl = (key: string) => {
-    return `${this.protocol}://${this.host}${this.basepath}/v1/suspense-cache/${key}`;
-  };
 
   public get = async (key: string) => {
     try {
-      const optionalHeaders: Record<string, string> = {};
-      const res = await fetch(this.getUrl(key), {
-        cache: 'no-store',
-        headers: {
-          ...this.headers,
-          ...optionalHeaders,
-        },
+      const res = await fetch(`${this.endpoint}${key}`, {
+        headers: this.headers,
         method: 'GET',
       });
 
@@ -80,7 +54,6 @@ export class BuildCache {
       name?: string;
       ttl?: number;
       tags?: string[];
-      chunkDelayMs?: number;
     }
   ) => {
     try {
@@ -94,8 +67,7 @@ export class BuildCache {
       if (options?.name) {
         optionalHeaders['x-vercel-cache-item-name'] = options.name;
       }
-      const res = await fetch(this.getUrl(key), {
-        cache: 'no-store',
+      const res = await fetch(`${this.endpoint}${key}`, {
         method: 'POST',
         headers: {
           ...this.headers,
@@ -114,12 +86,9 @@ export class BuildCache {
 
   public delete = async (key: string) => {
     try {
-      const res = await fetch(this.getUrl(key), {
-        cache: 'no-store',
+      const res = await fetch(`${this.endpoint}${key}`, {
         method: 'DELETE',
-        headers: {
-          ...this.headers,
-        },
+        headers: this.headers,
       });
 
       if (res.status !== 200) {
@@ -135,12 +104,9 @@ export class BuildCache {
       if (Array.isArray(tag)) {
         tag = tag.join(',');
       }
-      const res = await fetch(this.getUrl(`revalidate?tags=${tag}`), {
-        cache: 'no-store',
+      const res = await fetch(`${this.endpoint}revalidate?tags=${tag}`, {
         method: 'POST',
-        headers: {
-          ...this.headers,
-        },
+        headers: this.headers,
       });
 
       if (res.status !== 200) {
