@@ -124,7 +124,9 @@ describe('getLinkedProject', () => {
     if (!error) {
       throw new Error(`Expected an error to be thrown.`);
     }
-    expect(error.message).toBe('You are not authorized to read this team.');
+    expect(error.message).toBe(
+      'You are not authorized to read this team. (403)'
+    );
   });
 
   it('should return link with `project.json`', async () => {
