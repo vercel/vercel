@@ -399,7 +399,7 @@ export const build: BuildV3 = async ({
   const staticConfig = getConfig(project, entrypointPath);
 
   const runtime = staticConfig?.runtime;
-  validateConfiguredRuntime(runtime, entrypoint, isMiddleware);
+  validateConfiguredRuntime(runtime, entrypoint);
 
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
