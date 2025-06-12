@@ -16,7 +16,7 @@ describe('Node.js middleware', () => {
         };
       `,
     });
-    
+
     const buildResult = await build({
       ...filesystem,
       entrypoint: 'middleware.js',
@@ -25,7 +25,7 @@ describe('Node.js middleware', () => {
       },
       meta: { skipDownload: true },
     });
-    
+
     expect(buildResult.output).toBeDefined();
     expect(buildResult.routes).toEqual([
       {
@@ -48,7 +48,7 @@ describe('Node.js middleware', () => {
         };
       `,
     });
-    
+
     const buildResult = await build({
       ...filesystem,
       entrypoint: 'middleware.js',
@@ -57,7 +57,7 @@ describe('Node.js middleware', () => {
       },
       meta: { skipDownload: true },
     });
-    
+
     expect(buildResult.output).toBeDefined();
     expect(buildResult.routes).toEqual([
       {
@@ -82,14 +82,14 @@ describe('Node.js middleware', () => {
         };
       `,
     });
-    
+
     const buildResult = await build({
       ...filesystem,
       entrypoint: 'api/test.js',
       config: {},
       meta: { skipDownload: true },
     });
-    
+
     expect(buildResult.output).toBeDefined();
   });
 });
