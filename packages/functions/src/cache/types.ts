@@ -65,11 +65,4 @@ export interface CacheOptions {
    * Optional separator string for the namespace.
    */
   namespaceSeparator?: string;
-
-  /**
-   * This function can be used to add cache tags that will be used for cache invalidation.
-   *
-   * @param {(tags: string|string[]) => void} [addCacheTags] - Function to add cache tags.
-   */
-  addCacheTags?: (tags: string | string[]) => void;
 }
