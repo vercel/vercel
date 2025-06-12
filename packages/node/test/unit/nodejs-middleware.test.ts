@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { prepareFilesystem } from './test-utils';
 import { build } from '../../src';
 
