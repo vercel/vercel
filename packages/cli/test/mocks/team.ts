@@ -21,11 +21,13 @@ export function useTeams(
     failMissingToken?: boolean;
     failInvalidToken?: boolean;
     failNoAccess?: boolean;
+    failWithCustom403Code?: boolean;
     apiVersion?: number;
   } = {
     failMissingToken: false,
     failInvalidToken: false,
     failNoAccess: false,
+    failWithCustom403Code: false,
     apiVersion: 1,
   }
 ) {
@@ -60,6 +62,15 @@ export function useTeams(
         res.send({
           code: 'team_unauthorized',
           message: 'You are not authorized',
+        });
+        return;
+      }
+
+      if (options.failWithCustom403Code) {
+        res.statusCode = 403;
+        res.send({
+          code: 'custom_error_code',
+          message: 'You are not authorized to read this team.',
         });
         return;
       }
