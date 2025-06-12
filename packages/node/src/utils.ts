@@ -184,12 +184,6 @@ export function validateConfiguredRuntime(
   isMiddleware?: boolean
 ) {
   if (runtime) {
-    if (runtime === 'nodejs' && !isMiddleware) {
-      throw new Error(
-        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
-      );
-    }
-
     if (!ALLOWED_RUNTIMES.includes(runtime)) {
       throw new Error(
         `${entrypoint}: unsupported "runtime" value in \`config\`: ${JSON.stringify(
