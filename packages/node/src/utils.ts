@@ -180,8 +180,7 @@ const ALLOWED_RUNTIMES: string[] = [...Object.values(EdgeRuntimes), 'nodejs'];
 
 export function validateConfiguredRuntime(
   runtime: string | undefined,
-  entrypoint: string,
-  isMiddleware?: boolean
+  entrypoint: string
 ) {
   if (runtime) {
     if (!ALLOWED_RUNTIMES.includes(runtime)) {

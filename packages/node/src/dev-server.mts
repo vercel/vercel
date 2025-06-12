@@ -38,7 +38,7 @@ async function createEventHandler(
   const staticConfig = parseConfig(entrypointPath);
 
   const runtime = staticConfig?.runtime;
-  validateConfiguredRuntime(runtime, entrypoint, config.middleware === true);
+  validateConfiguredRuntime(runtime, entrypoint);
 
   const { maxDuration } = await getLambdaOptionsFromFunction({
     sourceFile: entrypoint,
