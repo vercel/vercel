@@ -176,14 +176,15 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   );
 }
 
-const ALLOWED_RUNTIMES: string[] = Object.values(EdgeRuntimes);
+const ALLOWED_RUNTIMES: string[] = [...Object.values(EdgeRuntimes), 'nodejs'];
 
 export function validateConfiguredRuntime(
   runtime: string | undefined,
-  entrypoint: string
+  entrypoint: string,
+  isMiddleware?: boolean
 ) {
   if (runtime) {
-    if (runtime === 'nodejs') {
+    if (runtime === 'nodejs' && !isMiddleware) {
       throw new Error(
         `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
       );
