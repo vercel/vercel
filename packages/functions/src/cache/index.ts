@@ -11,7 +11,7 @@ const defaultKeyHashFunction = (key: string) => {
 };
 
 const defaultNamespaceSeparator = '$';
-const defaultTagNamespace = 'rc:';
+const tagNamespace = 'rc:';
 
 // Singleton instance of InMemoryCache
 let inMemoryCacheInstance: InMemoryCache | null = null;
@@ -52,12 +52,6 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
     }
     return `${prefix}${hashFunction(key)}`;
   };
-
-  // Tag namespace logic
-  const tagNamespace =
-    typeof cacheOptions?.tagNamespace === 'string'
-      ? cacheOptions.tagNamespace
-      : defaultTagNamespace;
 
   const prefixTagOrTags = (tagOrTags?: string | string[]) => {
     if (!tagOrTags) return [];

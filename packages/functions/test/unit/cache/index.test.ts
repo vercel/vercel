@@ -133,44 +133,9 @@ describe('getCache', () => {
     );
   });
 
-  test('should prefix tags with explicit tagNamespace override', async () => {
-    const cache = getCache({ tagNamespace: 'custom:' });
-    await cache.set('tag-key', 'tag-value', { tags: ['foo', 'bar'] });
-    expect(mockCache.set).toHaveBeenCalledWith(
-      expect.any(String),
-      'tag-value',
-      expect.objectContaining({ tags: ['custom:foo', 'custom:bar'] })
-    );
-  });
-
-  test('should use default tagNamespace when tagNamespace is empty string', async () => {
-    const cache = getCache({ tagNamespace: '' });
-    await cache.set('tag-key', 'tag-value', { tags: ['foo', 'bar'] });
-    expect(mockCache.set).toHaveBeenCalledWith(
-      expect.any(String),
-      'tag-value',
-      expect.objectContaining({ tags: ['foo', 'bar'] })
-    );
-  });
-
   test('should prefix tags with default tagNamespace in expireTag', async () => {
     const cache = getCache();
     await cache.expireTag(['foo', 'bar']);
     expect(mockCache.expireTag).toHaveBeenCalledWith(['rc:foo', 'rc:bar']);
-  });
-
-  test('should prefix tags with explicit tagNamespace override in expireTag', async () => {
-    const cache = getCache({ tagNamespace: 'custom:' });
-    await cache.expireTag(['foo', 'bar']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith([
-      'custom:foo',
-      'custom:bar',
-    ]);
-  });
-
-  test('should use default tagNamespace when tagNamespace is empty string in expireTag', async () => {
-    const cache = getCache({ tagNamespace: '' });
-    await cache.expireTag(['foo', 'bar']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith(['foo', 'bar']);
   });
 });
