@@ -148,7 +148,7 @@ export const pullSubcommand = {
       required: false,
     },
     {
-      name: 'process',
+      name: 'command',
       required: false,
     },
   ],
@@ -194,7 +194,7 @@ export const pullSubcommand = {
     },
     {
       name: 'Run a process with the pulled Environment Variables without writing to a file',
-      value: [`${packageName} env <process>`, `${packageName} env next dev`],
+      value: [`${packageName} env <command>`, `${packageName} env next dev`],
     },
   ],
 } as const;
