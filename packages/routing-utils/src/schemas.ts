@@ -95,7 +95,7 @@ const matchableValueSchema = {
       },
     },
   ],
-};
+} as const;
 
 export const hasSchema = {
   description: 'An array of requirements that are needed to match',

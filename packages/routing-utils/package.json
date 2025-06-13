@@ -1,6 +1,6 @@
 {
   "name": "@vercel/routing-utils",
-  "version": "5.0.6",
+  "version": "5.0.7",
   "description": "Vercel routing utilities",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
