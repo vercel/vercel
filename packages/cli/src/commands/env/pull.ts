@@ -24,12 +24,13 @@ import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
-import { pullSubcommand } from './command';
+import { envCommand, pullSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { help } from '../help';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -60,7 +61,11 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(client: Client, argv: string[]) {
+export default async function pull(
+  client: Client,
+  argv: string[],
+  isDefault?: boolean
+) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -84,21 +89,20 @@ export default async function pull(client: Client, argv: string[]) {
     telemetryClient.trackCliFlagMemory();
 
     if (args.length) {
-      telemetryClient.trackCliArgumentProcess(args[0]);
+      telemetryClient.trackCliArgumentCommand(args[0]);
+    } else if (isDefault) {
+      output.print(help(envCommand, { columns: client.stderr.columns }));
+      return 2;
+    } else {
+      output.error(
+        `Invalid number of arguments. Usage: ${getCommandName(`env <command>`)}`
+      );
+      return 1;
     }
   }
-
-  if (!opts['--memory'] && args.length > 1) {
+  if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
-    );
-    return 1;
-  }
-
-  if (opts['--memory'] && !args.length) {
-    output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(`env <process>`)}
-       See also: ${getCommandName(`env --help`)}`
     );
     return 1;
   }
@@ -210,6 +214,10 @@ export async function envPullCommandLogic(
     output.stopSpinner();
 
     const [command, ...rest] = args;
+
+    output.debug(
+      `The following environment variables will be set: ${Object.keys(environmentVariables).join('\n')}`
+    );
 
     const child = spawn(command, rest, {
       env: { ...process.env, ...environmentVariables },

@@ -49,10 +49,10 @@ export class EnvPullTelemetryClient
     this.trackCliFlag('memory');
   }
 
-  trackCliArgumentProcess(value: string | undefined) {
+  trackCliArgumentCommand(value: string | undefined) {
     if (value) {
       this.trackCliArgument({
-        arg: 'process',
+        arg: 'command',
         value: this.redactedValue,
       });
     }

@@ -199,6 +199,20 @@ export const pullSubcommand = {
   ],
 } as const;
 
+export const commandSubcommand = {
+  name: '<command>',
+  aliases: [],
+  description: 'The subcommand to run with the pulled Environment Variables',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Run a process with the pulled Environment Variables without writing to a file',
+      value: [`${packageName} env <command>`, `${packageName} env next dev`],
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -209,6 +223,7 @@ export const envCommand = {
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
+    commandSubcommand,
   ],
   options: [],
   examples: [],

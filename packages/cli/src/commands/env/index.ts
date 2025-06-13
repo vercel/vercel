@@ -98,6 +98,6 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
-      return pull(client, args.concat('--memory'));
+      return pull(client, args.concat('--memory'), true);
   }
 }
