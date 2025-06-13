@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.7
+
+### Patch Changes
+
+- Fixed TS literal type inference for compatibility with json-schema-to-ts ([#13446](https://github.com/vercel/vercel/pull/13446))
+
 ## 5.0.6
 
 ### Patch Changes
