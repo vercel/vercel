@@ -23,6 +23,7 @@ describe('getCache', () => {
     mockCache = new InMemoryCache();
     vitest.spyOn(mockCache, 'set');
     vitest.spyOn(mockCache, 'get');
+    vitest.spyOn(mockCache, 'expireTag');
     (getContext as Mock).mockReturnValue({ cache: mockCache });
   });
 
@@ -36,7 +37,7 @@ describe('getCache', () => {
     const result = await cache.get('key');
     expect(result).toBe('value');
     expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', undefined);
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
   });
 
   test('should return the same cache instance for multiple calls to getCache when no context cache is available', async () => {
@@ -89,7 +90,7 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
   });
 
   test('should use the provided namespace and separator', async () => {
@@ -105,7 +106,7 @@ describe('getCache', () => {
       'value',
       undefined
     );
-    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32');
   });
 
   test('should use the default namespace separator if none is provided', async () => {
@@ -119,9 +120,57 @@ describe('getCache', () => {
       'value',
       undefined
     );
-    expect(mockCache.get).toHaveBeenCalledWith(
-      `${namespace}$b876d32`,
-      undefined
+    expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`);
+  });
+
+  test('should prefix tags with default tagNamespace', async () => {
+    const cache = getCache();
+    await cache.set('tag-key', 'tag-value', { tags: ['foo', 'bar'] });
+    expect(mockCache.set).toHaveBeenCalledWith(
+      expect.any(String),
+      'tag-value',
+      expect.objectContaining({ tags: ['rc:foo', 'rc:bar'] })
     );
+  });
+
+  test('should prefix tags with explicit tagNamespace override', async () => {
+    const cache = getCache({ tagNamespace: 'custom:' });
+    await cache.set('tag-key', 'tag-value', { tags: ['foo', 'bar'] });
+    expect(mockCache.set).toHaveBeenCalledWith(
+      expect.any(String),
+      'tag-value',
+      expect.objectContaining({ tags: ['custom:foo', 'custom:bar'] })
+    );
+  });
+
+  test('should use default tagNamespace when tagNamespace is empty string', async () => {
+    const cache = getCache({ tagNamespace: '' });
+    await cache.set('tag-key', 'tag-value', { tags: ['foo', 'bar'] });
+    expect(mockCache.set).toHaveBeenCalledWith(
+      expect.any(String),
+      'tag-value',
+      expect.objectContaining({ tags: ['foo', 'bar'] })
+    );
+  });
+
+  test('should prefix tags with default tagNamespace in expireTag', async () => {
+    const cache = getCache();
+    await cache.expireTag(['foo', 'bar']);
+    expect(mockCache.expireTag).toHaveBeenCalledWith(['rc:foo', 'rc:bar']);
+  });
+
+  test('should prefix tags with explicit tagNamespace override in expireTag', async () => {
+    const cache = getCache({ tagNamespace: 'custom:' });
+    await cache.expireTag(['foo', 'bar']);
+    expect(mockCache.expireTag).toHaveBeenCalledWith([
+      'custom:foo',
+      'custom:bar',
+    ]);
+  });
+
+  test('should use default tagNamespace when tagNamespace is empty string in expireTag', async () => {
+    const cache = getCache({ tagNamespace: '' });
+    await cache.expireTag(['foo', 'bar']);
+    expect(mockCache.expireTag).toHaveBeenCalledWith(['foo', 'bar']);
   });
 });

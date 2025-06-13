@@ -67,4 +67,9 @@ export interface CacheOptions {
    * Optional separator string for the namespace.
    */
   namespaceSeparator?: string;
+
+  /**
+   * Optional tag namespace to prefix cache tags. Defaults to `rc:`
+   */
+  tagNamespace?: string;
 }

@@ -11,6 +11,7 @@ const defaultKeyHashFunction = (key: string) => {
 };
 
 const defaultNamespaceSeparator = '$';
+const defaultTagNamespace = 'rc:';
 
 // Singleton instance of InMemoryCache
 let inMemoryCacheInstance: InMemoryCache | null = null;
@@ -52,22 +53,40 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
     return `${prefix}${hashFunction(key)}`;
   };
 
+  // Tag namespace logic
+  const tagNamespace =
+    typeof cacheOptions?.tagNamespace === 'string'
+      ? cacheOptions.tagNamespace
+      : defaultTagNamespace;
+
+  const prefixTagOrTags = (tagOrTags?: string | string[]) => {
+    if (!tagOrTags) return [];
+    return Array.isArray(tagOrTags)
+      ? tagOrTags.map(tag => tagNamespace + tag)
+      : [tagNamespace + tagOrTags];
+  };
+
   return {
-    get: (key: string, options?: { tags?: string[] }) => {
-      return cache.get(makeKey(key), options);
+    get: (key: string) => {
+      return cache.get(makeKey(key));
     },
     set: (
       key: string,
       value: unknown,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
-      return cache.set(makeKey(key), value, options);
+      const tags = options?.tags ? prefixTagOrTags(options.tags) : undefined;
+      return cache.set(
+        makeKey(key),
+        value,
+        tags ? { ...options, tags } : options
+      );
     },
     delete: (key: string) => {
       return cache.delete(makeKey(key));
     },
     expireTag: (tag: string | string[]) => {
-      return cache.expireTag(tag);
+      return cache.expireTag(prefixTagOrTags(tag));
     },
   };
 };
