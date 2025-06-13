@@ -426,13 +426,6 @@ export const build: BuildV3 = async ({
 
   // Add a `route` for Middleware
   if (isMiddleware) {
-    if (!isEdgeFunction) {
-      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
-      throw new Error(
-        `Middleware file can not be a Node.js Serverless Function`
-      );
-    }
-
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 

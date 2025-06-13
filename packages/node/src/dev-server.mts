@@ -45,10 +45,10 @@ async function createEventHandler(
     config,
   });
 
-  // `middleware.js`/`middleware.ts` file is always run as
-  // an Edge Function, otherwise needs to be opted-in via
-  // `export const config = { runtime: 'edge' }`
-  if (config.middleware === true || isEdgeRuntime(runtime)) {
+  // `middleware.js`/`middleware.ts` file is run as an Edge Function by default,
+  // but can be opted into Node.js runtime via `export const config = { runtime: 'nodejs' }`
+  // Non-middleware functions need to be opted-in via `export const config = { runtime: 'edge' }`
+  if ((config.middleware === true && !runtime) || isEdgeRuntime(runtime)) {
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
