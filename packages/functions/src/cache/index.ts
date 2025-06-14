@@ -1,6 +1,7 @@
 import { getContext } from '../get-context';
 import { CacheOptions, RuntimeCache } from './types';
 import { InMemoryCache } from './in-memory-cache';
+import { BuildCache } from './build-client';
 
 const defaultKeyHashFunction = (key: string) => {
   let hash = 5381;
@@ -12,8 +13,8 @@ const defaultKeyHashFunction = (key: string) => {
 
 const defaultNamespaceSeparator = '$';
 
-// Singleton instance of InMemoryCache
 let inMemoryCacheInstance: InMemoryCache | null = null;
+let buildCacheInstance: BuildCache | null = null;
 
 /**
  * Retrieves the Vercel Runtime Cache.
@@ -30,44 +31,73 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
 export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
-  let cache: RuntimeCache;
-  if (getContext().cache) {
-    cache = getContext().cache as RuntimeCache;
-  } else {
-    // Create InMemoryCache instance only once
-    if (!inMemoryCacheInstance) {
-      inMemoryCacheInstance = new InMemoryCache();
-    }
-    cache = inMemoryCacheInstance;
+  const cache: RuntimeCache =
+    getContext().cache ??
+    getCacheImplementation(process.env.SUSPENSE_CACHE_DEBUG === 'true');
+  return wrapWithKeyTransformation(cache, createKeyTransformer(cacheOptions));
+};
+
+function createKeyTransformer(
+  cacheOptions?: CacheOptions
+): (key: string) => string {
+  const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
+
+  return (key: string) => {
+    if (!cacheOptions?.namespace) return hashFunction(key);
+
+    const separator =
+      cacheOptions.namespaceSeparator || defaultNamespaceSeparator;
+    return `${cacheOptions.namespace}${separator}${hashFunction(key)}`;
+  };
+}
+
+function wrapWithKeyTransformation(
+  cache: RuntimeCache,
+  makeKey: (key: string) => string
+): RuntimeCache {
+  return {
+    get: key => cache.get(makeKey(key)),
+    set: (key, value, options) =>
+      cache.set(makeKey(key), value as unknown, options),
+    delete: key => cache.delete(makeKey(key)),
+    expireTag: tag => cache.expireTag(tag),
+  };
+}
+
+function getCacheImplementation(debug?: boolean): RuntimeCache {
+  if (!inMemoryCacheInstance) {
+    inMemoryCacheInstance = new InMemoryCache();
   }
 
-  const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
-  const makeKey = (key: string) => {
-    let prefix = '';
-    if (cacheOptions?.namespace) {
-      const namespaceSeparator =
-        cacheOptions.namespaceSeparator || defaultNamespaceSeparator;
-      prefix = `${cacheOptions.namespace}${namespaceSeparator}`;
-    }
-    return `${prefix}${hashFunction(key)}`;
-  };
+  if (process.env.RUNTIME_CACHE_DISABLE_BUILD_CACHE === 'true') {
+    debug && console.log('Using InMemoryCache as build cache is disabled');
+    return inMemoryCacheInstance;
+  }
 
-  return {
-    get: (key: string, options?: { tags?: string[] }) => {
-      return cache.get(makeKey(key), options);
-    },
-    set: (
-      key: string,
-      value: unknown,
-      options?: { name?: string; tags?: string[]; ttl?: number }
-    ) => {
-      return cache.set(makeKey(key), value, options);
-    },
-    delete: (key: string) => {
-      return cache.delete(makeKey(key));
-    },
-    expireTag: (tag: string | string[]) => {
-      return cache.expireTag(tag);
-    },
-  };
-};
+  const { RUNTIME_CACHE_ENDPOINT, RUNTIME_CACHE_HEADERS } = process.env;
+
+  if (debug) {
+    console.log('Runtime cache environment variables:', {
+      RUNTIME_CACHE_ENDPOINT,
+      RUNTIME_CACHE_HEADERS,
+    });
+  }
+
+  if (!RUNTIME_CACHE_ENDPOINT || !RUNTIME_CACHE_HEADERS) {
+    debug &&
+      console.log(
+        'No runtime cache configuration found - defaulting to InMemoryCache'
+      );
+    return inMemoryCacheInstance;
+  }
+
+  if (!buildCacheInstance) {
+    buildCacheInstance = new BuildCache({
+      endpoint: RUNTIME_CACHE_ENDPOINT,
+      headers: JSON.parse(RUNTIME_CACHE_HEADERS),
+      onError: (error: Error) => console.error(error),
+    });
+  }
+
+  return buildCacheInstance;
+}
