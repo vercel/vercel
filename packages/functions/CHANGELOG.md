@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.0
+
+### Minor Changes
+
+- Introduce `getVercelOidcTokenSync` ([#13429](https://github.com/vercel/vercel/pull/13429))
+
 ## 2.1.0
 
 ### Minor Changes
