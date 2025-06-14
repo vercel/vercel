@@ -122,11 +122,21 @@ export interface BuildsManifest {
   };
 }
 
-class InMemoryReporter implements Reporter {
+// class InMemoryReporter implements Reporter {
+//   public events: TraceEvent[] = [];
+
+//   report(event: TraceEvent) {
+//     this.events.push(event);
+//   }
+// }
+
+class StreamReporter implements Reporter {
+  // Supporting it for compatibility.
   public events: TraceEvent[] = [];
 
   report(event: TraceEvent) {
-    this.events.push(event);
+    // this.events.push(event);
+    output.event('trace', event);
   }
 }
 
@@ -138,7 +148,7 @@ export default async function main(client: Client): Promise<number> {
   });
 
   // Setup tracer to output into the build directory
-  const reporter = new InMemoryReporter();
+  const reporter = new StreamReporter();
   const rootSpan = new Span({ name: 'vc', reporter });
 
   let { cwd } = client;
@@ -616,6 +626,7 @@ async function doBuild(
       );
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
+        // TODO: Support events.
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
           () => builder.build(buildOptions)
         );
