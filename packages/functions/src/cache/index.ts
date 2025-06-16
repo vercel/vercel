@@ -53,8 +53,8 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
   };
 
   return {
-    get: (key: string, options?: { tags?: string[] }) => {
-      return cache.get(makeKey(key), options);
+    get: (key: string) => {
+      return cache.get(makeKey(key));
     },
     set: (
       key: string,

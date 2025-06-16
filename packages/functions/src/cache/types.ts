@@ -14,11 +14,9 @@ export interface RuntimeCache {
    * Retrieves a value from the cache.
    *
    * @param {string} key - The key of the value to retrieve.
-   * @param {Object} [options] - Optional settings for the cache entry.
-   * @param {string[]} [options.tags] - Optional tags to associate wit the cache entry.
    * @returns {Promise<unknown | null>} A promise that resolves to the value, or null if not found.
    */
-  get: (key: string, options?: { tags?: string[] }) => Promise<unknown | null>;
+  get: (key: string) => Promise<unknown | null>;
 
   /**
    * Sets a value in the cache.
