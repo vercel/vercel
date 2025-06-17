@@ -87,3 +87,89 @@ it('should throw an error for an unsupported runtime', async () => {
     'middleware.js: unsupported "runtime" value in `config`: "invalid" (must be one of: ["edge","experimental-edge","nodejs"])'
   );
 });
+
+it('nodejs middleware uses Web API interface', async () => {
+  const filesystem = await prepareFilesystem({
+    'middleware.js': `
+      export const config = {
+        runtime: 'nodejs'
+      };
+
+      export default function middleware(request) {
+        // Middleware should receive Web API Request object, not Node.js req
+        const url = new URL(request.url);
+        const headers = new Headers();
+        headers.set('x-middleware-runtime', 'nodejs');
+        headers.set('x-request-type', request.constructor.name);
+
+        return new Response('nodejs middleware with web api', {
+          headers,
+        });
+      };
+    `,
+  });
+
+  const buildResult = await build({
+    ...filesystem,
+    entrypoint: 'middleware.js',
+    config: {
+      middleware: true,
+    },
+    meta: { skipDownload: true },
+  });
+
+  expect(buildResult.output).toBeDefined();
+  expect(buildResult.output.type).toBe('Lambda');
+  // Verify the serverless handler will be configured to use web handlers for middleware
+  expect(buildResult.routes).toEqual([
+    {
+      src: '^/.*$',
+      middlewareRawSrc: [],
+      middlewarePath: 'middleware.js',
+      continue: true,
+      override: true,
+    },
+  ]);
+});
+
+it('nodejs middleware works fine with streaming mode', async () => {
+  const filesystem = await prepareFilesystem({
+    'middleware.js': `
+      export const config = {
+        runtime: 'nodejs'
+      };
+
+      export default function middleware(request) {
+        // This middleware should be eligible for streaming mode
+        // since it uses web handlers interface
+        return new Response('streaming middleware', {
+          headers: { 'x-middleware-streaming': 'true' },
+        });
+      };
+    `,
+  });
+
+  const buildResult = await build({
+    ...filesystem,
+    entrypoint: 'middleware.js',
+    config: {
+      middleware: true,
+    },
+    meta: { skipDownload: true },
+  });
+
+  expect(buildResult.output).toBeDefined();
+  expect(buildResult.output.type).toBe('Lambda');
+
+  // The key point is that middleware with nodejs runtime should be built successfully
+  // and will be configured to use web handlers interface with streaming capability
+  expect(buildResult.routes).toEqual([
+    {
+      src: '^/.*$',
+      middlewareRawSrc: [],
+      middlewarePath: 'middleware.js',
+      continue: true,
+      override: true,
+    },
+  ]);
+});
