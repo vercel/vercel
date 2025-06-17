@@ -16,7 +16,8 @@ export function createProxy(client: Client): Server {
       // Proxy to the upstream Vercel REST API
       const headers = toHeaders(req.headers);
       headers.delete('host');
-      const sanitizedUrl = req.url && req.url.startsWith('/') ? req.url : '/';
+      const apiUrl = 'http://localhost'; // Base URL for resolving relative paths
+      const sanitizedUrl = req.url ? new URL(req.url, apiUrl).pathname + new URL(req.url, apiUrl).search : '/';
       const fetchRes = await client.fetch(sanitizedUrl, {
         headers,
         method: req.method,
