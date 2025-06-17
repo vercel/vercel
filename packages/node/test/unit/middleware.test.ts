@@ -5,8 +5,8 @@ import { NodejsLambda } from '@vercel/build-utils/dist/nodejs-lambda';
 
 it.each([
   {
-    name: 'use "edge" as default runtime',
-    expectedType: 'EdgeFunction',
+    name: 'use "nodejs" as default runtime',
+    expectedType: 'Lambda',
   },
   {
     name: 'use "nodejs" as runtime',
