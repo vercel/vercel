@@ -1,13 +1,8 @@
-export const config = {
-  runtime: 'nodejs'
-};
-
 export default function middleware(req: Request) {
-  const url = new URL(req.url);
   const headers = new Headers({
     'x-got-middleware': 'true',
   });
-  if (url.pathname === '/' || url.pathname.startsWith('/api/')) {
+  if (req.url === '/' || req.url.startsWith('/api/')) {
     headers.set('x-middleware-next', '1');
     return new Response(null, { headers });
   } else {
