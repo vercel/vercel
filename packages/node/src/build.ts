@@ -389,7 +389,11 @@ export const build: BuildV3 = async ({
   );
 
   const isMiddleware = config.middleware === true;
-  let isEdgeFunction = isMiddleware;
+
+  // Default to nodejs runtime for all functions (including middleware)
+  // Will output an `EdgeFunction` only if source code contains:
+  // `export const config = { runtime: 'edge' }` or `export const config = { runtime: 'experimental-edge' }`
+  let isEdgeFunction = false;
 
   const project = new Project();
   const staticConfig = getConfig(project, entrypointPath);
