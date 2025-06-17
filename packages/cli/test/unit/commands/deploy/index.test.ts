@@ -1032,6 +1032,36 @@ describe('deploy', () => {
         { key: 'flag:logs', value: 'TRUE' },
       ]);
     });
+    it('should default to logs enabled when no --logs flag provided', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            withLogs: true,
+          }),
+        })
+      );
+    });
+    it('should respect --logs=false to disable logs', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--logs=false');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            withLogs: false,
+          }),
+        })
+      );
+    });
     it('--name', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--name', 'okok');

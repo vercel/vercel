@@ -505,7 +505,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      withLogs: parsedArguments.flags['--logs'],
+      withLogs: parsedArguments.flags['--logs'] ?? true,
       autoAssignCustomDomains,
     };
 

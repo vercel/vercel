@@ -116,7 +116,7 @@ export const deployCommand = {
       shorthand: 'l',
       type: Boolean,
       deprecated: false,
-      description: 'Print the build logs',
+      description: 'Print the build logs (default: true)',
     },
     {
       name: 'name',
@@ -160,6 +160,10 @@ export const deployCommand = {
     {
       name: 'Write Deployment URL to a file',
       value: 'vercel > deployment-url.txt',
+    },
+    {
+      name: 'Deploy without build logs',
+      value: 'vercel --logs=false',
     },
   ],
 } as const;
