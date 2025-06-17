@@ -87,7 +87,28 @@ async function nowDeploy(projectName, bodies, randomness, uploadNowJson, opts) {
 
   logWithinTest('id', deploymentId);
 
-  await waitForDeployment(deploymentId, deploymentUrl);
+  for (let i = 0; i < 750; i += 1) {
+    const deployment = await deploymentGet(deploymentId);
+    const { readyState } = deployment;
+    if (readyState === 'ERROR') {
+      logWithinTest('state is ERROR, throwing');
+      const error = new Error(
+        `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
+      );
+      error.deployment = deployment;
+      throw error;
+    }
+    if (readyState === 'READY') {
+      logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
+      break;
+    }
+    if (i % 25 === 0) {
+      logWithinTest(
+        `State of https://${deploymentUrl} is ${readyState}, retry number ${i}`
+      );
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
 
   return { deploymentId, deploymentUrl };
 }
@@ -283,68 +304,6 @@ async function fetchApi(url, opts = {}) {
   opts.headers['x-now-trace-priority'] = '1';
 
   return await fetch(urlWithHost, opts);
-}
-
-async function waitForDeployment(
-  deploymentId,
-  deploymentUrl,
-  timeoutMs = 300000,
-  initialIntervalMs = 100
-) {
-  const startTime = Date.now();
-  let interval = initialIntervalMs;
-  let attempts = 0;
-
-  while (Date.now() - startTime < timeoutMs) {
-    attempts++;
-
-    try {
-      const deployment = await deploymentGet(deploymentId);
-      const { readyState } = deployment;
-
-      if (readyState === 'ERROR') {
-        logWithinTest('state is ERROR, throwing');
-        const error = new Error(
-          `State of https://${deploymentUrl} is ERROR: ${deployment.errorMessage}`
-        );
-        error.deployment = deployment;
-        throw error;
-      }
-
-      if (readyState === 'READY') {
-        logWithinTest(`State of https://${deploymentUrl} is READY, moving on`);
-        return deployment;
-      }
-
-      // Log progress every 25 attempts
-      if (attempts % 25 === 0) {
-        logWithinTest(
-          `State of https://${deploymentUrl} is ${readyState}, attempt ${attempts} (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`
-        );
-      }
-
-      // Wait before next attempt
-      await new Promise(resolve => setTimeout(resolve, interval));
-
-      // Exponential backoff, but cap at 1 second
-      interval = Math.min(interval * 1.1, 1000);
-    } catch (error) {
-      if (error.deployment) {
-        // Re-throw deployment errors immediately
-        throw error;
-      }
-
-      // For network/API errors, log and continue
-      logWithinTest(
-        `Attempt ${attempts} failed: ${error.message}, retrying...`
-      );
-      await new Promise(resolve => setTimeout(resolve, interval));
-    }
-  }
-
-  throw new Error(
-    `Timeout waiting for deployment https://${deploymentUrl} to be ready after ${Math.round(timeoutMs / 1000)}s`
-  );
 }
 
 module.exports = {
