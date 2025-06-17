@@ -17,7 +17,10 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const apiUrl = 'http://localhost'; // Base URL for resolving relative paths
-      const sanitizedUrl = req.url ? new URL(req.url, apiUrl).pathname + new URL(req.url, apiUrl).search : '/';
+      const sanitizedUrl = req.url ? (() => {
+        const urlInstance = new URL(req.url, apiUrl);
+        return urlInstance.pathname + urlInstance.search;
+      })() : '/';
       const fetchRes = await client.fetch(sanitizedUrl, {
         headers,
         method: req.method,
