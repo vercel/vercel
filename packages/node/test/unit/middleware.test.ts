@@ -4,27 +4,31 @@ import { build } from '../../src';
 
 it.each([
   {
-    name: 'should build middleware with nodejs runtime',
+    name: 'use "nodejs" as default runtime',
+    expectedType: 'Lambda',
+  },
+  {
+    name: 'use "nodejs" as runtime',
     runtime: 'nodejs',
     expectedType: 'Lambda',
   },
   {
-    name: 'should build middleware with edge runtime',
+    name: 'use "edge" as runtime',
     runtime: 'edge',
     expectedType: 'EdgeFunction',
   },
   {
-    name: 'should build middleware with experimental-edge runtime',
+    name: 'use "experimental-edge" as runtime',
     runtime: 'experimental-edge',
     expectedType: 'EdgeFunction',
   },
 ])('$name', async ({ runtime, expectedType }) => {
+  const config = runtime
+    ? `export const config = { runtime: '${runtime}' }`
+    : '';
   const filesystem = await prepareFilesystem({
     'middleware.js': `
-      export const config = {
-        runtime: '${runtime}'
-      };
-
+      ${config};
       export default (req) => {
         return new Response('${runtime} middleware', {
           headers: { 'x-got-middleware': 'true' },
