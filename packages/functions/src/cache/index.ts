@@ -37,6 +37,9 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
     // Create InMemoryCache instance only once
     if (!inMemoryCacheInstance) {
       inMemoryCacheInstance = new InMemoryCache();
+      console.warn(
+        'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
+      );
     }
     cache = inMemoryCacheInstance;
   }
