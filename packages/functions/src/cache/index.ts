@@ -31,10 +31,21 @@ let buildCacheInstance: BuildCache | null = null;
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
 export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
-  const cache: RuntimeCache =
-    getContext().cache ??
-    getCacheImplementation(process.env.SUSPENSE_CACHE_DEBUG === 'true');
-  return wrapWithKeyTransformation(cache, createKeyTransformer(cacheOptions));
+  const resolveCache = () => {
+    let cache: RuntimeCache;
+    if (getContext().cache) {
+      cache = getContext().cache as RuntimeCache;
+    } else {
+      cache = getCacheImplementation(
+        process.env.SUSPENSE_CACHE_DEBUG === 'true'
+      );
+    }
+    return cache;
+  };
+  return wrapWithKeyTransformation(
+    resolveCache,
+    createKeyTransformer(cacheOptions)
+  );
 };
 
 function createKeyTransformer(
@@ -52,15 +63,26 @@ function createKeyTransformer(
 }
 
 function wrapWithKeyTransformation(
-  cache: RuntimeCache,
+  resolveCache: () => RuntimeCache,
   makeKey: (key: string) => string
 ): RuntimeCache {
   return {
-    get: key => cache.get(makeKey(key)),
-    set: (key, value, options) =>
-      cache.set(makeKey(key), value as unknown, options),
-    delete: key => cache.delete(makeKey(key)),
-    expireTag: tag => cache.expireTag(tag),
+    get: (key: string) => {
+      return resolveCache().get(makeKey(key));
+    },
+    set: (
+      key: string,
+      value: unknown,
+      options?: { name?: string; tags?: string[]; ttl?: number }
+    ) => {
+      return resolveCache().set(makeKey(key), value, options);
+    },
+    delete: (key: string) => {
+      return resolveCache().delete(makeKey(key));
+    },
+    expireTag: (tag: string | string[]) => {
+      return resolveCache().expireTag(tag);
+    },
   };
 }
 
