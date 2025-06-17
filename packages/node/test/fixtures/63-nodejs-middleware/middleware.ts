@@ -1,4 +1,5 @@
 export default function middleware(req: Request) {
+  console.log('middleware', req.url)
   const headers = new Headers({
     'x-got-middleware': 'true',
   });
