@@ -16,7 +16,9 @@ export function createProxy(client: Client): Server {
       // Proxy to the upstream Vercel REST API
       const headers = toHeaders(req.headers);
       headers.delete('host');
-      const fetchRes = await client.fetch(req.url || '/', {
+      const apiUrl = client.apiUrl || 'http://localhost'; // Use client's configured base URL or fallback to localhost
+      const sanitizedUrl = sanitizeUrl(req.url, apiUrl);
+      const fetchRes = await client.fetch(sanitizedUrl, {
         headers,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
