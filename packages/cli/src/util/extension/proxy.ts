@@ -17,10 +17,7 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const apiUrl = client.apiUrl || 'http://localhost'; // Use client's configured base URL or fallback to localhost
-      const sanitizedUrl = req.url ? (() => {
-        const urlInstance = new URL(req.url, apiUrl);
-        return urlInstance.pathname + urlInstance.search;
-      })() : '/';
+      const sanitizedUrl = sanitizeUrl(req.url, apiUrl);
       const fetchRes = await client.fetch(sanitizedUrl, {
         headers,
         method: req.method,
