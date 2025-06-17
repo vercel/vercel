@@ -127,6 +127,11 @@ export default class Client extends EventEmitter implements Stdio {
   private _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
+    // Validate that the hostname matches the expected apiUrl hostname
+    if (url.hostname !== new URL(this.apiUrl).hostname) {
+      throw new Error(`Invalid URL hostname: ${url.hostname}`);
+    }
+
     if (opts.accountId || opts.useCurrentTeam !== false) {
       if (opts.accountId) {
         if (opts.accountId.startsWith('team_')) {
