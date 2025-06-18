@@ -2,4 +2,4 @@
 "vercel": patch
 ---
 
-feat(cli) optimize blob token retrieval
+feat(cli): optimize blob token retrieval
