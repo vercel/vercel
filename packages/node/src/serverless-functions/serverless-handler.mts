@@ -70,14 +70,25 @@ async function compileUserCode(
     if (listener.default) listener = listener.default;
   }
 
-  const withWebHandlers =
+  const shouldUseWebHandlers =
     options.isMiddleware ||
     HTTP_METHODS.some(method => typeof listener[method] === 'function');
 
-  if (withWebHandlers) {
+  if (shouldUseWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
-    return getWebExportsHandler(listener, HTTP_METHODS);
+
+    let handler = listener;
+    if (options.isMiddleware) {
+      handler = HTTP_METHODS.reduce(
+        (acc, method) => {
+          acc[method] = listener;
+          return acc;
+        },
+        {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
+      );
+    }
+    return getWebExportsHandler(handler, HTTP_METHODS);
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
