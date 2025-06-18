@@ -13,7 +13,6 @@ export const pullSubcommand = {
       type: String,
       description:
         'The deploymentId to use for pulling the Microfrontend configuration',
-      required: true,
     },
   ],
   examples: [
