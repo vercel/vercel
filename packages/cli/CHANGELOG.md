@@ -1,5 +1,11 @@
 # vercel
 
+## 43.2.0
+
+### Minor Changes
+
+- fix(cli): allow custom 403 error message ([#13443](https://github.com/vercel/vercel/pull/13443))
+
 ## 43.1.0
 
 ### Minor Changes
