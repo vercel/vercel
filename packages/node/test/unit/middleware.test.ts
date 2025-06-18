@@ -1,6 +1,7 @@
 import { it, expect } from 'vitest';
 import { prepareFilesystem } from './test-utils';
 import { build } from '../../src';
+import { NodejsLambda } from '@vercel/build-utils/dist/nodejs-lambda';
 
 it.each([
   {
@@ -48,6 +49,8 @@ it.each([
 
   expect(buildResult.output).toBeDefined();
   expect(buildResult.output.type).toBe(expectedType);
+  if (expectedType === 'Lambda')
+    expect((buildResult.output as NodejsLambda).useWebApi).toBe(true);
   expect(buildResult.routes).toEqual([
     {
       src: '^/.*$',
@@ -120,7 +123,7 @@ it('nodejs middleware uses Web API interface', async () => {
 
   expect(buildResult.output).toBeDefined();
   expect(buildResult.output.type).toBe('Lambda');
-  // Verify the serverless handler will be configured to use web handlers for middleware
+  expect((buildResult.output as NodejsLambda).useWebApi).toBe(true);
   expect(buildResult.routes).toEqual([
     {
       src: '^/.*$',
