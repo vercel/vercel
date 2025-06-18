@@ -24,6 +24,7 @@ type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
   mode: 'streaming' | 'buffer';
   maxDuration?: number;
+  isMiddleware?: boolean;
 };
 
 type ServerlessFunctionSignature = (
@@ -69,7 +70,11 @@ async function compileUserCode(
     if (listener.default) listener = listener.default;
   }
 
-  if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
+  const withWebHandlers =
+    options.isMiddleware ||
+    HTTP_METHODS.some(method => typeof listener[method] === 'function');
+
+  if (withWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
     return getWebExportsHandler(listener, HTTP_METHODS);
