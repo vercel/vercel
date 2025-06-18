@@ -106,10 +106,9 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
   }
 
   if (!RUNTIME_CACHE_ENDPOINT || !RUNTIME_CACHE_HEADERS) {
-    debug &&
-      console.log(
-        'No runtime cache configuration found - defaulting to InMemoryCache'
-      );
+    console.warn(
+      'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
+    );
     return inMemoryCacheInstance;
   }
 
