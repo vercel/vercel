@@ -7,9 +7,11 @@ export class MicrofrontendsPullTelemetryClient
   implements TelemetryMethods<typeof pullSubcommand>
 {
   trackCliOptionDpl(value: string | undefined) {
-    this.trackCliOption({
-      option: '--dpl',
-      value: value ?? '',
-    });
+    if (value) {
+        this.trackCliOption({
+	      option: 'dpl',
+	      value: this.redactedValue,
+	    });
+    }
   }
 }
