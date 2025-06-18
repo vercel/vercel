@@ -511,7 +511,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      withLogs: withLogs,
+      withLogs,
       autoAssignCustomDomains,
     };
 
