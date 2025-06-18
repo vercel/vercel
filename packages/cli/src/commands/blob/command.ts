@@ -232,6 +232,14 @@ export const blobCommand = {
     copySubcommand,
     storeSubcommand,
   ],
-  options: [],
+  options: [
+    {
+      name: 'rw-token',
+      type: String,
+      deprecated: false,
+      description: 'Read/write token for the Blob store',
+      argument: 'String',
+    },
+  ],
   examples: [],
 } as const;

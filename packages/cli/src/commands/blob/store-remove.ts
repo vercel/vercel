@@ -27,7 +27,7 @@ export default async function removeStore(
     args: [storeId],
   } = parsedArgs;
 
-  const token = await getBlobRWToken(client);
+  const token = await getBlobRWToken(client, argv);
 
   if (!storeId && token.success) {
     const [, , , id] = token.token.split('_');
