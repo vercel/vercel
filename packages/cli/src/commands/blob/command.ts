@@ -235,6 +235,7 @@ export const blobCommand = {
   options: [
     {
       name: 'rw-token',
+      shorthand: null,
       type: String,
       deprecated: false,
       description: 'Read/write token for the Blob store',
