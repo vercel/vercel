@@ -114,9 +114,16 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
   }
 
   if (!buildCacheInstance) {
+    let parsedHeaders: Record<string, string> = {};
+    try {
+      parsedHeaders = JSON.parse(RUNTIME_CACHE_HEADERS);
+    } catch (e) {
+      console.error('Failed to parse RUNTIME_CACHE_HEADERS:', e);
+      return inMemoryCacheInstance;
+    }
     buildCacheInstance = new BuildCache({
       endpoint: RUNTIME_CACHE_ENDPOINT,
-      headers: JSON.parse(RUNTIME_CACHE_HEADERS),
+      headers: parsedHeaders,
       onError: (error: Error) => console.error(error),
     });
   }
