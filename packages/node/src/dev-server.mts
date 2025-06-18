@@ -72,7 +72,7 @@ async function createEventHandler(
 
   return createServerlessEventHandler(entrypointPath, {
     mode: isStreaming ? 'streaming' : 'buffer',
-    shouldAddHelpers: options.shouldAddHelpers,
+    shouldAddHelpers: isMiddleware ? false : options.shouldAddHelpers,
     maxDuration,
     isMiddleware,
   });
