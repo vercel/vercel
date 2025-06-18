@@ -139,6 +139,141 @@ export const hasSchema = {
   },
 } as const;
 
+const transformsSchema = {
+  description:
+    'A list of transform rules to adjust the query parameters of a request or HTTP headers of request or response',
+  type: 'array',
+  minItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'op', 'target'],
+    properties: {
+      type: {
+        description: 'The scope of the transform to apply',
+        type: 'string',
+        enum: ['request.headers', 'request.query', 'response.headers'],
+      },
+      op: {
+        description: 'The operation to perform on the target',
+        type: 'string',
+        enum: ['append', 'set', 'delete'],
+      },
+      target: {
+        description: 'The target of the transform',
+        type: 'object',
+        required: ['key'],
+        properties: {
+          // re is not supported for transforms. Once supported, replace target.key with matchableValueSchema
+          key: {
+            description:
+              'A value to match against. Can be a string or a condition operation object (without regex support)',
+            anyOf: [
+              {
+                description:
+                  'A valid header name (letters, numbers, hyphens, underscores)',
+                type: 'string',
+                maxLength: 4096,
+              },
+              {
+                description: 'A condition operation object',
+                type: 'object',
+                additionalProperties: false,
+                minProperties: 1,
+                properties: {
+                  eq: {
+                    description: 'Equal to',
+                    anyOf: [
+                      {
+                        type: 'string',
+                        maxLength: 4096,
+                      },
+                      {
+                        type: 'number',
+                      },
+                    ],
+                  },
+                  neq: {
+                    description: 'Not equal',
+                    type: 'string',
+                    maxLength: 4096,
+                  },
+                  inc: {
+                    description: 'In array',
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      maxLength: 4096,
+                    },
+                  },
+                  ninc: {
+                    description: 'Not in array',
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      maxLength: 4096,
+                    },
+                  },
+                  pre: {
+                    description: 'Starts with',
+                    type: 'string',
+                    maxLength: 4096,
+                  },
+                  suf: {
+                    description: 'Ends with',
+                    type: 'string',
+                    maxLength: 4096,
+                  },
+                  gt: {
+                    description: 'Greater than',
+                    type: 'number',
+                  },
+                  gte: {
+                    description: 'Greater than or equal to',
+                    type: 'number',
+                  },
+                  lt: {
+                    description: 'Less than',
+                    type: 'number',
+                  },
+                  lte: {
+                    description: 'Less than or equal to',
+                    type: 'number',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      args: {
+        description: 'The arguments to the operation',
+        anyOf: [
+          {
+            type: 'string',
+          },
+          {
+            type: 'array',
+            items: {
+              type: 'string',
+            },
+          },
+        ],
+      },
+    },
+    if: {
+      properties: {
+        op: {
+          enum: ['append', 'set'],
+        },
+      },
+    },
+    then: {
+      required: ['args'],
+    },
+  },
+} as const;
+
 /**
  * An ajv schema for the routes array
  */
@@ -256,6 +391,7 @@ export const routesSchema = {
           has: hasSchema,
           missing: hasSchema,
           mitigate: mitigateSchema,
+          transforms: transformsSchema,
         },
       },
       {
