@@ -238,7 +238,7 @@ export const blobCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Read/write token for the Blob store',
+      description: 'Read_Write_Token for the Blob store',
       argument: 'String',
     },
   ],

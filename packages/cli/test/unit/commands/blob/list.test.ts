@@ -18,13 +18,15 @@ const mockedOutput = vi.mocked(output);
 const mockedTable = vi.mocked(table);
 
 describe('blob list', () => {
+  const testToken = 'vercel_blob_rw_test_token_123';
+
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
-      token: 'test-token',
+      token: testToken,
       success: true,
     });
     mockedBlob.list.mockResolvedValue({
@@ -55,12 +57,11 @@ describe('blob list', () => {
     it('should list blobs with default options', async () => {
       client.setArgv('blob', 'list');
 
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
-      expect(mockedGetBlobRWToken).toHaveBeenCalledWith(client);
       expect(mockedBlob.list).toHaveBeenCalledWith({
-        token: 'test-token',
+        token: testToken,
         limit: 10,
         cursor: undefined,
         mode: 'expanded',
@@ -90,20 +91,24 @@ describe('blob list', () => {
         'folded'
       );
 
-      const exitCode = await list(client, [
-        '--limit',
-        '20',
-        '--cursor',
-        'cursor_123',
-        '--prefix',
-        'folder/',
-        '--mode',
-        'folded',
-      ]);
+      const exitCode = await list(
+        client,
+        [
+          '--limit',
+          '20',
+          '--cursor',
+          'cursor_123',
+          '--prefix',
+          'folder/',
+          '--mode',
+          'folded',
+        ],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.list).toHaveBeenCalledWith({
-        token: 'test-token',
+        token: testToken,
         limit: 20,
         cursor: 'cursor_123',
         mode: 'folded',
@@ -131,11 +136,11 @@ describe('blob list', () => {
     });
 
     it('should handle expanded mode explicitly', async () => {
-      const exitCode = await list(client, ['--mode', 'expanded']);
+      const exitCode = await list(client, ['--mode', 'expanded'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.list).toHaveBeenCalledWith({
-        token: 'test-token',
+        token: testToken,
         limit: 10,
         cursor: undefined,
         mode: 'expanded',
@@ -147,10 +152,14 @@ describe('blob list', () => {
       const limitValues = [1, 5, 10, 50, 100, 1000];
 
       for (const limit of limitValues) {
-        const exitCode = await list(client, ['--limit', String(limit)]);
+        const exitCode = await list(
+          client,
+          ['--limit', String(limit)],
+          testToken
+        );
         expect(exitCode).toBe(0);
         expect(mockedBlob.list).toHaveBeenCalledWith({
-          token: 'test-token',
+          token: testToken,
           limit,
           cursor: undefined,
           mode: 'expanded',
@@ -162,7 +171,7 @@ describe('blob list', () => {
 
   describe('table formatting and output', () => {
     it('should format table with correct headers and data', async () => {
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedTable).toHaveBeenCalledWith(
@@ -192,7 +201,7 @@ describe('blob list', () => {
         hasMore: false,
       });
 
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith('No blobs in this store');
@@ -216,7 +225,7 @@ describe('blob list', () => {
         hasMore: true,
       });
 
-      const exitCode = await list(client, ['--limit', '5']);
+      const exitCode = await list(client, ['--limit', '5'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
@@ -239,7 +248,7 @@ describe('blob list', () => {
         hasMore: false,
       });
 
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       // Should not call log with pagination message
@@ -255,14 +264,11 @@ describe('blob list', () => {
         hasMore: true,
       });
 
-      const exitCode = await list(client, [
-        '--limit',
-        '10',
-        '--prefix',
-        'test/',
-        '--mode',
-        'folded',
-      ]);
+      const exitCode = await list(
+        client,
+        ['--limit', '10', '--prefix', 'test/', '--mode', 'folded'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith(
@@ -275,7 +281,7 @@ describe('blob list', () => {
 
   describe('mode validation', () => {
     it('should accept folded mode', async () => {
-      const exitCode = await list(client, ['--mode', 'folded']);
+      const exitCode = await list(client, ['--mode', 'folded'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.list).toHaveBeenCalledWith(
@@ -284,7 +290,7 @@ describe('blob list', () => {
     });
 
     it('should accept expanded mode', async () => {
-      const exitCode = await list(client, ['--mode', 'expanded']);
+      const exitCode = await list(client, ['--mode', 'expanded'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.list).toHaveBeenCalledWith(
@@ -293,7 +299,7 @@ describe('blob list', () => {
     });
 
     it('should reject invalid mode', async () => {
-      const exitCode = await list(client, ['--mode', 'invalid']);
+      const exitCode = await list(client, ['--mode', 'invalid'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -306,7 +312,7 @@ describe('blob list', () => {
       const invalidModes = ['compact', 'detailed', 'json', ''];
 
       for (const mode of invalidModes) {
-        const exitCode = await list(client, ['--mode', mode]);
+        const exitCode = await list(client, ['--mode', mode], testToken);
         expect(exitCode).toBe(1);
         expect(mockedOutput.error).toHaveBeenCalledWith(
           `Invalid mode: ${mode} has to be either 'folded' or 'expanded'`
@@ -324,28 +330,15 @@ describe('blob list', () => {
         }),
       }));
 
-      const exitCode = await list(client, ['--invalid-flag']);
+      const exitCode = await list(client, ['--invalid-flag'], testToken);
       expect(exitCode).toBe(1);
-    });
-
-    it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await list(client, []);
-
-      expect(exitCode).toBe(1);
-      expect(mockedBlob.list).not.toHaveBeenCalled();
-      expect(mockedOutput.print).not.toHaveBeenCalled();
     });
 
     it('should return 1 when blob listing fails', async () => {
       const listError = new Error('Blob listing failed');
       mockedBlob.list.mockRejectedValue(listError);
 
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
@@ -357,7 +350,7 @@ describe('blob list', () => {
       const apiError = new Error('Network error');
       mockedBlob.list.mockRejectedValue(apiError);
 
-      const exitCode = await list(client, ['--limit', '5']);
+      const exitCode = await list(client, ['--limit', '5'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
@@ -366,7 +359,7 @@ describe('blob list', () => {
 
   describe('telemetry tracking', () => {
     it('should track limit option', async () => {
-      const exitCode = await list(client, ['--limit', '25']);
+      const exitCode = await list(client, ['--limit', '25'], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -378,7 +371,11 @@ describe('blob list', () => {
     });
 
     it('should track cursor option', async () => {
-      const exitCode = await list(client, ['--cursor', 'test_cursor_123']);
+      const exitCode = await list(
+        client,
+        ['--cursor', 'test_cursor_123'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -390,7 +387,7 @@ describe('blob list', () => {
     });
 
     it('should track prefix option', async () => {
-      const exitCode = await list(client, ['--prefix', 'uploads/']);
+      const exitCode = await list(client, ['--prefix', 'uploads/'], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -402,7 +399,7 @@ describe('blob list', () => {
     });
 
     it('should track mode option', async () => {
-      const exitCode = await list(client, ['--mode', 'folded']);
+      const exitCode = await list(client, ['--mode', 'folded'], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -414,7 +411,7 @@ describe('blob list', () => {
     });
 
     it('should not track options when not provided', async () => {
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
@@ -423,11 +420,11 @@ describe('blob list', () => {
 
   describe('prefix filtering', () => {
     it('should pass prefix to blob.list', async () => {
-      const exitCode = await list(client, ['--prefix', 'images/']);
+      const exitCode = await list(client, ['--prefix', 'images/'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.list).toHaveBeenCalledWith({
-        token: 'test-token',
+        token: testToken,
         limit: 10,
         cursor: undefined,
         mode: 'expanded',
@@ -445,7 +442,7 @@ describe('blob list', () => {
       ];
 
       for (const prefix of prefixes) {
-        const exitCode = await list(client, ['--prefix', prefix]);
+        const exitCode = await list(client, ['--prefix', prefix], testToken);
         expect(exitCode).toBe(0);
         expect(mockedBlob.list).toHaveBeenCalledWith(
           expect.objectContaining({ prefix })
@@ -456,7 +453,7 @@ describe('blob list', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during fetch and stop on success', async () => {
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
@@ -467,7 +464,7 @@ describe('blob list', () => {
       const fetchError = new Error('Fetch failed');
       mockedBlob.list.mockRejectedValue(fetchError);
 
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
@@ -475,7 +472,7 @@ describe('blob list', () => {
     });
 
     it('should show debug output', async () => {
-      const exitCode = await list(client, []);
+      const exitCode = await list(client, [], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.debug).toHaveBeenCalledWith('Fetching blobs');
@@ -500,7 +497,7 @@ describe('blob list', () => {
         hasMore: true,
       });
 
-      const exitCode = await list(client, ['--limit', '100']);
+      const exitCode = await list(client, ['--limit', '100'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedTable).toHaveBeenCalledWith(

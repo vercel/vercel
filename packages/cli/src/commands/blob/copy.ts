@@ -29,7 +29,7 @@ export default async function copy(
     return 1;
   }
 
-  if (!parsedArgs.args.length) {
+  if (!parsedArgs.args || parsedArgs.args.length < 2) {
     printError(
       `Missing required arguments: ${getCommandName(
         'blob copy fromUrlOrPathname toPathname'

@@ -69,11 +69,8 @@ export default async function main(client: Client) {
     );
   }
 
-  const token = await getBlobRWToken(client, client.argv.slice(2));
-  if (!token.success) {
-    printError(token.error);
-    return 1;
-  }
+  const token = await getBlobRWToken(client, client.argv);
+  telemetry.trackCliOptionRwToken();
 
   switch (subcommand) {
     case 'list':
@@ -84,6 +81,12 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandList(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
       return list(client, args, token.token);
     case 'put':
       if (needHelp) {
@@ -93,6 +96,12 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandPut(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
       return put(client, args, token.token);
     case 'del':
       if (needHelp) {
@@ -100,6 +109,14 @@ export default async function main(client: Client) {
         printHelp(delSubcommand);
         return 2;
       }
+
+      telemetry.trackCliSubcommandDel(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
       return del(client, args, token.token);
     case 'copy':
       if (needHelp) {
@@ -109,6 +126,12 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandCopy(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
       return copy(client, args, token.token);
     case 'store':
       telemetry.trackCliSubcommandStore(subcommandOriginal);

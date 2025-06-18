@@ -6,6 +6,14 @@ import type Client from '../client';
 import { getFlagsSpecification } from '../get-flags-specification';
 import { blobCommand } from '../../commands/blob/command';
 import { parseArguments } from '../get-args';
+import { getCommandName, packageName } from '../pkg-name';
+import cmd from '../output/cmd';
+import listItem from '../output/list-item';
+
+const ErrorMessage = `No Vercel Blob token found. To fix this issue, choose one of the following options:
+${listItem('Link your current folder to a Vercel Project that has a Vercel Blob store connected', 1)}
+${listItem(`Pass the token directly as an option: ${getCommandName('blob list --token BLOB_TOKEN')}`, 2)}
+${listItem(`Set the Token as an environment variable: ${cmd(`VERCEL_BLOB_READ_WRITE_TOKEN=BLOB_TOKEN ${packageName} blob list`)}`, 3)}`;
 
 export async function getBlobRWToken(
   client: Client,
@@ -20,7 +28,7 @@ export async function getBlobRWToken(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     return {
-      error: "Couldn't parse arguments",
+      error: ErrorMessage,
       success: false,
     };
   }
@@ -45,21 +53,21 @@ export async function getBlobRWToken(
     env = await createEnvObject(fullPath);
   } catch (error) {
     return {
-      error: "Couldn't read .env.local file. Please check if it exists.",
+      error: ErrorMessage,
       success: false,
     };
   }
 
   if (!env) {
     return {
-      error: `No environment variables found in ${filename}`,
+      error: ErrorMessage,
       success: false,
     };
   }
 
   if (!env.BLOB_READ_WRITE_TOKEN) {
     return {
-      error: `No BLOB_READ_WRITE_TOKEN found in ${filename}`,
+      error: ErrorMessage,
       success: false,
     };
   }

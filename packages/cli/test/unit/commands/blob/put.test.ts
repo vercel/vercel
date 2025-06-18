@@ -18,13 +18,15 @@ const mockedOutput = vi.mocked(output);
 const mockedFs = vi.mocked(fs);
 
 describe('blob put', () => {
+  const testToken = 'vercel_blob_rw_test_token_123';
+
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
-      token: 'test-token',
+      token: testToken,
       success: true,
     });
     mockedBlob.put.mockResolvedValue({
@@ -47,17 +49,16 @@ describe('blob put', () => {
     it('should upload file successfully with default options', async () => {
       client.setArgv('blob', 'put', 'test-file.txt');
 
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, ['test-file.txt'], testToken);
 
       expect(exitCode).toBe(0);
-      expect(mockedGetBlobRWToken).toHaveBeenCalledWith(client);
       expect(mockedFs.statSync).toHaveBeenCalledWith('test-file.txt');
       expect(mockedFs.readFileSync).toHaveBeenCalledWith('test-file.txt');
       expect(mockedBlob.put).toHaveBeenCalledWith(
         'test-file.txt',
         Buffer.from('test file content'),
         {
-          token: 'test-token',
+          token: testToken,
           access: 'public',
           addRandomSuffix: false,
           multipart: true,
@@ -97,25 +98,29 @@ describe('blob put', () => {
         'test-file.txt'
       );
 
-      const exitCode = await put(client, [
-        '--add-random-suffix',
-        '--pathname',
-        'custom-name.txt',
-        '--multipart',
-        '--content-type',
-        'text/plain',
-        '--cache-control-max-age',
-        '3600',
-        '--force',
-        'test-file.txt',
-      ]);
+      const exitCode = await put(
+        client,
+        [
+          '--add-random-suffix',
+          '--pathname',
+          'custom-name.txt',
+          '--multipart',
+          '--content-type',
+          'text/plain',
+          '--cache-control-max-age',
+          '3600',
+          '--force',
+          'test-file.txt',
+        ],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
         'custom-name.txt',
         Buffer.from('test file content'),
         {
-          token: 'test-token',
+          token: testToken,
           access: 'public',
           addRandomSuffix: true,
           multipart: true,
@@ -158,14 +163,14 @@ describe('blob put', () => {
     });
 
     it('should use filename as pathname when no --pathname provided', async () => {
-      const exitCode = await put(client, ['path/to/myfile.pdf']);
+      const exitCode = await put(client, ['path/to/myfile.pdf'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
         'myfile.pdf',
         Buffer.from('test file content'),
         {
-          token: 'test-token',
+          token: testToken,
           access: 'public',
           addRandomSuffix: false,
           multipart: true,
@@ -186,7 +191,7 @@ describe('blob put', () => {
       ];
 
       for (const filename of testCases) {
-        const exitCode = await put(client, [filename]);
+        const exitCode = await put(client, [filename], testToken);
         expect(exitCode).toBe(0);
         expect(mockedFs.readFileSync).toHaveBeenCalledWith(filename);
       }
@@ -202,25 +207,12 @@ describe('blob put', () => {
         }),
       }));
 
-      const exitCode = await put(client, ['--invalid-flag']);
+      const exitCode = await put(client, ['--invalid-flag'], testToken);
       expect(exitCode).toBe(1);
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await put(client, []);
-
-      expect(exitCode).toBe(1);
-      expect(mockedBlob.put).not.toHaveBeenCalled();
-      expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
-    it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, [], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedBlob.put).not.toHaveBeenCalled();
@@ -236,7 +228,7 @@ describe('blob put', () => {
         throw fileError;
       });
 
-      const exitCode = await put(client, ['nonexistent-file.txt']);
+      const exitCode = await put(client, ['nonexistent-file.txt'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -251,7 +243,7 @@ describe('blob put', () => {
         isDirectory: () => true,
       } as fs.Stats);
 
-      const exitCode = await put(client, ['some-directory']);
+      const exitCode = await put(client, ['some-directory'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -266,7 +258,7 @@ describe('blob put', () => {
         throw readError;
       });
 
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, ['test-file.txt'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
@@ -279,7 +271,7 @@ describe('blob put', () => {
       const uploadError = new Error('Upload failed');
       mockedBlob.put.mockRejectedValue(uploadError);
 
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, ['test-file.txt'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
@@ -290,7 +282,11 @@ describe('blob put', () => {
 
   describe('flag and option handling', () => {
     it('should handle --add-random-suffix flag', async () => {
-      const exitCode = await put(client, ['--add-random-suffix', 'test.txt']);
+      const exitCode = await put(
+        client,
+        ['--add-random-suffix', 'test.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -301,11 +297,11 @@ describe('blob put', () => {
     });
 
     it('should handle --pathname option', async () => {
-      const exitCode = await put(client, [
-        '--pathname',
-        'custom/path.txt',
-        'original.txt',
-      ]);
+      const exitCode = await put(
+        client,
+        ['--pathname', 'custom/path.txt', 'original.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -316,11 +312,11 @@ describe('blob put', () => {
     });
 
     it('should handle --content-type option', async () => {
-      const exitCode = await put(client, [
-        '--content-type',
-        'image/jpeg',
-        'image.jpg',
-      ]);
+      const exitCode = await put(
+        client,
+        ['--content-type', 'image/jpeg', 'image.jpg'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -331,11 +327,11 @@ describe('blob put', () => {
     });
 
     it('should handle --cache-control-max-age option', async () => {
-      const exitCode = await put(client, [
-        '--cache-control-max-age',
-        '86400',
-        'file.txt',
-      ]);
+      const exitCode = await put(
+        client,
+        ['--cache-control-max-age', '86400', 'file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -346,7 +342,7 @@ describe('blob put', () => {
     });
 
     it('should handle --force flag', async () => {
-      const exitCode = await put(client, ['--force', 'file.txt']);
+      const exitCode = await put(client, ['--force', 'file.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -357,7 +353,11 @@ describe('blob put', () => {
     });
 
     it('should handle --multipart flag (enabled by default)', async () => {
-      const exitCode = await put(client, ['--multipart', 'file.txt']);
+      const exitCode = await put(
+        client,
+        ['--multipart', 'file.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.put).toHaveBeenCalledWith(
@@ -370,7 +370,7 @@ describe('blob put', () => {
 
   describe('telemetry tracking', () => {
     it('should track file argument', async () => {
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, ['test-file.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -382,7 +382,7 @@ describe('blob put', () => {
     });
 
     it('should not track optional flags when not provided', async () => {
-      const exitCode = await put(client, ['test-file.txt']);
+      const exitCode = await put(client, ['test-file.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
@@ -400,17 +400,21 @@ describe('blob put', () => {
     });
 
     it('should track all provided options correctly', async () => {
-      const exitCode = await put(client, [
-        '--add-random-suffix',
-        '--pathname',
-        'custom.txt',
-        '--content-type',
-        'application/octet-stream',
-        '--cache-control-max-age',
-        '7200',
-        '--force',
-        'source.bin',
-      ]);
+      const exitCode = await put(
+        client,
+        [
+          '--add-random-suffix',
+          '--pathname',
+          'custom.txt',
+          '--content-type',
+          'application/octet-stream',
+          '--cache-control-max-age',
+          '7200',
+          '--force',
+          'source.bin',
+        ],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -447,7 +451,7 @@ describe('blob put', () => {
       const testContent = 'Hello, World!';
       mockedFs.readFileSync.mockReturnValue(Buffer.from(testContent));
 
-      const exitCode = await put(client, ['hello.txt']);
+      const exitCode = await put(client, ['hello.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedFs.readFileSync).toHaveBeenCalledWith('hello.txt');
@@ -468,7 +472,7 @@ describe('blob put', () => {
       ];
 
       for (const filePath of filePaths) {
-        const exitCode = await put(client, [filePath]);
+        const exitCode = await put(client, [filePath], testToken);
         expect(exitCode).toBe(0);
         expect(mockedFs.statSync).toHaveBeenCalledWith(filePath);
         expect(mockedFs.readFileSync).toHaveBeenCalledWith(filePath);
@@ -478,7 +482,7 @@ describe('blob put', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during upload and stop on success', async () => {
-      const exitCode = await put(client, ['test.txt']);
+      const exitCode = await put(client, ['test.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
@@ -492,7 +496,7 @@ describe('blob put', () => {
       const uploadError = new Error('Network error');
       mockedBlob.put.mockRejectedValue(uploadError);
 
-      const exitCode = await put(client, ['test.txt']);
+      const exitCode = await put(client, ['test.txt'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Uploading blob');
