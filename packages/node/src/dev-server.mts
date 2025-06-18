@@ -47,7 +47,10 @@ async function createEventHandler(
 
   const isMiddleware = config.middleware === true;
 
-  if (isEdgeRuntime(runtime)) {
+  // middleware is edge by default, otherwise respect the runtime
+  const useEdgeRuntime = (isMiddleware && !runtime) || isEdgeRuntime(runtime);
+
+  if (useEdgeRuntime) {
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,

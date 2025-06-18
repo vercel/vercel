@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'nodejs',
+};
+
 export default function middleware(req: Request) {
   const headers = new Headers({
     'x-got-middleware': 'true',

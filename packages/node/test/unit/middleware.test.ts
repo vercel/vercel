@@ -4,8 +4,8 @@ import { build } from '../../src';
 
 it.each([
   {
-    name: 'use "nodejs" as default runtime',
-    expectedType: 'Lambda',
+    name: 'use "edge" as default runtime',
+    expectedType: 'EdgeFunction',
   },
   {
     name: 'use "nodejs" as runtime',

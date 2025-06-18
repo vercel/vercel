@@ -3,4 +3,4 @@
 "@vercel/node": minor
 ---
 
-uses Node.js as the default runtime for middleware
+Allow to set Node.js runtime for middleware
