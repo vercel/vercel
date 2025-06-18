@@ -8,10 +8,10 @@ export class MicrofrontendsPullTelemetryClient
 {
   trackCliOptionDpl(value: string | undefined) {
     if (value) {
-        this.trackCliOption({
-	      option: 'dpl',
-	      value: this.redactedValue,
-	    });
+      this.trackCliOption({
+        option: 'dpl',
+        value: this.redactedValue,
+      });
     }
   }
 }
