@@ -12,7 +12,7 @@ import listItem from '../output/list-item';
 
 const ErrorMessage = `No Vercel Blob token found. To fix this issue, choose one of the following options:
 ${listItem('Link your current folder to a Vercel Project that has a Vercel Blob store connected', 1)}
-${listItem(`Pass the token directly as an option: ${getCommandName('blob list --token BLOB_TOKEN')}`, 2)}
+${listItem(`Pass the token directly as an option: ${getCommandName('blob list --rw-token BLOB_TOKEN')}`, 2)}
 ${listItem(`Set the Token as an environment variable: ${cmd(`VERCEL_BLOB_READ_WRITE_TOKEN=BLOB_TOKEN ${packageName} blob list`)}`, 3)}`;
 
 export async function getBlobRWToken(
