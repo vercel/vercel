@@ -1,0 +1,17 @@
+// app/page.tsx (Next.js App Router entry point)
+
+import Hero from "@/components/Hero";
+import Features from "@/components/Features";
+import CTA from "@/components/CTA";
+import Analytics from "@/components/Analytics";
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-white text-gray-900">
+      <Hero />
+      <Features />
+      <Analytics />
+      <CTA />
+    </main>
+  );
+}
