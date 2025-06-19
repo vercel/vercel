@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.0
+
+### Minor Changes
+
+- Allow to set Node.js runtime for middleware ([#13461](https://github.com/vercel/vercel/pull/13461))
+
 ## 5.2.2
 
 ### Patch Changes
