@@ -56,6 +56,7 @@
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
     "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
+    "postbuild": "mkdir -p public && cp -r build/* public/"
   },
   "lint-staged": {
     "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
