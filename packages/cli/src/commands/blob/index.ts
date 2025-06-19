@@ -135,7 +135,7 @@ export default async function main(client: Client) {
       return copy(client, args, token.token);
     case 'store':
       telemetry.trackCliSubcommandStore(subcommandOriginal);
-      return store(client);
+      return store(client, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));
