@@ -4,14 +4,14 @@ import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { delSubcommand } from './command';
-import { getBlobRWToken } from '../../util/blob/token';
 import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
 import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function del(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: string
 ): Promise<number> {
   const telemetryClient = new BlobDelTelemetryClient({
     opts: {
@@ -40,18 +40,12 @@ export default async function del(
 
   telemetryClient.trackCliArgumentUrlsOrPathnames(args[0]);
 
-  const token = await getBlobRWToken(client);
-  if (!token.success) {
-    printError(token.error);
-    return 1;
-  }
-
   try {
     output.debug('Deleting blob');
 
     output.spinner('Deleting blob');
 
-    await blob.del(args, { token: token.token });
+    await blob.del(args, { token: rwToken });
   } catch (err) {
     output.error(`Error deleting blob: ${err}`);
     return 1;

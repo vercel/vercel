@@ -2,8 +2,8 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import removeStore from '../../../../src/commands/blob/store-remove';
 import * as linkModule from '../../../../src/util/projects/link';
-import * as blobTokenModule from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
+import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
@@ -11,12 +11,13 @@ vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-const mockedGetBlobRWToken = vi.mocked(blobTokenModule.getBlobRWToken);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store remove', () => {
   const textInputMock = vi.fn().mockResolvedValue('store_1234567890123456');
   const confirmInputMock = vi.fn().mockResolvedValue(true);
+
+  const noToken: BlobRWToken = { success: false, error: 'No token' };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,12 +33,6 @@ describe('blob store remove', () => {
 
     client.input.text = textInputMock;
     client.input.confirm = confirmInputMock;
-
-    // Mock blob token - default to unsuccessful so it doesn't interfere
-    mockedGetBlobRWToken.mockResolvedValue({
-      success: false,
-      error: 'No token',
-    });
 
     // Default linked project mock
     mockedGetLinkedProject.mockResolvedValue({
@@ -58,7 +53,7 @@ describe('blob store remove', () => {
       const storeId = 'store_abcd1234567890efgh';
       client.setArgv('blob', 'store', 'remove', storeId);
 
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(mockedGetLinkedProject).toHaveBeenCalledWith(client);
@@ -98,7 +93,7 @@ describe('blob store remove', () => {
     it('should prompt for store ID when not provided', async () => {
       client.setArgv('blob', 'store', 'remove');
 
-      const exitCode = await removeStore(client, []);
+      const exitCode = await removeStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
@@ -130,7 +125,7 @@ describe('blob store remove', () => {
     it('should include accountId when project is linked', async () => {
       const storeId = 'store_linked12345678901';
 
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -161,7 +156,7 @@ describe('blob store remove', () => {
       });
 
       const storeId = 'store_unlinked123456789';
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -188,7 +183,7 @@ describe('blob store remove', () => {
       confirmInputMock.mockResolvedValueOnce(false);
       const storeId = 'store_declined_test_123';
 
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -217,14 +212,12 @@ describe('blob store remove', () => {
     });
 
     it('should derive store ID from token when no ID provided and token is available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
+      client.setArgv('blob', 'store', 'remove');
+
+      const exitCode = await removeStore(client, [], {
         success: true,
         token: 'blob_rw_token_xyz789_additional_data',
       });
-
-      client.setArgv('blob', 'store', 'remove');
-
-      const exitCode = await removeStore(client, []);
 
       expect(exitCode).toBe(0);
 
@@ -252,7 +245,7 @@ describe('blob store remove', () => {
         }),
       }));
 
-      const exitCode = await removeStore(client, ['--invalid-flag']);
+      const exitCode = await removeStore(client, ['--invalid-flag'], noToken);
       expect(exitCode).toBe(1);
     });
 
@@ -260,7 +253,11 @@ describe('blob store remove', () => {
       const apiError = new Error('Network error');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await removeStore(client, ['store_network_error_test']);
+      const exitCode = await removeStore(
+        client,
+        ['store_network_error_test'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -270,7 +267,11 @@ describe('blob store remove', () => {
       const notFoundError = new Error('Store not found');
       client.fetch = vi.fn().mockRejectedValue(notFoundError);
 
-      const exitCode = await removeStore(client, ['store_does_not_exist123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_does_not_exist123'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -280,7 +281,11 @@ describe('blob store remove', () => {
       const permissionError = new Error('Insufficient permissions');
       client.fetch = vi.fn().mockRejectedValue(permissionError);
 
-      const exitCode = await removeStore(client, ['store_permission_denied1']);
+      const exitCode = await removeStore(
+        client,
+        ['store_permission_denied1'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -290,7 +295,11 @@ describe('blob store remove', () => {
       const fetchError = new Error('Store fetch failed');
       client.fetch = vi.fn().mockRejectedValueOnce(fetchError);
 
-      const exitCode = await removeStore(client, ['store_fetch_fail_123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_fetch_fail_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -306,7 +315,11 @@ describe('blob store remove', () => {
         }) // GET succeeds
         .mockRejectedValueOnce(new Error('Delete failed')); // DELETE fails
 
-      const exitCode = await removeStore(client, ['store_delete_fail_123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_delete_fail_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -318,7 +331,7 @@ describe('blob store remove', () => {
     it('should make GET and DELETE requests to correct endpoints', async () => {
       const storeId = 'store_endpoint_test_12345';
 
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -357,7 +370,7 @@ describe('blob store remove', () => {
       });
 
       const storeId = 'store_different_org_test';
-      const exitCode = await removeStore(client, [storeId]);
+      const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -396,7 +409,7 @@ describe('blob store remove', () => {
           .mockResolvedValueOnce({ store: { id: storeId, name: 'Test Store' } })
           .mockResolvedValueOnce({});
 
-        const exitCode = await removeStore(client, [storeId]);
+        const exitCode = await removeStore(client, [storeId], noToken);
         expect(exitCode).toBe(0);
 
         // Should make both GET and DELETE requests
@@ -422,7 +435,7 @@ describe('blob store remove', () => {
 
   describe('interactive prompt behavior', () => {
     it('should show correct prompt message', async () => {
-      const exitCode = await removeStore(client, []);
+      const exitCode = await removeStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
@@ -435,7 +448,7 @@ describe('blob store remove', () => {
       const promptedStoreId = 'store_prompted_test_123';
       textInputMock.mockResolvedValueOnce(promptedStoreId);
 
-      const exitCode = await removeStore(client, []);
+      const exitCode = await removeStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
 
@@ -461,7 +474,11 @@ describe('blob store remove', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during deletion and stop on success', async () => {
-      const exitCode = await removeStore(client, ['store_spinner_test_123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_spinner_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
@@ -470,7 +487,11 @@ describe('blob store remove', () => {
     });
 
     it('should show debug output', async () => {
-      const exitCode = await removeStore(client, ['store_debug_test_123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_debug_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.debug).toHaveBeenCalledWith('Deleting blob store');
@@ -491,7 +512,11 @@ describe('blob store remove', () => {
         org: { id: 'team_123', slug: 'my-team', type: 'team' },
       });
 
-      const exitCode = await removeStore(client, ['store_team_test_123456']);
+      const exitCode = await removeStore(
+        client,
+        ['store_team_test_123456'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
 
@@ -527,7 +552,11 @@ describe('blob store remove', () => {
         org: { id: 'user_123', slug: 'my-user', type: 'user' },
       });
 
-      const exitCode = await removeStore(client, ['store_personal_test123']);
+      const exitCode = await removeStore(
+        client,
+        ['store_personal_test123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
 

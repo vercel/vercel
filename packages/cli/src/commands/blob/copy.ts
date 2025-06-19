@@ -5,13 +5,13 @@ import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { copySubcommand } from './command';
-import { getBlobRWToken } from '../../util/blob/token';
 import { BlobCopyTelemetryClient } from '../../util/telemetry/commands/blob/copy';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function copy(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: string
 ): Promise<number> {
   const telemetryClient = new BlobCopyTelemetryClient({
     opts: {
@@ -29,7 +29,7 @@ export default async function copy(
     return 1;
   }
 
-  if (!parsedArgs.args.length) {
+  if (!parsedArgs.args || parsedArgs.args.length < 2) {
     printError(
       `Missing required arguments: ${getCommandName(
         'blob copy fromUrlOrPathname toPathname'
@@ -53,12 +53,6 @@ export default async function copy(
   telemetryClient.trackCliOptionContentType(contentType);
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
 
-  const token = await getBlobRWToken(client);
-  if (!token.success) {
-    printError(token.error);
-    return 1;
-  }
-
   let result: blob.PutBlobResult;
   try {
     output.debug('Copying blob');
@@ -66,7 +60,7 @@ export default async function copy(
     output.spinner('Copying blob');
 
     result = await blob.copy(fromUrl, toPathname, {
-      token: token.token,
+      token: rwToken,
       access: 'public',
       addRandomSuffix: addRandomSuffix ?? false,
       contentType,
