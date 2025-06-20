@@ -39,6 +39,29 @@ export type HasField = Array<
     }
 >;
 
+type Transform = {
+  type: 'request.headers' | 'request.query' | 'response.headers';
+  op: 'append' | 'set' | 'delete';
+  target: {
+    // re is not supported for transforms. Once supported, replace key with MatchableValue.
+    key:
+      | string
+      | {
+          eq?: string | number;
+          neq?: string;
+          inc?: string[];
+          ninc?: string[];
+          pre?: string;
+          suf?: string;
+          gt?: number;
+          gte?: number;
+          lt?: number;
+          lte?: number;
+        };
+  };
+  args?: string | string[];
+};
+
 export type RouteWithSrc = {
   src: string;
   dest?: string;
@@ -55,6 +78,7 @@ export type RouteWithSrc = {
   mitigate?: {
     action: MitigateAction;
   };
+  transforms?: Transform[];
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
