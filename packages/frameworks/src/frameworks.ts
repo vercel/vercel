@@ -2216,11 +2216,11 @@ export const frameworks = [
     name: 'Nitro',
     slug: 'nitro',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nitro.svg',
-    //  demo: "",
+    demo: 'https://nitro-template.vercel.app',
     tagline: 'Nitro is a next generation server toolkit.',
-    //  description: "",
+    description:
+      'Nitro lets you create web servers that run on multiple platforms.',
     website: 'https://nitro.build/',
-    //  envPrefix: "",
     detectors: {
       every: [{ matchPackage: 'nitropack' }],
     },
