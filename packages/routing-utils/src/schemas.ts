@@ -251,26 +251,86 @@ const transformsSchema = {
         anyOf: [
           {
             type: 'string',
+            maxLength: 4096,
           },
           {
             type: 'array',
+            minItems: 1,
             items: {
               type: 'string',
+              maxLength: 4096,
             },
           },
         ],
       },
     },
-    if: {
-      properties: {
-        op: {
-          enum: ['append', 'set'],
+    allOf: [
+      {
+        if: {
+          properties: {
+            op: {
+              enum: ['append', 'set'],
+            },
+          },
+        },
+        then: {
+          required: ['args'],
         },
       },
-    },
-    then: {
-      required: ['args'],
-    },
+      {
+        if: {
+          allOf: [
+            {
+              properties: {
+                type: {
+                  enum: ['request.headers', 'response.headers'],
+                },
+              },
+            },
+            {
+              properties: {
+                op: {
+                  enum: ['set', 'append'],
+                },
+              },
+            },
+          ],
+        },
+        then: {
+          properties: {
+            target: {
+              properties: {
+                key: {
+                  if: {
+                    type: 'string',
+                  },
+                  then: {
+                    pattern: '^[a-zA-Z0-9_-]+$',
+                  },
+                },
+              },
+            },
+            args: {
+              anyOf: [
+                {
+                  type: 'string',
+                  pattern:
+                    '^[a-zA-Z0-9_ :;.,"\'?!(){}\\[\\]@<>=+*#$&`|~\\^%/-]+$',
+                },
+                {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    pattern:
+                      '^[a-zA-Z0-9_ :;.,"\'?!(){}\\[\\]@<>=+*#$&`|~\\^%/-]+$',
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ],
   },
 } as const;
 
