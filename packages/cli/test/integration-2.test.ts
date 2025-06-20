@@ -749,9 +749,13 @@ test('deploys with only vercel.json and README.md', async () => {
     'deploy-with-only-readme-vercel-json'
   );
 
-  const { exitCode, stdout, stderr } = await execCli(binaryPath, ['--yes'], {
-    cwd: directory,
-  });
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['--yes', '--no-logs'],
+    {
+      cwd: directory,
+    }
+  );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
