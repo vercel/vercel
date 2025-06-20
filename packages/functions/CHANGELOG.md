@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.2
+
+### Patch Changes
+
+- Add warning when calling getCache to indicate that in-memory cache is being used. ([#13455](https://github.com/vercel/vercel/pull/13455))
+
 ## 2.2.1
 
 ### Patch Changes

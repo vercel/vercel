@@ -1,6 +1,6 @@
 import bytes from 'bytes';
 import output from '../../output-manager';
-import { getBlobRWToken } from '../../util/blob/token';
+import type { BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
@@ -13,7 +13,8 @@ import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/
 
 export default async function getStore(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: BlobRWToken
 ): Promise<number> {
   const telemetryClient = new BlobGetStoreTelemetryClient({
     opts: {
@@ -35,10 +36,8 @@ export default async function getStore(
     args: [storeId],
   } = parsedArgs;
 
-  const token = await getBlobRWToken(client);
-
-  if (!storeId && token.success) {
-    const [, , , id] = token.token.split('_');
+  if (!storeId && rwToken.success) {
+    const [, , , id] = rwToken.token.split('_');
 
     storeId = `store_${id}`;
   }

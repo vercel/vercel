@@ -40,4 +40,11 @@ export class BlobTelemetryClient
       value: actual,
     });
   }
+
+  trackCliOptionRwToken() {
+    this.trackCliOption({
+      option: '--rw-token',
+      value: this.redactedValue,
+    });
+  }
 }
