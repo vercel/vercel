@@ -1529,6 +1529,7 @@ export const frameworks = [
     website: 'https://nuxtjs.org',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
+    supersedes: ['nitro'],
     detectors: {
       some: [
         {
