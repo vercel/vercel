@@ -2212,6 +2212,37 @@ export const frameworks = [
     getOutputDirName: async () => 'storybook-static',
   },
   {
+    name: 'Nitro',
+    slug: 'nitro',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nitro.svg',
+    //  demo: "",
+    tagline: 'Nitro is a next generation server toolkit.',
+    //  description: "",
+    website: 'https://nitro.build/',
+    //  envPrefix: "",
+    detectors: {
+      every: [{ matchPackage: 'nitropack' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `nitro build`',
+        value: 'nitro build',
+      },
+      devCommand: {
+        value: 'nitro dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'nitropack',
+    getOutputDirName: () => Promise<string>,
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
