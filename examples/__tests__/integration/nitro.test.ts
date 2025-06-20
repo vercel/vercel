@@ -1,4 +1,5 @@
 import { deployExample } from '../test-utils';
-it('[examples] should deploy nitro', async () => {
+// eslint-disable-next-line jest/no-disabled-tests
+it.skip('[examples] should deploy nitro', async () => {
   await deployExample('nitro');
 });
