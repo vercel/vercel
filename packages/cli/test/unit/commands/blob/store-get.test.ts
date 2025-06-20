@@ -2,9 +2,9 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
-import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 import dfns from 'date-fns';
+import type { BlobRWToken } from '../../../../src/util/blob/token';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
@@ -13,21 +13,20 @@ vi.mock('../../../../src/output-manager');
 const formatSpy = vi.spyOn(dfns, 'format');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-const mockedGetBlobRWToken = vi.mocked(getBlobRWTokenModule.getBlobRWToken);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store get', () => {
   const textInputMock = vi.fn().mockResolvedValue('store_1234567890123456');
 
+  const noToken: BlobRWToken = { success: false, error: 'No token found' };
+  const token: BlobRWToken = {
+    success: true,
+    token: 'vercel_blob_rw_123456_abcdefghijk',
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
-
-    // Default successful mocks
-    mockedGetBlobRWToken.mockResolvedValue({
-      token: 'vercel_blob_rw_123456_abcdefghijk',
-      success: true,
-    });
 
     client.fetch = vi.fn().mockResolvedValue({
       store: {
@@ -63,7 +62,7 @@ describe('blob store get', () => {
       const storeId = 'store_provided_12345678';
       client.setArgv('blob', 'store', 'get', storeId);
 
-      const exitCode = await getStore(client, [storeId]);
+      const exitCode = await getStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(mockedGetLinkedProject).toHaveBeenCalledWith(client);
@@ -95,7 +94,7 @@ describe('blob store get', () => {
     it('should auto-detect store ID from token when not provided', async () => {
       client.setArgv('blob', 'store', 'get');
 
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], token);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -109,12 +108,7 @@ describe('blob store get', () => {
     });
 
     it('should prompt for store ID when token parsing fails', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
@@ -133,7 +127,7 @@ describe('blob store get', () => {
     it('should include accountId when project is linked', async () => {
       const storeId = 'store_linked_test_123';
 
-      const exitCode = await getStore(client, [storeId]);
+      const exitCode = await getStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -153,7 +147,7 @@ describe('blob store get', () => {
       });
 
       const storeId = 'store_unlinked_test123';
-      const exitCode = await getStore(client, [storeId]);
+      const exitCode = await getStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -179,7 +173,11 @@ describe('blob store get', () => {
         },
       });
 
-      const exitCode = await getStore(client, ['store_display_test_123']);
+      const exitCode = await getStore(
+        client,
+        ['store_display_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
@@ -210,7 +208,11 @@ describe('blob store get', () => {
         },
       });
 
-      let exitCode = await getStore(client, ['store_billing_test_123']);
+      let exitCode = await getStore(
+        client,
+        ['store_billing_test_123'],
+        noToken
+      );
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining('Billing State: Active')
@@ -230,7 +232,7 @@ describe('blob store get', () => {
           },
         });
 
-        exitCode = await getStore(client, ['store_billing_test_123']);
+        exitCode = await getStore(client, ['store_billing_test_123'], noToken);
         expect(exitCode).toBe(0);
         expect(mockedOutput.print).toHaveBeenCalledWith(
           expect.stringContaining('Billing State: Inactive')
@@ -259,7 +261,11 @@ describe('blob store get', () => {
           },
         });
 
-        const exitCode = await getStore(client, ['store_size_test_123']);
+        const exitCode = await getStore(
+          client,
+          ['store_size_test_123'],
+          noToken
+        );
         expect(exitCode).toBe(0);
         expect(mockedOutput.print).toHaveBeenCalledWith(
           expect.stringContaining(`Size: ${expected}`)
@@ -277,15 +283,13 @@ describe('blob store get', () => {
       ];
 
       for (const token of tokenCases) {
-        mockedGetBlobRWToken.mockResolvedValue({
-          token,
-          success: true,
-        });
-
         const [, , , id] = token.split('_');
         const expectedStoreId = `store_${id}`;
 
-        const exitCode = await getStore(client, []);
+        const exitCode = await getStore(client, [], {
+          token,
+          success: true,
+        });
         expect(exitCode).toBe(0);
         expect(client.fetch).toHaveBeenCalledWith(
           `/v1/storage/stores/${expectedStoreId}`,
@@ -298,15 +302,10 @@ describe('blob store get', () => {
     });
 
     it('should use prompted store ID when token fails', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'Token expired',
-        success: false,
-      });
-
       const promptedStoreId = 'store_prompted_test_123';
       textInputMock.mockResolvedValueOnce(promptedStoreId);
 
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -328,7 +327,7 @@ describe('blob store get', () => {
         }),
       }));
 
-      const exitCode = await getStore(client, ['--invalid-flag']);
+      const exitCode = await getStore(client, ['--invalid-flag'], noToken);
       expect(exitCode).toBe(1);
     });
 
@@ -336,7 +335,11 @@ describe('blob store get', () => {
       const apiError = new Error('Store not found');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await getStore(client, ['store_not_found_123456']);
+      const exitCode = await getStore(
+        client,
+        ['store_not_found_123456'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Getting blob store');
@@ -348,7 +351,11 @@ describe('blob store get', () => {
       const apiError = new Error('Network error');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await getStore(client, ['store_network_error_test']);
+      const exitCode = await getStore(
+        client,
+        ['store_network_error_test'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
@@ -358,7 +365,11 @@ describe('blob store get', () => {
       const notFoundError = new Error('Store not found');
       client.fetch = vi.fn().mockRejectedValue(notFoundError);
 
-      const exitCode = await getStore(client, ['store_does_not_exist123']);
+      const exitCode = await getStore(
+        client,
+        ['store_does_not_exist123'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
@@ -368,7 +379,11 @@ describe('blob store get', () => {
       const permissionError = new Error('Insufficient permissions');
       client.fetch = vi.fn().mockRejectedValue(permissionError);
 
-      const exitCode = await getStore(client, ['store_permission_denied1']);
+      const exitCode = await getStore(
+        client,
+        ['store_permission_denied1'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
@@ -377,7 +392,11 @@ describe('blob store get', () => {
 
   describe('telemetry tracking', () => {
     it('should track store ID argument when provided', async () => {
-      const exitCode = await getStore(client, ['store_telemetry_test_123']);
+      const exitCode = await getStore(
+        client,
+        ['store_telemetry_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -389,7 +408,7 @@ describe('blob store get', () => {
     });
 
     it('should track store ID argument when auto-detected', async () => {
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], token);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -401,12 +420,7 @@ describe('blob store get', () => {
     });
 
     it('should track store ID argument when prompted', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -422,7 +436,7 @@ describe('blob store get', () => {
     it('should make GET request to correct endpoint', async () => {
       const storeId = 'store_endpoint_test_123';
 
-      const exitCode = await getStore(client, [storeId]);
+      const exitCode = await getStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -448,7 +462,7 @@ describe('blob store get', () => {
       });
 
       const storeId = 'store_different_org_test';
-      const exitCode = await getStore(client, [storeId]);
+      const exitCode = await getStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -483,7 +497,7 @@ describe('blob store get', () => {
       for (const storeData of storeResponses) {
         client.fetch = vi.fn().mockResolvedValue({ store: storeData });
 
-        const exitCode = await getStore(client, [storeData.id]);
+        const exitCode = await getStore(client, [storeData.id], noToken);
         expect(exitCode).toBe(0);
         expect(mockedOutput.print).toHaveBeenCalledWith(
           expect.stringContaining(`Blob Store: ${storeData.name}`)
@@ -494,12 +508,7 @@ describe('blob store get', () => {
 
   describe('interactive prompt behavior', () => {
     it('should show correct prompt message', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(textInputMock).toHaveBeenCalledWith({
@@ -509,15 +518,10 @@ describe('blob store get', () => {
     });
 
     it('should use prompted store ID in API call', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
       const promptedStoreId = 'store_prompted_test_123';
       textInputMock.mockResolvedValueOnce(promptedStoreId);
 
-      const exitCode = await getStore(client, []);
+      const exitCode = await getStore(client, [], noToken);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -532,7 +536,11 @@ describe('blob store get', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during retrieval and stop on success', async () => {
-      const exitCode = await getStore(client, ['store_spinner_test_123']);
+      const exitCode = await getStore(
+        client,
+        ['store_spinner_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Getting blob store');
@@ -543,7 +551,11 @@ describe('blob store get', () => {
       const retrievalError = new Error('Retrieval failed');
       client.fetch = vi.fn().mockRejectedValue(retrievalError);
 
-      const exitCode = await getStore(client, ['store_error_test_123']);
+      const exitCode = await getStore(
+        client,
+        ['store_error_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Getting blob store');
@@ -551,7 +563,11 @@ describe('blob store get', () => {
     });
 
     it('should show debug output', async () => {
-      const exitCode = await getStore(client, ['store_debug_test_123']);
+      const exitCode = await getStore(
+        client,
+        ['store_debug_test_123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.debug).toHaveBeenCalledWith('Getting blob store');
@@ -572,7 +588,11 @@ describe('blob store get', () => {
         org: { id: 'team_123', slug: 'my-team', type: 'team' },
       });
 
-      const exitCode = await getStore(client, ['store_team_test_123456']);
+      const exitCode = await getStore(
+        client,
+        ['store_team_test_123456'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(
@@ -597,7 +617,11 @@ describe('blob store get', () => {
         org: { id: 'user_123', slug: 'my-user', type: 'user' },
       });
 
-      const exitCode = await getStore(client, ['store_personal_test123']);
+      const exitCode = await getStore(
+        client,
+        ['store_personal_test123'],
+        noToken
+      );
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith(

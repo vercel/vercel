@@ -355,7 +355,7 @@ importers:
         specifier: 4.9.0
         version: link:../next
       '@vercel/node':
-        specifier: 5.2.2
+        specifier: 5.3.0
         version: link:../node
       '@vercel/python':
         specifier: 4.7.2

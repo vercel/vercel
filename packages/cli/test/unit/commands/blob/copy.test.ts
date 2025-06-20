@@ -15,13 +15,15 @@ const mockedGetBlobRWToken = vi.mocked(getBlobRWTokenModule.getBlobRWToken);
 const mockedOutput = vi.mocked(output);
 
 describe('blob copy', () => {
+  const testToken = 'vercel_blob_rw_test_token_123';
+
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
-      token: 'test-token',
+      token: testToken,
       success: true,
     });
     mockedBlob.copy.mockResolvedValue({
@@ -37,12 +39,15 @@ describe('blob copy', () => {
     it('should copy blob successfully and track telemetry', async () => {
       client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
 
-      const exitCode = await copy(client, ['source.txt', 'dest.txt']);
+      const exitCode = await copy(
+        client,
+        ['source.txt', 'dest.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
-      expect(mockedGetBlobRWToken).toHaveBeenCalledWith(client);
       expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
-        token: 'test-token',
+        token: testToken,
         access: 'public',
         addRandomSuffix: false,
         contentType: undefined,
@@ -79,19 +84,23 @@ describe('blob copy', () => {
         'dest.png'
       );
 
-      const exitCode = await copy(client, [
-        '--add-random-suffix',
-        '--content-type',
-        'image/png',
-        '--cache-control-max-age',
-        '86400',
-        'source.png',
-        'dest.png',
-      ]);
+      const exitCode = await copy(
+        client,
+        [
+          '--add-random-suffix',
+          '--content-type',
+          'image/png',
+          '--cache-control-max-age',
+          '86400',
+          'source.png',
+          'dest.png',
+        ],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith('source.png', 'dest.png', {
-        token: 'test-token',
+        token: testToken,
         access: 'public',
         addRandomSuffix: true,
         contentType: 'image/png',
@@ -126,11 +135,31 @@ describe('blob copy', () => {
       const sourceUrl = 'https://example.com/source.txt';
       client.setArgv('blob', 'copy', sourceUrl, 'dest.txt');
 
-      const exitCode = await copy(client, [sourceUrl, 'dest.txt']);
+      const exitCode = await copy(client, [sourceUrl, 'dest.txt'], testToken);
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith(sourceUrl, 'dest.txt', {
-        token: 'test-token',
+        token: testToken,
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+      });
+    });
+
+    it('should use provided token directly', async () => {
+      const customToken = 'vercel_blob_rw_custom_456';
+      client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
+
+      const exitCode = await copy(
+        client,
+        ['source.txt', 'dest.txt'],
+        customToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: customToken,
         access: 'public',
         addRandomSuffix: false,
         contentType: undefined,
@@ -148,27 +177,19 @@ describe('blob copy', () => {
         }),
       }));
 
-      const exitCode = await copy(client, ['--invalid-flag']);
+      const exitCode = await copy(client, ['--invalid-flag'], testToken);
       expect(exitCode).toBe(1);
-    });
-
-    it('should return 1 when token is not available', async () => {
-      mockedGetBlobRWToken.mockResolvedValue({
-        error: 'No token found',
-        success: false,
-      });
-
-      const exitCode = await copy(client, ['source.txt', 'dest.txt']);
-
-      expect(exitCode).toBe(1);
-      expect(mockedBlob.copy).not.toHaveBeenCalled();
     });
 
     it('should return 1 when blob copy fails', async () => {
       const copyError = new Error('Blob copy failed');
       mockedBlob.copy.mockRejectedValue(copyError);
 
-      const exitCode = await copy(client, ['source.txt', 'dest.txt']);
+      const exitCode = await copy(
+        client,
+        ['source.txt', 'dest.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Copying blob');
@@ -177,7 +198,14 @@ describe('blob copy', () => {
     });
 
     it('should return 1 when no arguments are provided', async () => {
-      const exitCode = await copy(client, []);
+      const exitCode = await copy(client, [], testToken);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.success).not.toHaveBeenCalled();
+    });
+
+    it('should return 1 when only one argument is provided', async () => {
+      const exitCode = await copy(client, ['source.txt'], testToken);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -188,7 +216,7 @@ describe('blob copy', () => {
     it('should not track optional flags when not provided', async () => {
       client.setArgv('blob', 'copy', 'source.txt', 'dest.txt');
 
-      await copy(client, ['source.txt', 'dest.txt']);
+      await copy(client, ['source.txt', 'dest.txt'], testToken);
 
       // Should only have argument events, no flag or option events
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
@@ -215,12 +243,11 @@ describe('blob copy', () => {
         'dest.json'
       );
 
-      await copy(client, [
-        '--content-type',
-        'application/json',
-        'source.json',
-        'dest.json',
-      ]);
+      await copy(
+        client,
+        ['--content-type', 'application/json', 'source.json', 'dest.json'],
+        testToken
+      );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -248,12 +275,11 @@ describe('blob copy', () => {
         'dest.txt'
       );
 
-      await copy(client, [
-        '--cache-control-max-age',
-        '3600',
-        'source.txt',
-        'dest.txt',
-      ]);
+      await copy(
+        client,
+        ['--cache-control-max-age', '3600', 'source.txt', 'dest.txt'],
+        testToken
+      );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -274,11 +300,15 @@ describe('blob copy', () => {
 
   describe('flag variations', () => {
     it('should handle addRandomSuffix flag correctly when false', async () => {
-      const exitCode = await copy(client, ['source.txt', 'dest.txt']);
+      const exitCode = await copy(
+        client,
+        ['source.txt', 'dest.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
-        token: 'test-token',
+        token: testToken,
         access: 'public',
         addRandomSuffix: false,
         contentType: undefined,
@@ -287,20 +317,149 @@ describe('blob copy', () => {
     });
 
     it('should handle addRandomSuffix flag correctly when true', async () => {
-      const exitCode = await copy(client, [
-        '--add-random-suffix',
-        'source.txt',
-        'dest.txt',
-      ]);
+      const exitCode = await copy(
+        client,
+        ['--add-random-suffix', 'source.txt', 'dest.txt'],
+        testToken
+      );
 
       expect(exitCode).toBe(0);
       expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
-        token: 'test-token',
+        token: testToken,
         access: 'public',
         addRandomSuffix: true,
         contentType: undefined,
         cacheControlMaxAge: undefined,
       });
+    });
+  });
+
+  describe('token handling', () => {
+    it('should work with different token formats', async () => {
+      const tokenFormats = [
+        'vercel_blob_rw_abc_def123',
+        'vercel_blob_rw_xyz_789ghi',
+        'vercel_blob_rw_test_token_456',
+      ];
+
+      for (const token of tokenFormats) {
+        const exitCode = await copy(client, ['source.txt', 'dest.txt'], token);
+
+        expect(exitCode).toBe(0);
+        expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+          token,
+          access: 'public',
+          addRandomSuffix: false,
+          contentType: undefined,
+          cacheControlMaxAge: undefined,
+        });
+      }
+    });
+
+    it('should handle empty token', async () => {
+      const exitCode = await copy(client, ['source.txt', 'dest.txt'], '');
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith('source.txt', 'dest.txt', {
+        token: '',
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: undefined,
+        cacheControlMaxAge: undefined,
+      });
+    });
+  });
+
+  describe('complex scenarios', () => {
+    it('should handle copying files with special characters in names', async () => {
+      const specialFiles = [
+        'file with spaces.txt',
+        'file-with-hyphens.txt',
+        'file_with_underscores.txt',
+        'file.with.dots.txt',
+        'file@with@symbols.txt',
+      ];
+
+      for (const filename of specialFiles) {
+        const exitCode = await copy(client, [filename, 'dest.txt'], testToken);
+        expect(exitCode).toBe(0);
+        expect(mockedBlob.copy).toHaveBeenCalledWith(
+          filename,
+          'dest.txt',
+          expect.any(Object)
+        );
+      }
+    });
+
+    it('should handle copying to different destination formats', async () => {
+      const destinations = [
+        'simple-dest.txt',
+        'folder/nested/dest.txt',
+        'dest-with-timestamp-2023.txt',
+        'dest.backup.txt',
+      ];
+
+      for (const dest of destinations) {
+        const exitCode = await copy(client, ['source.txt', dest], testToken);
+        expect(exitCode).toBe(0);
+        expect(mockedBlob.copy).toHaveBeenCalledWith(
+          'source.txt',
+          dest,
+          expect.any(Object)
+        );
+      }
+    });
+
+    it('should handle copying with multiple options simultaneously', async () => {
+      const exitCode = await copy(
+        client,
+        [
+          '--add-random-suffix',
+          '--content-type',
+          'application/pdf',
+          '--cache-control-max-age',
+          '7200',
+          'document.pdf',
+          'backup/document-copy.pdf',
+        ],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.copy).toHaveBeenCalledWith(
+        'document.pdf',
+        'backup/document-copy.pdf',
+        {
+          token: testToken,
+          access: 'public',
+          addRandomSuffix: true,
+          contentType: 'application/pdf',
+          cacheControlMaxAge: 7200,
+        }
+      );
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:fromUrlOrPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:toPathname',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'flag:add-random-suffix',
+          value: 'TRUE',
+        },
+        {
+          key: 'option:content-type',
+          value: 'application/pdf',
+        },
+        {
+          key: 'option:cache-control-max-age',
+          value: '7200',
+        },
+      ]);
     });
   });
 });

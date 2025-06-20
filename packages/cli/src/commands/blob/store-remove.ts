@@ -5,11 +5,12 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { removeStoreSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getLinkedProject } from '../../util/projects/link';
-import { getBlobRWToken } from '../../util/blob/token';
+import type { BlobRWToken } from '../../util/blob/token';
 
 export default async function removeStore(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: BlobRWToken
 ): Promise<number> {
   const flagsSpecification = getFlagsSpecification(
     removeStoreSubcommand.options
@@ -27,10 +28,8 @@ export default async function removeStore(
     args: [storeId],
   } = parsedArgs;
 
-  const token = await getBlobRWToken(client);
-
-  if (!storeId && token.success) {
-    const [, , , id] = token.token.split('_');
+  if (!storeId && rwToken.success) {
+    const [, , , id] = rwToken.token.split('_');
 
     storeId = `store_${id}`;
   }
