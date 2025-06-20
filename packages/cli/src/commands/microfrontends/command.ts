@@ -3,7 +3,7 @@ import { packageName } from '../../util/pkg-name';
 export const pullSubcommand = {
   name: 'pull',
   aliases: [],
-  description: 'Pull a Vercel Microfrontend configuration into your project',
+  description: 'Pull a Vercel Microfrontends configuration into your project',
   arguments: [],
   options: [
     {
@@ -12,16 +12,16 @@ export const pullSubcommand = {
       deprecated: false,
       type: String,
       description:
-        'The deploymentId to use for pulling the Microfrontend configuration',
+        'The deploymentId to use for pulling the microfrontends configuration',
     },
   ],
   examples: [
     {
-      name: 'Pull a Microfrontend configuration',
+      name: 'Pull a microfrontends configuration',
       value: `${packageName} microfrontends pull`,
     },
     {
-      name: 'Pull a Microfrontend configuration for a specific deployment',
+      name: 'Pull a microfrontends configuration for a specific deployment',
       value: `${packageName} microfrontends pull --dpl=<deployment-id>`,
     },
   ],

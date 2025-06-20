@@ -45,7 +45,7 @@ export default async function pull(client: Client): Promise<number> {
 
   const { contextName } = await getScope(client);
   output.spinner(
-    `Fetching Microfrontends configuration in ${chalk.bold(contextName)}`
+    `Fetching microfrontends configuration in ${chalk.bold(contextName)}`
   );
 
   let parsedArgs;
