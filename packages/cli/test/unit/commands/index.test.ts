@@ -35,6 +35,8 @@ describe('index', () => {
         ['logout', 'logout'],
         ['logs', 'logs'],
         ['ls', 'list'],
+        ['mf', 'microfrontends'],
+        ['microfrontends', 'microfrontends'],
         ['project', 'project'],
         ['projects', 'project'],
         ['promote', 'promote'],
