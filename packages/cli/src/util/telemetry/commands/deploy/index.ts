@@ -94,6 +94,11 @@ export class DeployTelemetryClient
       this.trackCliFlag('logs');
     }
   }
+  trackCliFlagNoLogs(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-logs');
+    }
+  }
   trackCliFlagNoClipboard(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('no-clipboard');
