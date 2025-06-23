@@ -1,5 +1,11 @@
 # vercel
 
+## 44.0.0
+
+### Major Changes
+
+- [cli] make `--logs` the default behavior for `vercel deploy` ([#13458](https://github.com/vercel/vercel/pull/13458))
+
 ## 43.3.0
 
 ### Minor Changes
