@@ -1,6 +1,7 @@
 import { aliasCommand } from './alias/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
+import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
@@ -38,6 +39,7 @@ const commandsStructs = [
   blobCommand,
   bisectCommand,
   buildCommand,
+  cacheCommand,
   certsCommand,
   deployCommand,
   devCommand,
