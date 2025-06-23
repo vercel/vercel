@@ -7,11 +7,18 @@ import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
 import { emoji, prependEmoji } from '../../util/emoji';
+import { CachePurgeTelemetryClient } from '../../util/telemetry/commands/cache/purge';
 
 export default async function purge(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const telemetry = new CachePurgeTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(purgeSubcommand.options);
   try {
@@ -37,6 +44,7 @@ export default async function purge(
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const yes = Boolean(parsedArgs.flags['--yes']);
+  telemetry.trackCliFlagYes(yes);
   const msg = `You are about to purge the CDN cache for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
@@ -69,6 +77,6 @@ export default async function purge(
     }),
   ]);
 
-  output.print(prependEmoji(`Success`, emoji('success')) + `\n`);
+  output.print(prependEmoji(`Successfuly purged`, emoji('success')) + `\n`);
   return 0;
 }

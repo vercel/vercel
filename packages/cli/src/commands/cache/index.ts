@@ -9,12 +9,19 @@ import { cacheCommand, purgeSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
+import { CacheTelemetryClient } from '../../util/telemetry/commands/cache';
 
 const COMMAND_CONFIG = {
   purge: getCommandAliases(purgeSubcommand),
 };
 
 export default async function main(client: Client) {
+  const telemetry = new CacheTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(cacheCommand.options);
   try {
@@ -27,16 +34,21 @@ export default async function main(client: Client) {
   }
 
   const subArgs = parsedArgs.args.slice(1);
-  const { subcommand, args } = getSubcommand(subArgs, COMMAND_CONFIG);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    subArgs,
+    COMMAND_CONFIG
+  );
 
   const needHelp = parsedArgs.flags['--help'];
 
   if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp(cacheCommand.name);
     output.print(help(cacheCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   function printHelp(command: Command) {
+    telemetry.trackCliFlagHelp(command.name, subcommandOriginal);
     output.print(
       help(command, { parent: cacheCommand, columns: client.stderr.columns })
     );
@@ -48,6 +60,7 @@ export default async function main(client: Client) {
         printHelp(purgeSubcommand);
         return 2;
       }
+      telemetry.trackCliSubcommandPurge(subcommandOriginal);
       return purge(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

@@ -18,7 +18,7 @@ export const purgeSubcommand = {
 export const cacheCommand = {
   name: 'cache',
   aliases: [],
-  description: 'Manage cache for a Project',
+  description: 'Manage CND cache for a Project',
   arguments: [],
   subcommands: [purgeSubcommand],
   options: [],

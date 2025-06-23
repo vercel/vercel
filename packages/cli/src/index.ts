@@ -611,7 +611,7 @@ const main = async () => {
           func = require('./commands/build').default;
           break;
         case 'cache':
-          // telemetry.trackCliCommandCache(userSuppliedSubCommand);
+          telemetry.trackCliCommandCache(userSuppliedSubCommand);
           func = require('./commands/cache').default;
           break;
         case 'certs':
