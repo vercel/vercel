@@ -166,6 +166,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandMicrofrontends(actual: string) {
+    this.trackCliCommand({
+      command: 'microfrontends',
+      value: actual,
+    });
+  }
+
   trackCliCommandProject(actual: string) {
     this.trackCliCommand({
       command: 'project',

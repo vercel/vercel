@@ -18,6 +18,7 @@ import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
+import { microfrontendsCommand } from './microfrontends/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
@@ -55,6 +56,7 @@ const commandsStructs = [
   loginCommand,
   logoutCommand,
   logsCommand,
+  microfrontendsCommand,
   projectCommand,
   promoteCommand,
   pullCommand,
