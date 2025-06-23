@@ -11,4 +11,13 @@ export class CachePurgeTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliOptionType(type: string | undefined) {
+    if (type) {
+      this.trackCliOption({
+        option: 'type',
+        value: type,
+      });
+    }
+  }
 }

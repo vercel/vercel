@@ -4,13 +4,31 @@ import { yesOption } from '../../util/arg-common';
 export const purgeSubcommand = {
   name: 'purge',
   aliases: [],
-  description: 'Purge the CDN cache for the current project',
+  description: 'Purge cache for the current project',
   arguments: [],
-  options: [yesOption],
+  options: [
+    yesOption,
+    {
+      name: 'type',
+      description: 'Type of cache to purge',
+      shorthand: null,
+      type: String,
+      argument: 'TYPE',
+      deprecated: false,
+    },
+  ],
   examples: [
     {
-      name: 'Purge the CDN cache for the current project',
+      name: 'Purge all caches for the current project',
       value: `${packageName} cache purge`,
+    },
+    {
+      name: 'Purge only the CDN cache',
+      value: `${packageName} cache purge --type cdn`,
+    },
+    {
+      name: 'Purge only the data cache',
+      value: `${packageName} cache purge --type data`,
     },
   ],
 } as const;
@@ -18,7 +36,7 @@ export const purgeSubcommand = {
 export const cacheCommand = {
   name: 'cache',
   aliases: [],
-  description: 'Manage CND cache for a Project',
+  description: 'Manage cache for a Project',
   arguments: [],
   subcommands: [purgeSubcommand],
   options: [],

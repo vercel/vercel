@@ -45,7 +45,24 @@ export default async function purge(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const yes = Boolean(parsedArgs.flags['--yes']);
   telemetry.trackCliFlagYes(yes);
-  const msg = `You are about to purge the CDN cache for project ${project.name}`;
+
+  const type = parsedArgs.flags['--type'] || 'all';
+  telemetry.trackCliOptionType(parsedArgs.flags['--type']);
+  const cacheTypeMap = {
+    cdn: 'the CDN cache',
+    data: 'the Data cache',
+    all: 'the CDN cache and Data cache',
+  };
+  const validTypes = Object.keys(cacheTypeMap);
+
+  if (!validTypes.includes(type)) {
+    output.error(
+      `Invalid cache type "${type}". Valid types are: ${validTypes.join(', ')}`
+    );
+    return 1;
+  }
+  const typeDesciption = cacheTypeMap[type as keyof typeof cacheTypeMap];
+  const msg = `You are about to purge ${typeDesciption} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {
@@ -62,21 +79,35 @@ export default async function purge(
     }
   }
 
-  await Promise.all([
-    client.fetch(`/v1/edge-cache/purge-all?${query}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }),
-    client.fetch(`/v1/data-cache/purge-all?${query}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    }),
-  ]);
+  const requests = [];
 
-  output.print(prependEmoji(`Successfuly purged`, emoji('success')) + `\n`);
+  if (type === 'cdn' || type === 'all') {
+    requests.push(
+      client.fetch(`/v1/edge-cache/purge-all?${query}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    );
+  }
+
+  if (type === 'data' || type === 'all') {
+    requests.push(
+      client.fetch(`/v1/data-cache/purge-all?${query}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    );
+  }
+
+  await Promise.all(requests);
+
+  output.print(
+    prependEmoji(`Successfully purged ${typeDesciption}`, emoji('success')) +
+      `\n`
+  );
   return 0;
 }
