@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.0.8
+
+### Patch Changes
+
+- support transform rules in vercel.json ([#13464](https://github.com/vercel/vercel/pull/13464))
+
 ## 5.0.7
 
 ### Patch Changes
