@@ -42,14 +42,14 @@ describe('microfrontends pull', () => {
     const microfrontendsPromise = microfrontends(client);
 
     await expect(client.stderr).toOutput(
-      `Fetching Microfrontends configuration`
+      `Fetching microfrontends configuration`
     );
 
     const exitCode = await microfrontendsPromise;
     expect(exitCode).toEqual(0);
 
     await expect(client.stderr).toOutput(
-      `Downloaded Microfrontends configuration to`
+      `Downloaded microfrontends configuration to`
     );
   });
 

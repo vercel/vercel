@@ -30,7 +30,7 @@ export const pullSubcommand = {
 export const microfrontendsCommand = {
   name: 'microfrontends',
   aliases: ['mf'],
-  description: 'Manage your Vercel Microfrontends',
+  description: 'Manages your microfrontends',
   arguments: [],
   subcommands: [pullSubcommand],
   options: [],

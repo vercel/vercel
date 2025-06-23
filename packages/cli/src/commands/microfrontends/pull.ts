@@ -103,7 +103,7 @@ export default async function pull(client: Client): Promise<number> {
     const microfrontendsStamp = stamp();
     output.print(
       `${prependEmoji(
-        `Downloaded Microfrontends configuration to ${chalk.bold(
+        `Downloaded microfrontends configuration to ${chalk.bold(
           humanizePath(
             join(currentDirectory, VERCEL_DIR, VERCEL_DIR_MICROFRONTENDS)
           )
