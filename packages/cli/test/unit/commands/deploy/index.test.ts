@@ -687,6 +687,15 @@ describe('deploy', () => {
       });
       deployment = useDeployment({ creator: user, state: 'BUILDING' });
       deployment.aliasAssigned = false;
+
+      client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+        res.json({
+          ...defaultProject,
+          name: 'node',
+          id: 'QmbKpqpiUqbcke',
+        });
+      });
+
       client.scenario.post(`/v13/deployments`, (req, res) => {
         res.json(
           res.json({
@@ -1243,6 +1252,13 @@ describe('deploy', () => {
         const user = useUser();
         client.scenario.get(`/v9/projects/:id`, (_req, res) => {
           return res.status(404).json({});
+        });
+
+        client.scenario.get(`/v9/projects`, (_req, res) => {
+          return res.json({
+            projects: [],
+            pagination: {},
+          });
         });
 
         client.scenario.post(`/v1/projects`, (req, res) => {
