@@ -14,6 +14,7 @@ export const help = () => `
         '(default)'
       )}
       build                            Build the project locally into './vercel/output'
+      cache                [cmd]       Manages cache for your current Project
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project

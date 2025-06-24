@@ -9,6 +9,7 @@ describe('index', () => {
         ['bisect', 'bisect'],
         ['blob', 'blob'],
         ['build', 'build'],
+        ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
         ['deploy', 'deploy'],

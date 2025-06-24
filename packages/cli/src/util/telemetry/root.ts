@@ -40,6 +40,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandCache(actual: string) {
+    this.trackCliCommand({
+      command: 'cache',
+      value: actual,
+    });
+  }
+
   trackCliCommandCerts(actual: string) {
     this.trackCliCommand({
       command: 'certs',
