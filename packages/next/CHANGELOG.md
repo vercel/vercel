@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.9.1
+
+### Patch Changes
+
+- Ensure we await node middleware import for top-level await ([#13479](https://github.com/vercel/vercel/pull/13479))
+
 ## 4.9.0
 
 ### Minor Changes
