@@ -59,31 +59,32 @@ export default async function pull(client: Client): Promise<number> {
     return 1;
   }
 
-  const dpl =
-    parsedArgs.flags['--dpl'] ??
-    project.targets?.production?.id ??
-    project.latestDeployments?.[0]?.id;
-
-  if (!dpl) {
-    output.stopSpinner();
-    output.error(`No deployment found for project ${chalk.bold(project.name)}`);
-    return 1;
-  }
-
-  const microfrontendsConfigUrl = `/v1/microfrontends/${dpl}/config`;
+  let rawConfig: MicrofrontendsConfig;
+  const dpl = parsedArgs.flags['--dpl'];
 
   try {
-    const { config } = await client.fetch<{
-      config: MicrofrontendsConfig;
-    }>(microfrontendsConfigUrl, {
-      method: 'GET',
-    });
+    if (dpl) {
+      const { config } = await client.fetch<{
+        config: MicrofrontendsConfig;
+      }>(`/v1/microfrontends/${dpl}/config`, {
+        method: 'GET',
+      });
+      rawConfig = config;
+    } else {
+      const projectId = project.id;
+      const { config } = await client.fetch<{
+        config: MicrofrontendsConfig;
+      }>(`/v1/microfrontends/projects/${projectId}/production-mfe-config`, {
+        method: 'GET',
+      });
+      rawConfig = config;
+    }
 
     // remove projectId from each application
     const sanitizedConfig: MicrofrontendsConfig = {
-      ...config,
+      ...rawConfig,
       applications: Object.fromEntries(
-        Object.entries(config.applications).map(([name, app]) => [
+        Object.entries(rawConfig.applications).map(([name, app]) => [
           name,
           {
             ...app,
