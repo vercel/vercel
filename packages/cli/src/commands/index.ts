@@ -8,6 +8,7 @@ import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
+import { guidanceCommand } from './guidance/command';
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -71,6 +72,10 @@ const commandsStructs = [
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
 ];
+
+if (process.env.FF_GUIDANCE_MODE) {
+  commandsStructs.push(guidanceCommand);
+}
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);

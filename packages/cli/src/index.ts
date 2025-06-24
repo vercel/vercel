@@ -376,6 +376,10 @@ const main = async () => {
     'telemetry',
   ];
 
+  if (process.env.FF_GUIDANCE_MODE) {
+    subcommandsWithoutToken.push('guidance');
+  }
+
   // Prompt for login if there is no current token
   if (
     (!authConfig || !authConfig.token) &&
@@ -639,6 +643,15 @@ const main = async () => {
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
           func = require('./commands/git').default;
           break;
+        case 'guidance':
+          if (process.env.FF_GUIDANCE_MODE) {
+            telemetry.trackCliCommandGuidance(userSuppliedSubCommand);
+            func = require('./commands/guidance').default;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
