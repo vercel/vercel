@@ -23,6 +23,8 @@ import {
   getCustomEnvironments,
   pickCustomEnvironment,
 } from '../../util/target/get-custom-environments';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
 
 /**
  * `vc redeploy` command
@@ -169,8 +171,15 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
         0
       );
-
-      if (deployment.readyState === 'READY' && deployment.aliasAssigned) {
+      const project = await getProjectByNameOrId(client, deployment.projectId);
+      if (project instanceof ProjectNotFound) {
+        throw project;
+      }
+      if (
+        deployment.readyState === 'READY' &&
+        deployment.aliasAssigned &&
+        !project.rollingRelease
+      ) {
         output.spinner('Completing', 0);
       } else {
         try {
@@ -190,6 +199,11 @@ export default async function redeploy(client: Client): Promise<number> {
           )) {
             if (event.type === 'building') {
               output.spinner('Building', 0);
+            } else if (event.type === 'ready' && project.rollingRelease) {
+              output.spinner('Releasing', 0);
+              output.stopSpinner();
+              deployment = event.payload;
+              break;
             } else if (
               event.type === 'ready' &&
               ((event.payload as any).checksState
