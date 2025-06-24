@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.1
+
+### Patch Changes
+
+- [rr] fix timeout ([#13482](https://github.com/vercel/vercel/pull/13482))
+
 ## 44.2.0
 
 ### Minor Changes
