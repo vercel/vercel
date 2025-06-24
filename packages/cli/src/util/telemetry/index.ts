@@ -182,7 +182,7 @@ export class TelemetryClient {
     });
   }
 
-  trackCliFlagFuture(command: 'login' | 'logout') {
+  trackCliFlagFuture(command: 'login') {
     this.track({ key: 'flag:future', value: command });
   }
 }

@@ -102,6 +102,7 @@ export default async (client: Client): Promise<number> => {
     );
     telemetryClient.trackCliFlagPublic(parsedArguments.flags['--public']);
     telemetryClient.trackCliFlagLogs(parsedArguments.flags['--logs']);
+    telemetryClient.trackCliFlagNoLogs(parsedArguments.flags['--no-logs']);
     telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
     telemetryClient.trackCliFlagWithCache(
       parsedArguments.flags['--with-cache']
@@ -111,6 +112,10 @@ export default async (client: Client): Promise<number> => {
       telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
+    }
+
+    if ('--logs' in parsedArguments.flags) {
+      output.warn('`--logs` is deprecated and now the default behavior.');
     }
   } catch (error) {
     printError(error);
@@ -463,6 +468,7 @@ export default async (client: Client): Promise<number> => {
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
+  const withLogs = '--no-logs' in parsedArguments.flags ? false : true;
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -505,7 +511,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      withLogs: parsedArguments.flags['--logs'],
+      withLogs,
       autoAssignCustomDomains,
     };
 

@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 10.6.1
+
+### Patch Changes
+
+- next package uses @vercel/routing-utils HasField rather than redefining & stricter validation. ([#13409](https://github.com/vercel/vercel/pull/13409))
+
+- Make architecture a defined property on Lambda classes to apply when creating ([#13398](https://github.com/vercel/vercel/pull/13398))
+
+- [env-vars] expose VERCEL_PROJECT_ID as NEXT_PUBLIC_VERCEL_PROJECT_ID ([#13431](https://github.com/vercel/vercel/pull/13431))
+
 ## 10.6.0
 
 ### Minor Changes

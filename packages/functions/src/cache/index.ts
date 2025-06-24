@@ -30,16 +30,17 @@ let inMemoryCacheInstance: InMemoryCache | null = null;
  * @throws {Error} If no cache is available in the context and `InMemoryCache` cannot be created.
  */
 export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
-  let cache: RuntimeCache;
-  if (getContext().cache) {
-    cache = getContext().cache as RuntimeCache;
-  } else {
-    // Create InMemoryCache instance only once
+  const resolveCache = () => {
+    const ctxCache = getContext().cache;
+    if (ctxCache) return ctxCache as RuntimeCache;
     if (!inMemoryCacheInstance) {
       inMemoryCacheInstance = new InMemoryCache();
+      console.warn(
+        'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
+      );
     }
-    cache = inMemoryCacheInstance;
-  }
+    return inMemoryCacheInstance;
+  };
 
   const hashFunction = cacheOptions?.keyHashFunction || defaultKeyHashFunction;
   const makeKey = (key: string) => {
@@ -54,20 +55,20 @@ export const getCache = (cacheOptions?: CacheOptions): RuntimeCache => {
 
   return {
     get: (key: string, options?: { tags?: string[] }) => {
-      return cache.get(makeKey(key), options);
+      return resolveCache().get(makeKey(key), options);
     },
     set: (
       key: string,
       value: unknown,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
-      return cache.set(makeKey(key), value, options);
+      return resolveCache().set(makeKey(key), value, options);
     },
     delete: (key: string) => {
-      return cache.delete(makeKey(key));
+      return resolveCache().delete(makeKey(key));
     },
     expireTag: (tag: string | string[]) => {
-      return cache.expireTag(tag);
+      return resolveCache().expireTag(tag);
     },
   };
 };
