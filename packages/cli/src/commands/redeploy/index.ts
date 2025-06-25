@@ -27,8 +27,6 @@ import {
   getCustomEnvironments,
   pickCustomEnvironment,
 } from '../../util/target/get-custom-environments';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../util/errors-ts';
 
 /**
  * `vc redeploy` command

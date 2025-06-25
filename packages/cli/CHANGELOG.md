@@ -1,5 +1,13 @@
 # vercel
 
+## 44.2.4
+
+### Patch Changes
+
+- Revert "[rr] fix timeout" ([#13493](https://github.com/vercel/vercel/pull/13493))
+
+- Revert "[cli] avoid fetching a deployment's project in a loop" ([#13490](https://github.com/vercel/vercel/pull/13490))
+
 ## 44.2.3
 
 ### Patch Changes
