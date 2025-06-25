@@ -64,7 +64,7 @@ export default async function guidance(client: Client) {
   }
 
   if (!subcommand && needHelp) {
-    telemetryClient.trackCliFlagHelp('telemetry', subcommand);
+    telemetryClient.trackCliFlagHelp('guidance', subcommand);
     output.print(help(guidanceCommand, { columns: client.stderr.columns }));
     return 2;
   }
@@ -72,7 +72,7 @@ export default async function guidance(client: Client) {
   switch (subcommand) {
     case 'status':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
+        telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(statusSubcommand);
         return 2;
       }
@@ -80,7 +80,7 @@ export default async function guidance(client: Client) {
       return status(client);
     case 'enable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
+        telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(enableSubcommand);
         return 2;
       }
@@ -88,7 +88,7 @@ export default async function guidance(client: Client) {
       return enable(client);
     case 'disable':
       if (needHelp) {
-        telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
+        telemetryClient.trackCliFlagHelp('guidance', subcommandOriginal);
         printHelp(disableSubcommand);
         return 2;
       }
