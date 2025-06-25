@@ -75,6 +75,7 @@ import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
+import { checkGuidanceStatus } from './util/guidance/check-status';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -265,6 +266,12 @@ const main = async () => {
   checkTelemetryStatus({
     config,
   });
+
+  if (process.env.FF_GUIDANCE_MODE) {
+    checkGuidanceStatus({
+      config,
+    });
+  }
 
   const telemetry = new RootTelemetryClient({
     opts: {

@@ -3,20 +3,20 @@ import * as configFiles from '../config/files';
 
 import output from '../../output-manager';
 
-export function checkTelemetryStatus({ config }: { config: GlobalConfig }) {
+export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
   if (!process.env.FF_GUIDANCE_MODE) {
-    return;
-  }
-
-  if (config.guidance) {
-    // telemetry has been set previously by this check of
-    // user running vercel telemetry commands
     return;
   }
 
   if (process.env.VERCEL_GUIDANCE_DISABLED) {
     // disabling guidance with the environment variable
     // implies the user has already been informed
+    return;
+  }
+
+  if (config.guidance) {
+    // telemetry has been set previously by this check of
+    // user running vercel telemetry commands
     return;
   }
 
