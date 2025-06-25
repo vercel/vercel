@@ -1,8 +1,4 @@
-import type {
-  Deployment,
-  Org,
-  ProjectRollingRelease,
-} from '@vercel-internals/types';
+import type { Deployment, Org } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
   type DeploymentOptions,
@@ -124,8 +120,6 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
-  let rollingRelease: ProjectRollingRelease | undefined;
-
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
       if (['tip', 'notice', 'warning'].includes(event.type)) {
@@ -240,22 +234,14 @@ export default async function processDeployment({
       }
 
       const deployment: Deployment = event.payload;
-
-      // Workaround to avoid hammering `api-projects-list`
-      if (rollingRelease === undefined) {
-        const project = await getProjectByNameOrId(
-          client,
-          deployment?.projectId || ''
-        );
-
-        if (project instanceof ProjectNotFound) {
-          throw project;
-        }
-
-        rollingRelease = project.rollingRelease;
+      const project = await getProjectByNameOrId(
+        client,
+        deployment?.projectId || ''
+      );
+      if (project instanceof ProjectNotFound) {
+        throw project;
       }
-
-      if (event.type === 'ready' && rollingRelease) {
+      if (event.type === 'ready' && project.rollingRelease) {
         output.spinner('Releasing', 0);
         output.stopSpinner();
         return event.payload;
