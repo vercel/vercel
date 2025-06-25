@@ -241,7 +241,7 @@ export default async function processDeployment({
       }
 
       let project: Project | ProjectNotFound | undefined;
-      if (rollingRelease === undefined && project === undefined) {
+      if (project === undefined) {
         project = await getProjectByNameOrId(client, projectName);
         if (project instanceof ProjectNotFound) {
           throw project;
