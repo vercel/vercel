@@ -701,6 +701,13 @@ describe('deploy', () => {
           })
         );
       });
+      client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+        res.json({
+          ...defaultProject,
+          name: 'node',
+          id: 'QmbKpqpiUqbcke',
+        });
+      });
       useBuildLogs({
         deployment,
         logProducer: async function* () {
