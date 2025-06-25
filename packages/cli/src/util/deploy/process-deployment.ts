@@ -21,7 +21,7 @@ import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../errors-ts';
+import type { ProjectNotFound } from '../errors-ts';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -243,10 +243,7 @@ export default async function processDeployment({
       let project: Project | ProjectNotFound | undefined;
       if (project === undefined) {
         project = await getProjectByNameOrId(client, projectName);
-        if (project instanceof ProjectNotFound) {
-          throw project;
-        }
-        rollingRelease = project?.rollingRelease;
+        rollingRelease = (project as Project)?.rollingRelease;
       }
 
       if (event.type === 'ready' && rollingRelease) {

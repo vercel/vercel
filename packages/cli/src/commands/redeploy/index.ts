@@ -27,7 +27,7 @@ import {
   getCustomEnvironments,
   pickCustomEnvironment,
 } from '../../util/target/get-custom-environments';
-import { ProjectNotFound } from '../../util/errors-ts';
+import type { ProjectNotFound } from '../../util/errors-ts';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 
 /**
@@ -180,10 +180,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
       if (deployment.projectId && deployment.projectId != '') {
         project = await getProjectByNameOrId(client, deployment.projectId);
-        if (project instanceof ProjectNotFound) {
-          throw project;
-        }
-        rollingRelease = project?.rollingRelease;
+        rollingRelease = (project as Project)?.rollingRelease;
       }
       if (
         deployment.readyState === 'READY' &&
