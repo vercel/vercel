@@ -2929,7 +2929,7 @@ export const onPrerenderRoute =
           prerenders[normalizePathData(outputPathData)] = prerender;
         }
         // If this route had a postponed state associated with it, then we
-        // should also associate it's data route with the postponed state too,
+        // should also associate its data route with the postponed state too,
         // ensuring that it will get the postponed state when it's requested.
         else if (
           outputPathData &&
@@ -2965,7 +2965,7 @@ export const onPrerenderRoute =
               ...initialHeaders,
               'content-type': contentType,
               // Dynamic RSC requests cannot be cached, so we explicity set it
-              // here to ensure that the response is not cached byy the browser.
+              // here to ensure that the response is not cached by the browser.
               'cache-control':
                 'private, no-store, no-cache, max-age=0, must-revalidate',
               vary: rscVaryHeader,
