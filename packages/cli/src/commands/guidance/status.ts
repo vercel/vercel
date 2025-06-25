@@ -7,7 +7,8 @@ export default async function status(client: Client) {
 
   const status = enabled ? chalk.green('Enabled') : chalk.red('Disabled');
   output.print('\n');
-  output.log(`${chalk.bold('Guidance status')}: ${status}\n`);
+  output.log(`${chalk.bold('Guidance status')}: ${status}`);
+  output.print('\n');
 
   return 0;
 }

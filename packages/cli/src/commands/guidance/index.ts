@@ -24,6 +24,13 @@ const COMMAND_CONFIG = {
 };
 
 export default async function guidance(client: Client) {
+  if (!process.env.FF_GUIDANCE_MODE) {
+    // technically unreachable because `main` will not call this.
+    // present here to allow us to unit test.
+    output.error('The guidance subcommand does not exist');
+    return 1;
+  }
+
   const telemetryClient = new GuidanceTelemetryClient({
     opts: {
       store: client.telemetryEventStore,

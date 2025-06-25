@@ -5,7 +5,7 @@ import status from './status';
 export default async function enable(client: Client) {
   client.config = {
     ...client.config,
-    telemetry: {
+    guidance: {
       ...client.config.guidance,
       enabled: true,
     },
