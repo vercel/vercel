@@ -20,6 +20,8 @@ import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../errors-ts';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -122,6 +124,8 @@ export default async function processDeployment({
     abortController?.abort();
     output.stopSpinner();
   }
+
+  let rollingRelease: ProjectRollingRelease | undefined;
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
