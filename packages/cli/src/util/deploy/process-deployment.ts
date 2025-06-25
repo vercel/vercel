@@ -241,18 +241,13 @@ export default async function processDeployment({
       }
 
       const deployment: Deployment = event.payload;
-
       let project: Project | ProjectNotFound | undefined;
       if (
-        (rollingRelease === undefined &&
-          deployment.projectId &&
-          deployment.projectId != '') ||
-        (deployment.name && deployment.name != '')
+        rollingRelease === undefined &&
+        deployment.projectId &&
+        deployment.projectId != ''
       ) {
-        project = await getProjectByNameOrId(
-          client,
-          deployment.projectId || deployment.name || ''
-        );
+        project = await getProjectByNameOrId(client, deployment.projectId);
 
         if (project instanceof ProjectNotFound) {
           throw project;
