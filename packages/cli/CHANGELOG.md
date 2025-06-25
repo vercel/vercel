@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.3
+
+### Patch Changes
+
+- [cli] avoid fetching a deployment's project in a loop ([#13487](https://github.com/vercel/vercel/pull/13487))
+
 ## 44.2.2
 
 ### Patch Changes
