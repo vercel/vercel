@@ -1,5 +1,0 @@
-
-> vercel@44.2.3 vercel /Users/brookemosby/Vercel/vercel/packages/cli
-> ts-node ./src/index.ts "deploy" "--prebuilt" "--prod" "--cwd=../../../../Personal/brooke-vercel"
-
-https://brooke-76xw46lm6.instamade.co
