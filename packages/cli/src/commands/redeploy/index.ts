@@ -175,10 +175,10 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
         0
       );
+      client.stdout.write(`redeploy project fetch`);
       let project: Project | ProjectNotFound | undefined;
       let rollingRelease: ProjectRollingRelease | undefined;
 
-      client.stdout.write(JSON.stringify(deployment));
       if (deployment.projectId && deployment.projectId != '') {
         project = await getProjectByNameOrId(client, deployment.projectId);
         if (project instanceof ProjectNotFound) {
