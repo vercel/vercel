@@ -178,6 +178,7 @@ export default async function redeploy(client: Client): Promise<number> {
       let project: Project | ProjectNotFound | undefined;
       let rollingRelease: ProjectRollingRelease | undefined;
 
+      client.stdout.write(JSON.stringify(deployment));
       if (deployment.projectId && deployment.projectId != '') {
         project = await getProjectByNameOrId(client, deployment.projectId);
         if (project instanceof ProjectNotFound) {
