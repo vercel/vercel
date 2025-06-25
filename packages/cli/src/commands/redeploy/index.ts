@@ -172,8 +172,14 @@ export default async function redeploy(client: Client): Promise<number> {
         0
       );
       let project: Project | ProjectNotFound | undefined;
-      if (deployment.projectId && deployment.projectId != '') {
-        project = await getProjectByNameOrId(client, deployment.projectId);
+      if (
+        (deployment.projectId && deployment.projectId != '') ||
+        (deployment.name && deployment.name != '')
+      ) {
+        project = await getProjectByNameOrId(
+          client,
+          deployment.projectId || deployment.name || ''
+        );
       }
       if (project instanceof ProjectNotFound) {
         throw project;

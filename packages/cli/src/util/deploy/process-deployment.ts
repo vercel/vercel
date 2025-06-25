@@ -244,13 +244,14 @@ export default async function processDeployment({
 
       let project: Project | ProjectNotFound | undefined;
       if (
-        rollingRelease === undefined &&
-        deployment.projectId &&
-        deployment.projectId != ''
+        (rollingRelease === undefined &&
+          deployment.projectId &&
+          deployment.projectId != '') ||
+        (deployment.name && deployment.name != '')
       ) {
         project = await getProjectByNameOrId(
           client,
-          deployment?.projectId || ''
+          deployment.projectId || deployment.name || ''
         );
       }
 
