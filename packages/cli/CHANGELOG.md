@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.5
+
+### Patch Changes
+
+- [rr] fix rate limits for undefined project name fetches ([#13491](https://github.com/vercel/vercel/pull/13491))
+
 ## 44.2.4
 
 ### Patch Changes
