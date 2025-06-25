@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.2
+
+### Patch Changes
+
+- [cli] Prefer fetching the microfrontends json using the project ID unless deployment ID is specified. ([#13485](https://github.com/vercel/vercel/pull/13485))
+
 ## 44.2.1
 
 ### Patch Changes
