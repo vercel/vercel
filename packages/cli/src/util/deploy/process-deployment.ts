@@ -240,8 +240,8 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      let project: Project | ProjectNotFound;
-      if (rollingRelease === undefined) {
+      let project: Project | ProjectNotFound | undefined;
+      if (rollingRelease === undefined && project === undefined) {
         project = await getProjectByNameOrId(client, projectName);
         if (project instanceof ProjectNotFound) {
           throw project;
