@@ -18,7 +18,11 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
-import type { CustomEnvironment, Project } from '@vercel-internals/types';
+import type {
+  CustomEnvironment,
+  Project,
+  ProjectRollingRelease,
+} from '@vercel-internals/types';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
@@ -172,6 +176,8 @@ export default async function redeploy(client: Client): Promise<number> {
         0
       );
       let project: Project | ProjectNotFound | undefined;
+      let rollingRelease: ProjectRollingRelease | undefined;
+
       if (
         (deployment.projectId && deployment.projectId != '') ||
         (deployment.name && deployment.name != '')
@@ -180,14 +186,15 @@ export default async function redeploy(client: Client): Promise<number> {
           client,
           deployment.projectId || deployment.name || ''
         );
-      }
-      if (project instanceof ProjectNotFound) {
-        throw project;
+        if (project instanceof ProjectNotFound) {
+          throw project;
+        }
+        rollingRelease = project?.rollingRelease;
       }
       if (
         deployment.readyState === 'READY' &&
         deployment.aliasAssigned &&
-        !project?.rollingRelease
+        !rollingRelease
       ) {
         output.spinner('Completing', 0);
       } else {
@@ -208,7 +215,7 @@ export default async function redeploy(client: Client): Promise<number> {
           )) {
             if (event.type === 'building') {
               output.spinner('Building', 0);
-            } else if (event.type === 'ready' && project?.rollingRelease) {
+            } else if (event.type === 'ready' && rollingRelease) {
               output.spinner('Releasing', 0);
               output.stopSpinner();
               deployment = event.payload;

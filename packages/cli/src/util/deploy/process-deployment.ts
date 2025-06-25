@@ -253,13 +253,12 @@ export default async function processDeployment({
           client,
           deployment.projectId || deployment.name || ''
         );
-      }
 
-      if (project instanceof ProjectNotFound) {
-        throw project;
+        if (project instanceof ProjectNotFound) {
+          throw project;
+        }
+        rollingRelease = project?.rollingRelease;
       }
-
-      rollingRelease = project?.rollingRelease;
 
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing', 0);
