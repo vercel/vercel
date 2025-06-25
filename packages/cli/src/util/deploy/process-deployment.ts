@@ -1,6 +1,7 @@
 import type {
   Deployment,
   Org,
+  Project,
   ProjectRollingRelease,
 } from '@vercel-internals/types';
 import {
@@ -241,19 +242,23 @@ export default async function processDeployment({
 
       const deployment: Deployment = event.payload;
 
-      // Workaround to avoid hammering `api-projects-list`
-      if (rollingRelease === undefined) {
-        const project = await getProjectByNameOrId(
+      let project: Project | ProjectNotFound | undefined;
+      if (
+        rollingRelease === undefined &&
+        deployment.projectId &&
+        deployment.projectId != ''
+      ) {
+        project = await getProjectByNameOrId(
           client,
           deployment?.projectId || ''
         );
-
-        if (project instanceof ProjectNotFound) {
-          throw project;
-        }
-
-        rollingRelease = project.rollingRelease;
       }
+
+      if (project instanceof ProjectNotFound) {
+        throw project;
+      }
+
+      rollingRelease = project?.rollingRelease;
 
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing', 0);

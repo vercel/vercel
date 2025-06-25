@@ -18,7 +18,7 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
-import type { CustomEnvironment } from '@vercel-internals/types';
+import type { CustomEnvironment, Project } from '@vercel-internals/types';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
@@ -171,14 +171,17 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
         0
       );
-      const project = await getProjectByNameOrId(client, deployment.projectId);
+      let project: Project | ProjectNotFound | undefined;
+      if (deployment.projectId && deployment.projectId != '') {
+        project = await getProjectByNameOrId(client, deployment.projectId);
+      }
       if (project instanceof ProjectNotFound) {
         throw project;
       }
       if (
         deployment.readyState === 'READY' &&
         deployment.aliasAssigned &&
-        !project.rollingRelease
+        !project?.rollingRelease
       ) {
         output.spinner('Completing', 0);
       } else {
@@ -199,7 +202,7 @@ export default async function redeploy(client: Client): Promise<number> {
           )) {
             if (event.type === 'building') {
               output.spinner('Building', 0);
-            } else if (event.type === 'ready' && project.rollingRelease) {
+            } else if (event.type === 'ready' && project?.rollingRelease) {
               output.spinner('Releasing', 0);
               output.stopSpinner();
               deployment = event.payload;
