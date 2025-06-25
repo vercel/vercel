@@ -15,8 +15,6 @@ import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
-import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../errors-ts';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -230,20 +228,6 @@ export default async function processDeployment({
 
       if (event.type === 'canceled') {
         stopSpinner();
-        return event.payload;
-      }
-
-      const deployment: Deployment = event.payload;
-      const project = await getProjectByNameOrId(
-        client,
-        deployment?.projectId || ''
-      );
-      if (project instanceof ProjectNotFound) {
-        throw project;
-      }
-      if (event.type === 'ready' && project.rollingRelease) {
-        output.spinner('Releasing', 0);
-        output.stopSpinner();
         return event.payload;
       }
 
