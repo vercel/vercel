@@ -57,7 +57,7 @@ describe('checkGuidanceStatus', () => {
             'The Vercel CLI can suggest common follow-up commands and steps to help guide new users.'
           );
           await expect(client.stderr).not.toOutput(
-            'You cand disable this feature by running:'
+            'You can disable this feature by running:'
           );
           await expect(client.stderr).not.toOutput('vercel guidance disable');
           await expect(client.stderr).not.toOutput(
