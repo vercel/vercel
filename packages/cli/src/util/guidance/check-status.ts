@@ -5,6 +5,13 @@ import output from '../../output-manager';
 
 export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
   if (!process.env.FF_GUIDANCE_MODE) {
+    // disabling guidance if not flagged into experimenting with it.
+    return;
+  }
+
+  if (process.env.CI) {
+    // disabling guidance initial enabling if in a CI environment
+    // which includes Vercel's build container.
     return;
   }
 

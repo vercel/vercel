@@ -9,6 +9,10 @@ vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 describe('checkGuidanceStatus', () => {
   const fileWriterSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
+  beforeEach(() => {
+    vi.stubEnv('CI', undefined);
+  });
+
   afterEach(() => {
     fileWriterSpy.mockClear();
     vi.unstubAllEnvs();
