@@ -30,7 +30,7 @@ export function checkGuidanceStatus({ config }: { config: GlobalConfig }) {
   output.note(
     'The Vercel CLI can suggest common follow-up commands and steps to help guide new users.'
   );
-  output.log('You cand disable this feature by running:');
+  output.log('You can disable this feature by running:');
   output.log('vercel guidance disable');
   output.log('or by setting VERCEL_GUIDANCE_DISABLED=1');
 
