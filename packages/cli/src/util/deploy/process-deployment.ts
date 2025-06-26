@@ -126,6 +126,7 @@ export default async function processDeployment({
   }
 
   let rollingRelease: ProjectRollingRelease | undefined;
+  let project: Project | ProjectNotFound | undefined;
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -240,7 +241,6 @@ export default async function processDeployment({
         return event.payload;
       }
 
-      let project: Project | ProjectNotFound | undefined;
       if (project === undefined) {
         project = await getProjectByNameOrId(client, projectName);
         rollingRelease = (project as Project)?.rollingRelease;
