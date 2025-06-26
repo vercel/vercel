@@ -668,11 +668,13 @@ export default async (client: Client): Promise<number> => {
 
     if (err instanceof BuildError) {
       output.error(err.message || 'Build failed');
-      output.error(
-        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
-          `logs ${now.url}`
+      output.log('\n');
+      output.log(
+        `To check build logs run: ${getCommandName(
+          `inspect ${now.url} --logs`
         )}`
       );
+      output.log(`Or inspect them in your browser at https://${now.url}/_logs`);
 
       return 1;
     }
