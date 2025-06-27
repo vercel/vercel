@@ -1,5 +1,18 @@
 # vercel
 
+## 44.2.7
+
+### Patch Changes
+
+- [cli] correct log checking suggestion for failed `deploy` runs ([#13500](https://github.com/vercel/vercel/pull/13500))
+
+- [rr] fix rate limits for undefined project name fetches ([#13497](https://github.com/vercel/vercel/pull/13497))
+
+- [cli][feature-flagged] adds stub `vercel guidance` command ([#13484](https://github.com/vercel/vercel/pull/13484))
+
+- Updated dependencies [[`83bccbfac19dbd63ff290ded3a7b96c5a1fad092`](https://github.com/vercel/vercel/commit/83bccbfac19dbd63ff290ded3a7b96c5a1fad092)]:
+  - @vercel/next@4.9.2
+
 ## 44.2.6
 
 ### Patch Changes
