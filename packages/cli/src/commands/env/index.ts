@@ -1,6 +1,5 @@
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
@@ -99,8 +98,6 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
     default:
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(envCommand, { columns: client.stderr.columns }));
-      return 2;
+      return pull(client, args.concat('--memory'), true);
   }
 }
