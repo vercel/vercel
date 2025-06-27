@@ -67,27 +67,25 @@ A promise that resolves when the cache entries expiration request is received.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:46](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L46)
+[packages/functions/src/cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
 
 ---
 
 ### get
 
-• **get**: (`key`: `string`, `options?`: { `tags?`: `string`[] }) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
+• **get**: (`key`: `string`) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
 
 #### Type declaration
 
-▸ (`key`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
+▸ (`key`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`unknown`\>
 
 Retrieves a value from the cache.
 
 ##### Parameters
 
-| Name            | Type       | Description                                     |
-| :-------------- | :--------- | :---------------------------------------------- |
-| `key`           | `string`   | The key of the value to retrieve.               |
-| `options?`      | `Object`   | Optional settings for the cache entry.          |
-| `options.tags?` | `string`[] | Optional tags to associate wit the cache entry. |
+| Name  | Type     | Description                       |
+| :---- | :------- | :-------------------------------- |
+| `key` | `string` | The key of the value to retrieve. |
 
 ##### Returns
 
@@ -97,7 +95,7 @@ A promise that resolves to the value, or null if not found.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:21](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L21)
+[packages/functions/src/cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
 
 ---
 
@@ -130,4 +128,4 @@ A promise that resolves when the value is set.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:34](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L34)
+[packages/functions/src/cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)
