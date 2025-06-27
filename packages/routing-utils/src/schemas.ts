@@ -339,7 +339,6 @@ const transformsSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  maxItems: 2048,
   deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
