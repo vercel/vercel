@@ -598,6 +598,7 @@ export interface Chain {
  *
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md
+ * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
  */
 export interface CloudEventTriggerBase<T extends string = string> {
   /** Vercel trigger specification version - must be 1 (REQUIRED) */
@@ -625,8 +626,6 @@ export interface CloudEventTriggerBase<T extends string = string> {
 /**
  * CloudEvent queue trigger for Vercel's queue system.
  * Handles "com.vercel.queue.v1" events with queue-specific configuration.
- *
- * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
  */
 export interface CloudEventQueueTrigger
   extends CloudEventTriggerBase<'com.vercel.queue.v1'> {
