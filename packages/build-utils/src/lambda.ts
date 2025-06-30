@@ -11,9 +11,15 @@ import type {
   Files,
   FunctionFramework,
   CloudEventTrigger,
+  CloudEventTriggerBase,
+  CloudEventQueueTrigger,
 } from './types';
 
-export type { CloudEventTrigger };
+export type {
+  CloudEventTrigger,
+  CloudEventTriggerBase,
+  CloudEventQueueTrigger,
+};
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -265,6 +271,37 @@ export class Lambda {
         );
         assert(trigger.type.length > 0, `${prefix}.type cannot be empty`);
 
+        // Validate queue-specific fields for com.vercel.queue.v1 triggers
+        if (trigger.type === 'com.vercel.queue.v1') {
+          assert(
+            'queue' in trigger &&
+              typeof trigger.queue === 'object' &&
+              trigger.queue !== null,
+            `${prefix}.queue is required and must be an object for queue triggers`
+          );
+
+          const queue = trigger.queue;
+          const queuePrefix = `${prefix}.queue`;
+
+          assert(
+            typeof queue.subject === 'string',
+            `${queuePrefix}.subject is required and must be a string`
+          );
+          assert(
+            queue.subject.length > 0,
+            `${queuePrefix}.subject cannot be empty`
+          );
+
+          assert(
+            typeof queue.consumer === 'string',
+            `${queuePrefix}.consumer is required and must be a string`
+          );
+          assert(
+            queue.consumer.length > 0,
+            `${queuePrefix}.consumer cannot be empty`
+          );
+        }
+
         // Validate required httpBinding
         const binding = trigger.httpBinding;
         const bindingPrefix = `${prefix}.httpBinding`;
@@ -302,48 +339,30 @@ export class Lambda {
           );
         }
 
-        // Validate optional delivery configuration
-        if (trigger.delivery !== undefined) {
-          const delivery = trigger.delivery;
-          const deliveryPrefix = `${prefix}.delivery`;
+        // Validate optional queue configuration (only on queue triggers)
+        if (trigger.type === 'com.vercel.queue.v1') {
+          const queue = (trigger as any).queue;
+          const queuePrefix = `${prefix}.queue`;
 
-          assert(
-            typeof delivery === 'object' && delivery !== null,
-            `${deliveryPrefix} must be an object`
-          );
-
-          if (delivery.maxConcurrency !== undefined) {
+          if (queue.maxAttempts !== undefined) {
             assert(
-              typeof delivery.maxConcurrency === 'number',
-              `${deliveryPrefix}.maxConcurrency must be a number`
+              typeof queue.maxAttempts === 'number',
+              `${queuePrefix}.maxAttempts must be a number`
             );
             assert(
-              Number.isInteger(delivery.maxConcurrency) &&
-                delivery.maxConcurrency > 0,
-              `${deliveryPrefix}.maxConcurrency must be a positive integer`
+              Number.isInteger(queue.maxAttempts) && queue.maxAttempts >= 0,
+              `${queuePrefix}.maxAttempts must be a non-negative integer`
             );
           }
 
-          if (delivery.maxAttempts !== undefined) {
+          if (queue.retryAfterSeconds !== undefined) {
             assert(
-              typeof delivery.maxAttempts === 'number',
-              `${deliveryPrefix}.maxAttempts must be a number`
+              typeof queue.retryAfterSeconds === 'number',
+              `${queuePrefix}.retryAfterSeconds must be a number`
             );
             assert(
-              Number.isInteger(delivery.maxAttempts) &&
-                delivery.maxAttempts >= 0,
-              `${deliveryPrefix}.maxAttempts must be a non-negative integer`
-            );
-          }
-
-          if (delivery.retryAfterSeconds !== undefined) {
-            assert(
-              typeof delivery.retryAfterSeconds === 'number',
-              `${deliveryPrefix}.retryAfterSeconds must be a number`
-            );
-            assert(
-              delivery.retryAfterSeconds > 0,
-              `${deliveryPrefix}.retryAfterSeconds must be a positive number`
+              queue.retryAfterSeconds > 0,
+              `${queuePrefix}.retryAfterSeconds must be a positive number`
             );
           }
         }

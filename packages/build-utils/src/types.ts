@@ -593,14 +593,13 @@ export interface Chain {
 }
 
 /**
- * CloudEvent trigger definition for HTTP protocol binding.
+ * Base CloudEvent trigger definition for HTTP protocol binding.
  * Defines what types of CloudEvents this Lambda can receive as an HTTP endpoint.
  *
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md
- * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
  */
-export interface CloudEventTrigger {
+export interface CloudEventTriggerBase<T extends string = string> {
   /** Vercel trigger specification version - must be 1 (REQUIRED) */
   triggerVersion: 1;
 
@@ -608,7 +607,7 @@ export interface CloudEventTrigger {
   specversion: '1.0';
 
   /** Event type pattern this trigger handles (REQUIRED) */
-  type: string;
+  type: T;
 
   /** HTTP binding configuration (REQUIRED) */
   httpBinding: {
@@ -621,39 +620,41 @@ export interface CloudEventTrigger {
     /** HTTP pathname for this trigger endpoint (OPTIONAL) */
     pathname?: string;
   };
+}
 
+/**
+ * CloudEvent queue trigger for Vercel's queue system.
+ * Handles "com.vercel.queue.v1" events with queue-specific configuration.
+ *
+ * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
+ */
+export interface CloudEventQueueTrigger
+  extends CloudEventTriggerBase<'com.vercel.queue.v1'> {
   /**
-   * Delivery configuration hints for trigger execution (OPTIONAL)
-   *
-   * These are HINTS that the trigger system MAY use to optimize execution,
-   * but they are NOT guarantees. The system may disregard these settings.
-   *
-   * IMPORTANT: Regardless of these settings, callers maintain synchronous
-   * event-response guarantees. HTTP requests to this trigger will receive
-   * immediate responses, not asynchronous acknowledgments.
+   * Queue configuration for this trigger (REQUIRED)
    */
-  delivery?: {
-    /**
-     * HINT: Suggested maximum number of concurrent executions for this trigger.
-     * Useful for system-initiated triggers like webhooks or pubsub events.
-     * The system MAY ignore this hint if resource constraints require it.
-     * Behavior when not specified depends on the sender system's defaults.
-     */
-    maxConcurrency?: number;
+  queue: {
+    /** Name of the queue subject to consume from (REQUIRED) */
+    subject: string;
+
+    /** Name of the consumer group for this trigger (REQUIRED) */
+    consumer: string;
 
     /**
-     * HINT: Suggested maximum number of retry attempts for failed executions.
-     * The system MAY implement different retry behavior or disable retries entirely.
-     * NOTE: Retries do NOT affect the synchronous response to the original caller.
-     * Behavior when not specified depends on the sender system's defaults.
+     * Maximum number of retry attempts for failed executions (OPTIONAL)
+     * Behavior when not specified depends on the server's default configuration.
      */
     maxAttempts?: number;
 
     /**
-     * HINT: Suggested delay in seconds before retrying failed executions.
-     * The system MAY use different timing or backoff strategies.
-     * Behavior when not specified depends on the sender system's defaults.
+     * Delay in seconds before retrying failed executions (OPTIONAL)
+     * Behavior when not specified depends on the server's default configuration.
      */
     retryAfterSeconds?: number;
   };
 }
+
+/**
+ * Union type of all supported CloudEvent trigger types.
+ */
+export type CloudEventTrigger = CloudEventTriggerBase | CloudEventQueueTrigger;

@@ -2,7 +2,11 @@ import path from 'path';
 import { tmpdir } from 'os';
 import fs from 'fs-extra';
 import { createZip, Lambda } from '../src/lambda';
-import type { CloudEventTrigger, Files } from '../src/types';
+import type {
+  CloudEventTrigger,
+  CloudEventQueueTrigger,
+  Files,
+} from '../src/types';
 import { FileBlob, glob, spawnAsync } from '../src';
 import { describe, expect, it } from 'vitest';
 
@@ -499,19 +503,21 @@ describe('Lambda', () => {
     });
 
     describe('Delivery Configuration', () => {
-      it('should create Lambda with maxConcurrency setting', () => {
-        const trigger: CloudEventTrigger = {
+      it('should create Lambda with retry attempts setting', () => {
+        const trigger: CloudEventQueueTrigger = {
           triggerVersion: 1,
           specversion: '1.0',
-          type: 'v1.pubsub.vercel.com',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            subject: 'user-events',
+            consumer: 'webhook-processors',
+            maxAttempts: 3,
+          },
           httpBinding: {
             mode: 'structured',
             method: 'POST',
             pathname: '/webhooks/pubsub',
           },
-          delivery: {
-            maxConcurrency: 5,
-          },
         };
 
         const lambda = new Lambda({
@@ -521,24 +527,27 @@ describe('Lambda', () => {
           experimentalTriggers: [trigger],
         });
 
-        expect(lambda.experimentalTriggers![0].delivery?.maxConcurrency).toBe(
-          5
-        );
+        expect(
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .maxAttempts
+        ).toBe(3);
       });
 
       it('should create Lambda with retry configuration', () => {
-        const trigger: CloudEventTrigger = {
+        const trigger: CloudEventQueueTrigger = {
           triggerVersion: 1,
           specversion: '1.0',
-          type: 'v1.webhook.vercel.com',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            subject: 'webhook-events',
+            consumer: 'retry-processors',
+            maxAttempts: 3,
+            retryAfterSeconds: 10,
+          },
           httpBinding: {
             mode: 'structured',
             method: 'POST',
           },
-          delivery: {
-            maxAttempts: 3,
-            retryAfterSeconds: 10,
-          },
         };
 
         const lambda = new Lambda({
@@ -548,27 +557,32 @@ describe('Lambda', () => {
           experimentalTriggers: [trigger],
         });
 
-        expect(lambda.experimentalTriggers![0].delivery?.maxAttempts).toBe(3);
         expect(
-          lambda.experimentalTriggers![0].delivery?.retryAfterSeconds
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .maxAttempts
+        ).toBe(3);
+        expect(
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .retryAfterSeconds
         ).toBe(10);
       });
 
-      it('should create Lambda with complete delivery configuration', () => {
-        const trigger: CloudEventTrigger = {
+      it('should create Lambda with complete queue configuration', () => {
+        const trigger: CloudEventQueueTrigger = {
           triggerVersion: 1,
           specversion: '1.0',
-          type: 'v1.system.vercel.com',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            subject: 'system-events',
+            consumer: 'system-processors',
+            maxAttempts: 5,
+            retryAfterSeconds: 30,
+          },
           httpBinding: {
             mode: 'structured',
             method: 'POST',
             pathname: '/system/events',
           },
-          delivery: {
-            maxConcurrency: 10,
-            maxAttempts: 5,
-            retryAfterSeconds: 30,
-          },
         };
 
         const lambda = new Lambda({
@@ -578,57 +592,14 @@ describe('Lambda', () => {
           experimentalTriggers: [trigger],
         });
 
-        const delivery = lambda.experimentalTriggers![0].delivery;
-        expect(delivery?.maxConcurrency).toBe(10);
-        expect(delivery?.maxAttempts).toBe(5);
-        expect(delivery?.retryAfterSeconds).toBe(30);
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.maxAttempts).toBe(5);
+        expect(queue.retryAfterSeconds).toBe(30);
       });
 
-      describe('Delivery Validation Errors', () => {
-        it('should throw error for invalid maxConcurrency type', () => {
-          expect(
-            () =>
-              new Lambda({
-                files,
-                handler: 'index.handler',
-                runtime: 'nodejs18.x',
-                experimentalTriggers: [
-                  {
-                    triggerVersion: 1,
-                    specversion: '1.0',
-                    type: 'v1.test.vercel.com',
-                    httpBinding: { mode: 'structured' },
-                    delivery: { maxConcurrency: 'invalid' as any },
-                  },
-                ],
-              })
-          ).toThrow(
-            '"experimentalTriggers[0]".delivery.maxConcurrency must be a number'
-          );
-        });
-
-        it('should throw error for non-positive maxConcurrency', () => {
-          expect(
-            () =>
-              new Lambda({
-                files,
-                handler: 'index.handler',
-                runtime: 'nodejs18.x',
-                experimentalTriggers: [
-                  {
-                    triggerVersion: 1,
-                    specversion: '1.0',
-                    type: 'v1.test.vercel.com',
-                    httpBinding: { mode: 'structured' },
-                    delivery: { maxConcurrency: 0 },
-                  },
-                ],
-              })
-          ).toThrow(
-            '"experimentalTriggers[0]".delivery.maxConcurrency must be a positive integer'
-          );
-        });
-
+      describe('Queue Validation Errors', () => {
         it('should throw error for negative maxAttempts', () => {
           expect(
             () =>
@@ -640,14 +611,18 @@ describe('Lambda', () => {
                   {
                     triggerVersion: 1,
                     specversion: '1.0',
-                    type: 'v1.test.vercel.com',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      subject: 'test-subject',
+                      consumer: 'test-consumer',
+                      maxAttempts: -1,
+                    },
                     httpBinding: { mode: 'structured' },
-                    delivery: { maxAttempts: -1 },
                   },
                 ],
               })
           ).toThrow(
-            '"experimentalTriggers[0]".delivery.maxAttempts must be a non-negative integer'
+            '"experimentalTriggers[0]".queue.maxAttempts must be a non-negative integer'
           );
         });
 
@@ -662,14 +637,18 @@ describe('Lambda', () => {
                   {
                     triggerVersion: 1,
                     specversion: '1.0',
-                    type: 'v1.test.vercel.com',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      subject: 'test-subject',
+                      consumer: 'test-consumer',
+                      retryAfterSeconds: 0,
+                    },
                     httpBinding: { mode: 'structured' },
-                    delivery: { retryAfterSeconds: 0 },
                   },
                 ],
               })
           ).toThrow(
-            '"experimentalTriggers[0]".delivery.retryAfterSeconds must be a positive number'
+            '"experimentalTriggers[0]".queue.retryAfterSeconds must be a positive number'
           );
         });
 
@@ -684,14 +663,18 @@ describe('Lambda', () => {
                   {
                     triggerVersion: 1,
                     specversion: '1.0',
-                    type: 'v1.test.vercel.com',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      subject: 'test-subject',
+                      consumer: 'test-consumer',
+                      maxAttempts: 'three' as any,
+                    },
                     httpBinding: { mode: 'structured' },
-                    delivery: { maxAttempts: 'three' as any },
                   },
                 ],
               })
           ).toThrow(
-            '"experimentalTriggers[0]".delivery.maxAttempts must be a number'
+            '"experimentalTriggers[0]".queue.maxAttempts must be a number'
           );
         });
 
@@ -706,34 +689,39 @@ describe('Lambda', () => {
                   {
                     triggerVersion: 1,
                     specversion: '1.0',
-                    type: 'v1.test.vercel.com',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      subject: 'test-subject',
+                      consumer: 'test-consumer',
+                      retryAfterSeconds: 'ten' as any,
+                    },
                     httpBinding: { mode: 'structured' },
-                    delivery: { retryAfterSeconds: 'ten' as any },
                   },
                 ],
               })
           ).toThrow(
-            '"experimentalTriggers[0]".delivery.retryAfterSeconds must be a number'
+            '"experimentalTriggers[0]".queue.retryAfterSeconds must be a number'
           );
         });
       });
 
       describe('Use Cases', () => {
-        it('should support system-initiated triggers with concurrency and retry', () => {
-          // System-initiated trigger (webhook, pubsub) with delivery controls
-          const systemTrigger: CloudEventTrigger = {
+        it('should support system-initiated triggers with retry configuration', () => {
+          // System-initiated trigger (webhook, pubsub) with queue controls
+          const systemTrigger: CloudEventQueueTrigger = {
             triggerVersion: 1,
             specversion: '1.0',
-            type: 'v1.pubsub.vercel.com',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              subject: 'pubsub-messages',
+              consumer: 'system-processors',
+              maxAttempts: 3,
+              retryAfterSeconds: 5,
+            },
             httpBinding: {
               mode: 'structured',
               method: 'POST',
               pathname: '/pubsub/messages',
-            },
-            delivery: {
-              maxConcurrency: 3,
-              maxAttempts: 3,
-              retryAfterSeconds: 5,
             },
           };
 
@@ -748,8 +736,8 @@ describe('Lambda', () => {
           ).not.toThrow();
         });
 
-        it('should support user-initiated triggers without delivery config', () => {
-          // User-initiated trigger (health check) without delivery controls
+        it('should support user-initiated triggers without queue config', () => {
+          // User-initiated trigger (health check) without queue controls
           const userTrigger: CloudEventTrigger = {
             triggerVersion: 1,
             specversion: '1.0',
@@ -759,7 +747,7 @@ describe('Lambda', () => {
               method: 'GET',
               pathname: '/health',
             },
-            // No delivery config - one-and-done trigger
+            // No queue config - simple trigger
           };
 
           expect(
@@ -774,16 +762,18 @@ describe('Lambda', () => {
         });
 
         it('should allow zero retry attempts for immediate failure', () => {
-          const trigger: CloudEventTrigger = {
+          const trigger: CloudEventQueueTrigger = {
             triggerVersion: 1,
             specversion: '1.0',
-            type: 'v1.critical.vercel.com',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              subject: 'critical-events',
+              consumer: 'immediate-processors',
+              maxAttempts: 0, // No retries - fail immediately
+            },
             httpBinding: {
               mode: 'structured',
               method: 'POST',
-            },
-            delivery: {
-              maxAttempts: 0, // No retries - fail immediately
             },
           };
 
@@ -798,22 +788,21 @@ describe('Lambda', () => {
           ).not.toThrow();
         });
 
-        it('should document that delivery config represents hints, not guarantees', () => {
-          // Delivery configuration provides HINTS that the system MAY use
-          // but are NOT guarantees. HTTP semantics remain synchronous.
-          const hintTrigger: CloudEventTrigger = {
+        it('should document that queue config represents proper configuration', () => {
+          // Queue configuration provides proper configuration for queue behavior
+          const queueTrigger: CloudEventQueueTrigger = {
             triggerVersion: 1,
             specversion: '1.0',
-            type: 'v1.hint.vercel.com',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              subject: 'config-events',
+              consumer: 'config-processors',
+              maxAttempts: 10,
+              retryAfterSeconds: 2,
+            },
             httpBinding: {
               mode: 'structured',
               method: 'POST',
-            },
-            delivery: {
-              // These are HINTS - the system may disregard them
-              maxConcurrency: 100, // System may limit this based on resources
-              maxAttempts: 10, // System may implement different retry logic
-              retryAfterSeconds: 2, // System may use different timing
             },
           };
 
@@ -821,11 +810,13 @@ describe('Lambda', () => {
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            experimentalTriggers: [hintTrigger],
+            experimentalTriggers: [queueTrigger],
           });
 
-          // Delivery config is stored as metadata/hints
-          expect(lambda.experimentalTriggers![0].delivery).toBeDefined();
+          // Queue config is stored as proper configuration
+          expect(
+            (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+          ).toBeDefined();
 
           // NOTE: The actual execution system may:
           // - Ignore maxConcurrency if resources are constrained
