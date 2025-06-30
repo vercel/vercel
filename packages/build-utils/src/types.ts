@@ -591,3 +591,33 @@ export interface Chain {
    */
   headers: Record<string, string>;
 }
+
+/**
+ * CloudEvent trigger definition for HTTP protocol binding.
+ * Defines what types of CloudEvents this Lambda can receive as an HTTP endpoint.
+ *
+ * @see https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md
+ * @see https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md
+ */
+export interface CloudEventTrigger {
+  /** Vercel trigger specification version - must be 1 (REQUIRED) */
+  triggerVersion: 1;
+
+  /** CloudEvents specification version - must be "1.0" (REQUIRED) */
+  specversion: '1.0';
+
+  /** Event type pattern this trigger handles (REQUIRED) */
+  type: string;
+
+  /** HTTP binding configuration (REQUIRED) */
+  httpBinding: {
+    /** HTTP binding mode - only structured mode is supported (REQUIRED) */
+    mode: 'structured';
+
+    /** HTTP method for this trigger endpoint (OPTIONAL, default: 'POST') */
+    method?: 'GET' | 'POST' | 'HEAD';
+
+    /** HTTP pathname for this trigger endpoint (OPTIONAL) */
+    pathname?: string;
+  };
+}

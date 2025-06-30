@@ -5,7 +5,15 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Config, Env, Files, FunctionFramework } from './types';
+import type {
+  Config,
+  Env,
+  Files,
+  FunctionFramework,
+  CloudEventTrigger,
+} from './types';
+
+export type { CloudEventTrigger };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -29,6 +37,15 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   framework?: FunctionFramework;
+  /**
+   * Experimental CloudEvents trigger definitions that this Lambda can receive.
+   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
+   * Currently supports HTTP protocol binding in structured mode only.
+   * Only supports CloudEvents specification version 1.0.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: CloudEventTrigger[];
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -95,6 +112,15 @@ export class Lambda {
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
   experimentalAllowBundling?: boolean;
+  /**
+   * Experimental CloudEvents trigger definitions that this Lambda can receive.
+   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
+   * Currently supports HTTP protocol binding in structured mode only.
+   * Only supports CloudEvents specification version 1.0.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: CloudEventTrigger[];
 
   constructor(opts: LambdaOptions) {
     const {
@@ -112,6 +138,7 @@ export class Lambda {
       experimentalResponseStreaming,
       operationType,
       framework,
+      experimentalTriggers,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -192,6 +219,77 @@ export class Lambda {
       }
     }
 
+    if (experimentalTriggers !== undefined) {
+      assert(
+        Array.isArray(experimentalTriggers),
+        '"experimentalTriggers" is not an Array'
+      );
+
+      for (let i = 0; i < experimentalTriggers.length; i++) {
+        const trigger = experimentalTriggers[i];
+        const prefix = `"experimentalTriggers[${i}]"`;
+
+        assert(
+          typeof trigger === 'object' && trigger !== null,
+          `${prefix} is not an object`
+        );
+
+        // Validate required CloudEventTrigger attributes
+        assert(
+          trigger.triggerVersion === 1,
+          `${prefix}.triggerVersion must be 1`
+        );
+
+        assert(
+          trigger.specversion === '1.0',
+          `${prefix}.specversion must be "1.0"`
+        );
+
+        assert(
+          typeof trigger.type === 'string',
+          `${prefix}.type is not a string`
+        );
+        assert(trigger.type.length > 0, `${prefix}.type cannot be empty`);
+
+        // Validate required httpBinding
+        const binding = trigger.httpBinding;
+        const bindingPrefix = `${prefix}.httpBinding`;
+
+        assert(
+          typeof binding === 'object' && binding !== null,
+          `${bindingPrefix} is required and must be an object`
+        );
+        assert(
+          binding.mode === 'structured',
+          `${bindingPrefix}.mode must be "structured"`
+        );
+
+        // Validate optional HTTP configuration within httpBinding
+        if (binding.method !== undefined) {
+          const validMethods = ['GET', 'POST', 'HEAD'];
+          assert(
+            validMethods.includes(binding.method),
+            `${bindingPrefix}.method must be one of: ${validMethods.join(', ')}`
+          );
+        }
+
+        if (binding.pathname !== undefined) {
+          assert(
+            typeof binding.pathname === 'string',
+            `${bindingPrefix}.pathname must be a string`
+          );
+          assert(
+            binding.pathname.length > 0,
+            `${bindingPrefix}.pathname cannot be empty`
+          );
+          assert(
+            binding.pathname.startsWith('/'),
+            `${bindingPrefix}.pathname must start with '/'`
+          );
+        }
+      }
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -213,6 +311,7 @@ export class Lambda {
       'experimentalAllowBundling' in opts
         ? opts.experimentalAllowBundling
         : undefined;
+    this.experimentalTriggers = experimentalTriggers;
   }
 
   async createZip(): Promise<Buffer> {
