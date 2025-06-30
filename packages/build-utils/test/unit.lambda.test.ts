@@ -497,5 +497,346 @@ describe('Lambda', () => {
         expect(storedTrigger.httpBinding.pathname).toBe('/api/health');
       });
     });
+
+    describe('Delivery Configuration', () => {
+      it('should create Lambda with maxConcurrency setting', () => {
+        const trigger: CloudEventTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.pubsub.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/webhooks/pubsub',
+          },
+          delivery: {
+            maxConcurrency: 5,
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        expect(lambda.experimentalTriggers![0].delivery?.maxConcurrency).toBe(
+          5
+        );
+      });
+
+      it('should create Lambda with retry configuration', () => {
+        const trigger: CloudEventTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.webhook.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+          },
+          delivery: {
+            maxAttempts: 3,
+            retryAfterSeconds: 10,
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        expect(lambda.experimentalTriggers![0].delivery?.maxAttempts).toBe(3);
+        expect(
+          lambda.experimentalTriggers![0].delivery?.retryAfterSeconds
+        ).toBe(10);
+      });
+
+      it('should create Lambda with complete delivery configuration', () => {
+        const trigger: CloudEventTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.system.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/system/events',
+          },
+          delivery: {
+            maxConcurrency: 10,
+            maxAttempts: 5,
+            retryAfterSeconds: 30,
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        const delivery = lambda.experimentalTriggers![0].delivery;
+        expect(delivery?.maxConcurrency).toBe(10);
+        expect(delivery?.maxAttempts).toBe(5);
+        expect(delivery?.retryAfterSeconds).toBe(30);
+      });
+
+      describe('Delivery Validation Errors', () => {
+        it('should throw error for invalid maxConcurrency type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { maxConcurrency: 'invalid' as any },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.maxConcurrency must be a number'
+          );
+        });
+
+        it('should throw error for non-positive maxConcurrency', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { maxConcurrency: 0 },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.maxConcurrency must be a positive integer'
+          );
+        });
+
+        it('should throw error for negative maxAttempts', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { maxAttempts: -1 },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.maxAttempts must be a non-negative integer'
+          );
+        });
+
+        it('should throw error for non-positive retryAfterSeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { retryAfterSeconds: 0 },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.retryAfterSeconds must be a positive number'
+          );
+        });
+
+        it('should throw error for invalid maxAttempts type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { maxAttempts: 'three' as any },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.maxAttempts must be a number'
+          );
+        });
+
+        it('should throw error for invalid retryAfterSeconds type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: { mode: 'structured' },
+                    delivery: { retryAfterSeconds: 'ten' as any },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".delivery.retryAfterSeconds must be a number'
+          );
+        });
+      });
+
+      describe('Use Cases', () => {
+        it('should support system-initiated triggers with concurrency and retry', () => {
+          // System-initiated trigger (webhook, pubsub) with delivery controls
+          const systemTrigger: CloudEventTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'v1.pubsub.vercel.com',
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+              pathname: '/pubsub/messages',
+            },
+            delivery: {
+              maxConcurrency: 3,
+              maxAttempts: 3,
+              retryAfterSeconds: 5,
+            },
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [systemTrigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should support user-initiated triggers without delivery config', () => {
+          // User-initiated trigger (health check) without delivery controls
+          const userTrigger: CloudEventTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'v1.health.vercel.com',
+            httpBinding: {
+              mode: 'structured',
+              method: 'GET',
+              pathname: '/health',
+            },
+            // No delivery config - one-and-done trigger
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [userTrigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should allow zero retry attempts for immediate failure', () => {
+          const trigger: CloudEventTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'v1.critical.vercel.com',
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+            },
+            delivery: {
+              maxAttempts: 0, // No retries - fail immediately
+            },
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [trigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should document that delivery config represents hints, not guarantees', () => {
+          // Delivery configuration provides HINTS that the system MAY use
+          // but are NOT guarantees. HTTP semantics remain synchronous.
+          const hintTrigger: CloudEventTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'v1.hint.vercel.com',
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+            },
+            delivery: {
+              // These are HINTS - the system may disregard them
+              maxConcurrency: 100, // System may limit this based on resources
+              maxAttempts: 10, // System may implement different retry logic
+              retryAfterSeconds: 2, // System may use different timing
+            },
+          };
+
+          const lambda = new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalTriggers: [hintTrigger],
+          });
+
+          // Delivery config is stored as metadata/hints
+          expect(lambda.experimentalTriggers![0].delivery).toBeDefined();
+
+          // NOTE: The actual execution system may:
+          // - Ignore maxConcurrency if resources are constrained
+          // - Implement different retry behavior
+          // - Disable retries entirely for performance
+          //
+          // HTTP request-response remains synchronous regardless:
+          // POST /trigger -> immediate response (success/failure)
+          // Retries (if any) happen independently of the HTTP response
+        });
+      });
+    });
   });
 });

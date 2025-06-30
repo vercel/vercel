@@ -43,6 +43,13 @@ export interface LambdaOptionsBase {
    * Currently supports HTTP protocol binding in structured mode only.
    * Only supports CloudEvents specification version 1.0.
    *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
+   *
    * @experimental This feature is experimental and may change.
    */
   experimentalTriggers?: CloudEventTrigger[];
@@ -117,6 +124,13 @@ export class Lambda {
    * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
    * Currently supports HTTP protocol binding in structured mode only.
    * Only supports CloudEvents specification version 1.0.
+   *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
    *
    * @experimental This feature is experimental and may change.
    */
@@ -286,6 +300,52 @@ export class Lambda {
             binding.pathname.startsWith('/'),
             `${bindingPrefix}.pathname must start with '/'`
           );
+        }
+
+        // Validate optional delivery configuration
+        if (trigger.delivery !== undefined) {
+          const delivery = trigger.delivery;
+          const deliveryPrefix = `${prefix}.delivery`;
+
+          assert(
+            typeof delivery === 'object' && delivery !== null,
+            `${deliveryPrefix} must be an object`
+          );
+
+          if (delivery.maxConcurrency !== undefined) {
+            assert(
+              typeof delivery.maxConcurrency === 'number',
+              `${deliveryPrefix}.maxConcurrency must be a number`
+            );
+            assert(
+              Number.isInteger(delivery.maxConcurrency) &&
+                delivery.maxConcurrency > 0,
+              `${deliveryPrefix}.maxConcurrency must be a positive integer`
+            );
+          }
+
+          if (delivery.maxAttempts !== undefined) {
+            assert(
+              typeof delivery.maxAttempts === 'number',
+              `${deliveryPrefix}.maxAttempts must be a number`
+            );
+            assert(
+              Number.isInteger(delivery.maxAttempts) &&
+                delivery.maxAttempts >= 0,
+              `${deliveryPrefix}.maxAttempts must be a non-negative integer`
+            );
+          }
+
+          if (delivery.retryAfterSeconds !== undefined) {
+            assert(
+              typeof delivery.retryAfterSeconds === 'number',
+              `${deliveryPrefix}.retryAfterSeconds must be a number`
+            );
+            assert(
+              delivery.retryAfterSeconds > 0,
+              `${deliveryPrefix}.retryAfterSeconds must be a positive number`
+            );
+          }
         }
       }
     }

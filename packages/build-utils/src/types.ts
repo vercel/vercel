@@ -598,6 +598,7 @@ export interface Chain {
  *
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md
  * @see https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md
+ * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
  */
 export interface CloudEventTrigger {
   /** Vercel trigger specification version - must be 1 (REQUIRED) */
@@ -619,5 +620,40 @@ export interface CloudEventTrigger {
 
     /** HTTP pathname for this trigger endpoint (OPTIONAL) */
     pathname?: string;
+  };
+
+  /**
+   * Delivery configuration hints for trigger execution (OPTIONAL)
+   *
+   * These are HINTS that the trigger system MAY use to optimize execution,
+   * but they are NOT guarantees. The system may disregard these settings.
+   *
+   * IMPORTANT: Regardless of these settings, callers maintain synchronous
+   * event-response guarantees. HTTP requests to this trigger will receive
+   * immediate responses, not asynchronous acknowledgments.
+   */
+  delivery?: {
+    /**
+     * HINT: Suggested maximum number of concurrent executions for this trigger.
+     * Useful for system-initiated triggers like webhooks or pubsub events.
+     * The system MAY ignore this hint if resource constraints require it.
+     * Behavior when not specified depends on the sender system's defaults.
+     */
+    maxConcurrency?: number;
+
+    /**
+     * HINT: Suggested maximum number of retry attempts for failed executions.
+     * The system MAY implement different retry behavior or disable retries entirely.
+     * NOTE: Retries do NOT affect the synchronous response to the original caller.
+     * Behavior when not specified depends on the sender system's defaults.
+     */
+    maxAttempts?: number;
+
+    /**
+     * HINT: Suggested delay in seconds before retrying failed executions.
+     * The system MAY use different timing or backoff strategies.
+     * Behavior when not specified depends on the sender system's defaults.
+     */
+    retryAfterSeconds?: number;
   };
 }
