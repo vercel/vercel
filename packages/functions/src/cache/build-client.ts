@@ -1,4 +1,10 @@
-import { PkgCacheState } from './index';
+import {
+  HEADERS_CACHE_STATE,
+  HEADERS_VERCEL_CACHE_ITEM_NAME,
+  HEADERS_VERCEL_CACHE_TAGS,
+  HEADERS_VERCEL_REVALIDATE,
+  PkgCacheState,
+} from './index';
 
 export class BuildCache {
   private readonly endpoint: string;
@@ -31,7 +37,7 @@ export class BuildCache {
       }
       if (res.status === 200) {
         const cacheState = res.headers.get(
-          'x-vercel-cache-state'
+          HEADERS_CACHE_STATE
         ) as PkgCacheState | null;
         if (cacheState !== PkgCacheState.Fresh) {
           res.body?.cancel?.();
@@ -59,13 +65,13 @@ export class BuildCache {
     try {
       const optionalHeaders: Record<string, string> = {};
       if (options?.ttl) {
-        optionalHeaders['x-vercel-revalidate'] = options.ttl.toString();
+        optionalHeaders[HEADERS_VERCEL_REVALIDATE] = options.ttl.toString();
       }
       if (options?.tags && options.tags.length > 0) {
-        optionalHeaders['x-vercel-cache-tags'] = options.tags.join(',');
+        optionalHeaders[HEADERS_VERCEL_CACHE_TAGS] = options.tags.join(',');
       }
       if (options?.name) {
-        optionalHeaders['x-vercel-cache-item-name'] = options.name;
+        optionalHeaders[HEADERS_VERCEL_CACHE_ITEM_NAME] = options.name;
       }
       const res = await fetch(`${this.endpoint}${key}`, {
         method: 'POST',
