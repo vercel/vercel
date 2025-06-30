@@ -28,7 +28,8 @@ export class BuildCache {
         return null;
       }
       if (res.status === 200) {
-        if (res.headers.get('x-vercel-cache-state') !== 'fresh') {
+        if (res.headers.get('x-vercel-cache-state') !== PkgCacheState.Fresh) {
+          res.body?.cancel?.();
           return null;
         }
         const content = (await res.json()) as unknown;
