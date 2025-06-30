@@ -5,6 +5,8 @@ describe('BuildCache', () => {
   const host = 'localhost';
   const basepath = '';
   const protocol = 'http';
+  const endpoint = `${protocol}://${host}${basepath}/v1/build-cache/`;
+  const headers = { Auth: 'test-auth' };
   const key = 'test-key';
   const value = { foo: 'bar' };
   let fetchMock: Mock;
@@ -17,9 +19,8 @@ describe('BuildCache', () => {
     // @ts-ignore
     global.fetch = fetchMock;
     cache = new BuildCache({
-      scHost: host,
-      scBasepath: basepath,
-      scProtocol: protocol,
+      endpoint,
+      headers,
       onError,
     });
   });
