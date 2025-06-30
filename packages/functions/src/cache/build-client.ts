@@ -1,5 +1,5 @@
 import {
-  HEADERS_CACHE_STATE,
+  HEADERS_VERCEL_CACHE_STATE,
   HEADERS_VERCEL_CACHE_ITEM_NAME,
   HEADERS_VERCEL_CACHE_TAGS,
   HEADERS_VERCEL_REVALIDATE,
@@ -37,7 +37,7 @@ export class BuildCache {
       }
       if (res.status === 200) {
         const cacheState = res.headers.get(
-          HEADERS_CACHE_STATE
+          HEADERS_VERCEL_CACHE_STATE
         ) as PkgCacheState | null;
         if (cacheState !== PkgCacheState.Fresh) {
           res.body?.cancel?.();
