@@ -1,0 +1,31 @@
+from fpdf import FPDF
+import qrcode
+
+# Datos del sitio web
+sitio_web = "https://autogripsa.vercel.app"
+
+# Crear el código QR
+qr = qrcode.make(sitio_web)
+qr_path = "/mnt/data/qr_autogrip.png"
+qr.save(qr_path)
+
+# Crear el cartel PDF con el logo y el QR
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Arial", 'B', 20)
+pdf.cell(0, 20, "AutoGrip S.A.", ln=True, align="C")
+
+pdf.set_font("Arial", '', 14)
+pdf.cell(0, 10, "Escaneá el código QR para visitar nuestro sitio web:", ln=True, align="C")
+
+# Insertar imagen del QR
+pdf.image(qr_path, x=60, y=50, w=90, h=90)
+
+# Agregar dirección web
+pdf.set_y(150)
+pdf.set_font("Arial", 'I', 12)
+pdf.cell(0, 10, sitio_web, ln=True, align="C")
+
+# Guardar el PDF
+cartel_pdf_path = "/mnt/data/Cartel_QR_AutoGrip_SA.pdf"
+cartel_pdf_path
