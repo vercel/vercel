@@ -28,12 +28,10 @@ export class BuildCache {
         return null;
       }
       if (res.status === 200) {
-        const cacheState = res.headers.get('x-vercel-cache-state');
-        const content = (await res.json()) as unknown;
-        if (content && cacheState !== 'fresh') {
-          await this.delete(key);
+        if (res.headers.get('x-vercel-cache-state') !== 'fresh') {
           return null;
         }
+        const content = (await res.json()) as unknown;
         if (content) {
           return content;
         }

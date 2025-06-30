@@ -45,7 +45,7 @@ describe('BuildCache', () => {
     expect(result).toBeNull();
   });
 
-  it('should delete and return null if cache is not fresh', async () => {
+  it('should return null if cache is not fresh', async () => {
     fetchMock
       .mockResolvedValueOnce({
         status: 200,
@@ -55,7 +55,7 @@ describe('BuildCache', () => {
       .mockResolvedValueOnce({ status: 200 }); // for delete
     const result = await cache.get(key);
     expect(result).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('should call onError and return null on get error', async () => {
