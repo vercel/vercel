@@ -129,3 +129,11 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
 
   return buildCacheInstance;
 }
+
+export enum PkgCacheState {
+  Fresh = 'fresh',
+  Stale = 'stale',
+  Expired = 'expired',
+  NotFound = 'notFound',
+  Error = 'error',
+}

@@ -1,3 +1,5 @@
+import { PkgCacheState } from './index';
+
 export class BuildCache {
   private readonly endpoint: string;
   private readonly headers: Record<string, string>;
@@ -28,15 +30,14 @@ export class BuildCache {
         return null;
       }
       if (res.status === 200) {
-        if (res.headers.get('x-vercel-cache-state') !== PkgCacheState.Fresh) {
+        const cacheState = res.headers.get(
+          'x-vercel-cache-state'
+        ) as PkgCacheState | null;
+        if (cacheState !== PkgCacheState.Fresh) {
           res.body?.cancel?.();
           return null;
         }
-        const content = (await res.json()) as unknown;
-        if (content) {
-          return content;
-        }
-        return null;
+        return (await res.json()) as unknown;
       } else {
         throw new Error(`Failed to get cache: ${res.statusText}`);
       }
