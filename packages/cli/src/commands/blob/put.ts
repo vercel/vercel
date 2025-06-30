@@ -4,7 +4,6 @@ import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { putSubcommand } from './command';
-import { getBlobRWToken } from '../../util/blob/token';
 import { readFileSync, statSync } from 'node:fs';
 import { isErrnoException } from '@vercel/error-utils';
 import { basename } from 'node:path';
@@ -15,7 +14,8 @@ import { printError } from '../../util/error';
 
 export default async function put(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: string
 ): Promise<number> {
   const telemetryClient = new BlobPutTelemetryClient({
     opts: {
@@ -60,12 +60,6 @@ export default async function put(
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
   telemetryClient.trackCliFlagForce(force);
 
-  const token = await getBlobRWToken(client);
-  if (!token.success) {
-    printError(token.error);
-    return 1;
-  }
-
   let putBody: string | Buffer;
   let pathname: string;
 
@@ -108,7 +102,7 @@ export default async function put(
     output.spinner('Uploading blob');
 
     result = await blob.put(pathname, putBody, {
-      token: token.token,
+      token: rwToken,
       access: 'public',
       addRandomSuffix: addRandomSuffix ?? false,
       multipart: multipart ?? true,

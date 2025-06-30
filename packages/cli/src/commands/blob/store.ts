@@ -17,6 +17,7 @@ import removeStore from './store-remove';
 import { BlobStoreTelemetryClient } from '../../util/telemetry/commands/blob/store';
 import { printError } from '../../util/error';
 import getStore from './store-get';
+import type { BlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addStoreSubcommand),
@@ -24,7 +25,7 @@ const COMMAND_CONFIG = {
   get: getCommandAliases(getStoreSubcommand),
 };
 
-export async function store(client: Client) {
+export async function store(client: Client, rwToken: BlobRWToken) {
   const telemetry = new BlobStoreTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -80,7 +81,7 @@ export async function store(client: Client) {
       }
 
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return removeStore(client, args);
+      return removeStore(client, args, rwToken);
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob store', subcommandOriginal);
@@ -89,7 +90,7 @@ export async function store(client: Client) {
       }
 
       telemetry.trackCliSubcommandGet(subcommandOriginal);
-      return getStore(client, args);
+      return getStore(client, args, rwToken);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(storeSubcommand, { columns: client.stderr.columns }));

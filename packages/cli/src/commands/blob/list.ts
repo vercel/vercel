@@ -9,7 +9,6 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import { getCommandName } from '../../util/pkg-name';
-import { getBlobRWToken } from '../../util/blob/token';
 import { BlobListTelemetryClient } from '../../util/telemetry/commands/blob/list';
 import { printError } from '../../util/error';
 
@@ -19,7 +18,8 @@ function isMode(mode: string): mode is 'folded' | 'expanded' {
 
 export default async function list(
   client: Client,
-  argv: string[]
+  argv: string[],
+  rwToken: string
 ): Promise<number> {
   const telemetryClient = new BlobListTelemetryClient({
     opts: {
@@ -49,12 +49,6 @@ export default async function list(
   telemetryClient.trackCliOptionPrefix(prefix);
   telemetryClient.trackCliOptionMode(modeFlag);
 
-  const token = await getBlobRWToken(client);
-  if (!token.success) {
-    printError(token.error);
-    return 1;
-  }
-
   const mode = modeFlag ?? 'expanded';
   if (!isMode(mode)) {
     output.error(
@@ -70,7 +64,7 @@ export default async function list(
 
     output.spinner('Fetching blobs');
     list = await blob.list({
-      token: token.token,
+      token: rwToken,
       limit: limit ?? 10,
       cursor,
       mode,

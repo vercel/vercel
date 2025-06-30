@@ -1,6 +1,7 @@
 import { aliasCommand } from './alias/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
+import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
@@ -8,6 +9,7 @@ import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
 import { gitCommand } from './git/command';
+import { guidanceCommand } from './guidance/command';
 import { initCommand } from './init/command';
 import { inspectCommand } from './inspect/command';
 import { installCommand } from './install/command';
@@ -18,6 +20,7 @@ import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
+import { microfrontendsCommand } from './microfrontends/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
@@ -38,6 +41,7 @@ const commandsStructs = [
   blobCommand,
   bisectCommand,
   buildCommand,
+  cacheCommand,
   certsCommand,
   deployCommand,
   devCommand,
@@ -55,6 +59,7 @@ const commandsStructs = [
   loginCommand,
   logoutCommand,
   logsCommand,
+  microfrontendsCommand,
   projectCommand,
   promoteCommand,
   pullCommand,
@@ -69,6 +74,10 @@ const commandsStructs = [
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
 ];
+
+if (process.env.FF_GUIDANCE_MODE) {
+  commandsStructs.push(guidanceCommand);
+}
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);

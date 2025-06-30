@@ -21,6 +21,7 @@ import del from './del';
 import copy from './copy';
 import { store } from './store';
 import { printError } from '../../util/error';
+import { getBlobRWToken } from '../../util/blob/token';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -68,6 +69,9 @@ export default async function main(client: Client) {
     );
   }
 
+  const token = await getBlobRWToken(client, client.argv);
+  telemetry.trackCliOptionRwToken();
+
   switch (subcommand) {
     case 'list':
       if (needHelp) {
@@ -77,7 +81,13 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return list(client, args);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return list(client, args, token.token);
     case 'put':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -86,14 +96,28 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandPut(subcommandOriginal);
-      return put(client, args);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return put(client, args, token.token);
     case 'del':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(delSubcommand);
         return 2;
       }
-      return del(client, args);
+
+      telemetry.trackCliSubcommandDel(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return del(client, args, token.token);
     case 'copy':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
@@ -102,10 +126,16 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandCopy(subcommandOriginal);
-      return copy(client, args);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return copy(client, args, token.token);
     case 'store':
       telemetry.trackCliSubcommandStore(subcommandOriginal);
-      return store(client);
+      return store(client, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));
