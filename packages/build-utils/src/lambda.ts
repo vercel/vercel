@@ -53,6 +53,14 @@ export interface LambdaOptionsBase {
   operationType?: string;
   framework?: FunctionFramework;
   /**
+   * Whether this Lambda is private and requires special access controls.
+   * Must be set to true when using experimentalTriggers.
+   * Cannot be true without experimentalTriggers defined.
+   *
+   * @default false
+   */
+  private?: boolean;
+  /**
    * Experimental CloudEvents trigger definitions that this Lambda can receive.
    * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
    * Currently supports HTTP protocol binding in structured mode only.
@@ -135,6 +143,14 @@ export class Lambda {
   framework?: FunctionFramework;
   experimentalAllowBundling?: boolean;
   /**
+   * Whether this Lambda is private and requires special access controls.
+   * Must be set to true when using experimentalTriggers.
+   * Cannot be true without experimentalTriggers defined.
+   *
+   * @default false
+   */
+  private: boolean;
+  /**
    * Experimental CloudEvents trigger definitions that this Lambda can receive.
    * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
    * Currently supports HTTP protocol binding in structured mode only.
@@ -167,6 +183,7 @@ export class Lambda {
       experimentalResponseStreaming,
       operationType,
       framework,
+      private: isPrivate = false,
       experimentalTriggers,
     } = opts;
     if ('files' in opts) {
@@ -246,6 +263,28 @@ export class Lambda {
           '"framework.version" is not a string'
         );
       }
+    }
+
+    if (isPrivate !== undefined) {
+      assert(typeof isPrivate === 'boolean', '"private" is not a boolean');
+    }
+
+    // Validate private field constraints
+    if (experimentalTriggers !== undefined && !isPrivate) {
+      assert(
+        false,
+        '"private" must be set to true when using "experimentalTriggers"'
+      );
+    }
+
+    if (
+      isPrivate &&
+      (experimentalTriggers === undefined || experimentalTriggers.length === 0)
+    ) {
+      assert(
+        false,
+        '"private" cannot be true without "experimentalTriggers" defined'
+      );
     }
 
     if (experimentalTriggers !== undefined) {
@@ -397,6 +436,7 @@ export class Lambda {
       'experimentalAllowBundling' in opts
         ? opts.experimentalAllowBundling
         : undefined;
+    this.private = isPrivate;
     this.experimentalTriggers = experimentalTriggers;
   }
 
