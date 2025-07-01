@@ -284,12 +284,12 @@ export class Lambda {
           const queuePrefix = `${prefix}.queue`;
 
           assert(
-            typeof queue.subject === 'string',
-            `${queuePrefix}.subject is required and must be a string`
+            typeof queue.topic === 'string',
+            `${queuePrefix}.topic is required and must be a string`
           );
           assert(
-            queue.subject.length > 0,
-            `${queuePrefix}.subject cannot be empty`
+            queue.topic.length > 0,
+            `${queuePrefix}.topic cannot be empty`
           );
 
           assert(

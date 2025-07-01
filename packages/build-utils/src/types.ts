@@ -633,8 +633,8 @@ export interface CloudEventQueueTrigger
    * Queue configuration for this trigger (REQUIRED)
    */
   queue: {
-    /** Name of the queue subject to consume from (REQUIRED) */
-    subject: string;
+    /** Name of the queue topic to consume from (REQUIRED) */
+    topic: string;
 
     /** Name of the consumer group for this trigger (REQUIRED) */
     consumer: string;

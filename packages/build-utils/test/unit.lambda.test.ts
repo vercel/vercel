@@ -509,7 +509,7 @@ describe('Lambda', () => {
           specversion: '1.0',
           type: 'com.vercel.queue.v1',
           queue: {
-            subject: 'user-events',
+            topic: 'user-events',
             consumer: 'webhook-processors',
             maxAttempts: 3,
           },
@@ -539,7 +539,7 @@ describe('Lambda', () => {
           specversion: '1.0',
           type: 'com.vercel.queue.v1',
           queue: {
-            subject: 'webhook-events',
+            topic: 'webhook-events',
             consumer: 'retry-processors',
             maxAttempts: 3,
             retryAfterSeconds: 10,
@@ -573,7 +573,7 @@ describe('Lambda', () => {
           specversion: '1.0',
           type: 'com.vercel.queue.v1',
           queue: {
-            subject: 'system-events',
+            topic: 'system-events',
             consumer: 'system-processors',
             maxAttempts: 5,
             retryAfterSeconds: 30,
@@ -613,7 +613,7 @@ describe('Lambda', () => {
                     specversion: '1.0',
                     type: 'com.vercel.queue.v1',
                     queue: {
-                      subject: 'test-subject',
+                      topic: 'test-subject',
                       consumer: 'test-consumer',
                       maxAttempts: -1,
                     },
@@ -639,7 +639,7 @@ describe('Lambda', () => {
                     specversion: '1.0',
                     type: 'com.vercel.queue.v1',
                     queue: {
-                      subject: 'test-subject',
+                      topic: 'test-subject',
                       consumer: 'test-consumer',
                       retryAfterSeconds: 0,
                     },
@@ -665,7 +665,7 @@ describe('Lambda', () => {
                     specversion: '1.0',
                     type: 'com.vercel.queue.v1',
                     queue: {
-                      subject: 'test-subject',
+                      topic: 'test-subject',
                       consumer: 'test-consumer',
                       maxAttempts: 'three' as any,
                     },
@@ -691,7 +691,7 @@ describe('Lambda', () => {
                     specversion: '1.0',
                     type: 'com.vercel.queue.v1',
                     queue: {
-                      subject: 'test-subject',
+                      topic: 'test-subject',
                       consumer: 'test-consumer',
                       retryAfterSeconds: 'ten' as any,
                     },
@@ -713,7 +713,7 @@ describe('Lambda', () => {
             specversion: '1.0',
             type: 'com.vercel.queue.v1',
             queue: {
-              subject: 'pubsub-messages',
+              topic: 'pubsub-messages',
               consumer: 'system-processors',
               maxAttempts: 3,
               retryAfterSeconds: 5,
@@ -767,7 +767,7 @@ describe('Lambda', () => {
             specversion: '1.0',
             type: 'com.vercel.queue.v1',
             queue: {
-              subject: 'critical-events',
+              topic: 'critical-events',
               consumer: 'immediate-processors',
               maxAttempts: 0, // No retries - fail immediately
             },
@@ -795,7 +795,7 @@ describe('Lambda', () => {
             specversion: '1.0',
             type: 'com.vercel.queue.v1',
             queue: {
-              subject: 'config-events',
+              topic: 'config-events',
               consumer: 'config-processors',
               maxAttempts: 10,
               retryAfterSeconds: 2,
