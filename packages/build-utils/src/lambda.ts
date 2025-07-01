@@ -23,6 +23,15 @@ export type {
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
+/**
+ * Type predicate to check if a CloudEvent trigger is a queue trigger.
+ */
+function isCloudEventQueueTrigger(
+  trigger: CloudEventTrigger
+): trigger is CloudEventQueueTrigger {
+  return trigger.type === 'com.vercel.queue.v1' && 'queue' in trigger;
+}
+
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
@@ -272,11 +281,9 @@ export class Lambda {
         assert(trigger.type.length > 0, `${prefix}.type cannot be empty`);
 
         // Validate queue-specific fields for com.vercel.queue.v1 triggers
-        if (trigger.type === 'com.vercel.queue.v1') {
+        if (isCloudEventQueueTrigger(trigger)) {
           assert(
-            'queue' in trigger &&
-              typeof trigger.queue === 'object' &&
-              trigger.queue !== null,
+            typeof trigger.queue === 'object' && trigger.queue !== null,
             `${prefix}.queue is required and must be an object for queue triggers`
           );
 
@@ -340,8 +347,8 @@ export class Lambda {
         }
 
         // Validate optional queue configuration (only on queue triggers)
-        if (trigger.type === 'com.vercel.queue.v1') {
-          const queue = (trigger as any).queue;
+        if (isCloudEventQueueTrigger(trigger)) {
+          const queue = trigger.queue;
           const queuePrefix = `${prefix}.queue`;
 
           if (queue.maxAttempts !== undefined) {
