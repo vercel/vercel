@@ -440,6 +440,113 @@ it('should support experimentalBypassFor correctly', async () => {
   }).toThrowError(
     'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
   );
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      {
+        type: 'header',
+        key: 'authorization',
+        value: {
+          eq: 'Bearer token123',
+          inc: ['Bearer', 'token'],
+          ninc: ['foo', 'bar'],
+          pre: 'Bearer',
+          suf: 'token123',
+        },
+      },
+    ],
+  });
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      {
+        type: 'cookie',
+        key: 'count',
+        value: { eq: 10, gt: 5, gte: 10, lt: 15, lte: 10 },
+      },
+    ],
+  });
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      {
+        type: 'query',
+        key: 'count',
+        value: { eq: 10, gt: 5, gte: 10, lt: 15, lte: 10 },
+      },
+    ],
+  });
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [
+      {
+        type: 'host',
+        value: { re: '^staging\\..*\\.com$' },
+      },
+    ],
+  });
+
+  new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    experimentalBypassFor: [{ type: 'header', key: 'test', value: undefined }],
+  });
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: [{ type: 'header', key: 'test', value: null }],
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: [{ type: 'host', key: 'test', value: 'invalid' }],
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error: testing invalid args
+      experimentalBypassFor: [{ type: 'invalid' }],
+    });
+  }).toThrowError(
+    'The `experimentalBypassFor` argument for `Prerender` must be Array of objects with fields `type`, `key` and optionally `value`.'
+  );
 });
 
 it('should support passQuery correctly', async () => {

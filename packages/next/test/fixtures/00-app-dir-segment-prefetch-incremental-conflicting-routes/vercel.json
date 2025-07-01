@@ -1,0 +1,22 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/dynamic?_rsc=1r34m",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/dynamic.prefetch.rsc"
+      }
+    }
+  ]
+}

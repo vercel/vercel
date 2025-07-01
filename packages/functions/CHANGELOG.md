@@ -1,5 +1,51 @@
 # @vercel/functions
 
+## 2.2.2
+
+### Patch Changes
+
+- Add warning when calling getCache to indicate that in-memory cache is being used. ([#13455](https://github.com/vercel/vercel/pull/13455))
+
+## 2.2.1
+
+### Patch Changes
+
+- Update runtime cache to always use the current cache instance to prevent holding a stale copy ([#13454](https://github.com/vercel/vercel/pull/13454))
+
+## 2.2.0
+
+### Minor Changes
+
+- Introduce `getVercelOidcTokenSync` ([#13429](https://github.com/vercel/vercel/pull/13429))
+
+## 2.1.0
+
+### Minor Changes
+
+- Change the load order of the OIDC token ([#13337](https://github.com/vercel/vercel/pull/13337))
+
+### Patch Changes
+
+- Rename getRuntimeCache to getCache ([#13325](https://github.com/vercel/vercel/pull/13325))
+
+## 2.0.3
+
+### Patch Changes
+
+- Rename FunctionCache / getFunctionCache to RuntimeCache / getRuntimeCache ([#13296](https://github.com/vercel/vercel/pull/13296))
+
+## 2.0.2
+
+### Patch Changes
+
+- Update in memory cache to use a singleton instance ([#13288](https://github.com/vercel/vercel/pull/13288))
+
+## 2.0.1
+
+### Patch Changes
+
+- Add Vercel Function Cache api ([#13221](https://github.com/vercel/vercel/pull/13221))
+
 ## 2.0.0
 
 ### Major Changes

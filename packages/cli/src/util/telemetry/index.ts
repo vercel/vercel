@@ -181,6 +181,10 @@ export class TelemetryClient {
       value: subcommand ? `${command}:${subcommand}` : command,
     });
   }
+
+  trackCliFlagFuture(command: 'login') {
+    this.track({ key: 'flag:future', value: command });
+  }
 }
 
 export class TelemetryEventStore {

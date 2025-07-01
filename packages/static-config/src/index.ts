@@ -13,6 +13,10 @@ import { validate } from './validation';
 export const BaseFunctionConfigSchema = {
   type: 'object',
   properties: {
+    architecture: {
+      type: 'string',
+      enum: ['x86_64', 'arm64'],
+    },
     runtime: { type: 'string' },
     memory: { type: 'number' },
     maxDuration: { type: 'number' },
@@ -26,6 +30,9 @@ export const BaseFunctionConfigSchema = {
           enum: ['all', 'default', 'auto'],
         },
       ],
+    },
+    preferredRegion: {
+      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     },
   },
 } as const;

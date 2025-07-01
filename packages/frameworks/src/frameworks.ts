@@ -415,7 +415,7 @@ export const frameworks = [
     cachePattern: '.cache/**',
   },
   {
-    name: 'Docusaurus (v2)',
+    name: 'Docusaurus (v2+)',
     slug: 'docusaurus-2',
     demo: 'https://docusaurus-2-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
@@ -1529,6 +1529,7 @@ export const frameworks = [
     website: 'https://nuxtjs.org',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
+    supersedes: ['nitro'],
     detectors: {
       some: [
         {
@@ -2210,6 +2211,37 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'storybook-static',
+  },
+  {
+    name: 'Nitro',
+    slug: 'nitro',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nitro.svg',
+    demo: 'https://nitro-template.vercel.app',
+    tagline: 'Nitro is a next generation server toolkit.',
+    description:
+      'Nitro lets you create web servers that run on multiple platforms.',
+    website: 'https://nitro.build/',
+    detectors: {
+      every: [{ matchPackage: 'nitropack' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `nitro build`',
+        value: 'nitro build',
+      },
+      devCommand: {
+        value: 'nitro dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'nitropack',
+    getOutputDirName: () => Promise<string>,
   },
   {
     name: 'Other',

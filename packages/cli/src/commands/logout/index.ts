@@ -36,14 +36,14 @@ export default async function logout(client: Client): Promise<number> {
     return 1;
   }
 
-  if (parsedArgs.flags['--future']) {
-    return await future(client);
-  }
-
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 2;
+  }
+
+  if (authConfig.type === 'oauth') {
+    return await future(client);
   }
 
   if (!authConfig.token) {
@@ -73,12 +73,6 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   delete config.currentTeam;
-
-  // The new user might have completely different teams, so
-  // we should wipe the order.
-  if (config.desktop) {
-    delete config.desktop.teamOrder;
-  }
 
   delete authConfig.token;
 

@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it, type MockInstance } from 'vitest';
-import { logout } from '../../../../src/commands/logout/future';
+import { beforeEach, describe, expect, it } from 'vitest';
+import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import fetch, { type Response } from 'node-fetch';
-import { as, VERCEL_CLI_CLIENT_ID } from '../../../../src/util/oauth';
+import _fetch, { type Response } from 'node-fetch';
+import {
+  as,
+  VERCEL_CLI_CLIENT_ID,
+  userAgent,
+} from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
-import ua from '../../../../src/util/ua';
 
-const fetchMock = fetch as unknown as MockInstance<typeof fetch>;
-
+const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
@@ -24,11 +26,12 @@ function mockResponse(data: unknown, ok = true): Response {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  client.emptyAuthConfig();
 });
 
-describe('logout --future', () => {
+describe('logout', () => {
   it('successful logout', async () => {
-    fetchMock.mockResolvedValueOnce(
+    fetch.mockResolvedValueOnce(
       mockResponse({
         issuer: 'https://vercel.com',
         device_authorization_endpoint: 'https://vercel.com',
@@ -39,33 +42,34 @@ describe('logout --future', () => {
     );
     const _as = await as();
 
-    fetchMock.mockResolvedValueOnce(mockResponse({}));
+    fetch.mockResolvedValueOnce(mockResponse({}));
 
-    client.setArgv('logout', '--future');
+    client.setArgv('logout');
+    client.authConfig.type = 'oauth';
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "logout --future"').toBe(0);
+    expect(exitCode, 'exit code for "logout"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenNthCalledWith(
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenNthCalledWith(
       2,
       _as.revocation_endpoint,
       expect.objectContaining({
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'user-agent': ua,
+          'user-agent': userAgent,
         },
         body: expect.any(URLSearchParams),
       })
     );
 
     expect(
-      fetchMock.mock.calls[1][1]?.body?.toString(),
+      fetch.mock.calls[1][1]?.body?.toString(),
       'Requesting token revocation with the correct params'
     ).toBe(
       new URLSearchParams({
@@ -89,16 +93,17 @@ describe('logout --future', () => {
       error_description:
         'The request is missing a required parameter, includes an unsupported parameter value (other than grant type), repeats a parameter, includes multiple credentials, utilizes more than one mechanism for authenticating the client, or is otherwise malformed.',
     };
-    fetchMock.mockResolvedValueOnce(mockResponse(invalidResponse, false));
+    fetch.mockResolvedValueOnce(mockResponse(invalidResponse, false));
 
-    client.setArgv('logout', '--future', '--debug');
+    client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();
+    client.authConfig.type = 'oauth';
     const tokenBefore = client.authConfig.token;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(1);
+    expect(exitCode, 'exit code for "login"').toBe(1);
 
     const output = await client.stderr.getFullOutput();
     expect(output).toMatch(invalidResponse.error);
@@ -118,14 +123,15 @@ describe('logout --future', () => {
   });
 
   it('if no token, do nothing', async () => {
-    client.setArgv('logout', '--future');
+    client.setArgv('logout');
     delete client.authConfig.token;
+    client.authConfig.type = 'oauth';
     expect(client.authConfig.token).toBeUndefined();
 
     const exitCode = await logout(client);
-    expect(exitCode, 'exit code for "login --future"').toBe(0);
+    expect(exitCode, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput(
-      'Not currently logged in, so `vercel logout --future` did nothing'
+      'Not currently logged in, so `vercel logout` did nothing'
     );
     expect(client.authConfig.token).toBeUndefined();
   });

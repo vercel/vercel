@@ -207,7 +207,7 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
       /<strong>500<\/strong>: INTERNAL_SERVER_ERROR/g
     );
     expect(stderr).toContain(
-      'api/edge-error-config.js: unsupported "runtime" value in `config`: "invalid-runtime-value" (must be one of: ["edge","experimental-edge"]). Learn more: https://vercel.link/creating-edge-functions'
+      'api/edge-error-config.js: unsupported "runtime" value in `config`: "invalid-runtime-value" (must be one of: ["edge","experimental-edge","nodejs"]). Learn more: https://vercel.link/creating-edge-functions'
     );
   } finally {
     await dev.kill();

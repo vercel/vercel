@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 4.9.2
+
+### Patch Changes
+
+- Added support for the Resume Data Cache (RDC) for React Server Component (RSC) requests ([#13459](https://github.com/vercel/vercel/pull/13459))
+
+## 4.9.1
+
+### Patch Changes
+
+- Ensure we await node middleware import for top-level await ([#13479](https://github.com/vercel/vercel/pull/13479))
+
+## 4.9.0
+
+### Minor Changes
+
+- make the output of collectTracedFiles deterministic ([#13410](https://github.com/vercel/vercel/pull/13410))
+
+## 4.8.0
+
+### Minor Changes
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
+### Patch Changes
+
+- reinstate Vary header ([#13359](https://github.com/vercel/vercel/pull/13359))
+
+## 4.7.11
+
+### Patch Changes
+
+- Bump @vercel/nft to latest ([#13312](https://github.com/vercel/vercel/pull/13312))
+
+## 4.7.10
+
+### Patch Changes
+
+- Add .next/turbopack file into diagnostics output ([#13293](https://github.com/vercel/vercel/pull/13293))
+
+## 4.7.9
+
+### Patch Changes
+
+- Support blocking static shells by not loading a fallback when none is present. Also updated the allowQuery logic to support this case. ([#13272](https://github.com/vercel/vercel/pull/13272))
+
+- Fix segment prefetching for PPR-disabled static routes ([#13275](https://github.com/vercel/vercel/pull/13275))
+
 ## 4.7.8
 
 ### Patch Changes

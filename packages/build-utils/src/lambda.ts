@@ -51,6 +51,24 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions'>;
 }
 
+function getDefaultLambdaArchitecture(
+  architecture: LambdaArchitecture | undefined
+): LambdaArchitecture {
+  if (architecture) {
+    return architecture;
+  }
+
+  switch (process.arch) {
+    case 'arm':
+    case 'arm64': {
+      return 'arm64';
+    }
+    default: {
+      return 'x86_64';
+    }
+  }
+}
+
 export class Lambda {
   type: 'Lambda';
   /**
@@ -62,7 +80,7 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
-  architecture?: LambdaArchitecture;
+  architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment: Env;
@@ -179,7 +197,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
-    this.architecture = architecture;
+    this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
@@ -279,12 +297,13 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'memory' | 'maxDuration'>
+  Pick<LambdaOptions, 'architecture' | 'memory' | 'maxDuration'>
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
       if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
         return {
+          architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
         };

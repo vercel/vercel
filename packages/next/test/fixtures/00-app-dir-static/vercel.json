@@ -9,7 +9,10 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+      }
     },
     {
       "path": "/dashboard",
@@ -27,7 +30,8 @@
         "RSC": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component"
+        "content-type": "text/x-component",
+        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
       }
     },
     {

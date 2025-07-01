@@ -2,6 +2,8 @@ import { join } from 'node:path';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { esbuild } from '../../../utils/build.mjs';
 import { compileDevTemplates } from './compile-templates.mjs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 
 const repoRoot = new URL('../', import.meta.url);
 
@@ -30,9 +32,30 @@ await compileDevTemplates();
 const pkgPath = join(process.cwd(), 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const externals = Object.keys(pkg.dependencies || {});
+const require = createRequire(import.meta.url);
 await esbuild({
   bundle: true,
   external: externals,
+  plugins: [
+    // plugin required to handle jsonc-parser
+    // https://github.com/evanw/esbuild/issues/1619
+    {
+      name: 'jsonc-parser-module-first',
+      setup(build) {
+        build.onResolve({ filter: /^jsonc-parser$/ }, args => {
+          const pkgJsonPath = require.resolve('jsonc-parser/package.json', {
+            paths: [args.resolveDir],
+          });
+          const { module, main } = JSON.parse(
+            readFileSync(pkgJsonPath, 'utf8')
+          );
+          const entryRel = module ?? main ?? 'index.js';
+          const entryAbs = path.join(path.dirname(pkgJsonPath), entryRel);
+          return { path: entryAbs, namespace: 'file' };
+        });
+      },
+    },
+  ],
 });
 
 // Copy a few static files into `dist`

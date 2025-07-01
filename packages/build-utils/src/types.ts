@@ -1,10 +1,11 @@
 import type FileRef from './file-ref';
 import type FileFsRef from './file-fs-ref';
 import type FileBlob from './file-blob';
-import type { Lambda } from './lambda';
+import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 import type { Span } from './trace';
+import type { HasField } from '@vercel/routing-utils';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -46,17 +47,7 @@ export interface Config {
   [key: string]: unknown;
 }
 
-export type HasField = Array<
-  | {
-      type: 'host';
-      value: string;
-    }
-  | {
-      type: 'header' | 'cookie' | 'query';
-      key: string;
-      value?: string;
-    }
->;
+export type { HasField };
 
 export interface Meta {
   isDev?: boolean;
@@ -385,6 +376,7 @@ export interface Builder {
 
 export interface BuilderFunctions {
   [key: string]: {
+    architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: number;
     runtime?: string;

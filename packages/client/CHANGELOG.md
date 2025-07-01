@@ -1,5 +1,53 @@
 # @vercel/client
 
+## 15.3.6
+
+### Patch Changes
+
+- Updated dependencies [[`8f791807ae04479e538c11ccd709b39ed210e477`](https://github.com/vercel/vercel/commit/8f791807ae04479e538c11ccd709b39ed210e477)]:
+  - @vercel/routing-utils@5.0.8
+
+## 15.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`b5fed7cca786d93b7c88af275ce1dca5e5b59098`](https://github.com/vercel/vercel/commit/b5fed7cca786d93b7c88af275ce1dca5e5b59098)]:
+  - @vercel/routing-utils@5.0.7
+
+## 15.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423), [`3c6cc512cf74439053b3614f95fcdf211c2d8a6d`](https://github.com/vercel/vercel/commit/3c6cc512cf74439053b3614f95fcdf211c2d8a6d), [`ff37e3c80d945d98696c05071b3b3c95fe78212f`](https://github.com/vercel/vercel/commit/ff37e3c80d945d98696c05071b3b3c95fe78212f), [`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423)]:
+  - @vercel/build-utils@10.6.1
+  - @vercel/routing-utils@5.0.6
+
+## 15.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`9e783f33df5181f93ff259b5f3c19e8cacf68afc`](https://github.com/vercel/vercel/commit/9e783f33df5181f93ff259b5f3c19e8cacf68afc)]:
+  - @vercel/routing-utils@5.0.5
+
+## 15.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`36cd6a44bf4daf429babb430c7f1e3f7130d30ee`](https://github.com/vercel/vercel/commit/36cd6a44bf4daf429babb430c7f1e3f7130d30ee), [`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/build-utils@10.6.0
+
+## 15.3.1
+
+### Patch Changes
+
+- Rename findConfig to findMicrofrontendsConfig ([#13277](https://github.com/vercel/vercel/pull/13277))
+
+## 15.3.0
+
+### Minor Changes
+
+- Infer microfrontends.json and microfrontends.jsonc if rootDirectory not specified ([#13263](https://github.com/vercel/vercel/pull/13263))
+
 ## 15.2.0
 
 ### Minor Changes

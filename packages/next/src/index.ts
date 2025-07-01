@@ -1648,7 +1648,6 @@ export const build: BuildV2 = async buildOptions => {
       );
 
       for (const page of mergedPageKeys) {
-        const tracedFiles: { [key: string]: FileFsRef } = {};
         const fileList = parentFilesMap.get(
           path.relative(baseDir, pages[page].fsPath)
         );
@@ -1660,16 +1659,16 @@ export const build: BuildV2 = async buildOptions => {
         }
         const reasons = result.reasons;
 
-        await Promise.all(
-          Array.from(fileList).map(
-            collectTracedFiles(
-              baseDir,
-              lstatResults,
-              lstatSema,
-              reasons,
-              tracedFiles
+        const tracedFiles: {
+          [filePath: string]: FileFsRef;
+        } = Object.fromEntries(
+          (
+            await Promise.all(
+              Array.from(fileList).map(
+                collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+              )
             )
-          )
+          ).filter((entry): entry is [string, FileFsRef] => !!entry)
         );
         pageTraces[page] = tracedFiles;
       }
@@ -1961,7 +1960,11 @@ export const build: BuildV2 = async buildOptions => {
               '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
-          let lambdaOptions: { memory?: number; maxDuration?: number } = {};
+          let lambdaOptions: {
+            architecture?: NodejsLambda['architecture'];
+            memory?: number;
+            maxDuration?: number;
+          } = {};
 
           if (config && config.functions) {
             lambdaOptions = await getLambdaOptionsFromFunction({
@@ -2272,9 +2275,6 @@ export const build: BuildV2 = async buildOptions => {
       canUsePreviewMode,
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
-      // Relevant Next.js versions will be handled by server-build.ts, which
-      // does correctly configure this variable.
-      shouldSkipVaryHeader: false,
     });
 
     await Promise.all(
@@ -2874,6 +2874,11 @@ export const diagnostics: Diagnostics = async ({
     // Collect `.next/trace` file
     ...(await glob(
       'trace',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
+    // Collect `.next/turbopack` file
+    ...(await glob(
+      'turbopack',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
   };
