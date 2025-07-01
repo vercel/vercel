@@ -225,6 +225,12 @@ export function useProject(
     Object.assign(project, req.body);
     res.json(project);
   });
+  client.scenario.get(`/v9/projects/${project.name}`, (_req, res) => {
+    res.json(project);
+  });
+  client.scenario.get(`/v9/projects/${project.id}`, (_req, res) => {
+    res.json(project);
+  });
   client.scenario.get(
     `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
     (req, res) => {

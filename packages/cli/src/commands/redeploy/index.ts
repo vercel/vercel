@@ -18,11 +18,17 @@ import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
-import type { CustomEnvironment } from '@vercel-internals/types';
+import type {
+  CustomEnvironment,
+  Project,
+  ProjectRollingRelease,
+} from '@vercel-internals/types';
 import {
   getCustomEnvironments,
   pickCustomEnvironment,
 } from '../../util/target/get-custom-environments';
+import type { ProjectNotFound } from '../../util/errors-ts';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 
 /**
  * `vc redeploy` command
@@ -169,8 +175,18 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
         0
       );
+      let project: Project | ProjectNotFound | undefined;
+      let rollingRelease: ProjectRollingRelease | undefined;
 
-      if (deployment.readyState === 'READY' && deployment.aliasAssigned) {
+      if (deployment.projectId && deployment.projectId != '') {
+        project = await getProjectByNameOrId(client, deployment.projectId);
+        rollingRelease = (project as Project)?.rollingRelease;
+      }
+      if (
+        deployment.readyState === 'READY' &&
+        deployment.aliasAssigned &&
+        !rollingRelease
+      ) {
         output.spinner('Completing', 0);
       } else {
         try {
@@ -190,6 +206,11 @@ export default async function redeploy(client: Client): Promise<number> {
           )) {
             if (event.type === 'building') {
               output.spinner('Building', 0);
+            } else if (event.type === 'ready' && rollingRelease) {
+              output.spinner('Releasing', 0);
+              output.stopSpinner();
+              deployment = event.payload;
+              break;
             } else if (
               event.type === 'ready' &&
               ((event.payload as any).checksState

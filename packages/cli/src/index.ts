@@ -75,6 +75,8 @@ import { help } from './args';
 import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
+import { checkGuidanceStatus } from './util/guidance/check-status';
+import { determineAgent } from './util/determine-agent';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -266,12 +268,20 @@ const main = async () => {
     config,
   });
 
+  if (process.env.FF_GUIDANCE_MODE) {
+    checkGuidanceStatus({
+      config,
+    });
+  }
+
   const telemetry = new RootTelemetryClient({
     opts: {
       store: telemetryEventStore,
     },
   });
 
+  const agent = await determineAgent();
+  telemetry.trackAgenticUse(agent);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -375,6 +385,10 @@ const main = async () => {
     'build',
     'telemetry',
   ];
+
+  if (process.env.FF_GUIDANCE_MODE) {
+    subcommandsWithoutToken.push('guidance');
+  }
 
   // Prompt for login if there is no current token
   if (
@@ -610,6 +624,10 @@ const main = async () => {
           telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = require('./commands/build').default;
           break;
+        case 'cache':
+          telemetry.trackCliCommandCache(userSuppliedSubCommand);
+          func = require('./commands/cache').default;
+          break;
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
@@ -639,6 +657,15 @@ const main = async () => {
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
           func = require('./commands/git').default;
           break;
+        case 'guidance':
+          if (process.env.FF_GUIDANCE_MODE) {
+            telemetry.trackCliCommandGuidance(userSuppliedSubCommand);
+            func = require('./commands/guidance').default;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = require('./commands/init').default;
@@ -678,6 +705,10 @@ const main = async () => {
         case 'logout':
           telemetry.trackCliCommandLogout(userSuppliedSubCommand);
           func = require('./commands/logout').default;
+          break;
+        case 'microfrontends':
+          telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
+          func = require('./commands/microfrontends').default;
           break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);

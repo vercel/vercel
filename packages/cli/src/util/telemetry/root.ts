@@ -40,6 +40,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandCache(actual: string) {
+    this.trackCliCommand({
+      command: 'cache',
+      value: actual,
+    });
+  }
+
   trackCliCommandCerts(actual: string) {
     this.trackCliCommand({
       command: 'certs',
@@ -85,6 +92,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGuidance(actual: string) {
+    this.trackCliCommand({
+      command: 'guidance',
       value: actual,
     });
   }
@@ -162,6 +176,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandLogs(actual: string) {
     this.trackCliCommand({
       command: 'logs',
+      value: actual,
+    });
+  }
+
+  trackCliCommandMicrofrontends(actual: string) {
+    this.trackCliCommand({
+      command: 'microfrontends',
       value: actual,
     });
   }
@@ -245,6 +266,10 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackCPUs() {
     super.trackCPUs();
+  }
+
+  trackAgenticUse(agent: string | false) {
+    super.trackAgenticUse(agent);
   }
 
   trackArch() {

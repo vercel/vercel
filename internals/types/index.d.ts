@@ -62,6 +62,9 @@ export interface GlobalConfig {
   telemetry?: {
     enabled?: boolean;
   };
+  guidance?: {
+    enabled?: boolean;
+  };
 }
 
 type Billing = {
