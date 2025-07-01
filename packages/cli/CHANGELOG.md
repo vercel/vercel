@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.8
+
+### Patch Changes
+
+- [cli] Report detected agent to CLI telemetry ([#13506](https://github.com/vercel/vercel/pull/13506))
+
 ## 44.2.7
 
 ### Patch Changes
