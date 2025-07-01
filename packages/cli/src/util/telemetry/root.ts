@@ -268,6 +268,10 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackCPUs();
   }
 
+  trackAgenticUse(agent: string | false) {
+    super.trackAgenticUse(agent);
+  }
+
   trackArch() {
     super.trackArch();
   }
