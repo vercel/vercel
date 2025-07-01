@@ -29,7 +29,7 @@ export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 function isCloudEventQueueTrigger(
   trigger: CloudEventTrigger
 ): trigger is CloudEventQueueTrigger {
-  return trigger.type === 'com.vercel.queue.v1' && 'queue' in trigger;
+  return trigger.type === 'com.vercel.queue.v1';
 }
 
 export type LambdaArchitecture = 'x86_64' | 'arm64';
