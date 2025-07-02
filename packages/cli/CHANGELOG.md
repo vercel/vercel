@@ -1,5 +1,11 @@
 # vercel
 
+## 44.2.11
+
+### Patch Changes
+
+- [cli] Send `commitAuthorEmail` with the git meta ([#13508](https://github.com/vercel/vercel/pull/13508))
+
 ## 44.2.10
 
 ### Patch Changes
