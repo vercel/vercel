@@ -3,7 +3,7 @@
   "name": "25-mono-repo-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/commits/84708a66457adf55c6c99512646dc49016a53d1d/next",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },

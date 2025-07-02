@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/commits/84708a66457adf55c6c99512646dc49016a53d1d/next",
     "react": "latest",
     "react-dom": "latest"
   }
