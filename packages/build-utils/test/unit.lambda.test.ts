@@ -111,6 +111,7 @@ describe('Lambda', () => {
         type: 'v1.test.vercel.com',
         httpBinding: {
           mode: 'structured',
+          method: 'POST',
         },
       };
 
@@ -173,7 +174,7 @@ describe('Lambda', () => {
           type: 'v1.health.vercel.com',
           httpBinding: {
             mode: 'structured',
-            method: 'GET',
+            method: 'POST',
             pathname: '/health',
           },
         },
@@ -191,31 +192,27 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers![1].type).toBe('v1.health.vercel.com');
     });
 
-    it('should support GET, POST, and HEAD methods', () => {
-      const methods: ('GET' | 'POST' | 'HEAD')[] = ['GET', 'POST', 'HEAD'];
+    it('should support only POST method', () => {
+      const trigger: CloudEventTrigger = {
+        triggerVersion: 1,
+        specversion: '1.0',
+        type: 'v1.post.vercel.com',
+        httpBinding: {
+          mode: 'structured',
+          method: 'POST',
+          pathname: '/post',
+        },
+      };
 
-      methods.forEach(method => {
-        const trigger: CloudEventTrigger = {
-          triggerVersion: 1,
-          specversion: '1.0',
-          type: `v1.${method.toLowerCase()}.vercel.com`,
-          httpBinding: {
-            mode: 'structured',
-            method,
-            pathname: `/${method.toLowerCase()}`,
-          },
-        };
-
-        expect(
-          () =>
-            new Lambda({
-              files,
-              handler: 'index.handler',
-              runtime: 'nodejs18.x',
-              experimentalTriggers: [trigger],
-            })
-        ).not.toThrow();
-      });
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalTriggers: [trigger],
+          })
+      ).not.toThrow();
     });
 
     describe('Validation Errors', () => {
@@ -231,7 +228,7 @@ describe('Lambda', () => {
                   triggerVersion: 2 as any,
                   specversion: '1.0',
                   type: 'v1.test.vercel.com',
-                  httpBinding: { mode: 'structured' },
+                  httpBinding: { mode: 'structured', method: 'POST' },
                 },
               ],
             })
@@ -250,7 +247,7 @@ describe('Lambda', () => {
                   triggerVersion: 1,
                   specversion: '2.0' as any,
                   type: 'v1.test.vercel.com',
-                  httpBinding: { mode: 'structured' },
+                  httpBinding: { mode: 'structured', method: 'POST' },
                 },
               ],
             })
@@ -269,7 +266,7 @@ describe('Lambda', () => {
                   triggerVersion: 1,
                   specversion: '1.0',
                   type: '',
-                  httpBinding: { mode: 'structured' },
+                  httpBinding: { mode: 'structured', method: 'POST' },
                 },
               ],
             })
@@ -288,7 +285,7 @@ describe('Lambda', () => {
                   triggerVersion: 1,
                   specversion: '1.0',
                   type: 'v1.test.vercel.com',
-                  httpBinding: { mode: 'binary' as any },
+                  httpBinding: { mode: 'binary' as any, method: 'POST' },
                 },
               ],
             })
@@ -317,7 +314,30 @@ describe('Lambda', () => {
               ],
             })
         ).toThrow(
-          '"experimentalTriggers[0]".httpBinding.method must be one of: GET, POST, HEAD'
+          '"experimentalTriggers[0]".httpBinding.method must be "POST"'
+        );
+      });
+
+      it('should throw error for missing HTTP method', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: {
+                    mode: 'structured',
+                  } as any,
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.method must be "POST"'
         );
       });
 
@@ -335,6 +355,7 @@ describe('Lambda', () => {
                   type: 'v1.test.vercel.com',
                   httpBinding: {
                     mode: 'structured',
+                    method: 'POST',
                     pathname: 'invalid-path',
                   },
                 },
@@ -359,6 +380,7 @@ describe('Lambda', () => {
                   type: 'v1.test.vercel.com',
                   httpBinding: {
                     mode: 'structured',
+                    method: 'POST',
                     pathname: '',
                   },
                 },
@@ -461,6 +483,7 @@ describe('Lambda', () => {
                     type: 'v1.test.vercel.com',
                     httpBinding: {
                       mode: 'structured',
+                      method: 'POST',
                       pathname,
                     },
                   },
@@ -479,7 +502,7 @@ describe('Lambda', () => {
           type: 'v1.complex.vercel.com',
           httpBinding: {
             mode: 'structured',
-            method: 'HEAD',
+            method: 'POST',
             pathname: '/api/health',
           },
         };
@@ -497,7 +520,7 @@ describe('Lambda', () => {
         expect(storedTrigger.specversion).toBe('1.0');
         expect(storedTrigger.type).toBe('v1.complex.vercel.com');
         expect(storedTrigger.httpBinding.mode).toBe('structured');
-        expect(storedTrigger.httpBinding.method).toBe('HEAD');
+        expect(storedTrigger.httpBinding.method).toBe('POST');
         expect(storedTrigger.httpBinding.pathname).toBe('/api/health');
       });
     });
@@ -713,7 +736,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       maxAttempts: -1,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -739,7 +762,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       retryAfterSeconds: 0,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -765,7 +788,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       maxAttempts: 'three' as any,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -791,7 +814,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       retryAfterSeconds: 'ten' as any,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -817,7 +840,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       initialDelaySeconds: 0,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -841,7 +864,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       initialDelaySeconds: -5,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -867,7 +890,7 @@ describe('Lambda', () => {
                       consumer: 'test-consumer',
                       initialDelaySeconds: 'sixty' as any,
                     },
-                    httpBinding: { mode: 'structured' },
+                    httpBinding: { mode: 'structured', method: 'POST' },
                   },
                 ],
               })
@@ -916,7 +939,7 @@ describe('Lambda', () => {
             type: 'v1.health.vercel.com',
             httpBinding: {
               mode: 'structured',
-              method: 'GET',
+              method: 'POST',
               pathname: '/health',
             },
             // No queue config - simple trigger
