@@ -489,7 +489,10 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'architecture' | 'memory' | 'maxDuration'>
+  Pick<
+    LambdaOptions,
+    'architecture' | 'memory' | 'maxDuration' | 'experimentalTriggers'
+  >
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -498,6 +501,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          experimentalTriggers: fn.experimentalTriggers,
         };
       }
     }
