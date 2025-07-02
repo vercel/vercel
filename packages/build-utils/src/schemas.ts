@@ -108,9 +108,6 @@ export const functionsSchema = {
           type: 'string',
           maxLength: 256,
         },
-        experimentalPrivate: {
-          type: 'boolean',
-        },
         experimentalTriggers: {
           type: 'array',
           items: cloudEventTriggerSchema,
