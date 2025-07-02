@@ -44,6 +44,23 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
+  experimentalTriggers?: Array<{
+    triggerVersion: 1;
+    specversion: '1.0';
+    type: string;
+    httpBinding: {
+      mode: 'structured';
+      method?: 'GET' | 'POST' | 'HEAD';
+      pathname?: string;
+    };
+    queue?: {
+      topic: string;
+      consumer: string;
+      maxAttempts?: number;
+      retryAfterSeconds?: number;
+      initialDelaySeconds?: number;
+    };
+  }>;
 }
 
 export async function writeBuildResult(
@@ -474,6 +491,8 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
 
   const config = {
     ...lambda,
@@ -481,6 +500,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    experimentalTriggers,
     filePathMap,
     type: undefined,
     files: undefined,

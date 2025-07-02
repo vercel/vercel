@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.9.3
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
 ## 4.9.2
 
 ### Patch Changes

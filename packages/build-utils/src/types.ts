@@ -382,6 +382,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    experimentalTriggers?: CloudEventTrigger[];
   };
 }
 
@@ -591,3 +592,76 @@ export interface Chain {
    */
   headers: Record<string, string>;
 }
+
+/**
+ * Base CloudEvent trigger definition for HTTP protocol binding.
+ * Defines what types of CloudEvents this Lambda can receive as an HTTP endpoint.
+ *
+ * @see https://github.com/cloudevents/spec/blob/main/cloudevents/spec.md
+ * @see https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/http-protocol-binding.md
+ * @see https://github.com/cloudevents/spec/blob/main/subscriptions/spec.md
+ */
+export interface CloudEventTriggerBase<T extends string = string> {
+  /** Vercel trigger specification version - must be 1 (REQUIRED) */
+  triggerVersion: 1;
+
+  /** CloudEvents specification version - must be "1.0" (REQUIRED) */
+  specversion: '1.0';
+
+  /** Event type pattern this trigger handles (REQUIRED) */
+  type: T;
+
+  /** HTTP binding configuration (REQUIRED) */
+  httpBinding: {
+    /** HTTP binding mode - only structured mode is supported (REQUIRED) */
+    mode: 'structured';
+
+    /** HTTP method for this trigger endpoint - only POST is supported (REQUIRED) */
+    method: 'POST';
+
+    /** HTTP pathname for this trigger endpoint (OPTIONAL) */
+    pathname?: string;
+  };
+}
+
+/**
+ * CloudEvent queue trigger for Vercel's queue system.
+ * Handles "com.vercel.queue.v1" events with queue-specific configuration.
+ */
+export interface CloudEventQueueTrigger
+  extends CloudEventTriggerBase<'com.vercel.queue.v1'> {
+  /**
+   * Queue configuration for this trigger (REQUIRED)
+   */
+  queue: {
+    /** Name of the queue topic to consume from (REQUIRED) */
+    topic: string;
+
+    /** Name of the consumer group for this trigger (REQUIRED) */
+    consumer: string;
+
+    /**
+     * Maximum number of retry attempts for failed executions (OPTIONAL)
+     * Behavior when not specified depends on the server's default configuration.
+     */
+    maxAttempts?: number;
+
+    /**
+     * Delay in seconds before retrying failed executions (OPTIONAL)
+     * Behavior when not specified depends on the server's default configuration.
+     */
+    retryAfterSeconds?: number;
+
+    /**
+     * Initial delay in seconds before first execution attempt (OPTIONAL)
+     * Must be 0 or greater. Use 0 for no initial delay.
+     * Behavior when not specified depends on the server's default configuration.
+     */
+    initialDelaySeconds?: number;
+  };
+}
+
+/**
+ * Union type of all supported CloudEvent trigger types.
+ */
+export type CloudEventTrigger = CloudEventTriggerBase | CloudEventQueueTrigger;
