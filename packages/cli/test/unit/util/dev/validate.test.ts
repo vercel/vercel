@@ -400,11 +400,10 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should not error with valid experimentalPrivate and experimentalTriggers', () => {
+  it('should not error with valid experimentalTriggers', () => {
     const error = validateConfig({
       functions: {
         'api/webhook.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -434,7 +433,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/trigger.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -449,21 +447,6 @@ describe('validateConfig', () => {
       },
     });
     expect(error).toBeNull();
-  });
-
-  it('should error with invalid experimentalPrivate type', () => {
-    const error = validateConfig({
-      functions: {
-        // @ts-ignore
-        'api/test.js': { experimentalPrivate: 'true' },
-      },
-    });
-    expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].experimentalPrivate` should be boolean."
-    );
-    expect(error!.link).toEqual(
-      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
-    );
   });
 
   it('should error with invalid experimentalTriggers type', () => {
@@ -485,7 +468,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               // @ts-ignore
@@ -510,7 +492,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -535,12 +516,11 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
+            // @ts-ignore - intentionally missing type property for testing
             {
               triggerVersion: 1,
               specversion: '1.0',
-              // @ts-ignore
               httpBinding: { mode: 'structured' },
             },
           ],
@@ -559,7 +539,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -584,7 +563,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -612,7 +590,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -637,16 +614,15 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
               httpBinding: { mode: 'structured' },
+              // @ts-ignore - intentionally missing consumer property for testing
               queue: {
                 topic: 'test-topic',
-                // @ts-ignore - missing consumer
               },
             },
           ],
@@ -665,7 +641,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -695,7 +670,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -724,7 +698,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -753,7 +726,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,
@@ -782,7 +754,6 @@ describe('validateConfig', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
-          experimentalPrivate: true,
           experimentalTriggers: [
             {
               triggerVersion: 1,

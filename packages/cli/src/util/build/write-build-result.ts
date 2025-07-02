@@ -44,7 +44,6 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
-  experimentalPrivate?: boolean;
   experimentalTriggers?: Array<{
     triggerVersion: 1;
     specversion: '1.0';
@@ -492,8 +491,6 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
-  const experimentalPrivate =
-    functionConfiguration?.experimentalPrivate ?? lambda.experimentalPrivate;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
 
@@ -503,7 +500,6 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
-    experimentalPrivate,
     experimentalTriggers,
     filePathMap,
     type: undefined,
