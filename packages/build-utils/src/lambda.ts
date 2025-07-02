@@ -5,9 +5,32 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Config, Env, Files, FunctionFramework } from './types';
+import type {
+  Config,
+  Env,
+  Files,
+  FunctionFramework,
+  CloudEventTrigger,
+  CloudEventTriggerBase,
+  CloudEventQueueTrigger,
+} from './types';
+
+export type {
+  CloudEventTrigger,
+  CloudEventTriggerBase,
+  CloudEventQueueTrigger,
+};
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
+
+/**
+ * Type predicate to check if a CloudEvent trigger is a queue trigger.
+ */
+function isCloudEventQueueTrigger(
+  trigger: CloudEventTrigger
+): trigger is CloudEventQueueTrigger {
+  return trigger.type === 'com.vercel.queue.v1';
+}
 
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
@@ -29,6 +52,22 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   framework?: FunctionFramework;
+  /**
+   * Experimental CloudEvents trigger definitions that this Lambda can receive.
+   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
+   * Currently supports HTTP protocol binding in structured mode only.
+   * Only supports CloudEvents specification version 1.0.
+   *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: CloudEventTrigger[];
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -95,6 +134,22 @@ export class Lambda {
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
   experimentalAllowBundling?: boolean;
+  /**
+   * Experimental CloudEvents trigger definitions that this Lambda can receive.
+   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
+   * Currently supports HTTP protocol binding in structured mode only.
+   * Only supports CloudEvents specification version 1.0.
+   *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: CloudEventTrigger[];
 
   constructor(opts: LambdaOptions) {
     const {
@@ -112,6 +167,7 @@ export class Lambda {
       experimentalResponseStreaming,
       operationType,
       framework,
+      experimentalTriggers,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -192,6 +248,145 @@ export class Lambda {
       }
     }
 
+    if (experimentalTriggers !== undefined) {
+      assert(
+        Array.isArray(experimentalTriggers),
+        '"experimentalTriggers" is not an Array'
+      );
+
+      for (let i = 0; i < experimentalTriggers.length; i++) {
+        const trigger = experimentalTriggers[i];
+        const prefix = `"experimentalTriggers[${i}]"`;
+
+        assert(
+          typeof trigger === 'object' && trigger !== null,
+          `${prefix} is not an object`
+        );
+
+        // Validate required CloudEventTrigger attributes
+        assert(
+          trigger.triggerVersion === 1,
+          `${prefix}.triggerVersion must be 1`
+        );
+
+        assert(
+          trigger.specversion === '1.0',
+          `${prefix}.specversion must be "1.0"`
+        );
+
+        assert(
+          typeof trigger.type === 'string',
+          `${prefix}.type is not a string`
+        );
+        assert(trigger.type.length > 0, `${prefix}.type cannot be empty`);
+
+        // Validate queue-specific fields for com.vercel.queue.v1 triggers
+        if (isCloudEventQueueTrigger(trigger)) {
+          assert(
+            typeof trigger.queue === 'object' && trigger.queue !== null,
+            `${prefix}.queue is required and must be an object for queue triggers`
+          );
+
+          const queue = trigger.queue;
+          const queuePrefix = `${prefix}.queue`;
+
+          assert(
+            typeof queue.topic === 'string',
+            `${queuePrefix}.topic is required and must be a string`
+          );
+          assert(
+            queue.topic.length > 0,
+            `${queuePrefix}.topic cannot be empty`
+          );
+
+          assert(
+            typeof queue.consumer === 'string',
+            `${queuePrefix}.consumer is required and must be a string`
+          );
+          assert(
+            queue.consumer.length > 0,
+            `${queuePrefix}.consumer cannot be empty`
+          );
+        }
+
+        // Validate required httpBinding
+        const binding = trigger.httpBinding;
+        const bindingPrefix = `${prefix}.httpBinding`;
+
+        assert(
+          typeof binding === 'object' && binding !== null,
+          `${bindingPrefix} is required and must be an object`
+        );
+        assert(
+          binding.mode === 'structured',
+          `${bindingPrefix}.mode must be "structured"`
+        );
+
+        // Validate optional HTTP configuration within httpBinding
+        if (binding.method !== undefined) {
+          const validMethods = ['GET', 'POST', 'HEAD'];
+          assert(
+            validMethods.includes(binding.method),
+            `${bindingPrefix}.method must be one of: ${validMethods.join(', ')}`
+          );
+        }
+
+        if (binding.pathname !== undefined) {
+          assert(
+            typeof binding.pathname === 'string',
+            `${bindingPrefix}.pathname must be a string`
+          );
+          assert(
+            binding.pathname.length > 0,
+            `${bindingPrefix}.pathname cannot be empty`
+          );
+          assert(
+            binding.pathname.startsWith('/'),
+            `${bindingPrefix}.pathname must start with '/'`
+          );
+        }
+
+        // Validate optional queue configuration (only on queue triggers)
+        if (isCloudEventQueueTrigger(trigger)) {
+          const queue = trigger.queue;
+          const queuePrefix = `${prefix}.queue`;
+
+          if (queue.maxAttempts !== undefined) {
+            assert(
+              typeof queue.maxAttempts === 'number',
+              `${queuePrefix}.maxAttempts must be a number`
+            );
+            assert(
+              Number.isInteger(queue.maxAttempts) && queue.maxAttempts >= 0,
+              `${queuePrefix}.maxAttempts must be a non-negative integer`
+            );
+          }
+
+          if (queue.retryAfterSeconds !== undefined) {
+            assert(
+              typeof queue.retryAfterSeconds === 'number',
+              `${queuePrefix}.retryAfterSeconds must be a number`
+            );
+            assert(
+              queue.retryAfterSeconds > 0,
+              `${queuePrefix}.retryAfterSeconds must be a positive number`
+            );
+          }
+
+          if (queue.initialDelaySeconds !== undefined) {
+            assert(
+              typeof queue.initialDelaySeconds === 'number',
+              `${queuePrefix}.initialDelaySeconds must be a number`
+            );
+            assert(
+              queue.initialDelaySeconds >= 0,
+              `${queuePrefix}.initialDelaySeconds must be a non-negative number`
+            );
+          }
+        }
+      }
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -213,6 +408,7 @@ export class Lambda {
       'experimentalAllowBundling' in opts
         ? opts.experimentalAllowBundling
         : undefined;
+    this.experimentalTriggers = experimentalTriggers;
   }
 
   async createZip(): Promise<Buffer> {

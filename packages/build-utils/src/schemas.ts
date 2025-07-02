@@ -1,3 +1,78 @@
+const cloudEventTriggerSchema = {
+  type: 'object',
+  properties: {
+    triggerVersion: {
+      type: 'number',
+      const: 1,
+    },
+    specversion: {
+      type: 'string',
+      const: '1.0',
+    },
+    type: {
+      type: 'string',
+      minLength: 1,
+    },
+    httpBinding: {
+      type: 'object',
+      properties: {
+        mode: {
+          type: 'string',
+          const: 'structured',
+        },
+        method: {
+          type: 'string',
+          enum: ['GET', 'POST', 'HEAD'],
+        },
+        pathname: {
+          type: 'string',
+          minLength: 1,
+          pattern: '^/',
+        },
+      },
+      required: ['mode'],
+      additionalProperties: false,
+    },
+    queue: {
+      type: 'object',
+      properties: {
+        topic: {
+          type: 'string',
+          minLength: 1,
+        },
+        consumer: {
+          type: 'string',
+          minLength: 1,
+        },
+        maxAttempts: {
+          type: 'number',
+          minimum: 0,
+        },
+        retryAfterSeconds: {
+          type: 'number',
+          exclusiveMinimum: 0,
+        },
+        initialDelaySeconds: {
+          type: 'number',
+          minimum: 0,
+        },
+      },
+      required: ['topic', 'consumer'],
+      additionalProperties: false,
+    },
+  },
+  required: ['triggerVersion', 'specversion', 'type', 'httpBinding'],
+  additionalProperties: false,
+  if: {
+    properties: {
+      type: { const: 'com.vercel.queue.v1' },
+    },
+  },
+  then: {
+    required: ['triggerVersion', 'specversion', 'type', 'httpBinding', 'queue'],
+  },
+};
+
 export const functionsSchema = {
   type: 'object',
   minProperties: 1,
@@ -32,6 +107,10 @@ export const functionsSchema = {
         excludeFiles: {
           type: 'string',
           maxLength: 256,
+        },
+        experimentalTriggers: {
+          type: 'array',
+          items: cloudEventTriggerSchema,
         },
       },
     },
