@@ -599,6 +599,105 @@ describe('Lambda', () => {
         expect(queue.retryAfterSeconds).toBe(30);
       });
 
+      it('should create Lambda with initialDelaySeconds configuration', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'delayed-events',
+            consumer: 'delayed-processors',
+            initialDelaySeconds: 60,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/delayed/events',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalPrivate: true,
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.initialDelaySeconds).toBe(60);
+      });
+
+      it('should create Lambda with all queue configuration options', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'full-config-events',
+            consumer: 'full-config-processors',
+            maxAttempts: 3,
+            retryAfterSeconds: 15,
+            initialDelaySeconds: 120,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/full/config',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalPrivate: true,
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.maxAttempts).toBe(3);
+        expect(queue.retryAfterSeconds).toBe(15);
+        expect(queue.initialDelaySeconds).toBe(120);
+      });
+
+      it('should create Lambda with zero initialDelaySeconds', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'immediate-events',
+            consumer: 'immediate-processors',
+            initialDelaySeconds: 0, // No initial delay
+            maxAttempts: 1,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/immediate/events',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalPrivate: true,
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.initialDelaySeconds).toBe(0);
+        expect(queue.maxAttempts).toBe(1);
+      });
+
       describe('Queue Validation Errors', () => {
         it('should throw error for negative maxAttempts', () => {
           expect(
@@ -703,6 +802,85 @@ describe('Lambda', () => {
             '"experimentalTriggers[0]".queue.retryAfterSeconds must be a number'
           );
         });
+
+        it('should allow zero initialDelaySeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalPrivate: true,
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: 0,
+                    },
+                    httpBinding: { mode: 'structured' },
+                  },
+                ],
+              })
+          ).not.toThrow();
+        });
+
+        it('should throw error for negative initialDelaySeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalPrivate: true,
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: -5,
+                    },
+                    httpBinding: { mode: 'structured' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.initialDelaySeconds must be a non-negative number'
+          );
+        });
+
+        it('should throw error for invalid initialDelaySeconds type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalPrivate: true,
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: 'sixty' as any,
+                    },
+                    httpBinding: { mode: 'structured' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.initialDelaySeconds must be a number'
+          );
+        });
       });
 
       describe('Use Cases', () => {
@@ -786,6 +964,42 @@ describe('Lambda', () => {
                 experimentalTriggers: [trigger],
               })
           ).not.toThrow();
+        });
+
+        it('should support delayed queue processing with initialDelaySeconds', () => {
+          // Delayed processing trigger - useful for scheduled or batch processing
+          const delayedTrigger: CloudEventQueueTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              topic: 'batch-processing',
+              consumer: 'delayed-batch-processors',
+              initialDelaySeconds: 300, // 5 minute delay before first execution
+              maxAttempts: 2,
+              retryAfterSeconds: 60,
+            },
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+              pathname: '/batch/process',
+            },
+          };
+
+          const lambda = new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalPrivate: true,
+            experimentalTriggers: [delayedTrigger],
+          });
+
+          const queue = (
+            lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+          ).queue;
+          expect(queue.initialDelaySeconds).toBe(300);
+          expect(queue.maxAttempts).toBe(2);
+          expect(queue.retryAfterSeconds).toBe(60);
         });
 
         it('should document that queue config represents proper configuration', () => {

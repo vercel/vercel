@@ -650,6 +650,13 @@ export interface CloudEventQueueTrigger
      * Behavior when not specified depends on the server's default configuration.
      */
     retryAfterSeconds?: number;
+
+    /**
+     * Initial delay in seconds before first execution attempt (OPTIONAL)
+     * Must be 0 or greater. Use 0 for no initial delay.
+     * Behavior when not specified depends on the server's default configuration.
+     */
+    initialDelaySeconds?: number;
   };
 }
 

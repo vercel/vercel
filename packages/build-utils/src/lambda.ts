@@ -372,6 +372,17 @@ export class Lambda {
               `${queuePrefix}.retryAfterSeconds must be a positive number`
             );
           }
+
+          if (queue.initialDelaySeconds !== undefined) {
+            assert(
+              typeof queue.initialDelaySeconds === 'number',
+              `${queuePrefix}.initialDelaySeconds must be a number`
+            );
+            assert(
+              queue.initialDelaySeconds >= 0,
+              `${queuePrefix}.initialDelaySeconds must be a non-negative number`
+            );
+          }
         }
       }
     }
