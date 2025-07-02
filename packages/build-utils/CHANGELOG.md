@@ -1,5 +1,13 @@
 # @vercel/build-utils
 
+## 10.6.3
+
+### Patch Changes
+
+- make POST method required ([#13518](https://github.com/vercel/vercel/pull/13518))
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
 ## 10.6.2
 
 ### Patch Changes

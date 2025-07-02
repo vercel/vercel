@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.9.4
+
+### Patch Changes
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
 ## 4.9.3
 
 ### Patch Changes
