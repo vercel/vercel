@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.6.2
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
 ## 10.6.1
 
 ### Patch Changes
