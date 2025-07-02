@@ -440,6 +440,7 @@ describe('validateConfig', () => {
               type: 'v1.test.vercel.com',
               httpBinding: {
                 mode: 'structured',
+                method: 'POST',
               },
             },
           ],
@@ -474,7 +475,7 @@ describe('validateConfig', () => {
               triggerVersion: 2,
               specversion: '1.0',
               type: 'v1.test.vercel.com',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
             },
           ],
         },
@@ -498,7 +499,7 @@ describe('validateConfig', () => {
               // @ts-ignore
               specversion: '2.0',
               type: 'v1.test.vercel.com',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
             },
           ],
         },
@@ -521,7 +522,7 @@ describe('validateConfig', () => {
             {
               triggerVersion: 1,
               specversion: '1.0',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
             },
           ],
         },
@@ -545,7 +546,7 @@ describe('validateConfig', () => {
               specversion: '1.0',
               type: 'v1.test.vercel.com',
               // @ts-ignore
-              httpBinding: { mode: 'binary' },
+              httpBinding: { mode: 'binary', method: 'POST' },
             },
           ],
         },
@@ -579,7 +580,33 @@ describe('validateConfig', () => {
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].httpBinding.method` should be equal to one of the allowed values."
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].httpBinding.method` should be equal to constant."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with missing HTTP method', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              triggerVersion: 1,
+              specversion: '1.0',
+              type: 'v1.test.vercel.com',
+              // @ts-ignore - intentionally missing method property
+              httpBinding: {
+                mode: 'structured',
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].httpBinding` missing required property `method`."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
@@ -595,7 +622,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               // @ts-ignore - missing queue configuration
             },
           ],
@@ -619,7 +646,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               // @ts-ignore - intentionally missing consumer property for testing
               queue: {
                 topic: 'test-topic',
@@ -646,7 +673,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               queue: {
                 topic: 'test-topic',
                 consumer: 'test-consumer',
@@ -675,7 +702,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               queue: {
                 topic: 'test-topic',
                 consumer: 'test-consumer',
@@ -703,7 +730,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               queue: {
                 topic: 'test-topic',
                 consumer: 'test-consumer',
@@ -731,7 +758,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               queue: {
                 topic: 'test-topic',
                 consumer: 'test-consumer',
@@ -759,7 +786,7 @@ describe('validateConfig', () => {
               triggerVersion: 1,
               specversion: '1.0',
               type: 'com.vercel.queue.v1',
-              httpBinding: { mode: 'structured' },
+              httpBinding: { mode: 'structured', method: 'POST' },
               queue: {
                 topic: 'test-topic',
                 consumer: 'test-consumer',
