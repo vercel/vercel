@@ -475,7 +475,6 @@ export const build: BuildV3 = async ({
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
-      experimentalTriggers: staticConfig?.experimentalTriggers,
       regions: normalizeRequestedRegions(
         staticConfig?.preferredRegion ?? staticConfig?.regions
       ),
