@@ -109,9 +109,6 @@ export const BaseFunctionConfigSchema = {
     preferredRegion: {
       oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
     },
-    experimentalPrivate: {
-      type: 'boolean',
-    },
     experimentalTriggers: {
       type: 'array',
       items: CloudEventTriggerSchema,

@@ -59,7 +59,6 @@ describe('getConfig()', () => {
     const config = getConfig(project, sourcePath);
     expect(config).toMatchInlineSnapshot(`
       {
-        "experimentalPrivate": true,
         "experimentalTriggers": [
           {
             "httpBinding": {

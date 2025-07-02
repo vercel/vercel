@@ -102,7 +102,6 @@ describe('getConfig for swc', () => {
     const config = getConfig(ast, BaseFunctionConfigSchema);
     expect(config).toMatchInlineSnapshot(`
       {
-        "experimentalPrivate": true,
         "experimentalTriggers": [
           {
             "httpBinding": {

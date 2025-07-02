@@ -1,6 +1,5 @@
 export const config = {
   runtime: 'nodejs18.x',
-  experimentalPrivate: true,
   experimentalTriggers: [
     {
       triggerVersion: 1,
