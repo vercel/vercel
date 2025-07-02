@@ -22,7 +22,7 @@ const cloudEventTriggerSchema = {
         },
         method: {
           type: 'string',
-          enum: ['GET', 'POST', 'HEAD'],
+          const: 'POST',
         },
         pathname: {
           type: 'string',
@@ -30,7 +30,7 @@ const cloudEventTriggerSchema = {
           pattern: '^/',
         },
       },
-      required: ['mode'],
+      required: ['mode', 'method'],
       additionalProperties: false,
     },
     queue: {
