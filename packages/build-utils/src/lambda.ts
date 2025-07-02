@@ -274,24 +274,6 @@ export class Lambda {
       );
     }
 
-    // Validate experimentalPrivate field constraints
-    if (experimentalTriggers !== undefined && !isPrivate) {
-      assert(
-        false,
-        '"experimentalPrivate" must be set to true when using "experimentalTriggers"'
-      );
-    }
-
-    if (
-      isPrivate &&
-      (experimentalTriggers === undefined || experimentalTriggers.length === 0)
-    ) {
-      assert(
-        false,
-        '"experimentalPrivate" cannot be true without "experimentalTriggers" defined'
-      );
-    }
-
     if (experimentalTriggers !== undefined) {
       assert(
         Array.isArray(experimentalTriggers),
@@ -418,6 +400,29 @@ export class Lambda {
           }
         }
       }
+    }
+
+    // Validate experimentalPrivate field constraints
+    // Only require experimentalPrivate: true when there are actual triggers (length > 0)
+    if (
+      experimentalTriggers !== undefined &&
+      experimentalTriggers.length > 0 &&
+      !isPrivate
+    ) {
+      assert(
+        false,
+        '"experimentalPrivate" must be set to true when using "experimentalTriggers"'
+      );
+    }
+
+    if (
+      isPrivate &&
+      (experimentalTriggers === undefined || experimentalTriggers.length === 0)
+    ) {
+      assert(
+        false,
+        '"experimentalPrivate" cannot be true without "experimentalTriggers" defined'
+      );
     }
 
     this.type = 'Lambda';
