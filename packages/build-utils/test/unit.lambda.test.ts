@@ -118,7 +118,7 @@ describe('Lambda', () => {
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
-        private: true,
+        experimentalPrivate: true,
         experimentalTriggers: [trigger],
       });
 
@@ -147,7 +147,7 @@ describe('Lambda', () => {
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
-        private: true,
+        experimentalPrivate: true,
         experimentalTriggers: [trigger],
       });
 
@@ -185,7 +185,7 @@ describe('Lambda', () => {
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
-        private: true,
+        experimentalPrivate: true,
         experimentalTriggers: triggers,
       });
 
@@ -215,7 +215,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [trigger],
             })
         ).not.toThrow();
@@ -230,7 +230,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 2 as any,
@@ -250,7 +250,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -270,7 +270,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -290,7 +290,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -312,7 +312,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -337,7 +337,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -362,7 +362,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -387,7 +387,7 @@ describe('Lambda', () => {
               files,
               handler: 'index.handler',
               runtime: 'nodejs18.x',
-              private: true,
+              experimentalPrivate: true,
               experimentalTriggers: [
                 {
                   triggerVersion: 1,
@@ -466,7 +466,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -501,7 +501,7 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          private: true,
+          experimentalPrivate: true,
           experimentalTriggers: [originalTrigger],
         });
 
@@ -538,7 +538,7 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          private: true,
+          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -569,7 +569,7 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          private: true,
+          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -605,7 +605,7 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          private: true,
+          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -624,7 +624,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -651,7 +651,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -678,7 +678,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -705,7 +705,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -752,7 +752,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [systemTrigger],
               })
           ).not.toThrow();
@@ -778,7 +778,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [userTrigger],
               })
           ).not.toThrow();
@@ -806,7 +806,7 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                private: true,
+                experimentalPrivate: true,
                 experimentalTriggers: [trigger],
               })
           ).not.toThrow();
@@ -834,7 +834,7 @@ describe('Lambda', () => {
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            private: true,
+            experimentalPrivate: true,
             experimentalTriggers: [queueTrigger],
           });
 
@@ -856,36 +856,36 @@ describe('Lambda', () => {
     });
   });
 
-  describe('Private Field Validation', () => {
+  describe('ExperimentalPrivate Field Validation', () => {
     const files: Files = {};
 
-    it('should default private to false when not specified', () => {
+    it('should default experimentalPrivate to false when not specified', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
       });
 
-      expect(lambda.private).toBe(false);
+      expect(lambda.experimentalPrivate).toBe(false);
     });
 
-    it('should accept private: false when no triggers are used', () => {
+    it('should accept experimentalPrivate: false when no triggers are used', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
-        private: false,
+        experimentalPrivate: false,
       });
 
-      expect(lambda.private).toBe(false);
+      expect(lambda.experimentalPrivate).toBe(false);
     });
 
-    it('should accept private: true with triggers', () => {
+    it('should accept experimentalPrivate: true with triggers', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
         runtime: 'nodejs18.x',
-        private: true,
+        experimentalPrivate: true,
         experimentalTriggers: [
           {
             triggerVersion: 1,
@@ -896,18 +896,18 @@ describe('Lambda', () => {
         ],
       });
 
-      expect(lambda.private).toBe(true);
+      expect(lambda.experimentalPrivate).toBe(true);
       expect(lambda.experimentalTriggers).toHaveLength(1);
     });
 
-    it('should throw error when private: false with triggers', () => {
+    it('should throw error when experimentalPrivate: false with triggers', () => {
       expect(
         () =>
           new Lambda({
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            private: false,
+            experimentalPrivate: false,
             experimentalTriggers: [
               {
                 triggerVersion: 1,
@@ -918,36 +918,36 @@ describe('Lambda', () => {
             ],
           })
       ).toThrow(
-        '"private" must be set to true when using "experimentalTriggers"'
+        '"experimentalPrivate" must be set to true when using "experimentalTriggers"'
       );
     });
 
-    it('should throw error when private: true without triggers', () => {
+    it('should throw error when experimentalPrivate: true without triggers', () => {
       expect(
         () =>
           new Lambda({
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            private: true,
+            experimentalPrivate: true,
           })
       ).toThrow(
-        '"private" cannot be true without "experimentalTriggers" defined'
+        '"experimentalPrivate" cannot be true without "experimentalTriggers" defined'
       );
     });
 
-    it('should throw error when private: true with empty triggers array', () => {
+    it('should throw error when experimentalPrivate: true with empty triggers array', () => {
       expect(
         () =>
           new Lambda({
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            private: true,
+            experimentalPrivate: true,
             experimentalTriggers: [],
           })
       ).toThrow(
-        '"private" cannot be true without "experimentalTriggers" defined'
+        '"experimentalPrivate" cannot be true without "experimentalTriggers" defined'
       );
     });
   });
