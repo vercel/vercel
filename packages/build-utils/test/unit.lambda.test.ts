@@ -620,7 +620,6 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -653,7 +652,6 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -687,7 +685,6 @@ describe('Lambda', () => {
           files,
           handler: 'index.handler',
           runtime: 'nodejs18.x',
-          experimentalPrivate: true,
           experimentalTriggers: [trigger],
         });
 
@@ -810,7 +807,6 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -835,7 +831,6 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -862,7 +857,6 @@ describe('Lambda', () => {
                 files,
                 handler: 'index.handler',
                 runtime: 'nodejs18.x',
-                experimentalPrivate: true,
                 experimentalTriggers: [
                   {
                     triggerVersion: 1,
@@ -990,7 +984,6 @@ describe('Lambda', () => {
             files,
             handler: 'index.handler',
             runtime: 'nodejs18.x',
-            experimentalPrivate: true,
             experimentalTriggers: [delayedTrigger],
           });
 
