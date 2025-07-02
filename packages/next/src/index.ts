@@ -31,6 +31,7 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  CloudEventTrigger,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -1964,6 +1965,8 @@ export const build: BuildV2 = async buildOptions => {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
             maxDuration?: number;
+            experimentalPrivate?: boolean;
+            experimentalTriggers?: CloudEventTrigger[];
           } = {};
 
           if (config && config.functions) {
