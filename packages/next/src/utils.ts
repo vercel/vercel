@@ -1877,7 +1877,9 @@ export async function getPageLambdaGroups({
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             group.isPrerenders === isPrerenderRoute &&
-            group.isExperimentalPPR === isExperimentalPPR;
+            group.isExperimentalPPR === isExperimentalPPR &&
+            JSON.stringify(group.experimentalTriggers) ===
+              JSON.stringify(opts.experimentalTriggers);
 
           if (matches) {
             let newTracedFilesUncompressedSize =
