@@ -1784,6 +1784,7 @@ export type LambdaGroup = {
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
+  experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
 
 export async function getPageLambdaGroups({
@@ -1826,6 +1827,7 @@ export async function getPageLambdaGroups({
   pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
+  experimentalTriggers?: Lambda['experimentalTriggers'];
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1839,6 +1841,7 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number;
+      experimentalTriggers?: NodejsLambda['experimentalTriggers'];
     } = {};
 
     if (
@@ -1913,6 +1916,7 @@ export async function getPageLambdaGroups({
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
+        experimentalTriggers: opts.experimentalTriggers,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
