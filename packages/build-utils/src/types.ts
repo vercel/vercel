@@ -616,8 +616,8 @@ export interface CloudEventTriggerBase<T extends string = string> {
     /** HTTP binding mode - only structured mode is supported (REQUIRED) */
     mode: 'structured';
 
-    /** HTTP method for this trigger endpoint (OPTIONAL, default: 'POST') */
-    method?: 'GET' | 'POST' | 'HEAD';
+    /** HTTP method for this trigger endpoint - only POST is supported (REQUIRED) */
+    method: 'POST';
 
     /** HTTP pathname for this trigger endpoint (OPTIONAL) */
     pathname?: string;

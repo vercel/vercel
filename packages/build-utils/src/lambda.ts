@@ -321,16 +321,12 @@ export class Lambda {
           binding.mode === 'structured',
           `${bindingPrefix}.mode must be "structured"`
         );
+        assert(
+          binding.method === 'POST',
+          `${bindingPrefix}.method must be "POST"`
+        );
 
         // Validate optional HTTP configuration within httpBinding
-        if (binding.method !== undefined) {
-          const validMethods = ['GET', 'POST', 'HEAD'];
-          assert(
-            validMethods.includes(binding.method),
-            `${bindingPrefix}.method must be one of: ${validMethods.join(', ')}`
-          );
-        }
-
         if (binding.pathname !== undefined) {
           assert(
             typeof binding.pathname === 'string',
