@@ -1965,7 +1965,6 @@ export const build: BuildV2 = async buildOptions => {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
             maxDuration?: number;
-            experimentalPrivate?: boolean;
             experimentalTriggers?: CloudEventTrigger[];
           } = {};
 
