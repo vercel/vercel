@@ -14,7 +14,7 @@ import handleCertError from '../../util/certs/handle-cert-error';
 import isWildcardAlias from '../../util/alias/is-wildcard-alias';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
-import toHost from '../../util/to-host';
+import toHost, { validateUrlProtocol } from '../../util/to-host';
 import { AliasSetTelemetryClient } from '../../util/telemetry/commands/alias/set';
 import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
@@ -71,6 +71,16 @@ export default async function set(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Validate URL protocol for common typos
+  if (args.length >= 2) {
+    const protocolValidation = validateUrlProtocol(args[1]);
+    if (!protocolValidation.isValid && protocolValidation.error && protocolValidation.suggestion) {
+      output.error(protocolValidation.error);
+      output.print(`  ${protocolValidation.suggestion}\n`);
+      return 1;
+    }
+  }
+
   if (args.length === 0) {
     output.error(
       `To ship to production, optionally configure your domains (${link(
@@ -84,6 +94,15 @@ export default async function set(client: Client, argv: string[]) {
   if (args.length === 1) {
     const [aliasTarget] = args;
     telemetryClient.trackCliArgumentAlias(aliasTarget);
+
+    // Validate URL protocol for common typos in single argument case
+    const protocolValidation = validateUrlProtocol(aliasTarget);
+    if (!protocolValidation.isValid && protocolValidation.error && protocolValidation.suggestion) {
+      output.error(protocolValidation.error);
+      output.print(`  ${protocolValidation.suggestion}\n`);
+      return 1;
+    }
+
     const deployment = handleCertError(
       await getDeploymentForAlias(
         client,
@@ -363,9 +382,42 @@ function handleCreateAliasError<T>(
 
 function getTargetsForAlias(args: string[], { alias }: VercelConfig = {}) {
   if (args.length) {
-    return [args[args.length - 1]]
-      .map(target => (target.indexOf('.') !== -1 ? toHost(target) : target))
+    const targets = [args[args.length - 1]]
+      .map(target => {
+        if (target.indexOf('.') !== -1) {
+          // Validate protocol before processing
+          const protocolValidation = validateUrlProtocol(target);
+          if (!protocolValidation.isValid) {
+            // Return error object to be handled by caller
+            return new ERRORS.InvalidDomain(
+              target,
+              `${protocolValidation.error}. ${protocolValidation.suggestion}`
+            );
+          }
+          return toHost(target);
+        }
+        return target;
+      })
       .filter((x): x is string => !!x && typeof x === 'string');
+    
+    // Check if any target validation failed
+    const errorTarget = [args[args.length - 1]].find(target => {
+      if (target.indexOf('.') !== -1) {
+        const protocolValidation = validateUrlProtocol(target);
+        return !protocolValidation.isValid;
+      }
+      return false;
+    });
+    
+    if (errorTarget) {
+      const protocolValidation = validateUrlProtocol(errorTarget);
+      return new ERRORS.InvalidDomain(
+        errorTarget,
+        `${protocolValidation.error}. ${protocolValidation.suggestion}`
+      );
+    }
+    
+    return targets;
   }
 
   if (!alias) {
