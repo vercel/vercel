@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "https://vercel-packages.vercel.app/next/commits/d879d543f5e507654b914051310ea93019eb81f6/next",
+    "next": "https://vercel-packages.vercel.app/next/commits/c6d20574bdadb9b982c6708ab10f3f540d9fc061/next",
     "react": "latest",
     "react-dom": "latest"
   }
