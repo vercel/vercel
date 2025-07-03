@@ -3,7 +3,7 @@
   "name": "25-mono-repo-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "https://vercel-packages.vercel.app/next/commits/d2e2db681672fddd2d40553f20746356d93e23e4/next",
+    "next": "https://vercel-packages.vercel.app/next/commits/3bbf3c360be2ee8a037ab98bf1266df3d07a2ae8/next",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },
