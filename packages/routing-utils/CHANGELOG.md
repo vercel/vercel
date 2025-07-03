@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.1.0
+
+### Minor Changes
+
+- Change where validation on the routing array happens (schema to api) ([#13476](https://github.com/vercel/vercel/pull/13476))
+
 ## 5.0.8
 
 ### Patch Changes
