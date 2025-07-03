@@ -15,6 +15,13 @@ export class BlobPutTelemetryClient
     }
   }
 
+  trackCliInputSourceStdin() {
+    this.trackCliArgument({
+      arg: 'pathToFile',
+      value: '__vercel_stdin__',
+    });
+  }
+
   trackCliFlagAddRandomSuffix(addRandomSuffix: boolean | undefined) {
     if (addRandomSuffix) {
       this.trackCliFlag('add-random-suffix');
