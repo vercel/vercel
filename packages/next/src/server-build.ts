@@ -2303,11 +2303,19 @@ export async function serverBuild({
                   key: rscHeader,
                 },
               ],
+              missing: [
+                {
+                  type: 'header',
+                  key: includeNotFoundHeader,
+                  value: '1',
+                },
+              ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
             },
+            // TODO: deal with not found index later..
             {
               src: `^${path.posix.join(
                 '/',
@@ -2322,6 +2330,7 @@ export async function serverBuild({
                 {
                   type: 'header',
                   key: includeNotFoundHeader,
+                  value: '1',
                 },
               ],
               dest: path.posix.join(
