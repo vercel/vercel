@@ -1082,6 +1082,12 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   await waitForPrompt(vc, 'In which directory is your code located?');
   vc.stdin?.write('\n');
 
+  await waitForPrompt(
+    vc,
+    'Want to use the default Deployment Protection settings?'
+  );
+  vc.stdin?.write('\n');
+
   await waitForPrompt(vc, 'Linked to');
 
   const output = await vc;
@@ -1265,6 +1271,17 @@ test('vercel.json configuration overrides in a new project prompt user and merge
   // otherwise the output from the build command will not be the index route and the page text assertion below will fail.
   await waitForPrompt(vc, "What's your Output Directory?");
   vc.stdin?.write('output\n');
+  await waitForPrompt(
+    vc,
+    'Want to use the default Deployment Protection settings?'
+  );
+  vc.stdin?.write('n\n');
+  await waitForPrompt(
+    vc,
+    'What setting do you want to use for Vercel Authentication?'
+  );
+  vc.stdin?.write('\x1b[B'); // Down Arrow
+  vc.stdin?.write('\n');
   await waitForPrompt(vc, 'Linked to');
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
