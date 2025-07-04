@@ -226,35 +226,6 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if over 2048 routes', () => {
-    assertError('string', [
-      {
-        dataPath: '',
-        keyword: 'type',
-        message: 'should be array',
-        params: {
-          type: 'array',
-        },
-        schemaPath: '#/type',
-      },
-    ]);
-
-    const arr = new Array(2049);
-    arr.fill(true);
-
-    assertError(arr, [
-      {
-        dataPath: '',
-        keyword: 'maxItems',
-        message: 'should NOT have more than 2048 items',
-        params: {
-          limit: '2048',
-        },
-        schemaPath: '#/maxItems',
-      },
-    ]);
-  });
-
   test('fails is src is not string', () => {
     assertError(
       [

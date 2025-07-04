@@ -1,7 +1,12 @@
 import path from 'path';
 import { tmpdir } from 'os';
 import fs from 'fs-extra';
-import { createZip } from '../src/lambda';
+import { createZip, Lambda } from '../src/lambda';
+import type {
+  CloudEventTrigger,
+  CloudEventQueueTrigger,
+  Files,
+} from '../src/types';
 import { FileBlob, glob, spawnAsync } from '../src';
 import { describe, expect, it } from 'vitest';
 
@@ -94,5 +99,965 @@ describe('Lambda', () => {
     } finally {
       await fs.remove(dir);
     }
+  });
+
+  describe('CloudEventTrigger', () => {
+    const files: Files = {};
+
+    it('should create Lambda with valid minimal CloudEventTrigger', () => {
+      const trigger: CloudEventTrigger = {
+        triggerVersion: 1,
+        specversion: '1.0',
+        type: 'v1.test.vercel.com',
+        httpBinding: {
+          mode: 'structured',
+          method: 'POST',
+        },
+      };
+
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs18.x',
+        experimentalTriggers: [trigger],
+      });
+
+      expect(lambda.experimentalTriggers).toEqual([trigger]);
+      expect(lambda.experimentalTriggers![0].triggerVersion).toBe(1);
+      expect(lambda.experimentalTriggers![0].specversion).toBe('1.0');
+      expect(lambda.experimentalTriggers![0].type).toBe('v1.test.vercel.com');
+      expect(lambda.experimentalTriggers![0].httpBinding.mode).toBe(
+        'structured'
+      );
+    });
+
+    it('should create Lambda with CloudEventTrigger including method and pathname', () => {
+      const trigger: CloudEventTrigger = {
+        triggerVersion: 1,
+        specversion: '1.0',
+        type: 'v1.pubsub.vercel.com',
+        httpBinding: {
+          mode: 'structured',
+          method: 'POST',
+          pathname: '/webhooks/pubsub',
+        },
+      };
+
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs18.x',
+        experimentalTriggers: [trigger],
+      });
+
+      expect(lambda.experimentalTriggers![0].httpBinding.method).toBe('POST');
+      expect(lambda.experimentalTriggers![0].httpBinding.pathname).toBe(
+        '/webhooks/pubsub'
+      );
+    });
+
+    it('should create Lambda with multiple CloudEventTriggers', () => {
+      const triggers: CloudEventTrigger[] = [
+        {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.pubsub.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/webhooks/pubsub',
+          },
+        },
+        {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.health.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/health',
+          },
+        },
+      ];
+
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs18.x',
+        experimentalTriggers: triggers,
+      });
+
+      expect(lambda.experimentalTriggers).toHaveLength(2);
+      expect(lambda.experimentalTriggers![0].type).toBe('v1.pubsub.vercel.com');
+      expect(lambda.experimentalTriggers![1].type).toBe('v1.health.vercel.com');
+    });
+
+    it('should support only POST method', () => {
+      const trigger: CloudEventTrigger = {
+        triggerVersion: 1,
+        specversion: '1.0',
+        type: 'v1.post.vercel.com',
+        httpBinding: {
+          mode: 'structured',
+          method: 'POST',
+          pathname: '/post',
+        },
+      };
+
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalTriggers: [trigger],
+          })
+      ).not.toThrow();
+    });
+
+    describe('Validation Errors', () => {
+      it('should throw error for invalid triggerVersion', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 2 as any,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: { mode: 'structured', method: 'POST' },
+                },
+              ],
+            })
+        ).toThrow('"experimentalTriggers[0]".triggerVersion must be 1');
+      });
+
+      it('should throw error for invalid specversion', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '2.0' as any,
+                  type: 'v1.test.vercel.com',
+                  httpBinding: { mode: 'structured', method: 'POST' },
+                },
+              ],
+            })
+        ).toThrow('"experimentalTriggers[0]".specversion must be "1.0"');
+      });
+
+      it('should throw error for missing type', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: '',
+                  httpBinding: { mode: 'structured', method: 'POST' },
+                },
+              ],
+            })
+        ).toThrow('"experimentalTriggers[0]".type cannot be empty');
+      });
+
+      it('should throw error for invalid httpBinding mode', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: { mode: 'binary' as any, method: 'POST' },
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.mode must be "structured"'
+        );
+      });
+
+      it('should throw error for invalid HTTP method', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: {
+                    mode: 'structured',
+                    method: 'PUT' as any,
+                  },
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.method must be "POST"'
+        );
+      });
+
+      it('should throw error for missing HTTP method', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: {
+                    mode: 'structured',
+                  } as any,
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.method must be "POST"'
+        );
+      });
+
+      it('should throw error for invalid pathname format', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: {
+                    mode: 'structured',
+                    method: 'POST',
+                    pathname: 'invalid-path',
+                  },
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.pathname must start with \'/\''
+        );
+      });
+
+      it('should throw error for empty pathname', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: {
+                    mode: 'structured',
+                    method: 'POST',
+                    pathname: '',
+                  },
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding.pathname cannot be empty'
+        );
+      });
+
+      it('should throw error for missing httpBinding', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: [
+                {
+                  triggerVersion: 1,
+                  specversion: '1.0',
+                  type: 'v1.test.vercel.com',
+                  httpBinding: null as any,
+                },
+              ],
+            })
+        ).toThrow(
+          '"experimentalTriggers[0]".httpBinding is required and must be an object'
+        );
+      });
+
+      it('should throw error for non-array experimentalTriggers', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: 'invalid' as any,
+            })
+        ).toThrow('"experimentalTriggers" is not an Array');
+      });
+
+      it('should throw error for non-object trigger', () => {
+        expect(
+          () =>
+            new Lambda({
+              files,
+              handler: 'index.handler',
+              runtime: 'nodejs18.x',
+              experimentalTriggers: ['invalid'] as any,
+            })
+        ).toThrow('"experimentalTriggers[0]" is not an object');
+      });
+    });
+
+    describe('Edge Cases', () => {
+      it('should work without experimentalTriggers', () => {
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+        });
+
+        expect(lambda.experimentalTriggers).toBeUndefined();
+      });
+
+      it('should work with empty experimentalTriggers array', () => {
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [],
+        });
+
+        expect(lambda.experimentalTriggers).toEqual([]);
+      });
+
+      it('should handle valid pathnames with various formats', () => {
+        const validPathnames = [
+          '/',
+          '/webhook',
+          '/api/v1/events',
+          '/webhooks/github',
+          '/health-check',
+          '/events/pubsub/messages',
+        ];
+
+        validPathnames.forEach(pathname => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'v1.test.vercel.com',
+                    httpBinding: {
+                      mode: 'structured',
+                      method: 'POST',
+                      pathname,
+                    },
+                  },
+                ],
+              })
+          ).not.toThrow();
+        });
+      });
+    });
+
+    describe('Type Safety', () => {
+      it('should preserve trigger properties correctly', () => {
+        const originalTrigger: CloudEventTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'v1.complex.vercel.com',
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/api/health',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [originalTrigger],
+        });
+
+        const storedTrigger = lambda.experimentalTriggers![0];
+        expect(storedTrigger).toEqual(originalTrigger);
+        expect(storedTrigger.triggerVersion).toBe(1);
+        expect(storedTrigger.specversion).toBe('1.0');
+        expect(storedTrigger.type).toBe('v1.complex.vercel.com');
+        expect(storedTrigger.httpBinding.mode).toBe('structured');
+        expect(storedTrigger.httpBinding.method).toBe('POST');
+        expect(storedTrigger.httpBinding.pathname).toBe('/api/health');
+      });
+    });
+
+    describe('Delivery Configuration', () => {
+      it('should create Lambda with retry attempts setting', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'user-events',
+            consumer: 'webhook-processors',
+            maxAttempts: 3,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/webhooks/pubsub',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        expect(
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .maxAttempts
+        ).toBe(3);
+      });
+
+      it('should create Lambda with retry configuration', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'webhook-events',
+            consumer: 'retry-processors',
+            maxAttempts: 3,
+            retryAfterSeconds: 10,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        expect(
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .maxAttempts
+        ).toBe(3);
+        expect(
+          (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+            .retryAfterSeconds
+        ).toBe(10);
+      });
+
+      it('should create Lambda with complete queue configuration', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'system-events',
+            consumer: 'system-processors',
+            maxAttempts: 5,
+            retryAfterSeconds: 30,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/system/events',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.maxAttempts).toBe(5);
+        expect(queue.retryAfterSeconds).toBe(30);
+      });
+
+      it('should create Lambda with initialDelaySeconds configuration', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'delayed-events',
+            consumer: 'delayed-processors',
+            initialDelaySeconds: 60,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/delayed/events',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.initialDelaySeconds).toBe(60);
+      });
+
+      it('should create Lambda with all queue configuration options', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'full-config-events',
+            consumer: 'full-config-processors',
+            maxAttempts: 3,
+            retryAfterSeconds: 15,
+            initialDelaySeconds: 120,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/full/config',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.maxAttempts).toBe(3);
+        expect(queue.retryAfterSeconds).toBe(15);
+        expect(queue.initialDelaySeconds).toBe(120);
+      });
+
+      it('should create Lambda with zero initialDelaySeconds', () => {
+        const trigger: CloudEventQueueTrigger = {
+          triggerVersion: 1,
+          specversion: '1.0',
+          type: 'com.vercel.queue.v1',
+          queue: {
+            topic: 'immediate-events',
+            consumer: 'immediate-processors',
+            initialDelaySeconds: 0, // No initial delay
+            maxAttempts: 1,
+          },
+          httpBinding: {
+            mode: 'structured',
+            method: 'POST',
+            pathname: '/immediate/events',
+          },
+        };
+
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs18.x',
+          experimentalTriggers: [trigger],
+        });
+
+        const queue = (
+          lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+        ).queue;
+        expect(queue.initialDelaySeconds).toBe(0);
+        expect(queue.maxAttempts).toBe(1);
+      });
+
+      describe('Queue Validation Errors', () => {
+        it('should throw error for negative maxAttempts', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      maxAttempts: -1,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.maxAttempts must be a non-negative integer'
+          );
+        });
+
+        it('should throw error for non-positive retryAfterSeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      retryAfterSeconds: 0,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.retryAfterSeconds must be a positive number'
+          );
+        });
+
+        it('should throw error for invalid maxAttempts type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      maxAttempts: 'three' as any,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.maxAttempts must be a number'
+          );
+        });
+
+        it('should throw error for invalid retryAfterSeconds type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      retryAfterSeconds: 'ten' as any,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.retryAfterSeconds must be a number'
+          );
+        });
+
+        it('should allow zero initialDelaySeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: 0,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).not.toThrow();
+        });
+
+        it('should throw error for negative initialDelaySeconds', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: -5,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.initialDelaySeconds must be a non-negative number'
+          );
+        });
+
+        it('should throw error for invalid initialDelaySeconds type', () => {
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [
+                  {
+                    triggerVersion: 1,
+                    specversion: '1.0',
+                    type: 'com.vercel.queue.v1',
+                    queue: {
+                      topic: 'test-subject',
+                      consumer: 'test-consumer',
+                      initialDelaySeconds: 'sixty' as any,
+                    },
+                    httpBinding: { mode: 'structured', method: 'POST' },
+                  },
+                ],
+              })
+          ).toThrow(
+            '"experimentalTriggers[0]".queue.initialDelaySeconds must be a number'
+          );
+        });
+      });
+
+      describe('Use Cases', () => {
+        it('should support system-initiated triggers with retry configuration', () => {
+          // System-initiated trigger (webhook, pubsub) with queue controls
+          const systemTrigger: CloudEventQueueTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              topic: 'pubsub-messages',
+              consumer: 'system-processors',
+              maxAttempts: 3,
+              retryAfterSeconds: 5,
+            },
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+              pathname: '/pubsub/messages',
+            },
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [systemTrigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should support user-initiated triggers without queue config', () => {
+          // User-initiated trigger (health check) without queue controls
+          const userTrigger: CloudEventTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'v1.health.vercel.com',
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+              pathname: '/health',
+            },
+            // No queue config - simple trigger
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [userTrigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should allow zero retry attempts for immediate failure', () => {
+          const trigger: CloudEventQueueTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              topic: 'critical-events',
+              consumer: 'immediate-processors',
+              maxAttempts: 0, // No retries - fail immediately
+            },
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+            },
+          };
+
+          expect(
+            () =>
+              new Lambda({
+                files,
+                handler: 'index.handler',
+                runtime: 'nodejs18.x',
+                experimentalTriggers: [trigger],
+              })
+          ).not.toThrow();
+        });
+
+        it('should support delayed queue processing with initialDelaySeconds', () => {
+          // Delayed processing trigger - useful for scheduled or batch processing
+          const delayedTrigger: CloudEventQueueTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              topic: 'batch-processing',
+              consumer: 'delayed-batch-processors',
+              initialDelaySeconds: 300, // 5 minute delay before first execution
+              maxAttempts: 2,
+              retryAfterSeconds: 60,
+            },
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+              pathname: '/batch/process',
+            },
+          };
+
+          const lambda = new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalTriggers: [delayedTrigger],
+          });
+
+          const queue = (
+            lambda.experimentalTriggers![0] as CloudEventQueueTrigger
+          ).queue;
+          expect(queue.initialDelaySeconds).toBe(300);
+          expect(queue.maxAttempts).toBe(2);
+          expect(queue.retryAfterSeconds).toBe(60);
+        });
+
+        it('should document that queue config represents proper configuration', () => {
+          // Queue configuration provides proper configuration for queue behavior
+          const queueTrigger: CloudEventQueueTrigger = {
+            triggerVersion: 1,
+            specversion: '1.0',
+            type: 'com.vercel.queue.v1',
+            queue: {
+              topic: 'config-events',
+              consumer: 'config-processors',
+              maxAttempts: 10,
+              retryAfterSeconds: 2,
+            },
+            httpBinding: {
+              mode: 'structured',
+              method: 'POST',
+            },
+          };
+
+          const lambda = new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs18.x',
+            experimentalTriggers: [queueTrigger],
+          });
+
+          // Queue config is stored as proper configuration
+          expect(
+            (lambda.experimentalTriggers![0] as CloudEventQueueTrigger).queue
+          ).toBeDefined();
+
+          // NOTE: The actual execution system may:
+          // - Ignore maxConcurrency if resources are constrained
+          // - Implement different retry behavior
+          // - Disable retries entirely for performance
+          //
+          // HTTP request-response remains synchronous regardless:
+          // POST /trigger -> immediate response (success/failure)
+          // Retries (if any) happen independently of the HTTP response
+        });
+      });
+    });
   });
 });

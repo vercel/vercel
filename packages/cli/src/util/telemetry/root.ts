@@ -96,6 +96,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandGuidance(actual: string) {
+    this.trackCliCommand({
+      command: 'guidance',
+      value: actual,
+    });
+  }
+
   trackCliCommandHelp(actual: string) {
     this.trackCliCommand({
       command: 'help',
@@ -259,6 +266,10 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackCPUs() {
     super.trackCPUs();
+  }
+
+  trackAgenticUse(agent: string | false) {
+    super.trackAgenticUse(agent);
   }
 
   trackArch() {
