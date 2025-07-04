@@ -3,7 +3,7 @@ import type { Project, ProjectSettings } from '@vercel-internals/types';
 
 export default async function createProject(
   client: Client,
-  settings: ProjectSettings & { name: string }
+  settings: ProjectSettings & { name: string; vercelAuth?: 'none' | 'standard' }
 ) {
   const { vercelAuth, ...rest } = settings;
   const project = await client.fetch<Project>('/v1/projects', {

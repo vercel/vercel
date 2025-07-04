@@ -1,5 +1,4 @@
 ---
-'@vercel/build-utils': patch
 'vercel': patch
 ---
 

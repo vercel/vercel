@@ -200,7 +200,7 @@ export default async function setupAndLink(
       );
     }
 
-    settings.vercelAuth = await vercelAuth(client, {
+    const vercelAuthSetting = await vercelAuth(client, {
       autoConfirm,
       wantsPublic,
     });
@@ -212,6 +212,7 @@ export default async function setupAndLink(
     const project = await createProject(client, {
       ...settings,
       name: newProjectName,
+      vercelAuth: vercelAuthSetting,
     });
 
     await linkFolderToProject(

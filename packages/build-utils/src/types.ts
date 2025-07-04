@@ -400,7 +400,6 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
-  vercelAuth?: 'standard' | 'none';
 }
 
 export interface BuilderV2 {
