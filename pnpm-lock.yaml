@@ -7741,7 +7741,7 @@ packages:
       is-buffer: 2.0.5
       is-node-process: 1.2.0
       throttleit: 2.1.0
-      undici: 5.28.4
+      undici: 5.29.0
     dev: false
 
   /@vercel/fun@1.1.6:
