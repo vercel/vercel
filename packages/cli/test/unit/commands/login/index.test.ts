@@ -77,6 +77,7 @@ describe('login', () => {
       client.events.keypress('down');
       client.events.keypress('down');
       client.events.keypress('down');
+      client.events.keypress('down');
       client.events.keypress('enter');
 
       await expect(client.stderr).toOutput('? Enter your email address:');
@@ -98,6 +99,7 @@ describe('login', () => {
       await expect(client.stderr).toOutput(`? Log in to Vercel`);
 
       // Move down to "Email" option
+      client.events.keypress('down');
       client.events.keypress('down');
       client.events.keypress('down');
       client.events.keypress('down');
