@@ -1840,10 +1840,14 @@ export async function serverBuild({
     routesManifest?.rsc?.prefetchSegmentDirSuffix;
   const prefetchSegmentSuffix = routesManifest?.rsc?.prefetchSegmentSuffix;
   const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
+  const includeNotFoundHeader =
+    routesManifest.rsc?.includeNotFoundHeader?.toLowerCase();
+
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
+  const notFoundSuffix = routesManifest?.rsc?.notFoundSuffix;
 
   if (isAppPPREnabled && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
@@ -2170,6 +2174,28 @@ export async function serverBuild({
 
       ...(appDir
         ? [
+            {
+              src: path.posix.join('/', entryDirectory, '/(?<path>.+)$'),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/$path${notFoundSuffix}`
+              ),
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                  value: '1',
+                },
+                {
+                  type: 'header',
+                  key: includeNotFoundHeader,
+                  value: '1',
+                },
+              ],
+              continue: true,
+              override: true,
+            },
             ...(isAppClientSegmentCacheEnabled &&
             rscPrefetchHeader &&
             prefetchSegmentHeader &&

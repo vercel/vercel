@@ -283,6 +283,16 @@ type RoutesManifestOld = {
      * Suffix for the prefetch segment data route directory.
      */
     prefetchSegmentDirSuffix?: string;
+
+    /**
+     * Suffix for the not found route.
+     */
+    notFoundSuffix?: string;
+
+    /**
+     * Header to include in the not found route.
+     */
+    includeNotFoundHeader?: string;
   };
   rewriteHeaders?: {
     pathHeader: string;
