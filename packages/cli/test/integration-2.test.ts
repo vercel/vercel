@@ -1378,3 +1378,110 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
 });
+
+test.each([
+  {
+    vercelAuth: 'none',
+    expectedStatus: 200,
+  },
+  {
+    vercelAuth: 'standard',
+    expectedStatus: 401,
+  },
+] as const)(
+  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts',
+  async ({ vercelAuth, expectedStatus }) => {
+    const dir = await setupE2EFixture('project-vercel-auth');
+    const projectName = `project-vercel-auth-${
+      Math.random().toString(36).split('.')[1]
+    }`;
+
+    // remove previously linked project if it exists
+    await remove(path.join(dir, '.vercel'));
+
+    const now = execCli(binaryPath, [dir], {
+      env: {
+        FORCE_TTY: '1',
+      },
+    });
+
+    await setupProject(
+      now,
+      projectName,
+      {
+        buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+        outputDirectory: 'o',
+      },
+      {
+        vercelAuth,
+      }
+    );
+
+    const output = await now;
+
+    // Ensure the exit code is right
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+
+    // Ensure .gitignore is created
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    expect(gitignore).toBe('.vercel\n');
+
+    // Ensure .vercel/project.json and .vercel/README.txt are created
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+      'project.json'
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+      'README.txt'
+    ).toBe(true);
+
+    const { href } = new URL(output.stdout);
+
+    // Send a test request to the deployment
+    const response = await fetch(href);
+    expect(response.status).toBe(expectedStatus);
+
+    const projectResponse = await apiFetch(`/projects/${projectName}`, {
+      method: 'DELETE',
+    });
+    expect(projectResponse.status).toBe(204);
+  }
+);
+
+test.each([
+  {
+    args: ['--public'],
+    expectedStatus: 200,
+  },
+  {
+    args: [],
+    expectedStatus: 401,
+  },
+])(
+  '[vc deploy] should create a project with Vercel Auth disabled when --public is specified',
+  async ({ args, expectedStatus }) => {
+    const projectName = `project-vercel-auth-${
+      Math.random().toString(36).split('.')[1]
+    }`;
+    const directory = await setupE2EFixture('project-vercel-auth');
+
+    const output = await execCli(binaryPath, [
+      directory,
+      '--yes',
+      '--name',
+      projectName,
+      ...args,
+    ]);
+    expect(output.exitCode, formatOutput(output)).toBe(0);
+
+    const { href } = new URL(output.stdout);
+    const response = await fetch(href);
+    expect(response.status).toBe(expectedStatus);
+
+    const projectResponse = await apiFetch(`/projects/${projectName}`, {
+      method: 'DELETE',
+    });
+    expect(projectResponse.status).toBe(204);
+  }
+);
