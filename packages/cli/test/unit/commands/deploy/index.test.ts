@@ -1324,6 +1324,11 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Want to modify these settings?');
         client.stdin.write('\n');
 
+        await expect(client.stderr).toOutput(
+          'Want to use the default Deployment Protection settings?'
+        );
+        client.stdin.write('\n');
+
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
@@ -1357,6 +1362,11 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          'Want to use the default Deployment Protection settings?'
+        );
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;

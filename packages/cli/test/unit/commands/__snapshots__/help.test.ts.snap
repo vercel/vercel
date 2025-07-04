@@ -790,9 +790,17 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -p,  --public                 Deploym…
                                 is      
                                 public  
-                                (\`/_src…
+                                (\`/_src\`
                                 is      
-                                exposed)
+                                exposed,
+                                and     
+                                Vercel  
+                                Auth is 
+                                disabled
+                                if      
+                                creating
+                                a new   
+                                project)
        --regions <REGION>       Set     
                                 default 
                                 regions 
@@ -930,7 +938,9 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 existing build                                  
        --prod                   Create a production deployment (shorthand for   
                                 \`--target=production\`)                          
-  -p,  --public                 Deployment is public (\`/_src\`) is exposed)      
+  -p,  --public                 Deployment is public (\`/_src\` is exposed, and   
+                                Vercel Auth is disabled if creating a new       
+                                project)                                        
        --regions <REGION>       Set default regions to enable the deployment on 
        --skip-domain            Disable the automatic promotion (aliasing) of   
                                 the relevant domains to a new production        
@@ -999,7 +1009,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
        --no-wait                Don't wait for the deployment to finish                                                 
        --prebuilt               Use in combination with \`vc build\`. Deploy an existing build                            
        --prod                   Create a production deployment (shorthand for \`--target=production\`)                    
-  -p,  --public                 Deployment is public (\`/_src\`) is exposed)                                              
+  -p,  --public                 Deployment is public (\`/_src\` is exposed, and Vercel Auth is disabled if creating a new 
+                                project)                                                                                
        --regions <REGION>       Set default regions to enable the deployment on                                         
        --skip-domain            Disable the automatic promotion (aliasing) of the relevant domains to a new production  
                                 deployment. You can use \`vc promote\` to complete the domain-assignment process later    

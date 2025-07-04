@@ -1,5 +1,5 @@
 ---
-'vercel': patch
+'vercel': minor
 ---
 
 Add support to create a project with Vercel Auth disabled.
