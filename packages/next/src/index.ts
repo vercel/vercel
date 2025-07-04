@@ -31,6 +31,7 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  CloudEventTrigger,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -1648,7 +1649,6 @@ export const build: BuildV2 = async buildOptions => {
       );
 
       for (const page of mergedPageKeys) {
-        const tracedFiles: { [key: string]: FileFsRef } = {};
         const fileList = parentFilesMap.get(
           path.relative(baseDir, pages[page].fsPath)
         );
@@ -1660,16 +1660,16 @@ export const build: BuildV2 = async buildOptions => {
         }
         const reasons = result.reasons;
 
-        await Promise.all(
-          Array.from(fileList).map(
-            collectTracedFiles(
-              baseDir,
-              lstatResults,
-              lstatSema,
-              reasons,
-              tracedFiles
+        const tracedFiles: {
+          [filePath: string]: FileFsRef;
+        } = Object.fromEntries(
+          (
+            await Promise.all(
+              Array.from(fileList).map(
+                collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+              )
             )
-          )
+          ).filter((entry): entry is [string, FileFsRef] => !!entry)
         );
         pageTraces[page] = tracedFiles;
       }
@@ -1965,6 +1965,7 @@ export const build: BuildV2 = async buildOptions => {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
             maxDuration?: number;
+            experimentalTriggers?: CloudEventTrigger[];
           } = {};
 
           if (config && config.functions) {

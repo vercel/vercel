@@ -37,7 +37,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 import {
@@ -389,10 +389,6 @@ export const build: BuildV3 = async ({
   );
 
   const isMiddleware = config.middleware === true;
-
-  // Will output an `EdgeFunction` for when `config.middleware = true`
-  // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -426,13 +422,6 @@ export const build: BuildV3 = async ({
 
   // Add a `route` for Middleware
   if (isMiddleware) {
-    if (!isEdgeFunction) {
-      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
-      throw new Error(
-        `Middleware file can not be a Node.js Serverless Function`
-      );
-    }
-
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
@@ -480,13 +469,33 @@ export const build: BuildV3 = async ({
       handler,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers,
+      useWebApi: isMiddleware,
+      shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
+      regions: normalizeRequestedRegions(
+        staticConfig?.preferredRegion ?? staticConfig?.regions
+      ),
     });
   }
 
   return { routes, output };
 };
+
+function normalizeRequestedRegions(
+  regions: BaseFunctionConfig['regions'] | BaseFunctionConfig['preferredRegion']
+): NodejsLambda['regions'] {
+  if (regions === 'all') {
+    return ['all'];
+  } else if (regions === 'auto' || regions === 'default') {
+    return undefined;
+  }
+
+  if (typeof regions === 'string') {
+    return [regions];
+  }
+
+  return regions;
+}

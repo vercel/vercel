@@ -1,5 +1,42 @@
 # @vercel/static-build
 
+## 2.7.12
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.86
+
+## 2.7.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.85
+
+## 2.7.10
+
+### Patch Changes
+
+- Updated dependencies [[`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423)]:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.84
+
+## 2.7.9
+
+### Patch Changes
+
+- Updated dependencies [[`6c8e763ab63c79e12c7d5455fd79cf158f43cc77`](https://github.com/vercel/vercel/commit/6c8e763ab63c79e12c7d5455fd79cf158f43cc77), [`953b06e9a94089c6e124a36c6e4040e90aab03b1`](https://github.com/vercel/vercel/commit/953b06e9a94089c6e124a36c6e4040e90aab03b1)]:
+  - @vercel/static-config@3.1.1
+  - @vercel/gatsby-plugin-vercel-builder@2.0.83
+
+## 2.7.8
+
+### Patch Changes
+
+- Updated dependencies [[`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/static-config@3.1.0
+  - @vercel/gatsby-plugin-vercel-builder@2.0.82
+
 ## 2.7.7
 
 ### Patch Changes

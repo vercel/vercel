@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { getVercelOidcToken } from '../../../src/oidc';
+import { getVercelOidcTokenSync } from '../../../src/oidc';
 import { randomUUID } from 'node:crypto';
 
-describe('getVercelOidcToken', () => {
+describe('getVercelOidcTokenSync', () => {
   describe('when VERCEL_OIDC_TOKEN is present in the environment variables', () => {
     const token = randomUUID();
 
@@ -14,8 +14,8 @@ describe('getVercelOidcToken', () => {
       delete process.env.VERCEL_OIDC_TOKEN;
     });
 
-    it('returns the OIDC token', async () => {
-      await expect(getVercelOidcToken()).resolves.toEqual(token);
+    it('returns the OIDC token', () => {
+      expect(getVercelOidcTokenSync()).toEqual(token);
     });
   });
 
@@ -41,8 +41,8 @@ describe('getVercelOidcToken', () => {
       ];
     });
 
-    it('returns the OIDC token', async () => {
-      await expect(getVercelOidcToken()).resolves.toEqual(token);
+    it('returns the OIDC token', () => {
+      expect(getVercelOidcTokenSync()).toEqual(token);
     });
   });
 
@@ -72,14 +72,14 @@ describe('getVercelOidcToken', () => {
       ];
     });
 
-    it('prefers the request context over the environment variable', async () => {
-      await expect(getVercelOidcToken()).resolves.toEqual(tokenFromContext);
+    it('prefers the request context over the environment variable', () => {
+      expect(getVercelOidcTokenSync()).toEqual(tokenFromContext);
     });
   });
 
   describe('when neither the environment variables or the request context is present', () => {
-    it('throws an error', async () => {
-      await expect(getVercelOidcToken()).rejects.toThrow(
+    it('throws an error', () => {
+      expect(() => getVercelOidcTokenSync()).toThrow(
         /The 'x-vercel-oidc-token' header is missing from the request/
       );
     });

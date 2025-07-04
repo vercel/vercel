@@ -283,6 +283,11 @@ type RoutesManifestOld = {
      * Suffix for the prefetch segment data route directory.
      */
     prefetchSegmentDirSuffix?: string;
+
+    /**
+     * When true, the dynamic RSC route is expecting to be a prerendered route.
+     */
+    dynamicRSCPrerender?: boolean;
   };
   rewriteHeaders?: {
     pathHeader: string;
@@ -904,8 +909,7 @@ export const collectTracedFiles =
     baseDir: string,
     lstatResults: { [key: string]: ReturnType<typeof lstat> },
     lstatSema: Sema,
-    reasons: NodeFileTraceReasons,
-    files: { [filePath: string]: FileFsRef }
+    reasons: NodeFileTraceReasons
   ) =>
   async (file: string) => {
     const reason = reasons.get(file);
@@ -923,10 +927,13 @@ export const collectTracedFiles =
     }
     const { mode } = await lstatResults[filePath];
 
-    files[file] = new FileFsRef({
-      fsPath: path.join(baseDir, file),
-      mode,
-    });
+    return [
+      file,
+      new FileFsRef({
+        fsPath: path.join(baseDir, file),
+        mode,
+      }),
+    ];
   };
 
 export const ExperimentalTraceVersion = `9.0.4-canary.1`;
@@ -1777,6 +1784,7 @@ export type LambdaGroup = {
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
+  experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
 
 export async function getPageLambdaGroups({
@@ -1819,6 +1827,7 @@ export async function getPageLambdaGroups({
   pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
+  experimentalTriggers?: Lambda['experimentalTriggers'];
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1832,6 +1841,7 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number;
+      experimentalTriggers?: NodejsLambda['experimentalTriggers'];
     } = {};
 
     if (
@@ -1867,7 +1877,9 @@ export async function getPageLambdaGroups({
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             group.isPrerenders === isPrerenderRoute &&
-            group.isExperimentalPPR === isExperimentalPPR;
+            group.isExperimentalPPR === isExperimentalPPR &&
+            JSON.stringify(group.experimentalTriggers) ===
+              JSON.stringify(opts.experimentalTriggers);
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -1906,6 +1918,7 @@ export async function getPageLambdaGroups({
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
+        experimentalTriggers: opts.experimentalTriggers,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -2426,41 +2439,32 @@ export const onPrerenderRoute =
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
+    let postponedState: string | null = null;
     let didPostpone = false;
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
       !isBlocking
     ) {
+      postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
+
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
-      const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
-      if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
-        const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-        if (
-          typeof meta === 'object' &&
-          meta !== null &&
-          'postponed' in meta &&
-          typeof meta.postponed === 'string'
-        ) {
-          didPostpone = true;
-          postponedPrerender = meta.postponed;
+      if (fs.existsSync(htmlPath)) {
+        const html = fs.readFileSync(htmlPath, 'utf8');
 
-          // Assign the headers Content-Type header to the prerendered type.
-          initialHeaders ??= {};
+        initialHeaders ??= {};
+
+        if (postponedState) {
           initialHeaders['content-type'] =
-            `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+            `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin="text/html; charset=utf-8"`;
 
-          // Read the HTML file and append it to the prerendered content.
-          const html = await fs.readFileSync(htmlPath, 'utf8');
-          postponedPrerender += html;
+          postponedPrerender = postponedState + html;
+          didPostpone = true;
         } else {
-          // Set the content type to text/html; charset=utf-8.
-          initialHeaders ??= {};
           initialHeaders['content-type'] = 'text/html; charset=utf-8';
 
-          // Read the HTML file and set it to the prerendered content.
-          const html = await fs.readFileSync(htmlPath, 'utf8');
           postponedPrerender = html;
+          didPostpone = false;
         }
       }
 
@@ -2929,6 +2933,50 @@ export const onPrerenderRoute =
           renderingMode !== RenderingMode.PARTIALLY_STATIC
         ) {
           prerenders[normalizePathData(outputPathData)] = prerender;
+        }
+        // If this route had a postponed state associated with it, then we
+        // should also associate its data route with the postponed state too,
+        // ensuring that it will get the postponed state when it's requested.
+        else if (
+          outputPathData &&
+          routesManifest?.rsc?.dynamicRSCPrerender &&
+          routesManifest?.ppr?.chain?.headers &&
+          postponedState
+        ) {
+          const contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+            rscContentTypeHeader
+          )}`;
+
+          prerenders[normalizePathData(outputPathData)] = new Prerender({
+            expiration: initialRevalidate,
+            staleExpiration: initialExpire,
+            lambda,
+            allowQuery,
+            fallback: isFallback
+              ? null
+              : new FileBlob({
+                  data: postponedState,
+                  contentType,
+                }),
+            group: prerenderGroup,
+            bypassToken: prerenderManifest.bypassToken,
+            experimentalBypassFor,
+            allowHeader,
+            chain: {
+              outputPath: normalizePathData(outputPathData),
+              headers: routesManifest.ppr.chain.headers,
+            },
+            ...(isNotFound ? { initialStatus: 404 } : {}),
+            initialHeaders: {
+              ...initialHeaders,
+              'content-type': contentType,
+              // Dynamic RSC requests cannot be cached, so we explicity set it
+              // here to ensure that the response is not cached by the browser.
+              'cache-control':
+                'private, no-store, no-cache, max-age=0, must-revalidate',
+              vary: rscVaryHeader,
+            },
+          });
         }
       }
 
@@ -3521,12 +3569,17 @@ export async function getNodeMiddleware({
     }
   });
   const reasons = new Map();
-  const tracedFiles: Record<string, FileFsRef> = {};
 
-  await Promise.all(
-    fileList.map(
-      collectTracedFiles(baseDir, lstatResults, lstatSema, reasons, tracedFiles)
-    )
+  const tracedFiles: {
+    [filePath: string]: FileFsRef;
+  } = Object.fromEntries(
+    (
+      await Promise.all(
+        fileList.map(
+          collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+        )
+      )
+    ).filter((entry): entry is [string, FileFsRef] => !!entry)
   );
 
   const launcherData = (
@@ -4167,4 +4220,37 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   }
 
   return updatedPrefetches;
+}
+
+/**
+ * Get the postponed state for a route.
+ *
+ * @param appDir - The app directory.
+ * @param routeFileNoExt - The route file name without the extension.
+ * @returns The postponed state for the route.
+ */
+function getHTMLPostponedState({
+  appDir,
+  routeFileNoExt,
+}: {
+  appDir: string;
+  routeFileNoExt: string;
+}) {
+  const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+  if (!fs.existsSync(metaPath)) {
+    return null;
+  }
+
+  const meta: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+
+  if (
+    typeof meta !== 'object' ||
+    meta === null ||
+    !('postponed' in meta) ||
+    typeof meta.postponed !== 'string'
+  ) {
+    return null;
+  }
+
+  return meta.postponed;
 }

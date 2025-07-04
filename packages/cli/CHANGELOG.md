@@ -1,5 +1,208 @@
 # vercel
 
+## 44.2.11
+
+### Patch Changes
+
+- [cli] Send `commitAuthorEmail` with the git meta ([#13508](https://github.com/vercel/vercel/pull/13508))
+
+## 44.2.10
+
+### Patch Changes
+
+- make POST method required ([#13518](https://github.com/vercel/vercel/pull/13518))
+
+- Updated dependencies [[`612f2af54c05ed758243122fe9ef2743c8ebd4c8`](https://github.com/vercel/vercel/commit/612f2af54c05ed758243122fe9ef2743c8ebd4c8), [`abf657ed5d52caa8965dcd3147174e940cca72b1`](https://github.com/vercel/vercel/commit/abf657ed5d52caa8965dcd3147174e940cca72b1)]:
+  - @vercel/build-utils@10.6.3
+  - @vercel/next@4.9.4
+  - @vercel/node@5.3.2
+  - @vercel/static-build@2.7.12
+
+## 44.2.9
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
+- Updated dependencies [[`7103cde0b7e0468773d1c596e223105233260e40`](https://github.com/vercel/vercel/commit/7103cde0b7e0468773d1c596e223105233260e40)]:
+  - @vercel/build-utils@10.6.2
+  - @vercel/next@4.9.3
+  - @vercel/static-build@2.7.11
+  - @vercel/node@5.3.1
+
+## 44.2.8
+
+### Patch Changes
+
+- [cli] Report detected agent to CLI telemetry ([#13506](https://github.com/vercel/vercel/pull/13506))
+
+## 44.2.7
+
+### Patch Changes
+
+- [cli] correct log checking suggestion for failed `deploy` runs ([#13500](https://github.com/vercel/vercel/pull/13500))
+
+- [rr] fix rate limits for undefined project name fetches ([#13497](https://github.com/vercel/vercel/pull/13497))
+
+- [cli][feature-flagged] adds stub `vercel guidance` command ([#13484](https://github.com/vercel/vercel/pull/13484))
+
+- Updated dependencies [[`83bccbfac19dbd63ff290ded3a7b96c5a1fad092`](https://github.com/vercel/vercel/commit/83bccbfac19dbd63ff290ded3a7b96c5a1fad092)]:
+  - @vercel/next@4.9.2
+
+## 44.2.6
+
+### Patch Changes
+
+- Revert "[rr] fix rate limits for undefined project name fetches" ([#13495](https://github.com/vercel/vercel/pull/13495))
+
+## 44.2.5
+
+### Patch Changes
+
+- [rr] fix rate limits for undefined project name fetches ([#13491](https://github.com/vercel/vercel/pull/13491))
+
+## 44.2.4
+
+### Patch Changes
+
+- Revert "[rr] fix timeout" ([#13493](https://github.com/vercel/vercel/pull/13493))
+
+- Revert "[cli] avoid fetching a deployment's project in a loop" ([#13490](https://github.com/vercel/vercel/pull/13490))
+
+## 44.2.3
+
+### Patch Changes
+
+- [cli] avoid fetching a deployment's project in a loop ([#13487](https://github.com/vercel/vercel/pull/13487))
+
+## 44.2.2
+
+### Patch Changes
+
+- [cli] Prefer fetching the microfrontends json using the project ID unless deployment ID is specified. ([#13485](https://github.com/vercel/vercel/pull/13485))
+
+## 44.2.1
+
+### Patch Changes
+
+- [rr] fix timeout ([#13482](https://github.com/vercel/vercel/pull/13482))
+
+## 44.2.0
+
+### Minor Changes
+
+- [cli] add new command `vercel cache purge` ([#13477](https://github.com/vercel/vercel/pull/13477))
+
+### Patch Changes
+
+- Updated dependencies [[`c992c13a1f326ad1e8ebbc7bfe69e608a43377e5`](https://github.com/vercel/vercel/commit/c992c13a1f326ad1e8ebbc7bfe69e608a43377e5)]:
+  - @vercel/next@4.9.1
+
+## 44.1.0
+
+### Minor Changes
+
+- Introduces the `vercel microfrontends pull` command to pull your Vercel Microfrontends configuration from your default application and run your `@vercel/microfrontends` local proxy when using a polyrepo setup ([#13450](https://github.com/vercel/vercel/pull/13450))
+
+## 44.0.0
+
+### Major Changes
+
+- [cli] make `--logs` the default behavior for `vercel deploy` ([#13458](https://github.com/vercel/vercel/pull/13458))
+
+## 43.3.0
+
+### Minor Changes
+
+- Allow to set Node.js runtime for middleware ([#13461](https://github.com/vercel/vercel/pull/13461))
+
+### Patch Changes
+
+- feat(cli): add blob token option and env variable ([#13462](https://github.com/vercel/vercel/pull/13462))
+
+- Updated dependencies [[`98d5c72ecb11251acd0eede3ddfdf0aa948a3c1f`](https://github.com/vercel/vercel/commit/98d5c72ecb11251acd0eede3ddfdf0aa948a3c1f)]:
+  - @vercel/node@5.3.0
+
+## 43.2.0
+
+### Minor Changes
+
+- fix(cli): allow custom 403 error message ([#13443](https://github.com/vercel/vercel/pull/13443))
+
+## 43.1.0
+
+### Minor Changes
+
+- Add blob subcommand ([#13364](https://github.com/vercel/vercel/pull/13364))
+
+  These are the new API's:
+  `vc blob store add mystore` - creates a new blob store, asks to connect store to project and suggests pulling the new env var
+  `vc blob store rm store_mystoreid` - delete a blob store
+
+  All of the following commands will try to read the `BLOB_READ_WRITE_TOKEN` from the next `.env.local` file:
+  `vc blob put file.txt` - uploads the file from the path to the blob store
+  `vc blob ls` - list blobs in the store
+  `vc blob del path/ path2/` - delete blobs from the store
+  `vc blob copy fromUrl toPathname` - copies a file within the store
+
+### Patch Changes
+
+- Fix bug where `vercel dev` would not exit on error ([#13438](https://github.com/vercel/vercel/pull/13438))
+
+## 43.0.0
+
+### Major Changes
+
+- Rolling Release command clean up ([#13420](https://github.com/vercel/vercel/pull/13420))
+
+### Patch Changes
+
+- fix(cli): do not require `--future` for `logout` ([#13366](https://github.com/vercel/vercel/pull/13366))
+
+- [cli] add try/catch around login prompt attempts ([#13399](https://github.com/vercel/vercel/pull/13399))
+
+- Updated dependencies [[`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423), [`3c6cc512cf74439053b3614f95fcdf211c2d8a6d`](https://github.com/vercel/vercel/commit/3c6cc512cf74439053b3614f95fcdf211c2d8a6d), [`ff37e3c80d945d98696c05071b3b3c95fe78212f`](https://github.com/vercel/vercel/commit/ff37e3c80d945d98696c05071b3b3c95fe78212f), [`57d0de67f6ddd0dbf16a7790f39ccd75a60acf60`](https://github.com/vercel/vercel/commit/57d0de67f6ddd0dbf16a7790f39ccd75a60acf60)]:
+  - @vercel/build-utils@10.6.1
+  - @vercel/next@4.9.0
+  - @vercel/node@5.2.2
+  - @vercel/static-build@2.7.10
+
+## 42.3.0
+
+### Minor Changes
+
+- Version bump to respect dependency updates ([#13390](https://github.com/vercel/vercel/pull/13390))
+
+- Adding support for rolling-releases ([#13387](https://github.com/vercel/vercel/pull/13387))
+
+### Patch Changes
+
+- Updated dependencies [[`6c8e763ab63c79e12c7d5455fd79cf158f43cc77`](https://github.com/vercel/vercel/commit/6c8e763ab63c79e12c7d5455fd79cf158f43cc77)]:
+  - @vercel/node@5.2.1
+  - @vercel/redwood@2.3.3
+  - @vercel/static-build@2.7.9
+  - @vercel/hydrogen@1.2.2
+  - @vercel/remix-builder@5.4.9
+
+## 42.2.0
+
+### Minor Changes
+
+- Warn when system environment variables are not available ([#13357](https://github.com/vercel/vercel/pull/13357))
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
+### Patch Changes
+
+- Updated dependencies [[`36cd6a44bf4daf429babb430c7f1e3f7130d30ee`](https://github.com/vercel/vercel/commit/36cd6a44bf4daf429babb430c7f1e3f7130d30ee), [`3bfdaa067780bfb4dfc4190a8e2a736a02d8d403`](https://github.com/vercel/vercel/commit/3bfdaa067780bfb4dfc4190a8e2a736a02d8d403), [`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/build-utils@10.6.0
+  - @vercel/next@4.8.0
+  - @vercel/node@5.2.0
+  - @vercel/hydrogen@1.2.1
+  - @vercel/redwood@2.3.2
+  - @vercel/remix-builder@5.4.8
+  - @vercel/static-build@2.7.8
+
 ## 42.1.1
 
 ### Patch Changes
