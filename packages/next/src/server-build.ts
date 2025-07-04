@@ -2174,28 +2174,6 @@ export async function serverBuild({
 
       ...(appDir
         ? [
-            {
-              src: path.posix.join('/', entryDirectory, '/(?<path>.+)$'),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/$path${notFoundSuffix}`
-              ),
-              has: [
-                {
-                  type: 'header',
-                  key: rscHeader,
-                  value: '1',
-                },
-                {
-                  type: 'header',
-                  key: includeNotFoundHeader,
-                  value: '1',
-                },
-              ],
-              continue: true,
-              override: true,
-            },
             ...(isAppClientSegmentCacheEnabled &&
             rscPrefetchHeader &&
             prefetchSegmentHeader &&
@@ -2326,6 +2304,31 @@ export async function serverBuild({
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              headers: { vary: rscVaryHeader },
+              continue: true,
+              override: true,
+            },
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+?)(?:/)?$'
+              )}`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                },
+                {
+                  type: 'header',
+                  key: includeNotFoundHeader,
+                },
+              ],
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/$1${notFoundSuffix}`
+              ),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
