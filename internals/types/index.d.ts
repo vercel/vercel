@@ -85,7 +85,7 @@ export type User = {
   billing: Billing;
   name?: string;
   limited?: boolean;
-  version?: 'northstar';
+  version: 'northstar';
   defaultTeamId?: string;
 };
 
