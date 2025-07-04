@@ -5,16 +5,10 @@ export async function vercelAuth(
   client: Client,
   {
     autoConfirm = false,
-    wantsPublic = false,
   }: {
     autoConfirm?: boolean;
-    wantsPublic?: boolean;
   }
 ): Promise<'standard' | 'none'> {
-  if (wantsPublic) {
-    return 'none';
-  }
-
   if (
     autoConfirm ||
     (await client.input.confirm(

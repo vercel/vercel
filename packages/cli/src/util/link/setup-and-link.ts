@@ -41,7 +41,6 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
-  wantsPublic?: boolean;
 }
 
 export default async function setupAndLink(
@@ -54,7 +53,6 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
-    wantsPublic = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -202,7 +200,6 @@ export default async function setupAndLink(
 
     const vercelAuthSetting = await vercelAuth(client, {
       autoConfirm,
-      wantsPublic,
     });
 
     if (rootDirectory) {

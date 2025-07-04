@@ -30,8 +30,7 @@ export const deployCommand = {
       shorthand: 'p',
       type: Boolean,
       deprecated: false,
-      description:
-        'Deployment is public (`/_src` is exposed, and Vercel Auth is disabled if creating a new project)',
+      description: 'Deployment is public (`/_src`) is exposed)',
     },
     {
       name: 'env',
