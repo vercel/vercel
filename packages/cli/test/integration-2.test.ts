@@ -421,22 +421,21 @@ test('deploy shows notice when project in `.vercel` does not exists', async () =
 });
 
 test('use `rootDirectory` from project when deploying', async () => {
+  const projectName = `project-root-directory-${
+    Math.random().toString(36).split('.')[1]
+  }`;
   const directory = await setupE2EFixture('project-root-directory');
 
   const firstResult = await execCli(binaryPath, [
     directory,
     '--yes',
+    '--name',
+    projectName,
     '--public',
   ]);
   expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
-  const { host: firstHost } = new URL(firstResult.stdout);
-  const response = await apiFetch(`/v12/now/deployments/get?url=${firstHost}`);
-  expect(response.status).toBe(200);
-  const { projectId } = await response.json();
-  expect(typeof projectId).toBe('string');
-
-  const projectResponse = await apiFetch(`/v2/projects/${projectId}`, {
+  const projectResponse = await apiFetch(`/v2/projects/${projectName}`, {
     method: 'PATCH',
     body: JSON.stringify({
       rootDirectory: 'src',
@@ -459,7 +458,7 @@ test('use `rootDirectory` from project when deploying', async () => {
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
 
-  await apiFetch(`/v2/projects/${projectId}`, {
+  await apiFetch(`/v2/projects/${projectName}`, {
     method: 'DELETE',
   });
 });
