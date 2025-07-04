@@ -32,6 +32,7 @@ import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
 import { frameworkList } from '@vercel/frameworks';
+import { vercelAuth } from '../input/vercel-auth';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -196,6 +197,8 @@ export default async function setupAndLink(
         localConfigurationOverrides
       );
     }
+
+    settings.vercelAuth = await vercelAuth(client, autoConfirm);
 
     if (rootDirectory) {
       settings.rootDirectory = rootDirectory;
