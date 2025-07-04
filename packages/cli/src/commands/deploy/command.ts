@@ -30,7 +30,8 @@ export const deployCommand = {
       shorthand: 'p',
       type: Boolean,
       deprecated: false,
-      description: 'Deployment is public (`/_src`) is exposed)',
+      description:
+        'Deployment is public (`/_src` is exposed, and Deployment Protection is disabled if creating a new project)',
     },
     {
       name: 'env',

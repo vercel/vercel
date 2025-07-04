@@ -186,6 +186,9 @@ export default async (client: Client): Promise<number> => {
 
   let { path: cwd } = pathValidation;
   const autoConfirm = parsedArguments.flags['--yes'];
+  const wantsPublic = Boolean(
+    parsedArguments.flags['--public'] || localConfig?.public
+  );
   // #endregion
 
   // #region Warning on flags
@@ -252,6 +255,7 @@ export default async (client: Client): Promise<number> => {
       nowConfig: localConfig,
       paths,
     }),
+    wantsPublic,
   });
   if (typeof link === 'number') {
     return link;
@@ -495,9 +499,7 @@ export default async (client: Client): Promise<number> => {
       vercelOutputDir,
       rootDirectory,
       quiet,
-      wantsPublic: Boolean(
-        parsedArguments.flags['--public'] || localConfig.public
-      ),
+      wantsPublic,
       nowConfig: {
         ...localConfig,
         // `images` is allowed in "vercel.json" and processed

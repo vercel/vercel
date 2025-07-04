@@ -34,6 +34,13 @@ async function setupProject(
     devCommand?: string;
     buildCommand?: string;
     outputDirectory?: string;
+  },
+  {
+    vercelAuth,
+  }: {
+    vercelAuth: 'standard' | 'none';
+  } = {
+    vercelAuth: 'standard',
   }
 ) {
   await waitForPrompt(process, /Set up[^?]+\?/);
@@ -74,6 +81,23 @@ async function setupProject(
     process.stdin?.write(`${outputDirectory || ''}\n`);
   } else {
     process.stdin?.write('no\n');
+  }
+
+  await waitForPrompt(
+    process,
+    'Want to use the default Deployment Protection settings?'
+  );
+
+  if (vercelAuth === 'none') {
+    process.stdin?.write('n\n');
+    await waitForPrompt(
+      process,
+      'What setting do you want to use for Vercel Authentication?'
+    );
+    process.stdin?.write('\x1b[B'); // Down Arrow
+    process.stdin?.write('\n');
+  } else {
+    process.stdin?.write('\n');
   }
 
   await waitForPrompt(process, 'Linked to');
@@ -165,10 +189,17 @@ test('should show prompts to set up project during first deploy', async () => {
     },
   });
 
-  await setupProject(now, projectName, {
-    buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-    outputDirectory: 'o',
-  });
+  await setupProject(
+    now,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    {
+      vercelAuth: 'none',
+    }
+  );
 
   const output = await now;
 
@@ -276,6 +307,12 @@ test('should prefill "project name" prompt with now.json `name`', async () => {
 
   await waitForPrompt(now, 'Want to modify these settings?');
   now.stdin?.write('no\n');
+
+  await waitForPrompt(
+    now,
+    'Want to use the default Deployment Protection settings?'
+  );
+  now.stdin?.write('\n');
 
   const output = await now;
   expect(output.exitCode, formatOutput(output)).toBe(0);

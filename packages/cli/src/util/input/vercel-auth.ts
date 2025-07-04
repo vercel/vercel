@@ -3,13 +3,23 @@ import chalk from 'chalk';
 
 export async function vercelAuth(
   client: Client,
-  autoConfirm = false
+  {
+    autoConfirm = false,
+    wantsPublic = false,
+  }: {
+    autoConfirm?: boolean;
+    wantsPublic?: boolean;
+  }
 ): Promise<'standard' | 'none'> {
+  if (wantsPublic) {
+    return 'none';
+  }
+
   if (
     autoConfirm ||
-    !(await client.input.confirm(
-      `Want to configure Vercel Authentication? ${chalk.dim(`(default: Standard Protection)`)}`,
-      false
+    (await client.input.confirm(
+      `Want to use the default Deployment Protection settings? ${chalk.dim(`(Vercel Authentication: Standard Protection)`)}`,
+      true
     ))
   ) {
     return 'standard';
