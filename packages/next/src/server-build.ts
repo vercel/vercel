@@ -1828,6 +1828,8 @@ export async function serverBuild({
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+        edgeFunctions[`${pathname}${RSC_NOT_FOUND_SUFFIX}`] =
+          edgeFunctions[pathname];
 
         if (isAppPPREnabled) {
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
