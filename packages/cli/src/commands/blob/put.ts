@@ -4,7 +4,8 @@ import * as blob from '@vercel/blob';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { putSubcommand } from './command';
-import { readFileSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
+import { open } from 'node:fs/promises';
 import { isErrnoException } from '@vercel/error-utils';
 import { basename } from 'node:path';
 import { getCommandName } from '../../util/pkg-name';
@@ -60,7 +61,7 @@ export default async function put(
   telemetryClient.trackCliOptionCacheControlMaxAge(cacheControlMaxAge);
   telemetryClient.trackCliFlagForce(force);
 
-  let putBody: string | Buffer;
+  let putBody: NodeJS.ReadableStream;
   let pathname: string;
 
   try {
@@ -68,7 +69,12 @@ export default async function put(
     const isFile = stats.isFile();
 
     if (isFile) {
-      putBody = readFileSync(filePath);
+      // we first open the file so we can handle errors with promises
+      const file = await open(filePath, 'r');
+      putBody = file.createReadStream();
+      putBody.once('error', err => {
+        output.error(`Error while reading file: ${err}`);
+      });
       pathname = pathnameFlag ?? basename(filePath);
     } else {
       output.error('Path to upload is not a file');
