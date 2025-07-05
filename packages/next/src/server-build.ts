@@ -56,6 +56,7 @@ import {
   getPostponeResumeOutput,
   getNodeMiddleware,
   getStaticSegmentRoutes,
+  RSC_NOT_FOUND_SUFFIX,
 } from './utils';
 import {
   nodeFileTrace,
@@ -1819,6 +1820,7 @@ export async function serverBuild({
 
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
+        lambdas[`${pathname}${RSC_NOT_FOUND_SUFFIX}`] = lambdas[pathname];
 
         if (isAppPPREnabled) {
           lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
@@ -1827,6 +1829,8 @@ export async function serverBuild({
 
       if (edgeFunctions[pathname]) {
         edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+        edgeFunctions[`${pathname}${RSC_NOT_FOUND_SUFFIX}`] =
+          edgeFunctions[pathname];
 
         if (isAppPPREnabled) {
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
@@ -1841,10 +1845,14 @@ export async function serverBuild({
     routesManifest?.rsc?.prefetchSegmentDirSuffix;
   const prefetchSegmentSuffix = routesManifest?.rsc?.prefetchSegmentSuffix;
   const rscPrefetchHeader = routesManifest.rsc?.prefetchHeader?.toLowerCase();
+  const includeNotFoundHeader =
+    routesManifest.rsc?.includeNotFoundHeader?.toLowerCase();
+
   const rscVaryHeader =
     routesManifest?.rsc?.varyHeader ||
     'RSC, Next-Router-State-Tree, Next-Router-Prefetch';
   const appNotFoundPath = path.posix.join('.', entryDirectory, '_not-found');
+  const notFoundSuffix = routesManifest?.rsc?.notFoundSuffix;
 
   if (isAppPPREnabled && !rscPrefetchHeader) {
     throw new Error("Invariant: cannot use PPR without 'rsc.prefetchHeader'");
@@ -2300,7 +2308,41 @@ export async function serverBuild({
                   key: rscHeader,
                 },
               ],
+              missing: [
+                {
+                  type: 'header',
+                  key: includeNotFoundHeader,
+                  value: '1',
+                },
+              ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
+              headers: { vary: rscVaryHeader },
+              continue: true,
+              override: true,
+            },
+            // TODO: deal with not found index later..
+            {
+              src: `^${path.posix.join(
+                '/',
+                entryDirectory,
+                '/((?!.+\\.rsc).+?)(?:/)?$'
+              )}`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                },
+                {
+                  type: 'header',
+                  key: includeNotFoundHeader,
+                  value: '1',
+                },
+              ],
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/$1${notFoundSuffix}`
+              ),
               headers: { vary: rscVaryHeader },
               continue: true,
               override: true,
