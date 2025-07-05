@@ -55,6 +55,7 @@ export const require_ = createRequire(__filename);
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+export const RSC_NOT_FOUND_SUFFIX = '.not-found.rsc';
 
 export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
   Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)

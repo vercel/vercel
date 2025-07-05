@@ -56,6 +56,7 @@ import {
   getPostponeResumeOutput,
   getNodeMiddleware,
   getStaticSegmentRoutes,
+  RSC_NOT_FOUND_SUFFIX,
 } from './utils';
 import {
   nodeFileTrace,
@@ -1818,6 +1819,7 @@ export async function serverBuild({
 
       if (lambdas[pathname]) {
         lambdas[`${pathname}.rsc`] = lambdas[pathname];
+        lambdas[`${pathname}${RSC_NOT_FOUND_SUFFIX}`] = lambdas[pathname];
 
         if (isAppPPREnabled) {
           lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
