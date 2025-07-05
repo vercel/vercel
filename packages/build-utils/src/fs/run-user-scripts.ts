@@ -112,6 +112,12 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * the error code, stdout and stderr.
    */
   ignoreNon0Exit?: boolean;
+
+  /**
+   * Stream where the stdout from the command will be written to. After the
+   * command finished (successfully or not), the stream will be closed.
+   */
+  stdoutStream?: NodeJS.WritableStream;
 }
 
 export function spawnAsync(
@@ -128,8 +134,21 @@ export function spawnAsync(
       child.stderr.on('data', data => stderrLogs.push(data));
     }
 
-    child.on('error', reject);
+    if (child.stdout && opts.stdoutStream) {
+      child.stdout.pipe(opts.stdoutStream);
+    }
+
+    child.on('error', () => {
+      if (opts.stdoutStream) {
+        opts.stdoutStream.end();
+      }
+      reject();
+    });
     child.on('close', (code, signal) => {
+      if (opts.stdoutStream) {
+        opts.stdoutStream.end();
+      }
+
       if (code === 0 || opts.ignoreNon0Exit) {
         return resolve();
       }
@@ -150,7 +169,10 @@ export function spawnAsync(
   });
 }
 
-export function spawnCommand(command: string, options: SpawnOptions = {}) {
+export function spawnCommand(
+  command: string,
+  options: SpawnOptions & SpawnOptionsExtended = {}
+) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
     return spawn('cmd.exe', ['/C', command], opts);
@@ -159,7 +181,10 @@ export function spawnCommand(command: string, options: SpawnOptions = {}) {
   return spawn('sh', ['-c', command], opts);
 }
 
-export async function execCommand(command: string, options: SpawnOptions = {}) {
+export async function execCommand(
+  command: string,
+  options: SpawnOptions & SpawnOptionsExtended = {}
+) {
   const opts = { ...options, prettyCommand: command };
   if (process.platform === 'win32') {
     await spawnAsync('cmd.exe', ['/C', command], opts);

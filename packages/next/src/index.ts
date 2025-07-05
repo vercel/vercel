@@ -100,6 +100,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { PassThrough } from 'stream';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -515,6 +516,12 @@ export const build: BuildV2 = async buildOptions => {
     build: JSON.stringify(shouldRunCompileStep),
   });
 
+  const buildStream = new PassThrough();
+  buildStream.setEncoding('utf8');
+  buildStream.on('data', (chunk: string) => {
+    console.log(`Received from build stream: ${chunk.toString()}`);
+  });
+
   if (shouldRunCompileStep) {
     await builderSpan
       .child(BUILDER_COMPILE_STEP, {
@@ -541,9 +548,11 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           console.log(`Running "${buildCommand}"`);
+
           await execCommand(buildCommand, {
             ...spawnOpts,
             cwd: entryPath,
+            stdoutStream: buildStream,
             env,
           });
         } else if (buildScriptName) {
