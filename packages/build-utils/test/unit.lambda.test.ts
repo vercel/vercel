@@ -127,7 +127,7 @@ describe('Lambda', () => {
         type: 'queue/v1beta',
         topic: 'system-events',
         consumer: 'system-processors',
-        maxAttempts: 3,
+        maxDeliveries: 3,
         retryAfterSeconds: 10,
         initialDelaySeconds: 60,
       };
@@ -144,7 +144,7 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers![0].consumer).toBe(
         'system-processors'
       );
-      expect(lambda.experimentalTriggers![0].maxAttempts).toBe(3);
+      expect(lambda.experimentalTriggers![0].maxDeliveries).toBe(3);
       expect(lambda.experimentalTriggers![0].retryAfterSeconds).toBe(10);
       expect(lambda.experimentalTriggers![0].initialDelaySeconds).toBe(60);
     });
@@ -160,7 +160,7 @@ describe('Lambda', () => {
           type: 'queue/v1beta',
           topic: 'system-events',
           consumer: 'system-processors',
-          maxAttempts: 5,
+          maxDeliveries: 5,
         },
       ];
 
@@ -174,7 +174,7 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers).toHaveLength(2);
       expect(lambda.experimentalTriggers![0].topic).toBe('user-events');
       expect(lambda.experimentalTriggers![1].topic).toBe('system-events');
-      expect(lambda.experimentalTriggers![1].maxAttempts).toBe(5);
+      expect(lambda.experimentalTriggers![1].maxDeliveries).toBe(5);
     });
 
     describe('Validation Errors', () => {
@@ -256,7 +256,7 @@ describe('Lambda', () => {
         ).toThrow('"experimentalTriggers[0]" is not an object');
       });
 
-      it('should throw error for invalid maxAttempts', () => {
+      it('should throw error for invalid maxDeliveries', () => {
         expect(
           () =>
             new Lambda({
@@ -268,13 +268,11 @@ describe('Lambda', () => {
                   type: 'queue/v1beta',
                   topic: 'test-topic',
                   consumer: 'test-consumer',
-                  maxAttempts: -1,
+                  maxDeliveries: 0,
                 },
               ],
             })
-        ).toThrow(
-          '"experimentalTriggers[0]".maxAttempts must be a non-negative integer'
-        );
+        ).toThrow('"experimentalTriggers[0]".maxDeliveries must be at least 1');
       });
 
       it('should throw error for invalid retryAfterSeconds', () => {

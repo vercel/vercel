@@ -13,9 +13,9 @@ const triggerEventSchema = {
       type: 'string',
       minLength: 1,
     },
-    maxAttempts: {
+    maxDeliveries: {
       type: 'number',
-      minimum: 0,
+      minimum: 1,
     },
     retryAfterSeconds: {
       type: 'number',
