@@ -27,6 +27,7 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
@@ -44,6 +45,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
+  experimentalTriggers?: TriggerEvent[];
 }
 
 export async function writeBuildResult(
@@ -474,6 +476,8 @@ async function writeLambda(
     functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
 
   const config = {
     ...lambda,
@@ -481,6 +485,7 @@ async function writeLambda(
     architecture,
     memory,
     maxDuration,
+    experimentalTriggers,
     filePathMap,
     type: undefined,
     files: undefined,

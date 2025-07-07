@@ -512,6 +512,7 @@ export interface Token {
 
 export interface GitMetadata {
   commitAuthorName?: string | undefined;
+  commitAuthorEmail?: string | undefined;
   commitMessage?: string | undefined;
   commitRef?: string | undefined;
   commitSha?: string | undefined;

@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.3
+
+### Patch Changes
+
+- Update runtime cache api to support usage during builds ([#13426](https://github.com/vercel/vercel/pull/13426))
+
 ## 2.2.2
 
 ### Patch Changes

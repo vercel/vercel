@@ -1384,6 +1384,7 @@ export async function serverBuild({
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
+        experimentalTriggers: group.experimentalTriggers,
       };
 
       // the app _not-found output should always be included
