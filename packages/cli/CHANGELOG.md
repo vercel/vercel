@@ -1,5 +1,16 @@
 # vercel
 
+## 44.2.13
+
+### Patch Changes
+
+- rename experimental maxAttempts to maxDeliveries ([#13534](https://github.com/vercel/vercel/pull/13534))
+
+- Updated dependencies [[`ed2d1c1ea934e803c5e656b1663034176aef2f27`](https://github.com/vercel/vercel/commit/ed2d1c1ea934e803c5e656b1663034176aef2f27)]:
+  - @vercel/build-utils@10.6.5
+  - @vercel/node@5.3.4
+  - @vercel/static-build@2.7.14
+
 ## 44.2.12
 
 ### Patch Changes
