@@ -409,7 +409,7 @@ describe('validateConfig', () => {
               type: 'queue/v1beta',
               topic: 'user-events',
               consumer: 'webhook-processors',
-              maxAttempts: 3,
+              maxDeliveries: 3,
               retryAfterSeconds: 10,
               initialDelaySeconds: 0,
             },
@@ -541,7 +541,7 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid maxAttempts type', () => {
+  it('should error with invalid maxDeliveries type', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -550,22 +550,22 @@ describe('validateConfig', () => {
               type: 'queue/v1beta',
               topic: 'test-topic',
               consumer: 'test-consumer',
-              // @ts-expect-error - Testing invalid maxAttempts type
-              maxAttempts: 'three',
+              // @ts-expect-error - Testing invalid maxDeliveries type
+              maxDeliveries: 'three',
             },
           ],
         },
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxAttempts` should be number."
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxDeliveries` should be number."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
   });
 
-  it('should error with negative maxAttempts', () => {
+  it('should error with invalid maxDeliveries value', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -574,14 +574,14 @@ describe('validateConfig', () => {
               type: 'queue/v1beta',
               topic: 'test-topic',
               consumer: 'test-consumer',
-              maxAttempts: -1,
+              maxDeliveries: 0,
             },
           ],
         },
       },
     });
     expect(error!.message).toEqual(
-      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxAttempts` should be >= 0."
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxDeliveries` should be >= 1."
     );
     expect(error!.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'

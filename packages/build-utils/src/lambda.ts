@@ -269,14 +269,15 @@ export class Lambda {
         );
 
         // Validate optional queue configuration
-        if (trigger.maxAttempts !== undefined) {
+        if (trigger.maxDeliveries !== undefined) {
           assert(
-            typeof trigger.maxAttempts === 'number',
-            `${prefix}.maxAttempts must be a number`
+            typeof trigger.maxDeliveries === 'number',
+            `${prefix}.maxDeliveries must be a number`
           );
           assert(
-            Number.isInteger(trigger.maxAttempts) && trigger.maxAttempts >= 0,
-            `${prefix}.maxAttempts must be a non-negative integer`
+            Number.isInteger(trigger.maxDeliveries) &&
+              trigger.maxDeliveries >= 1,
+            `${prefix}.maxDeliveries must be at least 1`
           );
         }
 

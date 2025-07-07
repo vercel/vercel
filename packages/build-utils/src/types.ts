@@ -608,10 +608,12 @@ export interface TriggerEvent {
   consumer: string;
 
   /**
-   * Maximum number of retry attempts for failed executions (OPTIONAL)
+   * Maximum number of delivery attempts for message processing (OPTIONAL)
+   * This represents the total number of times a message can be delivered,
+   * not the number of retries. Must be at least 1 if specified.
    * Behavior when not specified depends on the server's default configuration.
    */
-  maxAttempts?: number;
+  maxDeliveries?: number;
 
   /**
    * Delay in seconds before retrying failed executions (OPTIONAL)
