@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.6.4
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
 ## 10.6.3
 
 ### Patch Changes

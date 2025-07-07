@@ -1,76 +1,33 @@
-const cloudEventTriggerSchema = {
+const triggerEventSchema = {
   type: 'object',
   properties: {
-    triggerVersion: {
-      type: 'number',
-      const: 1,
-    },
-    specversion: {
-      type: 'string',
-      const: '1.0',
-    },
     type: {
+      type: 'string',
+      const: 'queue/v1beta',
+    },
+    topic: {
       type: 'string',
       minLength: 1,
     },
-    httpBinding: {
-      type: 'object',
-      properties: {
-        mode: {
-          type: 'string',
-          const: 'structured',
-        },
-        method: {
-          type: 'string',
-          const: 'POST',
-        },
-        pathname: {
-          type: 'string',
-          minLength: 1,
-          pattern: '^/',
-        },
-      },
-      required: ['mode', 'method'],
-      additionalProperties: false,
+    consumer: {
+      type: 'string',
+      minLength: 1,
     },
-    queue: {
-      type: 'object',
-      properties: {
-        topic: {
-          type: 'string',
-          minLength: 1,
-        },
-        consumer: {
-          type: 'string',
-          minLength: 1,
-        },
-        maxAttempts: {
-          type: 'number',
-          minimum: 0,
-        },
-        retryAfterSeconds: {
-          type: 'number',
-          exclusiveMinimum: 0,
-        },
-        initialDelaySeconds: {
-          type: 'number',
-          minimum: 0,
-        },
-      },
-      required: ['topic', 'consumer'],
-      additionalProperties: false,
+    maxAttempts: {
+      type: 'number',
+      minimum: 0,
+    },
+    retryAfterSeconds: {
+      type: 'number',
+      exclusiveMinimum: 0,
+    },
+    initialDelaySeconds: {
+      type: 'number',
+      minimum: 0,
     },
   },
-  required: ['triggerVersion', 'specversion', 'type', 'httpBinding'],
+  required: ['type', 'topic', 'consumer'],
   additionalProperties: false,
-  if: {
-    properties: {
-      type: { const: 'com.vercel.queue.v1' },
-    },
-  },
-  then: {
-    required: ['triggerVersion', 'specversion', 'type', 'httpBinding', 'queue'],
-  },
 };
 
 export const functionsSchema = {
@@ -110,7 +67,7 @@ export const functionsSchema = {
         },
         experimentalTriggers: {
           type: 'array',
-          items: cloudEventTriggerSchema,
+          items: triggerEventSchema,
         },
       },
     },
