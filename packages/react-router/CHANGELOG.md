@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.2.0
+
+### Minor Changes
+
+- Add support for Vercel Skew Protection ([#13536](https://github.com/vercel/vercel/pull/13536))
+
 ## 1.1.2
 
 ### Patch Changes

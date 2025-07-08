@@ -27,6 +27,7 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
@@ -44,23 +45,7 @@ interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
   maxDuration?: number;
-  experimentalTriggers?: Array<{
-    triggerVersion: 1;
-    specversion: '1.0';
-    type: string;
-    httpBinding: {
-      mode: 'structured';
-      method?: 'GET' | 'POST' | 'HEAD';
-      pathname?: string;
-    };
-    queue?: {
-      topic: string;
-      consumer: string;
-      maxAttempts?: number;
-      retryAfterSeconds?: number;
-      initialDelaySeconds?: number;
-    };
-  }>;
+  experimentalTriggers?: TriggerEvent[];
 }
 
 export async function writeBuildResult(
