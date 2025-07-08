@@ -178,8 +178,27 @@ export const addStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'region',
+      shorthand: 'r',
+      type: String,
+      deprecated: false,
+      description:
+        'Region to create the Blob store in (default: "iad1"). See https://vercel.com/docs/edge-network/regions#region-list for all available regions',
+      argument: 'STRING',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a blob store (uses default region "iad1")',
+      value: 'vercel blob store add my-store',
+    },
+    {
+      name: 'Create a blob store in a specific region',
+      value: 'vercel blob store add my-store --region cdg1',
+    },
+  ],
 } as const;
 
 export const removeStoreSubcommand = {

@@ -30,10 +30,14 @@ export default async function addStore(
     return 1;
   }
 
-  let {
-    args: [name],
+  const {
+    args: [nameArg],
+    flags,
   } = parsedArgs;
 
+  const region = flags['--region'] || 'iad1';
+
+  let name = nameArg;
   if (!name) {
     name = await client.input.text({
       message: 'Enter a name for your blob store',
@@ -47,26 +51,34 @@ export default async function addStore(
   }
 
   telemetryClient.trackCliArgumentName(name);
+  telemetryClient.trackCliOptionRegion(flags['--region']);
 
   const link = await getLinkedProject(client);
 
   let storeId: string;
+  let storeRegion: string | undefined;
   try {
     output.debug('Creating new blob store');
 
     output.spinner('Creating new blob store');
 
-    const res = await client.fetch<{ store: { id: string } }>(
+    const requestBody: { name: string; region: string } = {
+      name,
+      region,
+    };
+
+    const res = await client.fetch<{ store: { id: string; region?: string } }>(
       '/v1/storage/stores/blob',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(requestBody),
         accountId: link.status === 'linked' ? link.org.id : undefined,
       }
     );
 
     storeId = res.store.id;
+    storeRegion = res.store.region;
   } catch (err) {
     printError(err);
     return 1;
@@ -74,7 +86,8 @@ export default async function addStore(
 
   output.stopSpinner();
 
-  output.success(`Blob store created: ${name} (${storeId})`);
+  const regionInfo = storeRegion ? ` in ${storeRegion}` : '';
+  output.success(`Blob store created: ${name} (${storeId})${regionInfo}`);
 
   if (link.status === 'linked') {
     const res = await client.input.confirm(
