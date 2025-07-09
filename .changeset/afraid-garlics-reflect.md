@@ -1,5 +1,5 @@
 ---
-"vercel": patch
+"vercel": minor
 ---
 
 Add Google login functionality
