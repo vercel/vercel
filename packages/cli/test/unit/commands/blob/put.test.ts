@@ -472,4 +472,80 @@ describe('blob put', () => {
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
     });
   });
+
+  describe('stdin input', () => {
+    beforeEach(() => {
+      // Mock stdin to not be a TTY (simulating piped input)
+      client.stdin.isTTY = false;
+    });
+
+    it('should upload from stdin with pathname successfully', async () => {
+      const exitCode = await put(
+        client,
+        ['--pathname', 'from-stdin.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'from-stdin.txt',
+        process.stdin,
+        {
+          token: testToken,
+          access: 'public',
+          addRandomSuffix: false,
+          multipart: true,
+          contentType: undefined,
+          cacheControlMaxAge: undefined,
+          allowOverwrite: false,
+        }
+      );
+      expect(mockedOutput.success).toHaveBeenCalledWith(
+        'https://example.com/uploaded-file.txt'
+      );
+    });
+
+    it('should fail when reading from stdin without pathname', async () => {
+      const exitCode = await put(client, [], testToken);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        'Missing pathname. When reading from stdin, you must specify --pathname. Usage: cat file.txt | vercel blob put --pathname <pathname>'
+      );
+      expect(mockedBlob.put).not.toHaveBeenCalled();
+      expect(mockedOutput.success).not.toHaveBeenCalled();
+    });
+
+    it('should upload from stdin with all options', async () => {
+      const exitCode = await put(
+        client,
+        [
+          '--pathname',
+          'custom-stdin.txt',
+          '--add-random-suffix',
+          '--content-type',
+          'text/plain',
+          '--cache-control-max-age',
+          '3600',
+          '--force',
+        ],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.put).toHaveBeenCalledWith(
+        'custom-stdin.txt',
+        process.stdin,
+        {
+          token: testToken,
+          access: 'public',
+          addRandomSuffix: true,
+          multipart: true,
+          contentType: 'text/plain',
+          cacheControlMaxAge: 3600,
+          allowOverwrite: true,
+        }
+      );
+    });
+  });
 });
