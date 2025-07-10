@@ -1,34 +1,26 @@
 {
-  "name": "@vercel/functions",
-  "description": "Runtime functions to be used with your Vercel Functions",
+  "name": "@vercel/oidc-aws-credentials-provider",
+  "description": "Runtime AWS credentials provider intended for use with Vercel Functions",
   "homepage": "https://vercel.com",
   "files": [
     "**/*.js",
     "**/*.d.ts",
     "**/*.md"
   ],
-  "types": "./index.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./index.js",
-      "require": "./index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
     },
     "./headers": {
-      "import": "./headers.js",
-      "require": "./headers.js"
-    },
-    "./oidc": {
-      "import": "./oidc/index.js",
-      "require": "./oidc/index.js"
-    },
-    "./middleware": {
-      "import": "./middleware.js",
-      "require": "./middleware.js"
+      "import": "./dist/headers.js",
+      "require": "./dist/headers.js"
     }
   },
-  "version": "2.2.4",
+  "version": "1.0.0",
   "repository": {
-    "directory": "packages/functions",
+    "directory": "packages/oidc-aws-credentials-provider",
     "type": "git",
     "url": "git+https://github.com/vercel/vercel.git"
   },
@@ -36,8 +28,6 @@
     "url": "https://github.com/vercel/vercel/issues"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "3.609.0",
-    "@aws-sdk/credential-provider-web-identity": "3.609.0",
     "@smithy/types": "3.3.0",
     "tinyspawn": "1.3.1",
     "typedoc": "0.24.6",
@@ -46,14 +36,7 @@
     "typescript": "4.9.5",
     "vitest": "2.0.1"
   },
-  "peerDependencies": {
-    "@aws-sdk/credential-provider-web-identity": "*"
-  },
-  "peerDependenciesMeta": {
-    "@aws-sdk/credential-provider-web-identity": {
-      "optional": true
-    }
-  },
+  "peerDependenciesMeta": {},
   "engines": {
     "node": ">= 18"
   },
@@ -69,7 +52,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@vercel/oidc": "workspace:*",
-    "@vercel/oidc-aws-credentials-provider": "workspace:*"
+    "@aws-sdk/credential-provider-web-identity": "3.609.0",
+    "@vercel/oidc": "workspace:*"
   }
 }
