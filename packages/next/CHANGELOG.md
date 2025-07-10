@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.0
+
+### Minor Changes
+
+- Adds support for user configured `preferredRegion` for Node.js Functions ([#13546](https://github.com/vercel/vercel/pull/13546))
+
 ## 4.9.5
 
 ### Patch Changes
