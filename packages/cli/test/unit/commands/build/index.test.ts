@@ -989,6 +989,25 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should apply function configuration from source code to Serverless Functions', async () => {
+    const cwd = fixture('nextjs-with-route-handler-regions');
+    const output = join(cwd, '.vercel/output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    // "functions/api" directory has output Functions
+    const functions = await fs.readdir(join(output, 'functions/api'));
+    expect(functions.sort()).toContainEqual('regions.func');
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'functions/api/regions.func/.vc-config.json')
+    );
+    expect(vcConfig).toMatchObject({
+      regions: ['iad1'],
+    });
+  });
+
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows

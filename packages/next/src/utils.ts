@@ -992,6 +992,7 @@ export interface CreateLambdaFromPseudoLayersOptions
   isStreaming?: boolean;
   nextVersion?: string;
   experimentalAllowBundling?: boolean;
+  regions?: string[];
 }
 
 // measured with 1, 2, 5, 10, and `os.cpus().length || 5`
@@ -1004,6 +1005,7 @@ export async function createLambdaFromPseudoLayers({
   isStreaming,
   nextVersion,
   experimentalAllowBundling,
+  regions,
   ...lambdaOptions
 }: CreateLambdaFromPseudoLayersOptions) {
   await createLambdaSema.acquire();
@@ -1052,6 +1054,7 @@ export async function createLambdaFromPseudoLayers({
       version: nextVersion,
     },
     experimentalAllowBundling,
+    regions,
   });
 }
 
@@ -1768,6 +1771,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  regions?: string[];
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1834,6 +1838,7 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number;
+      regions?: string[];
     } = {};
 
     if (
@@ -3263,6 +3268,7 @@ export type FunctionsConfigManifestV1 = {
     {
       maxDuration?: number | undefined;
       runtime?: 'nodejs';
+      regions?: string[];
       matchers?: Array<{
         regexp: string;
         originalSource: string;
