@@ -1,5 +1,71 @@
 # vercel
 
+## 44.4.0
+
+### Minor Changes
+
+- Adds support for user configured `preferredRegion` for Node.js Functions ([#13546](https://github.com/vercel/vercel/pull/13546))
+
+### Patch Changes
+
+- Updated dependencies [[`7aa34eca64cbe70a9662bfcde82d23ab0eca527d`](https://github.com/vercel/vercel/commit/7aa34eca64cbe70a9662bfcde82d23ab0eca527d)]:
+  - @vercel/next@4.10.0
+
+## 44.3.0
+
+### Minor Changes
+
+- Add stdin and pipe support to `vc blob put` command. ([#13524](https://github.com/vercel/vercel/pull/13524))
+
+  Usage:
+
+  ```sh
+  cat file.txt | vc blob put --pathname file-from-stdin.txt
+  ```
+
+- Add region support to `vc blob store add` ([#13525](https://github.com/vercel/vercel/pull/13525))
+
+  You can now create Vercel Blob stores in any of the 19 Vercel Edge Regions:
+  https://vercel.com/docs/edge-network/regions.
+
+  Usage:
+
+  ```sh
+  vc blob store add --region cdg1
+  ```
+
+  Will create a Vercel Blob store in France 🇫.
+
+### Patch Changes
+
+- Change how files are uploaded for the `blob` commands. Before we were reading ([#13523](https://github.com/vercel/vercel/pull/13523))
+  files fully in memory and then sending them to the Vercel Blob API. We will now
+  stream files from disk to the Vercel Blob API, avoiding the need to read them
+  all in memory and making the upload more efficient.
+
+## 44.2.13
+
+### Patch Changes
+
+- rename experimental maxAttempts to maxDeliveries ([#13534](https://github.com/vercel/vercel/pull/13534))
+
+- Updated dependencies [[`ed2d1c1ea934e803c5e656b1663034176aef2f27`](https://github.com/vercel/vercel/commit/ed2d1c1ea934e803c5e656b1663034176aef2f27)]:
+  - @vercel/build-utils@10.6.5
+  - @vercel/node@5.3.4
+  - @vercel/static-build@2.7.14
+
+## 44.2.12
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
+- Updated dependencies [[`dc424e1b09230e35f4953e2c4d1ccdab18f57d8c`](https://github.com/vercel/vercel/commit/dc424e1b09230e35f4953e2c4d1ccdab18f57d8c)]:
+  - @vercel/build-utils@10.6.4
+  - @vercel/next@4.9.5
+  - @vercel/node@5.3.3
+  - @vercel/static-build@2.7.13
+
 ## 44.2.11
 
 ### Patch Changes

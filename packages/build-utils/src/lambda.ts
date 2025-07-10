@@ -10,27 +10,12 @@ import type {
   Env,
   Files,
   FunctionFramework,
-  CloudEventTrigger,
-  CloudEventTriggerBase,
-  CloudEventQueueTrigger,
+  TriggerEvent,
 } from './types';
 
-export type {
-  CloudEventTrigger,
-  CloudEventTriggerBase,
-  CloudEventQueueTrigger,
-};
+export type { TriggerEvent };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
-
-/**
- * Type predicate to check if a CloudEvent trigger is a queue trigger.
- */
-function isCloudEventQueueTrigger(
-  trigger: CloudEventTrigger
-): trigger is CloudEventQueueTrigger {
-  return trigger.type === 'com.vercel.queue.v1';
-}
 
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
@@ -53,10 +38,9 @@ export interface LambdaOptionsBase {
   operationType?: string;
   framework?: FunctionFramework;
   /**
-   * Experimental CloudEvents trigger definitions that this Lambda can receive.
-   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
-   * Currently supports HTTP protocol binding in structured mode only.
-   * Only supports CloudEvents specification version 1.0.
+   * Experimental trigger event definitions that this Lambda can receive.
+   * Defines what types of trigger events this Lambda can handle as an HTTP endpoint.
+   * Currently supports queue triggers for Vercel's queue system.
    *
    * The delivery configuration provides HINTS to the system about preferred
    * execution behavior (concurrency, retries) but these are NOT guarantees.
@@ -67,7 +51,7 @@ export interface LambdaOptionsBase {
    *
    * @experimental This feature is experimental and may change.
    */
-  experimentalTriggers?: CloudEventTrigger[];
+  experimentalTriggers?: TriggerEvent[];
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -135,10 +119,9 @@ export class Lambda {
   framework?: FunctionFramework;
   experimentalAllowBundling?: boolean;
   /**
-   * Experimental CloudEvents trigger definitions that this Lambda can receive.
-   * Defines what types of CloudEvents this Lambda can handle as an HTTP endpoint.
-   * Currently supports HTTP protocol binding in structured mode only.
-   * Only supports CloudEvents specification version 1.0.
+   * Experimental trigger event definitions that this Lambda can receive.
+   * Defines what types of trigger events this Lambda can handle as an HTTP endpoint.
+   * Currently supports queue triggers for Vercel's queue system.
    *
    * The delivery configuration provides HINTS to the system about preferred
    * execution behavior (concurrency, retries) but these are NOT guarantees.
@@ -149,7 +132,7 @@ export class Lambda {
    *
    * @experimental This feature is experimental and may change.
    */
-  experimentalTriggers?: CloudEventTrigger[];
+  experimentalTriggers?: TriggerEvent[];
 
   constructor(opts: LambdaOptions) {
     const {
@@ -263,122 +246,61 @@ export class Lambda {
           `${prefix} is not an object`
         );
 
-        // Validate required CloudEventTrigger attributes
+        // Validate required type
         assert(
-          trigger.triggerVersion === 1,
-          `${prefix}.triggerVersion must be 1`
+          trigger.type === 'queue/v1beta',
+          `${prefix}.type must be "queue/v1beta"`
         );
 
+        // Validate required queue fields
         assert(
-          trigger.specversion === '1.0',
-          `${prefix}.specversion must be "1.0"`
+          typeof trigger.topic === 'string',
+          `${prefix}.topic is required and must be a string`
+        );
+        assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
+
+        assert(
+          typeof trigger.consumer === 'string',
+          `${prefix}.consumer is required and must be a string`
+        );
+        assert(
+          trigger.consumer.length > 0,
+          `${prefix}.consumer cannot be empty`
         );
 
-        assert(
-          typeof trigger.type === 'string',
-          `${prefix}.type is not a string`
-        );
-        assert(trigger.type.length > 0, `${prefix}.type cannot be empty`);
-
-        // Validate queue-specific fields for com.vercel.queue.v1 triggers
-        if (isCloudEventQueueTrigger(trigger)) {
+        // Validate optional queue configuration
+        if (trigger.maxDeliveries !== undefined) {
           assert(
-            typeof trigger.queue === 'object' && trigger.queue !== null,
-            `${prefix}.queue is required and must be an object for queue triggers`
-          );
-
-          const queue = trigger.queue;
-          const queuePrefix = `${prefix}.queue`;
-
-          assert(
-            typeof queue.topic === 'string',
-            `${queuePrefix}.topic is required and must be a string`
+            typeof trigger.maxDeliveries === 'number',
+            `${prefix}.maxDeliveries must be a number`
           );
           assert(
-            queue.topic.length > 0,
-            `${queuePrefix}.topic cannot be empty`
-          );
-
-          assert(
-            typeof queue.consumer === 'string',
-            `${queuePrefix}.consumer is required and must be a string`
-          );
-          assert(
-            queue.consumer.length > 0,
-            `${queuePrefix}.consumer cannot be empty`
+            Number.isInteger(trigger.maxDeliveries) &&
+              trigger.maxDeliveries >= 1,
+            `${prefix}.maxDeliveries must be at least 1`
           );
         }
 
-        // Validate required httpBinding
-        const binding = trigger.httpBinding;
-        const bindingPrefix = `${prefix}.httpBinding`;
-
-        assert(
-          typeof binding === 'object' && binding !== null,
-          `${bindingPrefix} is required and must be an object`
-        );
-        assert(
-          binding.mode === 'structured',
-          `${bindingPrefix}.mode must be "structured"`
-        );
-        assert(
-          binding.method === 'POST',
-          `${bindingPrefix}.method must be "POST"`
-        );
-
-        // Validate optional HTTP configuration within httpBinding
-        if (binding.pathname !== undefined) {
+        if (trigger.retryAfterSeconds !== undefined) {
           assert(
-            typeof binding.pathname === 'string',
-            `${bindingPrefix}.pathname must be a string`
+            typeof trigger.retryAfterSeconds === 'number',
+            `${prefix}.retryAfterSeconds must be a number`
           );
           assert(
-            binding.pathname.length > 0,
-            `${bindingPrefix}.pathname cannot be empty`
-          );
-          assert(
-            binding.pathname.startsWith('/'),
-            `${bindingPrefix}.pathname must start with '/'`
+            trigger.retryAfterSeconds > 0,
+            `${prefix}.retryAfterSeconds must be a positive number`
           );
         }
 
-        // Validate optional queue configuration (only on queue triggers)
-        if (isCloudEventQueueTrigger(trigger)) {
-          const queue = trigger.queue;
-          const queuePrefix = `${prefix}.queue`;
-
-          if (queue.maxAttempts !== undefined) {
-            assert(
-              typeof queue.maxAttempts === 'number',
-              `${queuePrefix}.maxAttempts must be a number`
-            );
-            assert(
-              Number.isInteger(queue.maxAttempts) && queue.maxAttempts >= 0,
-              `${queuePrefix}.maxAttempts must be a non-negative integer`
-            );
-          }
-
-          if (queue.retryAfterSeconds !== undefined) {
-            assert(
-              typeof queue.retryAfterSeconds === 'number',
-              `${queuePrefix}.retryAfterSeconds must be a number`
-            );
-            assert(
-              queue.retryAfterSeconds > 0,
-              `${queuePrefix}.retryAfterSeconds must be a positive number`
-            );
-          }
-
-          if (queue.initialDelaySeconds !== undefined) {
-            assert(
-              typeof queue.initialDelaySeconds === 'number',
-              `${queuePrefix}.initialDelaySeconds must be a number`
-            );
-            assert(
-              queue.initialDelaySeconds >= 0,
-              `${queuePrefix}.initialDelaySeconds must be a non-negative number`
-            );
-          }
+        if (trigger.initialDelaySeconds !== undefined) {
+          assert(
+            typeof trigger.initialDelaySeconds === 'number',
+            `${prefix}.initialDelaySeconds must be a number`
+          );
+          assert(
+            trigger.initialDelaySeconds >= 0,
+            `${prefix}.initialDelaySeconds must be a non-negative number`
+          );
         }
       }
     }
