@@ -1,4 +1,3 @@
-import { platform } from 'node:os';
 import {
   FileFsRef,
   Files,
@@ -1875,9 +1874,7 @@ export async function getPageLambdaGroups({
       opts = { ...vercelConfigOpts, ...opts };
     }
 
-    if (opts.regions?.length || (0 > 0 && platform() === 'win32')) {
-      throw new Error('it did in fact rebuild');
-    }
+    throw new Error(`it did in fact rebuild: ${opts.regions?.[0]}`);
 
     let matchingGroup = experimentalAllowBundling
       ? undefined
