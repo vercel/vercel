@@ -1,5 +1,11 @@
 # @vercel/react-router
 
+## 1.2.1
+
+### Patch Changes
+
+- Use cookie method for Vercel Skew Protection ([#13552](https://github.com/vercel/vercel/pull/13552))
+
 ## 1.2.0
 
 ### Minor Changes
