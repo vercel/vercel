@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.7.1
+
+### Patch Changes
+
+- [frameworks] use correct output dir for nitro ([#13541](https://github.com/vercel/vercel/pull/13541))
+
+## 3.7.0
+
+### Minor Changes
+
+- Add Nitro to framework list ([#13472](https://github.com/vercel/vercel/pull/13472))
+
 ## 3.6.4
 
 ### Patch Changes

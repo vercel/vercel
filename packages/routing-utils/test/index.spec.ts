@@ -226,35 +226,6 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('fails if over 2048 routes', () => {
-    assertError('string', [
-      {
-        dataPath: '',
-        keyword: 'type',
-        message: 'should be array',
-        params: {
-          type: 'array',
-        },
-        schemaPath: '#/type',
-      },
-    ]);
-
-    const arr = new Array(2049);
-    arr.fill(true);
-
-    assertError(arr, [
-      {
-        dataPath: '',
-        keyword: 'maxItems',
-        message: 'should NOT have more than 2048 items',
-        params: {
-          limit: '2048',
-        },
-        schemaPath: '#/maxItems',
-      },
-    ]);
-  });
-
   test('fails is src is not string', () => {
     assertError(
       [
@@ -772,6 +743,168 @@ describe('normalizeRoutes', () => {
       error?.message,
       'Route at index 1 must define `continue: true` after `handle: miss`.'
     );
+  });
+
+  test('should fail validation when append operation is missing required args', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'append',
+            target: {
+              key: 'x-custom-header',
+            },
+          },
+        ],
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].transforms[0]',
+          keyword: 'required',
+          message: "should have required property '.args'",
+          params: { missingProperty: '.args' },
+          schemaPath:
+            '#/items/anyOf/0/properties/transforms/items/allOf/0/then/required',
+        },
+        {
+          dataPath: '[0].transforms[0]',
+          keyword: 'if',
+          message: 'should match "then" schema',
+          params: { failingKeyword: 'then' },
+          schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/0/if',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should fail validation when set operation is missing required args', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'response.headers',
+            op: 'set',
+            target: {
+              key: 'cache-control',
+            },
+          },
+        ],
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].transforms[0]',
+          keyword: 'required',
+          message: "should have required property '.args'",
+          params: { missingProperty: '.args' },
+          schemaPath:
+            '#/items/anyOf/0/properties/transforms/items/allOf/0/then/required',
+        },
+        {
+          dataPath: '[0].transforms[0]',
+          keyword: 'if',
+          message: 'should match "then" schema',
+          params: { failingKeyword: 'then' },
+          schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/0/if',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should pass validation when delete operation has no args', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'delete',
+            target: {
+              key: 'x-unwanted-header',
+            },
+            // No args needed for delete operation
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should pass validation when all operations have required args', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'append',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: 'additional-value',
+          },
+          {
+            type: 'response.headers',
+            op: 'set',
+            target: {
+              key: 'cache-control',
+            },
+            args: 'max-age=3600',
+          },
+          {
+            type: 'request.headers',
+            op: 'delete',
+            target: {
+              key: 'x-unwanted-header',
+            },
+            args: 'optional-value',
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
   });
 });
 
@@ -1393,7 +1526,7 @@ describe('getTransformedRoutes', () => {
     );
   });
   test('should validate mitigate property in route configuration', () => {
-    const routes = [
+    const routes: Route[] = [
       {
         src: '/api/protected/(.*)',
         mitigate: {
@@ -1412,10 +1545,11 @@ describe('getTransformedRoutes', () => {
   });
 
   test('should fail validation for invalid mitigate action', () => {
-    const routes = [
+    const routes: Route[] = [
       {
         src: '/api/protected/(.*)',
         mitigate: {
+          // @ts-expect-error - invalid action
           action: 'invalid',
         },
       },
@@ -1451,5 +1585,569 @@ describe('getTransformedRoutes', () => {
       ],
       routesSchema
     );
+  });
+
+  test('should validate basic transforms property in route configuration', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-forwarded-proto',
+            },
+            args: 'https',
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('should fail validation for transforms with regex property', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              // @ts-expect-error - re is not currently supported for transforms
+              key: { re: '^x-.*' },
+            },
+            args: 'value',
+          },
+        ],
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].transforms[0].target.key',
+          keyword: 'type',
+          message: 'should be string',
+          params: { type: 'string' },
+          schemaPath:
+            '#/items/anyOf/0/properties/transforms/items/properties/target/properties/key/anyOf/0/type',
+        },
+        {
+          dataPath: '[0].transforms[0].target.key',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 're' },
+          schemaPath:
+            '#/items/anyOf/0/properties/transforms/items/properties/target/properties/key/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0].transforms[0].target.key',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath:
+            '#/items/anyOf/0/properties/transforms/items/properties/target/properties/key/anyOf',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should validate transforms with non-regex MatchableValue properties', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: { eq: 'x-custom-header' },
+            },
+            args: 'value',
+          },
+          {
+            type: 'request.query',
+            op: 'append',
+            target: {
+              key: { pre: 'utm_' },
+            },
+            args: ['source', 'medium'],
+          },
+          {
+            type: 'response.headers',
+            op: 'delete',
+            target: {
+              key: { inc: ['server', 'x-powered-by'] },
+            },
+          },
+        ],
+      },
+    ];
+
+    assertValid(routes, routesSchema);
+  });
+
+  test('it should reject when transforms is an empty array', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms',
+        keyword: 'minItems',
+        message: 'should NOT have fewer than 1 items',
+        params: { limit: 1 },
+        schemaPath: '#/items/anyOf/0/properties/transforms/minItems',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
+  });
+
+  test('should fail validation when transforms is not an array', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        // @ts-expect-error - not an array
+        transforms: 'not-an-array',
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].transforms',
+          keyword: 'type',
+          message: 'should be array',
+          params: { type: 'array' },
+          schemaPath: '#/items/anyOf/0/properties/transforms/type',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('should fail validation when transform is missing required properties', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          // @ts-expect-error - missing required properties
+          {
+            args: 'value',
+          },
+        ],
+      },
+    ];
+
+    assertError(
+      routes,
+      [
+        {
+          dataPath: '[0].transforms[0]',
+          keyword: 'required',
+          message: "should have required property 'type'",
+          params: { missingProperty: 'type' },
+          schemaPath: '#/items/anyOf/0/properties/transforms/items/required',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'additionalProperties',
+          message: 'should NOT have additional properties',
+          params: { additionalProperty: 'src' },
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+        },
+        {
+          dataPath: '[0]',
+          keyword: 'anyOf',
+          message: 'should match some schema in anyOf',
+          params: {},
+          schemaPath: '#/items/anyOf',
+        },
+      ],
+      routesSchema
+    );
+  });
+
+  test('it should reject when transforms try to set a header with invalid key characters', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: '^x-.*',
+            },
+            args: 'valid-value',
+          },
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: '🚀',
+            },
+            args: 'valid-value',
+          },
+        ],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms[0].target.key',
+        keyword: 'pattern',
+        message: 'should match pattern "^[a-zA-Z0-9_-]+$"',
+        params: { pattern: '^[a-zA-Z0-9_-]+$' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/1/then/properties/target/properties/key/then/pattern',
+      },
+      {
+        dataPath: '[0].transforms[0].target.key',
+        keyword: 'if',
+        message: 'should match "then" schema',
+        params: { failingKeyword: 'then' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/1/then/properties/target/properties/key/if',
+      },
+      {
+        dataPath: '[0].transforms[0]',
+        keyword: 'if',
+        message: 'should match "then" schema',
+        params: { failingKeyword: 'then' },
+        schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/1/if',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
+  });
+
+  test('it should reject when transforms try to set a header with invalid value characters', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: '\\\\\\n',
+          },
+        ],
+      },
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: '🚀',
+          },
+        ],
+      },
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: ['🚀'],
+          },
+        ],
+      },
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: 'forbidden©chars',
+          },
+        ],
+      },
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: 'carriage\rreturnand\nnewlineand\ttab',
+          },
+        ],
+      },
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: '',
+          },
+        ],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms[0].args',
+        keyword: 'pattern',
+        message:
+          'should match pattern "^[a-zA-Z0-9_ :;.,"\'?!(){}\\[\\]@<>=+*#$&`|~\\^%/-]+$"',
+        params: {
+          pattern: '^[a-zA-Z0-9_ :;.,"\'?!(){}\\[\\]@<>=+*#$&`|~\\^%/-]+$',
+        },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/1/then/properties/args/anyOf/0/pattern',
+      },
+      {
+        dataPath: '[0].transforms[0].args',
+        keyword: 'type',
+        message: 'should be array',
+        params: { type: 'array' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/1/then/properties/args/anyOf/1/type',
+      },
+      {
+        dataPath: '[0].transforms[0].args',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/allOf/1/then/properties/args/anyOf',
+      },
+      {
+        dataPath: '[0].transforms[0]',
+        keyword: 'if',
+        message: 'should match "then" schema',
+        params: { failingKeyword: 'then' },
+        schemaPath: '#/items/anyOf/0/properties/transforms/items/allOf/1/if',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
+  });
+
+  test('it should fail validation when missing the target key', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          // @ts-expect-error - missing required properties
+          {
+            type: 'request.headers',
+            op: 'set',
+            args: 'value',
+          },
+        ],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms[0]',
+        keyword: 'required',
+        message: "should have required property 'target'",
+        params: { missingProperty: 'target' },
+        schemaPath: '#/items/anyOf/0/properties/transforms/items/required',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
+  });
+
+  test('it should fail validation when missing the target key, key', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            // @ts-expect-error - missing required properties
+            target: {},
+            args: 'value',
+          },
+        ],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms[0].target',
+        keyword: 'required',
+        message: "should have required property 'key'",
+        params: { missingProperty: 'key' },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/properties/target/required',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
+  });
+
+  test('it should fail validation when invalid type for enum values', () => {
+    const routes: Route[] = [
+      {
+        src: '/api/(.*)',
+        transforms: [
+          {
+            // @ts-expect-error - invalid type
+            type: 'invalid.headers',
+            op: 'set',
+            target: {
+              key: 'x-custom-header',
+            },
+            args: 'value',
+          },
+        ],
+      },
+    ];
+
+    assertError(routes, [
+      {
+        dataPath: '[0].transforms[0].type',
+        keyword: 'enum',
+        message: 'should be equal to one of the allowed values',
+        params: {
+          allowedValues: [
+            'request.headers',
+            'request.query',
+            'response.headers',
+          ],
+        },
+        schemaPath:
+          '#/items/anyOf/0/properties/transforms/items/properties/type/enum',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'additionalProperties',
+        message: 'should NOT have additional properties',
+        params: { additionalProperty: 'src' },
+        schemaPath: '#/items/anyOf/1/additionalProperties',
+      },
+      {
+        dataPath: '[0]',
+        keyword: 'anyOf',
+        message: 'should match some schema in anyOf',
+        params: {},
+        schemaPath: '#/items/anyOf',
+      },
+    ]);
   });
 });

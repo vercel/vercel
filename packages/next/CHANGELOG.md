@@ -1,5 +1,41 @@
 # @vercel/next
 
+## 4.9.5
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
+## 4.9.4
+
+### Patch Changes
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
+## 4.9.3
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
+## 4.9.2
+
+### Patch Changes
+
+- Added support for the Resume Data Cache (RDC) for React Server Component (RSC) requests ([#13459](https://github.com/vercel/vercel/pull/13459))
+
+## 4.9.1
+
+### Patch Changes
+
+- Ensure we await node middleware import for top-level await ([#13479](https://github.com/vercel/vercel/pull/13479))
+
+## 4.9.0
+
+### Minor Changes
+
+- make the output of collectTracedFiles deterministic ([#13410](https://github.com/vercel/vercel/pull/13410))
+
 ## 4.8.0
 
 ### Minor Changes

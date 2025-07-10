@@ -144,10 +144,10 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.6.4
+        specifier: 3.7.1
         version: link:../packages/frameworks
 
   internals/constants:
@@ -201,10 +201,10 @@ importers:
         specifier: workspace:*
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../../packages/routing-utils
     devDependencies:
       '@vercel-internals/tsconfig':
@@ -268,7 +268,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       aggregate-error:
         specifier: 3.0.1
@@ -336,8 +336,11 @@ importers:
 
   packages/cli:
     dependencies:
+      '@vercel/blob':
+        specifier: 1.0.2
+        version: 1.0.2
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/fun':
         specifier: 1.1.6
@@ -349,10 +352,10 @@ importers:
         specifier: 1.2.2
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.8.0
+        specifier: 4.9.5
         version: link:../next
       '@vercel/node':
-        specifier: 5.2.1
+        specifier: 5.3.4
         version: link:../node
       '@vercel/python':
         specifier: 4.7.2
@@ -367,7 +370,7 @@ importers:
         specifier: 2.2.0
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.7.9
+        specifier: 2.7.14
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -457,6 +460,9 @@ importers:
       '@types/minimatch':
         specifier: 3.0.3
         version: 3.0.3
+      '@types/mock-fs':
+        specifier: 4.13.4
+        version: 4.13.4
       '@types/ms':
         specifier: 0.7.30
         version: 0.7.30
@@ -509,19 +515,19 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 15.3.3
+        specifier: 15.3.10
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.6.4
+        specifier: 3.7.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.2
+        specifier: 5.4.7
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       '@vitest/expect':
         specifier: 2.1.3
@@ -661,6 +667,9 @@ importers:
       minimatch:
         specifier: 3.1.2
         version: 3.1.2
+      mock-fs:
+        specifier: 5.5.0
+        version: 5.5.0
       ms:
         specifier: 2.1.2
         version: 2.1.2
@@ -758,7 +767,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -767,7 +776,7 @@ importers:
         specifier: 1.2.2
         version: 1.2.2(vite@5.1.8)
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       async-retry:
         specifier: 1.2.3
@@ -943,7 +952,7 @@ importers:
         specifier: 2.5.8
         version: 2.5.8
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       ajv:
         specifier: 6.12.3
@@ -961,10 +970,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.6.4
+        specifier: 3.7.1
         version: link:../frameworks
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       glob:
         specifier: 8.0.3
@@ -1001,7 +1010,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1056,7 +1065,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       esbuild:
         specifier: 0.14.47
@@ -1084,7 +1093,7 @@ importers:
         specifier: 18.0.26
         version: 18.0.26
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       jest-junit:
         specifier: 16.0.0
@@ -1123,7 +1132,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1172,7 +1181,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1235,10 +1244,10 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       async-sema:
         specifier: 3.0.1
@@ -1322,7 +1331,7 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -1458,7 +1467,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       cross-env:
         specifier: 7.0.3
@@ -1541,10 +1550,10 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       execa:
         specifier: 3.2.0
@@ -1606,7 +1615,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1659,7 +1668,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1683,7 +1692,7 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.83
+        specifier: 2.0.88
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
         specifier: 3.1.1
@@ -1720,19 +1729,19 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 10.6.0
+        specifier: 10.6.5
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.6.4
+        specifier: 3.7.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.2
+        specifier: 5.4.7
         version: link:../fs-detectors
       '@vercel/routing-utils':
-        specifier: 5.0.5
+        specifier: 5.1.0
         version: link:../routing-utils
       execa:
         specifier: 3.2.0
@@ -4393,7 +4402,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       jest-message-util: 29.7.0
       jest-util: 29.7.0
@@ -4414,14 +4423,14 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       ansi-escapes: 4.3.2
       chalk: 4.1.0
       ci-info: 3.9.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-changed-files: 29.7.0
-      jest-config: 29.7.0(@types/node@22.15.8)
+      jest-config: 29.7.0(@types/node@22.5.0)
       jest-haste-map: 29.7.0
       jest-message-util: 29.7.0
       jest-regex-util: 29.6.3
@@ -4449,7 +4458,7 @@ packages:
     dependencies:
       '@jest/fake-timers': 29.5.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-mock: 29.5.0
     dev: true
 
@@ -4459,7 +4468,7 @@ packages:
     dependencies:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-mock: 29.7.0
     dev: true
 
@@ -4486,7 +4495,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-message-util: 29.7.0
       jest-mock: 29.5.0
       jest-util: 29.5.0
@@ -4498,7 +4507,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-message-util: 29.7.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
@@ -4531,7 +4540,7 @@ packages:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.25
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       collect-v8-coverage: 1.0.2
       exit: 0.1.2
@@ -4626,7 +4635,7 @@ packages:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       '@types/yargs': 17.0.33
       chalk: 4.1.0
     dev: true
@@ -6546,7 +6555,7 @@ packages:
     dependencies:
       '@types/http-cache-semantics': 4.0.4
       '@types/keyv': 3.1.4
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       '@types/responselike': 1.0.3
     dev: false
 
@@ -6681,7 +6690,7 @@ packages:
   /@types/graceful-fs@4.1.9:
     resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/http-cache-semantics@4.0.4:
@@ -6785,13 +6794,13 @@ packages:
   /@types/jsonfile@6.1.4:
     resolution: {integrity: sha512-D5qGUYwjvnNNextdU59/+fI+spnwtTFmyQP0h+PfIOSkNfpU6AOICUOkm4i0OnSk+NyjdPJrxCDro0sJsWlRpQ==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/keyv@3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: false
 
   /@types/load-json-file@2.0.7:
@@ -6814,6 +6823,12 @@ packages:
     resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
     dev: true
 
+  /@types/mock-fs@4.13.4:
+    resolution: {integrity: sha512-mXmM0o6lULPI8z3XNnQCpL0BGxPwx1Ul1wXYEPBGl4efShyxW2Rln0JOPEWGyZaYZMM6OVXM/15zUuFMY52ljg==}
+    dependencies:
+      '@types/node': 22.5.0
+    dev: true
+
   /@types/ms@0.7.30:
     resolution: {integrity: sha512-OftRLCgAzJP7vmKn9by/GVjnf4hloz/pXNOwPo0vKGAfXI7GqWXJi9N2kRar4cP5s1dGwuwcagWqO6iHBTq1Mg==}
     dev: true
@@ -6831,7 +6846,7 @@ packages:
   /@types/mute-stream@0.0.4:
     resolution: {integrity: sha512-CPM9nzrCPPJHQNA9keH9CVkVI+WR5kMa+7XEs5jcGQ0VoAGnLv242w8lIVgwAEfmE4oufJRaTc9PNLQl0ioAow==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/next-server@8.0.0:
@@ -6892,12 +6907,12 @@ packages:
     resolution: {integrity: sha512-VINDWfc4C3DGAa1J+riYRHjzt+IFj5eRaEl768ze7ZqXcjyN/4WHxPLAWMLTwmODpPvFyzuMTAT6A4RMOHlg5g==}
     dependencies:
       undici-types: 6.21.0
+    dev: true
 
   /@types/node@22.5.0:
     resolution: {integrity: sha512-DkFrJOe+rfdHTqqMg0bSNlGlQ85hSoh2TPzZyhHsXnMtligRWpxUySiyw8FY14ITt24HVCiQPWxS3KO/QlGmWg==}
     dependencies:
       undici-types: 6.19.8
-    dev: true
 
   /@types/normalize-package-data@2.4.4:
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -6962,7 +6977,7 @@ packages:
   /@types/responselike@1.0.3:
     resolution: {integrity: sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: false
 
   /@types/retry@0.12.5:
@@ -7056,7 +7071,7 @@ packages:
   /@types/webpack@4.41.40:
     resolution: {integrity: sha512-u6kMFSBM9HcoTpUXnL6mt2HSzftqb3JgYV6oxIgL2dl6sX6aCa5k6SOkzv5DuZjBTPUE/dJltKtwwuqrkZHpfw==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       '@types/tapable': 1.0.12
       '@types/uglify-js': 3.17.5
       '@types/webpack-sources': 3.2.0
@@ -7717,6 +7732,17 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@vercel/blob@1.0.2:
+    resolution: {integrity: sha512-Im/KeFH4oPx7UsM+QiteimnE07bIUD7JK6CBafI9Z0jRFogaialTBMiZj8EKk/30ctUYsrpIIyP9iIY1YxWnUQ==}
+    engines: {node: '>=16.14'}
+    dependencies:
+      async-retry: 1.3.3
+      is-buffer: 2.0.5
+      is-node-process: 1.2.0
+      throttleit: 2.1.0
+      undici: 5.28.4
+    dev: false
 
   /@vercel/fun@1.1.6:
     resolution: {integrity: sha512-xDiM+bD0fSZyzcjsAua3D+guXclvHOSTzr03UcZEQwYzIjwWjLduT7bl2gAaeNIe7fASAIZd0P00clcj0On4rQ==}
@@ -8559,7 +8585,6 @@ packages:
     resolution: {integrity: sha512-wfr/jstw9xNi/0teMHrRW7dsz3Lt5ARhYNZ2ewpadnhaIp5mbALhOAP+EAdsC7t4Z6wqsDVv9+W6gm1Dk9mEyw==}
     dependencies:
       retry: 0.13.1
-    dev: true
 
   /async-sema@2.1.4:
     resolution: {integrity: sha512-NKdMgXT9RfmkscybzytzK/6uGF4cL8Mt3PSeO9QHXYKs3oFWkUwIepnAkzLWkqttOdDDFoED3c8kriS8RzP+ow==}
@@ -12107,6 +12132,11 @@ packages:
       has-tostringtag: 1.0.2
     dev: true
 
+  /is-buffer@2.0.5:
+    resolution: {integrity: sha512-i2R6zNFDwgEHJyQUtJEk0XFi1i0dPFn/oqjK3/vPCcDeJvW5NQ83V8QbicfF1SupOaB0h8ntgBC2YiE7dfyctQ==}
+    engines: {node: '>=4'}
+    dev: false
+
   /is-builtin-module@3.2.1:
     resolution: {integrity: sha512-BSLE3HnV2syZ0FK0iMA/yUGplUeMmNz4AW5fnTunbCIqZi4vG3WjJT9FHMy5D69xmAYBHXQhJdALdpwVxV501A==}
     engines: {node: '>=6'}
@@ -12228,6 +12258,10 @@ packages:
     resolution: {integrity: sha512-1Qed0/Hr2m+YqxnM09CjA2d/i6YZNfF6R2oRAOj36eUdS6qIV/huPJNSEpKbupewFs+ZsJlxsjjPbc0/afW6Lw==}
     engines: {node: '>= 0.4'}
     dev: true
+
+  /is-node-process@1.2.0:
+    resolution: {integrity: sha512-Vg4o6/fqPxIjtxgUH5QLJhwZ7gW5diGCVlXpuUfELC62CuxM1iHcRe51f2W1FDy04Ai4KJkagKjx3XaqyfRKXw==}
+    dev: false
 
   /is-number-object@1.1.1:
     resolution: {integrity: sha512-lZhclumE1G6VYD8VHe35wFaIif+CTy5SJIi5+3y4psDgWu4wPDoBhF8NxUOinEc7pHgiTsT6MaBb92rKhhD+Xw==}
@@ -12523,7 +12557,7 @@ packages:
       '@jest/expect': 29.7.0
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       co: 4.6.0
       dedent: 1.6.0
@@ -12680,7 +12714,7 @@ packages:
       - supports-color
     dev: true
 
-  /jest-config@29.7.0(@types/node@22.15.8):
+  /jest-config@29.7.0(@types/node@22.5.0):
     resolution: {integrity: sha512-uXbpfeQ7R6TZBqI3/TxCU4q4ttk3u0PJeC+E0zbfSoSjq6bJ7buBPxzQPL0ifrkY4DNu4JUdk0ImlBUYi840eQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     peerDependencies:
@@ -12695,7 +12729,7 @@ packages:
       '@babel/core': 7.24.4
       '@jest/test-sequencer': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       babel-jest: 29.7.0(@babel/core@7.24.4)
       chalk: 4.1.0
       ci-info: 3.9.0
@@ -12775,7 +12809,7 @@ packages:
       '@jest/environment': 29.7.0
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
     dev: true
@@ -12801,7 +12835,7 @@ packages:
     dependencies:
       '@jest/types': 29.6.3
       '@types/graceful-fs': 4.1.9
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.11
@@ -12892,7 +12926,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-util: 29.5.0
     dev: true
 
@@ -12901,7 +12935,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-util: 29.7.0
     dev: true
 
@@ -12956,7 +12990,7 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       emittery: 0.13.1
       graceful-fs: 4.2.11
@@ -12987,7 +13021,7 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       cjs-module-lexer: 1.2.3
       collect-v8-coverage: 1.0.2
@@ -13039,7 +13073,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -13076,7 +13110,7 @@ packages:
     dependencies:
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       ansi-escapes: 4.3.2
       chalk: 4.1.0
       emittery: 0.13.1
@@ -13088,7 +13122,7 @@ packages:
     resolution: {integrity: sha512-eIz2msL/EzL9UFTFFx7jBTkeZfku0yUAyZZZmJ93H2TYEiroIx2PQjEXcwYtYl8zXCxb+PAmA2hLIt/6ZEkPHw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -13793,6 +13827,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
     dev: false
+
+  /mock-fs@5.5.0:
+    resolution: {integrity: sha512-d/P1M/RacgM3dB0sJ8rjeRNXxtapkPCUnMGmIN0ixJ16F/E4GUZCvWcSGfWGz8eaXYvn1s9baUwNjI4LOPEjiA==}
+    engines: {node: '>=12.0.0'}
+    dev: true
 
   /mri@1.1.4:
     resolution: {integrity: sha512-6y7IjGPm8AzlvoUrwAaw1tLnUBudaS3752vcd8JtrpGGQn+rXIe63LFVHm/YMwtqAuh+LJPCFdlLYPWM1nYn6w==}
@@ -15139,7 +15178,6 @@ packages:
   /retry@0.13.1:
     resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
     engines: {node: '>= 4'}
-    dev: true
 
   /reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
@@ -16114,6 +16152,11 @@ packages:
       tslib: 2.8.1
     dev: true
 
+  /throttleit@2.1.0:
+    resolution: {integrity: sha512-nt6AMGKW1p/70DF/hGBdJB57B8Tspmbp5gfJ8ilhLnt7kkr2ye7hzD6NVG8GGErk2HWF34igrL2CXmNIkzKqKw==}
+    engines: {node: '>=18'}
+    dev: false
+
   /through2@2.0.5:
     resolution: {integrity: sha512-/mrRod8xqpA+IHSLyGCQ2s8SPHiCDEeQJSep1jqLYeEUClOFG2Qsh+4FU6G9VeqpZnGW/Su8LQGc4YKni5rYSQ==}
     dependencies:
@@ -16748,10 +16791,10 @@ packages:
 
   /undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
-    dev: true
 
   /undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+    dev: true
 
   /undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}

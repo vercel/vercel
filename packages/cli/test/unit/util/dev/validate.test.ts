@@ -399,4 +399,256 @@ describe('validateConfig', () => {
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
   });
+
+  it('should not error with valid experimentalTriggers', () => {
+    const error = validateConfig({
+      functions: {
+        'api/webhook.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'user-events',
+              consumer: 'webhook-processors',
+              maxDeliveries: 3,
+              retryAfterSeconds: 10,
+              initialDelaySeconds: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should not error with minimal experimentalTriggers configuration', () => {
+    const error = validateConfig({
+      functions: {
+        'api/trigger.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+            },
+          ],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid experimentalTriggers type', () => {
+    const error = validateConfig({
+      functions: {
+        // @ts-ignore
+        'api/test.js': { experimentalTriggers: 'invalid' },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers` should be array."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with invalid type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              // @ts-ignore - Intentionally testing invalid type for runtime validation
+              type: 'invalid.type',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].type` should be equal to constant."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with missing type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            // @ts-expect-error - Testing missing required property
+            {
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0]` missing required property `type`."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with missing topic', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            // @ts-expect-error - Testing missing required property
+            {
+              type: 'queue/v1beta',
+              consumer: 'test-consumer',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0]` missing required property `topic`."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with missing consumer', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            // @ts-expect-error - Testing missing required property
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0]` missing required property `consumer`."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with invalid maxDeliveries type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              // @ts-expect-error - Testing invalid maxDeliveries type
+              maxDeliveries: 'three',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxDeliveries` should be number."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with invalid maxDeliveries value', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              maxDeliveries: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxDeliveries` should be >= 1."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with zero retryAfterSeconds', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              retryAfterSeconds: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].retryAfterSeconds` should be > 0."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with negative initialDelaySeconds', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              initialDelaySeconds: -1,
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].initialDelaySeconds` should be >= 0."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should allow zero initialDelaySeconds', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              initialDelaySeconds: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
 });

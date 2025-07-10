@@ -389,10 +389,6 @@ export const build: BuildV3 = async ({
   );
 
   const isMiddleware = config.middleware === true;
-
-  // Will output an `EdgeFunction` for when `config.middleware = true`
-  // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -426,13 +422,6 @@ export const build: BuildV3 = async ({
 
   // Add a `route` for Middleware
   if (isMiddleware) {
-    if (!isEdgeFunction) {
-      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
-      throw new Error(
-        `Middleware file can not be a Node.js Serverless Function`
-      );
-    }
-
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
@@ -480,7 +469,8 @@ export const build: BuildV3 = async ({
       handler,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers,
+      useWebApi: isMiddleware,
+      shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
