@@ -131,6 +131,7 @@ class InMemoryReporter implements Reporter {
 }
 
 export default async function main(client: Client): Promise<number> {
+  throw new Error('try number 2');
   const telemetryClient = new BuildTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
