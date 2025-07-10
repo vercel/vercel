@@ -86,8 +86,6 @@ function wrapWithKeyTransformation(
   };
 }
 
-let warnedCacheUnavailable = false;
-
 function getCacheImplementation(debug?: boolean): RuntimeCache {
   if (!inMemoryCacheInstance) {
     inMemoryCacheInstance = new InMemoryCache();
@@ -108,12 +106,9 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
   }
 
   if (!RUNTIME_CACHE_ENDPOINT || !RUNTIME_CACHE_HEADERS) {
-    if (!warnedCacheUnavailable) {
-      console.warn(
-        'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
-      );
-      warnedCacheUnavailable = true;
-    }
+    console.warn(
+      'Runtime Cache unavailable in this environment. Falling back to in-memory cache.'
+    );
     return inMemoryCacheInstance;
   }
 
