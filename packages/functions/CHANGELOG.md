@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.4
+
+### Patch Changes
+
+- Extract oidc to @vercel/oidc and cache utilities to @vercel/runtime-utils ([#13548](https://github.com/vercel/vercel/pull/13548))
+
 ## 2.2.3
 
 ### Patch Changes
