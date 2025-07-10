@@ -1,3 +1,4 @@
+import { platform } from 'node:os';
 import {
   FileFsRef,
   Files,
@@ -1834,6 +1835,9 @@ export async function getPageLambdaGroups({
   experimentalTriggers?: Lambda['experimentalTriggers'];
 }) {
   const groups: Array<LambdaGroup> = [];
+  if (region && platform() === 'win32') {
+    throw new Error('it did in fact rebuild');
+  }
 
   for (const page of pages) {
     const newPages = [...internalPages, page];
