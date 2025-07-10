@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "next": "v15.4.0-canary.66"
+  },
+  "ignoreNextjsUpdates": true,
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}
