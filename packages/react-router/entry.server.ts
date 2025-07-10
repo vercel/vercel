@@ -58,7 +58,10 @@ export function handleRequest(
           responseHeaders.set('Content-Type', 'text/html');
 
           if (vercelSkewProtectionEnabled && vercelDeploymentId) {
-            responseHeaders.set('x-deployment-id', vercelDeploymentId);
+            responseHeaders.append(
+              'Set-Cookie',
+              `__vdpl=${vercelDeploymentId}; HttpOnly`
+            );
           }
 
           resolve(
