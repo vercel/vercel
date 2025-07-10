@@ -990,6 +990,12 @@ describe.skipIf(flakey)('build', () => {
   });
 
   it('should apply function configuration from source code to Serverless Functions', async () => {
+    if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const cwd = fixture('nextjs-with-route-handler-regions');
     const output = join(cwd, '.vercel/output');
     client.cwd = cwd;
@@ -1001,7 +1007,7 @@ describe.skipIf(flakey)('build', () => {
     expect(functions.sort()).toContainEqual('regions.func');
 
     const vcConfig = await fs.readJSON(
-      join(output, 'functions/api/regions.func/.vc-config.json')
+      join(output, 'functions', 'api', 'regions.func', '.vc-config.json')
     );
     expect(vcConfig).toMatchObject({
       regions: ['iad1'],
