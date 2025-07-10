@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.0.0
+
+### Major Changes
+
+- Remove 'oidc' from vercel/functions and replace with [@vercel/oidc](../oidc/README.md) and [@vercel/oidc-aws-credentials-provider](../oidc-aws-credentials-provider/README.md)
+
 ## 2.2.3
 
 ### Patch Changes

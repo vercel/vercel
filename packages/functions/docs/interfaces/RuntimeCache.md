@@ -1,17 +1,15 @@
 # Interface: RuntimeCache
 
-[index](../modules/index.md).RuntimeCache
-
 Interface representing the runtime cache.
 
 ## Table of contents
 
 ### Properties
 
-- [delete](index.RuntimeCache.md#delete)
-- [expireTag](index.RuntimeCache.md#expiretag)
-- [get](index.RuntimeCache.md#get)
-- [set](index.RuntimeCache.md#set)
+- [delete](RuntimeCache.md#delete)
+- [expireTag](RuntimeCache.md#expiretag)
+- [get](RuntimeCache.md#get)
+- [set](RuntimeCache.md#set)
 
 ## Properties
 
@@ -39,7 +37,7 @@ A promise that resolves when the value is deleted.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:11](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L11)
+[cache/types.ts:11](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L11)
 
 ---
 
@@ -67,7 +65,7 @@ A promise that resolves when the cache entries expiration request is received.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
+[cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
 
 ---
 
@@ -95,7 +93,7 @@ A promise that resolves to the value, or null if not found.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
+[cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
 
 ---
 
@@ -128,4 +126,4 @@ A promise that resolves when the value is set.
 
 #### Defined in
 
-[packages/functions/src/cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)
+[cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)

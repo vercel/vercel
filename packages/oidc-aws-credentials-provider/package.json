@@ -1,6 +1,6 @@
 {
-  "name": "@vercel/functions",
-  "description": "Runtime functions to be used with your Vercel Functions",
+  "name": "@vercel/oidc-aws-credentials-provider",
+  "description": "Runtime AWS credentials helper intended for use with Vercel Functions",
   "homepage": "https://vercel.com",
   "files": [
     "**/*.js",
@@ -16,15 +16,11 @@
     "./headers": {
       "import": "./dist/headers.js",
       "require": "./dist/headers.js"
-    },
-    "./middleware": {
-      "import": "./dist/middleware.js",
-      "require": "./dist/middleware.js"
     }
   },
-  "version": "3.0.0",
+  "version": "1.0.0",
   "repository": {
-    "directory": "packages/functions",
+    "directory": "packages/oidc-aws-credentials-provider",
     "type": "git",
     "url": "git+https://github.com/vercel/vercel.git"
   },
@@ -32,6 +28,7 @@
     "url": "https://github.com/vercel/vercel/issues"
   },
   "devDependencies": {
+    "@smithy/types": "3.3.0",
     "tinyspawn": "1.3.1",
     "typedoc": "0.24.6",
     "typedoc-plugin-markdown": "4.1.2",
@@ -39,6 +36,7 @@
     "typescript": "4.9.5",
     "vitest": "2.0.1"
   },
+  "peerDependenciesMeta": {},
   "engines": {
     "node": ">= 18"
   },
@@ -52,5 +50,9 @@
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@aws-sdk/credential-provider-web-identity": "3.609.0",
+    "@vercel/oidc": "workspace:*"
   }
 }

@@ -5,3 +5,4 @@ export { waitUntil } from './wait-until';
 export { rewrite, next } from './middleware';
 export { getCache } from './cache';
 export type { RuntimeCache } from './cache/types';
+export { getContext } from './get-context';

@@ -1,7 +1,5 @@
 # Interface: AwsCredentialsProviderInit
 
-[oidc](../modules/oidc.md).AwsCredentialsProviderInit
-
 The init object for the `awsCredentialsProvider` function.
 
 ## Hierarchy
@@ -14,17 +12,17 @@ The init object for the `awsCredentialsProvider` function.
 
 ### Properties
 
-- [clientConfig](oidc.AwsCredentialsProviderInit.md#clientconfig)
-- [clientPlugins](oidc.AwsCredentialsProviderInit.md#clientplugins)
-- [durationSeconds](oidc.AwsCredentialsProviderInit.md#durationseconds)
-- [logger](oidc.AwsCredentialsProviderInit.md#logger)
-- [parentClientConfig](oidc.AwsCredentialsProviderInit.md#parentclientconfig)
-- [policy](oidc.AwsCredentialsProviderInit.md#policy)
-- [policyArns](oidc.AwsCredentialsProviderInit.md#policyarns)
-- [providerId](oidc.AwsCredentialsProviderInit.md#providerid)
-- [roleArn](oidc.AwsCredentialsProviderInit.md#rolearn)
-- [roleAssumerWithWebIdentity](oidc.AwsCredentialsProviderInit.md#roleassumerwithwebidentity)
-- [roleSessionName](oidc.AwsCredentialsProviderInit.md#rolesessionname)
+- [clientConfig](AwsCredentialsProviderInit.md#clientconfig)
+- [clientPlugins](AwsCredentialsProviderInit.md#clientplugins)
+- [durationSeconds](AwsCredentialsProviderInit.md#durationseconds)
+- [logger](AwsCredentialsProviderInit.md#logger)
+- [parentClientConfig](AwsCredentialsProviderInit.md#parentclientconfig)
+- [policy](AwsCredentialsProviderInit.md#policy)
+- [policyArns](AwsCredentialsProviderInit.md#policyarns)
+- [providerId](AwsCredentialsProviderInit.md#providerid)
+- [roleArn](AwsCredentialsProviderInit.md#rolearn)
+- [roleAssumerWithWebIdentity](AwsCredentialsProviderInit.md#roleassumerwithwebidentity)
+- [roleSessionName](AwsCredentialsProviderInit.md#rolesessionname)
 
 ## Properties
 
