@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.6.6
+
+### Patch Changes
+
+- Deprecate Node.js 18.x with warning ([#13549](https://github.com/vercel/vercel/pull/13549))
+
 ## 10.6.5
 
 ### Patch Changes
