@@ -147,5 +147,3 @@ export const HEADERS_VERCEL_CACHE_STATE = 'x-vercel-cache-state';
 export const HEADERS_VERCEL_REVALIDATE = 'x-vercel-revalidate';
 export const HEADERS_VERCEL_CACHE_TAGS = 'x-vercel-cache-tags';
 export const HEADERS_VERCEL_CACHE_ITEM_NAME = 'x-vercel-cache-item-name';
-
-export type { RuntimeCache } from './types';
