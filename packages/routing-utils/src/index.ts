@@ -425,7 +425,7 @@ export function getTransformedRoutes(
         routes,
         error: createError(
           code,
-          'Failed to parse rewrite',
+          (err as Error).message, // Error: Failed to parse rewrite: <which rewrite>
           'https://vercel.link/invalid-route-source-pattern',
           'Learn More'
         ),
