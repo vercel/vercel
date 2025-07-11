@@ -2419,6 +2419,11 @@ export async function serverBuild({
         status: 404,
         check: true,
         dest: '$0',
+        // When bots crawl a site, they may attempt to fetch /_next/static/ paths from <link> and <script> tags.
+        // Returning plain text instead of HTML prevents search engines from considering these as not found pages.
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files and
