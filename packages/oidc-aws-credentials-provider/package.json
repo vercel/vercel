@@ -12,10 +12,6 @@
     ".": {
       "import": "./dist/index.js",
       "require": "./dist/index.js"
-    },
-    "./headers": {
-      "import": "./dist/headers.js",
-      "require": "./dist/headers.js"
     }
   },
   "version": "1.0.0",
