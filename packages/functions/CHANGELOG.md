@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.4
+
+### Patch Changes
+
+- Only warn runtime cache unavailable once ([#13560](https://github.com/vercel/vercel/pull/13560))
+
 ## 2.2.3
 
 ### Patch Changes
