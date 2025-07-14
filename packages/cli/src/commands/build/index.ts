@@ -852,19 +852,19 @@ async function doBuild(
         meta,
         span: builderSpan,
         ...(typeof serviceRoutePrefix === 'string' ||
-        typeof serviceWorkspace === 'string'
+          typeof serviceWorkspace === 'string'
           ? {
-              service: {
-                routePrefix:
-                  typeof serviceRoutePrefix === 'string'
-                    ? serviceRoutePrefix
-                    : undefined,
-                workspace:
-                  typeof serviceWorkspace === 'string'
-                    ? serviceWorkspace
-                    : undefined,
-              },
-            }
+            service: {
+              routePrefix:
+                typeof serviceRoutePrefix === 'string'
+                  ? serviceRoutePrefix
+                  : undefined,
+              workspace:
+                typeof serviceWorkspace === 'string'
+                  ? serviceWorkspace
+                  : undefined,
+            },
+          }
           : undefined),
       };
       output.debug(
@@ -1347,7 +1347,7 @@ async function analyzeVcConfigFiles(
     for (const result of exceededFunctions) {
       output.print(
         `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
-          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
+        `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
       );
 
       // Show breakdown of largest files/dependencies
@@ -1396,13 +1396,13 @@ async function analyzeSingleFunction(
     const filePathMap =
       parsed.filePathMap && typeof parsed.filePathMap === 'object'
         ? Object.entries(parsed.filePathMap)
-            .filter(
-              (entry): entry is [string, string] => typeof entry[1] === 'string'
-            )
-            .map(([bundlePath, sourcePath]) => ({
-              bundlePath,
-              sourcePath: join(cwd, sourcePath),
-            }))
+          .filter(
+            (entry): entry is [string, string] => typeof entry[1] === 'string'
+          )
+          .map(([bundlePath, sourcePath]) => ({
+            bundlePath,
+            sourcePath: join(cwd, sourcePath),
+          }))
         : [];
 
     const fsRefStats = getTotalFileSizeInMB(filePathMap);
