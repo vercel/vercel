@@ -503,6 +503,11 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
+      'Want to use the default Deployment Protection settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
       `Linked to ${user.username}/awesome-app (created .vercel and added it to .gitignore)`
     );
 
