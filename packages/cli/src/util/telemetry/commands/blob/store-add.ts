@@ -14,4 +14,13 @@ export class BlobAddStoreTelemetryClient
       });
     }
   }
+
+  trackCliOptionRegion(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'region',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

@@ -2241,7 +2241,7 @@ export const frameworks = [
       },
     },
     dependency: 'nitropack',
-    getOutputDirName: () => Promise<string>,
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Other',

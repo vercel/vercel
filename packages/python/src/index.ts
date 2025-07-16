@@ -202,6 +202,7 @@ export const build: BuildV3 = async ({
         : [
             '.git/**',
             '.vercel/**',
+            '.pnpm-store/**',
             '**/node_modules/**',
             '**/.next/**',
             '**/.nuxt/**',
