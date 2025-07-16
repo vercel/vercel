@@ -1,5 +1,11 @@
 # @vercel/redwood
 
+## 2.3.4
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 2.3.3
 
 ### Patch Changes

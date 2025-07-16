@@ -1,5 +1,14 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.90
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/build-utils@10.6.7
+
 ## 2.0.89
 
 ### Patch Changes

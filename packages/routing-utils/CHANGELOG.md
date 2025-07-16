@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.1.1
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 5.1.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 10.6.7
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 10.6.6
 
 ### Patch Changes

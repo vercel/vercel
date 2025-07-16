@@ -1,5 +1,11 @@
 # @vercel/hydrogen
 
+## 1.2.3
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 1.2.2
 
 ### Patch Changes
