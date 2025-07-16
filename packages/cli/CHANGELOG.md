@@ -1,5 +1,23 @@
 # vercel
 
+## 44.4.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/static-build@2.7.16
+  - @vercel/build-utils@10.6.7
+  - @vercel/hydrogen@1.2.3
+  - @vercel/redwood@2.3.4
+  - @vercel/python@4.7.3
+  - @vercel/remix-builder@5.4.10
+  - @vercel/next@4.10.1
+  - @vercel/node@5.3.6
+  - @vercel/ruby@2.2.1
+  - @vercel/go@3.2.2
+
 ## 44.4.1
 
 ### Patch Changes

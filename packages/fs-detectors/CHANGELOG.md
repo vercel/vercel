@@ -1,5 +1,15 @@
 # @vercel/fs-detectors
 
+## 5.4.8
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/routing-utils@5.1.1
+  - @vercel/frameworks@3.7.2
+
 ## 5.4.7
 
 ### Patch Changes

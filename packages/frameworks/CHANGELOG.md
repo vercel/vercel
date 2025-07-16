@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.7.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 3.7.1
 
 ### Patch Changes
