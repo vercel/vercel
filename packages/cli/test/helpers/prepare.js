@@ -367,6 +367,9 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'project-vercel-auth': {
+      'index.txt': 'I Am a Website!',
+    },
     'project-link-deploy': {
       'package.json': '{}',
     },
