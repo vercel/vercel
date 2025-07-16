@@ -426,13 +426,24 @@ test('use `rootDirectory` from project when deploying', async () => {
   }`;
   const directory = await setupE2EFixture('project-root-directory');
 
-  const firstResult = await execCli(binaryPath, [
-    directory,
-    '--yes',
-    '--name',
+  const firstDeploy = execCli(
+    binaryPath,
+    [directory, '--name', projectName, '--public'],
+    {
+      env: {
+        FORCE_TTY: '1',
+      },
+    }
+  );
+  await setupProject(
+    firstDeploy,
     projectName,
-    '--public',
-  ]);
+    {},
+    {
+      vercelAuth: 'none',
+    }
+  );
+  const firstResult = await firstDeploy;
   expect(firstResult.exitCode, formatOutput(firstResult)).toBe(0);
 
   const projectResponse = await apiFetch(`/v2/projects/${projectName}`, {
@@ -877,18 +888,24 @@ test('deploy pnpm twice using pnp and symlink=false', async () => {
 
   await remove(path.join(directory, '.vercel'));
 
-  async function deploy() {
-    const res = await execCli(binaryPath, [
-      directory,
-      '--name',
-      session,
-      '--public',
-      '--yes',
-    ]);
-    return res;
+  function deploy() {
+    return execCli(binaryPath, [directory, '--name', session, '--public'], {
+      env: {
+        FORCE_TTY: '1',
+      },
+    });
   }
 
-  let { exitCode, stdout, stderr } = await deploy();
+  const firstDeploy = deploy();
+  await setupProject(
+    firstDeploy,
+    session,
+    {},
+    {
+      vercelAuth: 'none',
+    }
+  );
+  let { exitCode, stdout, stderr } = await firstDeploy;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   let page = await fetch(stdout);
