@@ -358,7 +358,7 @@ importers:
         specifier: 5.3.6
         version: link:../node
       '@vercel/python':
-        specifier: 4.7.3
+        specifier: 4.7.4
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.4
