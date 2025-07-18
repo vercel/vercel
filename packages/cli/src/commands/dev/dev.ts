@@ -16,6 +16,7 @@ import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import { resolveProjectPath } from '../../util/dev/path-resolution';
 
 type Options = {
   '--listen': string;
@@ -75,9 +76,12 @@ export default async function dev(
 
     projectSettings = project;
 
-    if (project.rootDirectory) {
-      cwd = join(cwd, project.rootDirectory);
-    }
+    // Use the utility function to resolve the project path
+    cwd = resolveProjectPath(
+      cwd,
+      repoRoot,
+      projectSettings.rootDirectory ?? undefined
+    );
 
     envValues = (await pullEnvRecords(client, project.id, 'vercel-cli:dev'))
       .env;
