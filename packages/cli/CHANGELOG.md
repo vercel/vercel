@@ -1,5 +1,20 @@
 # vercel
 
+## 44.5.0
+
+### Minor Changes
+
+- Add Google login functionality ([#13489](https://github.com/vercel/vercel/pull/13489))
+
+- Add support to create a project with Vercel Auth disabled. ([#13528](https://github.com/vercel/vercel/pull/13528))
+
+  The default for Vercel Auth is Standard Protection. Add a prompt so that Vercel Auth can be disabled when creating a new project.
+
+### Patch Changes
+
+- Updated dependencies [[`b0fa60d216ca9b3ff6b13d507f8b656169f88df1`](https://github.com/vercel/vercel/commit/b0fa60d216ca9b3ff6b13d507f8b656169f88df1)]:
+  - @vercel/next@4.10.2
+
 ## 44.4.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.2
+
+### Patch Changes
+
+- Added support for partial routes defining a source page by adding lambdas for these routes ([#13574](https://github.com/vercel/vercel/pull/13574))
+
 ## 4.10.1
 
 ### Patch Changes
