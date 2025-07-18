@@ -313,7 +313,10 @@ type RoutesManifestOld = {
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
   version: 4;
-  dynamicRoutes: (RoutesManifestRoute | { page: string; isMiddleware: true })[];
+  dynamicRoutes: (
+    | RoutesManifestRoute
+    | { sourcePage: string | undefined; page: string; isMiddleware: true }
+  )[];
 };
 
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
