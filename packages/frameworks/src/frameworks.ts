@@ -2244,6 +2244,68 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Hono',
+    slug: 'hono',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
+    tagline: 'Web framework built on Web Standards',
+    description:
+      'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
+    website: 'https://hono.dev',
+    detectors: {
+      every: [{ matchPackage: 'hono' }],
+      some: [
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'TODO',
+        value: 'TODO',
+      },
+      devCommand: {
+        value: 'TODO',
+      },
+      outputDirectory: {
+        value: '.',
+      },
+    },
+    dependency: 'hono',
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
