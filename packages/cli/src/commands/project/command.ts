@@ -51,7 +51,6 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
-    jsonOption,
     {
       name: 'json',
       shorthand: 'j',
