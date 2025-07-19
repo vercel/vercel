@@ -61,6 +61,9 @@ export default async function list(
     projectsUrl += `&until=${next}`;
   }
 
+  const json = opts['--json'] || false;
+  telemetryClient.trackCliFlagJson(json);
+
   const {
     projects: projectList,
     pagination,
@@ -75,40 +78,65 @@ export default async function list(
 
   const elapsed = ms(Date.now() - start);
 
-  output.log(
-    `${
-      projectList.length > 0 ? 'Projects' : 'No projects'
-    } found under ${chalk.bold(contextName)} ${
-      deprecated ? 'that are using a deprecated Node.js version' : '\b'
-    } ${chalk.gray(`[${elapsed}]`)}`
-  );
+  if (json) {
+    const jsonOutput = {
+      projects: projectList.map(project => ({
+        name: project.name,
+        id: project.id,
+        latestProductionUrl: getLatestProdUrl(project),
+        updatedAt: project.updatedAt,
+        nodeVersion: project.nodeVersion ?? null,
+        deprecated: deprecated,
+      })),
+      pagination: pagination,
+      contextName: contextName,
+      elapsed: elapsed,
+    };
+    output.print(JSON.stringify(jsonOutput, null, 2));
+  } else {
+    output.log(
+      `${
+        projectList.length > 0 ? 'Projects' : 'No projects'
+      } found under ${chalk.bold(contextName)} ${
+        deprecated ? 'that are using a deprecated Node.js version' : '\b'
+      } ${chalk.gray(`[${elapsed}]`)}`
+    );
 
-  if (projectList.length > 0) {
-    const tablePrint = table(
-      [
+    if (projectList.length > 0) {
+      const tablePrint = table(
         [
-          'Project Name',
-          'Latest Production URL',
-          'Updated',
-          'Node Version',
-        ].map(header => chalk.bold(chalk.cyan(header))),
-        ...projectList.flatMap(project => [
           [
-            chalk.bold(project.name),
-            getLatestProdUrl(project),
-            chalk.gray(ms(Date.now() - project.updatedAt)),
-            project.nodeVersion ?? '',
-          ],
-        ]),
-      ],
-      { hsep: 3 }
-    ).replace(/^/gm, '  ');
-    output.print(`\n${tablePrint}\n\n`);
+            'Project Name',
+            'Latest Production URL',
+            'Updated',
+            'Node Version',
+          ].map(header => chalk.bold(chalk.cyan(header))),
+          ...projectList.flatMap(project => [
+            [
+              chalk.bold(project.name),
+              getLatestProdUrl(project),
+              chalk.gray(ms(Date.now() - project.updatedAt)),
+              project.nodeVersion ?? '',
+            ],
+          ]),
+        ],
+        { hsep: 3 }
+      ).replace(/^/gm, '  ');
+      output.print(`\n${tablePrint}\n\n`);
 
-    if (pagination && pagination.count === 20) {
-      const flags = getCommandFlags(opts, ['_', '--next', '-N', '-d', '-y']);
-      const nextCmd = `project ls${flags} --next ${pagination.next}`;
-      output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+      if (pagination && pagination.count === 20) {
+        const flags = getCommandFlags(opts, [
+          '_',
+          '--next',
+          '-N',
+          '-d',
+          '-y',
+          '--json',
+          '-j',
+        ]);
+        const nextCmd = `project ls${flags} --next ${pagination.next}`;
+        output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+      }
     }
   }
   return 0;
