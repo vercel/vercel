@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption } from '../../util/arg-common';
+import { nextOption, yesOption, jsonOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -51,6 +51,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    jsonOption,
     {
       name: 'update-required',
       description: 'A list of projects affected by an upcoming deprecation',
@@ -63,6 +64,10 @@ export const listSubcommand = {
     {
       name: 'Paginate projects, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} project ls --next 1584722256178`,
+    },
+    {
+      name: 'List projects using a deprecated Node.js version in JSON format',
+      value: `${packageName} project ls --update-required --json`,
     },
   ],
 } as const;
