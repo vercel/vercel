@@ -116,11 +116,3 @@ export const forceOption = {
   type: Boolean,
   deprecated: false,
 } as const;
-
-export const jsonOption = {
-  name: 'json',
-  shorthand: 'j',
-  type: Boolean,
-  deprecated: false,
-  description: 'Output in JSON format',
-} as const;

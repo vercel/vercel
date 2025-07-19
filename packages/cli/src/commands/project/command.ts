@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption, jsonOption } from '../../util/arg-common';
+import { nextOption, yesOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
