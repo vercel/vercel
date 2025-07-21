@@ -1,7 +1,4 @@
 module.exports = {
-  experimental: {
-    nodeMiddleware: true
-  },
   generateBuildId() {
     return 'testing-build-id';
   },
