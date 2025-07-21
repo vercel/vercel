@@ -3598,7 +3598,14 @@ export async function getNodeMiddleware({
         ),
       })}`
     )
-    .replace('__NEXT_MIDDLEWARE_PATH__', `./.next/server/middleware.js`);
+    .replace(
+      '__NEXT_MIDDLEWARE_PATH__',
+      './' +
+        path.posix.join(
+          path.posix.relative(projectDir, outputDirectory),
+          `server/middleware.js`
+        )
+    );
 
   const lambda = new NodejsLambda({
     ...vercelConfigOpts,
