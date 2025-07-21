@@ -417,7 +417,7 @@ export const build: BuildV3 = async ({
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  // const handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
@@ -444,10 +444,28 @@ export const build: BuildV3 = async ({
       },
     ];
   }
+  preparedFiles['entry.js'] = new FileBlob({
+    data: `import app from "./index.js";
+
+const handle = (request) => {
+  return app.fetch(request)
+}
+
+export const GET = handle;
+export const POST = handle;
+export const PUT = handle;
+export const DELETE = handle;
+export const PATCH = handle;
+export const OPTIONS = handle;
+export const HEAD = handle;
+`,
+  });
+  const handler2 = 'entry.js';
+  // const handler2 = handler;
 
   if (isEdgeFunction) {
     output = new EdgeFunction({
-      entrypoint: handler,
+      entrypoint: handler2,
       files: preparedFiles,
       regions: staticConfig?.regions,
       deploymentTarget: 'v8-worker',
@@ -466,10 +484,10 @@ export const build: BuildV3 = async ({
 
     output = new NodejsLambda({
       files: preparedFiles,
-      handler,
+      handler: handler2,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      useWebApi: isMiddleware,
+      useWebApi: true,
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,

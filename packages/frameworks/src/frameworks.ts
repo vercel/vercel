@@ -2251,6 +2251,16 @@ export const frameworks = [
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
     website: 'https://hono.dev',
+    useRuntime: { src: 'package.json', use: '@vercel/node' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
     detectors: {
       every: [{ matchPackage: 'hono' }],
       some: [
@@ -2271,16 +2281,6 @@ export const frameworks = [
         },
         {
           path: 'src/index.js',
-          matchContent:
-            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
-        },
-        {
-          path: 'app/index.ts',
-          matchContent:
-            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
-        },
-        {
-          path: 'app/index.js',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
         },

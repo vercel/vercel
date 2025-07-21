@@ -1044,6 +1044,21 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders[0].src).not.toBe('now.json');
   });
 
+  // it.only('package.json with a support server library + index.js', async () => {
+  //   const pkg = { dependencies: { hono: 'latest' } };
+  //   const files = ['package.json', 'index.js', 'public/favicon.ico'];
+  //   const { builders } = await invokeDetectBuilders(files, pkg, {
+  //     featHandleMiss,
+  //     projectSettings: {
+  //       framework: 'hono',
+  //     },
+  //   });
+  //   console.log('builders', builders);
+  //   // console.log('errors', errors);
+  //   // expect(builders).toHaveLength(0);
+  //   // expect(errors.length).toBe(1);
+  // });
+
   it('package.json + no build', async () => {
     const pkg = { dependencies: { next: '9.0.0' } };
     const files = ['package.json', 'pages/index.js', 'public/index.html'];
