@@ -3,7 +3,7 @@
   "dependencies": {
     "@types/node": "^12.12.56",
     "@types/react": "^16.9.49",
-    "next": "canary",
+    "next": "https://vercel-packages.vercel.app/next/commits/0e9786d8caf90af6a60c315e81491ea2e2f34ad9/next",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "4.9.5"
