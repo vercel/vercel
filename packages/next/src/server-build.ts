@@ -2568,7 +2568,7 @@ export async function serverBuild({
               if (routesManifest.i18n) {
                 for (const locale of routesManifest.i18n?.locales || []) {
                   const prerenderPathname = pathname.replace(
-                    /^\/\$nextLocale/,
+                    /\/\$nextLocale/,
                     `/${locale}`
                   );
                   if (prerenders[path.join('./', prerenderPathname)]) {
