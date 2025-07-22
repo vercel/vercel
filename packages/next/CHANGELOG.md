@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.5
+
+### Patch Changes
+
+- Add cacheComponents support for getRequestHandlerWithMetadata export ([#13595](https://github.com/vercel/vercel/pull/13595))
+
 ## 4.10.4
 
 ### Patch Changes
