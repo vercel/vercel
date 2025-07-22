@@ -2251,7 +2251,7 @@ export const frameworks = [
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
     website: 'https://hono.dev',
-    useRuntime: { src: 'package.json', use: '@vercel/node' },
+    useRuntime: { src: 'index.js', use: '@vercel/hono' },
     defaultRoutes: [
       {
         handle: 'filesystem',

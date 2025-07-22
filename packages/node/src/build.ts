@@ -363,6 +363,7 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
 export const build: BuildV3 = async ({
   files,
   entrypoint,
+  shim,
   workPath,
   repoRootPath,
   config = {},
@@ -417,9 +418,10 @@ export const build: BuildV3 = async ({
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  // const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
+  console.log({ isMiddleware });
   // Add a `route` for Middleware
   if (isMiddleware) {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
@@ -444,28 +446,17 @@ export const build: BuildV3 = async ({
       },
     ];
   }
-  preparedFiles['entry.js'] = new FileBlob({
-    data: `import app from "./index.js";
 
-const handle = (request) => {
-  return app.fetch(request)
-}
-
-export const GET = handle;
-export const POST = handle;
-export const PUT = handle;
-export const DELETE = handle;
-export const PATCH = handle;
-export const OPTIONS = handle;
-export const HEAD = handle;
-`,
-  });
-  const handler2 = 'entry.js';
-  // const handler2 = handler;
+  // if (shim) {
+  //   preparedFiles['shim.js'] = new FileBlob({
+  //     data: `import app from "./${handler}";${shim}`,
+  //   });
+  //   handler = 'shim.js';
+  // }
 
   if (isEdgeFunction) {
     output = new EdgeFunction({
-      entrypoint: handler2,
+      entrypoint: handler,
       files: preparedFiles,
       regions: staticConfig?.regions,
       deploymentTarget: 'v8-worker',
@@ -484,7 +475,7 @@ export const HEAD = handle;
 
     output = new NodejsLambda({
       files: preparedFiles,
-      handler: handler2,
+      handler,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       useWebApi: true,

@@ -348,6 +348,9 @@ importers:
       '@vercel/go':
         specifier: 3.2.1
         version: link:../go
+      '@vercel/hono':
+        specifier: 0.0.1
+        version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.2
         version: link:../hydrogen
@@ -1164,6 +1167,37 @@ importers:
       yauzl-promise:
         specifier: 2.1.3
         version: 2.1.3
+
+  packages/hono:
+    dependencies:
+      '@vercel/node':
+        specifier: 5.3.5
+        version: link:../node
+      '@vercel/static-config':
+        specifier: 3.1.1
+        version: link:../static-config
+      ts-morph:
+        specifier: 12.0.0
+        version: 12.0.0
+    devDependencies:
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@vercel/build-utils':
+        specifier: 10.6.6
+        version: link:../build-utils
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
 
   packages/hydrogen:
     dependencies:
@@ -6539,7 +6573,7 @@ packages:
   /@types/buffer-crc32@0.2.0:
     resolution: {integrity: sha512-6lBhJ55o2DKVCxTanyS6ohWRyebCcyivIK7pRHiwZuOYbUhivcByYBrvm2dc9f72LZP12mH5mGxUhG7JQ64lQg==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/bytes@3.0.0:
@@ -6646,7 +6680,7 @@ packages:
     resolution: {integrity: sha512-c0hrgAOVYr21EX8J0jBMXGLMgJqVf/v6yxi0dLaJboW9aQPh16Id+z6w2Tx1hm+piJOLv8xPfVKZCLfjPw/IMQ==}
     dependencies:
       '@types/jsonfile': 6.1.4
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/fs-extra@5.0.5:
@@ -6664,7 +6698,7 @@ packages:
   /@types/fs-extra@8.0.0:
     resolution: {integrity: sha512-bCtL5v9zdbQW86yexOlXWTEGvLNqWxMFyi7gQA7Gcthbezr2cPSOb8SkESVKA937QD5cIwOFLDFt0MQoXOEr9Q==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/fs-extra@9.0.13:
@@ -6677,7 +6711,7 @@ packages:
     resolution: {integrity: sha512-SEYeGAIQIQX8NN6LDKprLjbrd5dARM5EXsd8GI/A5l0apYI1fGMWgPHSe4ZKL4eozlAyI+doUE9XbYS4xCkQ1w==}
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/glob@7.2.0:
@@ -6852,7 +6886,7 @@ packages:
   /@types/next-server@8.0.0:
     resolution: {integrity: sha512-TYWT510LScQJU6ACRqcnnK1IBdeZsXCOGgMvZrAgghQ6TXD1xE92qdTHh051WtXrcm9OjisZhI0Jx3i9PU3IuA==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       '@types/react': 18.0.26
       '@types/react-loadable': 5.5.11
     dev: true
@@ -7063,7 +7097,7 @@ packages:
   /@types/webpack-sources@3.2.0:
     resolution: {integrity: sha512-Ft7YH3lEVRQ6ls8k4Ff1oB4jN6oy/XmU6tQISKdhfh+1mR+viZFphS6WL0IrtDOzvefmJg5a0s7ZQoRXwqTEFg==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       '@types/source-list-map': 0.1.6
       source-map: 0.7.4
     dev: true
@@ -7112,7 +7146,7 @@ packages:
   /@types/yauzl@2.10.3:
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
     dependencies:
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
     dev: true
 
   /@types/yazl@2.4.2:
@@ -13085,7 +13119,7 @@ packages:
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 22.15.8
+      '@types/node': 22.5.0
       chalk: 4.1.0
       ci-info: 3.9.0
       graceful-fs: 4.2.11
