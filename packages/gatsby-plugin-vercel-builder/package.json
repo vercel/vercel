@@ -37,5 +37,6 @@
   },
   "pnpm": {
     "neverBuiltDependencies": []
-  }
+  },
+  "license": "Apache-2.0"
 }
