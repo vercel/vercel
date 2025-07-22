@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 4.8.0
+
+### Minor Changes
+
+- Improve Fluid support ([#13589](https://github.com/vercel/vercel/pull/13589))
+
 ## 4.7.4
 
 ### Patch Changes

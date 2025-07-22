@@ -352,13 +352,13 @@ importers:
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.10.3
+        specifier: 4.10.4
         version: link:../next
       '@vercel/node':
         specifier: 5.3.6
         version: link:../node
       '@vercel/python':
-        specifier: 4.7.4
+        specifier: 4.8.0
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.4
