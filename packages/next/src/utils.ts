@@ -55,6 +55,7 @@ export const require_ = createRequire(__filename);
 
 export const RSC_CONTENT_TYPE = 'x-component';
 export const RSC_PREFETCH_SUFFIX = '.prefetch.rsc';
+export const RSC_NOT_FOUND_SUFFIX = '.not-found.rsc';
 
 export const MAX_UNCOMPRESSED_LAMBDA_SIZE = !isNaN(
   Number(process.env.MAX_UNCOMPRESSED_LAMBDA_SIZE)
@@ -288,7 +289,18 @@ type RoutesManifestOld = {
      * When true, the dynamic RSC route is expecting to be a prerendered route.
      */
     dynamicRSCPrerender?: boolean;
+
+    /**
+     * Suffix for the not found segment of the route.
+     */
+    notFoundSuffix?: string;
+
+    /**
+     * Header to indicate that the request is for a not found segment of the route.
+     */
+    includeNotFoundHeader?: string;
   };
+
   rewriteHeaders?: {
     pathHeader: string;
     queryHeader: string;
