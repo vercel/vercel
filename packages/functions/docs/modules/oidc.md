@@ -57,7 +57,7 @@ A function that provides AWS credentials.
 
 #### Defined in
 
-packages/oidc-aws-credentials-provider/dist/aws-credentials-provider.d.ts:57
+packages/functions/src/oidc/aws-credentials-provider.ts:60
 
 ---
 

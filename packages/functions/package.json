@@ -69,7 +69,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@vercel/oidc": "workspace:*",
-    "@vercel/oidc-aws-credentials-provider": "workspace:*"
+    "@vercel/oidc": "workspace:*"
   }
 }

@@ -2,13 +2,13 @@
  * @deprecated Use @vercel/oidc-aws-credentials-provider instead
  * AWS authentication for Vercel Functions
  */
-export type { AwsCredentialsProviderInit } from '@vercel/oidc-aws-credentials-provider';
+export type { AwsCredentialsProviderInit } from './aws-credentials-provider';
 
 /**
  * @deprecated Use @vercel/oidc-aws-credentials-provider instead
  * AWS authentication for Vercel Functions
  */
-export { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
+export { awsCredentialsProvider } from './aws-credentials-provider';
 
 /**
  * @deprecated Use @vercel/oidc instead

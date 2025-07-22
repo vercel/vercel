@@ -49,9 +49,8 @@
     "access": "public"
   },
   "dependencies": {
+    "@aws-sdk/credential-provider-web-identity": "^3.609.0",
     "@vercel/oidc": "workspace:*"
   },
-  "peerDependencies": {
-    "@aws-sdk/credential-provider-web-identity": "^3.609.0"
-  }
+  "peerDependencies": {}
 }
