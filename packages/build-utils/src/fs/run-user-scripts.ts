@@ -398,9 +398,7 @@ export async function scanParentDirs(
         : null,
       bunLockPath ? fs.readFile(bunLockPath) : null,
       yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
-      vltLockPath
-        ? readConfigFile<{ lockfileVersion: number }>(vltLockPath)
-        : null,
+      vltLockPath ? readConfigFile(vltLockPath) : null,
     ]);
 
   const rootProjectInfo = readPackageJson
@@ -442,7 +440,6 @@ export async function scanParentDirs(
   } else if (vltLock) {
     cliType = 'vlt';
     lockfilePath = vltLockPath;
-    lockfileVersion = Number(vltLock.lockfileVersion);
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
