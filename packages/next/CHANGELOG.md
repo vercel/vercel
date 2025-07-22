@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.10.4
+
+### Patch Changes
+
+- Add support for experimental.cacheComponents in PPR detection ([#13585](https://github.com/vercel/vercel/pull/13585))
+
+  Enables the experimental.cacheComponents configuration option to activate PPR (Partial Pre-Rendering) alongside existing ppr configuration options (true and 'incremental').
+
 ## 4.10.3
 
 ### Patch Changes
