@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.10.3
+
+### Patch Changes
+
+- Fix node middleware with hoisted distDir ([#13584](https://github.com/vercel/vercel/pull/13584))
+
+- Fix case for \_next/data for i18n-basepath-middleware ([#13572](https://github.com/vercel/vercel/pull/13572))
+
 ## 4.10.2
 
 ### Patch Changes
