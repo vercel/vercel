@@ -34,7 +34,7 @@ const NO_OVERRIDE = {
   path: undefined,
 };
 
-export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
+export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
 export interface ScanParentDirsResult {
   /**
@@ -368,6 +368,7 @@ export async function scanParentDirs(
       pnpmLockPath,
       bunLockTextPath,
       bunLockBinPath,
+      vltLockPath,
     ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
@@ -379,6 +380,7 @@ export async function scanParentDirs(
       'pnpm-lock.yaml',
       'bun.lock',
       'bun.lockb',
+      'vlt-lock.json',
     ],
   });
   let lockfilePath: string | undefined;
@@ -386,16 +388,20 @@ export async function scanParentDirs(
   let cliType: CliType;
 
   const bunLockPath = bunLockTextPath ?? bunLockBinPath;
-  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock] = await Promise.all([
-    npmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-      : null,
-    pnpmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-      : null,
-    bunLockPath ? fs.readFile(bunLockPath) : null,
-    yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
-  ]);
+  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock, vltLock] =
+    await Promise.all([
+      npmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+        : null,
+      pnpmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+        : null,
+      bunLockPath ? fs.readFile(bunLockPath) : null,
+      yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
+      vltLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(vltLockPath)
+        : null,
+    ]);
 
   const rootProjectInfo = readPackageJson
     ? await readProjectRootInfo({
@@ -412,7 +418,7 @@ export async function scanParentDirs(
       )
     : undefined;
 
-  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
+  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun > vlt (lowest priority)
   if (bunLock && yarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
@@ -433,6 +439,10 @@ export async function scanParentDirs(
     cliType = 'bun';
     lockfilePath = bunLockPath;
     lockfileVersion = bunLockTextPath ? 1 : 0;
+  } else if (vltLock) {
+    cliType = 'vlt';
+    lockfilePath = vltLockPath;
+    lockfileVersion = Number(vltLock.lockfileVersion);
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
@@ -652,6 +662,11 @@ function getInstallCommandForPackageManager(
     case 'yarn':
       return {
         prettyCommand: 'yarn install',
+        commandArguments: ['install', ...args],
+      };
+    case 'vlt':
+      return {
+        prettyCommand: 'vlt install',
         commandArguments: ['install', ...args],
       };
   }
@@ -969,6 +984,7 @@ function validLockfileForPackageManager(
     case 'npm':
     case 'bun':
     case 'yarn':
+    case 'vlt':
       return true;
     case 'pnpm':
       switch (packageManagerMajorVersion) {
@@ -1240,6 +1256,12 @@ export function detectPackageManager(
         detectedLockfile: 'yarn.lock',
         detectedPackageManager: detectYarnVersion(lockfileVersion),
       };
+    case 'vlt':
+      return {
+        path: undefined,
+        detectedLockfile: 'vlt-lock.json',
+        detectedPackageManager: 'vlt@0.x',
+      };
   }
 }
 
@@ -1400,6 +1422,8 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `pnpm run ${scriptName}`;
   } else if (cliType === 'bun') {
     opts.prettyCommand = `bun run ${scriptName}`;
+  } else if (cliType === 'vlt') {
+    opts.prettyCommand = `vlt run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
   }
