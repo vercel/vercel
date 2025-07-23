@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.6
+
+### Patch Changes
+
+- Fix applying sourcePage mapping for lambdas ([#13599](https://github.com/vercel/vercel/pull/13599))
+
 ## 4.10.5
 
 ### Patch Changes
