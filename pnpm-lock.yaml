@@ -1198,6 +1198,12 @@ importers:
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@14.18.33)
+      vitest:
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/hydrogen:
     dependencies:
