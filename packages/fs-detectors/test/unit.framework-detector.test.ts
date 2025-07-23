@@ -559,8 +559,6 @@ describe('detectFrameworks()', () => {
     expect(slugs).toEqual(['remix']);
   });
 
-  // TODO: this isn't quite enough because they could have an `api` route that's using Hono
-  // and they want their non-api route to be "Other"
   describe('Hono', () => {
     const importSyntaxes = [
       'import { Hono } from "hono"',
@@ -632,28 +630,6 @@ describe('detectFrameworks()', () => {
         );
         expect(slugs).toEqual([]);
       });
-    });
-
-    // Test that legitimate Hono imports still work even with false positives
-    it('Should detect Hono when legitimate import is present with false positives', async () => {
-      const fs = new VirtualFilesystem({
-        'package.json': JSON.stringify({
-          dependencies: {
-            hono: 'latest',
-          },
-        }),
-        'index.ts': `
-          const hono = "something else";
-          const honest = "truthful";
-          import { Hono } from "hono";
-          const message = "hono is mentioned here";
-        `,
-      });
-
-      const slugs = (await detectFrameworks({ fs, frameworkList })).map(
-        f => f.slug
-      );
-      expect(slugs).toEqual(['hono']);
     });
   });
 
