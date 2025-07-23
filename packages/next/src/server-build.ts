@@ -1810,11 +1810,11 @@ export async function serverBuild({
     // RSC header is present
     const edgeFunctions = middleware.edgeFunctions;
 
-    for (const route of Object.values(appPathRoutesManifest)) {
+    for (const page of Object.values(appPathRoutesManifest)) {
       const pathname = path.posix.join(
         './',
         entryDirectory,
-        route === '/' ? '/index' : route
+        page === '/' ? '/index' : page
       );
 
       if (lambdas[pathname]) {
@@ -1832,6 +1832,41 @@ export async function serverBuild({
           edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
             edgeFunctions[pathname];
         }
+      }
+    }
+
+    for (const route of routesManifest.dynamicRoutes) {
+      // Skip any routes that don't have the sourcePage property defined. Only
+      // the dynamic routes that are partials will have their sourcePage
+      // defined so we can skip the usual isAppPPREnabled check.
+      if (!('sourcePage' in route)) continue;
+      if (typeof route.sourcePage !== 'string') continue;
+
+      // Skip this addition when the routes are the same, no need to alias them
+      // again!
+      if (route.sourcePage === route.page) continue;
+
+      const sourcePathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.sourcePage === '/' ? '/index' : route.sourcePage
+      );
+
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.page === '/' ? '/index' : route.page
+      );
+
+      if (lambdas[sourcePathname]) {
+        lambdas[`${pathname}.rsc`] = lambdas[sourcePathname];
+        lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[sourcePathname];
+      }
+
+      if (edgeFunctions[sourcePathname]) {
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[sourcePathname];
+        edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+          edgeFunctions[sourcePathname];
       }
     }
   }
@@ -2533,7 +2568,7 @@ export async function serverBuild({
               if (routesManifest.i18n) {
                 for (const locale of routesManifest.i18n?.locales || []) {
                   const prerenderPathname = pathname.replace(
-                    /^\/\$nextLocale/,
+                    /\/\$nextLocale/,
                     `/${locale}`
                   );
                   if (prerenders[path.join('./', prerenderPathname)]) {

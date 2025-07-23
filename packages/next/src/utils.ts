@@ -313,7 +313,10 @@ type RoutesManifestOld = {
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
   version: 4;
-  dynamicRoutes: (RoutesManifestRoute | { page: string; isMiddleware: true })[];
+  dynamicRoutes: (
+    | RoutesManifestRoute
+    | { sourcePage: string | undefined; page: string; isMiddleware: true }
+  )[];
 };
 
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
@@ -3595,7 +3598,14 @@ export async function getNodeMiddleware({
         ),
       })}`
     )
-    .replace('__NEXT_MIDDLEWARE_PATH__', `./.next/server/middleware.js`);
+    .replace(
+      '__NEXT_MIDDLEWARE_PATH__',
+      './' +
+        path.posix.join(
+          path.posix.relative(projectDir, outputDirectory),
+          `server/middleware.js`
+        )
+    );
 
   const lambda = new NodejsLambda({
     ...vercelConfigOpts,

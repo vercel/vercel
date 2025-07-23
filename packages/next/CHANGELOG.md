@@ -1,5 +1,39 @@
 # @vercel/next
 
+## 4.10.5
+
+### Patch Changes
+
+- Add cacheComponents support for getRequestHandlerWithMetadata export ([#13595](https://github.com/vercel/vercel/pull/13595))
+
+## 4.10.4
+
+### Patch Changes
+
+- Add support for experimental.cacheComponents in PPR detection ([#13585](https://github.com/vercel/vercel/pull/13585))
+
+  Enables the experimental.cacheComponents configuration option to activate PPR (Partial Pre-Rendering) alongside existing ppr configuration options (true and 'incremental').
+
+## 4.10.3
+
+### Patch Changes
+
+- Fix node middleware with hoisted distDir ([#13584](https://github.com/vercel/vercel/pull/13584))
+
+- Fix case for \_next/data for i18n-basepath-middleware ([#13572](https://github.com/vercel/vercel/pull/13572))
+
+## 4.10.2
+
+### Patch Changes
+
+- Added support for partial routes defining a source page by adding lambdas for these routes ([#13574](https://github.com/vercel/vercel/pull/13574))
+
+## 4.10.1
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 4.10.0
 
 ### Minor Changes
