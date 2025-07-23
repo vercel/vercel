@@ -1,9 +1,0 @@
-{
-  "builds": [{ "src": "**/*.{ts,js,mjs}", "use": "@vercel/hono" }],
-  "probes": [
-    {
-      "path": "/",
-      "mustContain": "Hello Hon?"
-    }
-  ]
-}

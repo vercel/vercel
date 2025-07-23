@@ -1,5 +1,5 @@
 {
-  "name": "hono-app-on-edge",
+  "name": "hono-app",
   "type": "module",
   "scripts": {
     "start": "vercel dev",
