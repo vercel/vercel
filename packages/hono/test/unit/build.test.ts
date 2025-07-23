@@ -74,6 +74,9 @@ const fixtures = {
   '06-indexcjs-on-node': {
     function: 'Lambda',
   },
+  '07-index-on-edge': {
+    function: 'EdgeFunction',
+  },
 };
 
 describe('build', () => {

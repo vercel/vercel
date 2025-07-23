@@ -1,4 +1,5 @@
 import { type BuildV3 } from '@vercel/build-utils';
+// @ts-expect-error - FIXME export-node-builder-type build is not exported
 import { build as nodeBuild } from '@vercel/node';
 
 export const build: BuildV3 = async ({
