@@ -265,9 +265,11 @@ describe('detectFrameworkRecord', () => {
           typescript: '^5.1.6',
         },
       }),
+      'index.ts':
+        'import { Hono } from "hono";\n\nconst app = new Hono();\n\nexport default app;',
     });
 
     const framework = await detectFrameworkRecord({ fs, frameworkList });
-    expect(framework?.slug).toBe('static');
+    expect(framework?.slug).toBe('hono');
   });
 });
