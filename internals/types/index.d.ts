@@ -513,11 +513,11 @@ export interface Token {
 export type CiMetadata =
   | {
       ciType: 'github-actions';
-      githubActionsActor: string;
+      ciGitProviderUsername: string;
     }
   | {
       ciType?: never;
-      githubActionsActor?: never;
+      ciGitProviderUsername?: never;
     };
 
 export interface GitMetadata extends CiMetadata {

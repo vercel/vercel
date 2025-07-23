@@ -254,7 +254,7 @@ describe('createGitMeta', () => {
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
         ciType: 'github-actions',
-        githubActionsActor: 'someGithubUsername',
+        ciGitProviderUsername: 'someGithubUsername',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));

@@ -58,7 +58,7 @@ export async function createGitMeta(
   if (process.env.GITHUB_ACTIONS && process.env.GITHUB_ACTOR) {
     ciMetadata = {
       ciType: 'github-actions' as const,
-      githubActionsActor: process.env.GITHUB_ACTOR,
+      ciGitProviderUsername: process.env.GITHUB_ACTOR,
     };
   }
 
