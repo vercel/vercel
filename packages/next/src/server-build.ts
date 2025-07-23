@@ -1520,6 +1520,104 @@ export async function serverBuild({
     );
   }
 
+  const nodeMiddleware = await getNodeMiddleware({
+    config,
+    baseDir,
+    projectDir,
+    entryPath,
+    nextVersion,
+    nodeVersion: nodeVersion.runtime,
+    lstatSema,
+    lstatResults,
+    pageExtensions: requiredServerFilesManifest.config.pageExtensions,
+    routesManifest,
+    outputDirectory,
+    prerenderBypassToken: prerenderManifest.bypassToken as string,
+    isCorrectMiddlewareOrder,
+    functionsConfigManifest,
+    requiredServerFilesManifest,
+  });
+
+  const middleware = await getMiddlewareBundle({
+    config,
+    entryPath,
+    outputDirectory,
+    routesManifest,
+    isCorrectMiddlewareOrder,
+    prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
+    appPathRoutesManifest: appPathRoutesManifest || {},
+  });
+
+  if (appPathRoutesManifest) {
+    // create .rsc variant for app lambdas and edge functions
+    // to match prerenders so we can route the same when the
+    // RSC header is present
+    const edgeFunctions = middleware.edgeFunctions;
+
+    for (const page of Object.values(appPathRoutesManifest)) {
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        page === '/' ? '/index' : page
+      );
+
+      if (lambdas[pathname]) {
+        lambdas[`${pathname}.rsc`] = lambdas[pathname];
+
+        if (isAppPPREnabled) {
+          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
+        }
+      }
+
+      if (edgeFunctions[pathname]) {
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+
+        if (isAppPPREnabled) {
+          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+            edgeFunctions[pathname];
+        }
+      }
+    }
+
+    for (const route of routesManifest.dynamicRoutes) {
+      // Skip any routes that don't have the sourcePage property defined. Only
+      // the dynamic routes that are partials will have their sourcePage
+      // defined so we can skip the usual isAppPPREnabled check.
+      if (!('sourcePage' in route)) continue;
+      if (typeof route.sourcePage !== 'string') continue;
+
+      // Skip this addition when the routes are the same, no need to alias them
+      // again!
+      if (route.sourcePage === route.page) continue;
+
+      const sourcePathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.sourcePage === '/' ? '/index' : route.sourcePage
+      );
+
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.page === '/' ? '/index' : route.page
+      );
+
+      if (lambdas[sourcePathname]) {
+        lambdas[`${pathname}`] = lambdas[sourcePathname];
+        lambdas[`${pathname}.rsc`] = lambdas[sourcePathname];
+        lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[sourcePathname];
+      }
+
+      if (edgeFunctions[sourcePathname]) {
+        edgeFunctions[`${pathname}`] = edgeFunctions[sourcePathname];
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[sourcePathname];
+        edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+          edgeFunctions[sourcePathname];
+      }
+    }
+  }
+
   const prerenderRoute = onPrerenderRoute({
     appDir,
     pagesDir,
@@ -1591,35 +1689,6 @@ export async function serverBuild({
         true
       )
     ];
-  });
-
-  const nodeMiddleware = await getNodeMiddleware({
-    config,
-    baseDir,
-    projectDir,
-    entryPath,
-    nextVersion,
-    nodeVersion: nodeVersion.runtime,
-    lstatSema,
-    lstatResults,
-    pageExtensions: requiredServerFilesManifest.config.pageExtensions,
-    routesManifest,
-    outputDirectory,
-    prerenderBypassToken: prerenderManifest.bypassToken as string,
-    isCorrectMiddlewareOrder,
-    functionsConfigManifest,
-    requiredServerFilesManifest,
-  });
-
-  const middleware = await getMiddlewareBundle({
-    config,
-    entryPath,
-    outputDirectory,
-    routesManifest,
-    isCorrectMiddlewareOrder,
-    prerenderBypassToken: prerenderManifest.bypassToken || '',
-    nextVersion,
-    appPathRoutesManifest: appPathRoutesManifest || {},
   });
 
   const isNextDataServerResolving =
@@ -1802,73 +1871,6 @@ export async function serverBuild({
       contentType: 'application/json',
       fsPath: catchallFsPath,
     });
-  }
-
-  if (appPathRoutesManifest) {
-    // create .rsc variant for app lambdas and edge functions
-    // to match prerenders so we can route the same when the
-    // RSC header is present
-    const edgeFunctions = middleware.edgeFunctions;
-
-    for (const page of Object.values(appPathRoutesManifest)) {
-      const pathname = path.posix.join(
-        './',
-        entryDirectory,
-        page === '/' ? '/index' : page
-      );
-
-      if (lambdas[pathname]) {
-        lambdas[`${pathname}.rsc`] = lambdas[pathname];
-
-        if (isAppPPREnabled) {
-          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
-        }
-      }
-
-      if (edgeFunctions[pathname]) {
-        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
-
-        if (isAppPPREnabled) {
-          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
-            edgeFunctions[pathname];
-        }
-      }
-    }
-
-    for (const route of routesManifest.dynamicRoutes) {
-      // Skip any routes that don't have the sourcePage property defined. Only
-      // the dynamic routes that are partials will have their sourcePage
-      // defined so we can skip the usual isAppPPREnabled check.
-      if (!('sourcePage' in route)) continue;
-      if (typeof route.sourcePage !== 'string') continue;
-
-      // Skip this addition when the routes are the same, no need to alias them
-      // again!
-      if (route.sourcePage === route.page) continue;
-
-      const sourcePathname = path.posix.join(
-        './',
-        entryDirectory,
-        route.sourcePage === '/' ? '/index' : route.sourcePage
-      );
-
-      const pathname = path.posix.join(
-        './',
-        entryDirectory,
-        route.page === '/' ? '/index' : route.page
-      );
-
-      if (lambdas[sourcePathname]) {
-        lambdas[`${pathname}.rsc`] = lambdas[sourcePathname];
-        lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[sourcePathname];
-      }
-
-      if (edgeFunctions[sourcePathname]) {
-        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[sourcePathname];
-        edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
-          edgeFunctions[sourcePathname];
-      }
-    }
   }
 
   const prefetchSegmentHeader = routesManifest?.rsc?.prefetchSegmentHeader;
