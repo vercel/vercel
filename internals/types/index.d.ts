@@ -510,7 +510,17 @@ export interface Token {
   teamId?: string;
 }
 
-export interface GitMetadata {
+export type CiMetadata =
+  | {
+      ciType: 'github-actions';
+      githubActionsActor: string;
+    }
+  | {
+      ciType?: never;
+      githubActionsActor?: never;
+    };
+
+export interface GitMetadata extends CiMetadata {
   commitAuthorName?: string | undefined;
   commitAuthorEmail?: string | undefined;
   commitMessage?: string | undefined;

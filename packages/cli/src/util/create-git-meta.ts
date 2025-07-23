@@ -3,7 +3,7 @@ import { join } from 'path';
 import ini from 'ini';
 import git from 'git-last-commit';
 import { exec } from 'child_process';
-import type { GitMetadata, Project } from '@vercel-internals/types';
+import type { CiMetadata, GitMetadata, Project } from '@vercel-internals/types';
 import { errorToString, normalizeError } from '@vercel/error-utils';
 import output from '../output-manager';
 
@@ -54,6 +54,14 @@ export async function createGitMeta(
   const dirty = dirtyResult.value;
   const commit = commitResult.value;
 
+  let ciMetadata: CiMetadata = {};
+  if (process.env.GITHUB_ACTIONS && process.env.GITHUB_ACTOR) {
+    ciMetadata = {
+      ciType: 'github-actions' as const,
+      githubActionsActor: process.env.GITHUB_ACTOR,
+    };
+  }
+
   return {
     remoteUrl: remoteUrl || undefined,
     commitAuthorName: commit.author.name,
@@ -62,6 +70,7 @@ export async function createGitMeta(
     commitRef: commit.branch,
     commitSha: commit.hash,
     dirty,
+    ...ciMetadata,
   };
 }
 

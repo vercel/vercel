@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import { join } from 'path';
 import fs from 'fs-extra';
 import os from 'os';
@@ -15,10 +15,13 @@ import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 import { useUser } from '../../../mocks/user';
 import { defaultProject, useProject } from '../../../mocks/project';
 import type { Project } from '@vercel-internals/types';
-import { vi } from 'vitest';
 import output from '../../../../src/output-manager';
 
 vi.setConfig({ testTimeout: 10 * 1000 });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/create-git-meta', name);
@@ -230,7 +233,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-github');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://github.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -238,6 +241,20 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
+      });
+
+      vi.stubEnv('GITHUB_ACTIONS', 'true');
+      vi.stubEnv('GITHUB_ACTOR', 'someGithubUsername');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://github.com/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
+        dirty: false,
+        ciType: 'github-actions',
+        githubActionsActor: 'someGithubUsername',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
