@@ -57,7 +57,7 @@ A function that provides AWS credentials.
 
 #### Defined in
 
-packages/functions/src/oidc/aws-credentials-provider.ts:60
+[packages/functions/src/oidc/aws-credentials-provider.ts:60](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L60)
 
 ---
 
