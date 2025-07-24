@@ -1652,7 +1652,7 @@ export async function serverBuild({
               key: 'segmentmatch',
             },
           ],
-          dest: '/$segmentmatch',
+          dest: '/$segmentmatch.segments/_tree.segment.rsc',
           check: true,
         },
       ]
@@ -1670,7 +1670,6 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
-    isAppClientSegmentCacheEnabled,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
