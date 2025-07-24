@@ -293,6 +293,7 @@ describe('createGitMeta', () => {
 
       vi.stubEnv('GITLAB_CI', 'true');
       vi.stubEnv('GITLAB_USER_LOGIN', 'someGitlabUsername');
+      vi.stubEnv('CI_PROJECT_VISIBILITY', 'private');
       data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://gitlab.com/user/repo.git',
@@ -303,6 +304,7 @@ describe('createGitMeta', () => {
         dirty: false,
         ciType: 'gitlab-ci-cd',
         ciGitProviderUsername: 'someGitlabUsername',
+        ciGitRepoVisibility: 'private',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
@@ -312,7 +314,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-bitbucket');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://bitbucket.org/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -320,6 +322,18 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
         dirty: false,
+      });
+
+      vi.stubEnv('BITBUCKET_PIPELINE_UUID', 'someUuid');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://bitbucket.org/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
+        dirty: false,
+        ciType: 'bitbucket-pipelines',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));
