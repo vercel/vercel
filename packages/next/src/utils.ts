@@ -378,7 +378,8 @@ export async function getDynamicRoutes({
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
-  isAppPPREnabled,
+  // isAppPPREnabled,
+  isAppClientSegmentCacheEnabled,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -391,6 +392,7 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
+  isAppClientSegmentCacheEnabled?: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -430,7 +432,13 @@ export async function getDynamicRoutes({
             continue;
           }
 
-          const { page, namedRegex, regex, routeKeys } = params;
+          const {
+            page,
+            namedRegex,
+            regex,
+            routeKeys,
+            prefetchSegmentDataRoutes,
+          } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
             dest: `${
@@ -464,43 +472,97 @@ export async function getDynamicRoutes({
             ];
           }
 
-          if (isAppPPREnabled) {
-            let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
+          // eslint-disable-next-line no-inner-declarations
+          function getDestinationForSegmentRoute(
+            isDev: boolean,
+            entryDirectory: string,
+            routeKeys: Record<string, string> | undefined,
+            prefetchSegmentDataRoute: {
+              destination: string;
+              routeKeys?: Record<string, string>;
+            }
+          ) {
+            return `${
+              !isDev
+                ? path.posix.join(
+                    '/',
+                    entryDirectory,
+                    prefetchSegmentDataRoute.destination
+                  )
+                : prefetchSegmentDataRoute.destination
+            }?${Object.entries(
+              prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {}
+            )
+              .map(([key, value]) => `${value}=$${key}`)
+              .join('&')}`;
+          }
+          // if (
+          //   isAppClientSegmentCacheEnabled &&
+          //   prefetchSegmentDataRoutes &&
+          //   prefetchSegmentDataRoutes.length > 0
+          // ) {
 
-            if (page === '/' || page === '/index') {
-              dest = dest?.replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1');
+          //   for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+          //     console.log({
+          //       ...route,
+          //       src: prefetchSegmentDataRoute.source,
+          //   dest: getDestinationForSegmentRoute(
+          //     isDev === true,
+          //     entryDirectory,
+          //     routeKeys,
+          //     prefetchSegmentDataRoute
+          //   ),
+          //   check: true,
+          // });
+          //   }
+          // }
 
-              routes.push({
+          if (isAppClientSegmentCacheEnabled && prefetchSegmentDataRoutes) {
+            /*
+              handle these 
+              
+              ^/lazily\\-generated\\-params/(?<nxtPparam>[^/]+?)\\.segments/lazily\\-generated\\-params/\\$d\\$param\\$\\k<nxtPparam>/__PAGE__\\.segment\\.rsc$
+              
+              /lazily-generated-params/[param].segments/lazily-generated-params/$d$param$[param]/__PAGE__.segment.rsc
+
+              ^/lazily\\-generated\\-params/(?<nxtPparam>[^/]+?)\\.segments/lazily\\-generated\\-params/\\$d\\$param\\$\\k<nxtPparam>\\.segment\\.rsc$
+              
+              /lazily-generated-params/[param].segments/lazily-generated-params/$d$param$[param].segment.rsc
+            */
+
+            const prefetchSegmentDataRoute = prefetchSegmentDataRoutes.find(
+              item => item.destination.includes('__PAGE__')
+            );
+
+            // TODO: Update this in Next.js itself
+            if (prefetchSegmentDataRoute) {
+              const segmentRoute = {
                 ...route,
-                src: route.src.replace(
-                  new RegExp(escapeStringRegexp('(?:/)?$')),
-                  '(?:\\.prefetch\\.rsc|\\.segments/_tree\\.segment\\.rsc)(?:/)?$'
+                src: prefetchSegmentDataRoute.source.replace(
+                  '/__PAGE__\\.segment\\.rsc$',
+                  `(?<segment>/__PAGE__\\.segment\\.rsc|\\.segment\\.rsc)(?:/)?$`
                 ),
-                dest,
-              });
+                dest: getDestinationForSegmentRoute(
+                  isDev === true,
+                  entryDirectory,
+                  routeKeys,
+                  prefetchSegmentDataRoute
+                ).replace('/__PAGE__.segment.rsc', '$segment'),
+                check: true,
+              };
+
+              routes.push(segmentRoute);
             }
           }
 
-          // index is special cased
-          if (page === '/' || page === '/index') {
-            routes.push({
-              ...route,
-              src: route.src.replace(
-                new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?:\\.rsc)(?:/)?$'
-              ),
-              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-            });
-          } else {
-            routes.push({
-              ...route,
-              src: route.src.replace(
-                new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/_tree\\.segment\\.rsc)(?:/)?$'
-              ),
-              dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
-            });
-          }
+          routes.push({
+            ...route,
+            src: route.src.replace(
+              new RegExp(escapeStringRegexp('(?:/)?$')),
+              '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
+            ),
+            dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
+          });
 
           routes.push(route);
         }

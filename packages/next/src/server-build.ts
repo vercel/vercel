@@ -1670,6 +1670,7 @@ export async function serverBuild({
     isServerMode: true,
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
+    isAppClientSegmentCacheEnabled,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -2479,6 +2480,30 @@ export async function serverBuild({
           ]
         : []),
 
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to the regular RSC request.
+      ...(isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
+              check: true,
+            },
+          ]
+        : []),
+
       // routes that are called after each rewrite or after routes
       // if there no rewrites
       { handle: 'rewrite' },
@@ -2607,30 +2632,6 @@ export async function serverBuild({
                 '/(.*).json'
               )}`,
               dest: '__next_data_catchall',
-            },
-          ]
-        : []),
-
-      // If it didn't match any of the static routes or dynamic ones, then we
-      // should fallback to the regular RSC request.
-      ...(isAppClientSegmentCacheEnabled &&
-      rscPrefetchHeader &&
-      prefetchSegmentHeader &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
-              check: true,
             },
           ]
         : []),
