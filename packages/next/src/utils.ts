@@ -367,6 +367,28 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
+function getDestinationForSegmentRoute(
+  isDev: boolean,
+  entryDirectory: string,
+  routeKeys: Record<string, string> | undefined,
+  prefetchSegmentDataRoute: {
+    destination: string;
+    routeKeys?: Record<string, string>;
+  }
+) {
+  return `${
+    !isDev
+      ? path.posix.join(
+          '/',
+          entryDirectory,
+          prefetchSegmentDataRoute.destination
+        )
+      : prefetchSegmentDataRoute.destination
+  }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
+    .map(([key, value]) => `${value}=$${key}`)
+    .join('&')}`;
+}
+
 export async function getDynamicRoutes({
   entryPath,
   entryDirectory,
@@ -472,86 +494,31 @@ export async function getDynamicRoutes({
             ];
           }
 
-          // eslint-disable-next-line no-inner-declarations
-          function getDestinationForSegmentRoute(
-            isDev: boolean,
-            entryDirectory: string,
-            routeKeys: Record<string, string> | undefined,
-            prefetchSegmentDataRoute: {
-              destination: string;
-              routeKeys?: Record<string, string>;
-            }
-          ) {
-            return `${
-              !isDev
-                ? path.posix.join(
-                    '/',
-                    entryDirectory,
-                    prefetchSegmentDataRoute.destination
-                  )
-                : prefetchSegmentDataRoute.destination
-            }?${Object.entries(
-              prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {}
-            )
-              .map(([key, value]) => `${value}=$${key}`)
-              .join('&')}`;
-          }
-          // if (
-          //   isAppClientSegmentCacheEnabled &&
-          //   prefetchSegmentDataRoutes &&
-          //   prefetchSegmentDataRoutes.length > 0
-          // ) {
-
-          //   for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
-          //     console.log({
-          //       ...route,
-          //       src: prefetchSegmentDataRoute.source,
-          //   dest: getDestinationForSegmentRoute(
-          //     isDev === true,
-          //     entryDirectory,
-          //     routeKeys,
-          //     prefetchSegmentDataRoute
-          //   ),
-          //   check: true,
-          // });
-          //   }
-          // }
-
           if (isAppClientSegmentCacheEnabled && prefetchSegmentDataRoutes) {
-            /*
-              handle these 
-              
-              ^/lazily\\-generated\\-params/(?<nxtPparam>[^/]+?)\\.segments/lazily\\-generated\\-params/\\$d\\$param\\$\\k<nxtPparam>/__PAGE__\\.segment\\.rsc$
-              
-              /lazily-generated-params/[param].segments/lazily-generated-params/$d$param$[param]/__PAGE__.segment.rsc
+            // TODO: remove when landed in Next.js itself
+            if (prefetchSegmentDataRoutes.length > 1) {
+              const prefetchSegmentDataRoute = prefetchSegmentDataRoutes.find(
+                item => item.destination.includes('__PAGE__')
+              );
 
-              ^/lazily\\-generated\\-params/(?<nxtPparam>[^/]+?)\\.segments/lazily\\-generated\\-params/\\$d\\$param\\$\\k<nxtPparam>\\.segment\\.rsc$
-              
-              /lazily-generated-params/[param].segments/lazily-generated-params/$d$param$[param].segment.rsc
-            */
+              if (prefetchSegmentDataRoute) {
+                const segmentRoute = {
+                  ...route,
+                  src: prefetchSegmentDataRoute.source.replace(
+                    '/__PAGE__\\.segment\\.rsc$',
+                    `(?<segment>/__PAGE__\\.segment\\.rsc|\\.segment\\.rsc)(?:/)?$`
+                  ),
+                  dest: getDestinationForSegmentRoute(
+                    isDev === true,
+                    entryDirectory,
+                    routeKeys,
+                    prefetchSegmentDataRoute
+                  ).replace('/__PAGE__.segment.rsc', '$segment'),
+                  check: true,
+                };
 
-            const prefetchSegmentDataRoute = prefetchSegmentDataRoutes.find(
-              item => item.destination.includes('__PAGE__')
-            );
-
-            // TODO: Update this in Next.js itself
-            if (prefetchSegmentDataRoute) {
-              const segmentRoute = {
-                ...route,
-                src: prefetchSegmentDataRoute.source.replace(
-                  '/__PAGE__\\.segment\\.rsc$',
-                  `(?<segment>/__PAGE__\\.segment\\.rsc|\\.segment\\.rsc)(?:/)?$`
-                ),
-                dest: getDestinationForSegmentRoute(
-                  isDev === true,
-                  entryDirectory,
-                  routeKeys,
-                  prefetchSegmentDataRoute
-                ).replace('/__PAGE__.segment.rsc', '$segment'),
-                check: true,
-              };
-
-              routes.push(segmentRoute);
+                routes.push(segmentRoute);
+              }
             }
           }
 
