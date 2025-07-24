@@ -679,6 +679,11 @@ function getDestinationForSegmentRoute(
     .map(([key, value]) => `${value}=$${key}`)
     .join('&')}`;
 
+  // When PPR is enabled, we only emit `.rsc` files and not `.prefetch.rsc` files.
+  // Next.js should probably not include `.prefetch.rsc` in the routes manifest, but
+  // because we already have the `isAppPPREnabled` plumbing and various spots where we
+  // switch between `.rsc` and `.prefetch.rsc` based on it, we can leave it in here for now.
+  // Eventually there won't need to be separate RSC outputs and we can remove all these forks.
   if (!isAppPPREnabled && dest.includes('.prefetch.rsc')) {
     return dest.replace('.prefetch.rsc', '.rsc');
   }
