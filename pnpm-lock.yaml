@@ -352,7 +352,7 @@ importers:
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.10.6
+        specifier: 4.10.7
         version: link:../next
       '@vercel/node':
         specifier: 5.3.6

@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.7
+
+### Patch Changes
+
+- Correct node middleware require path ([#13603](https://github.com/vercel/vercel/pull/13603))
+
 ## 4.10.6
 
 ### Patch Changes
