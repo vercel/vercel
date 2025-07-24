@@ -58,13 +58,15 @@ export async function createGitMeta(
   if (process.env.GITHUB_ACTIONS && process.env.GITHUB_ACTOR) {
     // https://docs.github.com/en/actions/reference/variables-reference
     ciMetadata = {
+      ci: true,
       ciType: 'github-actions' as const,
-      // The name of the person or app that initiated the workflow.
+      // The username of the person or app that initiated the workflow.
       ciGitProviderUsername: process.env.GITHUB_ACTOR,
     };
   } else if (process.env.GITLAB_CI && process.env.GITLAB_USER_LOGIN) {
     // https://docs.gitlab.com/ci/variables/predefined_variables/
     ciMetadata = {
+      ci: true,
       ciType: 'gitlab-ci-cd' as const,
       // The unique username of the user who started the pipeline, unless the job is a manual job.
       // In manual jobs, the value is the username of the user who started the job.
@@ -79,8 +81,14 @@ export async function createGitMeta(
   } else if (process.env.BITBUCKET_PIPELINE_UUID) {
     // https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/
     ciMetadata = {
+      ci: true,
       // Bitbucket Pipelines does not provide usernames in the environment variables
       ciType: 'bitbucket-pipelines' as const,
+    };
+  } else if (process.env.CI) {
+    // Unknown CI environment
+    ciMetadata = {
+      ci: true,
     };
   }
 

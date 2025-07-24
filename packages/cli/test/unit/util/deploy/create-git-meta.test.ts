@@ -253,6 +253,7 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '0499dbfa2f58cd8b3b3ce5b2c02a24200862ac97',
         dirty: false,
+        ci: true,
         ciType: 'github-actions',
         ciGitProviderUsername: 'someGithubUsername',
       });
@@ -302,6 +303,7 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
         dirty: false,
+        ci: true,
         ciType: 'gitlab-ci-cd',
         ciGitProviderUsername: 'someGitlabUsername',
         ciGitRepoVisibility: 'private',
@@ -333,6 +335,7 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '3d883ccee5de4222ef5f40bde283a57b533b1256',
         dirty: false,
+        ci: true,
         ciType: 'bitbucket-pipelines',
       });
     } finally {
