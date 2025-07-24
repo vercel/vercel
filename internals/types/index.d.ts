@@ -512,12 +512,24 @@ export interface Token {
 
 export type CiMetadata =
   | {
-      ciType: 'github-actions' | 'gitlab-ci-cd';
+      ciType: 'github-actions';
       ciGitProviderUsername: string;
+      ciGitRepoVisibility?: never;
+    }
+  | {
+      ciType: 'gitlab-ci-cd';
+      ciGitProviderUsername: string;
+      ciGitRepoVisibility?: 'public' | 'private' | 'internal';
+    }
+  | {
+      ciType: 'bitbucket-pipelines';
+      ciGitProviderUsername?: never;
+      ciGitRepoVisibility?: never;
     }
   | {
       ciType?: never;
       ciGitProviderUsername?: never;
+      ciGitRepoVisibility?: never;
     };
 
 export interface GitMetadata extends CiMetadata {
