@@ -2293,14 +2293,15 @@ export const frameworks = [
           '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
-        placeholder: 'TODO',
-        value: 'TODO',
+        placeholder: 'None',
+        value: null,
       },
       devCommand: {
-        value: 'TODO',
+        placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
-        value: '.',
+        value: 'N/A',
       },
     },
     dependency: 'hono',

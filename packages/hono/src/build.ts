@@ -23,7 +23,8 @@ export const build: BuildV3 = async ({
   if (!entrypoint) {
     throw new Error('No valid entrypoint found');
   }
-  const shim = `
+  const shim = (handler: string) => `
+  import app from "./${handler}";
 
   const handle = async (request) => {
     return app.fetch(request);
@@ -36,6 +37,7 @@ export const build: BuildV3 = async ({
   export const PATCH = handle;
   export const OPTIONS = handle;
   export const HEAD = handle;`;
+  console.log('build', nodeBuild);
 
   return nodeBuild({
     entrypoint,

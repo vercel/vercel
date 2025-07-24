@@ -370,7 +370,7 @@ export const build = async ({
   config = {},
   meta = {},
 }: Parameters<BuildV3>[0] & {
-  shim?: string;
+  shim?: (handler: string) => string;
   useWebApi?: boolean;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
@@ -450,9 +450,11 @@ export const build = async ({
     ];
   }
 
+  console.log('hello?');
   if (shim) {
+    console.log('shim', shim(handler));
     preparedFiles['shim.js'] = new FileBlob({
-      data: `import app from "./${handler}";${shim}`,
+      data: shim(handler),
     });
     handler = 'shim.js';
   }
