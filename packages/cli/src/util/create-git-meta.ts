@@ -60,6 +60,11 @@ export async function createGitMeta(
       ciType: 'github-actions' as const,
       ciGitProviderUsername: process.env.GITHUB_ACTOR,
     };
+  } else if (process.env.GITLAB_CI && process.env.GITLAB_USER_LOGIN) {
+    ciMetadata = {
+      ciType: 'gitlab-ci-cd' as const,
+      ciGitProviderUsername: process.env.GITLAB_USER_LOGIN,
+    };
   }
 
   return {

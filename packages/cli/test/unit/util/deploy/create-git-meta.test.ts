@@ -281,7 +281,7 @@ describe('createGitMeta', () => {
     const directory = fixture('test-gitlab');
     try {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
-      const data = await createGitMeta(directory);
+      let data = await createGitMeta(directory);
       expect(data).toMatchObject({
         remoteUrl: 'https://gitlab.com/user/repo.git',
         commitAuthorName: 'Matthew Stanciu',
@@ -289,6 +289,20 @@ describe('createGitMeta', () => {
         commitRef: 'master',
         commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
         dirty: false,
+      });
+
+      vi.stubEnv('GITLAB_CI', 'true');
+      vi.stubEnv('GITLAB_USER_LOGIN', 'someGitlabUsername');
+      data = await createGitMeta(directory);
+      expect(data).toMatchObject({
+        remoteUrl: 'https://gitlab.com/user/repo.git',
+        commitAuthorName: 'Matthew Stanciu',
+        commitMessage: 'hi',
+        commitRef: 'master',
+        commitSha: '328fa04e4363b462ad96a7180d67d2785bace650',
+        dirty: false,
+        ciType: 'gitlab-ci-cd',
+        ciGitProviderUsername: 'someGitlabUsername',
       });
     } finally {
       await fs.rename(join(directory, '.git'), join(directory, 'git'));

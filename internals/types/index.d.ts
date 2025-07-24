@@ -512,7 +512,7 @@ export interface Token {
 
 export type CiMetadata =
   | {
-      ciType: 'github-actions';
+      ciType: 'github-actions' | 'gitlab-ci-cd';
       ciGitProviderUsername: string;
     }
   | {
