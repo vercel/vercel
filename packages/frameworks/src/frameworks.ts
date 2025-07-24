@@ -2245,6 +2245,53 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Effect',
+    slug: 'effect',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/effect.svg',
+    demo: 'https://effect-template.vercel.app',
+    tagline:
+      'Effect is a powerful TypeScript library designed to help developers easily create complex, synchronous, and asynchronous programs.',
+    description: 'An Effect application with HTTP server and type-safe APIs.',
+    website: 'https://effect.website',
+    envPrefix: 'EFFECT_',
+    detectors: {
+      some: [
+        {
+          matchPackage: 'effect',
+        },
+        {
+          matchPackage: '@effect/platform',
+        },
+        {
+          matchPackage: '@effect/platform-node',
+        },
+        {
+          matchPackage: '@effect/platform-bun',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `effect build`',
+        value: 'npm run build',
+      },
+      devCommand: {
+        value: 'npm run dev',
+        placeholder: 'npm run dev',
+      },
+      outputDirectory: {
+        placeholder: '`.vercel/output` (Build Output API)',
+        value: '.vercel/output',
+      },
+    },
+    getOutputDirName: async () => '.vercel/output',
+    useRuntime: { src: 'package.json', use: '@vercel/node' },
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
