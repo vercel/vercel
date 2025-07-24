@@ -37,7 +37,6 @@ export const build: BuildV3 = async ({
   export const PATCH = handle;
   export const OPTIONS = handle;
   export const HEAD = handle;`;
-  console.log('build', nodeBuild);
 
   return nodeBuild({
     entrypoint,
