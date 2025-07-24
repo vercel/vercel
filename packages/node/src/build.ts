@@ -450,9 +450,7 @@ export const build = async ({
     ];
   }
 
-  console.log('hello?');
   if (shim) {
-    console.log('shim', shim(handler));
     preparedFiles['shim.js'] = new FileBlob({
       data: shim(handler),
     });

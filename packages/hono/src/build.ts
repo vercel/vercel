@@ -38,7 +38,7 @@ export const build: BuildV3 = async ({
   export const OPTIONS = handle;
   export const HEAD = handle;`;
 
-  return nodeBuild({
+  const result = await nodeBuild({
     entrypoint,
     files,
     shim,
@@ -47,4 +47,18 @@ export const build: BuildV3 = async ({
     config,
     meta,
   });
+
+  return {
+    output: result.output,
+    routes: [
+      ...(result.routes || []),
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  };
 };
