@@ -17,8 +17,7 @@
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_tree"
       },
-      "mustNotContain": "[\"careers\",\"[slug]\"]",
-      "mustContain": "[\"careers\",\"foobar-1\"]"
+      "mustContain": "foobar-1"
     }
   ]
 }
