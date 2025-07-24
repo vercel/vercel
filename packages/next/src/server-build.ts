@@ -1626,35 +1626,35 @@ export async function serverBuild({
 
   const staticSegmentRoutes: RouteWithSrc[] = isAppClientSegmentCacheEnabled
     ? [
-        {
-          src: '^\\/(.*)\\.segments\\/_tree\\.segment\\.rsc$',
-          dest: '/$1.prefetch.rsc',
-          transforms: [
-            {
-              type: 'request.headers',
-              op: 'append',
-              target: {
-                key: 'segmentmatch',
-              },
-              args: '$1',
-            },
-          ],
-          check: true,
-        },
-        // if above didn't match we didn't get a static match
-        // so undo the rewrite to it's original for dynamic route
-        // matching
-        {
-          src: '^\\/(.*).prefetch.rsc$',
-          has: [
-            {
-              type: 'header',
-              key: 'segmentmatch',
-            },
-          ],
-          dest: '/$segmentmatch.segments/_tree.segment.rsc',
-          check: true,
-        },
+        // {
+        //   src: '^\\/(.*)\\.segments\\/_tree\\.segment\\.rsc$',
+        //   dest: '/$1.prefetch.rsc',
+        //   transforms: [
+        //     {
+        //       type: 'request.headers',
+        //       op: 'append',
+        //       target: {
+        //         key: 'segmentmatch',
+        //       },
+        //       args: '$1',
+        //     },
+        //   ],
+        //   check: true,
+        // },
+        // // if above didn't match we didn't get a static match
+        // // so undo the rewrite to it's original for dynamic route
+        // // matching
+        // {
+        //   src: '^\\/(.*).prefetch.rsc$',
+        //   has: [
+        //     {
+        //       type: 'header',
+        //       key: 'segmentmatch',
+        //     },
+        //   ],
+        //   dest: '/$segmentmatch.segments/_tree.segment.rsc',
+        //   check: true,
+        // },
       ]
     : [];
 
@@ -1703,10 +1703,15 @@ export async function serverBuild({
 
     for (const page of pagesEntries) {
       const pathName = page.startsWith('/') ? page.slice(1) : page;
-      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+      const dummyBlob = new FileBlob({
         data: '{}',
         contentType: 'application/json',
       });
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = dummyBlob;
+
+      if (isAppClientSegmentCacheEnabled) {
+        pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`];
+      }
     }
   }
 
@@ -2225,7 +2230,11 @@ export async function serverBuild({
                   },
                 ]
               : []),
-            ...(rscPrefetchHeader && isAppPPREnabled
+            ...(rscPrefetchHeader &&
+            isAppPPREnabled &&
+            // when client segment cache is enabled we do not need
+            // the .prefetch.rsc routing
+            !isAppClientSegmentCacheEnabled
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}$`,
