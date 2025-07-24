@@ -547,26 +547,38 @@ export async function getDynamicRoutes({
 
             if (page === '/' || page === '/index') {
               dest = dest?.replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1');
-            }
 
+              routes.push({
+                ...route,
+                src: route.src.replace(
+                  new RegExp(escapeStringRegexp('(?:/)?$')),
+                  '(?:\\.prefetch\\.rsc)(?:/)?$'
+                ),
+                dest,
+              });
+            }
+          }
+
+          // index is special cased
+          if (page === '/' || page === '/index') {
             routes.push({
               ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?:\\.prefetch\\.rsc)(?:/)?$'
+                '(?:\\.rsc)(?:/)?$'
               ),
-              dest,
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+            });
+          } else {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
             });
           }
-
-          routes.push({
-            ...route,
-            src: route.src.replace(
-              new RegExp(escapeStringRegexp('(?:/)?$')),
-              '(?:\\.rsc)(?:/)?$'
-            ),
-            dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-          });
 
           routes.push(route);
         }
