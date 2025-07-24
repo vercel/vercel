@@ -17,6 +17,10 @@ export function middleware(request) {
   const url = request.nextUrl;
   const pathname = url.pathname;
 
+  if (pathname.includes('/next-runtime')) {
+    return NextResponse.json({ runtime: process.env.NEXT_RUNTIME })
+  }
+
   if (process.env.FOO) {
     console.log(`Includes env variable ${process.env.FOO}`);
   }

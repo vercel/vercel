@@ -3585,6 +3585,8 @@ export async function getNodeMiddleware({
     ).filter((entry): entry is [string, FileFsRef] => !!entry)
   );
 
+  const absoluteOutputDirectory = path.posix.join(entryPath, outputDirectory);
+
   const launcherData = (
     await fs.readFile(path.join(__dirname, 'middleware-launcher.js'), 'utf8')
   )
@@ -3592,17 +3594,14 @@ export async function getNodeMiddleware({
       /(?:var|const) conf = __NEXT_CONFIG__/,
       `const conf = ${JSON.stringify({
         ...requiredServerFilesManifest.config,
-        distDir: path.relative(
-          projectDir,
-          path.join(entryPath, outputDirectory)
-        ),
+        distDir: path.relative(projectDir, absoluteOutputDirectory),
       })}`
     )
     .replace(
       '__NEXT_MIDDLEWARE_PATH__',
       './' +
         path.posix.join(
-          path.posix.relative(projectDir, outputDirectory),
+          path.posix.relative(projectDir, absoluteOutputDirectory),
           `server/middleware.js`
         )
     );
