@@ -13,6 +13,16 @@ import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
 
+// Constants
+const TABLE_HEADERS = [
+  'Project Name',
+  'Latest Production URL',
+  'Updated',
+  'Node Version',
+];
+const PAGINATION_FLAGS_TO_EXCLUDE = ['_', '--next', '-N', '-d', '-y', '--json'];
+const BASE_PROJECTS_URL = '/v9/projects?limit=20';
+
 export default async function list(
   client: Client,
   argv: string[]
@@ -47,19 +57,9 @@ export default async function list(
   const { contextName } = await getScope(client);
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
-  let projectsUrl = '/v9/projects?limit=20';
-
-  const deprecated = opts['--update-required'] || false;
-  telemetryClient.trackCliFlagUpdateRequired(deprecated);
-  if (deprecated) {
-    projectsUrl += `&deprecated=${deprecated}`;
-  }
-
-  const next = opts['--next'];
-  telemetryClient.trackCliOptionNext(next);
-  if (next) {
-    projectsUrl += `&until=${next}`;
-  }
+  // Process flags and build URL
+  const flags = processFlags(opts, telemetryClient);
+  const projectsUrl = buildProjectsUrl(flags);
 
   const {
     projects: projectList,
@@ -75,6 +75,103 @@ export default async function list(
 
   const elapsed = ms(Date.now() - start);
 
+  if (flags.json) {
+    outputJson(client, projectList, {
+      pagination,
+      contextName,
+      elapsed,
+      deprecated: flags.deprecated,
+    });
+  } else {
+    outputTable(projectList, {
+      contextName,
+      elapsed,
+      deprecated: flags.deprecated,
+      opts,
+      pagination,
+    });
+  }
+
+  return 0;
+}
+
+// Helper function to process flags and track telemetry
+function processFlags(
+  opts: Record<string, any>,
+  telemetryClient: ProjectListTelemetryClient
+) {
+  const deprecated = opts['--update-required'] || false;
+  const next = opts['--next'];
+  const json = opts['--json'] || false;
+
+  telemetryClient.trackCliFlagUpdateRequired(deprecated);
+  telemetryClient.trackCliOptionNext(next);
+  telemetryClient.trackCliFlagJson(json);
+
+  return { deprecated, next, json };
+}
+
+// Helper function to build projects URL
+function buildProjectsUrl(flags: { deprecated: boolean; next?: number }) {
+  let url = BASE_PROJECTS_URL;
+
+  if (flags.deprecated) {
+    url += `&deprecated=${flags.deprecated}`;
+  }
+  if (flags.next) {
+    url += `&until=${flags.next}`;
+  }
+
+  return url;
+}
+
+// Helper function to create project JSON representation
+function createProjectJson(project: Project, deprecated: boolean) {
+  return {
+    name: project.name,
+    id: project.id,
+    latestProductionUrl: getLatestProdUrl(project),
+    updatedAt: project.updatedAt,
+    nodeVersion: project.nodeVersion ?? null,
+    deprecated: deprecated,
+  };
+}
+
+// Helper function for JSON output
+function outputJson(
+  client: Client,
+  projectList: Project[],
+  metadata: {
+    pagination: any;
+    contextName: string;
+    elapsed: string;
+    deprecated: boolean;
+  }
+) {
+  const jsonOutput = {
+    projects: projectList.map(project =>
+      createProjectJson(project, metadata.deprecated)
+    ),
+    pagination: metadata.pagination,
+    contextName: metadata.contextName,
+    elapsed: metadata.elapsed,
+  };
+  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+}
+
+// Helper function for table output
+function outputTable(
+  projectList: Project[],
+  options: {
+    contextName: string;
+    elapsed: string;
+    deprecated: boolean;
+    opts: Record<string, any>;
+    pagination: { count: number; next: number };
+  }
+) {
+  const { contextName, elapsed, deprecated, opts, pagination } = options;
+
   output.log(
     `${
       projectList.length > 0 ? 'Projects' : 'No projects'
@@ -84,34 +181,40 @@ export default async function list(
   );
 
   if (projectList.length > 0) {
-    const tablePrint = table(
-      [
-        [
-          'Project Name',
-          'Latest Production URL',
-          'Updated',
-          'Node Version',
-        ].map(header => chalk.bold(chalk.cyan(header))),
-        ...projectList.flatMap(project => [
-          [
-            chalk.bold(project.name),
-            getLatestProdUrl(project),
-            chalk.gray(ms(Date.now() - project.updatedAt)),
-            project.nodeVersion ?? '',
-          ],
-        ]),
-      ],
-      { hsep: 3 }
-    ).replace(/^/gm, '  ');
-    output.print(`\n${tablePrint}\n\n`);
-
-    if (pagination && pagination.count === 20) {
-      const flags = getCommandFlags(opts, ['_', '--next', '-N', '-d', '-y']);
-      const nextCmd = `project ls${flags} --next ${pagination.next}`;
-      output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
-    }
+    printProjectsTable(projectList);
+    printPaginationInstructions(opts, pagination);
   }
-  return 0;
+}
+
+// Helper function to print projects table
+function printProjectsTable(projectList: Project[]) {
+  const tablePrint = table(
+    [
+      TABLE_HEADERS.map(header => chalk.bold(chalk.cyan(header))),
+      ...projectList.flatMap(project => [
+        [
+          chalk.bold(project.name),
+          getLatestProdUrl(project),
+          chalk.gray(ms(Date.now() - project.updatedAt)),
+          project.nodeVersion ?? '',
+        ],
+      ]),
+    ],
+    { hsep: 3 }
+  ).replace(/^/gm, '  ');
+  output.print(`\n${tablePrint}\n\n`);
+}
+
+// Helper function to print pagination instructions
+function printPaginationInstructions(
+  opts: Record<string, any>,
+  pagination: { count: number; next: number }
+) {
+  if (pagination && pagination.count === 20) {
+    const flags = getCommandFlags(opts, PAGINATION_FLAGS_TO_EXCLUDE);
+    const nextCmd = `project ls${flags} --next ${pagination.next}`;
+    output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+  }
 }
 
 function getLatestProdUrl(project: Project): string {

@@ -87,6 +87,60 @@ describe('list', () => {
     });
   });
 
+  describe('--json', () => {
+    it('should track flag', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--json');
+      await projects(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: `subcommand:list`,
+          value: 'ls',
+        },
+        {
+          key: `flag:json`,
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should output projects in JSON format', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      const project = useProject({
+        ...defaultProject,
+      });
+
+      client.setArgv('project', 'ls', '--json');
+      await projects(client);
+
+      const output = client.stdout.getFullOutput();
+
+      const parsedOutput = JSON.parse(output);
+      expect(parsedOutput).toMatchObject({
+        projects: expect.arrayContaining([
+          expect.objectContaining({
+            name: project.project.name,
+            id: project.project.id,
+            latestProductionUrl: expect.any(String),
+            updatedAt: expect.any(Number),
+            nodeVersion: null,
+            deprecated: false,
+          }),
+        ]),
+        pagination: expect.any(Object),
+        contextName: user.username,
+        elapsed: expect.any(String),
+      });
+    });
+  });
+
   it('should list projects', async () => {
     const user = useUser();
     useTeams('team_dummy');
