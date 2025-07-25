@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.4
+
+### Patch Changes
+
+- Use exact version for @vercel/node instead of workspace ([#13617](https://github.com/vercel/vercel/pull/13617))
+
 ## 0.0.3
 
 ### Patch Changes
