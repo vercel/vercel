@@ -23,22 +23,8 @@ export const build: BuildV3 = async ({
   if (!entrypoint) {
     throw new Error('No valid entrypoint found');
   }
-  const shim = (handler: string) => `
-  import app from "./${handler}";
 
-  const handle = async (request) => {
-    return app.fetch(request);
-  };
-
-  export const GET = handle;
-  export const POST = handle;
-  export const PUT = handle;
-  export const DELETE = handle;
-  export const PATCH = handle;
-  export const OPTIONS = handle;
-  export const HEAD = handle;`;
-
-  const result = await nodeBuild({
+  return nodeBuild({
     entrypoint,
     files,
     shim,
@@ -47,18 +33,19 @@ export const build: BuildV3 = async ({
     config,
     meta,
   });
-
-  return {
-    output: result.output,
-    routes: [
-      ...(result.routes || []),
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/',
-      },
-    ],
-  };
 };
+
+const shim = (handler: string) => `
+import app from "./${handler}";
+
+const handle = async (request) => {
+  return app.fetch(request);
+};
+
+export const GET = handle;
+export const POST = handle;
+export const PUT = handle;
+export const DELETE = handle;
+export const PATCH = handle;
+export const OPTIONS = handle;
+export const HEAD = handle;`;
