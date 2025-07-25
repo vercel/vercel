@@ -609,24 +609,22 @@ describe('rewrite headers', () => {
     routes = output.buildResult.routes;
   });
 
-  it('should add rewrite headers before the original rewrite', () => {
+  it('should add rewrite headers to the original rewrite', () => {
     let route = routes.filter(r => r.src?.includes('/hello/sam'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/hello/samantha',
       'x-nextjs-rewritten-query': undefined,
     });
-    expect(route[1].headers).toBeUndefined();
   });
 
   it('should add rewrite query headers', () => {
     let route = routes.filter(r => r.src?.includes('/hello/fred'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/other',
       'x-nextjs-rewritten-query': 'key=value',
     });
-    expect(route[1].headers).toBeUndefined();
   });
 
   it('should not add external rewrite headers', () => {
@@ -637,40 +635,11 @@ describe('rewrite headers', () => {
 
   it('should strip the hash from the rewritten path', () => {
     const route = routes.filter(r => r.src?.includes('suffix'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/$1',
       'x-nextjs-rewritten-query': 'suffix=$1',
     });
-  });
-
-  it('should not add rewrite headers when it is excluded with missing', () => {
-    const route = routes.filter(r => r.src?.includes('missing'));
-    expect(route.length).toBe(1);
-    expect(route[0].headers).toBeUndefined();
-  });
-
-  it('should combine has rules', () => {
-    const route = routes.filter(r => r.src?.includes('/hello/has'));
-    expect(route.length).toBe(2);
-    expect(route[0].headers).toEqual({
-      'x-nextjs-rewritten-path': '/other',
-      'x-nextjs-rewritten-query': undefined,
-    });
-    expect(route[0].has).toEqual([
-      {
-        type: 'header',
-        key: 'x-other-header',
-        value: 'other-value',
-      },
-      {
-        type: 'header',
-        key: 'rsc',
-        value: '1',
-      },
-    ]);
-
-    expect(route[1].headers).toBeUndefined();
   });
 });
 
@@ -683,24 +652,16 @@ describe('rewrite headers with rewrite', () => {
     routes = output.buildResult.routes;
   });
 
-  it('should add rewrite headers before the original rewrite', () => {
+  it('should add rewrite headers to the original rewrite', () => {
     let route = routes.filter(
       r => r.src === '^(?:/(en|fi|sv|fr|nb))(?:/)?(?<rscsuff>\\.rsc)?$'
     );
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
 
-    // Header without the actual rewrite.
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/$1/landing',
       'x-nextjs-rewritten-query': undefined,
     });
-    expect(route[0].continue).toBe(true);
-    expect(route[0].check).toBeUndefined();
-
-    // Actual rewrite.
-    expect(route[1].headers).toBeUndefined();
-    expect(route[1].continue).toBeUndefined();
-    expect(route[1].check).toBe(true);
   });
 });
 
