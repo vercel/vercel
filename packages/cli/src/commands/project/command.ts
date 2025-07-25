@@ -53,6 +53,7 @@ export const listSubcommand = {
     nextOption,
     {
       name: 'json',
+      shorthand: null,
       type: Boolean,
       deprecated: false,
       description: 'Output in JSON format',

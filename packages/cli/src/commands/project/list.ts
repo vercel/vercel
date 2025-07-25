@@ -20,14 +20,7 @@ const TABLE_HEADERS = [
   'Updated',
   'Node Version',
 ];
-const PAGINATION_FLAGS_TO_EXCLUDE = [
-  '_',
-  '--next',
-  '-N',
-  '-d',
-  '-y',
-  '--json',
-];
+const PAGINATION_FLAGS_TO_EXCLUDE = ['_', '--next', '-N', '-d', '-y', '--json'];
 const BASE_PROJECTS_URL = '/v9/projects?limit=20';
 
 export default async function list(
@@ -83,7 +76,7 @@ export default async function list(
   const elapsed = ms(Date.now() - start);
 
   if (flags.json) {
-    outputJson(projectList, {
+    outputJson(client, projectList, {
       pagination,
       contextName,
       elapsed,
@@ -146,6 +139,7 @@ function createProjectJson(project: Project, deprecated: boolean) {
 
 // Helper function for JSON output
 function outputJson(
+  client: Client,
   projectList: Project[],
   metadata: {
     pagination: any;
@@ -162,7 +156,7 @@ function outputJson(
     contextName: metadata.contextName,
     elapsed: metadata.elapsed,
   };
-  output.print(JSON.stringify(jsonOutput, null, 2));
+  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }
 
 // Helper function for table output

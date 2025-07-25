@@ -120,8 +120,7 @@ describe('list', () => {
       client.setArgv('project', 'ls', '--json');
       await projects(client);
 
-      const output = client.stderr.getFullOutput();
-
+      const output = client.stdout.getFullOutput();
 
       const parsedOutput = JSON.parse(output);
       expect(parsedOutput).toMatchObject({
