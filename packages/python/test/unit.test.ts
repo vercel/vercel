@@ -1,7 +1,9 @@
 import { getSupportedPythonVersion } from '../src/version';
+import { build } from '../src/index';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
+import { FileBlob } from '@vercel/build-utils';
 
 const tmpPythonDir = path.join(
   tmpdir(),
@@ -109,3 +111,97 @@ function makeMockPython(version: string) {
   }
   process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
 }
+
+describe('file exclusions', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-test-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('should exclude predefined files by default', async () => {
+    // Subset of excluded directories
+    const excludedDirs = ['.git', '.pnpm-store'];
+    const testFiles = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    };
+
+    // Add files that should be excluded
+    excludedDirs.forEach(dir => {
+      const dirPath = path.join(mockWorkPath, dir);
+      fs.mkdirSync(dirPath, { recursive: true });
+      fs.writeFileSync(path.join(dirPath, 'test.txt'), 'should be excluded');
+    });
+
+    // Add a nested node_modules that should also be excluded
+    const nestedNodeModules = path.join(mockWorkPath, 'src', 'node_modules');
+    fs.mkdirSync(nestedNodeModules, { recursive: true });
+    fs.writeFileSync(path.join(nestedNodeModules, 'package.json'), '{}');
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files: testFiles,
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(result.output.files || {});
+
+    // Should include the handler and requirements files
+    expect(outputFiles.some(f => f.includes('handler'))).toBe(true);
+
+    // Should not include any excluded directories
+    excludedDirs.forEach(dir => {
+      expect(outputFiles.some(f => f.includes(dir))).toBe(false);
+    });
+  });
+
+  it('should add config.excludeFiles to predefined exclusions', async () => {
+    const testFiles = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'secret.txt': new FileBlob({ data: 'secret data' }),
+      'config.ini': new FileBlob({ data: '[settings]' }),
+      'public.txt': new FileBlob({ data: 'public data' }),
+    };
+
+    // Create the files in workPath
+    fs.writeFileSync(path.join(mockWorkPath, 'secret.txt'), 'secret data');
+    fs.writeFileSync(path.join(mockWorkPath, 'config.ini'), '[settings]');
+    fs.writeFileSync(path.join(mockWorkPath, 'public.txt'), 'public data');
+
+    // Should still exclude predefined files (test with .git if it exists)
+    const gitDir = path.join(mockWorkPath, '.git');
+    fs.mkdirSync(gitDir, { recursive: true });
+    fs.writeFileSync(path.join(gitDir, 'config'), 'git config');
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files: testFiles,
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: { excludeFiles: 'secret.txt' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(result.output.files || {});
+
+    // Should not include the user-excluded file
+    expect(outputFiles.some(f => f.includes('secret.txt'))).toBe(false);
+
+    // Should still include other files
+    expect(outputFiles.some(f => f.includes('public.txt'))).toBe(true);
+    expect(outputFiles.some(f => f.includes('config.ini'))).toBe(true);
+
+    expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
+  });
+});
