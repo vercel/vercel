@@ -27,7 +27,6 @@ const PAGINATION_FLAGS_TO_EXCLUDE = [
   '-d',
   '-y',
   '--json',
-  '-j',
 ];
 const BASE_PROJECTS_URL = '/v9/projects?limit=20';
 
