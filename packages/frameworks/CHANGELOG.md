@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.7.4
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
 ## 3.7.3
 
 ### Patch Changes
