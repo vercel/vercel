@@ -2065,7 +2065,9 @@ export const frameworks = [
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
-    tagline: 'The structured content platform.',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/sanity-dark.svg',
+    tagline: 'The Content Operating system.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
@@ -2127,7 +2129,9 @@ export const frameworks = [
     slug: 'sanity',
     demo: 'https://sanity-studio-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/sanity.svg',
-    tagline: 'The structured content platform.',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/sanity-dark.svg',
+    tagline: 'The Content Operating system.',
     description: 'A Sanity Studio',
     website: 'https://www.sanity.io',
     envPrefix: 'SANITY_STUDIO_',
