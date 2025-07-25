@@ -123,7 +123,7 @@ describe('list', () => {
       const output = client.stderr.getFullOutput();
 
 
-      const parsedOutput = JSON.parse(jsonMatch![0]);
+      const parsedOutput = JSON.parse(output);
       expect(parsedOutput).toMatchObject({
         projects: expect.arrayContaining([
           expect.objectContaining({
