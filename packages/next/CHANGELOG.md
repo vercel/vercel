@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.8
+
+### Patch Changes
+
+- Reduce segment routes ([#13602](https://github.com/vercel/vercel/pull/13602))
+
 ## 4.10.7
 
 ### Patch Changes
