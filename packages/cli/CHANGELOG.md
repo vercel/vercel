@@ -1,5 +1,12 @@
 # vercel
 
+## 44.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`a646bee5f8f1fe7ac9451605e81f15b2e275d5b0`](https://github.com/vercel/vercel/commit/a646bee5f8f1fe7ac9451605e81f15b2e275d5b0)]:
+  - @vercel/next@4.10.8
+
 ## 44.6.0
 
 ### Minor Changes
