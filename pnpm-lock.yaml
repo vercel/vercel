@@ -1175,7 +1175,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: workspace:*
+        specifier: 5.3.7
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1
