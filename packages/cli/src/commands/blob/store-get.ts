@@ -32,10 +32,11 @@ export default async function getStore(
     return 1;
   }
 
-  let {
-    args: [storeId],
+  const {
+    args: [storeIdArg],
   } = parsedArgs;
 
+  let storeId = storeIdArg;
   if (!storeId && rwToken.success) {
     const [, , , id] = rwToken.token.split('_');
 
@@ -71,6 +72,7 @@ export default async function getStore(
         updatedAt: number;
         billingState: string;
         size: number;
+        region?: string;
       };
     }>(`/v1/storage/stores/${storeId}`, {
       method: 'GET',
@@ -79,6 +81,10 @@ export default async function getStore(
 
     const dateTimeFormat = 'MM/DD/YYYY HH:mm:ss.SS';
 
+    const regionInfo = store.store.region
+      ? `\nRegion: ${store.store.region}`
+      : '';
+
     output.print(
       `Blob Store: ${chalk.bold(store.store.name)} (${chalk.dim(store.store.id)})
 Billing State: ${
@@ -86,7 +92,7 @@ Billing State: ${
           ? chalk.green('Active')
           : chalk.red('Inactive')
       }
-Size: ${bytes(store.store.size)}
+Size: ${bytes(store.store.size)}${regionInfo}
 Created At: ${format(new Date(store.store.createdAt), dateTimeFormat)}
 Updated At: ${format(new Date(store.store.updatedAt), dateTimeFormat)}\n`
     );

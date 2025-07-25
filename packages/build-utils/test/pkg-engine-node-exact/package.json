@@ -1,6 +1,6 @@
 {
   "private": true,
   "engines": {
-    "node": "18.2.0"
+    "node": "22.11.0"
   }
 }

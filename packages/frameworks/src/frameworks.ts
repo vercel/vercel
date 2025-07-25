@@ -252,6 +252,7 @@ export const frameworks = [
     sort: 7,
     supersedes: ['hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
         {
@@ -2241,7 +2242,7 @@ export const frameworks = [
       },
     },
     dependency: 'nitropack',
-    getOutputDirName: () => Promise<string>,
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Other',

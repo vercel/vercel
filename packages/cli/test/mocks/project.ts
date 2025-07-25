@@ -221,14 +221,14 @@ export function useProject(
   client.scenario.get(`/:version/projects/${project.id}`, (_req, res) => {
     res.json(project);
   });
+  client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
+    Object.assign(project, req.body);
+    res.json(project);
+  });
   client.scenario.get(`/v9/projects/${project.name}`, (_req, res) => {
     res.json(project);
   });
   client.scenario.get(`/v9/projects/${project.id}`, (_req, res) => {
-    res.json(project);
-  });
-  client.scenario.patch(`/:version/projects/${project.id}`, (req, res) => {
-    Object.assign(project, req.body);
     res.json(project);
   });
   client.scenario.get(

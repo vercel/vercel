@@ -13,6 +13,11 @@
   },
   "probes": [
     {
+      "path": "/next-runtime",
+      "status": 200,
+      "mustContain": "{\"runtime\":\"nodejs\"}"
+    },
+    {
       "path": "/_next/data/testing-build-id/dynamic/static.json",
       "status": 200,
       "headers": {

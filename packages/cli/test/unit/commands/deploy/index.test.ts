@@ -687,15 +687,6 @@ describe('deploy', () => {
       });
       deployment = useDeployment({ creator: user, state: 'BUILDING' });
       deployment.aliasAssigned = false;
-
-      client.scenario.get(`/v9/projects/:id`, (_req, res) => {
-        res.json({
-          ...defaultProject,
-          name: 'node',
-          id: 'QmbKpqpiUqbcke',
-        });
-      });
-
       client.scenario.post(`/v13/deployments`, (req, res) => {
         res.json(
           res.json({
@@ -709,6 +700,13 @@ describe('deploy', () => {
             alias: [],
           })
         );
+      });
+      client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+        res.json({
+          ...defaultProject,
+          name: 'node',
+          id: 'QmbKpqpiUqbcke',
+        });
       });
       useBuildLogs({
         deployment,
@@ -1254,13 +1252,6 @@ describe('deploy', () => {
           return res.status(404).json({});
         });
 
-        client.scenario.get(`/v9/projects`, (_req, res) => {
-          return res.json({
-            projects: [],
-            pagination: {},
-          });
-        });
-
         client.scenario.post(`/v1/projects`, (req, res) => {
           return res.status(200).json(req.body);
         });
@@ -1333,6 +1324,11 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Want to modify these settings?');
         client.stdin.write('\n');
 
+        await expect(client.stderr).toOutput(
+          'Want to use the default Deployment Protection settings?'
+        );
+        client.stdin.write('\n');
+
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
@@ -1366,6 +1362,11 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          'Want to use the default Deployment Protection settings?'
+        );
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;

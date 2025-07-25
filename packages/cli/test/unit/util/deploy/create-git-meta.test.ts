@@ -194,6 +194,7 @@ describe('createGitMeta', () => {
       await fs.rename(join(directory, 'git'), join(directory, '.git'));
       const data = await createGitMeta(directory);
       expect(data).toEqual({
+        commitAuthorEmail: 'mattbstanciu@gmail.com',
         commitAuthorName: 'Matthew Stanciu',
         commitMessage: 'hi',
         commitRef: 'master',

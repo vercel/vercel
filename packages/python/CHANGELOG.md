@@ -1,5 +1,23 @@
 # @vercel/python
 
+## 4.8.0
+
+### Minor Changes
+
+- Improve Fluid support ([#13589](https://github.com/vercel/vercel/pull/13589))
+
+## 4.7.4
+
+### Patch Changes
+
+- Ignore .pnpm_store in Python lambdas ([#13568](https://github.com/vercel/vercel/pull/13568))
+
+## 4.7.3
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 4.7.2
 
 ### Patch Changes

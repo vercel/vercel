@@ -1,5 +1,43 @@
 # @vercel/build-utils
 
+## 10.6.7
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 10.6.6
+
+### Patch Changes
+
+- Deprecate Node.js 18.x with warning ([#13549](https://github.com/vercel/vercel/pull/13549))
+
+## 10.6.5
+
+### Patch Changes
+
+- rename experimental maxAttempts to maxDeliveries ([#13534](https://github.com/vercel/vercel/pull/13534))
+
+## 10.6.4
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
+## 10.6.3
+
+### Patch Changes
+
+- make POST method required ([#13518](https://github.com/vercel/vercel/pull/13518))
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
+## 10.6.2
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
 ## 10.6.1
 
 ### Patch Changes

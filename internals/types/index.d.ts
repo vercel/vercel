@@ -62,6 +62,9 @@ export interface GlobalConfig {
   telemetry?: {
     enabled?: boolean;
   };
+  guidance?: {
+    enabled?: boolean;
+  };
 }
 
 type Billing = {
@@ -513,6 +516,7 @@ export interface Token {
 
 export interface GitMetadata {
   commitAuthorName?: string | undefined;
+  commitAuthorEmail?: string | undefined;
   commitMessage?: string | undefined;
   commitRef?: string | undefined;
   commitSha?: string | undefined;

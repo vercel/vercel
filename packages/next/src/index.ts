@@ -31,6 +31,7 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -1456,7 +1457,10 @@ export const build: BuildV2 = async buildOptions => {
 
     const isAppPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.ppr === true ||
-        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+        requiredServerFilesManifest.config.experimental?.ppr ===
+          'incremental' ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
       : false;
 
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
@@ -1964,6 +1968,7 @@ export const build: BuildV2 = async buildOptions => {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
             maxDuration?: number;
+            experimentalTriggers?: TriggerEvent[];
           } = {};
 
           if (config && config.functions) {

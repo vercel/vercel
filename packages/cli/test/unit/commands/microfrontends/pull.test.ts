@@ -5,7 +5,12 @@ import { client } from '../../../mocks/client';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { useMicrofrontends } from '../../../mocks/microfrontends';
+import {
+  useMicrofrontendsDeploymentNotFound,
+  useMicrofrontendsForDeployment,
+  useMicrofrontendsForProject,
+  useMicrofrontendsNotEnabled,
+} from '../../../mocks/microfrontends';
 
 describe('microfrontends pull', () => {
   describe('--help', () => {
@@ -34,7 +39,7 @@ describe('microfrontends pull', () => {
       id: 'vercel-microfrontends-pull',
       name: 'vercel-microfrontends-pull',
     });
-    useMicrofrontends();
+    useMicrofrontendsForProject();
     const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
     client.cwd = cwd;
@@ -53,17 +58,15 @@ describe('microfrontends pull', () => {
     );
   });
 
-  it('should fail with no deployment found', async () => {
+  it('should fail when project is not a microfrontends project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
       id: 'vercel-microfrontends-pull',
       name: 'vercel-microfrontends-pull',
-      latestDeployments: [],
-      targets: {},
     });
-    useMicrofrontends();
+    useMicrofrontendsNotEnabled();
     const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
     client.cwd = cwd;
@@ -74,7 +77,7 @@ describe('microfrontends pull', () => {
     expect(exitCode).toEqual(1);
 
     await expect(client.stderr).toOutput(
-      `No deployment found for project vercel-microfrontends-pull`
+      `Project is not part of a microfrontends group`
     );
   });
 
@@ -87,7 +90,7 @@ describe('microfrontends pull', () => {
         id: 'vercel-microfrontends-pull',
         name: 'vercel-microfrontends-pull',
       });
-      useMicrofrontends();
+      useMicrofrontendsForDeployment();
       const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
       client.cwd = cwd;
@@ -114,7 +117,7 @@ describe('microfrontends pull', () => {
         id: 'vercel-microfrontends-pull',
         name: 'vercel-microfrontends-pull',
       });
-      useMicrofrontends();
+      useMicrofrontendsDeploymentNotFound();
       const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
       client.cwd = cwd;
@@ -136,7 +139,7 @@ describe('microfrontends pull', () => {
       id: 'vercel-microfrontends-pull',
       name: 'vercel-microfrontends-pull',
     });
-    useMicrofrontends();
+    useMicrofrontendsForProject();
     const cwd = setupUnitFixture('vercel-microfrontends-pull');
 
     client.cwd = cwd;

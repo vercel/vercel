@@ -1,5 +1,17 @@
 # @vercel/routing-utils
 
+## 5.1.1
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 5.1.0
+
+### Minor Changes
+
+- Change where validation on the routing array happens (schema to api) ([#13476](https://github.com/vercel/vercel/pull/13476))
+
 ## 5.0.8
 
 ### Patch Changes

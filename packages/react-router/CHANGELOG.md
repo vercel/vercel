@@ -1,5 +1,23 @@
 # @vercel/react-router
 
+## 1.2.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 1.2.1
+
+### Patch Changes
+
+- Use cookie method for Vercel Skew Protection ([#13552](https://github.com/vercel/vercel/pull/13552))
+
+## 1.2.0
+
+### Minor Changes
+
+- Add support for Vercel Skew Protection ([#13536](https://github.com/vercel/vercel/pull/13536))
+
 ## 1.1.2
 
 ### Patch Changes

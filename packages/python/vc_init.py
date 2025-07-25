@@ -171,6 +171,11 @@ if 'VERCEL_IPC_PATH' in os.environ:
             if not self.parse_request():
                 return
 
+            if self.path == '/_vercel/ping':
+                self.send_response(200)
+                self.end_headers()
+                return
+
             invocationId = self.headers.get('x-vercel-internal-invocation-id')
             requestId = int(self.headers.get('x-vercel-internal-request-id'))
             del self.headers['x-vercel-internal-invocation-id']
