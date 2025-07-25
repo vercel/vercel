@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.5
+
+### Patch Changes
+
+- Extract oidc behavior into separate packages ([#13548](https://github.com/vercel/vercel/pull/13548))
+
 ## 2.2.4
 
 ### Patch Changes

@@ -1,5 +1,4 @@
-import { getContext } from '../get-context';
-
+import { getContext } from './get-context';
 /**
  * Gets the current OIDC token from the request context or the environment variable.
  *
