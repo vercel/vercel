@@ -400,7 +400,7 @@ export async function getDynamicRoutes({
   bypassToken,
   isServerMode,
   dynamicMiddlewareRouteMap,
-  // isAppPPREnabled,
+  isAppPPREnabled,
   isAppClientSegmentCacheEnabled,
 }: {
   entryPath: string;
@@ -494,42 +494,47 @@ export async function getDynamicRoutes({
             ];
           }
 
-          if (isAppClientSegmentCacheEnabled && prefetchSegmentDataRoutes) {
-            // TODO: remove when landed in Next.js itself
-            if (prefetchSegmentDataRoutes.length > 1) {
-              const prefetchSegmentDataRoute = prefetchSegmentDataRoutes.find(
-                item => item.destination.includes('__PAGE__')
-              );
-
-              if (prefetchSegmentDataRoute) {
-                const segmentRoute = {
-                  ...route,
-                  src: prefetchSegmentDataRoute.source.replace(
-                    '/__PAGE__\\.segment\\.rsc$',
-                    `(?<segment>/__PAGE__\\.segment\\.rsc|\\.segment\\.rsc)(?:/)?$`
-                  ),
-                  dest: getDestinationForSegmentRoute(
-                    isDev === true,
-                    entryDirectory,
-                    routeKeys,
-                    prefetchSegmentDataRoute
-                  ).replace('/__PAGE__.segment.rsc', '$segment'),
-                  check: true,
-                };
-
-                routes.push(segmentRoute);
-              }
+          if (
+            isAppClientSegmentCacheEnabled &&
+            prefetchSegmentDataRoutes &&
+            prefetchSegmentDataRoutes.length > 0
+          ) {
+            for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
+              routes.push({
+                ...route,
+                src: prefetchSegmentDataRoute.source,
+                dest: getDestinationForSegmentRoute(
+                  isDev === true,
+                  entryDirectory,
+                  routeKeys,
+                  prefetchSegmentDataRoute
+                ),
+                check: true,
+              });
             }
           }
 
-          routes.push({
-            ...route,
-            src: route.src.replace(
-              new RegExp(escapeStringRegexp('(?:/)?$')),
-              '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
-            ),
-            dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
-          });
+          // use combined regex for .rsc, .prefetch.rsc, and .segments
+          // if PPR or client segment cache is enabled
+          if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
+            });
+          } else {
+            routes.push({
+              ...route,
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                '(?:\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
+            });
+          }
 
           routes.push(route);
         }

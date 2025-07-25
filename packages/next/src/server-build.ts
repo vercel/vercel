@@ -1624,40 +1624,6 @@ export async function serverBuild({
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
-  const staticSegmentRoutes: RouteWithSrc[] = isAppClientSegmentCacheEnabled
-    ? [
-        // {
-        //   src: '^\\/(.*)\\.segments\\/_tree\\.segment\\.rsc$',
-        //   dest: '/$1.prefetch.rsc',
-        //   transforms: [
-        //     {
-        //       type: 'request.headers',
-        //       op: 'append',
-        //       target: {
-        //         key: 'segmentmatch',
-        //       },
-        //       args: '$1',
-        //     },
-        //   ],
-        //   check: true,
-        // },
-        // // if above didn't match we didn't get a static match
-        // // so undo the rewrite to it's original for dynamic route
-        // // matching
-        // {
-        //   src: '^\\/(.*).prefetch.rsc$',
-        //   has: [
-        //     {
-        //       type: 'header',
-        //       key: 'segmentmatch',
-        //     },
-        //   ],
-        //   dest: '/$segmentmatch.segments/_tree.segment.rsc',
-        //   check: true,
-        // },
-      ]
-    : [];
-
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
     entryDirectory,
@@ -1711,7 +1677,8 @@ export async function serverBuild({
       pagesPlaceholderRscEntries[`${pathName}.rsc`] = dummyBlob;
 
       if (isAppClientSegmentCacheEnabled) {
-        pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`];
+        pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`] =
+          dummyBlob;
       }
     }
   }
@@ -2598,8 +2565,6 @@ export async function serverBuild({
             },
           ]
         : []),
-
-      ...staticSegmentRoutes,
 
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
