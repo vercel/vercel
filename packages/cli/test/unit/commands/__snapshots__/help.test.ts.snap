@@ -3768,6 +3768,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
+       --json             Output in JSON format                                                                              
   -N,  --next <MS>        Show next page of results                                                                          
        --update-required  A list of projects affected by an upcoming deprecation                                             
 
