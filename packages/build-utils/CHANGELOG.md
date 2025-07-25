@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 11.0.0
+
+### Major Changes
+
+- Add support for vlt as a package manager ([#13591](https://github.com/vercel/vercel/pull/13591))
+
 ## 10.6.7
 
 ### Patch Changes
