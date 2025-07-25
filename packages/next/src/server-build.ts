@@ -1699,6 +1699,7 @@ export async function serverBuild({
     ? await getStaticSegmentRoutes({
         entryDirectory,
         routesManifest,
+        isAppPPREnabled,
       })
     : [];
 

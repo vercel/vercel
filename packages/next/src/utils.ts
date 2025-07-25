@@ -370,9 +370,11 @@ export async function getRoutesManifest(
 export async function getStaticSegmentRoutes({
   entryDirectory,
   routesManifest,
+  isAppPPREnabled,
 }: {
   entryDirectory: string;
   routesManifest: RoutesManifest;
+  isAppPPREnabled: boolean;
 }): Promise<RouteWithSrc[]> {
   // When clientSegmentCache is enabled, static routes may output additional
   // routes to handle segment requests. This is only relevant when PPR is in
@@ -396,7 +398,8 @@ export async function getStaticSegmentRoutes({
                 false,
                 entryDirectory,
                 routeKeys,
-                prefetchSegmentDataRoute
+                prefetchSegmentDataRoute,
+                isAppPPREnabled
               ),
               check: true,
             });
@@ -535,7 +538,8 @@ export async function getDynamicRoutes({
                   isDev === true,
                   entryDirectory,
                   routeKeys,
-                  prefetchSegmentDataRoute
+                  prefetchSegmentDataRoute,
+                  isAppPPREnabled
                 ),
                 check: true,
               });
@@ -660,9 +664,10 @@ function getDestinationForSegmentRoute(
   prefetchSegmentDataRoute: {
     destination: string;
     routeKeys?: Record<string, string>;
-  }
+  },
+  isAppPPREnabled: boolean
 ) {
-  return `${
+  const dest = `${
     !isDev
       ? path.posix.join(
           '/',
@@ -673,6 +678,17 @@ function getDestinationForSegmentRoute(
   }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
     .map(([key, value]) => `${value}=$${key}`)
     .join('&')}`;
+
+  // When PPR is enabled, we only emit `.rsc` files and not `.prefetch.rsc` files.
+  // Next.js should probably not include `.prefetch.rsc` in the routes manifest, but
+  // because we already have the `isAppPPREnabled` plumbing and various spots where we
+  // switch between `.rsc` and `.prefetch.rsc` based on it, we can leave it in here for now.
+  // Eventually there won't need to be separate RSC outputs and we can remove all these forks.
+  if (!isAppPPREnabled && dest.includes('.prefetch.rsc')) {
+    return dest.replace('.prefetch.rsc', '.rsc');
+  }
+
+  return dest;
 }
 
 export function localizeDynamicRoutes(
