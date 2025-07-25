@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.3
+
+### Patch Changes
+
+- Force publish ([#13615](https://github.com/vercel/vercel/pull/13615))
+
 ## 0.0.2
 
 ### Patch Changes
