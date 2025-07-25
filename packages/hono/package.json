@@ -24,7 +24,7 @@
   ],
   "dependencies": {
     "@vercel/static-config": "3.1.1",
-    "@vercel/node": "workspace:*",
+    "@vercel/node": "5.3.7",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {
