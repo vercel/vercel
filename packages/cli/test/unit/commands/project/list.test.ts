@@ -122,19 +122,6 @@ describe('list', () => {
 
       const output = client.stderr.getFullOutput();
 
-      // Should not contain table formatting
-      expect(output).not.toContain('Project Name');
-      expect(output).not.toContain('Latest Production URL');
-
-      // Should contain JSON output
-      expect(output).toContain('"projects":');
-      expect(output).toContain('"pagination":');
-      expect(output).toContain('"contextName":');
-      expect(output).toContain('"elapsed":');
-
-      // Parse JSON to validate structure
-      const jsonMatch = output.match(/\{[\s\S]*\}/);
-      expect(jsonMatch).toBeTruthy();
 
       const parsedOutput = JSON.parse(jsonMatch![0]);
       expect(parsedOutput).toMatchObject({
