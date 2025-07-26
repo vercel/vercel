@@ -47,6 +47,10 @@ const linkSchema = {
       type: 'string',
       minLength: 1,
     },
+    projectName: {
+      type: 'string',
+      minLength: 1,
+    },
   },
 };
 
@@ -318,7 +322,10 @@ export async function linkFolderToProject(
 
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_PROJECT),
-    JSON.stringify(projectLink)
+    JSON.stringify({
+      ...projectLink,
+      projectName,
+    })
   );
 
   await writeReadme(path);

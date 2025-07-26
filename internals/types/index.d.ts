@@ -421,6 +421,10 @@ export interface ProjectLink {
    * to the selected project root directory.
    */
   projectRootDirectory?: string;
+  /**
+   * Name of the Vercel Project.
+   */
+  projectName?: string;
 }
 
 export interface PaginationOptions {
