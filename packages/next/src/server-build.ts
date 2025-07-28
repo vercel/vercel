@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -55,7 +55,6 @@ import {
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
-  getStaticSegmentRoutes,
 } from './utils';
 import {
   nodeFileTrace,
@@ -340,91 +339,21 @@ export async function serverBuild({
         // we don't need to add the rewrite headers.
         if (protocol || (!pathname && !query)) continue;
 
-        const missing =
-          'missing' in rewrite && rewrite.missing ? rewrite.missing : [];
+        (rewrite as RouteWithSrc).headers = {
+          ...(rewrite as RouteWithSrc).headers,
 
-        // Find any rules that could conflict with our new rule.
-        let found = missing.filter(
-          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
-        );
+          ...(pathname
+            ? {
+                [rewriteHeaders.pathHeader]: pathname,
+              }
+            : {}),
 
-        // If we found a `missing` rule that would conflict with our rule,
-        // skip adding this rewrite.
-        if (
-          found.some(
-            m =>
-              // These are rules that don't have a value check or those that
-              // have their value set to '1'.
-              !m.value || m.value === '1'
-          )
-        ) {
-          continue;
-        }
-
-        const has =
-          'has' in rewrite && rewrite.has
-            ? // As we mutate the array below, we need to clone it to avoid
-              // mutating the original
-              [...rewrite.has]
-            : [];
-
-        // Find any rules that could conflict with our new rule.
-        found = has.filter(
-          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
-        );
-
-        // If we found a `has` rule that would conflict with our rule,
-        // skip adding this rewrite.
-        if (
-          found.some(
-            h =>
-              // These are rules that have a value set to anything other than
-              // '1'.
-              h.value && h.value !== '1'
-          )
-        ) {
-          continue;
-        }
-
-        // Remove any existing RSC header rules as we'll add our own.
-        for (const h of found) {
-          has.splice(has.indexOf(h), 1);
-        }
-
-        // Add our new RSC header rule.
-        has.push({ type: 'header', key: rscHeader, value: '1' });
-
-        // Create a new rewrite that adds the rsc header to the rule.
-        const headers: Record<string, string> =
-          'headers' in rewrite && rewrite.headers
-            ? // Clone the existing headers to avoid mutating the original
-              // object.
-              { ...rewrite.headers }
-            : {};
-
-        const updated: Route = {
-          ...rewrite,
-          // We don't want to perform the actual rewrite here, instead we want
-          // to just add the headers associated with the rewrite.
-          dest: undefined,
-          // We don't want to check here, so omit the check property but we do
-          // want to maintain the order of the rewrites, so add the continue
-          // property.
-          check: undefined,
-          continue: true,
-          has,
-          headers,
+          ...(query
+            ? {
+                [rewriteHeaders.queryHeader]: query,
+              }
+            : {}),
         };
-
-        // If the pathname was rewritten, add it to the headers.
-        if (pathname) headers[rewriteHeaders.pathHeader] = pathname;
-
-        // If the query was rewritten, add it to the headers.
-        if (query) headers[rewriteHeaders.queryHeader] = query;
-
-        // Insert the updated rewrite before the original rewrite.
-        rewrites.splice(i, 0, updated);
-        i++;
       }
     };
 
@@ -1520,6 +1449,104 @@ export async function serverBuild({
     );
   }
 
+  const nodeMiddleware = await getNodeMiddleware({
+    config,
+    baseDir,
+    projectDir,
+    entryPath,
+    nextVersion,
+    nodeVersion: nodeVersion.runtime,
+    lstatSema,
+    lstatResults,
+    pageExtensions: requiredServerFilesManifest.config.pageExtensions,
+    routesManifest,
+    outputDirectory,
+    prerenderBypassToken: prerenderManifest.bypassToken as string,
+    isCorrectMiddlewareOrder,
+    functionsConfigManifest,
+    requiredServerFilesManifest,
+  });
+
+  const middleware = await getMiddlewareBundle({
+    config,
+    entryPath,
+    outputDirectory,
+    routesManifest,
+    isCorrectMiddlewareOrder,
+    prerenderBypassToken: prerenderManifest.bypassToken || '',
+    nextVersion,
+    appPathRoutesManifest: appPathRoutesManifest || {},
+  });
+
+  if (appPathRoutesManifest) {
+    // create .rsc variant for app lambdas and edge functions
+    // to match prerenders so we can route the same when the
+    // RSC header is present
+    const edgeFunctions = middleware.edgeFunctions;
+
+    for (const page of Object.values(appPathRoutesManifest)) {
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        page === '/' ? '/index' : page
+      );
+
+      if (lambdas[pathname]) {
+        lambdas[`${pathname}.rsc`] = lambdas[pathname];
+
+        if (isAppPPREnabled) {
+          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
+        }
+      }
+
+      if (edgeFunctions[pathname]) {
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
+
+        if (isAppPPREnabled) {
+          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+            edgeFunctions[pathname];
+        }
+      }
+    }
+
+    for (const route of routesManifest.dynamicRoutes) {
+      // Skip any routes that don't have the sourcePage property defined. Only
+      // the dynamic routes that are partials will have their sourcePage
+      // defined so we can skip the usual isAppPPREnabled check.
+      if (!('sourcePage' in route)) continue;
+      if (typeof route.sourcePage !== 'string') continue;
+
+      // Skip this addition when the routes are the same, no need to alias them
+      // again!
+      if (route.sourcePage === route.page) continue;
+
+      const sourcePathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.sourcePage === '/' ? '/index' : route.sourcePage
+      );
+
+      const pathname = path.posix.join(
+        './',
+        entryDirectory,
+        route.page === '/' ? '/index' : route.page
+      );
+
+      if (lambdas[sourcePathname]) {
+        lambdas[`${pathname}`] = lambdas[sourcePathname];
+        lambdas[`${pathname}.rsc`] = lambdas[sourcePathname];
+        lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[sourcePathname];
+      }
+
+      if (edgeFunctions[sourcePathname]) {
+        edgeFunctions[`${pathname}`] = edgeFunctions[sourcePathname];
+        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[sourcePathname];
+        edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
+          edgeFunctions[sourcePathname];
+      }
+    }
+  }
+
   const prerenderRoute = onPrerenderRoute({
     appDir,
     pagesDir,
@@ -1593,45 +1620,9 @@ export async function serverBuild({
     ];
   });
 
-  const nodeMiddleware = await getNodeMiddleware({
-    config,
-    baseDir,
-    projectDir,
-    entryPath,
-    nextVersion,
-    nodeVersion: nodeVersion.runtime,
-    lstatSema,
-    lstatResults,
-    pageExtensions: requiredServerFilesManifest.config.pageExtensions,
-    routesManifest,
-    outputDirectory,
-    prerenderBypassToken: prerenderManifest.bypassToken as string,
-    isCorrectMiddlewareOrder,
-    functionsConfigManifest,
-    requiredServerFilesManifest,
-  });
-
-  const middleware = await getMiddlewareBundle({
-    config,
-    entryPath,
-    outputDirectory,
-    routesManifest,
-    isCorrectMiddlewareOrder,
-    prerenderBypassToken: prerenderManifest.bypassToken || '',
-    nextVersion,
-    appPathRoutesManifest: appPathRoutesManifest || {},
-  });
-
   const isNextDataServerResolving =
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
-
-  const staticSegmentRoutes = isAppClientSegmentCacheEnabled
-    ? await getStaticSegmentRoutes({
-        entryDirectory,
-        routesManifest,
-      })
-    : [];
 
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
@@ -1679,10 +1670,16 @@ export async function serverBuild({
 
     for (const page of pagesEntries) {
       const pathName = page.startsWith('/') ? page.slice(1) : page;
-      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+      const dummyBlob = new FileBlob({
         data: '{}',
         contentType: 'application/json',
       });
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = dummyBlob;
+
+      if (isAppClientSegmentCacheEnabled) {
+        pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`] =
+          dummyBlob;
+      }
     }
   }
 
@@ -1802,73 +1799,6 @@ export async function serverBuild({
       contentType: 'application/json',
       fsPath: catchallFsPath,
     });
-  }
-
-  if (appPathRoutesManifest) {
-    // create .rsc variant for app lambdas and edge functions
-    // to match prerenders so we can route the same when the
-    // RSC header is present
-    const edgeFunctions = middleware.edgeFunctions;
-
-    for (const page of Object.values(appPathRoutesManifest)) {
-      const pathname = path.posix.join(
-        './',
-        entryDirectory,
-        page === '/' ? '/index' : page
-      );
-
-      if (lambdas[pathname]) {
-        lambdas[`${pathname}.rsc`] = lambdas[pathname];
-
-        if (isAppPPREnabled) {
-          lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[pathname];
-        }
-      }
-
-      if (edgeFunctions[pathname]) {
-        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[pathname];
-
-        if (isAppPPREnabled) {
-          edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
-            edgeFunctions[pathname];
-        }
-      }
-    }
-
-    for (const route of routesManifest.dynamicRoutes) {
-      // Skip any routes that don't have the sourcePage property defined. Only
-      // the dynamic routes that are partials will have their sourcePage
-      // defined so we can skip the usual isAppPPREnabled check.
-      if (!('sourcePage' in route)) continue;
-      if (typeof route.sourcePage !== 'string') continue;
-
-      // Skip this addition when the routes are the same, no need to alias them
-      // again!
-      if (route.sourcePage === route.page) continue;
-
-      const sourcePathname = path.posix.join(
-        './',
-        entryDirectory,
-        route.sourcePage === '/' ? '/index' : route.sourcePage
-      );
-
-      const pathname = path.posix.join(
-        './',
-        entryDirectory,
-        route.page === '/' ? '/index' : route.page
-      );
-
-      if (lambdas[sourcePathname]) {
-        lambdas[`${pathname}.rsc`] = lambdas[sourcePathname];
-        lambdas[`${pathname}${RSC_PREFETCH_SUFFIX}`] = lambdas[sourcePathname];
-      }
-
-      if (edgeFunctions[sourcePathname]) {
-        edgeFunctions[`${pathname}.rsc`] = edgeFunctions[sourcePathname];
-        edgeFunctions[`${pathname}${RSC_PREFETCH_SUFFIX}`] =
-          edgeFunctions[sourcePathname];
-      }
-    }
   }
 
   const prefetchSegmentHeader = routesManifest?.rsc?.prefetchSegmentHeader;
@@ -2268,7 +2198,11 @@ export async function serverBuild({
                   },
                 ]
               : []),
-            ...(rscPrefetchHeader && isAppPPREnabled
+            ...(rscPrefetchHeader &&
+            isAppPPREnabled &&
+            // when client segment cache is enabled we do not need
+            // the .prefetch.rsc routing
+            !isAppClientSegmentCacheEnabled
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}$`,
@@ -2513,6 +2447,30 @@ export async function serverBuild({
           ]
         : []),
 
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to the regular RSC request.
+      ...(isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
+              check: true,
+            },
+          ]
+        : []),
+
       // routes that are called after each rewrite or after routes
       // if there no rewrites
       { handle: 'rewrite' },
@@ -2608,8 +2566,6 @@ export async function serverBuild({
           ]
         : []),
 
-      ...staticSegmentRoutes,
-
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
       ...dynamicRoutes,
@@ -2641,30 +2597,6 @@ export async function serverBuild({
                 '/(.*).json'
               )}`,
               dest: '__next_data_catchall',
-            },
-          ]
-        : []),
-
-      // If it didn't match any of the static routes or dynamic ones, then we
-      // should fallback to the regular RSC request.
-      ...(isAppClientSegmentCacheEnabled &&
-      rscPrefetchHeader &&
-      prefetchSegmentHeader &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
-              check: true,
             },
           ]
         : []),

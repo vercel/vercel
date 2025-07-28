@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.10.8
+
+### Patch Changes
+
+- Reduce segment routes ([#13602](https://github.com/vercel/vercel/pull/13602))
+
+## 4.10.7
+
+### Patch Changes
+
+- Correct node middleware require path ([#13603](https://github.com/vercel/vercel/pull/13603))
+
+## 4.10.6
+
+### Patch Changes
+
+- Fix applying sourcePage mapping for lambdas ([#13599](https://github.com/vercel/vercel/pull/13599))
+
 ## 4.10.5
 
 ### Patch Changes

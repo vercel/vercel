@@ -1,5 +1,56 @@
 # vercel
 
+## 44.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`04ab34baac9c5c3b5b4c7c4092ca9f739c533454`](https://github.com/vercel/vercel/commit/04ab34baac9c5c3b5b4c7c4092ca9f739c533454)]:
+  - @vercel/hono@0.0.4
+
+## 44.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`f816c405a7cbda4ff8c4231741f90c0608412ba6`](https://github.com/vercel/vercel/commit/f816c405a7cbda4ff8c4231741f90c0608412ba6)]:
+  - @vercel/hono@0.0.3
+
+## 44.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`a646bee5f8f1fe7ac9451605e81f15b2e275d5b0`](https://github.com/vercel/vercel/commit/a646bee5f8f1fe7ac9451605e81f15b2e275d5b0)]:
+  - @vercel/next@4.10.8
+
+## 44.6.0
+
+### Minor Changes
+
+- Add --json flag to projects list ([#13578](https://github.com/vercel/vercel/pull/13578))
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+### Patch Changes
+
+- Updated dependencies [[`4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9`](https://github.com/vercel/vercel/commit/4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9), [`b79db72d870a8d2e98e36a7413c656ae80fed01f`](https://github.com/vercel/vercel/commit/b79db72d870a8d2e98e36a7413c656ae80fed01f)]:
+  - @vercel/node@5.3.7
+  - @vercel/hono@0.0.2
+  - @vercel/build-utils@11.0.0
+  - @vercel/static-build@2.7.17
+
+## 44.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`ad18ebf61438332fca31d2960b2c35ca609a45fa`](https://github.com/vercel/vercel/commit/ad18ebf61438332fca31d2960b2c35ca609a45fa)]:
+  - @vercel/next@4.10.7
+
+## 44.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`e6fd638c1b54474e2f73c37c24156fead1f60722`](https://github.com/vercel/vercel/commit/e6fd638c1b54474e2f73c37c24156fead1f60722)]:
+  - @vercel/next@4.10.6
+
 ## 44.5.3
 
 ### Patch Changes
