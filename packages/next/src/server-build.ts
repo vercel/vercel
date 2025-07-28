@@ -1861,6 +1861,41 @@ export async function serverBuild({
     }
   }
 
+  // if
+  const shouldHandleSegmentToRsc = Boolean(
+    isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+  );
+
+  const denormalizeSegmentRoute = () => {
+    return [
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to either prefetch or normal RSC request
+      ...(shouldHandleSegmentToRsc &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
+              check: true,
+            },
+          ]
+        : []),
+    ];
+  };
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -2373,29 +2408,7 @@ export async function serverBuild({
 
       { handle: 'resource' },
 
-      // If it didn't match any of the static routes or dynamic ones, then we
-      // should fallback to the regular RSC request.
-      ...(isAppClientSegmentCacheEnabled &&
-      rscPrefetchHeader &&
-      prefetchSegmentHeader &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
-              check: true,
-            },
-          ]
-        : []),
+      ...denormalizeSegmentRoute(),
 
       ...fallbackRewrites,
 
@@ -2490,6 +2503,49 @@ export async function serverBuild({
             const { pathname } = new URL(route.dest || '/', 'http://n');
             return !isDynamicRoute(pathname.replace(/(\\)?\.json$/, ''));
           })
+        : []),
+
+      // check for static .prefetch.rsc or normal rsc match if we
+      // didn't match segment output
+      ...denormalizeSegmentRoute(),
+
+      // if no static one re-route to segment route before processing
+      // dynamic routes which can still match segment routes
+      ...(shouldHandleSegmentToRsc &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)(${isAppPPREnabled ? '\\.prefetch\\.rsc' : '\\.rsc'})$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                `/$path${prefetchSegmentDirSuffix}/$segmentPath${prefetchSegmentSuffix}`
+              ),
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                  value: '1',
+                },
+                {
+                  type: 'header',
+                  key: rscPrefetchHeader,
+                  value: '1',
+                },
+                {
+                  type: 'header',
+                  key: prefetchSegmentHeader,
+                  value: '/(?<segmentPath>.+)',
+                },
+              ],
+              check: true,
+            },
+          ]
         : []),
 
       // /_next/data routes for getServerProps/getStaticProps pages
