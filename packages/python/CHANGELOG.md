@@ -1,5 +1,21 @@
 # @vercel/python
 
+## 5.0.0
+
+### Major Changes
+
+- By default, the Python builder excludes certain directories from the zip output. ([#13609](https://github.com/vercel/vercel/pull/13609))
+  In vercel.json it's also possible to specify a custom `excludeFiles` rule.
+  Previously `excludeFiles` would replace the default exclusions entirely. Now the
+  default exclusions will always apply. The default exclusions consist of:
+
+  - .git
+  - .vercel
+  - .pnpm-store
+  - node_modules (also excluded when nested)
+  - .next
+  - .nuxt
+
 ## 4.8.0
 
 ### Minor Changes
