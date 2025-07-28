@@ -2373,6 +2373,30 @@ export async function serverBuild({
 
       { handle: 'resource' },
 
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to the regular RSC request.
+      ...(isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix
+        ? [
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
+              ),
+              dest: path.posix.join(
+                '/',
+                entryDirectory,
+                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
+              ),
+              check: true,
+            },
+          ]
+        : []),
+
       ...fallbackRewrites,
 
       // make sure 404 page is used when a directory is matched without
@@ -2447,30 +2471,6 @@ export async function serverBuild({
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
               dest: `${path.posix.join('/', entryDirectory, '/')}$1`,
-              check: true,
-            },
-          ]
-        : []),
-
-      // If it didn't match any of the static routes or dynamic ones, then we
-      // should fallback to the regular RSC request.
-      ...(isAppClientSegmentCacheEnabled &&
-      rscPrefetchHeader &&
-      prefetchSegmentHeader &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
               check: true,
             },
           ]

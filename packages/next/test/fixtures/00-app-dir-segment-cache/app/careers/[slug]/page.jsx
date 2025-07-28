@@ -7,6 +7,8 @@ export const generateStaticParams = async () => {
 export default async function Page({ params }) {
   const { slug } = await params;
 
+  console.log({ slug });
+
   if (!slug.includes('foobar')) {
     redirect('/careers');
   }
