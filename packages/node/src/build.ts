@@ -360,14 +360,19 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
-export const build: BuildV3 = async ({
+export const build = async ({
   files,
   entrypoint,
+  shim,
+  useWebApi,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}) => {
+}: Parameters<BuildV3>[0] & {
+  shim?: (handler: string) => string;
+  useWebApi?: boolean;
+}): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -417,7 +422,7 @@ export const build: BuildV3 = async ({
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
@@ -445,6 +450,13 @@ export const build: BuildV3 = async ({
     ];
   }
 
+  if (shim) {
+    preparedFiles['shim.js'] = new FileBlob({
+      data: shim(handler),
+    });
+    handler = 'shim.js';
+  }
+
   if (isEdgeFunction) {
     output = new EdgeFunction({
       entrypoint: handler,
@@ -469,7 +481,7 @@ export const build: BuildV3 = async ({
       handler,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      useWebApi: isMiddleware,
+      useWebApi: isMiddleware ? true : useWebApi,
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
