@@ -1,32 +1,6 @@
-// Import types from actual database packages
-import type { Pool as PgPoolType } from 'pg';
-import type { Pool as MySQL2PoolType } from 'mysql2/promise';
-import type { Pool as MariaDBPoolType } from 'mariadb';
-import type { MongoClient as MongoDBClientType } from 'mongodb';
-import type { Redis as IoRedisType } from 'ioredis';
-import type { Client as CassandraClientType } from 'cassandra-driver';
 import { getContext } from '../get-context';
 
 const DEBUG = !!process.env.DEBUG;
-
-// Note: Our interfaces are simplified versions that only include the properties
-// needed for lifecycle observation. They are compatible subsets of the actual types.
-
-// Type assertions to verify our interfaces are proper subtypes of the imported types
-// This ensures that real database instances can be used where our interfaces are expected
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _pgSubtypeCheck = (pool: PgPoolType): PgPool => pool;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _mysql2SubtypeCheck = (pool: MySQL2PoolType): MySQL2Pool => pool;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _mariadbSubtypeCheck = (pool: MariaDBPoolType): MariaDBPool => pool;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _mongoSubtypeCheck = (client: MongoDBClientType): MongoDBPool => client;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _ioredisSubtypeCheck = (redis: IoRedisType): RedisPool => redis;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- this is a subtype check
-const _cassandraSubtypeCheck = (client: CassandraClientType): CassandraPool =>
-  client;
 
 // Note: Different database pools support different observation patterns:
 // - PostgreSQL (pg), MySQL2, MariaDB: pool.on('release') events
@@ -102,8 +76,18 @@ interface CassandraPool {
   connect?: (callback?: (err?: Error) => void) => Promise<void>;
   execute?: (query: string, params?: any[], options?: any) => Promise<any>;
 }
-
-type DbPool =
+/**
+ * The database pool object. The supported pool types are:
+ * - PostgreSQL (pg)
+ * - MySQL2
+ * - MariaDB
+ * - MongoDB
+ * - Redis (ioredis)
+ * - Cassandra (cassandra-driver)
+ * - OTHER: This method uses duck-typing to detect the pool type. Respectively you can
+ *   pass in any object with a compatible interface.
+ */
+export type DbPool =
   | PgPool
   | MySQLPool
   | MySQL2Pool
