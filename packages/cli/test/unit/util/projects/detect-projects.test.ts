@@ -41,4 +41,12 @@ describe('detectProjects()', () => {
       ['packages/frontend/b', ['ember']],
     ]);
   });
+
+  // This fixture specifically checks that we don't traverse into `node_modules` for workspace matching.
+  // If it traverses into `node_modules` for this fixture it will result in not matching Next.js as a framework.
+  it('should match "70-node-modules-with-workspace"', async () => {
+    const dir = join(FS_DETECTORS_FIXTURES, '70-node-modules-with-workspace');
+    const detected = await detectProjects(dir);
+    expect(mapDetected(detected)).toEqual([['', ['nextjs']]]);
+  });
 });
