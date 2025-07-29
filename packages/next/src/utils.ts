@@ -510,7 +510,6 @@ export async function getDynamicRoutes({
                   routeKeys,
                   prefetchSegmentDataRoute
                 ),
-                check: true,
               });
             }
           }
