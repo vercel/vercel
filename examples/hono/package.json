@@ -2,9 +2,8 @@
   "name": "hono",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "dev": "vc dev",
+    "build": "vc build"
   },
   "dependencies": {
     "hono": "^4.8.9"
@@ -12,6 +11,7 @@
   "devDependencies": {
     "@types/node": "^20.11.17",
     "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vercel": "latest"
   }
 }
