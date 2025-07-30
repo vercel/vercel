@@ -84,7 +84,7 @@
       "mustContain": ":",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -102,7 +102,7 @@
       },
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -128,7 +128,7 @@
       "mustContain": ":",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -143,7 +143,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -158,7 +158,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -182,7 +182,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -218,7 +218,7 @@
       "status": 200,
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       },
       "mustNotContain": "<html",
       "mustContain": ":"
@@ -247,7 +247,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component"
@@ -260,7 +260,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "bodyMustBe": "{}"
     },
@@ -278,7 +278,7 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "rsc": "1"
       },
       "responseHeaders": {
@@ -315,7 +315,7 @@
       },
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -497,7 +497,7 @@
       },
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       }
     },
     {
@@ -514,7 +514,7 @@
       "mustContain": "hello world",
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       }
     }
   ]

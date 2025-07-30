@@ -11,7 +11,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
@@ -24,7 +24,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "responseHeaders": {
@@ -37,7 +37,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_index"
       },
       "responseHeaders": {
@@ -50,7 +50,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog"
       },
       "responseHeaders": {
@@ -63,7 +63,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world"
       },
       "responseHeaders": {
@@ -76,7 +76,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1",
+        "next-router-prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world/__PAGE__"
       },
       "responseHeaders": {

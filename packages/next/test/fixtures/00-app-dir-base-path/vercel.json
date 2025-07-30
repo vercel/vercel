@@ -39,7 +39,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     

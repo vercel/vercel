@@ -30,7 +30,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -45,7 +45,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -69,7 +69,7 @@
       "mustNotContain": "<html",
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       }
     },
     {
@@ -105,7 +105,7 @@
       "status": 200,
       "headers": {
         "rsc": 1,
-        "Next-Router-Prefetch": 1
+        "next-router-prefetch": 1
       },
       "mustNotContain": "<html",
       "mustContain": ":"
@@ -134,7 +134,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component"
@@ -180,7 +180,7 @@
       },
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -372,7 +372,7 @@
       },
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       }
     },
     {
@@ -394,7 +394,7 @@
       "status": 200,
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"

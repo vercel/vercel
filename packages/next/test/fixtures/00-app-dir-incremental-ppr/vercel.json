@@ -32,7 +32,7 @@
       "path": "/",
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "status": 200,
       "mustContain": "sentinel:loading",
@@ -75,14 +75,14 @@
       "mustContain": "sentinel:static",
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       }
     },
     {
       "path": "/disabled",
       "headers": {
         "rsc": "1",
-        "Next-Router-Prefetch": "1"
+        "next-router-prefetch": "1"
       },
       "status": 200,
       "mustNotContain": "sentinel:dynamic"
