@@ -27,21 +27,24 @@ import { getTokenPayload, isExpired, refreshToken } from './token';
  * });
  * ```
  */
-export async function getVercelOidcToken(refresh = false): Promise<string> {
+export async function getVercelOidcToken(): Promise<string> {
   let token = '';
+  let err: any;
+
   try {
     token = getVercelOidcTokenSync();
   } catch (error) {
-    if (!refresh) {
-      throw error;
-    }
+    err = error;
   }
-  if (refresh) {
+
+  try {
     if (!token || isExpired(getTokenPayload(token))) {
       // better to handle the errors here or let them propogate up to the user so they can handle it?
       await refreshToken();
       token = getVercelOidcTokenSync();
     }
+  } catch (error) {
+    throw new Error(`Failed to refresh OIDC token: ${err}: ${error}`);
   }
   return token;
 }

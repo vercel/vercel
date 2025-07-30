@@ -45,5 +45,8 @@
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@types/ms": "2.1.0"
   }
 }
