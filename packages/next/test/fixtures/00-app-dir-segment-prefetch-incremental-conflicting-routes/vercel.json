@@ -12,7 +12,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/_tree"
+        "next-router-segment-prefetch": "/_tree"
       },
       "responseHeaders": {
         "x-matched-path": "/dynamic.prefetch.rsc"

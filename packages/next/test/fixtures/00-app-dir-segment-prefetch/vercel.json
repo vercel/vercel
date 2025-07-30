@@ -12,7 +12,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/_tree"
+        "next-router-segment-prefetch": "/_tree"
       },
       "responseHeaders": {
         "x-matched-path": "/index.segments/_tree.segment.rsc"
@@ -25,7 +25,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/_tree"
+        "next-router-segment-prefetch": "/_tree"
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/_tree.segment.rsc"
@@ -38,7 +38,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/_index"
+        "next-router-segment-prefetch": "/_index"
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/_index.segment.rsc"
@@ -51,7 +51,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/blog"
+        "next-router-segment-prefetch": "/blog"
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/blog.segment.rsc"
@@ -64,7 +64,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world"
+        "next-router-segment-prefetch": "/blog/$d$slug$hello-world"
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world.segment.rsc"
@@ -77,7 +77,7 @@
       "headers": {
         "rsc": "1",
         "next-router-prefetch": "1",
-        "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world/__PAGE__"
+        "next-router-segment-prefetch": "/blog/$d$slug$hello-world/__PAGE__"
       },
       "responseHeaders": {
         "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
