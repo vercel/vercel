@@ -313,6 +313,7 @@ describe('link', () => {
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
+      expect(projectJson.projectName).toEqual(project.name);
     });
 
     it('should track use of redacted `--project` option', async () => {
@@ -373,6 +374,7 @@ describe('link', () => {
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
+      expect(projectJson.projectName).toEqual(project.name);
 
       const gitignore = await readFile(join(cwd, '.gitignore'), 'utf8');
       expect(gitignore).toBe(`.vercel${EOL}`);
@@ -465,6 +467,7 @@ describe('link', () => {
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(project.id);
+    expect(projectJson.projectName).toEqual(project.name);
   });
 
   it('should create new Project', async () => {
@@ -539,6 +542,7 @@ describe('link', () => {
     let projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(proj1.id);
+    expect(projectJson.projectName).toEqual(proj1.name);
 
     client.setArgv('--project', proj2.name!, '--yes');
     const exitCodeLink2 = await link(client);
@@ -547,6 +551,7 @@ describe('link', () => {
     projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     expect(projectJson.orgId).toEqual(user.id);
     expect(projectJson.projectId).toEqual(proj2.id);
+    expect(projectJson.projectName).toEqual(proj2.name);
   });
 
   it('should track use of deprecated `cwd` positional argument', async () => {
