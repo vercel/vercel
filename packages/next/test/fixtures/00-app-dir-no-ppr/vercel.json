@@ -269,7 +269,7 @@
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -298,7 +298,7 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -310,7 +310,7 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
         "content-type": "text/x-component"
       },
       "headers": {
@@ -345,14 +345,14 @@
       "status": 200,
       "mustContain": "hello from app/dashboard/deployments/[id]/settings",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -365,14 +365,14 @@
       "status": 200,
       "mustContain": "catchall",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
         "RSC": "1"
@@ -385,7 +385,7 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -405,7 +405,7 @@
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
