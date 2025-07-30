@@ -9,10 +9,8 @@ import { getTokenPayload, isExpired, refreshToken } from './token';
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
  *
- * Unlike the `getVercelOidcTokenSync` function, this function will optionally refresh the token if it is expired.
- * by pulling the latest token from the Vercel CLI.
+ * Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
  *
- * @param {boolean} refresh - Whether to refresh the token if it is expired or missing.
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
  *
@@ -39,7 +37,6 @@ export async function getVercelOidcToken(): Promise<string> {
 
   try {
     if (!token || isExpired(getTokenPayload(token))) {
-      // better to handle the errors here or let them propogate up to the user so they can handle it?
       await refreshToken();
       token = getVercelOidcTokenSync();
     }
@@ -56,6 +53,8 @@ export async function getVercelOidcToken(): Promise<string> {
  *
  * This function is used to retrieve the OIDC token from the request context or the environment variable.
  * It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+ *
+ * This function will not refresh the token if it is expired. For refreshing the token, use the @link{getVercelOidcToken} function.
  *
  * @returns {string} The OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.

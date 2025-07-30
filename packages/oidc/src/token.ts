@@ -9,21 +9,31 @@ interface TokenPayload {
   exp: number;
 }
 
-function getVercelDataDir(): string | null {
-  const vercelFolder = 'com.vercel.cli';
+function getUserDataDir(): string | null {
   if (process.env.XDG_DATA_HOME) {
-    return path.join(process.env.XDG_DATA_HOME, vercelFolder);
+    return process.env.XDG_DATA_HOME;
   }
   switch (os.platform()) {
     case 'darwin':
-      return path.join('~/Library/Application Support', vercelFolder);
+      return path.join(os.homedir(), 'Library/Application Support');
     case 'linux':
-      return path.join('~/.local/share', vercelFolder);
+      return path.join(os.homedir(), '.local/share');
     case 'win32':
-      return path.join('%LOCALAPPDATA%', vercelFolder);
+      if (process.env.LOCALAPPDATA) {
+        return process.env.LOCALAPPDATA;
+      }
+      return null;
     default:
       return null;
   }
+}
+function getVercelDataDir(): string | null {
+  const vercelFolder = 'com.vercel.cli';
+  const dataDir = getUserDataDir();
+  if (!dataDir) {
+    return null;
+  }
+  return path.join(dataDir, vercelFolder);
 }
 
 function getVercelCliToken(): string | null {
@@ -56,34 +66,46 @@ async function getVercelOidcToken(
       },
     });
     if (!res.ok) {
-      throw new Error(`failed to refresh token: ${res.statusText}`);
+      throw new VercelOidcTokenError(
+        `Failed to refresh OIDC token: ${res.statusText}`
+      );
     }
-    if (!res.json) {
-      throw new Error('failed to refresh token: no json response');
-    }
-    const tokenRes = (await res.json()) as VercelTokenResponse;
+    const tokenRes = await res.json();
+    assertVercelOidcTokenResponse(tokenRes);
     return tokenRes;
   } catch (e) {
-    const message = e instanceof Error ? e.message : e;
-    throw new Error(`failed to refresh token: ${message}`);
+    throw new VercelOidcTokenError(`Failed to refresh OIDC token`, e);
+  }
+}
+
+function assertVercelOidcTokenResponse(
+  res: unknown
+): asserts res is VercelTokenResponse {
+  if (!res || typeof res !== 'object') {
+    throw new TypeError('Expected an object');
+  }
+  if (!('token' in res) || typeof res.token !== 'string') {
+    throw new TypeError('Expected a string-valued token property');
   }
 }
 
 function findProjectId(): string {
   const dir = findRootDir();
   if (!dir) {
-    throw new Error('unable to find root directory');
+    throw new VercelOidcTokenError('Unable to find root directory');
   }
   try {
     const pkgPath = path.join(dir, '.vercel', 'project.json');
     if (!fs.existsSync(pkgPath)) {
-      throw new Error('project.json not found');
+      throw new VercelOidcTokenError('Project.json not found');
     }
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    if (typeof pkg.projectId !== 'string') {
+      throw new TypeError('Expected a string-valued projectId property');
+    }
     return pkg.projectId;
   } catch (e) {
-    const message = e instanceof Error ? e.message : e;
-    throw new Error(`unable to find project id: ${message}`);
+    throw new VercelOidcTokenError(`Unable to find project id`, e);
   }
 }
 
@@ -98,45 +120,52 @@ function findRootDir(): string {
       dir = path.dirname(dir);
     }
   } catch (e) {
-    throw new Error('token refresh only supported in node server environments');
+    throw new VercelOidcTokenError(
+      'Token refresh only supported in node server environments'
+    );
   }
-  throw new Error('unable to find root directory');
+  throw new VercelOidcTokenError('Unable to find root directory');
 }
 
 function saveToken(token: VercelTokenResponse, projectId: string): void {
   try {
-    const tmpDir = os.tmpdir();
-    const tokenPath = path.join(tmpDir, `${projectId}.json`);
+    const dir = getUserDataDir();
+    if (!dir) {
+      throw new VercelOidcTokenError('Unable to find user data directory');
+    }
+    const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
     const tokenJson = JSON.stringify(token);
     fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
     fs.writeFileSync(tokenPath, tokenJson);
+    fs.chmodSync(tokenPath, 0o600);
     return;
   } catch (e) {
-    const message = e instanceof Error ? e.message : e;
-    throw new Error(`failed to save token: ${message}`);
+    throw new VercelOidcTokenError(`Failed to save token`, e);
   }
 }
 
 function loadToken(projectId: string): VercelTokenResponse | null {
   try {
-    const tmpDir = os.tmpdir();
-    const tokenPath = path.join(tmpDir, `${projectId}.json`);
+    const dir = getUserDataDir();
+    if (!dir) {
+      return null;
+    }
+    const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
     if (!fs.existsSync(tokenPath)) {
       return null;
     }
-    const tokenJson = fs.readFileSync(tokenPath, 'utf8');
-    const token = JSON.parse(tokenJson) as VercelTokenResponse;
+    const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+    assertVercelOidcTokenResponse(token);
     return token;
   } catch (e) {
-    const message = e instanceof Error ? e.message : e;
-    throw new Error(`failed to load token: ${message}`);
+    throw new VercelOidcTokenError(`Failed to load token`, e);
   }
 }
 
 export function getTokenPayload(token: string): TokenPayload {
   const tokenParts = token.split('.');
   if (tokenParts.length !== 3) {
-    throw new Error('Invalid token');
+    throw new VercelOidcTokenError('Invalid token');
   }
 
   const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -157,18 +186,39 @@ export async function refreshToken(): Promise<void> {
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
     const authToken = getVercelCliToken();
     if (!authToken) {
-      throw new Error('failed to refresh token: login to vercel cli');
+      throw new VercelOidcTokenError(
+        'Failed to refresh OIDC token: login to vercel cli'
+      );
     }
     const projectId = findProjectId();
     if (!projectId) {
-      throw new Error('failed to refresh token: project id not found');
+      throw new VercelOidcTokenError(
+        'Failed to refresh OIDC token: project id not found'
+      );
     }
     maybeToken = await getVercelOidcToken(authToken, projectId);
     if (!maybeToken) {
-      throw new Error('failed to refresh token');
+      throw new VercelOidcTokenError('Failed to refresh OIDC token');
     }
     saveToken(maybeToken, projectId);
   }
   process.env.VERCEL_OIDC_TOKEN = maybeToken.token;
   return;
+}
+
+export class VercelOidcTokenError extends Error {
+  cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = 'VercelOidcTokenError';
+    this.cause = cause;
+  }
+
+  toString() {
+    if (this.cause) {
+      return `${this.name}: ${this.message}: ${this.cause}`;
+    }
+    return `${this.name}: ${this.message}`;
+  }
 }
