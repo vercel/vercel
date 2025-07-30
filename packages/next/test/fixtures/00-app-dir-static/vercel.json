@@ -11,14 +11,14 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -27,11 +27,11 @@
       "path": "/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -63,7 +63,7 @@
       "path": "/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
