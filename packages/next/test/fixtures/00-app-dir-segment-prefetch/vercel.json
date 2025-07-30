@@ -10,7 +10,7 @@
       "path": "/?_rsc=1r34m",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_tree"
       },
@@ -23,7 +23,7 @@
       "path": "/blog/hello-world?_rsc=1r34m",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_tree"
       },
@@ -36,7 +36,7 @@
       "path": "/blog/hello-world?_rsc=nn07o",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/_index"
       },
@@ -49,7 +49,7 @@
       "path": "/blog/hello-world?_rsc=ydjbj",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog"
       },
@@ -62,7 +62,7 @@
       "path": "/blog/hello-world?_rsc=5ga50",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world"
       },
@@ -75,7 +75,7 @@
       "path": "/blog/hello-world?_rsc=1a29i",
       "status": 200,
       "headers": {
-        "RSC": "1",
+        "rsc": "1",
         "Next-Router-Prefetch": "1",
         "Next-Router-Segment-Prefetch": "/blog/$d$slug$hello-world/__PAGE__"
       },

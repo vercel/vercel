@@ -20,7 +20,7 @@
       "path": "/",
       "status": 200,
       "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustNotContain": "<html",
       "mustContain": "catch-all"
@@ -39,7 +39,7 @@
       "path": "/nested",
       "status": 200,
       "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustNotContain": "<html",
       "mustContain": "catch-all"
@@ -58,7 +58,7 @@
       "path": "/first",
       "status": 200,
       "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustNotContain": "<html",
       "mustContain": "catch-all"
@@ -77,7 +77,7 @@
       "path": "/another",
       "status": 200,
       "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustNotContain": "<html",
       "mustContain": "catch-all"

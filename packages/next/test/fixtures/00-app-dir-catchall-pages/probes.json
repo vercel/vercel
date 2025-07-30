@@ -14,7 +14,7 @@
       "path": "/en/about",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "bodyMustBe": "{}"
     },
@@ -22,7 +22,7 @@
       "path": "/en/foobar",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustNotContain": "<html"
     }
