@@ -15,8 +15,8 @@
       "path": "/en-us/t/size-chart/mens/",
       "status": 200,
        "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       },
       "mustContain": ":{",
       "mustNotContain": ".prefetch"
@@ -25,7 +25,7 @@
       "path": "/en-us/t/size-chart/mens/",
       "status": 200,
        "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustContain": ":{",
       "mustNotContain": ".rsc"
@@ -34,7 +34,7 @@
       "path": "/dynamic/category-1/id-1/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "fetchOptions": {
         "redirect": "manual"
@@ -47,17 +47,17 @@
       "status": 200,
       "mustContain": "hello from /ssg",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/ssg/",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -87,17 +87,17 @@
       "status": 200,
       "mustContain": "hello from app/dashboard/deployments/[id]/settings",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/123/settings/",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -107,17 +107,17 @@
       "status": 200,
       "mustContain": "catchall",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard/deployments/catchall/something/",
       "status": 200,
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -127,14 +127,14 @@
       "status": 200,
       "mustContain": "hello from app/dashboard",
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
       "path": "/dashboard/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -143,11 +143,11 @@
       "path": "/dashboard/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component",
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -184,7 +184,7 @@
       "path": "/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"

@@ -22,10 +22,10 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -46,10 +46,10 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -70,10 +70,10 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch"
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
