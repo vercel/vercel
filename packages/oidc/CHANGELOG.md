@@ -1,5 +1,12 @@
 # @vercel/oidc
 
+## 2.0.1
+
+### Patch Changes
+
+- Add refresh token behavior to getVercelOidcToken ([#13608](https://github.com/vercel/vercel/pull/13608))
+- - Depends on vercel CLI being installed and linked to the project in question
+
 ## 2.0.0
 
 ### Major Changes
