@@ -7,7 +7,6 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@hono/node-server": "^1.17.1",
     "hono": "^4.8.9"
   },
   "devDependencies": {
