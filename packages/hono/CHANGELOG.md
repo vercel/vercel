@@ -1,5 +1,16 @@
 # @vercel/hono
 
+## 0.0.6
+
+### Patch Changes
+
+- Support `server.ts` for hono entrypoint ([#13638](https://github.com/vercel/vercel/pull/13638))
+
+- Fix issue with hono support in monorepos ([#13642](https://github.com/vercel/vercel/pull/13642))
+
+- Updated dependencies [[`003343e128ccb3848a3c966f1f16f0d19df012e8`](https://github.com/vercel/vercel/commit/003343e128ccb3848a3c966f1f16f0d19df012e8)]:
+  - @vercel/node@5.3.8
+
 ## 0.0.5
 
 ### Patch Changes
