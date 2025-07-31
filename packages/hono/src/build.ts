@@ -40,6 +40,8 @@ export const HEAD = handle;`;
 
 export const findEntrypoint = (files: Files) => {
   const validEntrypoints = [
+    'server.ts',
+    'server.js',
     'index.ts',
     'index.js',
     'index.mjs',
