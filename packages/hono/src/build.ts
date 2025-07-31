@@ -9,9 +9,6 @@ export const build: BuildV3 = async ({
   meta = {},
 }) => {
   const entrypoint = findEntrypoint(files);
-  if (!entrypoint) {
-    throw new Error('No valid entrypoint found');
-  }
 
   return nodeBuild({
     entrypoint,
@@ -24,9 +21,11 @@ export const build: BuildV3 = async ({
   });
 };
 
-const shim = (handler: string) => `
-import app from "./${handler}";
+export const shim = (handler: string, relativePathToHandler = '.') => `
+// @ts-ignore
+import app from "${relativePathToHandler}/${handler}";
 
+// @ts-ignore
 const handle = async (request) => {
   return app.fetch(request);
 };
