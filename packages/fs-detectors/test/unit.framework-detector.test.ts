@@ -90,6 +90,16 @@ describe('DetectorFilesystem', () => {
     expect(readFileSpy).not.toHaveBeenCalled();
   });
 
+  it('should ignore nested potential files for caching', async () => {
+    const files = {
+      'package.json': '{}',
+      'packages/app1/package.json': '{}',
+    };
+    const fs = new VirtualFilesystem(files);
+    await fs.readdir('packages', { potentialFiles: ['app1/package.json'] });
+    expect(await fs.hasPath('packages/app1/package.json')).toEqual(true);
+  });
+
   it('should be able to change directories', async () => {
     const nextPackageJson = JSON.stringify({
       dependencies: {
