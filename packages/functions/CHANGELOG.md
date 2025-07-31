@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.6
+
+### Patch Changes
+
+- Introduce attachDatabasePool function ([#13632](https://github.com/vercel/vercel/pull/13632))
+
 ## 2.2.5
 
 ### Patch Changes
