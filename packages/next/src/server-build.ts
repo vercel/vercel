@@ -2253,6 +2253,7 @@ export async function serverBuild({
                 {
                   type: 'header',
                   key: rscHeader,
+                  value: '1',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
@@ -2270,6 +2271,7 @@ export async function serverBuild({
                 {
                   type: 'header',
                   key: rscHeader,
+                  value: '1',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
