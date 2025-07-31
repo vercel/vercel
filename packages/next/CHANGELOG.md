@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.9
+
+### Patch Changes
+
+- Only route prefetches to a static file if the prefetch header value is '1' ([#13547](https://github.com/vercel/vercel/pull/13547))
+
 ## 4.10.8
 
 ### Patch Changes

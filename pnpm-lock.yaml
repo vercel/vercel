@@ -349,13 +349,13 @@ importers:
         specifier: 3.2.2
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.4
+        specifier: 0.0.5
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.10.8
+        specifier: 4.10.9
         version: link:../next
       '@vercel/node':
         specifier: 5.3.7

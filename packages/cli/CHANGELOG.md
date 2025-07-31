@@ -1,5 +1,17 @@
 # vercel
 
+## 44.6.5
+
+### Patch Changes
+
+- Support `vc dev` for hono framework ([#13637](https://github.com/vercel/vercel/pull/13637))
+
+- Save projectName in project.json when linking a Project. ([#13611](https://github.com/vercel/vercel/pull/13611))
+
+- Updated dependencies [[`52e212359509cbb36da786f6cbaf48b9e930d423`](https://github.com/vercel/vercel/commit/52e212359509cbb36da786f6cbaf48b9e930d423), [`21afa1623f72ee81439d1f34028f921cd66b5589`](https://github.com/vercel/vercel/commit/21afa1623f72ee81439d1f34028f921cd66b5589)]:
+  - @vercel/hono@0.0.5
+  - @vercel/next@4.10.9
+
 ## 44.6.4
 
 ### Patch Changes
