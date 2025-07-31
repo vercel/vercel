@@ -3,8 +3,8 @@ export * from './build';
 // @ts-expect-error - FIXME: startDevServer types are not exported
 import { startDevServer as nodeStartDevServer } from '@vercel/node';
 import { findEntrypoint, shim } from './build';
-import { mkdir, writeFile } from 'fs/promises';
-import { dirname } from 'path';
+import { mkdir, rm, writeFile } from 'fs/promises';
+import { dirname, join } from 'path';
 import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 
 export const shouldServe: ShouldServe = async opts => {
@@ -29,8 +29,11 @@ export const startDevServer: StartDevServer = async opts => {
   // FIXME: for CJS the shim will need to use `require` instead of `import`
   const shimString = shim(entrypoint, '../..');
   const shimEntrypoint = `.vercel/dev/shim.${entrypointExtension}`;
-  await mkdir(dirname(shimEntrypoint), { recursive: true });
-  await writeFile(shimEntrypoint, shimString);
+  const shimEntrypointPath = join(opts.workPath, shimEntrypoint);
+  const shimEntrypointDir = dirname(shimEntrypointPath);
+  await rm(shimEntrypointDir, { force: true, recursive: true });
+  await mkdir(shimEntrypointDir, { recursive: true });
+  await writeFile(shimEntrypointPath, shimString);
 
   return nodeStartDevServer({
     ...opts,
