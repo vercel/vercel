@@ -47,6 +47,7 @@ import {
   KIB,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  INTERNAL_PAGES,
 } from './constants';
 
 type stringMap = { [key: string]: string };
@@ -1666,11 +1667,14 @@ async function getSourceFilePathFromPage({
     return '';
   }
 
-  console.log(
-    `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
-      ', '
-    )}, this can cause functions config from \`vercel.json\` to not be applied`
-  );
+  // Skip warning for internal pages (_app.js, _error.js, _document.js)
+  if (!INTERNAL_PAGES.includes(page)) {
+    console.log(
+      `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
+        ', '
+      )}, this can cause functions config from \`vercel.json\` to not be applied`
+    );
+  }
   return '';
 }
 
