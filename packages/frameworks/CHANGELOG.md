@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.7.5
+
+### Patch Changes
+
+- Support `server.ts` for hono entrypoint ([#13638](https://github.com/vercel/vercel/pull/13638))
+
 ## 3.7.4
 
 ### Patch Changes

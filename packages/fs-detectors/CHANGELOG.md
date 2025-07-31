@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.4.11
+
+### Patch Changes
+
+- Fix incorrect caching for DetectorFilesystem.readdir ([#13645](https://github.com/vercel/vercel/pull/13645))
+
+- Updated dependencies [[`99ec6718b0ddffac67a8a66608c718fce99bf542`](https://github.com/vercel/vercel/commit/99ec6718b0ddffac67a8a66608c718fce99bf542)]:
+  - @vercel/frameworks@3.7.5
+
 ## 5.4.10
 
 ### Patch Changes
