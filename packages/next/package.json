@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "4.10.8",
+  "version": "4.10.9",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",

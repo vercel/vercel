@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.5
+
+### Patch Changes
+
+- Support `vc dev` for hono framework ([#13637](https://github.com/vercel/vercel/pull/13637))
+
 ## 0.0.4
 
 ### Patch Changes
