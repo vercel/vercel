@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.10.10
+
+### Patch Changes
+
+- Ensure RSC headers have exact value '1' for proper routing and prefetch handling consistency ([#13644](https://github.com/vercel/vercel/pull/13644))
+
+- fix erroneous source file warning when using dynamic not-found ([#13641](https://github.com/vercel/vercel/pull/13641))
+
 ## 4.10.9
 
 ### Patch Changes

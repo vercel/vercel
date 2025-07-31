@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.8
+
+### Patch Changes
+
+- Fix issue with hono support in monorepos ([#13642](https://github.com/vercel/vercel/pull/13642))
+
 ## 5.3.7
 
 ### Patch Changes
