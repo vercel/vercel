@@ -451,10 +451,13 @@ export const build = async ({
   }
 
   if (shim) {
-    preparedFiles['shim.js'] = new FileBlob({
+    const handlerDir = dirname(handler);
+    const shimHandler =
+      handlerDir === '.' ? 'shim.js' : join(handlerDir, 'shim.js');
+    preparedFiles[shimHandler] = new FileBlob({
       data: shim(handler),
     });
-    handler = 'shim.js';
+    handler = shimHandler;
   }
 
   if (isEdgeFunction) {
