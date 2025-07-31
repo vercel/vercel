@@ -56,6 +56,7 @@ import {
   getPostponeResumeOutput,
   getNodeMiddleware,
 } from './utils';
+import { INTERNAL_PAGES } from './constants';
 import {
   nodeFileTrace,
   NodeFileTraceReasons,
@@ -210,7 +211,7 @@ export async function serverBuild({
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
-  const internalPages = ['_app.js', '_error.js', '_document.js'];
+  const internalPages = INTERNAL_PAGES;
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
