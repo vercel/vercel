@@ -4,4 +4,5 @@ export { getEnv } from './get-env';
 export { waitUntil } from './wait-until';
 export { rewrite, next } from './middleware';
 export { getCache } from './cache';
+export { experimental_attachDatabasePool } from './db-connections';
 export type { RuntimeCache } from './cache/types';
