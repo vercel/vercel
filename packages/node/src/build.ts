@@ -451,11 +451,12 @@ export const build = async ({
   }
 
   if (shim) {
+    const handlerFilename = basename(handler);
     const handlerDir = dirname(handler);
     const shimHandler =
       handlerDir === '.' ? 'shim.js' : join(handlerDir, 'shim.js');
     preparedFiles[shimHandler] = new FileBlob({
-      data: shim(handler),
+      data: shim(handlerFilename),
     });
     handler = shimHandler;
   }
