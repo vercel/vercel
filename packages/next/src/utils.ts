@@ -224,6 +224,18 @@ type RoutesManifestRoute = {
   regex: string;
   namedRegex?: string;
   routeKeys?: { [named: string]: string };
+
+  /**
+   * If true, this indicates that the route has fallback root params. This is
+   * used to simplify the route regex for matching.
+   */
+  hasFallbackRootParams?: boolean;
+
+  /**
+   * The prefetch segment data routes for this route. This is used to rewrite
+   * the prefetch segment data routes (or the inverse) to the correct
+   * destination.
+   */
   prefetchSegmentDataRoutes?: {
     source: string;
     destination: string;
@@ -473,6 +485,7 @@ export async function getDynamicRoutes({
             regex,
             routeKeys,
             prefetchSegmentDataRoutes,
+            hasFallbackRootParams,
           } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
@@ -540,9 +553,14 @@ export async function getDynamicRoutes({
             routes.push({
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
+                hasFallbackRootParams
+                  ? '\\.rsc(?:/)?$'
+                  : '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
               ),
-              dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
+              dest: route.dest?.replace(
+                /($|\?)/,
+                hasFallbackRootParams ? '.rsc$1' : '$rscSuffix$1'
+              ),
               check: true,
               override: true,
             });
@@ -1078,6 +1096,7 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       routeRegex: string;
       dataRoute: string | null;
+      fallback: string | boolean | null;
       fallbackRootParams?: string[];
       dataRouteRegex: string | null;
       prefetchDataRoute?: string | null;
@@ -1285,6 +1304,7 @@ export async function getPrerenderManifest(
         dynamicRoutes: {
           [key: string]: {
             fallback?: string;
+            fallbackRootParams?: string[];
             routeRegex: string;
             dataRoute: string;
             dataRouteRegex: string;
@@ -1391,8 +1411,13 @@ export async function getPrerenderManifest(
       });
 
       lazyRoutes.forEach(lazyRoute => {
-        const { routeRegex, fallback, dataRoute, dataRouteRegex } =
-          manifest.dynamicRoutes[lazyRoute];
+        const {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+          fallbackRootParams,
+        } = manifest.dynamicRoutes[lazyRoute];
 
         if (fallback) {
           ret.fallbackRoutes[lazyRoute] = {
@@ -1407,6 +1432,8 @@ export async function getPrerenderManifest(
           ret.blockingFallbackRoutes[lazyRoute] = {
             routeRegex,
             dataRoute,
+            fallback: null,
+            fallbackRootParams,
             dataRouteRegex,
             renderingMode: RenderingMode.STATIC,
             allowHeader: undefined,
@@ -1551,6 +1578,7 @@ export async function getPrerenderManifest(
             renderingMode,
             allowHeader,
             fallbackRootParams,
+            fallback: null,
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
@@ -2789,11 +2817,16 @@ export const onPrerenderRoute =
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
         (isFallback || isBlocking)
       ) {
-        const { fallbackRootParams } = isFallback
+        const { fallbackRootParams, fallback } = isFallback
           ? prerenderManifest.fallbackRoutes[routeKey]
           : prerenderManifest.blockingFallbackRoutes[routeKey];
 
-        if (fallbackRootParams && fallbackRootParams.length > 0) {
+        if (
+          fallback &&
+          typeof fallback === 'string' &&
+          fallbackRootParams &&
+          fallbackRootParams.length > 0
+        ) {
           htmlAllowQuery = fallbackRootParams;
         } else if (postponedPrerender) {
           htmlAllowQuery = [];
