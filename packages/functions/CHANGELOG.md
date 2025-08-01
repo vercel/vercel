@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.7
+
+### Patch Changes
+
+- Make DB pool inert in local dev ([#13647](https://github.com/vercel/vercel/pull/13647))
+
 ## 2.2.6
 
 ### Patch Changes
