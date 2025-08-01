@@ -58,31 +58,53 @@ const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
 const fixtures = {
   '01-src-index-on-edge': {
     function: 'EdgeFunction',
+    entrypoint: 'src/shim.js',
   },
   '02-src-index-on-node': {
     function: 'Lambda',
+    entrypoint: 'src/shim.js',
   },
   '03-index-on-node': {
     function: 'Lambda',
+    entrypoint: 'shim.js',
   },
   '04-indexjs-on-node': {
     function: 'Lambda',
+    entrypoint: 'shim.js',
   },
   '05-indexmjs-on-node': {
     function: 'Lambda',
+    entrypoint: 'shim.js',
   },
   '06-indexcjs-on-node': {
     function: 'Lambda',
+    entrypoint: 'shim.js',
   },
   '07-index-on-edge': {
     function: 'EdgeFunction',
+    entrypoint: 'shim.js',
+  },
+  '08-monorepo-src-index-on-node': {
+    function: 'Lambda',
+    entrypoint: 'src/shim.js',
+    workPath: join(
+      __dirname,
+      '../fixtures/08-monorepo-src-index-on-node/apps/my-app'
+    ),
+  },
+  '09-server-on-node': {
+    function: 'Lambda',
+    entrypoint: 'shim.js',
   },
 };
 
 describe('build', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
     it(`should build ${fixtureName}`, async () => {
-      const workPath = join(__dirname, '../fixtures', fixtureName);
+      const workPath =
+        'workPath' in fixtureConfig
+          ? fixtureConfig.workPath
+          : join(__dirname, '../fixtures', fixtureName);
 
       // Read directory recursively to get all files
       const fileList = readDirectoryRecursively(workPath);
@@ -94,15 +116,16 @@ describe('build', () => {
         config,
         meta,
         // Entrypoint is just used as the BOA function name
-        entrypoint: 'index.ts',
+        entrypoint: 'this value is not used',
         repoRootPath: workPath,
       });
 
       expect(result.output.type).toBe(fixtureConfig.function);
+      // The shim should be adjacent to the entrypoint
       if ('entrypoint' in result.output) {
-        expect(result.output.entrypoint).toBe('shim.js');
+        expect(result.output.entrypoint).toBe(fixtureConfig.entrypoint);
       } else if ('handler' in result.output) {
-        expect(result.output.handler).toBe('shim.js');
+        expect(result.output.handler).toBe(fixtureConfig.entrypoint);
       } else {
         throw new Error('entrypoint is not defined');
       }
