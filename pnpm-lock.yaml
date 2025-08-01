@@ -349,16 +349,16 @@ importers:
         specifier: 3.2.2
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.6
+        specifier: 0.0.7
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.10.10
+        specifier: 4.10.11
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.8
+        specifier: 5.3.9
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
@@ -1193,7 +1193,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.8
+        specifier: 5.3.9
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1

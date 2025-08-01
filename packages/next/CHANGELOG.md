@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.10.11
+
+### Patch Changes
+
+- fix routing issue when clientSegmentCache is enabled ([#13625](https://github.com/vercel/vercel/pull/13625))
+
 ## 4.10.10
 
 ### Patch Changes
