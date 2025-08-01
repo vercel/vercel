@@ -437,6 +437,18 @@ export async function getDynamicRoutes({
       case 4: {
         const routes: RouteWithSrc[] = [];
 
+        // for static routes check if there is a .prefetch or .rsc
+        // for the corresponding segment request that matches
+        // exactly before continuing to process dynamic routes
+        if (isAppClientSegmentCacheEnabled && !isAppPPREnabled) {
+          routes.push({
+            src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+            dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
+            check: true,
+            override: true,
+          });
+        }
+
         for (const dynamicRoute of routesManifest.dynamicRoutes) {
           if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
             continue;
@@ -479,6 +491,13 @@ export async function getDynamicRoutes({
             route.check = true;
           }
 
+          // We must use check: true and override to ensure the
+          // correct route priority with PPR or segment cache
+          if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
+            route.check = true;
+            route.override = true;
+          }
+
           if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
             // only match this route when in preview mode so
             // preview works for non-prerender fallback: false pages
@@ -502,7 +521,6 @@ export async function getDynamicRoutes({
           ) {
             for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
               routes.push({
-                ...route,
                 src: prefetchSegmentDataRoute.source,
                 dest: getDestinationForSegmentRoute(
                   isDev === true,
@@ -511,6 +529,7 @@ export async function getDynamicRoutes({
                   prefetchSegmentDataRoute
                 ),
                 check: true,
+                override: true,
               });
             }
           }
@@ -519,12 +538,13 @@ export async function getDynamicRoutes({
           // if PPR or client segment cache is enabled
           if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
             routes.push({
-              ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
                 '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
               ),
               dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
+              check: true,
+              override: true,
             });
           } else {
             routes.push({
