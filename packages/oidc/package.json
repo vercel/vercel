@@ -47,6 +47,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@types/ms": "2.1.0"
+    "@types/ms": "2.1.0",
+    "ms": "2.1.3"
   }
 }

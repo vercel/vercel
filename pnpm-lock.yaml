@@ -1516,6 +1516,9 @@ importers:
       '@types/ms':
         specifier: 2.1.0
         version: 2.1.0
+      ms:
+        specifier: 2.1.3
+        version: 2.1.3
     devDependencies:
       tinyspawn:
         specifier: 1.3.1
