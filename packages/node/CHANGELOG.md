@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.9
+
+### Patch Changes
+
+- Fix relative path issue when Hono builder uses the Node builder ([#13649](https://github.com/vercel/vercel/pull/13649))
+
 ## 5.3.8
 
 ### Patch Changes
