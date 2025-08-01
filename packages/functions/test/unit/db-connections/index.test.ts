@@ -3,7 +3,10 @@ import { experimental_attachDatabasePool as attachDatabasePool } from '../../../
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../../src/get-context';
 
 describe('db-connections', () => {
+  const vercelUrl = process.env.VERCEL_URL;
+
   beforeEach(() => {
+    process.env.VERCEL_URL = 'test.vercel.app';
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -14,6 +17,7 @@ describe('db-connections', () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     delete globalThis[SYMBOL_FOR_REQ_CONTEXT];
+    process.env.VERCEL_URL = vercelUrl;
   });
 
   describe('supported pool types', () => {

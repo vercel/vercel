@@ -51,7 +51,7 @@ experimental_attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/db-connections/index.ts:217](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L217)
+[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
 
 ---
 
