@@ -1861,7 +1861,6 @@ export async function serverBuild({
     }
   }
 
-  // if
   const shouldHandleSegmentToRsc = Boolean(
     isAppClientSegmentCacheEnabled &&
       rscPrefetchHeader &&
@@ -2468,16 +2467,8 @@ export async function serverBuild({
       prefetchSegmentSuffix
         ? [
             {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
+              src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+              dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
               check: true,
             },
           ]
