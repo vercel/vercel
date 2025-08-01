@@ -2248,6 +2248,7 @@ export const frameworks = [
     name: 'Hono',
     slug: 'hono',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
+    demo: 'https://hono.vercel.dev',
     tagline: 'Web framework built on Web Standards',
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
@@ -2265,6 +2266,16 @@ export const frameworks = [
     detectors: {
       every: [{ matchPackage: 'hono' }],
       some: [
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
         {
           path: 'index.ts',
           matchContent:

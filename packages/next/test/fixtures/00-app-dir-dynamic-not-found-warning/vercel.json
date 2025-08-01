@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "app/api/route.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "probes": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/non-existent-page",
+      "status": 404
+    },
+    {
+      "logMustNotContain": "WARNING: Unable to find source file"
+    }
+  ]
+}
