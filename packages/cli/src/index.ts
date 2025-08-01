@@ -523,7 +523,7 @@ const main = async () => {
       }
 
       output.error(
-        `Not able to load user because of unexpected error code: ${err.code}`
+        `Not able to load user because of unexpected error: ${errorToString(err)}`
       );
       return 1;
     }
