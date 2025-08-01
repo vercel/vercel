@@ -522,7 +522,7 @@ const main = async () => {
         return 1;
       }
 
-      output.error('Not able to load user');
+      output.error(`Not able to load user because ${err.code}`);
       return 1;
     }
 
