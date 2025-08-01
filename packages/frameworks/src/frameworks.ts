@@ -2248,6 +2248,7 @@ export const frameworks = [
     name: 'Hono',
     slug: 'hono',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
+    demo: 'https://hono.vercel.dev',
     tagline: 'Web framework built on Web Standards',
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
