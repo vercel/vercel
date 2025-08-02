@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 11.0.0
+
+### Major Changes
+
+- Add support for vlt as a package manager ([#13591](https://github.com/vercel/vercel/pull/13591))
+
+## 10.6.7
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 10.6.6
+
+### Patch Changes
+
+- Deprecate Node.js 18.x with warning ([#13549](https://github.com/vercel/vercel/pull/13549))
+
 ## 10.6.5
 
 ### Patch Changes

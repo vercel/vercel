@@ -1,5 +1,175 @@
 # vercel
 
+## 44.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`8e3912d2510a13b484567fee4ee9e985df922780`](https://github.com/vercel/vercel/commit/8e3912d2510a13b484567fee4ee9e985df922780), [`a78f91c2e36e20f3725d758021691fc06a90f0b4`](https://github.com/vercel/vercel/commit/a78f91c2e36e20f3725d758021691fc06a90f0b4)]:
+  - @vercel/next@4.10.11
+  - @vercel/node@5.3.9
+  - @vercel/hono@0.0.7
+
+## 44.6.6
+
+### Patch Changes
+
+- Updated dependencies [[`24f47647b272c18c38187f32130bfd58a04d9d97`](https://github.com/vercel/vercel/commit/24f47647b272c18c38187f32130bfd58a04d9d97), [`df172a801b3da2515afa0e228461e61a45a7c64a`](https://github.com/vercel/vercel/commit/df172a801b3da2515afa0e228461e61a45a7c64a), [`99ec6718b0ddffac67a8a66608c718fce99bf542`](https://github.com/vercel/vercel/commit/99ec6718b0ddffac67a8a66608c718fce99bf542), [`003343e128ccb3848a3c966f1f16f0d19df012e8`](https://github.com/vercel/vercel/commit/003343e128ccb3848a3c966f1f16f0d19df012e8)]:
+  - @vercel/next@4.10.10
+  - @vercel/hono@0.0.6
+  - @vercel/node@5.3.8
+
+## 44.6.5
+
+### Patch Changes
+
+- Support `vc dev` for hono framework ([#13637](https://github.com/vercel/vercel/pull/13637))
+
+- Save projectName in project.json when linking a Project. ([#13611](https://github.com/vercel/vercel/pull/13611))
+
+- Updated dependencies [[`52e212359509cbb36da786f6cbaf48b9e930d423`](https://github.com/vercel/vercel/commit/52e212359509cbb36da786f6cbaf48b9e930d423), [`21afa1623f72ee81439d1f34028f921cd66b5589`](https://github.com/vercel/vercel/commit/21afa1623f72ee81439d1f34028f921cd66b5589)]:
+  - @vercel/hono@0.0.5
+  - @vercel/next@4.10.9
+
+## 44.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`68e194575272fd8a24b7e88057475397b3492196`](https://github.com/vercel/vercel/commit/68e194575272fd8a24b7e88057475397b3492196)]:
+  - @vercel/python@5.0.0
+
+## 44.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`04ab34baac9c5c3b5b4c7c4092ca9f739c533454`](https://github.com/vercel/vercel/commit/04ab34baac9c5c3b5b4c7c4092ca9f739c533454)]:
+  - @vercel/hono@0.0.4
+
+## 44.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`f816c405a7cbda4ff8c4231741f90c0608412ba6`](https://github.com/vercel/vercel/commit/f816c405a7cbda4ff8c4231741f90c0608412ba6)]:
+  - @vercel/hono@0.0.3
+
+## 44.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`a646bee5f8f1fe7ac9451605e81f15b2e275d5b0`](https://github.com/vercel/vercel/commit/a646bee5f8f1fe7ac9451605e81f15b2e275d5b0)]:
+  - @vercel/next@4.10.8
+
+## 44.6.0
+
+### Minor Changes
+
+- Add --json flag to projects list ([#13578](https://github.com/vercel/vercel/pull/13578))
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+### Patch Changes
+
+- Updated dependencies [[`4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9`](https://github.com/vercel/vercel/commit/4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9), [`b79db72d870a8d2e98e36a7413c656ae80fed01f`](https://github.com/vercel/vercel/commit/b79db72d870a8d2e98e36a7413c656ae80fed01f)]:
+  - @vercel/node@5.3.7
+  - @vercel/hono@0.0.2
+  - @vercel/build-utils@11.0.0
+  - @vercel/static-build@2.7.17
+
+## 44.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`ad18ebf61438332fca31d2960b2c35ca609a45fa`](https://github.com/vercel/vercel/commit/ad18ebf61438332fca31d2960b2c35ca609a45fa)]:
+  - @vercel/next@4.10.7
+
+## 44.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`e6fd638c1b54474e2f73c37c24156fead1f60722`](https://github.com/vercel/vercel/commit/e6fd638c1b54474e2f73c37c24156fead1f60722)]:
+  - @vercel/next@4.10.6
+
+## 44.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`501d4da4f3be995111eafe6d6197000365a5a377`](https://github.com/vercel/vercel/commit/501d4da4f3be995111eafe6d6197000365a5a377)]:
+  - @vercel/next@4.10.5
+
+## 44.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`861d4723b91dabd697215ae214b95a7cbba5e6a7`](https://github.com/vercel/vercel/commit/861d4723b91dabd697215ae214b95a7cbba5e6a7), [`205cba1c42ecaa2aec92a9839d2162557f44662e`](https://github.com/vercel/vercel/commit/205cba1c42ecaa2aec92a9839d2162557f44662e)]:
+  - @vercel/next@4.10.4
+  - @vercel/python@4.8.0
+
+## 44.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`a4601064d0c0e8d63b5ad9fe6afff5f6677dfe1d`](https://github.com/vercel/vercel/commit/a4601064d0c0e8d63b5ad9fe6afff5f6677dfe1d), [`be124640b352749684e2cb7f455bc5ad3cb5852f`](https://github.com/vercel/vercel/commit/be124640b352749684e2cb7f455bc5ad3cb5852f)]:
+  - @vercel/next@4.10.3
+
+## 44.5.0
+
+### Minor Changes
+
+- Add Google login functionality ([#13489](https://github.com/vercel/vercel/pull/13489))
+
+- Add support to create a project with Vercel Auth disabled. ([#13528](https://github.com/vercel/vercel/pull/13528))
+
+  The default for Vercel Auth is Standard Protection. Add a prompt so that Vercel Auth can be disabled when creating a new project.
+
+### Patch Changes
+
+- Updated dependencies [[`b0fa60d216ca9b3ff6b13d507f8b656169f88df1`](https://github.com/vercel/vercel/commit/b0fa60d216ca9b3ff6b13d507f8b656169f88df1)]:
+  - @vercel/next@4.10.2
+
+## 44.4.3
+
+### Patch Changes
+
+- Updated dependencies [[`56e154e2a3c4cdb7c1fd1d4e7c529fb1653f4eb5`](https://github.com/vercel/vercel/commit/56e154e2a3c4cdb7c1fd1d4e7c529fb1653f4eb5)]:
+  - @vercel/python@4.7.4
+
+## 44.4.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/static-build@2.7.16
+  - @vercel/build-utils@10.6.7
+  - @vercel/hydrogen@1.2.3
+  - @vercel/redwood@2.3.4
+  - @vercel/python@4.7.3
+  - @vercel/remix-builder@5.4.10
+  - @vercel/next@4.10.1
+  - @vercel/node@5.3.6
+  - @vercel/ruby@2.2.1
+  - @vercel/go@3.2.2
+
+## 44.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`f37cd4e2eb35764a658f617643e2ab228191e7e2`](https://github.com/vercel/vercel/commit/f37cd4e2eb35764a658f617643e2ab228191e7e2)]:
+  - @vercel/build-utils@10.6.6
+  - @vercel/node@5.3.5
+  - @vercel/static-build@2.7.15
+
+## 44.4.0
+
+### Minor Changes
+
+- Adds support for user configured `preferredRegion` for Node.js Functions ([#13546](https://github.com/vercel/vercel/pull/13546))
+
+### Patch Changes
+
+- Updated dependencies [[`7aa34eca64cbe70a9662bfcde82d23ab0eca527d`](https://github.com/vercel/vercel/commit/7aa34eca64cbe70a9662bfcde82d23ab0eca527d)]:
+  - @vercel/next@4.10.0
+
 ## 44.3.0
 
 ### Minor Changes

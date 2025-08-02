@@ -1457,7 +1457,10 @@ export const build: BuildV2 = async buildOptions => {
 
     const isAppPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.ppr === true ||
-        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+        requiredServerFilesManifest.config.experimental?.ppr ===
+          'incremental' ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
       : false;
 
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
@@ -2046,7 +2049,6 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
-      isAppClientSegmentCacheEnabled: false,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -2077,7 +2079,6 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
-        isAppClientSegmentCacheEnabled: false,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);

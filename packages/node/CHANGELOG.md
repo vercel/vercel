@@ -1,5 +1,42 @@
 # @vercel/node
 
+## 5.3.9
+
+### Patch Changes
+
+- Fix relative path issue when Hono builder uses the Node builder ([#13649](https://github.com/vercel/vercel/pull/13649))
+
+## 5.3.8
+
+### Patch Changes
+
+- Fix issue with hono support in monorepos ([#13642](https://github.com/vercel/vercel/pull/13642))
+
+## 5.3.7
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+- Updated dependencies [[`b79db72d870a8d2e98e36a7413c656ae80fed01f`](https://github.com/vercel/vercel/commit/b79db72d870a8d2e98e36a7413c656ae80fed01f)]:
+  - @vercel/build-utils@11.0.0
+
+## 5.3.6
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/build-utils@10.6.7
+
+## 5.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`f37cd4e2eb35764a658f617643e2ab228191e7e2`](https://github.com/vercel/vercel/commit/f37cd4e2eb35764a658f617643e2ab228191e7e2)]:
+  - @vercel/build-utils@10.6.6
+
 ## 5.3.4
 
 ### Patch Changes

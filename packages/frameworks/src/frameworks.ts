@@ -252,6 +252,7 @@ export const frameworks = [
     sort: 7,
     supersedes: ['hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
         {
@@ -2241,6 +2242,90 @@ export const frameworks = [
       },
     },
     dependency: 'nitropack',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Hono',
+    slug: 'hono',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
+    demo: 'https://hono.vercel.dev',
+    tagline: 'Web framework built on Web Standards',
+    description:
+      'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
+    website: 'https://hono.dev',
+    useRuntime: { src: 'index.js', use: '@vercel/hono' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: 'hono' }],
+      some: [
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'hono',
     getOutputDirName: async () => 'public',
   },
   {

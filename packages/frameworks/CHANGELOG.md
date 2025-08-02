@@ -1,5 +1,29 @@
 # @vercel/frameworks
 
+## 3.7.5
+
+### Patch Changes
+
+- Support `server.ts` for hono entrypoint ([#13638](https://github.com/vercel/vercel/pull/13638))
+
+## 3.7.4
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+## 3.7.3
+
+### Patch Changes
+
+- No longer inject 404 route for react router ([#13571](https://github.com/vercel/vercel/pull/13571))
+
+## 3.7.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
 ## 3.7.1
 
 ### Patch Changes
