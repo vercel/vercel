@@ -8,32 +8,14 @@ export const build: BuildV3 = async args => {
   return nodeBuild({
     ...args,
     entrypoint,
-    useWebApi: true,
-    shim,
   });
 };
-
-export const shim = (handler: string, relativePathToHandler = '.') => `
-// @ts-ignore
-import app from "${relativePathToHandler}/${handler}";
-
-// @ts-ignore
-const handle = async (request) => {
-  return app.fetch(request);
-};
-
-export const GET = handle;
-export const POST = handle;
-export const PUT = handle;
-export const DELETE = handle;
-export const PATCH = handle;
-export const OPTIONS = handle;
-export const HEAD = handle;`;
 
 export const findEntrypoint = (files: Files) => {
   const validEntrypoints = [
     'server.ts',
     'server.js',
+    'server.mjs',
     'index.ts',
     'index.js',
     'index.mjs',
