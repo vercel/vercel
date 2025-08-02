@@ -28,9 +28,21 @@ const meta = { skipDownload: true };
 
 const createFiles = (workPath: string, fileList: string[]) => {
   const files: Files = {};
+  console.log('🔧 createFiles - workPath:', workPath);
+  console.log('🔧 createFiles - fileList:', fileList);
+
   for (const path of fileList) {
+    console.log('🔧 createFiles - Processing path:', path);
+    if (!path) {
+      console.log('❌ createFiles - Found undefined/null path!');
+      continue;
+    }
+
+    const fullPath = join(workPath, path);
+    console.log('🔧 createFiles - Full path:', fullPath);
+
     files[path] = new FileFsRef({
-      fsPath: join(workPath, path),
+      fsPath: fullPath,
       mode: 0o644,
     });
   }
@@ -110,8 +122,10 @@ describe('build', () => {
       const workPath = join(__dirname, '../fixtures', fixtureName);
 
       const fileList = readDirectoryRecursively(workPath);
+      console.log('📁 Test - File list:', fileList);
 
       const files = createFiles(workPath, fileList);
+      console.log('📁 Test - Files object keys:', Object.keys(files));
       const result = await build({
         files,
         workPath,
