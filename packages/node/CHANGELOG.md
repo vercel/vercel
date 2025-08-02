@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.10
+
+### Patch Changes
+
+- Fix issue where .mjs files weren't transpiled properly for Hono ([#13658](https://github.com/vercel/vercel/pull/13658))
+
 ## 5.3.9
 
 ### Patch Changes

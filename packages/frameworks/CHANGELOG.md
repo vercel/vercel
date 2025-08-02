@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.7.6
+
+### Patch Changes
+
+- Fix issue where .mjs files weren't transpiled properly for Hono ([#13658](https://github.com/vercel/vercel/pull/13658))
+
 ## 3.7.5
 
 ### Patch Changes
