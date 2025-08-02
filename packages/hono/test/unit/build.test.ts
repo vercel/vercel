@@ -109,7 +109,6 @@ describe('build', () => {
     it(`should build ${fixtureName}`, async () => {
       const workPath = join(__dirname, '../fixtures', fixtureName);
 
-      // Read directory recursively to get all files
       const fileList = readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
@@ -146,7 +145,6 @@ describe('failing fixtures', () => {
     it(`should fail to build${fixtureName}`, async () => {
       const workPath = join(__dirname, '../failing-fixtures', fixtureName);
 
-      // Read directory recursively to get all files
       const fileList = readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
