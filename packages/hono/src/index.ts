@@ -24,6 +24,7 @@ export const shouldServe: ShouldServe = async opts => {
 export const startDevServer: StartDevServer = async opts => {
   const entrypoint = findEntrypoint(opts.files);
 
+  process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
   return nodeStartDevServer({
     ...opts,
     entrypoint,

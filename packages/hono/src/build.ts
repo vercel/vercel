@@ -5,6 +5,9 @@ import { build as nodeBuild } from '@vercel/node';
 export const build: BuildV3 = async args => {
   const entrypoint = findEntrypoint(args.files);
 
+  // Introducing new behavior for the node builder where Typescript errors always
+  // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
+  process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
   return nodeBuild({
     ...args,
     entrypoint,
@@ -13,17 +16,21 @@ export const build: BuildV3 = async args => {
 
 export const findEntrypoint = (files: Files) => {
   const validEntrypoints = [
-    'server.ts',
-    'server.js',
-    'server.mjs',
-    'index.ts',
+    'index.cjs',
     'index.js',
     'index.mjs',
-    'index.cjs',
-    'src/index.ts',
+    'index.mts',
+    'index.ts',
+    'server.cjs',
+    'server.js',
+    'server.mjs',
+    'server.mts',
+    'server.ts',
+    'src/index.cjs',
     'src/index.js',
     'src/index.mjs',
-    'src/index.cjs',
+    'src/index.mts',
+    'src/index.ts',
   ];
   const entrypoint = validEntrypoints.find(path => files[path] !== undefined);
   if (!entrypoint) {

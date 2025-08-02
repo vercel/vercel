@@ -11,8 +11,8 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test-e2e": "pnpm test test/test.js",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
     "type-check": "tsc --noEmit"
   },
   "files": [
