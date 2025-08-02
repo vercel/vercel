@@ -74,11 +74,11 @@ const fixtures = {
   },
   '05-indexmjs-on-node': {
     function: 'Lambda',
-    entrypoint: 'shim.js',
+    entrypoint: 'shim.mjs',
   },
   '06-indexcjs-on-node': {
     function: 'Lambda',
-    entrypoint: 'shim.js',
+    entrypoint: 'shim.cjs',
   },
   '07-index-on-edge': {
     function: 'EdgeFunction',
@@ -95,6 +95,10 @@ const fixtures = {
   '09-server-on-node': {
     function: 'Lambda',
     entrypoint: 'shim.js',
+  },
+  '10-src-index-mjs-on-node': {
+    function: 'Lambda',
+    entrypoint: 'src/shim.mjs',
   },
 };
 

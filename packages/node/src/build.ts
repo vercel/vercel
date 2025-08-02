@@ -9,6 +9,7 @@ import {
   resolve,
   sep,
   parse as parsePath,
+  extname,
 } from 'path';
 import { Project } from 'ts-morph';
 import { nodeFileTrace } from '@vercel/nft';
@@ -453,8 +454,21 @@ export const build = async ({
   if (shim) {
     const handlerFilename = basename(handler);
     const handlerDir = dirname(handler);
+    const extension = extname(handlerFilename);
+    const extMap: Record<string, string> = {
+      '.ts': '.js',
+      '.mts': '.mjs',
+      '.mjs': '.mjs',
+      '.cjs': '.cjs',
+      '.js': '.js',
+    };
+    const ext = extMap[extension];
+    if (!ext) {
+      throw new Error(`Unsupported extension for ${entrypoint}`);
+    }
+    const filename = `shim${ext}`;
     const shimHandler =
-      handlerDir === '.' ? 'shim.js' : join(handlerDir, 'shim.js');
+      handlerDir === '.' ? filename : join(handlerDir, filename);
     preparedFiles[shimHandler] = new FileBlob({
       data: shim(handlerFilename),
     });
