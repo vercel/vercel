@@ -122,11 +122,11 @@ describe('build', () => {
         repoRootPath: workPath,
       });
 
-      if ('entrypoint' in result.output) {
-        expect(result.output.entrypoint).toBe(fixtureConfig.handler);
-      } else if ('handler' in result.output) {
+      if ('handler' in result.output) {
         expect(result.output.handler).toBe(fixtureConfig.handler);
-        const file = result.output.files?.[result.output.handler];
+        // Normalize the handler path to match the files object keys
+        const normalizedHandler = result.output.handler.replace(/\\/g, '/');
+        const file = result.output.files?.[normalizedHandler];
         if (file && 'data' in file) {
           const content = file.data.toString();
           const moduleTypeDetected = await detectModuleType(content);
