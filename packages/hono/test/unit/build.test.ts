@@ -24,7 +24,7 @@ const config = {
   buildCommand: undefined,
   nodeVersion: '22.x',
 };
-const meta = { skipDownload: true, cliVersion: '44.4.1' };
+const meta = { skipDownload: true };
 
 const createFiles = (workPath: string, fileList: string[]) => {
   const files: Files = {};
@@ -102,6 +102,8 @@ const fixtures = {
   },
 };
 
+const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
+
 describe('build', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
     it(`should build ${fixtureName}`, async () => {
@@ -136,6 +138,29 @@ describe('build', () => {
       } else {
         throw new Error('entrypoint is not defined');
       }
+    });
+  }
+});
+describe('failing fixtures', () => {
+  for (const fixtureName of failingFixtures) {
+    it(`should fail to build${fixtureName}`, async () => {
+      const workPath = join(__dirname, '../failing-fixtures', fixtureName);
+
+      // Read directory recursively to get all files
+      const fileList = readDirectoryRecursively(workPath);
+
+      const files = createFiles(workPath, fileList);
+      expect(
+        build({
+          files,
+          workPath,
+          config,
+          meta,
+          // Entrypoint is just used as the BOA function name
+          entrypoint: 'this value is not used',
+          repoRootPath: workPath,
+        })
+      ).rejects.toThrowError();
     });
   }
 });
