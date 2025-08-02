@@ -1,0 +1,40 @@
+import { Card, CardContent } from "@/components/ui/card"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input"; import { useState } from "react"; import { UploadCloud } from "lucide-react";
+
+export default function FoodCalorieAI() { const [image, setImage] = useState(null); const [result, setResult] = useState(null);
+
+const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { setImage(URL.createObjectURL(file)); // Simulação de resultado setTimeout(() => { setResult({ alimentos: ["Arroz", "Feijão", "Frango grelhado"], calorias: 620 }); }, 1500); } };
+
+return ( <div className="p-4 max-w-md mx-auto"> <h1 className="text-xl font-bold mb-4 text-center">NutriScan IA</h1>
+
+<Card>
+    <CardContent className="flex flex-col items-center gap-4 p-4">
+      {!image ? (
+        <>
+          <label className="flex flex-col items-center gap-2 cursor-pointer">
+            <UploadCloud className="w-10 h-10" />
+            <Input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            <span className="text-sm text-gray-500">Envie uma foto do seu prato</span>
+          </label>
+        </>
+      ) : (
+        <>
+          <img src={image} alt="Prato" className="rounded-xl w-full h-auto" />
+          <Button variant="outline" onClick={() => setImage(null)}>Enviar outra foto</Button>
+        </>
+      )}
+    </CardContent>
+  </Card>
+
+  {result && (
+    <Card className="mt-4">
+      <CardContent className="p-4">
+        <h2 className="font-semibold text-lg mb-2">Resultado:</h2>
+        <p><strong>Alimentos detectados:</strong> {result.alimentos.join(", ")}</p>
+        <p><strong>Total estimado de calorias:</strong> {result.calorias} kcal</p>
+      </CardContent>
+    </Card>
+  )}
+</div>
+
+); }
+
