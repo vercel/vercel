@@ -102,6 +102,10 @@ const fixtures = {
   },
   '10-index-ts-no-tsconfig': {
     handler: ['index.js'],
+    // This is a bug, the `"type": "module"` is not being respected in the build but at runtime we'll get an error:
+    // ReferenceError: exports is not defined in ES module scope
+    // This file is being treated as an ES module because it has a '.js' file extension and '/var/task/package.json'
+    // contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
     moduleType: 'cjs',
   },
   '11-index-ts-tsconfig-node': {
