@@ -1,6 +1,6 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
-import { join } from 'path';
+import { join, sep } from 'path';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 
@@ -65,47 +65,47 @@ const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
 
 const fixtures = {
   '01-index-js-no-module': {
-    handler: 'index.js',
+    handler: ['index.js'],
     moduleType: 'cjs',
   },
   '02-src-index-js-no-module': {
-    handler: 'src/index.js',
+    handler: ['src', 'index.js'],
     moduleType: 'cjs',
   },
   '03-server-js-no-module': {
-    handler: 'server.js',
+    handler: ['server.js'],
     moduleType: 'cjs',
   },
   '04-index-mjs-no-module': {
-    handler: 'index.mjs',
+    handler: ['index.mjs'],
     moduleType: 'esm',
   },
   '05-index-mjs-no-module': {
-    handler: 'index.mjs',
+    handler: ['index.mjs'],
     moduleType: 'esm',
   },
   '06-server-mjs-no-module': {
-    handler: 'server.mjs',
+    handler: ['server.mjs'],
     moduleType: 'esm',
   },
   '07-index-ts-no-module-no-tsconfig': {
-    handler: 'index.js',
+    handler: ['index.js'],
     moduleType: 'cjs',
   },
   '08-src-index-ts-no-module-no-tsconfig': {
-    handler: 'src/index.js',
+    handler: ['src', 'index.js'],
     moduleType: 'cjs',
   },
   '09-server-ts-no-module-no-tsconfig': {
-    handler: 'server.js',
+    handler: ['server.js'],
     moduleType: 'cjs',
   },
   '10-index-ts-no-tsconfig': {
-    handler: 'index.js',
+    handler: ['index.js'],
     moduleType: 'cjs',
   },
   '11-index-ts-tsconfig-node': {
-    handler: 'index.js',
+    handler: ['index.js'],
     moduleType: 'esm',
   },
 };
@@ -131,10 +131,8 @@ describe('build', () => {
       });
 
       if ('handler' in result.output) {
-        expect(result.output.handler).toBe(fixtureConfig.handler);
-        // Normalize the handler path to match the files object keys
-        const normalizedHandler = result.output.handler.replace(/[\\/]/g, '/');
-        const file = result.output.files?.[normalizedHandler];
+        expect(result.output.handler).toBe(fixtureConfig.handler.join(sep));
+        const file = result.output.files?.[result.output.handler];
         if (file && 'data' in file) {
           const content = file.data.toString();
           const moduleTypeDetected = await detectModuleType(content);
