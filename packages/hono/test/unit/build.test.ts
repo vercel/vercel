@@ -28,18 +28,14 @@ const meta = { skipDownload: true };
 
 const createFiles = (workPath: string, fileList: string[]) => {
   const files: Files = {};
-  console.log('🔧 createFiles - workPath:', workPath);
-  console.log('🔧 createFiles - fileList:', fileList);
 
   for (const path of fileList) {
-    console.log('🔧 createFiles - Processing path:', path);
     if (!path) {
       console.log('❌ createFiles - Found undefined/null path!');
       continue;
     }
 
     const fullPath = join(workPath, path);
-    console.log('🔧 createFiles - Full path:', fullPath);
 
     files[path] = new FileFsRef({
       fsPath: fullPath,
@@ -122,10 +118,8 @@ describe('build', () => {
       const workPath = join(__dirname, '../fixtures', fixtureName);
 
       const fileList = readDirectoryRecursively(workPath);
-      console.log('📁 Test - File list:', fileList);
 
       const files = createFiles(workPath, fileList);
-      console.log('📁 Test - Files object keys:', Object.keys(files));
       const result = await build({
         files,
         workPath,
@@ -139,7 +133,7 @@ describe('build', () => {
       if ('handler' in result.output) {
         expect(result.output.handler).toBe(fixtureConfig.handler);
         // Normalize the handler path to match the files object keys
-        const normalizedHandler = result.output.handler.replace(/\\/g, '/');
+        const normalizedHandler = result.output.handler.replace(/[\\/]/g, '/');
         const file = result.output.files?.[normalizedHandler];
         if (file && 'data' in file) {
           const content = file.data.toString();
