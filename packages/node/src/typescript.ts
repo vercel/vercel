@@ -312,7 +312,11 @@ export function register(opts: Options = {}): Register {
 
       const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
 
-      reportTSError(diagnosticList, config.options.noEmitOnError);
+      if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+        reportTSError(diagnosticList, true);
+      } else {
+        reportTSError(diagnosticList, config.options.noEmitOnError);
+      }
 
       if (output.emitSkipped) {
         throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
