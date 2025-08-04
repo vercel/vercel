@@ -10,6 +10,7 @@
 
 ### Functions
 
+- [experimental_attachDatabasePool](index.md#experimental_attachdatabasepool)
 - [geolocation](index.md#geolocation)
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
@@ -19,6 +20,40 @@
 - [waitUntil](index.md#waituntil)
 
 ## Functions
+
+### experimental_attachDatabasePool
+
+▸ **experimental_attachDatabasePool**(`dbPool`): `void`
+
+Call this function right after creating a database pool with the database pool object
+as argument.
+This ensures that the current function instance stays alive long enough for
+idle database connections to be removed from the pool.
+
+**`Example`**
+
+```ts
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+experimental_attachDatabasePool(pgPool);
+```
+
+#### Parameters
+
+| Name     | Type     | Description                                                                                                                                                                                                                                                                                 |
+| :------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `dbPool` | `DbPool` | The database pool object. The supported pool types are: - PostgreSQL (pg) - MySQL2 - MariaDB - MongoDB - Redis (ioredis) - Cassandra (cassandra-driver) - OTHER: This method uses duck-typing to detect the pool type. Respectively you can pass in any object with a compatible interface. |
+
+#### Returns
+
+`void`
+
+#### Defined in
+
+[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+
+---
 
 ### geolocation
 
@@ -99,7 +134,7 @@ An instance of the Vercel Runtime Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L32)
+[packages/functions/src/cache/index.ts:33](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L33)
 
 ---
 

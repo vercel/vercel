@@ -32,6 +32,7 @@ import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
 import { frameworkList } from '@vercel/frameworks';
+import { vercelAuth } from '../input/vercel-auth';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -197,6 +198,10 @@ export default async function setupAndLink(
       );
     }
 
+    const vercelAuthSetting = await vercelAuth(client, {
+      autoConfirm,
+    });
+
     if (rootDirectory) {
       settings.rootDirectory = rootDirectory;
     }
@@ -204,6 +209,7 @@ export default async function setupAndLink(
     const project = await createProject(client, {
       ...settings,
       name: newProjectName,
+      vercelAuth: vercelAuthSetting,
     });
 
     await linkFolderToProject(

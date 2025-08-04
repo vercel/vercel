@@ -1,5 +1,35 @@
 # @vercel/routing-utils
 
+## 5.1.1
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 5.1.0
+
+### Minor Changes
+
+- Change where validation on the routing array happens (schema to api) ([#13476](https://github.com/vercel/vercel/pull/13476))
+
+## 5.0.8
+
+### Patch Changes
+
+- support transform rules in vercel.json ([#13464](https://github.com/vercel/vercel/pull/13464))
+
+## 5.0.7
+
+### Patch Changes
+
+- Fixed TS literal type inference for compatibility with json-schema-to-ts ([#13446](https://github.com/vercel/vercel/pull/13446))
+
+## 5.0.6
+
+### Patch Changes
+
+- Adds support for conditionValues for `has` and `missing` and `mitigate` in your `vercel.json` file. ([#13409](https://github.com/vercel/vercel/pull/13409))
+
 ## 5.0.5
 
 ### Patch Changes

@@ -163,7 +163,7 @@ export class Output {
     }
   };
 
-  spinner = (message: string, delay: number = 300): void => {
+  spinner = (message: string, delay = 300): void => {
     if (this.debugEnabled) {
       this.debug(`Spinner invoked (${message}) with a ${delay}ms delay`);
       return;

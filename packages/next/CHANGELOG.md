@@ -1,5 +1,129 @@
 # @vercel/next
 
+## 4.11.0
+
+### Minor Changes
+
+- Improve fallback root params handling with hasFallbackRootParams flag ([#13653](https://github.com/vercel/vercel/pull/13653))
+
+  - Add hasFallbackRootParams flag to RoutesManifestRoute type for simplified route regex generation
+  - Update route handling logic to conditionally apply fallback root params processing
+  - Enhance prerender manifest structure with fallback root params support
+
+## 4.10.11
+
+### Patch Changes
+
+- fix routing issue when clientSegmentCache is enabled ([#13625](https://github.com/vercel/vercel/pull/13625))
+
+## 4.10.10
+
+### Patch Changes
+
+- Ensure RSC headers have exact value '1' for proper routing and prefetch handling consistency ([#13644](https://github.com/vercel/vercel/pull/13644))
+
+- fix erroneous source file warning when using dynamic not-found ([#13641](https://github.com/vercel/vercel/pull/13641))
+
+## 4.10.9
+
+### Patch Changes
+
+- Only route prefetches to a static file if the prefetch header value is '1' ([#13547](https://github.com/vercel/vercel/pull/13547))
+
+## 4.10.8
+
+### Patch Changes
+
+- Reduce segment routes ([#13602](https://github.com/vercel/vercel/pull/13602))
+
+## 4.10.7
+
+### Patch Changes
+
+- Correct node middleware require path ([#13603](https://github.com/vercel/vercel/pull/13603))
+
+## 4.10.6
+
+### Patch Changes
+
+- Fix applying sourcePage mapping for lambdas ([#13599](https://github.com/vercel/vercel/pull/13599))
+
+## 4.10.5
+
+### Patch Changes
+
+- Add cacheComponents support for getRequestHandlerWithMetadata export ([#13595](https://github.com/vercel/vercel/pull/13595))
+
+## 4.10.4
+
+### Patch Changes
+
+- Add support for experimental.cacheComponents in PPR detection ([#13585](https://github.com/vercel/vercel/pull/13585))
+
+  Enables the experimental.cacheComponents configuration option to activate PPR (Partial Pre-Rendering) alongside existing ppr configuration options (true and 'incremental').
+
+## 4.10.3
+
+### Patch Changes
+
+- Fix node middleware with hoisted distDir ([#13584](https://github.com/vercel/vercel/pull/13584))
+
+- Fix case for \_next/data for i18n-basepath-middleware ([#13572](https://github.com/vercel/vercel/pull/13572))
+
+## 4.10.2
+
+### Patch Changes
+
+- Added support for partial routes defining a source page by adding lambdas for these routes ([#13574](https://github.com/vercel/vercel/pull/13574))
+
+## 4.10.1
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 4.10.0
+
+### Minor Changes
+
+- Adds support for user configured `preferredRegion` for Node.js Functions ([#13546](https://github.com/vercel/vercel/pull/13546))
+
+## 4.9.5
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
+## 4.9.4
+
+### Patch Changes
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
+## 4.9.3
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
+## 4.9.2
+
+### Patch Changes
+
+- Added support for the Resume Data Cache (RDC) for React Server Component (RSC) requests ([#13459](https://github.com/vercel/vercel/pull/13459))
+
+## 4.9.1
+
+### Patch Changes
+
+- Ensure we await node middleware import for top-level await ([#13479](https://github.com/vercel/vercel/pull/13479))
+
+## 4.9.0
+
+### Minor Changes
+
+- make the output of collectTracedFiles deterministic ([#13410](https://github.com/vercel/vercel/pull/13410))
+
 ## 4.8.0
 
 ### Minor Changes

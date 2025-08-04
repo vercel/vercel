@@ -83,11 +83,25 @@ export async function editProjectSettings(
     return settings;
   }
 
+  const styledFramework = (frameworkName: string) => {
+    const frameworkStyle = {
+      text: frameworkName,
+      color: chalk.blue,
+    };
+
+    if (frameworkName === 'Hono') {
+      frameworkStyle.text = '🔥 Hono';
+      frameworkStyle.color = chalk.hex('#FFA500');
+    }
+
+    return chalk.bold(frameworkStyle.color(frameworkStyle.text));
+  };
+
   // A missing framework slug implies the "Other" framework was selected
   output.print(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings (${chalk.bold(framework.name)}):\n`
+      : `Auto-detected Project Settings (${styledFramework(framework.name)}):\n`
   );
 
   settings.framework = framework.slug;

@@ -47,6 +47,7 @@ import {
   KIB,
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
+  INTERNAL_PAGES,
 } from './constants';
 
 type stringMap = { [key: string]: string };
@@ -223,6 +224,18 @@ type RoutesManifestRoute = {
   regex: string;
   namedRegex?: string;
   routeKeys?: { [named: string]: string };
+
+  /**
+   * If true, this indicates that the route has fallback root params. This is
+   * used to simplify the route regex for matching.
+   */
+  hasFallbackRootParams?: boolean;
+
+  /**
+   * The prefetch segment data routes for this route. This is used to rewrite
+   * the prefetch segment data routes (or the inverse) to the correct
+   * destination.
+   */
   prefetchSegmentDataRoutes?: {
     source: string;
     destination: string;
@@ -283,6 +296,11 @@ type RoutesManifestOld = {
      * Suffix for the prefetch segment data route directory.
      */
     prefetchSegmentDirSuffix?: string;
+
+    /**
+     * When true, the dynamic RSC route is expecting to be a prerendered route.
+     */
+    dynamicRSCPrerender?: boolean;
   };
   rewriteHeaders?: {
     pathHeader: string;
@@ -308,7 +326,10 @@ type RoutesManifestOld = {
 
 type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
   version: 4;
-  dynamicRoutes: (RoutesManifestRoute | { page: string; isMiddleware: true })[];
+  dynamicRoutes: (
+    | RoutesManifestRoute
+    | { sourcePage: string | undefined; page: string; isMiddleware: true }
+  )[];
 };
 
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
@@ -359,54 +380,26 @@ export async function getRoutesManifest(
   return routesManifest;
 }
 
-export async function getStaticSegmentRoutes({
-  entryDirectory,
-  routesManifest,
-}: {
-  entryDirectory: string;
-  routesManifest: RoutesManifest;
-}): Promise<RouteWithSrc[]> {
-  // When clientSegmentCache is enabled, static routes may output additional
-  // routes to handle segment requests. This is only relevant when PPR is in
-  // incremental mode, because for normal PPR, all routes are part of the
-  // prerender manifest, which has its own handling for this case.
-  // NOTE: We may be able to remove this code if we decide that incremental PPR
-  // + clientSegmentCache is not a supported configuration.
-  switch (routesManifest.version) {
-    case 3:
-    case 4: {
-      const routes: RouteWithSrc[] = [];
-      for (const {
-        routeKeys,
-        prefetchSegmentDataRoutes,
-      } of routesManifest.staticRoutes) {
-        if (prefetchSegmentDataRoutes && prefetchSegmentDataRoutes.length > 0) {
-          for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
-            routes.push({
-              src: prefetchSegmentDataRoute.source,
-              dest: getDestinationForSegmentRoute(
-                false,
-                entryDirectory,
-                routeKeys,
-                prefetchSegmentDataRoute
-              ),
-              check: true,
-            });
-          }
-        }
-      }
-      return routes;
-    }
-    default: {
-      // update MIN_ROUTES_MANIFEST_VERSION
-      throw new NowBuildError({
-        message:
-          'This version of `@vercel/next` does not support the version of Next.js you are trying to deploy.\n' +
-          'Please upgrade your `@vercel/next` builder and try again. Contact support if this continues to happen.',
-        code: 'NEXT_VERSION_UPGRADE',
-      });
-    }
+function getDestinationForSegmentRoute(
+  isDev: boolean,
+  entryDirectory: string,
+  routeKeys: Record<string, string> | undefined,
+  prefetchSegmentDataRoute: {
+    destination: string;
+    routeKeys?: Record<string, string>;
   }
+) {
+  return `${
+    !isDev
+      ? path.posix.join(
+          '/',
+          entryDirectory,
+          prefetchSegmentDataRoute.destination
+        )
+      : prefetchSegmentDataRoute.destination
+  }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
+    .map(([key, value]) => `${value}=$${key}`)
+    .join('&')}`;
 }
 
 export async function getDynamicRoutes({
@@ -434,7 +427,7 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
-  isAppClientSegmentCacheEnabled: boolean;
+  isAppClientSegmentCacheEnabled?: boolean;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -455,6 +448,18 @@ export async function getDynamicRoutes({
       case 3:
       case 4: {
         const routes: RouteWithSrc[] = [];
+
+        // for static routes check if there is a .prefetch or .rsc
+        // for the corresponding segment request that matches
+        // exactly before continuing to process dynamic routes
+        if (isAppClientSegmentCacheEnabled && !isAppPPREnabled) {
+          routes.push({
+            src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+            dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
+            check: true,
+            override: true,
+          });
+        }
 
         for (const dynamicRoute of routesManifest.dynamicRoutes) {
           if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
@@ -480,6 +485,7 @@ export async function getDynamicRoutes({
             regex,
             routeKeys,
             prefetchSegmentDataRoutes,
+            hasFallbackRootParams,
           } = params;
           const route: RouteWithSrc = {
             src: namedRegex || regex,
@@ -496,6 +502,13 @@ export async function getDynamicRoutes({
 
           if (!isServerMode) {
             route.check = true;
+          }
+
+          // We must use check: true and override to ensure the
+          // correct route priority with PPR or segment cache
+          if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
+            route.check = true;
+            route.override = true;
           }
 
           if (isServerMode && canUsePreviewMode && omittedRoutes?.has(page)) {
@@ -521,7 +534,6 @@ export async function getDynamicRoutes({
           ) {
             for (const prefetchSegmentDataRoute of prefetchSegmentDataRoutes) {
               routes.push({
-                ...route,
                 src: prefetchSegmentDataRoute.source,
                 dest: getDestinationForSegmentRoute(
                   isDev === true,
@@ -530,35 +542,38 @@ export async function getDynamicRoutes({
                   prefetchSegmentDataRoute
                 ),
                 check: true,
+                override: true,
               });
             }
           }
 
-          if (isAppPPREnabled) {
-            let dest = route.dest?.replace(/($|\?)/, '.prefetch.rsc$1');
-
-            if (page === '/' || page === '/index') {
-              dest = dest?.replace(/([^/]+\.prefetch\.rsc(\?.*|$))/, '__$1');
-            }
-
+          // use combined regex for .rsc, .prefetch.rsc, and .segments
+          // if PPR or client segment cache is enabled
+          if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
+            routes.push({
+              src: route.src.replace(
+                new RegExp(escapeStringRegexp('(?:/)?$')),
+                hasFallbackRootParams
+                  ? '\\.rsc(?:/)?$'
+                  : '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
+              ),
+              dest: route.dest?.replace(
+                /($|\?)/,
+                hasFallbackRootParams ? '.rsc$1' : '$rscSuffix$1'
+              ),
+              check: true,
+              override: true,
+            });
+          } else {
             routes.push({
               ...route,
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
-                '(?:\\.prefetch\\.rsc)(?:/)?$'
+                '(?:\\.rsc)(?:/)?$'
               ),
-              dest,
+              dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
             });
           }
-
-          routes.push({
-            ...route,
-            src: route.src.replace(
-              new RegExp(escapeStringRegexp('(?:/)?$')),
-              '(?:\\.rsc)(?:/)?$'
-            ),
-            dest: route.dest?.replace(/($|\?)/, '.rsc$1'),
-          });
 
           routes.push(route);
         }
@@ -643,28 +658,6 @@ export async function getDynamicRoutes({
     }
   });
   return routes;
-}
-
-function getDestinationForSegmentRoute(
-  isDev: boolean,
-  entryDirectory: string,
-  routeKeys: Record<string, string> | undefined,
-  prefetchSegmentDataRoute: {
-    destination: string;
-    routeKeys?: Record<string, string>;
-  }
-) {
-  return `${
-    !isDev
-      ? path.posix.join(
-          '/',
-          entryDirectory,
-          prefetchSegmentDataRoute.destination
-        )
-      : prefetchSegmentDataRoute.destination
-  }?${Object.entries(prefetchSegmentDataRoute.routeKeys ?? routeKeys ?? {})
-    .map(([key, value]) => `${value}=$${key}`)
-    .join('&')}`;
 }
 
 export function localizeDynamicRoutes(
@@ -1103,6 +1096,7 @@ export type NextPrerenderedRoutes = {
     [route: string]: {
       routeRegex: string;
       dataRoute: string | null;
+      fallback: string | boolean | null;
       fallbackRootParams?: string[];
       dataRouteRegex: string | null;
       prefetchDataRoute?: string | null;
@@ -1310,6 +1304,7 @@ export async function getPrerenderManifest(
         dynamicRoutes: {
           [key: string]: {
             fallback?: string;
+            fallbackRootParams?: string[];
             routeRegex: string;
             dataRoute: string;
             dataRouteRegex: string;
@@ -1416,8 +1411,13 @@ export async function getPrerenderManifest(
       });
 
       lazyRoutes.forEach(lazyRoute => {
-        const { routeRegex, fallback, dataRoute, dataRouteRegex } =
-          manifest.dynamicRoutes[lazyRoute];
+        const {
+          routeRegex,
+          fallback,
+          dataRoute,
+          dataRouteRegex,
+          fallbackRootParams,
+        } = manifest.dynamicRoutes[lazyRoute];
 
         if (fallback) {
           ret.fallbackRoutes[lazyRoute] = {
@@ -1432,6 +1432,8 @@ export async function getPrerenderManifest(
           ret.blockingFallbackRoutes[lazyRoute] = {
             routeRegex,
             dataRoute,
+            fallback: null,
+            fallbackRootParams,
             dataRouteRegex,
             renderingMode: RenderingMode.STATIC,
             allowHeader: undefined,
@@ -1576,6 +1578,7 @@ export async function getPrerenderManifest(
             renderingMode,
             allowHeader,
             fallbackRootParams,
+            fallback: null,
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
@@ -1712,11 +1715,14 @@ async function getSourceFilePathFromPage({
     return '';
   }
 
-  console.log(
-    `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
-      ', '
-    )}, this can cause functions config from \`vercel.json\` to not be applied`
-  );
+  // Skip warning for internal pages (_app.js, _error.js, _document.js)
+  if (!INTERNAL_PAGES.includes(page)) {
+    console.log(
+      `WARNING: Unable to find source file for page ${page} with extensions: ${extensionsToTry.join(
+        ', '
+      )}, this can cause functions config from \`vercel.json\` to not be applied`
+    );
+  }
   return '';
 }
 
@@ -1779,6 +1785,7 @@ export type LambdaGroup = {
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
+  experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
 
 export async function getPageLambdaGroups({
@@ -1821,6 +1828,7 @@ export async function getPageLambdaGroups({
   pageExtensions?: ReadonlyArray<string>;
   inversedAppPathManifest?: Record<string, string>;
   experimentalAllowBundling?: boolean;
+  experimentalTriggers?: Lambda['experimentalTriggers'];
 }) {
   const groups: Array<LambdaGroup> = [];
 
@@ -1834,6 +1842,7 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number;
+      experimentalTriggers?: NodejsLambda['experimentalTriggers'];
     } = {};
 
     if (
@@ -1869,7 +1878,9 @@ export async function getPageLambdaGroups({
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             group.isPrerenders === isPrerenderRoute &&
-            group.isExperimentalPPR === isExperimentalPPR;
+            group.isExperimentalPPR === isExperimentalPPR &&
+            JSON.stringify(group.experimentalTriggers) ===
+              JSON.stringify(opts.experimentalTriggers);
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -1908,6 +1919,7 @@ export async function getPageLambdaGroups({
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
+        experimentalTriggers: opts.experimentalTriggers,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -2428,41 +2440,32 @@ export const onPrerenderRoute =
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
     let postponedPrerender: string | undefined;
+    let postponedState: string | null = null;
     let didPostpone = false;
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
       !isBlocking
     ) {
+      postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
+
       const htmlPath = path.join(appDir, `${routeFileNoExt}.html`);
-      const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
-      if (fs.existsSync(htmlPath) && fs.existsSync(metaPath)) {
-        const meta: unknown = JSON.parse(await fs.readFile(metaPath, 'utf8'));
-        if (
-          typeof meta === 'object' &&
-          meta !== null &&
-          'postponed' in meta &&
-          typeof meta.postponed === 'string'
-        ) {
-          didPostpone = true;
-          postponedPrerender = meta.postponed;
+      if (fs.existsSync(htmlPath)) {
+        const html = fs.readFileSync(htmlPath, 'utf8');
 
-          // Assign the headers Content-Type header to the prerendered type.
-          initialHeaders ??= {};
+        initialHeaders ??= {};
+
+        if (postponedState) {
           initialHeaders['content-type'] =
-            `application/x-nextjs-pre-render; state-length=${meta.postponed.length}`;
+            `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin="text/html; charset=utf-8"`;
 
-          // Read the HTML file and append it to the prerendered content.
-          const html = await fs.readFileSync(htmlPath, 'utf8');
-          postponedPrerender += html;
+          postponedPrerender = postponedState + html;
+          didPostpone = true;
         } else {
-          // Set the content type to text/html; charset=utf-8.
-          initialHeaders ??= {};
           initialHeaders['content-type'] = 'text/html; charset=utf-8';
 
-          // Read the HTML file and set it to the prerendered content.
-          const html = await fs.readFileSync(htmlPath, 'utf8');
           postponedPrerender = html;
+          didPostpone = false;
         }
       }
 
@@ -2814,11 +2817,16 @@ export const onPrerenderRoute =
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
         (isFallback || isBlocking)
       ) {
-        const { fallbackRootParams } = isFallback
+        const { fallbackRootParams, fallback } = isFallback
           ? prerenderManifest.fallbackRoutes[routeKey]
           : prerenderManifest.blockingFallbackRoutes[routeKey];
 
-        if (fallbackRootParams && fallbackRootParams.length > 0) {
+        if (
+          fallback &&
+          typeof fallback === 'string' &&
+          fallbackRootParams &&
+          fallbackRootParams.length > 0
+        ) {
           htmlAllowQuery = fallbackRootParams;
         } else if (postponedPrerender) {
           htmlAllowQuery = [];
@@ -2931,6 +2939,50 @@ export const onPrerenderRoute =
           renderingMode !== RenderingMode.PARTIALLY_STATIC
         ) {
           prerenders[normalizePathData(outputPathData)] = prerender;
+        }
+        // If this route had a postponed state associated with it, then we
+        // should also associate its data route with the postponed state too,
+        // ensuring that it will get the postponed state when it's requested.
+        else if (
+          outputPathData &&
+          routesManifest?.rsc?.dynamicRSCPrerender &&
+          routesManifest?.ppr?.chain?.headers &&
+          postponedState
+        ) {
+          const contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+            rscContentTypeHeader
+          )}`;
+
+          prerenders[normalizePathData(outputPathData)] = new Prerender({
+            expiration: initialRevalidate,
+            staleExpiration: initialExpire,
+            lambda,
+            allowQuery,
+            fallback: isFallback
+              ? null
+              : new FileBlob({
+                  data: postponedState,
+                  contentType,
+                }),
+            group: prerenderGroup,
+            bypassToken: prerenderManifest.bypassToken,
+            experimentalBypassFor,
+            allowHeader,
+            chain: {
+              outputPath: normalizePathData(outputPathData),
+              headers: routesManifest.ppr.chain.headers,
+            },
+            ...(isNotFound ? { initialStatus: 404 } : {}),
+            initialHeaders: {
+              ...initialHeaders,
+              'content-type': contentType,
+              // Dynamic RSC requests cannot be cached, so we explicity set it
+              // here to ensure that the response is not cached by the browser.
+              'cache-control':
+                'private, no-store, no-cache, max-age=0, must-revalidate',
+              vary: rscVaryHeader,
+            },
+          });
         }
       }
 
@@ -3536,6 +3588,8 @@ export async function getNodeMiddleware({
     ).filter((entry): entry is [string, FileFsRef] => !!entry)
   );
 
+  const absoluteOutputDirectory = path.posix.join(entryPath, outputDirectory);
+
   const launcherData = (
     await fs.readFile(path.join(__dirname, 'middleware-launcher.js'), 'utf8')
   )
@@ -3543,13 +3597,17 @@ export async function getNodeMiddleware({
       /(?:var|const) conf = __NEXT_CONFIG__/,
       `const conf = ${JSON.stringify({
         ...requiredServerFilesManifest.config,
-        distDir: path.relative(
-          projectDir,
-          path.join(entryPath, outputDirectory)
-        ),
+        distDir: path.relative(projectDir, absoluteOutputDirectory),
       })}`
     )
-    .replace('__NEXT_MIDDLEWARE_PATH__', `./.next/server/middleware.js`);
+    .replace(
+      '__NEXT_MIDDLEWARE_PATH__',
+      './' +
+        path.posix.join(
+          path.posix.relative(projectDir, absoluteOutputDirectory),
+          `server/middleware.js`
+        )
+    );
 
   const lambda = new NodejsLambda({
     ...vercelConfigOpts,
@@ -4174,4 +4232,37 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   }
 
   return updatedPrefetches;
+}
+
+/**
+ * Get the postponed state for a route.
+ *
+ * @param appDir - The app directory.
+ * @param routeFileNoExt - The route file name without the extension.
+ * @returns The postponed state for the route.
+ */
+function getHTMLPostponedState({
+  appDir,
+  routeFileNoExt,
+}: {
+  appDir: string;
+  routeFileNoExt: string;
+}) {
+  const metaPath = path.join(appDir, `${routeFileNoExt}.meta`);
+  if (!fs.existsSync(metaPath)) {
+    return null;
+  }
+
+  const meta: unknown = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+
+  if (
+    typeof meta !== 'object' ||
+    meta === null ||
+    !('postponed' in meta) ||
+    typeof meta.postponed !== 'string'
+  ) {
+    return null;
+  }
+
+  return meta.postponed;
 }
