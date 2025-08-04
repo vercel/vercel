@@ -1,51 +1,46 @@
 import { Files, type BuildV3 } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: hono-framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
+import { sep } from 'path';
 
 export const build: BuildV3 = async args => {
   const entrypoint = findEntrypoint(args.files);
 
+  // Introducing new behavior for the node builder where Typescript errors always
+  // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
+  process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
   return nodeBuild({
     ...args,
     entrypoint,
-    useWebApi: true,
-    shim,
   });
 };
 
-export const shim = (handler: string, relativePathToHandler = '.') => `
-// @ts-ignore
-import app from "${relativePathToHandler}/${handler}";
-
-// @ts-ignore
-const handle = async (request) => {
-  return app.fetch(request);
-};
-
-export const GET = handle;
-export const POST = handle;
-export const PUT = handle;
-export const DELETE = handle;
-export const PATCH = handle;
-export const OPTIONS = handle;
-export const HEAD = handle;`;
-
 export const findEntrypoint = (files: Files) => {
   const validEntrypoints = [
-    'server.ts',
-    'server.js',
-    'index.ts',
-    'index.js',
-    'index.mjs',
-    'index.cjs',
-    'src/index.ts',
-    'src/index.js',
-    'src/index.mjs',
-    'src/index.cjs',
+    ['index.cjs'],
+    ['index.js'],
+    ['index.mjs'],
+    ['index.mts'],
+    ['index.ts'],
+    ['server.cjs'],
+    ['server.js'],
+    ['server.mjs'],
+    ['server.mts'],
+    ['server.ts'],
+    ['src', 'index.cjs'],
+    ['src', 'index.js'],
+    ['src', 'index.mjs'],
+    ['src', 'index.mts'],
+    ['src', 'index.ts'],
   ];
-  const entrypoint = validEntrypoints.find(path => files[path] !== undefined);
+
+  const entrypoint = validEntrypoints.find(entrypointParts => {
+    const path = entrypointParts.join(sep);
+    return files[path] !== undefined;
+  });
+
   if (!entrypoint) {
     throw new Error('No valid entrypoint found');
   }
-  return entrypoint;
+  return entrypoint.join(sep);
 };

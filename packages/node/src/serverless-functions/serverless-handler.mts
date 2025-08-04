@@ -72,7 +72,8 @@ async function compileUserCode(
 
   const shouldUseWebHandlers =
     options.isMiddleware ||
-    HTTP_METHODS.some(method => typeof listener[method] === 'function');
+    HTTP_METHODS.some(method => typeof listener[method] === 'function') ||
+    typeof listener.fetch === 'function';
 
   if (shouldUseWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
@@ -83,6 +84,15 @@ async function compileUserCode(
       handler = HTTP_METHODS.reduce(
         (acc, method) => {
           acc[method] = listener;
+          return acc;
+        },
+        {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
+      );
+    }
+    if (typeof listener.fetch === 'function') {
+      handler = HTTP_METHODS.reduce(
+        (acc, method) => {
+          acc[method] = listener.fetch;
           return acc;
         },
         {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
