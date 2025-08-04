@@ -9,7 +9,7 @@ export async function getResources(
   searchParams.set('teamId', teamId);
 
   const storesResponse = await client.fetch<{ stores: Resource[] }>(
-    `/v1/storage/stores?teamId=${searchParams}`,
+    `/v1/storage/stores?${searchParams}`,
     {
       json: true,
     }
