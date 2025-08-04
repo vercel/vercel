@@ -1,5 +1,16 @@
 # @vercel/hono
 
+## 0.0.9
+
+### Patch Changes
+
+- Support fetchable apps out of the box for Node dev server. ([#13664](https://github.com/vercel/vercel/pull/13664))
+
+  Support CommonJS for Hono
+
+- Updated dependencies [[`a4e72c3c53ddbfccfb31c483ab1e745c68282371`](https://github.com/vercel/vercel/commit/a4e72c3c53ddbfccfb31c483ab1e745c68282371)]:
+  - @vercel/node@5.3.11
+
 ## 0.0.8
 
 ### Patch Changes
