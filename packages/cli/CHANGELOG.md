@@ -1,5 +1,19 @@
 # vercel
 
+## 44.7.2
+
+### Patch Changes
+
+- Remove duplicate teamId param when fetching stores ([#13674](https://github.com/vercel/vercel/pull/13674))
+
+## 44.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`a4e72c3c53ddbfccfb31c483ab1e745c68282371`](https://github.com/vercel/vercel/commit/a4e72c3c53ddbfccfb31c483ab1e745c68282371)]:
+  - @vercel/hono@0.0.9
+  - @vercel/node@5.3.11
+
 ## 44.7.0
 
 ### Minor Changes
