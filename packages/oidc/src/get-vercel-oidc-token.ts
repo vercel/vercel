@@ -1,4 +1,5 @@
 import { getContext } from './get-context';
+import { VercelOidcTokenError } from './token-error';
 
 /**
  * Gets the current OIDC token from the request context or the environment variable.
@@ -42,10 +43,10 @@ export async function getVercelOidcToken(): Promise<string> {
       token = getVercelOidcTokenSync();
     }
   } catch (error) {
-    if (error instanceof Error && err.message === error.message) {
-      throw err;
+    if (err?.message && error instanceof Error) {
+      error.message = `${err.message}\n${error.message}`;
     }
-    throw new Error(`Failed to refresh OIDC token: ${err}: ${error}`);
+    throw new VercelOidcTokenError(`Failed to refresh OIDC token`, error);
   }
   return token;
 }
