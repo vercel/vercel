@@ -1,5 +1,11 @@
 # vercel
 
+## 44.7.2
+
+### Patch Changes
+
+- Remove duplicate teamId param when fetching stores ([#13674](https://github.com/vercel/vercel/pull/13674))
+
 ## 44.7.1
 
 ### Patch Changes
