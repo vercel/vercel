@@ -1,9 +1,6 @@
 {
   "name": "hono",
   "type": "module",
-  "scripts": {
-    "dev": "vc dev"
-  },
   "dependencies": {
     "hono": "^4.8.9"
   },
