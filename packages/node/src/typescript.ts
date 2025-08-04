@@ -124,7 +124,9 @@ const configFileToBuildMap = new Map<string, GetOutputFunction>();
 /**
  * Register TypeScript compiler.
  */
-export function register(opts: Options = {}): Register {
+export function register(
+  opts: Options & { experimentalNodeTSErrors?: boolean } = {}
+): Register {
   const options = Object.assign({}, DEFAULTS, opts);
 
   const ignoreDiagnostics = [
@@ -312,7 +314,7 @@ export function register(opts: Options = {}): Register {
 
       const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
 
-      if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+      if (options.experimentalNodeTSErrors) {
         reportTSError(diagnosticList, true);
       } else {
         reportTSError(diagnosticList, config.options.noEmitOnError);

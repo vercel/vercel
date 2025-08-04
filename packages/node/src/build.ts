@@ -106,7 +106,8 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean
+  isEdgeFunction: boolean,
+  experimentalNodeTSErrors?: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -148,6 +149,7 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        experimentalNodeTSErrors,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -368,11 +370,15 @@ export const build = async ({
   useWebApi,
   workPath,
   repoRootPath,
+  // Introducing new behavior for the node builder where Typescript errors always
+  // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
+  experimentalNodeTSErrors = false,
   config = {},
   meta = {},
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
+  experimentalNodeTSErrors?: boolean;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -416,7 +422,8 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    experimentalNodeTSErrors
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
