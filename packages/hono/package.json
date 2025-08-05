@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hono",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -11,8 +11,8 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test-e2e": "pnpm test test/test.js",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
     "type-check": "tsc --noEmit"
   },
   "files": [
@@ -21,7 +21,7 @@
   ],
   "dependencies": {
     "@vercel/static-config": "3.1.1",
-    "@vercel/node": "5.3.9",
+    "@vercel/node": "5.3.11",
     "ts-morph": "12.0.0"
   },
   "devDependencies": {

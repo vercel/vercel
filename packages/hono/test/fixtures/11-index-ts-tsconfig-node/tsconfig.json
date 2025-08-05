@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "esnext",
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": false, // default, but be explicit
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+  },
+}

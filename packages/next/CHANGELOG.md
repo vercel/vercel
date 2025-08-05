@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.11.0
+
+### Minor Changes
+
+- Improve fallback root params handling with hasFallbackRootParams flag ([#13653](https://github.com/vercel/vercel/pull/13653))
+
+  - Add hasFallbackRootParams flag to RoutesManifestRoute type for simplified route regex generation
+  - Update route handling logic to conditionally apply fallback root params processing
+  - Enhance prerender manifest structure with fallback root params support
+
 ## 4.10.11
 
 ### Patch Changes

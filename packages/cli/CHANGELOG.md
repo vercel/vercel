@@ -1,5 +1,41 @@
 # vercel
 
+## 44.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`60772fe5e76463d8ff8208e5dd6ffdfcedb9c565`](https://github.com/vercel/vercel/commit/60772fe5e76463d8ff8208e5dd6ffdfcedb9c565)]:
+  - @vercel/go@3.2.3
+
+## 44.7.2
+
+### Patch Changes
+
+- Remove duplicate teamId param when fetching stores ([#13674](https://github.com/vercel/vercel/pull/13674))
+
+## 44.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`a4e72c3c53ddbfccfb31c483ab1e745c68282371`](https://github.com/vercel/vercel/commit/a4e72c3c53ddbfccfb31c483ab1e745c68282371)]:
+  - @vercel/hono@0.0.9
+  - @vercel/node@5.3.11
+
+## 44.7.0
+
+### Minor Changes
+
+- Make framework detection text prettier ([#13654](https://github.com/vercel/vercel/pull/13654))
+
+### Patch Changes
+
+- Improve non-debug error log for user fetch ([#13657](https://github.com/vercel/vercel/pull/13657))
+
+- Updated dependencies [[`e9ef3b82c7093ac750173fc2a2d2747ba25f6c78`](https://github.com/vercel/vercel/commit/e9ef3b82c7093ac750173fc2a2d2747ba25f6c78), [`b1993ee3af72d12859bbc621744b687fbc968a1b`](https://github.com/vercel/vercel/commit/b1993ee3af72d12859bbc621744b687fbc968a1b)]:
+  - @vercel/next@4.11.0
+  - @vercel/hono@0.0.8
+  - @vercel/node@5.3.10
+
 ## 44.6.7
 
 ### Patch Changes
