@@ -1,5 +1,5 @@
 import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
-import { experimental_attachDatabasePool as attachDatabasePool } from '../../../src/db-connections';
+import { attachDatabasePool } from '../../../src/db-connections';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../../src/get-context';
 
 describe('db-connections', () => {

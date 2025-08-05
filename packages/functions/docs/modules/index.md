@@ -10,6 +10,7 @@
 
 ### Functions
 
+- [attachDatabasePool](index.md#attachdatabasepool)
 - [experimental_attachDatabasePool](index.md#experimental_attachdatabasepool)
 - [geolocation](index.md#geolocation)
 - [getCache](index.md#getcache)
@@ -21,9 +22,9 @@
 
 ## Functions
 
-### experimental_attachDatabasePool
+### attachDatabasePool
 
-▸ **experimental_attachDatabasePool**(`dbPool`): `void`
+▸ **attachDatabasePool**(`dbPool`): `void`
 
 Call this function right after creating a database pool with the database pool object
 as argument.
@@ -36,7 +37,7 @@ idle database connections to be removed from the pool.
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
-experimental_attachDatabasePool(pgPool);
+attachDatabasePool(pgPool);
 ```
 
 #### Parameters
@@ -44,6 +45,30 @@ experimental_attachDatabasePool(pgPool);
 | Name     | Type     | Description                                                                                                                                                                                                                                                                                 |
 | :------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `dbPool` | `DbPool` | The database pool object. The supported pool types are: - PostgreSQL (pg) - MySQL2 - MariaDB - MongoDB - Redis (ioredis) - Cassandra (cassandra-driver) - OTHER: This method uses duck-typing to detect the pool type. Respectively you can pass in any object with a compatible interface. |
+
+#### Returns
+
+`void`
+
+#### Defined in
+
+[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+
+---
+
+### experimental_attachDatabasePool
+
+▸ **experimental_attachDatabasePool**(`dbPool`): `void`
+
+**`Deprecated`**
+
+Use attachDatabasePool instead.
+
+#### Parameters
+
+| Name     | Type     |
+| :------- | :------- |
+| `dbPool` | `DbPool` |
 
 #### Returns
 
