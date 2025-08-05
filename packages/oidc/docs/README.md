@@ -84,4 +84,4 @@ The OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:75](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L75)
+[get-vercel-oidc-token.ts:79](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L79)

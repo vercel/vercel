@@ -35,10 +35,11 @@ interface VercelTokenResponse {
 
 export async function getVercelOidcToken(
   authToken: string,
-  projectId: string
+  projectId: string,
+  teamId?: string
 ): Promise<VercelTokenResponse | null> {
   try {
-    const url = `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-oidc-refresh`;
+    const url = `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-oidc-refresh${teamId ? `&teamId=${teamId}` : ''}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -69,7 +70,7 @@ export function assertVercelOidcTokenResponse(
   }
 }
 
-export function findProjectId(): string {
+export function findProjectInfo(): { projectId: string; teamId: string } {
   const dir = findRootDir();
   if (!dir) {
     throw new VercelOidcTokenError('Unable to find root directory');
@@ -80,10 +81,10 @@ export function findProjectId(): string {
       throw new VercelOidcTokenError('project.json not found');
     }
     const prj = JSON.parse(fs.readFileSync(prjPath, 'utf8'));
-    if (typeof prj.projectId !== 'string') {
+    if (typeof prj.projectId !== 'string' && typeof prj.orgId !== 'string') {
       throw new TypeError('Expected a string-valued projectId property');
     }
-    return prj.projectId;
+    return { projectId: prj.projectId, teamId: prj.orgId };
   } catch (e) {
     throw new VercelOidcTokenError(`Unable to find project ID`, e);
   }
