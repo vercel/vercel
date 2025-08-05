@@ -22,8 +22,9 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.23', '1.23.2'],
-  ['1.22', '1.22.8'],
+  ['1.24', '1.24.5'],
+  ['1.23', '1.23.11'],
+  ['1.22', '1.22.12'],
   ['1.21', '1.21.13'],
   ['1.20', '1.20.14'],
   ['1.19', '1.19.13'],
@@ -483,7 +484,8 @@ export function parseGoModVersion(content: string): GoVersions | undefined {
     );
   const toolchain = toolchainMatches ? toolchainMatches[1] : undefined;
   if (major >= GO_MIN_MAJOR_VERSION && minor >= GO_MIN_MINOR_VERSION) {
-    if (patch) {
+    // Special case handle `patch` is provided and 0
+    if (patch || patch === 0) {
       return {
         go: `${major}.${minor}.${patch}`,
         toolchain,
