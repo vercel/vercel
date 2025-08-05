@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.2.3
+
+### Patch Changes
+
+- Respect patch version of 0 ([#13672](https://github.com/vercel/vercel/pull/13672))
+
 ## 3.2.2
 
 ### Patch Changes

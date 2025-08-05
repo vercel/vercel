@@ -1,5 +1,12 @@
 # vercel
 
+## 44.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`60772fe5e76463d8ff8208e5dd6ffdfcedb9c565`](https://github.com/vercel/vercel/commit/60772fe5e76463d8ff8208e5dd6ffdfcedb9c565)]:
+  - @vercel/go@3.2.3
+
 ## 44.7.2
 
 ### Patch Changes
