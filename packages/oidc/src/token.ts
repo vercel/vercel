@@ -1,6 +1,6 @@
 import { VercelOidcTokenError } from './token-error';
 import {
-  findProjectId,
+  findProjectInfo,
   getTokenPayload,
   getVercelCliToken,
   getVercelOidcToken,
@@ -10,7 +10,9 @@ import {
 } from './token-util';
 
 export async function refreshToken(): Promise<void> {
-  let maybeToken = loadToken(findProjectId());
+  const { projectId, teamId } = findProjectInfo();
+  let maybeToken = loadToken(projectId);
+
   if (!maybeToken || isExpired(getTokenPayload(maybeToken.token))) {
     const authToken = getVercelCliToken();
     if (!authToken) {
@@ -18,13 +20,12 @@ export async function refreshToken(): Promise<void> {
         'Failed to refresh OIDC token: login to vercel cli'
       );
     }
-    const projectId = findProjectId();
     if (!projectId) {
       throw new VercelOidcTokenError(
         'Failed to refresh OIDC token: project id not found'
       );
     }
-    maybeToken = await getVercelOidcToken(authToken, projectId);
+    maybeToken = await getVercelOidcToken(authToken, projectId, teamId);
     if (!maybeToken) {
       throw new VercelOidcTokenError('Failed to refresh OIDC token');
     }
