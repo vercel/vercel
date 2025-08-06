@@ -12,7 +12,9 @@ import { VercelOidcTokenError } from './token-error';
  * Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
  *
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
- * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
+ * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
+ * is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
+ * or the token refresh request fails.
  *
  * @example
  *
