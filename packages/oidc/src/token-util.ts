@@ -97,7 +97,6 @@ export function saveToken(token: VercelTokenResponse, projectId: string): void {
       throw new VercelOidcTokenError('Unable to find user data directory');
     }
     const tokenPath = path.join(dir, 'com.vercel.token', `${projectId}.json`);
-    console.log(tokenPath);
     const tokenJson = JSON.stringify(token);
     fs.mkdirSync(path.dirname(tokenPath), { mode: 0o660, recursive: true }); // read/write perms for owner only
     fs.writeFileSync(tokenPath, tokenJson);
