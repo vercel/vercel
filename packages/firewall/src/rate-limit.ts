@@ -65,7 +65,8 @@ export async function checkRateLimit(
   if (!requestHeaders && isUsingNextJs) {
     const { headers } = await import('next/headers');
     try {
-      requestHeaders = headers();
+      // await for next.js >15
+      requestHeaders = await headers();
     } catch {
       // Ignore
     }
