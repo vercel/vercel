@@ -24,7 +24,9 @@ Unlike the `getVercelOidcTokenSync` function, this function will refresh the tok
 
 **`Throws`**
 
-If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
+If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
+is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
+or the token refresh request fails.
 
 **`Example`**
 
@@ -47,7 +49,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:28](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L28)
+[get-vercel-oidc-token.ts:30](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L30)
 
 ---
 
@@ -84,4 +86,4 @@ The OIDC token.
 
 #### Defined in
 
-[get-vercel-oidc-token.ts:79](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L79)
+[get-vercel-oidc-token.ts:81](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L81)
