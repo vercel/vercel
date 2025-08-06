@@ -1,0 +1,34 @@
+import React from "react";
+
+export default function Home() {
+  return (
+    <main className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono p-8">
+      <h1 className="text-5xl font-bold text-center text-yellow-400 drop-shadow mb-4">🎮 WHO? SPADES!!!</h1>
+      <p className="text-center italic text-purple-300 mb-6">The Mike Jones–themed Spades game you never knew you needed. 🎤💰</p>
+
+      <img
+        src="/mike-jones-animated.gif"
+        alt="Mike Jones Face Card"
+        className="rounded-full w-40 h-40 mb-6 border-4 border-yellow-300"
+      />
+
+      <a
+        href="https://your-vercel-link.vercel.app"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="bg-yellow-500 text-black px-6 py-3 rounded-xl text-xl font-bold hover:scale-105 transition"
+      >
+        🎮 PLAY NOW
+      </a>
+
+      <p className="mt-8 max-w-xl text-center text-sm text-gray-400">
+        Featuring face cards with animated Mike Jones avatars, trash talk audio, Money Train Records soundtrack,
+        and YouTube autoplay background vibes.
+      </p>
+
+      <div className="mt-6 text-xs text-center text-gray-600 italic">
+        "Back then they didn’t want me. Now I’m hot, they all on me." – Mike Jones
+      </div>
+    </main>
+  );
+}
