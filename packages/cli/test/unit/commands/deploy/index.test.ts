@@ -1325,7 +1325,7 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Want to use the default Deployment Protection settings?'
+          'Do you want to change additional project settings?'
         );
         client.stdin.write('\n');
 
@@ -1365,7 +1365,7 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput(
-          'Want to use the default Deployment Protection settings?'
+          'Do you want to change additional project settings?'
         );
         client.stdin.write('\n');
 
