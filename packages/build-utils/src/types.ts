@@ -5,6 +5,7 @@ import type { Lambda, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 import type { Span } from './trace';
+import type { HasField } from '@vercel/routing-utils';
 
 export interface Env {
   [name: string]: string | undefined;
@@ -46,17 +47,7 @@ export interface Config {
   [key: string]: unknown;
 }
 
-export type HasField = Array<
-  | {
-      type: 'host';
-      value: string;
-    }
-  | {
-      type: 'header' | 'cookie' | 'query';
-      key: string;
-      value?: string;
-    }
->;
+export type { HasField };
 
 export interface Meta {
   isDev?: boolean;
@@ -391,6 +382,7 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    experimentalTriggers?: TriggerEvent[];
   };
 }
 
@@ -599,4 +591,40 @@ export interface Chain {
    * The headers to send when making the request to append to the response.
    */
   headers: Record<string, string>;
+}
+
+/**
+ * Queue trigger event for Vercel's queue system.
+ * Handles "queue/v1beta" events with queue-specific configuration.
+ */
+export interface TriggerEvent {
+  /** Event type - must be "queue/v1beta" (REQUIRED) */
+  type: 'queue/v1beta';
+
+  /** Name of the queue topic to consume from (REQUIRED) */
+  topic: string;
+
+  /** Name of the consumer group for this trigger (REQUIRED) */
+  consumer: string;
+
+  /**
+   * Maximum number of delivery attempts for message processing (OPTIONAL)
+   * This represents the total number of times a message can be delivered,
+   * not the number of retries. Must be at least 1 if specified.
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  maxDeliveries?: number;
+
+  /**
+   * Delay in seconds before retrying failed executions (OPTIONAL)
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  retryAfterSeconds?: number;
+
+  /**
+   * Initial delay in seconds before first execution attempt (OPTIONAL)
+   * Must be 0 or greater. Use 0 for no initial delay.
+   * Behavior when not specified depends on the server's default configuration.
+   */
+  initialDelaySeconds?: number;
 }

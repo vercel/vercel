@@ -1,6 +1,6 @@
 import type { AwsCredentialIdentityProvider } from '@smithy/types';
 import type { FromWebTokenInit } from '@aws-sdk/credential-provider-web-identity';
-import { getVercelOidcToken } from './get-vercel-oidc-token';
+import { getVercelOidcTokenSync } from '@vercel/oidc';
 
 /**
  * The init object for the `awsCredentialsProvider` function.
@@ -57,16 +57,24 @@ export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-e
  * });
  * ```
  */
+async function loadAwsCredentialProviderWebIdentity() {
+  try {
+    return await import('@aws-sdk/credential-provider-web-identity');
+  } catch (err) {
+    throw new Error(
+      "package '@aws-sdk/credential-provider-web-identity' not found"
+    );
+  }
+}
+
 export function awsCredentialsProvider(
   init: AwsCredentialsProviderInit
 ): AwsCredentialIdentityProvider {
   return async () => {
-    const { fromWebToken } = await import(
-      '@aws-sdk/credential-provider-web-identity'
-    );
+    const { fromWebToken } = await loadAwsCredentialProviderWebIdentity();
     return fromWebToken({
       ...init,
-      webIdentityToken: await getVercelOidcToken(),
+      webIdentityToken: getVercelOidcTokenSync(),
     })();
   };
 }

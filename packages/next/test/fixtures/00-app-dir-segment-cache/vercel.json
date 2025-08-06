@@ -1,0 +1,23 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "fetchOptions": {
+        "redirect": "manual"
+      },
+      "path": "/careers/foobar-1?_rsc=fu8n3",
+      "status": 200,
+      "headers": {
+        "RSC": "1",
+        "Next-Router-Prefetch": "1",
+        "Next-Router-Segment-Prefetch": "/_tree"
+      },
+      "mustContain": "foobar-1"
+    }
+  ]
+}

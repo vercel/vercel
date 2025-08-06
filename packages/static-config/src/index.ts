@@ -31,6 +31,9 @@ export const BaseFunctionConfigSchema = {
         },
       ],
     },
+    preferredRegion: {
+      oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+    },
   },
 } as const;
 

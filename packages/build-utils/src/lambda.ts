@@ -5,7 +5,15 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Config, Env, Files, FunctionFramework } from './types';
+import type {
+  Config,
+  Env,
+  Files,
+  FunctionFramework,
+  TriggerEvent,
+} from './types';
+
+export type { TriggerEvent };
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
@@ -29,6 +37,21 @@ export interface LambdaOptionsBase {
   experimentalResponseStreaming?: boolean;
   operationType?: string;
   framework?: FunctionFramework;
+  /**
+   * Experimental trigger event definitions that this Lambda can receive.
+   * Defines what types of trigger events this Lambda can handle as an HTTP endpoint.
+   * Currently supports queue triggers for Vercel's queue system.
+   *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: TriggerEvent[];
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -51,6 +74,24 @@ interface GetLambdaOptionsFromFunctionOptions {
   config?: Pick<Config, 'functions'>;
 }
 
+function getDefaultLambdaArchitecture(
+  architecture: LambdaArchitecture | undefined
+): LambdaArchitecture {
+  if (architecture) {
+    return architecture;
+  }
+
+  switch (process.arch) {
+    case 'arm':
+    case 'arm64': {
+      return 'arm64';
+    }
+    default: {
+      return 'x86_64';
+    }
+  }
+}
+
 export class Lambda {
   type: 'Lambda';
   /**
@@ -62,7 +103,7 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
-  architecture?: LambdaArchitecture;
+  architecture: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
   environment: Env;
@@ -77,6 +118,21 @@ export class Lambda {
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
   experimentalAllowBundling?: boolean;
+  /**
+   * Experimental trigger event definitions that this Lambda can receive.
+   * Defines what types of trigger events this Lambda can handle as an HTTP endpoint.
+   * Currently supports queue triggers for Vercel's queue system.
+   *
+   * The delivery configuration provides HINTS to the system about preferred
+   * execution behavior (concurrency, retries) but these are NOT guarantees.
+   * The system may disregard these hints based on resource constraints.
+   *
+   * IMPORTANT: HTTP request-response semantics remain synchronous regardless
+   * of delivery configuration. Callers receive immediate responses.
+   *
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalTriggers?: TriggerEvent[];
 
   constructor(opts: LambdaOptions) {
     const {
@@ -94,6 +150,7 @@ export class Lambda {
       experimentalResponseStreaming,
       operationType,
       framework,
+      experimentalTriggers,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -174,12 +231,86 @@ export class Lambda {
       }
     }
 
+    if (experimentalTriggers !== undefined) {
+      assert(
+        Array.isArray(experimentalTriggers),
+        '"experimentalTriggers" is not an Array'
+      );
+
+      for (let i = 0; i < experimentalTriggers.length; i++) {
+        const trigger = experimentalTriggers[i];
+        const prefix = `"experimentalTriggers[${i}]"`;
+
+        assert(
+          typeof trigger === 'object' && trigger !== null,
+          `${prefix} is not an object`
+        );
+
+        // Validate required type
+        assert(
+          trigger.type === 'queue/v1beta',
+          `${prefix}.type must be "queue/v1beta"`
+        );
+
+        // Validate required queue fields
+        assert(
+          typeof trigger.topic === 'string',
+          `${prefix}.topic is required and must be a string`
+        );
+        assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
+
+        assert(
+          typeof trigger.consumer === 'string',
+          `${prefix}.consumer is required and must be a string`
+        );
+        assert(
+          trigger.consumer.length > 0,
+          `${prefix}.consumer cannot be empty`
+        );
+
+        // Validate optional queue configuration
+        if (trigger.maxDeliveries !== undefined) {
+          assert(
+            typeof trigger.maxDeliveries === 'number',
+            `${prefix}.maxDeliveries must be a number`
+          );
+          assert(
+            Number.isInteger(trigger.maxDeliveries) &&
+              trigger.maxDeliveries >= 1,
+            `${prefix}.maxDeliveries must be at least 1`
+          );
+        }
+
+        if (trigger.retryAfterSeconds !== undefined) {
+          assert(
+            typeof trigger.retryAfterSeconds === 'number',
+            `${prefix}.retryAfterSeconds must be a number`
+          );
+          assert(
+            trigger.retryAfterSeconds > 0,
+            `${prefix}.retryAfterSeconds must be a positive number`
+          );
+        }
+
+        if (trigger.initialDelaySeconds !== undefined) {
+          assert(
+            typeof trigger.initialDelaySeconds === 'number',
+            `${prefix}.initialDelaySeconds must be a number`
+          );
+          assert(
+            trigger.initialDelaySeconds >= 0,
+            `${prefix}.initialDelaySeconds must be a non-negative number`
+          );
+        }
+      }
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
-    this.architecture = architecture;
+    this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
@@ -195,6 +326,7 @@ export class Lambda {
       'experimentalAllowBundling' in opts
         ? opts.experimentalAllowBundling
         : undefined;
+    this.experimentalTriggers = experimentalTriggers;
   }
 
   async createZip(): Promise<Buffer> {
@@ -279,7 +411,10 @@ export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
-  Pick<LambdaOptions, 'architecture' | 'memory' | 'maxDuration'>
+  Pick<
+    LambdaOptions,
+    'architecture' | 'memory' | 'maxDuration' | 'experimentalTriggers'
+  >
 > {
   if (config?.functions) {
     for (const [pattern, fn] of Object.entries(config.functions)) {
@@ -288,6 +423,7 @@ export async function getLambdaOptionsFromFunction({
           architecture: fn.architecture,
           memory: fn.memory,
           maxDuration: fn.maxDuration,
+          experimentalTriggers: fn.experimentalTriggers,
         };
       }
     }

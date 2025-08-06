@@ -1,5 +1,70 @@
 # @vercel/functions
 
+## 2.2.8
+
+### Patch Changes
+
+- Declare attachDatabasePool stable ([#13673](https://github.com/vercel/vercel/pull/13673))
+
+## 2.2.7
+
+### Patch Changes
+
+- Make DB pool inert in local dev ([#13647](https://github.com/vercel/vercel/pull/13647))
+
+## 2.2.6
+
+### Patch Changes
+
+- Introduce attachDatabasePool function ([#13632](https://github.com/vercel/vercel/pull/13632))
+
+## 2.2.5
+
+### Patch Changes
+
+- extract oidc and aws oidc credential helpers from @vercel/functions into @vercel/oidc and @vercel/oidc-aws-credentials-provider. @vercel/functions re-exports the new functions as deprecated to maintain backwards compatibility. ([#13548](https://github.com/vercel/vercel/pull/13548))
+
+- Updated dependencies [[`fa8d4c76ea50c4844031f56209b21845818212fc`](https://github.com/vercel/vercel/commit/fa8d4c76ea50c4844031f56209b21845818212fc)]:
+  - @vercel/oidc@2.0.0
+
+## 2.2.5
+
+### Patch Changes
+
+- Extract oidc behavior into separate packages ([#13548](https://github.com/vercel/vercel/pull/13548))
+
+## 2.2.4
+
+### Patch Changes
+
+- Only warn runtime cache unavailable once ([#13560](https://github.com/vercel/vercel/pull/13560))
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 2.2.3
+
+### Patch Changes
+
+- Update runtime cache api to support usage during builds ([#13426](https://github.com/vercel/vercel/pull/13426))
+
+## 2.2.2
+
+### Patch Changes
+
+- Add warning when calling getCache to indicate that in-memory cache is being used. ([#13455](https://github.com/vercel/vercel/pull/13455))
+
+## 2.2.1
+
+### Patch Changes
+
+- Update runtime cache to always use the current cache instance to prevent holding a stale copy ([#13454](https://github.com/vercel/vercel/pull/13454))
+
+## 2.2.0
+
+### Minor Changes
+
+- Introduce `getVercelOidcTokenSync` ([#13429](https://github.com/vercel/vercel/pull/13429))
+
 ## 2.1.0
 
 ### Minor Changes

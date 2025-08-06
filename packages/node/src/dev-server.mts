@@ -45,14 +45,16 @@ async function createEventHandler(
     config,
   });
 
-  // `middleware.js`/`middleware.ts` file is always run as
-  // an Edge Function, otherwise needs to be opted-in via
-  // `export const config = { runtime: 'edge' }`
-  if (config.middleware === true || isEdgeRuntime(runtime)) {
+  const isMiddleware = config.middleware === true;
+
+  // middleware is edge by default, otherwise respect the runtime
+  const useEdgeRuntime = (isMiddleware && !runtime) || isEdgeRuntime(runtime);
+
+  if (useEdgeRuntime) {
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
-      config.middleware || false,
+      isMiddleware,
       config.zeroConfig,
       maxDuration
     );
@@ -62,6 +64,7 @@ async function createEventHandler(
 
   const isStreaming =
     staticConfig?.supportsResponseStreaming ||
+    isMiddleware ||
     (await hasWebHandlers(async () => parseCjs(content).exports)) ||
     (await hasWebHandlers(async () =>
       init.then(() => parseEsm(content)[1].map(specifier => specifier.n))
@@ -69,8 +72,9 @@ async function createEventHandler(
 
   return createServerlessEventHandler(entrypointPath, {
     mode: isStreaming ? 'streaming' : 'buffer',
-    shouldAddHelpers: options.shouldAddHelpers,
+    shouldAddHelpers: isMiddleware ? false : options.shouldAddHelpers,
     maxDuration,
+    isMiddleware,
   });
 }
 
