@@ -6,12 +6,6 @@ import _fetch, { Headers, type Response } from 'node-fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const inspectToken = vi.mocked(oauth.inspectToken);
-vi.mock('../../../../src/util/oauth', async () => ({
-  ...(await vi.importActual('../../../../src/util/oauth')),
-  inspectToken: vi.fn(),
-}));
-
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
@@ -52,14 +46,6 @@ describe('login --future', () => {
       })
     );
     const _as = await oauth.as();
-    const accessTokenPayload = {
-      active: true,
-      team_id: randomUUID(),
-      token_type: 'access_token',
-      exp: Number.POSITIVE_INFINITY,
-    } as const;
-
-    inspectToken.mockReturnValueOnce([null, accessTokenPayload]);
 
     const authorizationResult = {
       device_code: randomUUID(),
@@ -152,7 +138,7 @@ describe('login --future', () => {
 
     const teamAfter = client.config.currentTeam;
     expect(teamAfter, 'Team id differs from original').not.toBe(teamBefore);
-    expect(teamAfter).toBe(accessTokenPayload.team_id);
+    expect(teamAfter).toBe(undefined);
 
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter, 'Token differs from original').not.toBe(tokenBefore);
