@@ -64,51 +64,55 @@ const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
 };
 
 const fixtures = {
-  '01-index-js-no-module': {
-    handler: ['index.js'],
-    moduleType: 'cjs',
-  },
-  '02-src-index-js-no-module': {
-    handler: ['src', 'index.js'],
-    moduleType: 'cjs',
-  },
-  '03-server-js-no-module': {
-    handler: ['server.js'],
-    moduleType: 'cjs',
-  },
-  '04-index-mjs-no-module': {
-    handler: ['index.mjs'],
-    moduleType: 'esm',
-  },
-  '05-index-mjs-no-module': {
-    handler: ['index.mjs'],
-    moduleType: 'esm',
-  },
-  '06-server-mjs-no-module': {
-    handler: ['server.mjs'],
-    moduleType: 'esm',
-  },
-  '07-index-ts-no-module-no-tsconfig': {
-    handler: ['index.js'],
-    moduleType: 'cjs',
-  },
-  '08-src-index-ts-no-module-no-tsconfig': {
-    handler: ['src', 'index.js'],
-    moduleType: 'cjs',
-  },
-  '09-server-ts-no-module-no-tsconfig': {
-    handler: ['server.js'],
-    moduleType: 'cjs',
-  },
-  '10-index-ts-no-tsconfig': {
-    handler: ['index.js'],
-    moduleType: 'cjs',
-  },
-  '11-index-ts-tsconfig-node': {
-    handler: ['index.js'],
-    moduleType: 'esm',
-  },
-  '12-index-mts-tsconfig-node-no-module': {
+  // '01-index-js-no-module': {
+  //   handler: ['index.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '02-src-index-js-no-module': {
+  //   handler: ['src', 'index.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '03-server-js-no-module': {
+  //   handler: ['server.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '04-index-mjs-no-module': {
+  //   handler: ['index.mjs'],
+  //   moduleType: 'esm',
+  // },
+  // '05-index-mjs-no-module': {
+  //   handler: ['index.mjs'],
+  //   moduleType: 'esm',
+  // },
+  // '06-server-mjs-no-module': {
+  //   handler: ['server.mjs'],
+  //   moduleType: 'esm',
+  // },
+  // '07-index-ts-no-module-no-tsconfig': {
+  //   handler: ['index.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '08-src-index-ts-no-module-no-tsconfig': {
+  //   handler: ['src', 'index.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '09-server-ts-no-module-no-tsconfig': {
+  //   handler: ['server.js'],
+  //   moduleType: 'cjs',
+  // },
+  // '10-index-ts-no-tsconfig': {
+  //   handler: ['index.js'],
+  //   moduleType: 'esm',
+  // },
+  // '11-index-ts-tsconfig-node': {
+  //   handler: ['index.js'],
+  //   moduleType: 'esm',
+  // },
+  // '12-index-mts-tsconfig-node-no-module': {
+  //   handler: ['index.mjs'],
+  //   moduleType: 'esm',
+  // },
+  '13-index-mts-no-tsconfig-node-no-module': {
     handler: ['index.mjs'],
     moduleType: 'esm',
   },

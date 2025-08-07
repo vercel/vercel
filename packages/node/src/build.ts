@@ -143,14 +143,50 @@ async function compile(
   }
 
   let tsCompile: Register;
-  function compileTypeScript(path: string, source: string): string {
+  async function compileTypeScript(
+    path: string,
+    source: string
+  ): Promise<string> {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
+      // Find package.json to determine module type
+      const pathDir = join(workPath, dirname(path));
+      let pkg: { type?: string } = {};
+
+      // Check if we already have the package.json in cache
+      if (pkgCache.has(pathDir)) {
+        pkg = pkgCache.get(pathDir) || {};
+      } else {
+        // Load package.json and add to cache
+        try {
+          const pathToPkg = await walkParentDirs({
+            base: workPath,
+            start: pathDir,
+            filename: 'package.json',
+          });
+          if (pathToPkg) {
+            pkg = require_(pathToPkg);
+          } else {
+            pkg = {};
+          }
+          pkgCache.set(pathDir, pkg);
+        } catch (error) {
+          // Ignore errors when reading package.json
+          pkg = {};
+          pkgCache.set(pathDir, pkg);
+        }
+      }
+
+      // Check if this is a .mts file
+      const isMtsFile = path.endsWith('.mts');
+
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
+        pkg,
+        isMtsFile,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -227,7 +263,7 @@ async function compile(
             fsPath.endsWith('.tsx') ||
             fsPath.endsWith('.mts')
           ) {
-            source = compileTypeScript(fsPath, source.toString());
+            source = await compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
