@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import { build } from '../../src';
 import { prepareFilesystem } from './test-utils';
+import { join } from 'path';
+
+// Normalize paths for Windows compatibility
+const normalizePath = (path: string) => path.replace(/\\/g, '/');
 
 describe('.mts file support', () => {
   test('should compile .mts files to .mjs', async () => {
@@ -45,6 +49,7 @@ describe('.mts file support', () => {
     const buildResult = await build({
       ...filesystem,
       entrypoint: 'index.mts',
+      config: {},
       meta: { skipDownload: true },
     });
 
@@ -53,7 +58,7 @@ describe('.mts file support', () => {
 
     // Check that the handler was renamed from .mts to .mjs
     if (buildResult.output.type === 'Lambda') {
-      expect(buildResult.output.handler).toBe('index.mjs');
+      expect(normalizePath(buildResult.output.handler)).toBe('index.mjs');
     }
 
     // Verify that the compiled .mjs file exists in the output
@@ -105,6 +110,7 @@ describe('.mts file support', () => {
     const buildResult = await build({
       ...filesystem,
       entrypoint: 'index.mts',
+      config: {},
       meta: { skipDownload: true },
     });
 
@@ -142,7 +148,7 @@ describe('.mts file support', () => {
         },
         include: ['**/*.mts'],
       }),
-      'api/handler.mts': `
+      [join('api', 'handler.mts')]: `
         import { IncomingMessage, ServerResponse } from 'http';
 
         export default (req: IncomingMessage, res: ServerResponse) => {
@@ -154,7 +160,8 @@ describe('.mts file support', () => {
 
     const buildResult = await build({
       ...filesystem,
-      entrypoint: 'api/handler.mts',
+      entrypoint: join('api', 'handler.mts'),
+      config: {},
       meta: { skipDownload: true },
     });
 
@@ -163,7 +170,7 @@ describe('.mts file support', () => {
 
     // Check that the nested handler was compiled correctly
     if (buildResult.output.type === 'Lambda') {
-      expect(buildResult.output.handler).toBe('api/handler.mjs');
+      expect(normalizePath(buildResult.output.handler)).toBe('api/handler.mjs');
     }
 
     const files =
