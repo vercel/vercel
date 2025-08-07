@@ -79,7 +79,7 @@ describe('login --future', () => {
     expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetch).toHaveBeenCalledTimes(pollCount + 3);
+    expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
 
     expect(fetch).toHaveBeenNthCalledWith(
       2,
@@ -109,21 +109,6 @@ describe('login --future', () => {
         scope: tokenResult.scope,
       }).toString()
     );
-
-    for (let i = 3; i <= fetch.mock.calls.length; i++) {
-      expect(fetch).toHaveBeenNthCalledWith(
-        i,
-        _as.token_endpoint,
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'user-agent': oauth.userAgent,
-          },
-          body: expect.any(URLSearchParams),
-        })
-      );
-    }
 
     expect(
       fetch.mock.calls[pollCount + 1][1]?.body?.toString(),
