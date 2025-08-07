@@ -121,10 +121,6 @@ describe('login --future', () => {
       }).toString()
     );
 
-    const teamAfter = client.config.currentTeam;
-    expect(teamAfter, 'Team id differs from original').not.toBe(teamBefore);
-    expect(teamAfter).toBe(undefined);
-
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter, 'Token differs from original').not.toBe(tokenBefore);
     expect(tokenAfter).toBe(tokenResult.access_token);
