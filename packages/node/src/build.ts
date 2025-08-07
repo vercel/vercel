@@ -96,6 +96,9 @@ function renameTStoJS(path: string) {
   if (path.endsWith('.tsx')) {
     return path.slice(0, -4) + '.js';
   }
+  if (path.endsWith('.mts')) {
+    return path.slice(0, -4) + '.mjs';
+  }
   return path;
 }
 
@@ -221,7 +224,8 @@ async function compile(
 
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-            fsPath.endsWith('.tsx')
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -291,6 +295,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mts') &&
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
