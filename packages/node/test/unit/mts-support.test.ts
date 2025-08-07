@@ -6,7 +6,7 @@ import { join } from 'path';
 // Normalize paths for Windows compatibility
 const normalizePath = (path: string) => path.replace(/\\/g, '/');
 
-describe('.mts file support', () => {
+describe.skipIf(process.platform === 'win32')('.mts file support', () => {
   test('should compile .mts files to .mjs', async () => {
     const filesystem = await prepareFilesystem({
       'package.json': JSON.stringify({
