@@ -979,6 +979,112 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
         },
 
+        // Rewrite metadata routes to _next/static/metadata/...
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(favicon\\.ico)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(icon\\.[^/?]+)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(apple-icon\\.[^/?]+)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(opengraph-image\\.[^/?]+)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(twitter-image\\.[^/?]+)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(sitemap\\.xml)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(robots\\.txt)(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$3'
+          ),
+          check: true,
+        },
+        {
+          src: path.posix.join(
+            '/',
+            entryDirectory,
+            '((?:.*/)?)(manifest\\.(json|webmanifest))(\\?.*)?$'
+          ),
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/metadata/$1$2$4'
+          ),
+          check: true,
+        },
+
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
@@ -1050,7 +1156,7 @@ export const build: BuildV2 = async buildOptions => {
           src: path.posix.join(
             '/',
             entryDirectory,
-            `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
+            `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|metadata|${escapedBuildId})/.+`
           ),
           // Next.js assets contain a hash or entropy in their filenames, so they
           // are guaranteed to be unique and cacheable indefinitely.
