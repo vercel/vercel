@@ -511,6 +511,27 @@ describe('env pull', () => {
     expect(gitignoreAfter).toBe(gitignoreBefore);
   });
 
+  it('should work when called programmatically from link command', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+
+    // Call env pull programmatically like the link command does
+    client.setArgv('env', 'pull', '--yes');
+    const exitCode = await env(client);
+    expect(exitCode, 'exit code for programmatic env pull').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+    const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
+    expect(devFileHasDevEnv).toBeTruthy();
+  });
+
   it('should not pull VERCEL_ANALYTICS_ID', async () => {
     useUser();
     useTeams('team_dummy');
