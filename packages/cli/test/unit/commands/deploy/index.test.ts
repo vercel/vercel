@@ -739,7 +739,7 @@ describe('deploy', () => {
 
       const outputLines = client.getFullOutput().split('\n');
 
-      // remove first  lines which contain warning and randomized data
+      // remove first 3 lines which contain warning and randomized data
       expect(outputLines.slice(3).join('\n')).toMatchInlineSnapshot(`
           "Building
           2024-06-03T15:01:10.339Z  ${outputLine1}
