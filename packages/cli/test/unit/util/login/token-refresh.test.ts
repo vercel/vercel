@@ -5,18 +5,11 @@ import _fetch, { Request, Response } from 'node-fetch';
 
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
-import { inspectToken as inspectTokenActual } from '../../../../src/util/oauth';
 
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
-}));
-
-const inspectToken = vi.mocked(inspectTokenActual);
-vi.mock('../../../../src/util/oauth', async () => ({
-  ...(await vi.importActual('../../../../src/util/oauth')),
-  inspectToken: vi.fn(),
 }));
 
 describe('OAuth Token Refresh', () => {
@@ -69,15 +62,6 @@ describe('OAuth Token Refresh', () => {
 
       throw new Error(`Unexpected URL: ${url}`);
     });
-
-    inspectToken.mockReturnValueOnce([
-      null,
-      {
-        active: true,
-        token_type: 'access_token',
-        exp: Number.POSITIVE_INFINITY,
-      },
-    ]);
 
     const exitCode = await whoami(client);
     expect(exitCode).toBe(0);

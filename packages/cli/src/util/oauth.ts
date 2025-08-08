@@ -1,5 +1,4 @@
 import fetch, { type Response } from 'node-fetch';
-import { decodeJwt } from 'jose';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -399,34 +398,3 @@ function canParseURL(url: string) {
     return false;
   }
 }
-
-/** @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
-interface AccessToken {
-  /**
-   * Integer timestamp, measured in the number of seconds
-   * since January 1 1970 UTC, indicating when this token will expire.
-   */
-  exp: number;
-  /** Whether or not the presented token is active. */
-  active: boolean;
-  token_type: 'access_token';
-  /** The authorizing principal's team. */
-  team_id?: string;
-}
-
-/**
- * Inspects and returns the content of an access_token.
- * If the token is invalid, an {@link InspectionError} is returned.
- * @todo Use [Introspection Endpoint](https://datatracker.ietf.org/doc/html/rfc7662)
- */
-export function inspectToken(
-  token: TokenSet['access_token']
-): [InspectionError] | [null, AccessToken] {
-  try {
-    return [null, decodeJwt<AccessToken>(token)];
-  } catch (cause) {
-    return [new InspectionError('Could not inspect token.', { cause })];
-  }
-}
-
-class InspectionError extends Error {}

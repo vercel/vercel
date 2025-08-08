@@ -15,7 +15,6 @@ import {
   deviceAccessTokenRequest,
   processTokenResponse,
   isOAuthError,
-  inspectToken,
 } from '../../util/oauth';
 import o from '../../output-manager';
 
@@ -129,30 +128,18 @@ export async function login(client: Client): Promise<number> {
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
 
-      const [inspectError, payload] = inspectToken(tokens.access_token);
-
-      if (inspectError) return inspectError;
-
-      o.debug('access_token inspected');
-
       client.updateAuthConfig({
         token: tokens.access_token,
         type: 'oauth',
         expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+        refreshToken: tokens.refresh_token,
       });
 
-      if (payload.team_id) o.debug('Current team updated');
-      else o.debug('Current team deleted');
-
-      client.updateConfig({ currentTeam: payload.team_id });
-
-      if (tokens.refresh_token) {
-        client.updateAuthConfig({ refreshToken: tokens.refresh_token });
-      }
+      client.updateConfig({ currentTeam: undefined });
 
       // If we have a brand new login, update `currentTeam`
       if (isInitialLogin) {
-        await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
+        await updateCurrentTeamAfterLogin(client);
       }
 
       client.writeToAuthConfigFile();

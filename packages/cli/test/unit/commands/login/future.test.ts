@@ -6,12 +6,6 @@ import _fetch, { Headers, type Response } from 'node-fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const inspectToken = vi.mocked(oauth.inspectToken);
-vi.mock('../../../../src/util/oauth', async () => ({
-  ...(await vi.importActual('../../../../src/util/oauth')),
-  inspectToken: vi.fn(),
-}));
-
 const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
@@ -52,14 +46,6 @@ describe('login --future', () => {
       })
     );
     const _as = await oauth.as();
-    const accessTokenPayload = {
-      active: true,
-      team_id: randomUUID(),
-      token_type: 'access_token',
-      exp: Number.POSITIVE_INFINITY,
-    } as const;
-
-    inspectToken.mockReturnValueOnce([null, accessTokenPayload]);
 
     const authorizationResult = {
       device_code: randomUUID(),
@@ -93,7 +79,7 @@ describe('login --future', () => {
     expect(await exitCodePromise, 'exit code for "login --future"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetch).toHaveBeenCalledTimes(pollCount + 3);
+    expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
 
     expect(fetch).toHaveBeenNthCalledWith(
       2,
@@ -124,21 +110,6 @@ describe('login --future', () => {
       }).toString()
     );
 
-    for (let i = 3; i <= fetch.mock.calls.length; i++) {
-      expect(fetch).toHaveBeenNthCalledWith(
-        i,
-        _as.token_endpoint,
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'user-agent': oauth.userAgent,
-          },
-          body: expect.any(URLSearchParams),
-        })
-      );
-    }
-
     expect(
       fetch.mock.calls[pollCount + 1][1]?.body?.toString(),
       'Polling with the received device code'
@@ -149,10 +120,6 @@ describe('login --future', () => {
         device_code: authorizationResult.device_code,
       }).toString()
     );
-
-    const teamAfter = client.config.currentTeam;
-    expect(teamAfter, 'Team id differs from original').not.toBe(teamBefore);
-    expect(teamAfter).toBe(accessTokenPayload.team_id);
 
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter, 'Token differs from original').not.toBe(tokenBefore);
