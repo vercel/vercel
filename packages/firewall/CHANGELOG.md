@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.0.1
+
+### Patch Changes
+
+- Fix headers being awaited for nextjs 15+ ([#13688](https://github.com/vercel/vercel/pull/13688))
+
 ## 1.0.0
 
 ### Major Changes
