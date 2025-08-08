@@ -738,12 +738,9 @@ describe('deploy', () => {
       await Promise.all<void>([runCommand(), slowlyDeploy()]);
 
       const outputLines = client.getFullOutput().split('\n');
-      expect(outputLines[0]).toBe(
-        'WARN! `--logs` is deprecated and now the default behavior.'
-      );
 
-      // remove first 4 lines which contain warning and randomized data
-      expect(outputLines.slice(4).join('\n')).toMatchInlineSnapshot(`
+      // remove first 3 lines which contain warning and randomized data
+      expect(outputLines.slice(3).join('\n')).toMatchInlineSnapshot(`
           "Building
           2024-06-03T15:01:10.339Z  ${outputLine1}
           2024-06-03T15:01:10.439Z  ${outputLine2}
@@ -759,7 +756,7 @@ describe('deploy', () => {
       ]);
     });
 
-    it('should print and follow build logs while deploying by default', async () => {
+    it('should not print and follow build logs while deploying by default', async () => {
       let exitCode: number | undefined;
       const runCommand = async () => {
         const repoRoot = setupUnitFixture('commands/deploy/node');
@@ -774,9 +771,8 @@ describe('deploy', () => {
       expect(client.getFullOutput().split('\n').slice(3).join('\n'))
         .toMatchInlineSnapshot(`
           "Building
-          2024-06-03T15:01:10.339Z  ${outputLine1}
-          2024-06-03T15:01:10.439Z  ${outputLine2}
-          2024-06-03T15:01:10.540Z  ${outputLine3}
+          Building
+          Completing
           "
         `);
       expect(exitCode).toEqual(0);
