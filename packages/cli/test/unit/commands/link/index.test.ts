@@ -1,5 +1,5 @@
 import { EOL } from 'node:os';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { basename, join } from 'path';
 import { readFile } from 'fs-extra';
 import {
@@ -11,6 +11,7 @@ import {
   remove,
 } from 'fs-extra';
 import link from '../../../../src/commands/link';
+import pull from '../../../../src/commands/env/pull';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
@@ -26,7 +27,18 @@ import {
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../../../src/util/errors-ts';
 
+// Mock the env pull command
+vi.mock('../../../../src/commands/env/pull');
+const mockPull = vi.mocked(pull);
+
 describe('link', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default mock implementation for env pull command
+    mockPull.mockResolvedValue(0);
+    // Mock client.input.confirm for env pull prompt
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+  });
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'link';
@@ -421,6 +433,17 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
       expect(projectJson.projectName).toEqual(project.name);
+
+      // Verify the env pull prompt was called
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Would you like to pull environment variables now?',
+        true
+      );
+
+      // Verify env pull was called with --yes flag since link used --yes
+      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
+        '--yes',
+      ]);
     });
 
     it('should track use of redacted `--project` option', async () => {
@@ -691,5 +714,179 @@ describe('link', () => {
         value: '[REDACTED]',
       },
     ]);
+  });
+
+  describe('environment variable pull prompt', () => {
+    it('should prompt to pull environment variables after successful linking', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!, '--yes');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify the env pull prompt was called
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Would you like to pull environment variables now?',
+        true
+      );
+
+      // Verify env pull was called with --yes flag
+      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
+        '--yes',
+      ]);
+    });
+
+    it('should not call env pull when user declines the prompt', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      // Mock user declining the prompt
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify the env pull prompt was called
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Would you like to pull environment variables now?',
+        true
+      );
+
+      // Verify env pull was NOT called
+      expect(mockPull).not.toHaveBeenCalled();
+    });
+
+    it('should handle env pull failure gracefully', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      // Mock env pull to fail
+      mockPull.mockResolvedValue(1);
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!, '--yes');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0); // Link should still succeed even if env pull fails
+
+      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
+        '--yes',
+      ]);
+    });
+
+    it('should handle env pull command throwing an error', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      // Mock env pull to throw an error
+      mockPull.mockRejectedValue(new Error('Network error'));
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!, '--yes');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Failed to pull environment variables. You can run `vc env pull` manually.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0); // Link should still succeed even if env pull throws
+
+      expect(mockPull).toHaveBeenCalledWith(expect.objectContaining({ cwd }), [
+        '--yes',
+      ]);
+    });
+
+    it('should pass empty args to env pull when link command does not use --yes', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--project', project.name!);
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      // Verify the env pull prompt was called
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Would you like to pull environment variables now?',
+        true
+      );
+
+      // Verify env pull was called with empty args since link didn't use --yes
+      expect(mockPull).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd }),
+        []
+      );
+    });
   });
 });
