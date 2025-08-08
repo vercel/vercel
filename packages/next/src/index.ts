@@ -99,6 +99,7 @@ import {
   require_,
   getServerlessPages,
   RenderingMode,
+  getStaticMetadataRoutesManifest,
 } from './utils';
 
 export const version = 2;
@@ -615,6 +616,10 @@ export const build: BuildV2 = async buildOptions => {
     entryPath,
     outputDirectory
   );
+  const staticMetadataRoutesManifest = await getStaticMetadataRoutesManifest(
+    entryPath,
+    outputDirectory
+  );
   const omittedPrerenderRoutes: ReadonlySet<string> = new Set(
     Object.keys(prerenderManifest.omittedRoutes)
   );
@@ -655,6 +660,14 @@ export const build: BuildV2 = async buildOptions => {
       trace: '_next/__private/trace',
     }
   );
+
+  const staticMetadataRewrites: Route[] = Object.values(
+    staticMetadataRoutesManifest || {}
+  ).map(value => ({
+    src: value.regex,
+    dest: path.posix.join('/', entryDirectory, value.sourcePage),
+    check: true,
+  }));
 
   const headers: Route[] = [];
   const beforeFilesRewrites: Route[] = [];
@@ -979,115 +992,12 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
         },
 
-        // Rewrite metadata routes to _next/static/metadata/...
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(favicon\\.ico)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(icon\\.[^/?]+)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(apple-icon\\.[^/?]+)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(opengraph-image\\.[^/?]+)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(twitter-image\\.[^/?]+)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(sitemap\\.xml)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(robots\\.txt)(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$3'
-          ),
-          check: true,
-        },
-        {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '((?:.*/)?)(manifest\\.(json|webmanifest))(\\?.*)?$'
-          ),
-          dest: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/metadata/$1$2$4'
-          ),
-          check: true,
-        },
-
         // Next.js pages, `static/` folder, reserved assets, and `public/`
         // folder
         { handle: 'filesystem' },
+
+        // Rewrite metadata routes to _next/static/metadata/...
+        ...staticMetadataRewrites,
 
         // ensure the basePath prefixed _next/image is rewritten to the root
         // _next/image path
@@ -1655,6 +1565,7 @@ export const build: BuildV2 = async buildOptions => {
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
         clientParamParsingOrigins,
+        staticMetadataRewrites,
       });
     }
 
@@ -2756,6 +2667,9 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js page lambdas, `static/` folder, reserved assets, and `public/`
       // folder
       { handle: 'filesystem' },
+
+      // Rewrite metadata routes to _next/static/metadata/...
+      ...staticMetadataRewrites,
 
       // map pages to their lambda
       ...pageLambdaRoutes.filter(route => {
