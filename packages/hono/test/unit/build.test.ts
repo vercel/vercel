@@ -1,8 +1,14 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
 import { join, sep } from 'path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs';
+
+import { clearTypeScriptBuildCache } from '../../../node/src/typescript';
+
+beforeEach(() => {
+  clearTypeScriptBuildCache();
+});
 
 const config = {
   outputDirectory: undefined,

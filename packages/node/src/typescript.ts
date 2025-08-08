@@ -124,6 +124,13 @@ const require_ = createRequire(__filename);
 const configFileToBuildMap = new Map<string, GetOutputFunction>();
 
 /**
+ * Clear the build cache, used for tests.
+ */
+export function clearTypeScriptBuildCache() {
+  configFileToBuildMap.clear();
+}
+
+/**
  * Register TypeScript compiler.
  */
 export function register(opts: Options = {}): Register {
