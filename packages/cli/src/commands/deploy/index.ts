@@ -69,6 +69,7 @@ import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
+import { displayBuildLogs } from '../../util/logs';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -114,8 +115,8 @@ export default async (client: Client): Promise<number> => {
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
     }
 
-    if ('--logs' in parsedArguments.flags) {
-      output.warn('`--logs` is deprecated and now the default behavior.');
+    if ('--no-logs' in parsedArguments.flags) {
+      output.warn('`--no-logs` is deprecated and now the default behavior.');
     }
   } catch (error) {
     printError(error);
@@ -468,7 +469,7 @@ export default async (client: Client): Promise<number> => {
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withLogs = '--no-logs' in parsedArguments.flags ? false : true;
+  const withLogs = parsedArguments.flags['--logs'] ? true : false;
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -668,13 +669,64 @@ export default async (client: Client): Promise<number> => {
 
     if (err instanceof BuildError) {
       output.error(err.message || 'Build failed');
-      output.log('\n');
-      output.log(
-        `To check build logs run: ${getCommandName(
-          `inspect ${now.url} --logs`
-        )}`
-      );
-      output.log(`Or inspect them in your browser at https://${now.url}/_logs`);
+      if (withLogs === false) {
+        let poller: ReturnType<typeof setInterval> | undefined;
+        try {
+          if (now.url) {
+            const failedDeployment = await getDeployment(
+              client,
+              contextName,
+              now.url
+            );
+            const { promise, abortController } = displayBuildLogs(
+              client,
+              failedDeployment,
+              true
+            );
+            const deploymentDone = (state: string | undefined) => {
+              if (!state) return false;
+              return (
+                state === 'READY' ||
+                state === 'ERROR' ||
+                state === 'CANCELED' ||
+                state.endsWith('_ERROR')
+              );
+            };
+            poller = setInterval(async () => {
+              try {
+                const dep = await getDeployment(
+                  client,
+                  contextName,
+                  failedDeployment.id
+                );
+                if (deploymentDone(dep?.readyState)) {
+                  clearInterval(poller);
+                  abortController.abort();
+                }
+              } catch {
+                // On errors, abort to avoid hanging
+                clearInterval(poller);
+                abortController.abort();
+              }
+            }, 250);
+            try {
+              await promise;
+            } finally {
+              if (poller) clearInterval(poller);
+            }
+          }
+        } catch (_) {
+          // Fallback to instructions if we fail to fetch logs
+          output.log(
+            `To check build logs run: ${getCommandName(
+              `inspect ${now.url} --logs`
+            )}`
+          );
+          output.log(
+            `Or inspect them in your browser at https://${now.url}/_logs`
+          );
+        }
+      }
 
       return 1;
     }
