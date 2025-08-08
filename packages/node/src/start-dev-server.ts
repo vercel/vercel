@@ -233,6 +233,7 @@ async function doTypeCheck(
       '--noEmit',
       '--allowJs',
       '--esModuleInterop',
+      '--skipLibCheck',
     ],
     {
       cwd: workPath,
