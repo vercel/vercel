@@ -3,8 +3,10 @@ import { join } from 'path';
 import { remove, pathExists } from 'fs-extra';
 import { setupE2EFixture } from './helpers/setup-e2e-fixture';
 import { execCli } from './helpers/exec';
-import { binaryPath } from './helpers/get-binary-path';
-import { waitForPrompt } from './helpers/wait-for-prompt';
+import { resolve } from 'path';
+import waitForPrompt from './helpers/wait-for-prompt';
+
+const binaryPath = resolve(__dirname, '../scripts/start.js');
 
 describe('[vc link] environment variable pull integration', () => {
   it('should prompt for env pull and handle acceptance', async () => {
