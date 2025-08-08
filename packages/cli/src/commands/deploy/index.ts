@@ -669,8 +669,8 @@ export default async (client: Client): Promise<number> => {
 
     if (err instanceof BuildError) {
       output.error(err.message || 'Build failed');
+      output.print('\n');
       if (withLogs === false) {
-        let poller: ReturnType<typeof setInterval> | undefined;
         try {
           if (now.url) {
             const failedDeployment = await getDeployment(
@@ -678,45 +678,14 @@ export default async (client: Client): Promise<number> => {
               contextName,
               now.url
             );
-            const { promise, abortController } = displayBuildLogs(
+            const { promise } = displayBuildLogs(
               client,
               failedDeployment,
-              true
+              false
             );
-            const deploymentDone = (state: string | undefined) => {
-              if (!state) return false;
-              return (
-                state === 'READY' ||
-                state === 'ERROR' ||
-                state === 'CANCELED' ||
-                state.endsWith('_ERROR')
-              );
-            };
-            poller = setInterval(async () => {
-              try {
-                const dep = await getDeployment(
-                  client,
-                  contextName,
-                  failedDeployment.id
-                );
-                if (deploymentDone(dep?.readyState)) {
-                  clearInterval(poller);
-                  abortController.abort();
-                }
-              } catch {
-                // On errors, abort to avoid hanging
-                clearInterval(poller);
-                abortController.abort();
-              }
-            }, 250);
-            try {
-              await promise;
-            } finally {
-              if (poller) clearInterval(poller);
-            }
+            await promise;
           }
         } catch (_) {
-          // Fallback to instructions if we fail to fetch logs
           output.log(
             `To check build logs run: ${getCommandName(
               `inspect ${now.url} --logs`
