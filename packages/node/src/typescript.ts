@@ -43,6 +43,8 @@ interface Options {
   fileExists?: (path: string) => boolean;
   transformers?: _ts.CustomTransformers;
   nodeVersionMajor?: number;
+  pkg?: { type?: string };
+  isMtsFile?: boolean;
 }
 
 /**
@@ -120,6 +122,13 @@ const require_ = createRequire(__filename);
  * Maps the config path to a build func
  */
 const configFileToBuildMap = new Map<string, GetOutputFunction>();
+
+/**
+ * Clear the build cache, used for tests.
+ */
+export function clearTypeScriptBuildCache() {
+  configFileToBuildMap.clear();
+}
 
 /**
  * Register TypeScript compiler.
@@ -403,7 +412,7 @@ export function register(opts: Options = {}): Register {
       TS_NODE_COMPILER_OPTIONS
     );
 
-    fixConfig(config, options.nodeVersionMajor);
+    fixConfig(config, options.nodeVersionMajor, options.pkg, options.isMtsFile);
 
     const configResult = ts.parseJsonConfigFileContent(
       config,
@@ -455,7 +464,9 @@ type GetOutputFunction = (code: string, fileName: string) => SourceOutput;
  */
 export function fixConfig(
   config: { compilerOptions: any },
-  nodeVersionMajor = 12
+  nodeVersionMajor = 12,
+  pkg?: { type?: string },
+  isMtsFile?: boolean
 ) {
   if (!config.compilerOptions) {
     config.compilerOptions = {};
@@ -491,8 +502,13 @@ export function fixConfig(
   }
 
   // If not specified, the default Node.js module is CommonJS.
+  // However, if package.json has "type": "module" or the file is .mts, use ESNext instead.
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'CommonJS';
+    if (pkg?.type === 'module' || isMtsFile) {
+      config.compilerOptions.module = 'ESNext';
+    } else {
+      config.compilerOptions.module = 'CommonJS';
+    }
   }
 
   return config;
