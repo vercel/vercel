@@ -9,9 +9,10 @@ describe('Client', () => {
   describe('fetch()', () => {
     beforeEach(() => {
       delete process.env.HTTPS_PROXY;
+      delete process.env.HTTP_PROXY;
     });
 
-    it('should respect the `HTTPS_PROXY` env var', async () => {
+    it('should respect the `HTTP_PROXY` env var', async () => {
       let connectCount = 0;
       const proxy = createProxy();
       const proxyUrl = await listen(proxy);
@@ -27,7 +28,7 @@ describe('Client', () => {
       const mockServerUrl = await listen(mockServer);
 
       try {
-        process.env.HTTPS_PROXY = proxyUrl.href;
+        process.env.HTTP_PROXY = proxyUrl.href;
 
         client.agent = new ProxyAgent({ keepAlive: true });
 
