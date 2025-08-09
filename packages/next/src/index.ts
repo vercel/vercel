@@ -270,6 +270,7 @@ export const build: BuildV2 = async buildOptions => {
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
@@ -369,6 +370,7 @@ export const build: BuildV2 = async buildOptions => {
     await builderSpan
       .child(BUILDER_INSTALLER_STEP, {
         cliType,
+        lockfilePath: lockfilePath || 'none',
         lockfileVersion: lockfileVersion?.toString(),
         packageJsonPackageManager,
         detectedPackageManager,
