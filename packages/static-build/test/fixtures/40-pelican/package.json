@@ -4,6 +4,6 @@
     "build": "pelican && mv output public"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
