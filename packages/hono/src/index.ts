@@ -7,8 +7,8 @@ import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 
 export const shouldServe: ShouldServe = async opts => {
   const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'
-  // Don't override API routes, otherwise serve it
-  if (requestPath.startsWith('api')) {
+  if (requestPath.startsWith('api') && opts.hasMatched) {
+    // Don't override API routes, otherwise serve it
     return false;
   }
   // NOTE: public assets are served by the default handler
