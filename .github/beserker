@@ -1,0 +1,490 @@
+// SpaceRiot.jsx
+// Juego completo de una sola página listo para desplegar en Vercel.
+// Instrucciones rápidas:
+// 1) Next.js: crea un repo, pega este archivo como `pages/index.jsx` y push al repo -> conecta a Vercel.
+// 2) Create React App: pega como `src/App.jsx`, añade Tailwind (opcional) o usa la clase container; luego build y deploy en Vercel.
+// Controles: WASD / flechas para mover, espacio para disparar, click o tocar para disparo/boost.
+
+import React, { useRef, useEffect, useState } from 'react';
+
+export default function SpaceRiot() {
+  const canvasRef = useRef(null);
+  const [running, setRunning] = useState(false);
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [level, setLevel] = useState(1);
+  const [message, setMessage] = useState('Pulsa JUGAR para comenzar');
+
+  useEffect(() => {
+    let animationId;
+    let lastTime = performance.now();
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const DPR = window.devicePixelRatio || 1;
+    const resize = () => {
+      canvas.width = Math.floor(canvas.clientWidth * DPR);
+      canvas.height = Math.floor(canvas.clientHeight * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Game state
+    const state = {
+      w: canvas.clientWidth,
+      h: canvas.clientHeight,
+      ship: null,
+      bullets: [],
+      enemies: [],
+      particles: [],
+      keys: {},
+      lastSpawn: 0,
+      spawnInterval: 1500,
+      audioCtx: null,
+    };
+
+    // --- Audio helpers (WebAudio synthesized) ---
+    function ensureAudio() {
+      if (!state.audioCtx) {
+        try {
+          state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+          console.warn('Audio not supported', e);
+          state.audioCtx = null;
+        }
+      }
+    }
+    function playTone(freq, type = 'sine', time = 0.05, vol = 0.2) {
+      ensureAudio();
+      if (!state.audioCtx) return;
+      const o = state.audioCtx.createOscillator();
+      const g = state.audioCtx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      o.connect(g);
+      g.connect(state.audioCtx.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, state.audioCtx.currentTime + time);
+      setTimeout(() => o.stop(), time * 1000 + 20);
+    }
+    function playExplosion() {
+      ensureAudio();
+      if (!state.audioCtx) return;
+      const noise = state.audioCtx.createBufferSource();
+      const bufferSize = state.audioCtx.sampleRate * 0.2;
+      const buffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      noise.buffer = buffer;
+      const filter = state.audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1200;
+      noise.connect(filter);
+      filter.connect(state.audioCtx.destination);
+      noise.start();
+      setTimeout(() => noise.stop(), 200);
+    }
+
+    // --- Entities ---
+    function createShip() {
+      return {
+        x: state.w / 2,
+        y: state.h - 80,
+        vx: 0,
+        vy: 0,
+        r: 16,
+        angle: -Math.PI / 2,
+        thrusting: false,
+        shootingCooldown: 0,
+      };
+    }
+
+    function spawnEnemy(now) {
+      const kind = Math.random() < 0.65 ? 'asteroid' : 'monster';
+      const size = kind === 'asteroid' ? (24 + Math.random() * 40) : (30 + Math.random() * 50);
+      const x = Math.random() * (state.w - size * 2) + size;
+      const y = -size - 10;
+      const vx = (Math.random() - 0.5) * (level * 0.3 + 1);
+      const vy = 0.4 + Math.random() * (1 + level * 0.2);
+      const hp = kind === 'asteroid' ? Math.ceil(size / 20) : Math.ceil(size / 30) + 1;
+      state.enemies.push({ x, y, vx, vy, r: size, kind, hp, wobble: Math.random() * 1000 });
+    }
+
+    function fireBullet() {
+      if (!state.ship) return;
+      if (state.ship.shootingCooldown > 0) return;
+      state.ship.shootingCooldown = 200; // ms
+      const speed = 6;
+      const bx = state.ship.x + Math.cos(state.ship.angle) * (state.ship.r + 4);
+      const by = state.ship.y + Math.sin(state.ship.angle) * (state.ship.r + 4);
+      state.bullets.push({ x: bx, y: by, vx: Math.cos(state.ship.angle) * speed, vy: Math.sin(state.ship.angle) * speed, life: 1200 });
+      playTone(1000, 'square', 0.06, 0.15);
+    }
+
+    // --- Particles for explosion/engine ---
+    function spawnParticles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 3 + 1;
+        state.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 600 + Math.random() * 800, color });
+      }
+    }
+
+    // --- Collisions ---
+    function hitTest(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return dx * dx + dy * dy < (a.r + (b.r || 4)) * (a.r + (b.r || 4));
+    }
+
+    // --- Game loop ---
+    function update(dt, now) {
+      state.w = canvas.clientWidth;
+      state.h = canvas.clientHeight;
+
+      // ship controls
+      const s = state.ship;
+      if (s) {
+        // rotation via left/right or A/D
+        if (state.keys['ArrowLeft'] || state.keys['a']) s.angle -= 0.08 * dt / 16;
+        if (state.keys['ArrowRight'] || state.keys['d']) s.angle += 0.08 * dt / 16;
+        // thrust
+        s.thrusting = !!(state.keys['ArrowUp'] || state.keys['w']);
+        if (s.thrusting) {
+          s.vx += Math.cos(s.angle) * 0.15 * dt / 16;
+          s.vy += Math.sin(s.angle) * 0.15 * dt / 16;
+          spawnParticles(s.x - Math.cos(s.angle) * (s.r + 6), s.y - Math.sin(s.angle) * (s.r + 6), 1, 'orange');
+          playTone(150 + Math.random() * 50, 'sawtooth', 0.02, 0.02);
+        }
+        // friction
+        s.vx *= 0.995;
+        s.vy *= 0.995;
+        s.x += s.vx * dt / 16;
+        s.y += s.vy * dt / 16;
+
+        // wrap horizontally, clamp vertically
+        if (s.x < -s.r) s.x = state.w + s.r;
+        if (s.x > state.w + s.r) s.x = -s.r;
+        if (s.y < s.r) s.y = s.r;
+        if (s.y > state.h - s.r) s.y = state.h - s.r;
+
+        // shooting
+        if ((state.keys[' '] || state.keys['Spacebar'] || state.keys['Space'])) fireBullet();
+        if (s.shootingCooldown > 0) s.shootingCooldown -= dt;
+      }
+
+      // bullets
+      for (let i = state.bullets.length - 1; i >= 0; i--) {
+        const b = state.bullets[i];
+        b.x += b.vx * dt / 16;
+        b.y += b.vy * dt / 16;
+        b.life -= dt;
+        if (b.x < -10 || b.x > state.w + 10 || b.y < -10 || b.y > state.h + 10 || b.life <= 0) state.bullets.splice(i, 1);
+      }
+
+      // enemies
+      for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const e = state.enemies[i];
+        e.wobble += dt;
+        e.x += e.vx * dt / 16 + Math.sin(e.wobble * 0.005) * 0.3;
+        e.y += e.vy * dt / 16;
+        if (e.y - e.r > state.h + 50) {
+          // pass bottom -> damage ship
+          state.enemies.splice(i, 1);
+          setLives(l => { const nl = l - 1; if (nl <= 0) endGame(); return nl; });
+          playExplosion();
+          spawnParticles(e.x, e.y, Math.min(40, Math.ceil(e.r / 3)), 'red');
+        }
+      }
+
+      // bullets vs enemies
+      for (let i = state.bullets.length - 1; i >= 0; i--) {
+        const b = state.bullets[i];
+        for (let j = state.enemies.length - 1; j >= 0; j--) {
+          const e = state.enemies[j];
+          if (hitTest(b, e)) {
+            state.bullets.splice(i, 1);
+            e.hp -= 1;
+            spawnParticles(b.x, b.y, 6, 'yellow');
+            playTone(600 + Math.random() * 200, 'triangle', 0.04, 0.08);
+            if (e.hp <= 0) {
+              // enemy destroyed
+              state.enemies.splice(j, 1);
+              setScore(sc => sc + (e.kind === 'asteroid' ? Math.round(e.r) : Math.round(e.r * 1.5)));
+              spawnParticles(e.x, e.y, Math.min(60, Math.ceil(e.r / 2)), e.kind === 'asteroid' ? 'gray' : 'purple');
+              playExplosion();
+            }
+            break;
+          }
+        }
+      }
+
+      // enemies vs ship
+      if (state.ship) {
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+          const e = state.enemies[i];
+          if (hitTest(state.ship, e)) {
+            state.enemies.splice(i, 1);
+            spawnParticles(e.x, e.y, 40, 'red');
+            setLives(l => { const nl = l - 1; if (nl <= 0) endGame(); return nl; });
+            playExplosion();
+          }
+        }
+      }
+
+      // particles
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.vy += 0.02 * dt / 16;
+        p.x += p.vx * dt / 16;
+        p.y += p.vy * dt / 16;
+        p.life -= dt;
+        if (p.life <= 0) state.particles.splice(i, 1);
+      }
+
+      // spawn
+      if (now - state.lastSpawn > state.spawnInterval) {
+        spawnEnemy(now);
+        state.lastSpawn = now;
+        // increase difficulty gradually
+        if (Math.random() < 0.1) state.spawnInterval = Math.max(400, state.spawnInterval - 20);
+      }
+
+      // level up by score
+      if (score > level * 500) {
+        setLevel(l => l + 1);
+        state.spawnInterval = Math.max(500, state.spawnInterval - 200);
+        setMessage('¡Nivel ' + (level + 1) + '!');
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, state.w, state.h);
+
+      // background starfield
+      const starCount = Math.floor(80 * Math.min(state.w, state.h) / 600);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, state.w, state.h);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < starCount; i++) {
+        const x = (i * 1013) % state.w + (i * 7) % 3;
+        const y = ((i * 997) % state.h) + ((performance.now() / 50) % 10) * ((i % 5) - 2);
+        const s = (i % 3) * 0.8 + 0.6;
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + (i % 3) * 0.25) + ')';
+        ctx.fillRect(x, y, s, s);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+
+      // particles
+      for (const p of state.particles) {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // enemies
+      for (const e of state.enemies) {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        if (e.kind === 'asteroid') {
+          // rocky polygon
+          ctx.fillStyle = 'rgba(160,160,160,0.95)';
+          ctx.beginPath();
+          const spikes = 8 + Math.floor(e.r / 10);
+          for (let i = 0; i < spikes; i++) {
+            const a = (i / spikes) * Math.PI * 2;
+            const rr = e.r * (0.7 + Math.sin(i * 12 + e.wobble * 0.01) * 0.15);
+            const x = Math.cos(a) * rr;
+            const y = Math.sin(a) * rr;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          // monster: eye + tentacles
+          ctx.fillStyle = 'rgba(140,80,200,0.95)';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, e.r * 0.9, e.r * 0.6, Math.sin(e.wobble * 0.002), 0, Math.PI * 2);
+          ctx.fill();
+          // eye
+          ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0, -e.r * 0.1, e.r * 0.22, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(0, -e.r * 0.1, e.r * 0.08, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // bullets
+      for (const b of state.bullets) {
+        ctx.fillStyle = 'cyan';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ship
+      if (state.ship) {
+        const s = state.ship;
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.angle);
+        // body
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(s.r, 0);
+        ctx.lineTo(-s.r * 0.6, -s.r * 0.7);
+        ctx.lineTo(-s.r * 0.6, s.r * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        // cockpit
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.beginPath();
+        ctx.arc(-s.r * 0.15, 0, s.r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        // thrust
+        if (s.thrusting) {
+          ctx.fillStyle = 'orange';
+          ctx.beginPath();
+          ctx.moveTo(-s.r - 2, 0);
+          ctx.lineTo(-s.r - 12 - Math.random() * 6, -6);
+          ctx.lineTo(-s.r - 12 - Math.random() * 6, 6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // UI overlay
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(10, 10, 220, 64);
+      ctx.fillStyle = 'white';
+      ctx.font = '16px monospace';
+      ctx.fillText('Puntuación: ' + score, 18, 30);
+      ctx.fillText('Vidas: ' + lives, 18, 50);
+      ctx.fillText('Nivel: ' + level, 118, 50);
+
+      if (!running) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(state.w / 2 - 180, state.h / 2 - 60, 360, 120);
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.font = '20px monospace';
+        ctx.fillText(message, state.w / 2, state.h / 2 - 10);
+        ctx.font = '14px monospace';
+        ctx.fillText('Controles: WASD/Flechas mover • Espacio o click disparar', state.w / 2, state.h / 2 + 20);
+        ctx.textAlign = 'start';
+      }
+    }
+
+    function loop(now) {
+      const dt = Math.min(40, now - lastTime);
+      lastTime = now;
+      if (running) update(dt, now);
+      draw();
+      animationId = requestAnimationFrame(loop);
+    }
+
+    // start
+    function startGame() {
+      // reset
+      state.enemies = [];
+      state.bullets = [];
+      state.particles = [];
+      state.spawnInterval = 1500;
+      state.lastSpawn = performance.now();
+      state.ship = createShip();
+      setScore(0); setLives(3); setLevel(1); setMessage('');
+      setRunning(true);
+      ensureAudio();
+    }
+
+    function endGame() {
+      setRunning(false);
+      setMessage('Juego terminado • Pulsa JUGAR para reiniciar');
+    }
+
+    // input
+    function onKey(e) {
+      state.keys[e.key] = e.type === 'keydown';
+      // prevent page scroll on space
+      if ([' ', 'Spacebar', 'Space'].includes(e.key)) e.preventDefault();
+      // start on Enter
+      if (e.type === 'keydown' && e.key === 'Enter' && !running) startGame();
+    }
+    function onDown(e) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      // rotate ship towards pointer and fire
+      if (state.ship) {
+        const dx = x - state.ship.x; const dy = y - state.ship.y;
+        state.ship.angle = Math.atan2(dy, dx);
+        fireBullet();
+      }
+    }
+
+    function onMove(e) {
+      if (!state.ship) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const dx = x - state.ship.x; const dy = y - state.ship.y;
+      state.ship.angle = Math.atan2(dy, dx);
+    }
+
+    canvas.addEventListener('mousedown', onDown);
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKey);
+
+    // public controls
+    (window as any).__SpaceRiot = { startGame, endGame };
+
+    animationId = requestAnimationFrame(loop);
+
+    // cleanup
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resize);
+      canvas.removeEventListener('mousedown', onDown);
+      canvas.removeEventListener('touchstart', onDown);
+      canvas.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('touchmove', onMove);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
+    };
+  }, [running, score, level, lives]);
+
+  // component UI
+  return (
+    <div className="w-full h-screen bg-gradient-to-b from-black to-slate-900 flex flex-col items-center justify-center text-white">
+      <div className="max-w-4xl w-full px-4">
+        <header className="py-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">SpaceRiot — Nave vs Asteroides y Monstruos Galácticos</h1>
+          <div className="space-x-2">
+            <button
+              className="px-3 py-2 bg-green-600 rounded-md hover:bg-green-500"
+              onClick={() => { if (!running) { (window as any).__SpaceRiot?.startGame(); } else { (window as any).__SpaceRiot?.endGame(); } }}
+            >
+              {running ? 'Detener' : 'Jugar'}
+            </button>
+            <button className="px-3 py-2 bg-blue-600 rounded-md hover:bg-blue-500" onClick={() => { setScore(0); setLives(3); setLevel(1); setMessage('Pulsa JUGAR para comenzar'); setRunning(false); }}>Reiniciar</button>
+          </div>
+        </header>
+
+        <div className="relative" style={{ aspectRatio: '16/9' }}>
+          <canvas ref={canvasRef} className="w-full h-full rounded-xl shadow-2xl bg-black" />
+        </div>
+
+        <footer className="mt-4 text-sm text-slate-300">
+          Controles: WASD / Flechas para mover, Espacio o click para disparar. Funciona en móvil (toca para apuntar y disparar).
+        </footer>
+      </div>
+    </div>
+  );
+}
