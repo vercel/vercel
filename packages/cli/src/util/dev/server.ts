@@ -2410,7 +2410,8 @@ async function findBuildMatch(
         requestPath,
         devServer,
         vercelConfig,
-        isFilesystem
+        isFilesystem,
+        !!bestIndexMatch
       )
     ) {
       if (!isIndex(match.src)) {
@@ -2436,7 +2437,8 @@ async function shouldServe(
   requestPath: string,
   devServer: DevServer,
   vercelConfig: VercelConfig,
-  isFilesystem = false
+  isFilesystem = false,
+  hasMatched = false
 ): Promise<boolean> {
   const {
     src,
@@ -2483,6 +2485,7 @@ async function shouldServe(
       config: config || {},
       requestPath,
       workPath: devServer.cwd,
+      hasMatched,
     });
     if (shouldServe) {
       return true;
