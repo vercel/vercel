@@ -1692,6 +1692,7 @@ export async function serverBuild({
   // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, write a
   // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
   const notFoundTextPath = path.posix.join(
+    entryPath,
     outputDirectory,
     'static/not-found.txt'
   );
