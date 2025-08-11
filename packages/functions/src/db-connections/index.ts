@@ -213,12 +213,12 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
  * const pgPool = new Pool({
  *   connectionString: process.env.DATABASE_URL,
  * });
- * experimental_attachDatabasePool(pgPool);
+ * attachDatabasePool(pgPool);
  * ```
  *
  * @experimental
  */
-export function experimental_attachDatabasePool(dbPool: DbPool) {
+export function attachDatabasePool(dbPool: DbPool) {
   if (idleTimeout) {
     idleTimeoutResolve?.();
     clearTimeout(idleTimeout);
@@ -312,3 +312,8 @@ export function experimental_attachDatabasePool(dbPool: DbPool) {
 
   throw new Error('Unsupported database pool type');
 }
+
+/**
+ * @deprecated Use attachDatabasePool instead.
+ */
+export const experimental_attachDatabasePool = attachDatabasePool;

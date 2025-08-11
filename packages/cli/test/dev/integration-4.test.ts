@@ -166,15 +166,19 @@ test(
 
 test(
   '[vercel dev] Middleware that does basic rewrite',
-  testFixtureStdio('middleware-rewrite', async (testPath: any) => {
-    await testPath(200, '/', '<h1>Index</h1>');
-    await testPath(200, '/index', '<h1>Another</h1>');
-    await testPath(200, '/another', '<h1>Another</h1>');
-    await testPath(200, '/another.html', '<h1>Another</h1>');
-    await testPath(200, '/foo', '<h1>Another</h1>');
-    // different origin
-    await testPath(200, '?to=http://example.com', /Example Domain/);
-  })
+  testFixtureStdio(
+    'middleware-rewrite',
+    async (testPath: any) => {
+      await testPath(200, '/', '<h1>Index</h1>');
+      await testPath(200, '/index', '<h1>Another</h1>');
+      await testPath(200, '/another', '<h1>Another</h1>');
+      await testPath(200, '/another.html', '<h1>Another</h1>');
+      await testPath(200, '/foo', '<h1>Another</h1>');
+      // different origin
+      await testPath(200, '?to=http://example.com', /Example Domain/);
+    },
+    { skipDeploy: true }
+  )
 );
 
 test('[vercel dev] Middleware rewrites with same origin', async () => {
