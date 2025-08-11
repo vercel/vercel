@@ -8,5 +8,11 @@
     "path": "/not-found-page",
     "status": 404,
     "mustContain": "This Is The Not Found Page"
+  },
+  {
+    "path": "/_next/static/404",
+    "status": 404,
+    "mustContain": "Not Found",
+    "mustNotContain": "<html"
   }
 ]}
