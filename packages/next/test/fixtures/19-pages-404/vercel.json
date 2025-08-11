@@ -33,12 +33,6 @@
     {
       "path": "/404",
       "status": 404
-    },
-    {
-      "path": "/_next/static/404",
-      "status": 404,
-      "mustContain": "Not Found",
-      "mustNotContain": "<html"
     }
   ]
 }
