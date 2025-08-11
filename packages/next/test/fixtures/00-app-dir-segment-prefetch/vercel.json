@@ -67,7 +67,7 @@
         "next-router-segment-prefetch": "/blog/$d$slug$hello-world"
       },
       "responseHeaders": {
-        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world.segment.rsc"
+        "x-matched-path": "/blog/hello-world.prefetch.rsc"
       },
       "mustNotContain": "Dynamic Component"
     },
@@ -80,7 +80,7 @@
         "next-router-segment-prefetch": "/blog/$d$slug$hello-world/__PAGE__"
       },
       "responseHeaders": {
-        "x-matched-path": "/blog/hello-world.segments/blog/$d$slug$hello-world/__PAGE__.segment.rsc"
+        "x-matched-path": "/blog/hello-world.prefetch.rsc"
       },
       "mustNotContain": "Dynamic Component"
     }
