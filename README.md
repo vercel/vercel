@@ -17,7 +17,7 @@
 </p>
 <br/>
 
-## Vercel
+## Vercel sanity check
 
 Vercel’s Frontend Cloud provides the developer experience and infrastructure to build, scale, and secure a faster, more personalized Web.
 
