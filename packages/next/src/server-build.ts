@@ -631,8 +631,9 @@ export async function serverBuild({
         dynamicPages.push(normalizedPathname);
       }
 
-      if (lambdaAppPaths[page]) {
-        if (lambdaAppPaths[page].fsPath.endsWith('route.js')) {
+      const lambdaAppPath = lambdaAppPaths[page];
+      if (lambdaAppPath?.fsPath) {
+        if (lambdaAppPath.fsPath.endsWith('route.js')) {
           appRouteHandlers.push(page);
         } else {
           appRouterPages.push(page);
@@ -850,8 +851,9 @@ export async function serverBuild({
       let originalPagePath = page;
 
       if (appDir && lambdaAppPaths[page]) {
-        const { fsPath } = lambdaAppPaths[page];
-        originalPagePath = path.relative(appDir, fsPath);
+        if (lambdaAppPaths[page]?.fsPath) {
+          originalPagePath = path.relative(appDir, lambdaAppPaths[page].fsPath);
+        }
       }
       return originalPagePath;
     };
@@ -867,7 +869,7 @@ export async function serverBuild({
       .map(page => {
         const originalPagePath = getOriginalPagePath(page);
         if (!getBuildTraceFile(originalPagePath)) {
-          return lambdaPages[page].fsPath;
+          return lambdaPages[page]?.fsPath;
         }
       })
       .filter(Boolean) as string[];
@@ -898,7 +900,7 @@ export async function serverBuild({
     for (const page of mergedPageKeys) {
       const originalPagePath = getOriginalPagePath(page);
       const pageBuildTrace = getBuildTraceFile(originalPagePath);
-      let fileList: string[];
+      let fileList: string[] = [];
       let reasons: NodeFileTraceReasons;
 
       if (pageBuildTrace) {
@@ -951,15 +953,10 @@ export async function serverBuild({
         });
         reasons = new Map();
       } else {
-        fileList = Array.from(
-          parentFilesMap?.get(
-            path.relative(baseDir, lambdaPages[page].fsPath)
-          ) || []
-        );
-
-        if (!fileList) {
-          throw new Error(
-            `Invariant: Failed to trace ${page}, missing fileList`
+        const lambdaPage = lambdaPages[page];
+        if (lambdaPage?.fsPath) {
+          fileList = Array.from(
+            parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
           );
         }
         reasons = traceResult?.reasons || new Map();
@@ -978,11 +975,13 @@ export async function serverBuild({
       );
 
       pageTraces[page] = tracedFiles;
-      compressedPages[page] = (
-        await createPseudoLayer({
-          [page]: lambdaPages[page],
-        })
-      ).pseudoLayer[page] as PseudoFile;
+      if (lambdaPages[page]) {
+        compressedPages[page] = (
+          await createPseudoLayer({
+            [page]: lambdaPages[page],
+          })
+        ).pseudoLayer[page] as PseudoFile;
+      }
     }
 
     const tracedPseudoLayer = await createPseudoLayer(
@@ -1161,10 +1160,14 @@ export async function serverBuild({
         ...internalPages,
         ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
       ]) {
-        const pageFileName = path.normalize(
-          path.relative(baseDir, lambdaPages[page].fsPath)
-        );
-        groupPageFiles[pageFileName] = compressedPages[page];
+        let pageFileName: string;
+        const lambdaPage = lambdaPages[page];
+        if (lambdaPage?.fsPath) {
+          pageFileName = path.normalize(
+            path.relative(baseDir, lambdaPage.fsPath)
+          );
+          groupPageFiles[pageFileName] = compressedPages[page];
+        }
       }
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};
