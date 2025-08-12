@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.11.1
+
+### Patch Changes
+
+- Handle generated function config ([#13720](https://github.com/vercel/vercel/pull/13720))
+
 ## 4.11.0
 
 ### Minor Changes
