@@ -38,7 +38,10 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { htmlContentType } from '.';
 import textTable from 'text-table';
 import { getNextjsEdgeFunctionSource } from './edge-function-source/get-edge-function-source';
-import type { LambdaOptionsWithFiles } from '@vercel/build-utils/dist/lambda';
+import type {
+  LambdaOptions,
+  LambdaOptionsWithFiles,
+} from '@vercel/build-utils/dist/lambda';
 import { stringifySourceMap } from './sourcemapped';
 import type { RawSourceMap } from 'source-map';
 import { prettyBytes } from './pretty-bytes';
@@ -1869,6 +1872,38 @@ export async function getPageLambdaGroups({
       });
 
       opts = { ...vercelConfigOpts, ...opts };
+    }
+
+    const isGeneratedSteps = routeName.includes('api/generated/steps');
+    const isGeneratedWorkflows = routeName.includes('api/generated/workflows');
+
+    if (isGeneratedSteps || isGeneratedWorkflows) {
+      const sourceFile = await getSourceFilePathFromPage({
+        workPath: entryPath,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
+        pageExtensions,
+      });
+      const config = JSON.parse(
+        await fs
+          .readFile(
+            path.join(entryPath, path.dirname(sourceFile), '../config.json'),
+            'utf8'
+          )
+          .catch(() => '{}')
+      ) as {
+        steps?: LambdaOptions;
+        workflows?: LambdaOptions;
+      };
+
+      if (isGeneratedSteps && config.steps) {
+        Object.assign(opts, config.steps);
+      } else if (isGeneratedWorkflows && config.workflows) {
+        Object.assign(opts, config.workflows);
+      }
     }
 
     let matchingGroup = experimentalAllowBundling
