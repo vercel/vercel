@@ -342,6 +342,9 @@ importers:
       '@vercel/build-utils':
         specifier: 11.0.1
         version: link:../build-utils
+      '@vercel/express':
+        specifier: 0.0.2
+        version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
         version: 1.1.6
