@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.3
+
+### Patch Changes
+
+- Include `@vercel/express` in the Vercel CLI ([#13716](https://github.com/vercel/vercel/pull/13716))
+
 ## 0.0.2
 
 ### Patch Changes
