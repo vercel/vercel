@@ -424,7 +424,10 @@ export async function getBuildMatches(
     // us to return a different value from what the preset provides, but we need
     // to use BuildResultV3 so that we can run the dev server with the startDevServer
     // function exported from Hono.
-    if (buildConfig.config?.framework === 'hono') {
+    if (
+      buildConfig.config?.framework === 'hono' ||
+      buildConfig.config?.framework === 'express'
+    ) {
       src = 'package.json';
     }
 
