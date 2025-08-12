@@ -1897,10 +1897,11 @@ export async function serverBuild({
       // server to return a plain text "Not Found". However, as we handle the "_next/static/"
       // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, create a
       // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
-      '_next/static/not-found.txt': new FileBlob({
-        data: 'Not Found',
-        contentType: 'text/plain',
-      }),
+      [path.posix.join('.', entryDirectory, '_next/static/not-found.txt')]:
+        new FileBlob({
+          data: 'Not Found',
+          contentType: 'text/plain',
+        }),
     },
     routes: [
       /*
