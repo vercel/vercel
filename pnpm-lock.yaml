@@ -1065,7 +1065,7 @@ importers:
   packages/functions:
     dependencies:
       '@vercel/oidc':
-        specifier: workspace:*
+        specifier: 2.1.0
         version: link:../oidc
     devDependencies:
       '@aws-sdk/client-s3':
@@ -1585,7 +1585,7 @@ importers:
         specifier: ^3.609.0
         version: 3.609.0(@aws-sdk/client-sts@3.806.0)
       '@vercel/oidc':
-        specifier: workspace:*
+        specifier: 2.1.0
         version: link:../oidc
     devDependencies:
       '@smithy/types':
