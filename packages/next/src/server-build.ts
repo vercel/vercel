@@ -1684,22 +1684,6 @@ export async function serverBuild({
     }
   }
 
-  // When bots crawl a site, they may render the page after awhile (e.g. re-sync),
-  // and the sub-assets may not be available then. In this case, the link to
-  // static assets could be not found, and return a 404 HTML. This behavior can
-  // bait the bots as if they found 404 pages. In Next.js it is handled on the
-  // server to return a plain text "Not Found". However, as we handle the "_next/static/"
-  // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, write a
-  // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
-  const notFoundTextPath = path.posix.join(
-    entryPath,
-    outputDirectory,
-    'static/not-found.txt'
-  );
-  if (!fs.existsSync(notFoundTextPath)) {
-    await fs.writeFile(notFoundTextPath, 'Not Found');
-  }
-
   const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
     await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
@@ -1906,6 +1890,17 @@ export async function serverBuild({
             __next_data_catchall: nextDataCatchallOutput,
           }
         : {}),
+      // When bots crawl a site, they may render the page after awhile (e.g. re-sync),
+      // and the sub-assets may not be available then. In this case, the link to
+      // static assets could be not found, and return a 404 HTML. This behavior can
+      // bait the bots as if they found 404 pages. In Next.js it is handled on the
+      // server to return a plain text "Not Found". However, as we handle the "_next/static/"
+      // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, create a
+      // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
+      '_next/static/not-found.txt': new FileBlob({
+        data: 'Not Found',
+        contentType: 'text/plain',
+      }),
     },
     routes: [
       /*
