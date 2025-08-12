@@ -38,6 +38,7 @@
     "@vercel/build-utils": "11.0.1",
     "@vercel/fun": "1.1.6",
     "@vercel/go": "3.2.3",
+    "@vercel/express": "0.0.2",
     "@vercel/hono": "0.0.10",
     "@vercel/hydrogen": "1.2.3",
     "@vercel/next": "4.11.0",
