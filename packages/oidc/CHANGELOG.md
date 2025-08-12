@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 2.1.0
+
+### Minor Changes
+
+- Add refresh token ability to @vercel/oidc ([#13608](https://github.com/vercel/vercel/pull/13608))
+
 ## 2.0.0
 
 ### Major Changes

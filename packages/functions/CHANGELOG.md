@@ -1,5 +1,14 @@
 # @vercel/functions
 
+## 2.2.9
+
+### Patch Changes
+
+- Extract AWS dynamic import to async loader with error handling ([#13660](https://github.com/vercel/vercel/pull/13660))
+
+- Updated dependencies [[`a133e534e7dfd785beeeb0dcafed8d2c991e9f11`](https://github.com/vercel/vercel/commit/a133e534e7dfd785beeeb0dcafed8d2c991e9f11)]:
+  - @vercel/oidc@2.1.0
+
 ## 2.2.8
 
 ### Patch Changes
