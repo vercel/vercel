@@ -1646,11 +1646,7 @@ export const build: BuildV2 = async buildOptions => {
       const nftCache = Object.create(null);
       const lstatSema = new Sema(25);
       const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
-      const pathsToTrace = mergedPageKeys
-        .map(page => {
-          return pages[page]?.fsPath;
-        })
-        .filter(Boolean) as string[];
+      const pathsToTrace = mergedPageKeys.map(page => pages[page].fsPath);
 
       const result = await nodeFileTrace(pathsToTrace, {
         base: baseDir,

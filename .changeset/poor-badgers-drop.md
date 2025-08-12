@@ -2,4 +2,4 @@
 '@vercel/next': patch
 ---
 
-Handle building for app router without interal pages entries
+Handle building for app router without internal pages entries
