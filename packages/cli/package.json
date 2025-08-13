@@ -98,7 +98,6 @@
     "@vercel-internals/get-package-json": "workspace:*",
     "@vercel-internals/types": "workspace:*",
     "@vercel/client": "15.3.14",
-    "@vercel/detect-agent": "0.0.2",
     "@vercel/error-utils": "2.0.3",
     "@vercel/frameworks": "3.7.6",
     "@vercel/fs-detectors": "5.4.12",

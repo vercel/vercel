@@ -76,7 +76,7 @@ import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-af
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
-import { determineAgent } from '@vercel/detect-agent';
+import { determineAgent } from './util/determine-agent';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
