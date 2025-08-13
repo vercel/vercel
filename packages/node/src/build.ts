@@ -375,9 +375,11 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  considerBuildCommand = false,
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
+  considerBuildCommand?: boolean;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -391,10 +393,15 @@ export const build = async ({
       meta,
     });
 
+  // For traditional api-folder builds, the `build` script isn't used.
+  // but we're reusing the node builder for hono and express, where we do need it
+  const possibleScripts = considerBuildCommand
+    ? ['vercel-build', 'now-build', 'build']
+    : ['vercel-build', 'now-build'];
+
   await runPackageJsonScript(
     entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
+    possibleScripts,
     spawnOpts,
     config.projectSettings?.createdAt
   );
