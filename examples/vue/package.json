@@ -6,7 +6,7 @@
     "lint": "vue-cli-service lint"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "dependencies": {
     "core-js": "^3.30.2",
