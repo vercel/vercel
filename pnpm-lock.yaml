@@ -352,7 +352,7 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.12
+        specifier: 0.0.13
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
