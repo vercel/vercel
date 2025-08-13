@@ -1,5 +1,11 @@
 # vercel
 
+## 45.0.6
+
+### Patch Changes
+
+- Migrate to agent detect package in steps ([#13746](https://github.com/vercel/vercel/pull/13746))
+
 ## 45.0.5
 
 ### Patch Changes
