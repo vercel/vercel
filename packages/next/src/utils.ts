@@ -2504,7 +2504,7 @@ export const onPrerenderRoute =
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    let htmlFallbackFsRef: File | null = null;
+    let htmlFallbackFsRef: File | null;
 
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
@@ -2573,44 +2573,53 @@ export const onPrerenderRoute =
           fsPath,
           contentType: contentType || 'text/html;charset=utf-8',
         });
+      } else {
+        htmlFallbackFsRef = null;
       }
     } else {
-      htmlFallbackFsRef =
-        isBlocking || (isNotFound && !static404Page)
-          ? // Blocking pages do not have an HTML fallback
-            null
-          : new FileFsRef({
-              fsPath: path.join(
-                isAppPathRoute && !isOmittedOrNotFound && appDir
-                  ? appDir
-                  : pagesDir,
-                isFallback
-                  ? // Fallback pages have a special file.
-                    addLocaleOrDefault(
-                      prerenderManifest.fallbackRoutes[routeKey].fallback,
-                      routesManifest,
-                      locale
-                    )
-                  : // Otherwise, the route itself should exist as a static HTML
-                    // file.
-                    `${
-                      isOmittedOrNotFound
-                        ? localePrefixed404
-                          ? addLocaleOrDefault('/404', routesManifest, locale)
-                          : '/404'
-                        : routeFileNoExt
-                    }.html`
-              ),
-            });
+      if (isBlocking || (isNotFound && !static404Page)) {
+        // Blocking pages and 404 pages that are not static do not have an HTML
+        // fallback
+        htmlFallbackFsRef = null;
+      } else {
+        const basePath =
+          isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
+
+        let htmlPath: string;
+        if (isFallback) {
+          // Fallback pages have a special file.
+          htmlPath = addLocaleOrDefault(
+            prerenderManifest.fallbackRoutes[routeKey].fallback,
+            routesManifest,
+            locale
+          );
+        } else {
+          // Otherwise, the route itself should exist as a static HTML file.
+          let fileBase: string;
+          if (isOmittedOrNotFound) {
+            if (localePrefixed404) {
+              fileBase = addLocaleOrDefault('/404', routesManifest, locale);
+            } else {
+              fileBase = '/404';
+            }
+          } else {
+            fileBase = routeFileNoExt;
+          }
+          htmlPath = `${fileBase}.html`;
+        }
+
+        htmlFallbackFsRef = new FileFsRef({
+          fsPath: path.join(basePath, htmlPath),
+        });
+      }
     }
 
     /**
      * The file that's associated with the data part of the page prerender. This
      * could be a JSON file in Pages Router, or an RSC file in App Router.
      */
-    let dataFallbackFsRef: File | null = null;
+    let dataFallbackFsRef: File | null;
 
-    // Data does not exist for fallback or blocking pages
     if (
       !isFallback &&
       !isBlocking &&
@@ -2618,29 +2627,43 @@ export const onPrerenderRoute =
       dataRoute &&
       (!isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
+      // Data does not exist for fallback or blocking pages, or 404 pages that
+      // are not static.
+      dataFallbackFsRef = null;
+    } else {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
 
+      let dataPath: string;
+      if (isOmittedOrNotFound) {
+        if (localePrefixed404) {
+          dataPath = addLocaleOrDefault('/404.html', routesManifest, locale);
+        } else {
+          dataPath = '/404.html';
+        }
+      } else if (isAppPathRoute) {
+        // When experimental PPR is enabled, we expect that the data
+        // that should be served as a part of the prerender should
+        // be from the prefetch data route. If this isn't enabled
+        // for ppr, the only way to get the data is from the data
+        // route.
+        if (renderingMode === RenderingMode.PARTIALLY_STATIC) {
+          if (!prefetchDataRoute) {
+            throw new Error(
+              `Invariant: prefetchDataRoute can't be undefined when renderingMode is PARTIALLY_STATIC`
+            );
+          }
+
+          dataPath = prefetchDataRoute;
+        } else {
+          dataPath = dataRoute;
+        }
+      } else {
+        dataPath = routeFileNoExt + '.json';
+      }
+
       dataFallbackFsRef = new FileFsRef({
-        fsPath: path.join(
-          basePath,
-          `${
-            isOmittedOrNotFound
-              ? localePrefixed404
-                ? addLocaleOrDefault('/404.html', routesManifest, locale)
-                : '/404.html'
-              : isAppPathRoute
-                ? // When experimental PPR is enabled, we expect that the data
-                  // that should be served as a part of the prerender should
-                  // be from the prefetch data route. If this isn't enabled
-                  // for ppr, the only way to get the data is from the data
-                  // route.
-                  renderingMode === RenderingMode.PARTIALLY_STATIC
-                  ? prefetchDataRoute
-                  : dataRoute
-                : routeFileNoExt + '.json'
-          }`
-        ),
+        fsPath: path.join(basePath, dataPath),
       });
     }
 
