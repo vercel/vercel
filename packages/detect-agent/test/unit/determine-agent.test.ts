@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { determineAgent } from '../../../src/util/determine-agent';
+import { determineAgent } from '../../src/index';
 import mockFs from 'mock-fs';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
@@ -70,6 +70,26 @@ describe('checkTelemetryStatus', () => {
       it('detects', async () => {
         const agent = await determineAgent();
         expect(agent).to.eq('devin');
+      });
+    });
+  });
+
+  describe('replit detection', () => {
+    describe('REPL_ID not set', () => {
+      it('is false', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq(false);
+      });
+    });
+
+    describe('REPL_ID set', () => {
+      beforeEach(() => {
+        vi.stubEnv('REPL_ID', '1');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('replit');
       });
     });
   });
