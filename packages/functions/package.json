@@ -42,6 +42,7 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "3.609.0",
     "@aws-sdk/credential-provider-web-identity": "3.609.0",
+    "@prisma/client": "6.14.0",
     "@smithy/types": "3.3.0",
     "@types/pg": "8.15.5",
     "cassandra-driver": "4.8.0",

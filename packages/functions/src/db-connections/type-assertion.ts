@@ -7,6 +7,7 @@ import type { Pool as MariaDBPoolType } from 'mariadb';
 import type { MongoClient as MongoDBClientType } from 'mongodb';
 import type { Redis as IoRedisType } from 'ioredis';
 import type { Client as CassandraClientType } from 'cassandra-driver';
+import type { PrismaClient as PrismaClientType } from '@prisma/client';
 import type { DbPool } from '.';
 
 // Note: Our interfaces are simplified versions that only include the properties
@@ -21,5 +22,6 @@ export const mongoSubtypeCheck = (client: MongoDBClientType): DbPool => client;
 export const ioredisSubtypeCheck = (redis: IoRedisType): DbPool => redis;
 export const cassandraSubtypeCheck = (client: CassandraClientType): DbPool =>
   client;
+export const prismaSubtypeCheck = (prisma: PrismaClientType): DbPool => prisma;
 
 throw new Error('This file is not used in the codebase.');
