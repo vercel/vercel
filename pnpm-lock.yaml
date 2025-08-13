@@ -352,13 +352,13 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.10
+        specifier: 0.0.11
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.11.1
+        specifier: 4.11.2
         version: link:../next
       '@vercel/node':
         specifier: 5.3.12

@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.11
+
+### Patch Changes
+
+- Add support for custom build scripts ([#13724](https://github.com/vercel/vercel/pull/13724))
+
 ## 0.0.10
 
 ### Patch Changes

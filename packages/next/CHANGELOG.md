@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.11.2
+
+### Patch Changes
+
+- Return plain text 404 for `/_next/static/` paths instead of HTML to prevent SEO issues. ([#12906](https://github.com/vercel/vercel/pull/12906))
+
 ## 4.11.1
 
 ### Patch Changes
