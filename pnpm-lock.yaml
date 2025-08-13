@@ -520,6 +520,9 @@ importers:
       '@vercel/client':
         specifier: 15.3.13
         version: link:../client
+      '@vercel/detect-agent':
+        specifier: 0.0.1
+        version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
@@ -848,6 +851,21 @@ importers:
       vitest:
         specifier: 2.0.1
         version: 2.0.1(@types/node@16.18.119)
+
+  packages/detect-agent:
+    devDependencies:
+      '@types/mock-fs':
+        specifier: 4.13.4
+        version: 4.13.4
+      mock-fs:
+        specifier: 5.5.0
+        version: 5.5.0
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@14.18.33)
+      vitest:
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/edge:
     devDependencies:
