@@ -1024,14 +1024,17 @@ export const build: BuildV2 = async buildOptions => {
         // /_next
         { handle: 'miss' },
         {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-          ),
+          src: path.posix.join('/', entryDirectory, '_next/static/.+'),
           status: 404,
           check: true,
-          dest: '$0',
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/not-found.txt'
+          ),
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+          },
         },
 
         // Dynamic routes
@@ -2670,14 +2673,13 @@ export const build: BuildV2 = async buildOptions => {
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
       {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-        ),
+        src: path.join('/', entryDirectory, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: '$0',
+        dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files
