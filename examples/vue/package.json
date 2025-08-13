@@ -13,11 +13,11 @@
     "vue": "^3.3.4"
   },
   "devDependencies": {
+    "@babel/eslint-parser": "^7.21.8",
     "@vue/cli-plugin-babel": "~5.0.8",
     "@vue/cli-plugin-eslint": "~5.0.8",
     "@vue/cli-service": "~5.0.8",
     "@vue/compiler-sfc": "^3.3.4",
-    "@babel/eslint-parser": "^7.21.8",
     "eslint": "^8.4.1",
     "eslint-plugin-vue": "^9.14.0"
   },
