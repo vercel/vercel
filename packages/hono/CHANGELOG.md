@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.13
+
+### Patch Changes
+
+- Mark package as public ([#13750](https://github.com/vercel/vercel/pull/13750))
+
 ## 0.0.12
 
 ### Patch Changes
