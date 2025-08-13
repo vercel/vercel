@@ -32,6 +32,6 @@
     "esbuild": "0.19.2"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">=16"
   }
 }

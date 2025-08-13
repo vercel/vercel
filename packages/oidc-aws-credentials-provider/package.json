@@ -34,7 +34,7 @@
     "vitest": "2.0.1"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">= 18"
   },
   "scripts": {
     "pretest": "pnpm run build:code",
