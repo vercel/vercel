@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 2.2.11
+
+### Patch Changes
+
+- Fix dependency ([#13726](https://github.com/vercel/vercel/pull/13726))
+
 ## 2.2.10
 
 ### Patch Changes

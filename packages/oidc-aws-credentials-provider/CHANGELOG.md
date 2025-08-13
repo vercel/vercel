@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 2.0.3
+
+### Patch Changes
+
+- Fix dependency ([#13726](https://github.com/vercel/vercel/pull/13726))
+
 ## 2.0.2
 
 ### Patch Changes
