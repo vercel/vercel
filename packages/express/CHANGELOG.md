@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.5
+
+### Patch Changes
+
+- Make express public ([#13748](https://github.com/vercel/vercel/pull/13748))
+
 ## 0.0.4
 
 ### Patch Changes
