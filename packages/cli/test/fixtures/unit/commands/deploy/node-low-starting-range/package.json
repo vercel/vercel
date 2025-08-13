@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">10"
+    "node": "22.x"
   }
 }
