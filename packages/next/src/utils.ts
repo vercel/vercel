@@ -2618,7 +2618,7 @@ export const onPrerenderRoute =
      * The file that's associated with the data part of the page prerender. This
      * could be a JSON file in Pages Router, or an RSC file in App Router.
      */
-    let dataFallbackFsRef: File | null;
+    let dataFallbackFsRef: File | null = null;
 
     if (
       !isFallback &&
@@ -2627,10 +2627,6 @@ export const onPrerenderRoute =
       dataRoute &&
       (!isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
-      // Data does not exist for fallback or blocking pages, or 404 pages that
-      // are not static.
-      dataFallbackFsRef = null;
-    } else {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
 
