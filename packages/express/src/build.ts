@@ -12,6 +12,7 @@ export const build: BuildV3 = async args => {
   return nodeBuild({
     ...args,
     entrypoint,
+    considerBuildCommand: true,
   });
 };
 
