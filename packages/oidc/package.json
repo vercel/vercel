@@ -14,7 +14,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -45,5 +45,9 @@
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@types/ms": "2.1.0",
+    "ms": "2.1.3"
   }
 }
