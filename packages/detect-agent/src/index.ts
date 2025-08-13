@@ -6,6 +6,7 @@ const devinLocalPath = '/opt/.devin';
 const CURSOR = 'cursor';
 const CLAUDE = 'claude';
 const DEVIN = 'devin';
+const REPLIT = 'replit';
 
 export async function determineAgent(): Promise<string | false> {
   if (process.env.CURSOR_TRACE_ID) {
@@ -14,6 +15,10 @@ export async function determineAgent(): Promise<string | false> {
 
   if (process.env.CLAUDE_CODE) {
     return CLAUDE;
+  }
+
+  if (process.env.REPL_ID) {
+    return REPLIT;
   }
 
   try {
