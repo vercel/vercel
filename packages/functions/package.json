@@ -79,6 +79,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@vercel/oidc": "workspace:*"
+    "@vercel/oidc": "2.1.0"
   }
 }
