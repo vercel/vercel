@@ -1,5 +1,13 @@
 # vercel
 
+## 45.0.5
+
+### Patch Changes
+
+- Move agent detection logic to its own package ([#13736](https://github.com/vercel/vercel/pull/13736))
+
+- Update dependencies for CLI ([#13743](https://github.com/vercel/vercel/pull/13743))
+
 ## 45.0.4
 
 ### Patch Changes
