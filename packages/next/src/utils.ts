@@ -301,6 +301,12 @@ type RoutesManifestOld = {
      * When true, the dynamic RSC route is expecting to be a prerendered route.
      */
     dynamicRSCPrerender?: boolean;
+
+    /**
+     * Whether the client param parsing is enabled. This is only relevant for
+     * app pages when PPR is enabled.
+     */
+    clientParamParsing?: boolean;
   };
   rewriteHeaders?: {
     pathHeader: string;
@@ -2242,6 +2248,7 @@ type OnPrerenderRouteArgs = {
   isEmptyAllowQueryForPrendered?: boolean;
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
+  isAppClientParamParsingEnabled: boolean;
 };
 let prerenderGroup = 1;
 
@@ -2280,6 +2287,7 @@ export const onPrerenderRoute =
       isEmptyAllowQueryForPrendered,
       isAppPPREnabled,
       isAppClientSegmentCacheEnabled,
+      isAppClientParamParsingEnabled,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2435,7 +2443,7 @@ export const onPrerenderRoute =
     }
 
     const isOmittedOrNotFound = isOmitted || isNotFound;
-    let htmlFsRef: File | null = null;
+    let htmlFallbackFsRef: File | null = null;
 
     // If enabled, try to get the postponed route information from the file
     // system and use it to assemble the prerender.
@@ -2469,17 +2477,10 @@ export const onPrerenderRoute =
         }
       }
 
-      if (!dataRoute?.endsWith('.rsc')) {
-        throw new Error(
-          `Invariant: unexpected output path for ${dataRoute} and PPR`
-        );
-      }
-
-      if (!prefetchDataRoute?.endsWith('.prefetch.rsc')) {
-        throw new Error(
-          `Invariant: unexpected output path for ${prefetchDataRoute} and PPR`
-        );
-      }
+      // NOTE: we don't validate the extension suffix of the data routes because
+      // some routes (like those that have PPR client segment cache, and client
+      // parsing all enabled) may be null because they only contain segment
+      // data.
     }
 
     if (postponedPrerender) {
@@ -2489,7 +2490,10 @@ export const onPrerenderRoute =
       }
 
       // Assemble the prerendered file.
-      htmlFsRef = new FileBlob({ contentType, data: postponedPrerender });
+      htmlFallbackFsRef = new FileBlob({
+        contentType,
+        data: postponedPrerender,
+      });
     } else if (
       appDir &&
       !dataRoute &&
@@ -2504,13 +2508,13 @@ export const onPrerenderRoute =
       // have dynamic segments.
       const fsPath = path.join(appDir, `${routeFileNoExt}.body`);
       if (fs.existsSync(fsPath)) {
-        htmlFsRef = new FileFsRef({
+        htmlFallbackFsRef = new FileFsRef({
           fsPath,
           contentType: contentType || 'text/html;charset=utf-8',
         });
       }
     } else {
-      htmlFsRef =
+      htmlFallbackFsRef =
         isBlocking || (isNotFound && !static404Page)
           ? // Blocking pages do not have an HTML fallback
             null
@@ -2538,33 +2542,46 @@ export const onPrerenderRoute =
               ),
             });
     }
-    const jsonFsRef =
-      // JSON data does not exist for fallback or blocking pages
-      isFallback || isBlocking || (isNotFound && !static404Page) || !dataRoute
-        ? null
-        : new FileFsRef({
-            fsPath: path.join(
-              isAppPathRoute && !isOmittedOrNotFound && appDir
-                ? appDir
-                : pagesDir,
-              `${
-                isOmittedOrNotFound
-                  ? localePrefixed404
-                    ? addLocaleOrDefault('/404.html', routesManifest, locale)
-                    : '/404.html'
-                  : isAppPathRoute
-                    ? // When experimental PPR is enabled, we expect that the data
-                      // that should be served as a part of the prerender should
-                      // be from the prefetch data route. If this isn't enabled
-                      // for ppr, the only way to get the data is from the data
-                      // route.
-                      renderingMode === RenderingMode.PARTIALLY_STATIC
-                      ? prefetchDataRoute
-                      : dataRoute
-                    : routeFileNoExt + '.json'
-              }`
-            ),
-          });
+
+    /**
+     * The file that's associated with the data part of the page prerender. This
+     * could be a JSON file in Pages Router, or an RSC file in App Router.
+     */
+    let dataFallbackFsRef: File | null = null;
+
+    // Data does not exist for fallback or blocking pages
+    if (
+      isFallback ||
+      isBlocking ||
+      (isNotFound && !static404Page) ||
+      !dataRoute ||
+      (isAppClientParamParsingEnabled && !prefetchDataRoute)
+    ) {
+      const basePath =
+        isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
+
+      dataFallbackFsRef = new FileFsRef({
+        fsPath: path.join(
+          basePath,
+          `${
+            isOmittedOrNotFound
+              ? localePrefixed404
+                ? addLocaleOrDefault('/404.html', routesManifest, locale)
+                : '/404.html'
+              : isAppPathRoute
+                ? // When experimental PPR is enabled, we expect that the data
+                  // that should be served as a part of the prerender should
+                  // be from the prefetch data route. If this isn't enabled
+                  // for ppr, the only way to get the data is from the data
+                  // route.
+                  renderingMode === RenderingMode.PARTIALLY_STATIC
+                  ? prefetchDataRoute
+                  : dataRoute
+                : routeFileNoExt + '.json'
+          }`
+        ),
+      });
+    }
 
     if (isOmittedOrNotFound) {
       initialStatus = 404;
@@ -2613,8 +2630,6 @@ export const onPrerenderRoute =
       }
 
       outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
-    } else if (renderingMode === RenderingMode.PARTIALLY_STATIC) {
-      throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
     if (isSharedLambdas) {
@@ -2653,7 +2668,7 @@ export const onPrerenderRoute =
     }
 
     if (!isAppPathRoute && !isNotFound && initialRevalidate === false) {
-      if (htmlFsRef == null || jsonFsRef == null) {
+      if (htmlFallbackFsRef == null || dataFallbackFsRef == null) {
         throw new NowBuildError({
           code: 'NEXT_HTMLFSREF_JSONFSREF',
           message: `invariant: htmlFsRef != null && jsonFsRef != null ${routeFileNoExt}`,
@@ -2666,11 +2681,11 @@ export const onPrerenderRoute =
         !canUsePreviewMode ||
         (routeKey === '/404' && !lambdas[outputPathPage])
       ) {
-        htmlFsRef.contentType = htmlContentType;
-        prerenders[outputPathPage] = htmlFsRef;
+        htmlFallbackFsRef.contentType = htmlContentType;
+        prerenders[outputPathPage] = htmlFallbackFsRef;
 
         if (outputPathPrefetchData) {
-          prerenders[outputPathPrefetchData] = jsonFsRef;
+          prerenders[outputPathPrefetchData] = dataFallbackFsRef;
         }
 
         // If experimental ppr is not enabled for this route, then add the data
@@ -2679,7 +2694,7 @@ export const onPrerenderRoute =
           outputPathData &&
           renderingMode !== RenderingMode.PARTIALLY_STATIC
         ) {
-          prerenders[outputPathData] = jsonFsRef;
+          prerenders[outputPathData] = dataFallbackFsRef;
         }
       }
     }
@@ -2822,6 +2837,8 @@ export const onPrerenderRoute =
           : prerenderManifest.blockingFallbackRoutes[routeKey];
 
         if (
+          // We only want to vary on the shell contents if there is a fallback
+          // present and able to be served.
           fallback &&
           typeof fallback === 'string' &&
           fallbackRootParams &&
@@ -2838,7 +2855,7 @@ export const onPrerenderRoute =
         staleExpiration: initialExpire,
         lambda,
         allowQuery: htmlAllowQuery,
-        fallback: htmlFsRef,
+        fallback: htmlFallbackFsRef,
         group: prerenderGroup,
         bypassToken: prerenderManifest.bypassToken,
         experimentalBypassFor,
@@ -2891,7 +2908,7 @@ export const onPrerenderRoute =
           staleExpiration: initialExpire,
           lambda,
           allowQuery,
-          fallback: jsonFsRef,
+          fallback: dataFallbackFsRef,
           group: prerenderGroup,
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
@@ -3015,6 +3032,20 @@ export const onPrerenderRoute =
               appDir,
               routeFileNoExt + prefetchSegmentDirSuffix
             );
+
+            // If the application has client segment cache, client segment
+            // parsing, and ppr enabled, then we can use a blank allowQuery
+            // for the segment prerenders. This is because we know that the
+            // segments do not vary based on the route parameters.
+            let segmentAllowQuery = allowQuery;
+            if (
+              isAppClientSegmentCacheEnabled &&
+              isAppClientParamParsingEnabled &&
+              (isFallback || isBlocking)
+            ) {
+              segmentAllowQuery = [];
+            }
+
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
                 path.join(
@@ -3024,8 +3055,13 @@ export const onPrerenderRoute =
 
               let fallback: FileFsRef | null = null;
 
-              // Only add the fallback if this is not a fallback route.
-              if (!isFallback) {
+              // Only use the fallback value when the allowQuery is defined and
+              // is empty, which means that the segments do not vary based on
+              // the route parameters. This is safer than ensuring that we only
+              // use the fallback when this is not a fallback because we know in
+              // this new logic that it doesn't vary based on the route
+              // parameters and therefore can be used for all requests instead.
+              if (segmentAllowQuery && segmentAllowQuery.length === 0) {
                 const fsPath = path.join(
                   segmentsDir,
                   segmentPath + prefetchSegmentSuffix
@@ -3038,7 +3074,7 @@ export const onPrerenderRoute =
                 expiration: initialRevalidate,
                 staleExpiration: initialExpire,
                 lambda,
-                allowQuery,
+                allowQuery: segmentAllowQuery,
                 fallback,
 
                 // Use the same prerender group as the JSON/data prerender.

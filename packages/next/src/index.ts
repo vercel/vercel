@@ -1468,6 +1468,12 @@ export const build: BuildV2 = async buildOptions => {
         true
       : false;
 
+    // We read this from the routes manifest instead of the config because we
+    // expect that the flag will be deprecated in the future and the manifest
+    // will be the source of truth.
+    const isAppClientParamParsingEnabled =
+      routesManifest?.rsc?.clientParamParsing ?? false;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1525,6 +1531,7 @@ export const build: BuildV2 = async buildOptions => {
         experimentalPPRRoutes,
         isAppPPREnabled,
         isAppClientSegmentCacheEnabled,
+        isAppClientParamParsingEnabled,
       });
     }
 
@@ -2276,8 +2283,10 @@ export const build: BuildV2 = async buildOptions => {
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      // The following flags are not supported in this version of the builder.
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
+      isAppClientParamParsingEnabled: false,
     });
 
     await Promise.all(

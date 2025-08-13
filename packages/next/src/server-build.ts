@@ -148,6 +148,7 @@ export async function serverBuild({
   experimentalPPRRoutes,
   isAppPPREnabled,
   isAppClientSegmentCacheEnabled,
+  isAppClientParamParsingEnabled,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -191,6 +192,7 @@ export async function serverBuild({
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
+  isAppClientParamParsingEnabled: boolean;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -1569,6 +1571,7 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
   });
 
   await Promise.all(
