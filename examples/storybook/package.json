@@ -28,6 +28,6 @@
     "storybook": "^7.0.18"
   },
   "engines": {
-    "node": "22.x"
+    "node": "18.x"
   }
 }
