@@ -13,7 +13,7 @@ for (const name of fs.readdirSync(packagesDir)) {
     fs.readFileSync(new URL(`${name}/package.json`, packagesDir), 'utf8')
   );
   spawnSync(
-    'npm',
+    'pnpm',
     `dist-tag add ${pkg.name}@${pkg.version} canary`.split(' '),
     { stdio: 'inherit' }
   );

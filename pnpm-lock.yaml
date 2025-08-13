@@ -343,7 +343,7 @@ importers:
         specifier: 11.0.1
         version: link:../build-utils
       '@vercel/express':
-        specifier: 0.0.2
+        specifier: 0.0.3
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -358,7 +358,7 @@ importers:
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.11.0
+        specifier: 4.11.1
         version: link:../next
       '@vercel/node':
         specifier: 5.3.12
@@ -1065,7 +1065,7 @@ importers:
   packages/functions:
     dependencies:
       '@vercel/oidc':
-        specifier: workspace:*
+        specifier: 2.1.0
         version: link:../oidc
     devDependencies:
       '@aws-sdk/client-s3':
@@ -1585,7 +1585,7 @@ importers:
         specifier: ^3.609.0
         version: 3.609.0(@aws-sdk/client-sts@3.806.0)
       '@vercel/oidc':
-        specifier: workspace:*
+        specifier: 2.1.0
         version: link:../oidc
     devDependencies:
       '@smithy/types':

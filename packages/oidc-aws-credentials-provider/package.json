@@ -14,7 +14,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "2.0.1",
+  "version": "2.0.2",
   "repository": {
     "directory": "packages/oidc-aws-credentials-provider",
     "type": "git",
@@ -49,6 +49,6 @@
   },
   "dependencies": {
     "@aws-sdk/credential-provider-web-identity": "^3.609.0",
-    "@vercel/oidc": "workspace:*"
+    "@vercel/oidc": "2.1.0"
   }
 }
