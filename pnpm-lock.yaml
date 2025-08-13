@@ -524,7 +524,7 @@ importers:
         specifier: 15.3.14
         version: link:../client
       '@vercel/detect-agent':
-        specifier: 0.0.1
+        specifier: 0.0.2
         version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
