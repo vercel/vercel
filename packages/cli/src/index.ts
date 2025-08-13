@@ -700,6 +700,9 @@ const main = async () => {
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = require('./commands/logs').default;
           break;
+        case 'mcp':
+          func = require('./commands/mcp').default;
+          break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
           func = require('./commands/login').default;
