@@ -1,0 +1,5 @@
+---
+'vercel': patch
+---
+
+Update dependencies
