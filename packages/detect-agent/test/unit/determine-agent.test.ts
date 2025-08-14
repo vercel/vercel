@@ -70,6 +70,46 @@ describe('checkTelemetryStatus', () => {
     });
   });
 
+  describe('gemini detection', () => {
+    describe('GEMINI_CLI not set', () => {
+      it('is false', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq(false);
+      });
+    });
+
+    describe('GEMINI_CLI set', () => {
+      beforeEach(() => {
+        vi.stubEnv('GEMINI_CLI', '1');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('gemini');
+      });
+    });
+  });
+
+  describe('codex detection', () => {
+    describe('CODEX_SANDBOX not set', () => {
+      it('is false', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq(false);
+      });
+    });
+
+    describe('CODEX_SANDBOX set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('codex');
+      });
+    });
+  });
+
   describe('claude detection', () => {
     describe('CLAUDE_CODE not set', () => {
       it('is false', async () => {
