@@ -1,5 +1,104 @@
 # vercel
 
+## 45.0.9
+
+### Patch Changes
+
+- Update framework dependencies ([#13757](https://github.com/vercel/vercel/pull/13757))
+
+## 45.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`7a88b3c2dc0b10d624c1d59d1013efb4a5a4a365`](https://github.com/vercel/vercel/commit/7a88b3c2dc0b10d624c1d59d1013efb4a5a4a365)]:
+  - @vercel/hono@0.0.13
+
+## 45.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`0c95aeb94d885b0ca8145282fc77bdaa6585c681`](https://github.com/vercel/vercel/commit/0c95aeb94d885b0ca8145282fc77bdaa6585c681)]:
+  - @vercel/express@0.0.5
+
+## 45.0.6
+
+### Patch Changes
+
+- Migrate to agent detect package in steps ([#13746](https://github.com/vercel/vercel/pull/13746))
+
+## 45.0.5
+
+### Patch Changes
+
+- Move agent detection logic to its own package ([#13736](https://github.com/vercel/vercel/pull/13736))
+
+- Update dependencies for CLI ([#13743](https://github.com/vercel/vercel/pull/13743))
+
+## 45.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`8dc72da59da50e666b6dd174d8f2f7d045405bb2`](https://github.com/vercel/vercel/commit/8dc72da59da50e666b6dd174d8f2f7d045405bb2)]:
+  - @vercel/express@0.0.4
+  - @vercel/hono@0.0.12
+
+## 45.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`23eb3cc7efbb0f86b5d930178c15039b02641c99`](https://github.com/vercel/vercel/commit/23eb3cc7efbb0f86b5d930178c15039b02641c99), [`d06771715244e21f6b705a9d3ac7227206bdff42`](https://github.com/vercel/vercel/commit/d06771715244e21f6b705a9d3ac7227206bdff42)]:
+  - @vercel/next@4.11.2
+  - @vercel/hono@0.0.11
+
+## 45.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`ba961065f808d3cb756729caea70677ec00b51bc`](https://github.com/vercel/vercel/commit/ba961065f808d3cb756729caea70677ec00b51bc)]:
+  - @vercel/next@4.11.1
+
+## 45.0.1
+
+### Patch Changes
+
+- Add `@vercel/express` framework builder ([#13714](https://github.com/vercel/vercel/pull/13714))
+
+- Updated dependencies [[`f5eb9eee45deb0e8f32846ee629c3a6a0ea6759d`](https://github.com/vercel/vercel/commit/f5eb9eee45deb0e8f32846ee629c3a6a0ea6759d)]:
+  - @vercel/express@0.0.3
+
+## 45.0.0
+
+### Major Changes
+
+- Disable logs by default on vercel build and show them on error ([#13695](https://github.com/vercel/vercel/pull/13695))
+
+### Minor Changes
+
+- Add project settings option on link ([#13685](https://github.com/vercel/vercel/pull/13685))
+
+### Patch Changes
+
+- Fix 404 status for /api routes when using Hono with the vercel dev server ([#13706](https://github.com/vercel/vercel/pull/13706))
+
+- `vc login --future` no longer parses `teamId` out of the access token ([#13690](https://github.com/vercel/vercel/pull/13690))
+
+- Fix blob token in error message ([#13703](https://github.com/vercel/vercel/pull/13703))
+
+- Integration test fixes ([#13694](https://github.com/vercel/vercel/pull/13694))
+
+- Updated dependencies [[`8a020e07c2116833bbe39ee43f62efad9f7de0de`](https://github.com/vercel/vercel/commit/8a020e07c2116833bbe39ee43f62efad9f7de0de), [`5eb982e20d82ca22f7e79ea60c288b876fa661e9`](https://github.com/vercel/vercel/commit/5eb982e20d82ca22f7e79ea60c288b876fa661e9), [`ce8eec3bbaca1909abc9f054b7f6e92aed5a343e`](https://github.com/vercel/vercel/commit/ce8eec3bbaca1909abc9f054b7f6e92aed5a343e)]:
+  - @vercel/build-utils@11.0.1
+  - @vercel/hono@0.0.10
+  - @vercel/node@5.3.12
+  - @vercel/static-build@2.7.18
+
+## 44.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`60772fe5e76463d8ff8208e5dd6ffdfcedb9c565`](https://github.com/vercel/vercel/commit/60772fe5e76463d8ff8208e5dd6ffdfcedb9c565)]:
+  - @vercel/go@3.2.3
+
 ## 44.7.2
 
 ### Patch Changes

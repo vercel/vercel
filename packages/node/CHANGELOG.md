@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 5.3.12
+
+### Patch Changes
+
+- Add `.mts` support to node builder ([#13687](https://github.com/vercel/vercel/pull/13687))
+
+- Skip lib check on node dev server ([#13696](https://github.com/vercel/vercel/pull/13696))
+
+- Updated dependencies [[`8a020e07c2116833bbe39ee43f62efad9f7de0de`](https://github.com/vercel/vercel/commit/8a020e07c2116833bbe39ee43f62efad9f7de0de)]:
+  - @vercel/build-utils@11.0.1
+
 ## 5.3.11
 
 ### Patch Changes

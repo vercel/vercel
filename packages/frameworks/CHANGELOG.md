@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.7.7
+
+### Patch Changes
+
+- Add Express to frameworks detection ([#13754](https://github.com/vercel/vercel/pull/13754))
+
 ## 3.7.6
 
 ### Patch Changes

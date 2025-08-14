@@ -18,46 +18,19 @@
 
 ▸ **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
 
-Obtains the Vercel OIDC token and creates an AWS credential provider function
-that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
-
-**`Example`**
-
-```js
-import * as s3 from '@aws-sdk/client-s3';
-import { awsCredentialsProvider } from '@vercel/functions/oidc';
-
-const s3Client = new s3.S3Client({
-  credentials: awsCredentialsProvider({
-    roleArn: 'arn:aws:iam::1234567890:role/RoleA',
-    clientConfig: { region: 'us-west-2' },
-    clientPlugins: [addFooHeadersPlugin],
-    roleAssumerWithWebIdentity: customRoleAssumer,
-    roleSessionName: 'session_123',
-    providerId: 'graph.facebook.com',
-    policyArns: [{ arn: 'arn:aws:iam::1234567890:policy/SomePolicy' }],
-    policy:
-      '{"Statement": [{"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]}',
-    durationSeconds: 7200,
-  }),
-});
-```
-
 #### Parameters
 
-| Name   | Type                                                                             | Description                |
-| :----- | :------------------------------------------------------------------------------- | :------------------------- |
-| `init` | [`AwsCredentialsProviderInit`](../interfaces/oidc.AwsCredentialsProviderInit.md) | The initialization object. |
+| Name   | Type                                                                             |
+| :----- | :------------------------------------------------------------------------------- |
+| `init` | [`AwsCredentialsProviderInit`](../interfaces/oidc.AwsCredentialsProviderInit.md) |
 
 #### Returns
 
 `AwsCredentialIdentityProvider`
 
-A function that provides AWS credentials.
-
 #### Defined in
 
-[packages/functions/src/oidc/aws-credentials-provider.ts:60](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L60)
+[packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
 
 ---
 
@@ -97,7 +70,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:23
+node_modules/.pnpm/@vercel+oidc@2.0.0/node_modules/@vercel/oidc/dist/get-vercel-oidc-token.d.ts:23
 
 ---
 
@@ -132,4 +105,4 @@ The OIDC token.
 
 #### Defined in
 
-packages/oidc/dist/get-vercel-oidc-token.d.ts:43
+node_modules/.pnpm/@vercel+oidc@2.0.0/node_modules/@vercel/oidc/dist/get-vercel-oidc-token.d.ts:43

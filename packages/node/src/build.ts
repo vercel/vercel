@@ -96,6 +96,9 @@ function renameTStoJS(path: string) {
   if (path.endsWith('.tsx')) {
     return path.slice(0, -4) + '.js';
   }
+  if (path.endsWith('.mts')) {
+    return path.slice(0, -4) + '.mjs';
+  }
   return path;
 }
 
@@ -221,7 +224,8 @@ async function compile(
 
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-            fsPath.endsWith('.tsx')
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -291,6 +295,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mts') &&
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
@@ -370,9 +375,11 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  considerBuildCommand = false,
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
+  considerBuildCommand?: boolean;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -386,10 +393,15 @@ export const build = async ({
       meta,
     });
 
+  // For traditional api-folder builds, the `build` script isn't used.
+  // but we're reusing the node builder for hono and express, where we do need it
+  const possibleScripts = considerBuildCommand
+    ? ['vercel-build', 'now-build', 'build']
+    : ['vercel-build', 'now-build'];
+
   await runPackageJsonScript(
     entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
+    possibleScripts,
     spawnOpts,
     config.projectSettings?.createdAt
   );
