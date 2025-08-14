@@ -1,5 +1,11 @@
 # vercel
 
+## 45.0.9
+
+### Patch Changes
+
+- Update framework dependencies ([#13757](https://github.com/vercel/vercel/pull/13757))
+
 ## 45.0.8
 
 ### Patch Changes
