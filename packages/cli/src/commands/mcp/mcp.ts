@@ -115,7 +115,7 @@ export default async function mcp(client: Client) {
       if (typeof result === 'object' && 'error' in result) {
         if (result.stderr?.includes('already exists')) {
           summary.push('✅ Claude Code: Vercel MCP already configured');
-          output.print('ℹ️  Vercel MCP is already configured in Claude Code\n');
+          output.print('ℹ️ Vercel MCP is already configured in Claude Code\n');
         } else {
           summary.push('❌ Claude Code: Failed to add MCP server');
           output.print('💡 Manual commands:\n');
@@ -130,7 +130,7 @@ export default async function mcp(client: Client) {
         summary.push('✅ Claude Code: Vercel MCP added successfully');
         output.print('✅ Successfully added Vercel MCP to Claude Code\n');
         output.print(
-          'ℹ️  You may need to authenticate using the /mcp command in Claude Code\n'
+          'ℹ️ You may need to authenticate using the /mcp command in Claude Code\n'
         );
       }
     } else if (clientName === 'Claude.ai and Claude for desktop') {
@@ -153,7 +153,7 @@ export default async function mcp(client: Client) {
         output.print(`      • URL: ${MCP_ENDPOINT}\n`);
       }
       output.print('   4. Complete the authentication flow\n');
-      summary.push('ℹ️  Claude.ai/Desktop: Manual setup required');
+      summary.push('ℹ️ Claude.ai/Desktop: Manual setup required');
     } else if (clientName === 'Cursor') {
       output.print('🔗 Setting up Cursor MCP...\n');
 
@@ -187,8 +187,8 @@ export default async function mcp(client: Client) {
         summary.push('✅ Cursor: One-click installer opened');
         output.print('✅ Successfully opened Cursor one-click installer\n');
       } catch (error) {
-        summary.push('⚠️  Cursor: Deep link may not have worked');
-        output.print('⚠️  Deep link may not have opened Cursor settings\n');
+        summary.push('⚠️ Cursor: Deep link may not have worked');
+        output.print('⚠️ Deep link may not have opened Cursor settings\n');
       }
 
       // Always provide manual setup instructions as fallback
@@ -214,7 +214,7 @@ export default async function mcp(client: Client) {
 
       if (typeof copilotCheck === 'object' && 'error' in copilotCheck) {
         output.print(
-          '⚠️  GitHub Copilot not detected. MCP functionality may be limited.\n'
+          '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
         );
         output.print('   1. Open VS Code\n');
         output.print('   2. Go to Extensions (Cmd+Shift+X / Ctrl+Shift+X)\n');
@@ -257,9 +257,9 @@ export default async function mcp(client: Client) {
 
         summary.push('✅ VS Code: One-click installer opened');
         output.print('✅ Successfully opened VS Code one-click installer\n');
-        output.print('ℹ️  Follow the prompts in VS Code to complete setup\n');
+        output.print('ℹ️ Follow the prompts in VS Code to complete setup\n');
         output.print(
-          'ℹ️  You may need to authorize the connection when prompted\n'
+          'ℹ️ You may need to authorize the connection when prompted\n'
         );
       } catch (error) {
         summary.push('❌ VS Code: Failed to open one-click installer');
@@ -289,7 +289,7 @@ export default async function mcp(client: Client) {
 
   output.print('📊 Setup Summary\n');
   output.print('─'.repeat(50) + '\n');
-  summary.forEach(line => output.print(`  ${line}\n`));
+  summary.forEach(line => output.print(`${line}\n`));
 
   if (isProjectSpecific) {
     const projectInfo = await getProjectSpecificUrl(client);
