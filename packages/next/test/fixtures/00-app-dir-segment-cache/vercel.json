@@ -18,6 +18,19 @@
         "Next-Router-Segment-Prefetch": "/_tree"
       },
       "mustContain": "foobar-1"
+    },
+    {
+      "path": "/api/status",
+      "status": 200,
+      "responseHeaders": {
+        "x-next-cache": {
+          "mustNotBe": "HIT"
+        },
+        "cache-control": {
+          "mustNotContain": "s-maxage"
+        }
+      },
+      "mustContain": "\"status\":\"ok\""
     }
   ]
 }
