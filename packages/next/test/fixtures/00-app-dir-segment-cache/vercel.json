@@ -23,12 +23,8 @@
       "path": "/api/status",
       "status": 200,
       "responseHeaders": {
-        "x-next-cache": {
-          "mustNotBe": "HIT"
-        },
-        "cache-control": {
-          "mustNotContain": "s-maxage"
-        }
+        "x-vercel-cache": "MISS",
+        "cache-control": "public, max-age=0, must-revalidate"
       },
       "mustContain": "\"status\":\"ok\""
     }

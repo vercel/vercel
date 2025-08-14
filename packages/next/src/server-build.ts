@@ -1677,7 +1677,10 @@ export async function serverBuild({
       });
       pagesPlaceholderRscEntries[`${pathName}.rsc`] = dummyBlob;
 
-      if (isAppClientSegmentCacheEnabled && prerenderRoutes.has(page)) {
+      if (
+        isAppClientSegmentCacheEnabled &&
+        prerenderRoutes.has(normalizePage(page))
+      ) {
         pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`] =
           dummyBlob;
       }
