@@ -10,6 +10,26 @@ describe('checkTelemetryStatus', () => {
     mockFs.restore();
   });
 
+  describe('custom agent detection from `AI_AGENT`', () => {
+    describe('AI_AGENT not set', () => {
+      it('is false', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq(false);
+      });
+    });
+
+    describe('AI_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('AI_AGENT', 'custom-agent');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('custom-agent');
+      });
+    });
+  });
+
   describe('cursor detection', () => {
     describe('CURSOR_TRACE_ID not set', () => {
       it('is false', async () => {

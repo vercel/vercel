@@ -9,6 +9,10 @@ const DEVIN = 'devin';
 const REPLIT = 'replit';
 
 export async function determineAgent(): Promise<string | false> {
+  if (process.env.AI_AGENT) {
+    return process.env.AI_AGENT;
+  }
+
   if (process.env.CURSOR_TRACE_ID) {
     return CURSOR;
   }
