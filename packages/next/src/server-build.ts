@@ -631,9 +631,8 @@ export async function serverBuild({
         dynamicPages.push(normalizedPathname);
       }
 
-      const lambdaAppPath = lambdaAppPaths[page];
-      if (lambdaAppPath?.fsPath) {
-        if (lambdaAppPath.fsPath.endsWith('route.js')) {
+      if (lambdaAppPaths[page]) {
+        if (lambdaAppPaths[page].fsPath.endsWith('route.js')) {
           appRouteHandlers.push(page);
         } else {
           appRouterPages.push(page);
@@ -843,15 +842,21 @@ export async function serverBuild({
       ...appRouterPages,
       ...appRouteHandlers,
       ...apiPages,
-      ...internalPages,
     ];
+
+    internalPages.forEach(page => {
+      if (lambdaPages[page]) {
+        mergedPageKeys.push(page);
+      }
+    });
+
     const traceCache = {};
 
     const getOriginalPagePath = (page: string) => {
       let originalPagePath = page;
 
       if (appDir && lambdaAppPaths[page]) {
-        if (lambdaAppPaths[page]?.fsPath) {
+        if (lambdaAppPaths[page].fsPath) {
           originalPagePath = path.relative(appDir, lambdaAppPaths[page].fsPath);
         }
       }
@@ -868,8 +873,8 @@ export async function serverBuild({
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
         const originalPagePath = getOriginalPagePath(page);
-        if (!getBuildTraceFile(originalPagePath)) {
-          return lambdaPages[page]?.fsPath;
+        if (lambdaPages[page] && !getBuildTraceFile(originalPagePath)) {
+          return lambdaPages[page].fsPath;
         }
       })
       .filter(Boolean) as string[];
@@ -954,11 +959,9 @@ export async function serverBuild({
         reasons = new Map();
       } else {
         const lambdaPage = lambdaPages[page];
-        if (lambdaPage?.fsPath) {
-          fileList = Array.from(
-            parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
-          );
-        }
+        fileList = Array.from(
+          parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
+        );
         reasons = traceResult?.reasons || new Map();
       }
 
@@ -1160,14 +1163,11 @@ export async function serverBuild({
         ...internalPages,
         ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
       ]) {
-        let pageFileName: string;
         const lambdaPage = lambdaPages[page];
-        if (lambdaPage?.fsPath) {
-          pageFileName = path.normalize(
-            path.relative(baseDir, lambdaPage.fsPath)
-          );
-          groupPageFiles[pageFileName] = compressedPages[page];
-        }
+        const pageFileName = path.normalize(
+          path.relative(baseDir, lambdaPage.fsPath)
+        );
+        groupPageFiles[pageFileName] = compressedPages[page];
       }
 
       const updatedManifestFiles: { [name: string]: FileBlob } = {};

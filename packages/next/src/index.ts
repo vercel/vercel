@@ -1268,10 +1268,9 @@ export const build: BuildV2 = async buildOptions => {
      * This is a detection for preview mode that's required for the pages
      * router.
      */
-    const canUsePreviewMode = Object.keys(pages).some(page => {
-      const fsPath = pages[page]?.fsPath;
-      return !!fsPath && isApiPage(fsPath);
-    });
+    const canUsePreviewMode = Object.keys(pages).some(page =>
+      isApiPage(pages[page].fsPath)
+    );
     const originalStaticPages = await glob('**/*.html', pagesDir);
     staticPages = filterStaticPages(
       originalStaticPages,
@@ -1608,9 +1607,6 @@ export const build: BuildV2 = async buildOptions => {
     const nonApiPages: string[] = [];
 
     for (const page of pageKeys) {
-      if (!pages[page]?.fsPath) {
-        continue;
-      }
       const pagePath = pages[page].fsPath;
       const route = `/${page.replace(/\.js$/, '')}`;
 
@@ -1661,9 +1657,6 @@ export const build: BuildV2 = async buildOptions => {
       );
 
       for (const page of mergedPageKeys) {
-        if (!pages[page]?.fsPath) {
-          continue;
-        }
         const fileList = parentFilesMap.get(
           path.relative(baseDir, pages[page].fsPath)
         );
@@ -1841,9 +1834,6 @@ export const build: BuildV2 = async buildOptions => {
             continue;
           }
 
-          if (!pages[page]?.fsPath) {
-            continue;
-          }
           const pageFileName = path.normalize(
             path.relative(workPath, pages[page].fsPath)
           );
@@ -1965,9 +1955,6 @@ export const build: BuildV2 = async buildOptions => {
             dynamicPages.push(normalizePage(pathname));
           }
 
-          if (!pages[page]?.fsPath) {
-            return;
-          }
           const pageFileName = path.normalize(
             path.relative(entryPath, pages[page].fsPath)
           );
