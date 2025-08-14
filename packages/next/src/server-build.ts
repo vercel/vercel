@@ -856,9 +856,8 @@ export async function serverBuild({
       let originalPagePath = page;
 
       if (appDir && lambdaAppPaths[page]) {
-        if (lambdaAppPaths[page].fsPath) {
-          originalPagePath = path.relative(appDir, lambdaAppPaths[page].fsPath);
-        }
+        const { fsPath } = lambdaAppPaths[page];
+        originalPagePath = path.relative(appDir, fsPath);
       }
       return originalPagePath;
     };
@@ -873,7 +872,7 @@ export async function serverBuild({
     const pathsToTrace: string[] = mergedPageKeys
       .map(page => {
         const originalPagePath = getOriginalPagePath(page);
-        if (lambdaPages[page] && !getBuildTraceFile(originalPagePath)) {
+        if (!getBuildTraceFile(originalPagePath)) {
           return lambdaPages[page].fsPath;
         }
       })
@@ -978,13 +977,11 @@ export async function serverBuild({
       );
 
       pageTraces[page] = tracedFiles;
-      if (lambdaPages[page]) {
-        compressedPages[page] = (
-          await createPseudoLayer({
-            [page]: lambdaPages[page],
-          })
-        ).pseudoLayer[page] as PseudoFile;
-      }
+      compressedPages[page] = (
+        await createPseudoLayer({
+          [page]: lambdaPages[page],
+        })
+      ).pseudoLayer[page] as PseudoFile;
     }
 
     const tracedPseudoLayer = await createPseudoLayer(
@@ -1163,9 +1160,8 @@ export async function serverBuild({
         ...internalPages,
         ...(group.isAppRouter && appNotFoundTraces ? ['_not-found.js'] : []),
       ]) {
-        const lambdaPage = lambdaPages[page];
         const pageFileName = path.normalize(
-          path.relative(baseDir, lambdaPage.fsPath)
+          path.relative(baseDir, lambdaPages[page].fsPath)
         );
         groupPageFiles[pageFileName] = compressedPages[page];
       }

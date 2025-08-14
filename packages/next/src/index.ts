@@ -1618,13 +1618,11 @@ export const build: BuildV2 = async buildOptions => {
         nonApiPages.push(page);
       }
 
-      if (pages[page]) {
-        compressedPages[page] = (
-          await createPseudoLayer({
-            [page]: pages[page],
-          })
-        ).pseudoLayer[page] as PseudoFile;
-      }
+      compressedPages[page] = (
+        await createPseudoLayer({
+          [page]: pages[page],
+        })
+      ).pseudoLayer[page] as PseudoFile;
     }
     const mergedPageKeys: string[] = [...nonApiPages, ...apiPages];
 
