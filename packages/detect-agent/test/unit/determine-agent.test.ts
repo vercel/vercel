@@ -50,6 +50,26 @@ describe('checkTelemetryStatus', () => {
     });
   });
 
+  describe('cursor cli detection', () => {
+    describe('CURSOR_AGENT not set', () => {
+      it('is false', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq(false);
+      });
+    });
+
+    describe('CURSOR_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CURSOR_AGENT', '1');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('cursor-cli');
+      });
+    });
+  });
+
   describe('claude detection', () => {
     describe('CLAUDE_CODE not set', () => {
       it('is false', async () => {
@@ -61,6 +81,17 @@ describe('checkTelemetryStatus', () => {
     describe('CLAUDE_CODE set', () => {
       beforeEach(() => {
         vi.stubEnv('CLAUDE_CODE', '1');
+      });
+
+      it('detects', async () => {
+        const agent = await determineAgent();
+        expect(agent).to.eq('claude');
+      });
+    });
+
+    describe('CLAUDECODE set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CLAUDECODE', '1');
       });
 
       it('detects', async () => {
