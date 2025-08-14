@@ -523,6 +523,9 @@ importers:
       '@vercel/client':
         specifier: 15.3.14
         version: link:../client
+      '@vercel/detect-agent':
+        specifier: 0.1.0
+        version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
