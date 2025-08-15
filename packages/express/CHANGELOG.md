@@ -1,5 +1,12 @@
 # @vercel/express
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`bebaf76f5df3e640c96d913049588c7ab741719b`](https://github.com/vercel/vercel/commit/bebaf76f5df3e640c96d913049588c7ab741719b)]:
+  - @vercel/node@5.3.13
+
 ## 0.0.5
 
 ### Patch Changes

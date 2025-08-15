@@ -1,5 +1,14 @@
 # @vercel/functions
 
+## 2.2.12
+
+### Patch Changes
+
+- Fix package versions for oidc-aws-credentials-provider, vercel/functions, and publish the next version of vercel/oidc ([#13765](https://github.com/vercel/vercel/pull/13765))
+
+- Updated dependencies [[`2f5244647dc7d2c81bb688035952d4d45b6d707e`](https://github.com/vercel/vercel/commit/2f5244647dc7d2c81bb688035952d4d45b6d707e)]:
+  - @vercel/oidc@2.0.1
+
 ## 2.2.11
 
 ### Patch Changes

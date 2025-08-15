@@ -1,5 +1,16 @@
 # vercel
 
+## 45.0.10
+
+### Patch Changes
+
+- Use @vercel/detect-agent for agent detection ([#13760](https://github.com/vercel/vercel/pull/13760))
+
+- Updated dependencies [[`bebaf76f5df3e640c96d913049588c7ab741719b`](https://github.com/vercel/vercel/commit/bebaf76f5df3e640c96d913049588c7ab741719b)]:
+  - @vercel/node@5.3.13
+  - @vercel/express@0.0.6
+  - @vercel/hono@0.0.14
+
 ## 45.0.9
 
 ### Patch Changes
