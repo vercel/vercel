@@ -1,5 +1,11 @@
 # vercel
 
+## 46.0.0
+
+### Major Changes
+
+- Adding in mcp command to connect to supported clients ([#13751](https://github.com/vercel/vercel/pull/13751))
+
 ## 45.0.10
 
 ### Patch Changes
