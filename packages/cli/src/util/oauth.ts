@@ -434,16 +434,16 @@ interface AccessToken {
  */
 export async function processInspectTokenResponse(
   response: Response
-): Promise<[InspectionError] | [null, AccessToken]> {
+): Promise<[IntrospectionError] | [null, AccessToken]> {
   try {
     const token = await response.json();
     if (!token || typeof token !== 'object' || !('active' in token)) {
-      throw new InspectionError('Invalid token introspection response');
+      throw new IntrospectionError('Invalid token introspection response');
     }
     return [null, token];
   } catch (cause) {
-    return [new InspectionError('Could not inspect token.', { cause })];
+    return [new IntrospectionError('Could not introspect token.', { cause })];
   }
 }
 
-class InspectionError extends Error {}
+class IntrospectionError extends Error {}
