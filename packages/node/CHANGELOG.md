@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.13
+
+### Patch Changes
+
+- Support running project build script for node builder if its being treated as the project's primary builder ([#13767](https://github.com/vercel/vercel/pull/13767))
+
 ## 5.3.12
 
 ### Patch Changes

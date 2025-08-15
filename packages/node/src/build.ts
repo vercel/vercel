@@ -28,6 +28,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  execCommand,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -393,18 +394,36 @@ export const build = async ({
       meta,
     });
 
-  // For traditional api-folder builds, the `build` script isn't used.
-  // but we're reusing the node builder for hono and express, where we do need it
-  const possibleScripts = considerBuildCommand
-    ? ['vercel-build', 'now-build', 'build']
-    : ['vercel-build', 'now-build'];
+  const projectBuildCommand = config.projectSettings?.buildCommand;
 
-  await runPackageJsonScript(
-    entrypointFsDirname,
-    possibleScripts,
-    spawnOpts,
-    config.projectSettings?.createdAt
-  );
+  // For traditional api-folder builds, the `build` script or project build command isn't used.
+  // but we're reusing the node builder for hono and express, where they should be treated as the
+  // primary builder
+  if (projectBuildCommand && considerBuildCommand) {
+    await execCommand(projectBuildCommand, {
+      ...spawnOpts,
+
+      // Yarn v2 PnP mode may be activated, so force
+      // "node-modules" linker style
+      env: {
+        YARN_NODE_LINKER: 'node-modules',
+        ...spawnOpts.env,
+      },
+
+      cwd: workPath,
+    });
+  } else {
+    const possibleScripts = considerBuildCommand
+      ? ['vercel-build', 'now-build', 'build']
+      : ['vercel-build', 'now-build'];
+
+    await runPackageJsonScript(
+      entrypointFsDirname,
+      possibleScripts,
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
+  }
 
   const isMiddleware = config.middleware === true;
   let isEdgeFunction = isMiddleware;
