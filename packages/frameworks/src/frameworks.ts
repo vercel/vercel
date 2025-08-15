@@ -2509,7 +2509,7 @@ export const frameworks = [
           '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
       },
       buildCommand: {
-        placeholder: '`npm run build` or `xmcp build --vercel`',
+        placeholder: '`npm run build` or `xmcp build`',
         value: 'xmcp build --vercel',
       },
       devCommand: {

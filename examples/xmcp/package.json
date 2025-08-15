@@ -6,12 +6,12 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "xmcp build --vercel",
+    "build": "xmcp build",
     "dev": "xmcp dev",
     "start": "node dist/http.js"
   },
   "dependencies": {
-    "xmcp": "0.1.9",
+    "xmcp": "0.1.10",
     "zod": "3.24.4"
   },
   "devDependencies": {
