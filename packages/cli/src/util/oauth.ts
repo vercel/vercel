@@ -421,17 +421,10 @@ export async function inspectTokenRequest(token: string): Promise<Response> {
 /**
  * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
 interface AccessToken {
-  /**
-   * Integer timestamp, measured in the number of seconds
-   * since January 1 1970 UTC, indicating when this token will expire.
-   */
-  exp: number;
   /** Whether or not the presented token is active. */
   active: boolean;
-  token_type: 'access_token';
-  /** The authorizing principal's team. */
-  team_id?: string;
-  session_id: string;
+  client_id?: string;
+  session_id?: string;
 }
 
 /**
@@ -444,8 +437,8 @@ export async function processInspectTokenResponse(
 ): Promise<[InspectionError] | [null, AccessToken]> {
   try {
     const token = await response.json();
-    if (!token || typeof token !== 'object' || !('session_id' in token)) {
-      throw new Error('Invalid token response');
+    if (!token || typeof token !== 'object' || !('active' in token)) {
+      throw new InspectionError('Invalid token introspection response');
     }
     return [null, token];
   } catch (cause) {

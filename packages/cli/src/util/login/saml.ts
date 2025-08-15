@@ -10,11 +10,10 @@ export default async function doSamlLogin(
   ssoUserId?: string
 ) {
   if (client.authConfig.type === 'oauth') {
-    const sessionId = await getSessionId(client);
+    const { session_id, client_id } = await decodeToken(client);
+    const params = { session_id, client_id };
     const url = new URL(
-      `https://vercel.com/sso/${team.slug}?${new URLSearchParams({
-        session_id: sessionId,
-      }).toString()}`
+      `https://vercel.com/sso/${team.slug}?${new URLSearchParams(params).toString()}`
     );
     return doOauthLogin(
       client,
@@ -29,13 +28,7 @@ export default async function doSamlLogin(
   return doOauthLogin(client, url, 'SAML Single Sign-On', outOfBand, ssoUserId);
 }
 
-export async function getSessionId(client: Client): Promise<string> {
-  if (client.authConfig.type !== 'oauth') {
-    throw new Error(
-      'Session ID can only be retrieved for OAuth login. This error should not happen. Please contact support.'
-    );
-  }
-
+export async function decodeToken(client: Client) {
   const { token } = client.authConfig;
 
   if (!token) {
@@ -51,5 +44,16 @@ export async function getSessionId(client: Client): Promise<string> {
 
   if (inspectError) throw inspectError;
 
-  return inspectResult.session_id;
+  if (
+    !inspectResult.active ||
+    !inspectResult.session_id ||
+    !inspectResult.client_id
+  ) {
+    throw new Error('Invalid token. Please log in and try again.');
+  }
+
+  return {
+    session_id: inspectResult.session_id,
+    client_id: inspectResult.client_id,
+  };
 }
