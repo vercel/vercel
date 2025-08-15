@@ -49,6 +49,6 @@
   },
   "dependencies": {
     "@aws-sdk/credential-provider-web-identity": "^3.609.0",
-    "@vercel/oidc": "2.0.0"
+    "@vercel/oidc": "workspace:*"
   }
 }
