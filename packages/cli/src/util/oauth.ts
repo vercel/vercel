@@ -446,4 +446,6 @@ export async function processInspectTokenResponse(
   }
 }
 
-class IntrospectionError extends Error {}
+class IntrospectionError extends Error {
+  name = 'IntrospectionError';
+}
