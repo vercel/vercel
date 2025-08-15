@@ -2,8 +2,8 @@ lockfileVersion: '6.0'
 
 dependencies:
   xmcp:
-    specifier: 0.1.9
-    version: 0.1.9(@types/node@24.2.1)(swc-loader@0.2.6)(typescript@5.9.2)(zod@3.24.4)
+    specifier: 0.1.10
+    version: 0.1.10(@types/node@24.2.1)(swc-loader@0.2.6)(typescript@5.9.2)(zod@3.24.4)
   zod:
     specifier: 3.24.4
     version: 3.24.4
@@ -4257,8 +4257,8 @@ packages:
       is-wsl: 3.1.0
     dev: false
 
-  /xmcp@0.1.9(@types/node@24.2.1)(swc-loader@0.2.6)(typescript@5.9.2)(zod@3.24.4):
-    resolution: {integrity: sha512-dTZH7Zyzspwm0kkhck9ZsIJQupKAOFAiaNr+CqoUUGrRYJ/+fIPNYIcSgCDvxfokCC2phofJUFVaYCJHUrMUsQ==}
+  /xmcp@0.1.10(@types/node@24.2.1)(swc-loader@0.2.6)(typescript@5.9.2)(zod@3.24.4):
+    resolution: {integrity: sha512-BWoHLLYLxeEEK/nj3LEhE83pmozOolm+4G9C+YUZC0PcOxCtd+zTedUQcnVDH/Y59LB7n+eLgZeVCaub2mEYnw==}
     hasBin: true
     peerDependencies:
       swc-loader: ^0.2.6
