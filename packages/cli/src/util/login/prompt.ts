@@ -13,7 +13,7 @@ import output from '../../output-manager';
 
 export default async function prompt(
   client: Client,
-  error?: Pick<SAMLError, 'teamId'>,
+  error?: Pick<SAMLError, 'teamId' | 'scope'>,
   outOfBand?: boolean,
   ssoUserId?: string
 ) {
@@ -52,13 +52,10 @@ export default async function prompt(
     result = await doEmailLogin(client, email, ssoUserId);
   } else if (choice === 'saml') {
     const slug =
-      error?.teamId || (await readInput(client, 'Enter your Team slug:'));
-    result = await doSamlLogin(
-      client,
-      { teamIdOrSlug: slug, slug },
-      outOfBand,
-      ssoUserId
-    );
+      error?.scope ||
+      error?.teamId ||
+      (await readInput(client, 'Enter your Team slug:'));
+    result = await doSamlLogin(client, slug, outOfBand, ssoUserId);
   }
 
   return result;

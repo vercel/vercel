@@ -5,7 +5,7 @@ import doOauthLogin from './oauth';
 
 export default async function doSamlLogin(
   client: Client,
-  team: { teamIdOrSlug: string; slug: string },
+  teamIdOrSlug: string,
   outOfBand?: boolean,
   ssoUserId?: string
 ) {
@@ -13,7 +13,7 @@ export default async function doSamlLogin(
     const { session_id, client_id } = await decodeToken(client);
     const params = { session_id, client_id };
     const url = new URL(
-      `https://vercel.com/sso/${team.slug}?${new URLSearchParams(params).toString()}`
+      `https://vercel.com/sso/${teamIdOrSlug}?${new URLSearchParams(params).toString()}`
     );
     return doOauthLogin(
       client,
@@ -24,7 +24,7 @@ export default async function doSamlLogin(
     );
   }
   const url = new URL('/auth/sso', client.apiUrl);
-  url.searchParams.set('teamId', team.teamIdOrSlug);
+  url.searchParams.set('teamId', teamIdOrSlug);
   return doOauthLogin(client, url, 'SAML Single Sign-On', outOfBand, ssoUserId);
 }
 
