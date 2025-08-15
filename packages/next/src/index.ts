@@ -1463,6 +1463,13 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
+    // When this is true, then it means all routes are PPR enabled.
+    const isAppFullPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
+      : false;
+
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
         true
@@ -1530,6 +1537,7 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
       });
