@@ -267,11 +267,8 @@ describe('logs', () => {
 `
       );
       const output = client.getFullOutput();
-      expect(output).toContain(
-        `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
-      );
       // 3nd line is time dependent and others are blank lines
-      expect(output.split('\n').slice(4).join('\n')).toMatchInlineSnapshot(`
+      expect(output.split('\n').slice(3).join('\n')).toMatchInlineSnapshot(`
         "waiting for new logs...
         15:01:10.33  ℹ️  GET  200  acme.com     /
         -----------------------------------------
@@ -309,9 +306,6 @@ describe('logs', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${deployment.url}" in ${user.username}
 `
-      );
-      expect(client.getFullOutput()).toContain(
-        `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
       );
       expect(client.stdout.getFullOutput())
         .toContain(`{"rowId":1,"timestampInMs":1717426870339,"level":"info","message":"Hello, world!","messageTruncated":false,"domain":"acme.com","requestMethod":"GET","requestPath":"/","responseStatusCode":200}
