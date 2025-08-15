@@ -28,7 +28,7 @@ export default async function doSamlLogin(
   return doOauthLogin(client, url, 'SAML Single Sign-On', outOfBand, ssoUserId);
 }
 
-export async function decodeToken(client: Client) {
+async function decodeToken(client: Client) {
   const { token } = client.authConfig;
 
   if (!token) {
