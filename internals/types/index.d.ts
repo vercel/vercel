@@ -49,6 +49,7 @@ interface OAuthAuthConfig extends AuthConfigBase {
   expiresAt?: number;
   refreshToken?: string;
   type: 'oauth';
+  sessionId?: string;
 }
 
 type AuthConfig = LegacyAuthConfig | OAuthAuthConfig;

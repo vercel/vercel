@@ -73,7 +73,11 @@ export default async function login(client: Client): Promise<number> {
     if (validateEmail(input)) {
       result = await doEmailLogin(client, input);
     } else {
-      result = await doSamlLogin(client, input, parsedArgs.flags['--oob']);
+      result = await doSamlLogin(
+        client,
+        { teamIdOrSlug: input, slug: input },
+        parsedArgs.flags['--oob']
+      );
     }
   } else if (parsedArgs.flags['--github']) {
     result = await doGithubLogin(client, parsedArgs.flags['--oob']);

@@ -53,7 +53,12 @@ export default async function prompt(
   } else if (choice === 'saml') {
     const slug =
       error?.teamId || (await readInput(client, 'Enter your Team slug:'));
-    result = await doSamlLogin(client, slug, outOfBand, ssoUserId);
+    result = await doSamlLogin(
+      client,
+      { teamIdOrSlug: slug, slug },
+      outOfBand,
+      ssoUserId
+    );
   }
 
   return result;

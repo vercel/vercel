@@ -12,6 +12,7 @@ interface AuthorizationServerMetadata {
   token_endpoint: URL;
   revocation_endpoint: URL;
   jwks_uri: URL;
+  introspection_endpoint: URL;
 }
 
 let _as: AuthorizationServerMetadata;
@@ -63,7 +64,8 @@ async function processDiscoveryEndpointResponse(
     !canParseURL(json.device_authorization_endpoint) ||
     !canParseURL(json.token_endpoint) ||
     !canParseURL(json.revocation_endpoint) ||
-    !canParseURL(json.jwks_uri)
+    !canParseURL(json.jwks_uri) ||
+    !canParseURL(json.introspection_endpoint)
   ) {
     return [new TypeError('Invalid discovery response')];
   }
@@ -84,6 +86,7 @@ async function processDiscoveryEndpointResponse(
       token_endpoint: new URL(json.token_endpoint),
       revocation_endpoint: new URL(json.revocation_endpoint),
       jwks_uri: new URL(json.jwks_uri),
+      introspection_endpoint: new URL(json.introspection_endpoint),
     },
   ];
 }
@@ -398,3 +401,56 @@ function canParseURL(url: string) {
     return false;
   }
 }
+
+/**
+ * Perform Token Introspection Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.1
+ */
+export async function inspectTokenRequest(token: string): Promise<Response> {
+  return fetch((await as()).introspection_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': ua,
+    },
+    body: new URLSearchParams({ token }),
+  });
+}
+
+/**
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
+interface AccessToken {
+  /**
+   * Integer timestamp, measured in the number of seconds
+   * since January 1 1970 UTC, indicating when this token will expire.
+   */
+  exp: number;
+  /** Whether or not the presented token is active. */
+  active: boolean;
+  token_type: 'access_token';
+  /** The authorizing principal's team. */
+  team_id?: string;
+  session_id: string;
+}
+
+/**
+ * Process Token Introspection Response.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2
+ */
+export async function processInspectTokenResponse(
+  response: Response
+): Promise<[InspectionError] | [null, AccessToken]> {
+  try {
+    const token = await response.json();
+    if (!token || typeof token !== 'object' || !('session_id' in token)) {
+      throw new Error('Invalid token response');
+    }
+    return [null, token];
+  } catch (cause) {
+    return [new InspectionError('Could not inspect token.', { cause })];
+  }
+}
+
+class InspectionError extends Error {}
