@@ -1,5 +1,11 @@
 # vercel
 
+## 46.0.1
+
+### Patch Changes
+
+- Remove deprecation warning ([#13717](https://github.com/vercel/vercel/pull/13717))
+
 ## 46.0.0
 
 ### Major Changes
