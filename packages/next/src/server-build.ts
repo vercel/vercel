@@ -422,16 +422,9 @@ export async function serverBuild({
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
 
-  const pagesManifestPath = path.join(
-    entryPath,
-    outputDirectory,
-    `server/pages-manifest.json`
-  );
-  const pagesManifest = await fs.readJSON(pagesManifestPath);
-
   // Only include internal pages that are actually existed
   const internalPages = [...INTERNAL_PAGES].filter(page => {
-    return pagesManifest[page];
+    return lambdaPages[page];
   });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
@@ -855,7 +848,6 @@ export async function serverBuild({
       ...apiPages,
       ...internalPages,
     ];
-
     const traceCache = {};
 
     const getOriginalPagePath = (page: string) => {
@@ -1665,7 +1657,13 @@ export async function serverBuild({
     // this is so that an RSC request to a `pages` entry will match
     // rather than falling back to a catchall `app` entry
     // on the nextjs side, invalid RSC response payloads will correctly trigger an mpa navigation
-    const pagesEntries = Object.keys(pagesManifest);
+    const pagesManifest = path.join(
+      entryPath,
+      outputDirectory,
+      `server/pages-manifest.json`
+    );
+    const pagesData = await fs.readJSON(pagesManifest);
+    const pagesEntries = Object.keys(pagesData);
 
     for (const page of pagesEntries) {
       const pathName = page.startsWith('/') ? page.slice(1) : page;
