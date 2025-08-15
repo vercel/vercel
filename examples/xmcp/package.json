@@ -6,7 +6,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "xmcp build",
+    "build": "xmcp build --vercel",
     "dev": "xmcp dev",
     "start": "node dist/http.js"
   },
