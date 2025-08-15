@@ -210,6 +210,14 @@ export async function serverBuild({
 
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
 
+  // When the entire application has PPR enabled (all the routes) and both
+  // client param parsing and client segment cache are enabled we do not need
+  // the .prefetch.rsc routing.
+  const shouldSkipPrefetchRSCHandling =
+    isAppFullPPREnabled &&
+    isAppClientParamParsingEnabled &&
+    isAppClientSegmentCacheEnabled;
+
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
   );
@@ -1645,6 +1653,8 @@ export async function serverBuild({
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
+    prerenderManifest,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1876,24 +1886,12 @@ export async function serverBuild({
       // When the entire application has PPR enabled (all the routes) and both
       // client param parsing and client segment cache are enabled we do not
       // need the .prefetch.rsc rewrite.
-      !(
-        isAppFullPPREnabled &&
-        isAppClientParamParsingEnabled &&
-        isAppClientSegmentCacheEnabled
-      )
+      !shouldSkipPrefetchRSCHandling
   );
 
   const serverActionMetaRoutes = await getServerActionMetaRoutes(
     path.join(entryPath, outputDirectory)
   );
-
-  // When the entire application has PPR enabled (all the routes) and both
-  // client param parsing and client segment cache are enabled we do not need
-  // the .prefetch.rsc routing.
-  const shouldSkipPrefetchRSCHandling =
-    isAppFullPPREnabled &&
-    isAppClientParamParsingEnabled &&
-    isAppClientSegmentCacheEnabled;
 
   return {
     wildcard: wildcardConfig,
@@ -2247,52 +2245,50 @@ export async function serverBuild({
                   },
                 ]
               : []),
-            ...(rscPrefetchHeader && isAppPPREnabled
+            ...(rscPrefetchHeader &&
+            isAppPPREnabled &&
+            !shouldSkipPrefetchRSCHandling
               ? [
-                  ...(shouldSkipPrefetchRSCHandling
-                    ? []
-                    : [
-                        {
-                          src: `^${path.posix.join('/', entryDirectory, '/')}$`,
-                          has: [
-                            {
-                              type: 'header',
-                              key: rscPrefetchHeader,
-                              value: '1',
-                            },
-                          ],
-                          dest: path.posix.join(
-                            '/',
-                            entryDirectory,
-                            `/__index${RSC_PREFETCH_SUFFIX}`
-                          ),
-                          headers: { vary: rscVaryHeader },
-                          continue: true,
-                          override: true,
-                        },
-                        {
-                          src: `^${path.posix.join(
-                            '/',
-                            entryDirectory,
-                            '/((?!.+\\.rsc).+?)(?:/)?$'
-                          )}`,
-                          has: [
-                            {
-                              type: 'header',
-                              key: rscPrefetchHeader,
-                              value: '1',
-                            },
-                          ],
-                          dest: path.posix.join(
-                            '/',
-                            entryDirectory,
-                            `/$1${RSC_PREFETCH_SUFFIX}`
-                          ),
-                          headers: { vary: rscVaryHeader },
-                          continue: true,
-                          override: true,
-                        },
-                      ]),
+                  {
+                    src: `^${path.posix.join('/', entryDirectory, '/')}$`,
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                        value: '1',
+                      },
+                    ],
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/__index${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    headers: { vary: rscVaryHeader },
+                    continue: true,
+                    override: true,
+                  },
+                  {
+                    src: `^${path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/((?!.+\\.rsc).+?)(?:/)?$'
+                    )}`,
+                    has: [
+                      {
+                        type: 'header',
+                        key: rscPrefetchHeader,
+                        value: '1',
+                      },
+                    ],
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/$1${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    headers: { vary: rscVaryHeader },
+                    continue: true,
+                    override: true,
+                  },
                 ]
               : []),
             {

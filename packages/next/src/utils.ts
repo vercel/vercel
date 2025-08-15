@@ -424,6 +424,8 @@ export async function getDynamicRoutes({
   dynamicMiddlewareRouteMap,
   isAppPPREnabled,
   isAppClientSegmentCacheEnabled,
+  isAppClientParamParsingEnabled,
+  prerenderManifest,
 }: {
   entryPath: string;
   entryDirectory: string;
@@ -437,6 +439,8 @@ export async function getDynamicRoutes({
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled?: boolean;
+  isAppClientParamParsingEnabled?: boolean;
+  prerenderManifest: NextPrerenderedRoutes;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
     switch (routesManifest.version) {
@@ -509,6 +513,18 @@ export async function getDynamicRoutes({
             }`,
           };
 
+          // Determine if the route is PPR enabled. This is a dynamic route (as
+          // it's listed in the routes manifest as dynamic) so we only need to
+          // check the prerender manifest.
+          const { renderingMode, prefetchDataRoute } =
+            prerenderManifest.fallbackRoutes[page] ??
+            prerenderManifest.blockingFallbackRoutes[page] ??
+            prerenderManifest.omittedRoutes[page] ??
+            {};
+
+          const isRoutePPREnabled =
+            renderingMode === RenderingMode.PARTIALLY_STATIC;
+
           if (!isServerMode) {
             route.check = true;
           }
@@ -562,13 +578,25 @@ export async function getDynamicRoutes({
             routes.push({
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
-                hasFallbackRootParams
+                // If we have fallback root params (implying we've already
+                // emitted a rewrite for the /_tree request), or if the route
+                // has PPR enabled and client param parsing is enabled, then
+                // we don't need to include any other suffixes.
+                hasFallbackRootParams ||
+                  (isRoutePPREnabled &&
+                    isAppClientParamParsingEnabled &&
+                    !prefetchDataRoute)
                   ? '\\.rsc(?:/)?$'
                   : '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
               ),
               dest: route.dest?.replace(
                 /($|\?)/,
-                hasFallbackRootParams ? '.rsc$1' : '$rscSuffix$1'
+                hasFallbackRootParams ||
+                  (isRoutePPREnabled &&
+                    isAppClientParamParsingEnabled &&
+                    !prefetchDataRoute)
+                  ? '.rsc$1'
+                  : '$rscSuffix$1'
               ),
               check: true,
               override: true,
@@ -2586,11 +2614,11 @@ export const onPrerenderRoute =
 
     // Data does not exist for fallback or blocking pages
     if (
-      isFallback ||
-      isBlocking ||
-      (isNotFound && !static404Page) ||
-      !dataRoute ||
-      (isAppClientParamParsingEnabled && !prefetchDataRoute)
+      !isFallback &&
+      !isBlocking &&
+      (!isNotFound || static404Page) &&
+      dataRoute &&
+      (!isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
@@ -2665,6 +2693,11 @@ export const onPrerenderRoute =
       }
 
       outputPathPrefetchData = normalizeDataRoute(prefetchDataRoute);
+    } else if (
+      renderingMode === RenderingMode.PARTIALLY_STATIC &&
+      !isAppClientParamParsingEnabled
+    ) {
+      throw new Error('Invariant: expected to find prefetch data route PPR');
     }
 
     if (isSharedLambdas) {
@@ -3073,11 +3106,7 @@ export const onPrerenderRoute =
             // for the segment prerenders. This is because we know that the
             // segments do not vary based on the route parameters.
             let segmentAllowQuery = allowQuery;
-            if (
-              isAppClientSegmentCacheEnabled &&
-              isAppClientParamParsingEnabled &&
-              (isFallback || isBlocking)
-            ) {
+            if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
               segmentAllowQuery = [];
             }
 
