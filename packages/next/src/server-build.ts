@@ -211,7 +211,6 @@ export async function serverBuild({
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
-  const internalPages = [...INTERNAL_PAGES];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
@@ -422,6 +421,18 @@ export async function serverBuild({
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
+
+  const pagesManifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    `server/pages-manifest.json`
+  );
+  const pagesManifest = await fs.readJSON(pagesManifestPath);
+
+  // Only include internal pages that are actually existed
+  const internalPages = [...INTERNAL_PAGES].filter(page => {
+    return pagesManifest[page];
+  });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
     const result = onPrerenderRouteInitial(
@@ -842,13 +853,8 @@ export async function serverBuild({
       ...appRouterPages,
       ...appRouteHandlers,
       ...apiPages,
+      ...internalPages,
     ];
-
-    internalPages.forEach(page => {
-      if (lambdaPages[page]) {
-        mergedPageKeys.push(page);
-      }
-    });
 
     const traceCache = {};
 
@@ -1659,14 +1665,7 @@ export async function serverBuild({
     // this is so that an RSC request to a `pages` entry will match
     // rather than falling back to a catchall `app` entry
     // on the nextjs side, invalid RSC response payloads will correctly trigger an mpa navigation
-    const pagesManifest = path.join(
-      entryPath,
-      outputDirectory,
-      `server/pages-manifest.json`
-    );
-
-    const pagesData = await fs.readJSON(pagesManifest);
-    const pagesEntries = Object.keys(pagesData);
+    const pagesEntries = Object.keys(pagesManifest);
 
     for (const page of pagesEntries) {
       const pathName = page.startsWith('/') ? page.slice(1) : page;
