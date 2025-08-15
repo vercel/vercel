@@ -2483,6 +2483,47 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'xmcp',
+    slug: 'xmcp',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/xmcp.svg',
+    tagline: 'The MCP framework for building AI-powered tools',
+    description:
+      'A framework for building Model Context Protocol servers with zero configuration.',
+    website: 'https://xmcp.dev',
+    detectors: {
+      some: [
+        {
+          path: 'xmcp.config.ts',
+        },
+        {
+          path: 'xmcp.config.js',
+        },
+        {
+          matchPackage: 'xmcp',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `xmcp build`',
+        value: 'xmcp build --vercel',
+      },
+      devCommand: {
+        value: 'xmcp dev',
+        placeholder: 'xmcp dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'xmcp',
+    getOutputDirName: async () => 'dist',
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
