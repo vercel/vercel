@@ -15,7 +15,7 @@ export default async function reauthenticate(
       `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
     );
     if (await client.input.confirm(`Log in with SAML?`, true)) {
-      return doSamlLogin(client, error.teamId);
+      return doSamlLogin(client, error.scope ?? error.teamId);
     }
   } else {
     // Personal account, or team that does not have SAML enforced

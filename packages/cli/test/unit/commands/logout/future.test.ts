@@ -38,6 +38,7 @@ describe('logout', () => {
         token_endpoint: 'https://vercel.com',
         revocation_endpoint: 'https://vercel.com',
         jwks_uri: 'https://vercel.com',
+        introspection_endpoint: 'https://vercel.com',
       })
     );
     const _as = await as();

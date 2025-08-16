@@ -34,6 +34,7 @@ describe('OAuth Token Refresh', () => {
       token_endpoint: 'https://token/',
       revocation_endpoint: 'https://revoke/',
       jwks_uri: 'https://jwks/',
+      introspection_endpoint: 'https://introspection/',
     };
     fetch.mockImplementation(init => {
       const url = init instanceof Request ? init.url : init.toString();
