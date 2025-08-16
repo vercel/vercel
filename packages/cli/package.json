@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "46.0.0",
+  "version": "46.0.1",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -100,8 +100,8 @@
     "@vercel/client": "15.3.14",
     "@vercel/detect-agent": "0.2.0",
     "@vercel/error-utils": "2.0.3",
-    "@vercel/frameworks": "3.7.7",
-    "@vercel/fs-detectors": "5.4.13",
+    "@vercel/frameworks": "3.8.0",
+    "@vercel/fs-detectors": "5.4.14",
     "@vercel/routing-utils": "5.1.1",
     "@vitest/expect": "2.1.3",
     "ajv": "6.12.3",

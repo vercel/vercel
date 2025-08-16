@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.8.0
+
+### Minor Changes
+
+- Add xmcp zero-config Framework Preset ([#13770](https://github.com/vercel/vercel/pull/13770))
+
 ## 3.7.7
 
 ### Patch Changes
