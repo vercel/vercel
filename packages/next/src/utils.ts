@@ -4301,3 +4301,73 @@ function getHTMLPostponedState({
 
   return meta.postponed;
 }
+
+export async function getServerActionMetaRoutes(
+  distDir: string
+): Promise<Route[]> {
+  const manifestPath = path.join(
+    distDir,
+    'server',
+    'server-reference-manifest.json'
+  );
+
+  try {
+    const manifestContent = await fs.readFile(manifestPath, 'utf8');
+
+    type ActionItem = {
+      filename?: string;
+      exportedName?: string;
+    };
+    const manifest = JSON.parse(manifestContent) as {
+      node?: Record<string, ActionItem>;
+      edge?: Record<string, ActionItem>;
+    };
+
+    const routes: Route[] = [];
+
+    // Process both node and edge entries
+    for (const runtimeType of ['node', 'edge'] as const) {
+      const runtime = manifest[runtimeType];
+      if (!runtime) continue;
+
+      for (const [id, entry] of Object.entries(runtime)) {
+        // Skip entries without filename or exportedName
+        if (!entry.filename || !entry.exportedName) continue;
+
+        let exportedName = entry.exportedName;
+
+        if (exportedName === '$$RSC_SERVER_ACTION_0') {
+          exportedName = 'anonymous_fn';
+        }
+
+        const route: Route = {
+          src: '/(.*)',
+          has: [
+            {
+              type: 'header',
+              key: 'next-action',
+              value: id,
+            },
+          ],
+          transforms: [
+            {
+              type: 'request.headers',
+              op: 'append',
+              target: {
+                key: 'x-server-action-name',
+              },
+              args: `${entry.filename}#${exportedName}`,
+            },
+          ],
+        };
+
+        routes.push(route);
+      }
+    }
+
+    return routes;
+  } catch (error) {
+    // If manifest doesn't exist or can't be read, return empty routes
+    return [];
+  }
+}

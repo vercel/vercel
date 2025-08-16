@@ -55,6 +55,7 @@ import {
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
+  getServerActionMetaRoutes,
 } from './utils';
 import { INTERNAL_PAGES } from './constants';
 import {
@@ -1869,6 +1870,10 @@ export async function serverBuild({
       prefetchSegmentSuffix
   );
 
+  const serverActionMetaRoutes = await getServerActionMetaRoutes(
+    path.join(entryPath, outputDirectory)
+  );
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -2068,6 +2073,8 @@ export async function serverBuild({
       ...headers,
 
       ...redirects,
+
+      ...serverActionMetaRoutes,
 
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route

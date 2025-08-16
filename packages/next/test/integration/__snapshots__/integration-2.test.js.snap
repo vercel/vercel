@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`action-headers should add action name meta routes 1`] = `
+[
+  "app/actions.js#increment",
+  "app/rsc/dynamic/page.js#anonymous_fn",
+  "app/rsc/static/[dynamic-static]/page.js#anonymous_fn",
+  "app/rsc/static/generate-static-params/[slug]/page.js#anonymous_fn",
+  "app/rsc/static/page.js#anonymous_fn",
+]
+`;
