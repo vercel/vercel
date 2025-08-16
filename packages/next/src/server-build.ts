@@ -148,6 +148,7 @@ export async function serverBuild({
   experimentalPPRRoutes,
   isAppPPREnabled,
   isAppClientSegmentCacheEnabled,
+  staticMetadataRewrites,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -191,6 +192,7 @@ export async function serverBuild({
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
+  staticMetadataRewrites: Route[];
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -2306,6 +2308,9 @@ export async function serverBuild({
       // folder
       { handle: 'filesystem' },
 
+      // Rewrite metadata routes to _next/static/metadata/...
+      ...staticMetadataRewrites,
+
       // ensure the basePath prefixed _next/image is rewritten to the root
       // _next/image path
       ...(routesManifest?.basePath
@@ -2628,7 +2633,7 @@ export async function serverBuild({
         src: path.posix.join(
           '/',
           entryDirectory,
-          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|${escapedBuildId})/.+`
+          `_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|metadata|${escapedBuildId})/.+`
         ),
         // Next.js assets contain a hash or entropy in their filenames, so they
         // are guaranteed to be unique and cacheable indefinitely.

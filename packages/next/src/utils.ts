@@ -4301,3 +4301,32 @@ function getHTMLPostponedState({
 
   return meta.postponed;
 }
+
+type StaticMetadataRoutesManifest = {
+  [page: string]: {
+    regex: string;
+    sourcePage: string;
+  };
+};
+
+export async function getStaticMetadataRoutesManifest(
+  entryPath: string,
+  outputDirectory: string
+): Promise<StaticMetadataRoutesManifest | undefined> {
+  const manifestPath = path.join(
+    entryPath,
+    outputDirectory,
+    'static-metadata-routes-manifest.json'
+  );
+
+  const hasManifest = await fs
+    .access(manifestPath)
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasManifest) {
+    return;
+  }
+
+  return fs.readJson(manifestPath);
+}
