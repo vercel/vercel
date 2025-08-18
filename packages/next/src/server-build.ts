@@ -212,7 +212,6 @@ export async function serverBuild({
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
-  const internalPages = [...INTERNAL_PAGES];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
@@ -423,6 +422,11 @@ export async function serverBuild({
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
+
+  // Only include internal pages that are actually existed
+  const internalPages = [...INTERNAL_PAGES].filter(page => {
+    return lambdaPages[page];
+  });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
     const result = onPrerenderRouteInitial(
@@ -899,7 +903,7 @@ export async function serverBuild({
     for (const page of mergedPageKeys) {
       const originalPagePath = getOriginalPagePath(page);
       const pageBuildTrace = getBuildTraceFile(originalPagePath);
-      let fileList: string[];
+      let fileList: string[] = [];
       let reasons: NodeFileTraceReasons;
 
       if (pageBuildTrace) {
@@ -952,17 +956,10 @@ export async function serverBuild({
         });
         reasons = new Map();
       } else {
+        const lambdaPage = lambdaPages[page];
         fileList = Array.from(
-          parentFilesMap?.get(
-            path.relative(baseDir, lambdaPages[page].fsPath)
-          ) || []
+          parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
         );
-
-        if (!fileList) {
-          throw new Error(
-            `Invariant: Failed to trace ${page}, missing fileList`
-          );
-        }
         reasons = traceResult?.reasons || new Map();
       }
 
@@ -1666,7 +1663,6 @@ export async function serverBuild({
       outputDirectory,
       `server/pages-manifest.json`
     );
-
     const pagesData = await fs.readJSON(pagesManifest);
     const pagesEntries = Object.keys(pagesData);
 
