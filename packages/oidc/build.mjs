@@ -11,5 +11,5 @@ await Promise.all([
   esbuild({
     format: 'esm',
     outExtension: { '.js': '.mjs' },
-  })
+  }),
 ]);
