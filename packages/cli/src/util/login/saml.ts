@@ -33,7 +33,7 @@ async function decodeToken(client: Client) {
 
   if (!token) {
     throw new Error(
-      'You need to be logged in to perform this action. Please log in and try again.'
+      `No existing credentials found. Please run \`vercel login --future\`.`
     );
   }
 
@@ -49,7 +49,9 @@ async function decodeToken(client: Client) {
     !inspectResult.session_id ||
     !inspectResult.client_id
   ) {
-    throw new Error('Invalid token. Please log in and try again.');
+    throw new Error(
+      `Invalid token type. Run \`vercel login --future\` to log-in and try again.`
+    );
   }
 
   return {
