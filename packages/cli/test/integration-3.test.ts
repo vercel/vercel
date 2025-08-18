@@ -131,7 +131,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 test('print the deploy help message', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, ['help']);
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(deployHelpMessage);
   expect(stderr).not.toContain('ExperimentalWarning');
 });
