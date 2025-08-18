@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.11.3
+
+### Patch Changes
+
+- Handle building for app router without internal pages entries ([#13704](https://github.com/vercel/vercel/pull/13704))
+
+- Add action metadata routes ([#13775](https://github.com/vercel/vercel/pull/13775))
+
 ## 4.11.2
 
 ### Patch Changes
