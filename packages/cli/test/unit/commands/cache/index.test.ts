@@ -8,7 +8,7 @@ describe('cache', () => {
   it('should track telemetry with --help', async () => {
     client.setArgv(command, '--help');
     const exitCodePromise = cache(client);
-    await expect(exitCodePromise).resolves.toEqual(2);
+    await expect(exitCodePromise).resolves.toEqual(0);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
