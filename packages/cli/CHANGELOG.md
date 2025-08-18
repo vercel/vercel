@@ -1,5 +1,16 @@
 # vercel
 
+## 46.0.2
+
+### Patch Changes
+
+- feat(cli): add SSO re-authorization support to --future ([#13771](https://github.com/vercel/vercel/pull/13771))
+
+- Return the correct exit code in the Vercel command ([#13780](https://github.com/vercel/vercel/pull/13780))
+
+- Updated dependencies [[`fcf7791f1dae2967c09c09b78aedf00be5d25303`](https://github.com/vercel/vercel/commit/fcf7791f1dae2967c09c09b78aedf00be5d25303), [`b9e399c69ebeb71d9150e8aa994294b0c2be8c9f`](https://github.com/vercel/vercel/commit/b9e399c69ebeb71d9150e8aa994294b0c2be8c9f)]:
+  - @vercel/next@4.11.3
+
 ## 46.0.1
 
 ### Patch Changes
