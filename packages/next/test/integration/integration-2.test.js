@@ -732,7 +732,7 @@ describe('action-headers', () => {
     const foundActionNames = [];
 
     for (const route of buildResult.routes || []) {
-      if (route.has?.[0].key == 'next-action' && route.transforms) {
+      if (route.has?.[0].key === 'next-action' && route.transforms) {
         foundActionNames.push(route.transforms[0].args);
       }
     }
