@@ -1466,10 +1466,23 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
+    // When this is true, then it means all routes are PPR enabled.
+    const isAppFullPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
+      : false;
+
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
         true
       : false;
+
+    // We read this from the routes manifest instead of the config because we
+    // expect that the flag will be deprecated in the future and the manifest
+    // will be the source of truth.
+    const isAppClientParamParsingEnabled =
+      routesManifest?.rsc?.clientParamParsing ?? false;
 
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
@@ -1527,7 +1540,9 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
+        isAppClientParamParsingEnabled,
       });
     }
 
@@ -2052,6 +2067,9 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
+      isAppClientParamParsingEnabled,
+      isAppClientSegmentCacheEnabled,
+      prerenderManifest,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -2082,6 +2100,9 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientParamParsingEnabled: false,
+        isAppClientSegmentCacheEnabled: false,
+        prerenderManifest,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2279,8 +2300,10 @@ export const build: BuildV2 = async buildOptions => {
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      // The following flags are not supported in this version of the builder.
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
+      isAppClientParamParsingEnabled: false,
     });
 
     await Promise.all(
