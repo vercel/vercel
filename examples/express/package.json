@@ -1,5 +1,5 @@
 {
-  "name": "hono",
+  "name": "express",
   "type": "module",
   "dependencies": {
     "express": "5.1.0"
