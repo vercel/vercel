@@ -2067,6 +2067,8 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
+      isAppClientParamParsingEnabled,
+      isAppClientSegmentCacheEnabled,
       prerenderManifest,
     }).then(arr =>
       localizeDynamicRoutes(
@@ -2098,6 +2100,8 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientParamParsingEnabled: false,
+        isAppClientSegmentCacheEnabled: false,
         prerenderManifest,
       }).then(arr =>
         arr.map(route => {

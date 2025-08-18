@@ -438,8 +438,8 @@ export async function getDynamicRoutes({
   isServerMode?: boolean;
   dynamicMiddlewareRouteMap?: ReadonlyMap<string, RouteWithSrc>;
   isAppPPREnabled: boolean;
-  isAppClientSegmentCacheEnabled?: boolean;
-  isAppClientParamParsingEnabled?: boolean;
+  isAppClientSegmentCacheEnabled: boolean;
+  isAppClientParamParsingEnabled: boolean;
   prerenderManifest: NextPrerenderedRoutes;
 }): Promise<RouteWithSrc[]> {
   if (routesManifest) {
@@ -575,28 +575,26 @@ export async function getDynamicRoutes({
           // use combined regex for .rsc, .prefetch.rsc, and .segments
           // if PPR or client segment cache is enabled
           if (isAppPPREnabled || isAppClientSegmentCacheEnabled) {
+            // If we have fallback root params (implying we've already
+            // emitted a rewrite for the /_tree request), or if the route
+            // has PPR enabled and client param parsing is enabled, then
+            // we don't need to include any other suffixes.
+            const shouldSkipSuffixes =
+              hasFallbackRootParams ||
+              (isRoutePPREnabled &&
+                isAppClientParamParsingEnabled &&
+                !prefetchDataRoute);
+
             routes.push({
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
-                // If we have fallback root params (implying we've already
-                // emitted a rewrite for the /_tree request), or if the route
-                // has PPR enabled and client param parsing is enabled, then
-                // we don't need to include any other suffixes.
-                hasFallbackRootParams ||
-                  (isRoutePPREnabled &&
-                    isAppClientParamParsingEnabled &&
-                    !prefetchDataRoute)
+                shouldSkipSuffixes
                   ? '\\.rsc(?:/)?$'
                   : '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
               ),
               dest: route.dest?.replace(
                 /($|\?)/,
-                hasFallbackRootParams ||
-                  (isRoutePPREnabled &&
-                    isAppClientParamParsingEnabled &&
-                    !prefetchDataRoute)
-                  ? '.rsc$1'
-                  : '$rscSuffix$1'
+                shouldSkipSuffixes ? '.rsc$1' : '$rscSuffix$1'
               ),
               check: true,
               override: true,
