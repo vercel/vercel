@@ -33,7 +33,7 @@ describe('link', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

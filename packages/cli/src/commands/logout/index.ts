@@ -39,7 +39,7 @@ export default async function logout(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   if (authConfig.type === 'oauth') {

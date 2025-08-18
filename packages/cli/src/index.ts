@@ -192,7 +192,7 @@ const main = async () => {
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
-    return 2;
+    return 0;
   }
 
   // Ensure that the Vercel global configuration directory exists
