@@ -388,8 +388,6 @@ export default async function mcp(client: Client) {
         output.print('─'.repeat(50) + '\n');
       }
     }
-
-    output.print('📊 Setup Summary\n');
   }
 
   output.print('📊 Setup Summary\n');
