@@ -381,9 +381,6 @@ importers:
       chokidar:
         specifier: 4.0.0
         version: 4.0.0
-      http-proxy-node16:
-        specifier: 1.0.6
-        version: 1.0.6(debug@3.1.0)
       jose:
         specifier: 5.9.6
         version: 5.9.6
@@ -631,6 +628,9 @@ importers:
       git-last-commit:
         specifier: 1.0.1
         version: 1.0.1
+      http-proxy-node16:
+        specifier: 1.0.6
+        version: 1.0.6(debug@3.1.0)
       ini:
         specifier: 3.0.0
         version: 3.0.0
@@ -11144,7 +11144,6 @@ packages:
 
   /eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
-    dev: false
 
   /events-intercept@2.0.0:
     resolution: {integrity: sha512-blk1va0zol9QOrdZt0rFXo5KMkNPVSp92Eju/Qz8THwKWKRKeE0T8Br/1aW6+Edkyq9xHYgYxn2QtOnUKPUp+Q==}
@@ -11493,7 +11492,6 @@ packages:
         optional: true
     dependencies:
       debug: 3.1.0
-    dev: false
 
   /for-each@0.3.5:
     resolution: {integrity: sha512-dKx12eRCVIzqCxFGplyFKJMPvLEWgmNtUrpTiJIR5u97zEhRG8ySrtboPHZXx7daLxQVrl643cTzbab2tkQjxg==}
@@ -12095,7 +12093,7 @@ packages:
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
-    dev: false
+    dev: true
 
   /http-proxy@1.18.1:
     resolution: {integrity: sha512-7mz/721AbnJwIVbnaSv1Cz3Am0ZLT/UBwkC92VlxhXv/k/BBQfM2fXElQNC27BVGr0uwUpplYPQM9LnaBMR5NQ==}
@@ -15467,7 +15465,6 @@ packages:
 
   /requires-port@1.0.0:
     resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
-    dev: false
 
   /resolve-alpn@1.2.1:
     resolution: {integrity: sha512-0a1F4l73/ZFZOakJnQ3FvkJ2+gSTQWz/r2KE5OdDY0TxPm5h4GkqkWWfM47T7HsbnOtcJVEF4epCVy6u7Q3K+g==}
