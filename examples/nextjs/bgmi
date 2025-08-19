@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disco Esports Registration</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0d0d0d;
+      color: #fff;
+      padding: 40px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #00ffd0;
+    }
+    form {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #00ffd0;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      background-color: #2c2c2c;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 5px;
+    }
+    input[type="file"] {
+      background-color: transparent;
+      border: none;
+    }
+    button {
+      margin-top: 20px;
+      background-color: #00ffd0;
+      color: #000;
+      padding: 12px;
+      border: none;
+      width: 100%;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00cca8;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Disco Esports BGMI Tournament</h1>
+
+  <form action="https://formspree.io/f/your-form-id" method="POST" enctype="multipart/form-data">
+
+    <label>Team Name:</label>
+    <input type="text" name="teamName" required>
+
+    <label>Team Leader Name:</label>
+    <input type="text" name="leaderName" required>
+
+    <label>Phone / WhatsApp Number:</label>
+    <input type="text" name="phone" required>
+
+    <label>Email (Optional):</label>
+    <input type="email" name="email">
+
+    <label>Player 1 IGN:</label>
+    <input type="text" name="player1" required>
+
+    <label>Player 2 IGN:</label>
+    <input type="text" name="player2" required>
+
+    <label>Player 3 IGN:</label>
+    <input type="text" name="player3" required>
+
+    <label>Player 4 IGN:</label>
+    <input type="text" name="player4" required>
+
+    <label>Upload Payment Screenshot:</label>
+    <input type="file" name="paymentProof" required>
+
+    <label>Have you read the rules?</label>
+    <select name="rulesAccepted" required>
+      <option value="">-- Select --</option>
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+
+    <label>Any Questions / Notes?</label>
+    <textarea name="notes" rows="4"></textarea>
+
+    <button type="submit">Submit Registration</button>
+  </form>
+
+</body>
+</html>
