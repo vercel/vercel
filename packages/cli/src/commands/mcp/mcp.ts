@@ -394,15 +394,6 @@ export default async function mcp(client: Client) {
   output.print('─'.repeat(50) + '\n');
   summary.forEach(line => output.print(`${line}\n`));
 
-  if (isProjectSpecific) {
-    const projectInfo = await getProjectSpecificUrl(client);
-    output.print(`🔗 Project-specific MCP URL: ${projectInfo?.url}\n`);
-  }
-
-  output.print(
-    '🔗 Official documentation: https://vercel.com/docs/mcp/vercel-mcp\n'
-  );
-  output.print(`🔒 Official endpoint: ${MCP_ENDPOINT}\n`);
   output.print('✨ Setup complete! Restart your clients if needed.\n');
 
   return 0;
