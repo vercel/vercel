@@ -714,3 +714,29 @@ describe('cache-control', () => {
     expect(outputEntry.staleExpiration).toBeUndefined();
   });
 });
+
+describe('action-headers', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-actions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should add action name meta routes', async () => {
+    const foundActionNames = [];
+
+    for (const route of buildResult.routes || []) {
+      if (route.has?.[0].key === 'next-action' && route.transforms) {
+        foundActionNames.push(route.transforms[0].args);
+      }
+    }
+    expect(foundActionNames.length).toBe(5);
+    expect(foundActionNames.sort()).toMatchSnapshot();
+  });
+});

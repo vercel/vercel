@@ -55,6 +55,7 @@ import {
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
+  getServerActionMetaRoutes,
 } from './utils';
 import { INTERNAL_PAGES } from './constants';
 import {
@@ -147,7 +148,9 @@ export async function serverBuild({
   variantsManifest,
   experimentalPPRRoutes,
   isAppPPREnabled,
+  isAppFullPPREnabled,
   isAppClientSegmentCacheEnabled,
+  isAppClientParamParsingEnabled,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -190,7 +193,13 @@ export async function serverBuild({
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
+  /**
+   * When this is true, then it means all routes are PPR enabled. PPR is not
+   * enabled in incremental mode and all routes will be prerendered.
+   */
+  isAppFullPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
+  isAppClientParamParsingEnabled: boolean;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -200,6 +209,14 @@ export async function serverBuild({
   }
 
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
+  // When the entire application has PPR enabled (all the routes) and both
+  // client param parsing and client segment cache are enabled we do not need
+  // the .prefetch.rsc routing.
+  const shouldSkipPrefetchRSCHandling =
+    isAppFullPPREnabled &&
+    isAppClientParamParsingEnabled &&
+    isAppClientSegmentCacheEnabled;
 
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
@@ -211,7 +228,6 @@ export async function serverBuild({
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
-  const internalPages = [...INTERNAL_PAGES];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
@@ -422,6 +438,11 @@ export async function serverBuild({
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
+
+  // Only include internal pages that are actually existed
+  const internalPages = [...INTERNAL_PAGES].filter(page => {
+    return lambdaPages[page];
+  });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
     const result = onPrerenderRouteInitial(
@@ -898,7 +919,7 @@ export async function serverBuild({
     for (const page of mergedPageKeys) {
       const originalPagePath = getOriginalPagePath(page);
       const pageBuildTrace = getBuildTraceFile(originalPagePath);
-      let fileList: string[];
+      let fileList: string[] = [];
       let reasons: NodeFileTraceReasons;
 
       if (pageBuildTrace) {
@@ -951,17 +972,10 @@ export async function serverBuild({
         });
         reasons = new Map();
       } else {
+        const lambdaPage = lambdaPages[page];
         fileList = Array.from(
-          parentFilesMap?.get(
-            path.relative(baseDir, lambdaPages[page].fsPath)
-          ) || []
+          parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
         );
-
-        if (!fileList) {
-          throw new Error(
-            `Invariant: Failed to trace ${page}, missing fileList`
-          );
-        }
         reasons = traceResult?.reasons || new Map();
       }
 
@@ -1569,6 +1583,7 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
   });
 
   await Promise.all(
@@ -1638,6 +1653,8 @@ export async function serverBuild({
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
+    prerenderManifest,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1665,7 +1682,6 @@ export async function serverBuild({
       outputDirectory,
       `server/pages-manifest.json`
     );
-
     const pagesData = await fs.readJSON(pagesManifest);
     const pagesEntries = Object.keys(pagesData);
 
@@ -1866,7 +1882,15 @@ export async function serverBuild({
       rscPrefetchHeader &&
       prefetchSegmentHeader &&
       prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
+      prefetchSegmentSuffix &&
+      // When the entire application has PPR enabled (all the routes) and both
+      // client param parsing and client segment cache are enabled we do not
+      // need the .prefetch.rsc rewrite.
+      !shouldSkipPrefetchRSCHandling
+  );
+
+  const serverActionMetaRoutes = await getServerActionMetaRoutes(
+    path.join(entryPath, outputDirectory)
   );
 
   return {
@@ -2069,6 +2093,8 @@ export async function serverBuild({
 
       ...redirects,
 
+      ...serverActionMetaRoutes,
+
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
       ...(routesManifest?.skipMiddlewareUrlNormalize
@@ -2221,9 +2247,7 @@ export async function serverBuild({
               : []),
             ...(rscPrefetchHeader &&
             isAppPPREnabled &&
-            // when client segment cache is enabled we do not need
-            // the .prefetch.rsc routing
-            !isAppClientSegmentCacheEnabled
+            !shouldSkipPrefetchRSCHandling
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}$`,
@@ -2356,28 +2380,36 @@ export async function serverBuild({
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
         ? [
-            {
-              src: path.posix.join('/', entryDirectory, '/\\.prefetch\\.rsc$'),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              check: true,
-            },
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                '(.+)/\\.prefetch\\.rsc$'
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `$1${RSC_PREFETCH_SUFFIX}`
-              ),
-              check: true,
-            },
+            ...(shouldSkipPrefetchRSCHandling
+              ? []
+              : [
+                  {
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/\\.prefetch\\.rsc$'
+                    ),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/__index${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    check: true,
+                  },
+                  {
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '(.+)/\\.prefetch\\.rsc$'
+                    ),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `$1${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    check: true,
+                  },
+                ]),
             {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
               dest: path.posix.join('/', entryDirectory, `/index.rsc`),
@@ -2477,9 +2509,7 @@ export async function serverBuild({
 
       // If it didn't match any of the static routes or dynamic ones, then we
       // should fallback to either prefetch or normal RSC request
-      ...(shouldHandleSegmentToRsc &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
+      ...(shouldHandleSegmentToRsc
         ? [
             {
               src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',

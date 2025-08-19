@@ -76,7 +76,7 @@ import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-af
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
-import { determineAgent } from './util/determine-agent';
+import { determineAgent } from '@vercel/detect-agent';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -192,7 +192,7 @@ const main = async () => {
   const bareHelpSubcommand = targetOrSubcommand === 'help' && !subSubCommand;
   if (bareHelpOption || bareHelpSubcommand) {
     output.print(help());
-    return 2;
+    return 0;
   }
 
   // Ensure that the Vercel global configuration directory exists
@@ -699,6 +699,9 @@ const main = async () => {
         case 'logs':
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = require('./commands/logs').default;
+          break;
+        case 'mcp':
+          func = require('./commands/mcp').default;
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);

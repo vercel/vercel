@@ -147,7 +147,7 @@ importers:
         specifier: 11.0.1
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.7.7
+        specifier: 3.8.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -343,7 +343,7 @@ importers:
         specifier: 11.0.1
         version: link:../build-utils
       '@vercel/express':
-        specifier: 0.0.5
+        specifier: 0.0.6
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -352,16 +352,16 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.13
+        specifier: 0.0.14
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.11.2
+        specifier: 4.11.3
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.12
+        specifier: 5.3.13
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
@@ -523,14 +523,17 @@ importers:
       '@vercel/client':
         specifier: 15.3.14
         version: link:../client
+      '@vercel/detect-agent':
+        specifier: 0.2.0
+        version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.7.7
+        specifier: 3.8.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.13
+        specifier: 5.4.14
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -921,7 +924,7 @@ importers:
   packages/express:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.12
+        specifier: 5.3.13
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1
@@ -1028,7 +1031,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.7.7
+        specifier: 3.8.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1080,7 +1083,7 @@ importers:
   packages/functions:
     dependencies:
       '@vercel/oidc':
-        specifier: 2.0.0
+        specifier: workspace:*
         version: link:../oidc
     devDependencies:
       '@aws-sdk/client-s3':
@@ -1248,7 +1251,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.12
+        specifier: 5.3.13
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1
@@ -1600,7 +1603,7 @@ importers:
         specifier: ^3.609.0
         version: 3.609.0(@aws-sdk/client-sts@3.806.0)
       '@vercel/oidc':
-        specifier: 2.0.0
+        specifier: workspace:*
         version: link:../oidc
     devDependencies:
       '@smithy/types':
@@ -1911,10 +1914,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.7.7
+        specifier: 3.8.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.13
+        specifier: 5.4.14
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
