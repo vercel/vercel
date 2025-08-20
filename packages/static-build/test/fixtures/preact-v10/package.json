@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "preact": "^10.27.0",
-    "preact-render-to-string": "^6.5.5",
+    "preact-render-to-string": "^6.6.0",
     "preact-router": "^4.1.2"
   }
 }
