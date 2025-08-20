@@ -18,6 +18,11 @@ export const build: BuildV3 = async args => {
 
 export const findEntrypoint = (files: Files) => {
   const validEntrypoints = [
+    ['app.cjs'],
+    ['app.js'],
+    ['app.mjs'],
+    ['app.mts'],
+    ['app.ts'],
     ['index.cjs'],
     ['index.js'],
     ['index.mjs'],
@@ -41,7 +46,13 @@ export const findEntrypoint = (files: Files) => {
   });
 
   if (!entrypoint) {
-    throw new Error('No valid entrypoint found');
+    throw new Error(`No valid entrypoint found. Valid entrypoints are:
+
+- app.{cjs,js,mjs,mts,ts}
+- index.{cjs,js,mjs,mts,ts}
+- server.{cjs,js,mjs,mts,ts}
+- src/index.{cjs,js,mjs,mts,ts}
+`);
   }
   return entrypoint.join(sep);
 };
