@@ -1484,6 +1484,11 @@ export const build: BuildV2 = async buildOptions => {
     const isAppClientParamParsingEnabled =
       routesManifest?.rsc?.clientParamParsing ?? false;
 
+    const clientParamParsingOrigins = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental
+          ?.clientParamParsingOrigins
+      : undefined;
+
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
         throw new Error(
@@ -1543,6 +1548,7 @@ export const build: BuildV2 = async buildOptions => {
         isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
+        clientParamParsingOrigins,
       });
     }
 
