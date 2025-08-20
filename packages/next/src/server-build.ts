@@ -151,6 +151,7 @@ export async function serverBuild({
   isAppFullPPREnabled,
   isAppClientSegmentCacheEnabled,
   isAppClientParamParsingEnabled,
+  clientParamParsingOrigins,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -200,6 +201,7 @@ export async function serverBuild({
   isAppFullPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
   isAppClientParamParsingEnabled: boolean;
+  clientParamParsingOrigins: string[] | undefined;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -291,6 +293,30 @@ export async function serverBuild({
           protocol = 'https://';
         }
 
+        let origin: string | null = null;
+        if (protocol) {
+          const urlWithoutProtocol = rewrite.dest.substring(protocol.length);
+
+          // Find the first occurrence of any URL delimiter
+          const delimiters = ['/', '?', '#'];
+          let endIndex = -1;
+
+          for (const delimiter of delimiters) {
+            const index = urlWithoutProtocol.indexOf(delimiter);
+            if (index !== -1) {
+              endIndex = endIndex === -1 ? index : Math.min(endIndex, index);
+            }
+          }
+
+          if (endIndex === -1) {
+            // No delimiters found, the entire URL is the origin
+            origin = rewrite.dest;
+          } else {
+            // Extract up to the first delimiter
+            origin = protocol + urlWithoutProtocol.substring(0, endIndex);
+          }
+        }
+
         // We only support adding rewrite headers to routes that do not have
         // a protocol, so don't bother trying to parse the pathname if there is
         // a protocol.
@@ -352,9 +378,19 @@ export async function serverBuild({
         const { rewriteHeaders } = routesManifest;
         if (!rewriteHeaders) continue;
 
-        // If the rewrite was external or didn't include a pathname or query,
-        // we don't need to add the rewrite headers.
-        if (protocol || (!pathname && !query)) continue;
+        // Check to see if this is a non-relative rewrite. If it is, we need
+        // to check to see if it's an allowed origin to receive the rewritten
+        // headers.
+        const isAllowedOrigin =
+          origin && clientParamParsingOrigins
+            ? clientParamParsingOrigins.some(allowedOrigin =>
+                new RegExp(allowedOrigin).test(origin!)
+              )
+            : false;
+
+        // If the rewrite was external and the origin is not allowed, we don't
+        // need to add the rewrite headers.
+        if (origin && !isAllowedOrigin) continue;
 
         (rewrite as RouteWithSrc).headers = {
           ...(rewrite as RouteWithSrc).headers,
