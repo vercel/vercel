@@ -33,7 +33,7 @@ async function decodeToken(client: Client) {
 
   if (!token) {
     throw new Error(
-      `No existing credentials found. Please run \`vercel login --future\`.`
+      `No existing credentials found. Please run \`vercel login\`.`
     );
   }
 
@@ -50,7 +50,7 @@ async function decodeToken(client: Client) {
     !inspectResult.client_id
   ) {
     throw new Error(
-      `Invalid token type. Run \`vercel login --future\` to log-in and try again.`
+      `Invalid token type. Run \`vercel login\` to log-in and try again.`
     );
   }
 
