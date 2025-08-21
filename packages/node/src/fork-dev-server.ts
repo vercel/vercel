@@ -22,11 +22,16 @@ export function forkDevServer(options: {
    */
   devServerPath?: string;
 }) {
-  let nodeOptions = process.env.NODE_OPTIONS || '';
+  const nodeOptions = process.env.NODE_OPTIONS || '';
+  const execArgs: string[] = [...process.execArgv];
 
-  if (!nodeOptions.includes('--no-warnings')) {
-    nodeOptions += ' --no-warnings';
+  const hasNoWarnings =
+    execArgs.includes('--no-warnings') ||
+    (nodeOptions && nodeOptions.includes('--no-warnings'));
+  if (!hasNoWarnings) {
+    execArgs.push('--no-warnings');
   }
+
   const tsNodePath = options.require_.resolve('ts-node');
   const esmLoader = pathToFileURL(join(tsNodePath, '..', '..', 'esm.mjs'));
   const cjsLoader = join(tsNodePath, '..', '..', 'register', 'index.js');
@@ -35,21 +40,20 @@ export function forkDevServer(options: {
 
   if (options.maybeTranspile) {
     if (options.isTypeScript) {
-      nodeOptions = `--require ${cjsLoader} --loader ${esmLoader} ${
-        nodeOptions || ''
-      }`;
+      execArgs.push('--require', cjsLoader);
+      execArgs.push('--loader', esmLoader.toString());
     } else {
       if (options.isEsm) {
         // no transform needed because Node.js supports ESM natively
       } else {
-        nodeOptions = `--require ${cjsLoader} ${nodeOptions || ''}`;
+        execArgs.push('--require', cjsLoader);
       }
     }
   }
 
   const forkOptions: ForkOptions = {
     cwd: options.workPath,
-    execArgv: [],
+    execArgv: execArgs,
     env: cloneEnv(process.env, options.meta.env, {
       VERCEL_DEV_ENTRYPOINT: options.entrypoint,
       VERCEL_DEV_CONFIG: JSON.stringify(options.config),
@@ -62,6 +66,7 @@ export function forkDevServer(options: {
     }),
     stdio: options.printLogs ? 'pipe' : undefined,
   };
+
   const child = fork(devServerPath, [], forkOptions);
 
   if (options.printLogs) {
