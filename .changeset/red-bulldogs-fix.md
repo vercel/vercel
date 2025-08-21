@@ -8,7 +8,7 @@ The `vercel login` command has been overhauled, see below for how to use the new
 
 The following are now obsolete:
 
-- The `email` argument and `--github`, `--gitlab`, `--bitbucket` flags. Run the command without any options:
+- Passing the `email` argument or `--github`, `--gitlab`, `--bitbucket` flags. Run the command without any options:
 
 ```diff
 - $ vercel login your@email.com
@@ -20,7 +20,7 @@ The following are now obsolete:
 
 Choose your preferred authentication method in the browser instead.
 
-- the `teamId`/`teamSlug` argument. Run the command without any options:
+- Passing the `teamId`/`teamSlug` argument. Run the command without any options:
 
 ```diff
 - $ vercel login team
@@ -29,11 +29,10 @@ Choose your preferred authentication method in the browser instead.
 
 After signing in with any of the non-SAML methods, you will be prompted to authorize individual teams.
 
-- `--oob`: Visit [vercel.com/device](https://vercel.com/device) on any browser-capable device
-  and enter the code shown in the terminal. This flag is now obsolete.
+- `--oob`: Visit [vercel.com/device](https://vercel.com/device) on any browser-capable device and enter the code shown in the terminal. This flag is now obsolete.
 
 > [!TIP]
-> Hit `ENTER` to open the link automatically, if you are signing in from a browser-capable device.
+> Hit <kbd>Enter</kbd> to open the link automatically, if you are signing in from a browser-capable device.
 
 > [!IMPORTANT]
 > Read the instructions carefully to match your location, IP, and request time when approving the device, as you will be granting access to your Vercel account.
