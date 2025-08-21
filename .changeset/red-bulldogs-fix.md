@@ -6,11 +6,12 @@ The `vercel login` command has been overhauled, see below for how to use the new
 
 ## Breaking changes
 
-The following flags are now obsolete:
+The following are now obsolete:
 
-- `--github`, `--gitlab`, `--bitbucket`: Run the command without any flag:
+- The `email` argument and `--github`, `--gitlab`, `--bitbucket` flags. Run the command without any options:
 
 ```diff
+- $ vercel login your@email.com
 - $ vercel login --github
 - $ vercel login --gitlab
 - $ vercel login --bitbucket
@@ -18,6 +19,15 @@ The following flags are now obsolete:
 ```
 
 Choose your preferred authentication method in the browser instead.
+
+- the `teamId`/`teamSlug` argument. Run the command without any options:
+
+```diff
+- $ vercel login team
++ $ vercel login
+```
+
+After signing in with any of the non-SAML methods, you will be prompted to authorize individual teams.
 
 - `--oob`: Visit [vercel.com/device](https://vercel.com/device) on any browser-capable device
   and enter the code shown in the terminal. This flag is now obsolete.
