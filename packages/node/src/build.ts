@@ -1,6 +1,13 @@
 import { isErrnoException } from '@vercel/error-utils';
 import { createRequire } from 'module';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
+import {
+  readFileSync,
+  lstatSync,
+  readlinkSync,
+  statSync,
+  readdirSync,
+  existsSync,
+} from 'fs';
 import {
   basename,
   dirname,
@@ -40,6 +47,11 @@ import type {
   BuildResultV3,
 } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
+import {
+  rolldown,
+  build as rolldownBuild,
+  RolldownPluginOption,
+} from 'rolldown';
 
 import { Register, register } from './typescript';
 import {
@@ -144,7 +156,10 @@ async function compile(
   }
 
   let tsCompile: Register;
-  function compileTypeScript(path: string, source: string): string {
+  async function compileTypeScript(
+    path: string,
+    source: string
+  ): Promise<string> {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
@@ -228,7 +243,7 @@ async function compile(
             fsPath.endsWith('.tsx') ||
             fsPath.endsWith('.mts')
           ) {
-            source = compileTypeScript(fsPath, source.toString());
+            source = await compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
@@ -440,21 +455,36 @@ export const build = async ({
 
   debug('Tracing input files...');
   const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
+  // const { preparedFiles, shouldAddSourcemapSupport } = await compile(
+  //   workPath,
+  //   baseDir,
+  //   entrypointPath,
+  //   config,
+  //   meta,
+  //   nodeVersion,
+  //   isEdgeFunction
+  // );
+
+  const format = 'cjs';
+
+  const { preparedFiles, shouldAddSourcemapSupport } = await rolldownCompile(
     workPath,
     baseDir,
     entrypointPath,
     config,
     meta,
     nodeVersion,
-    isEdgeFunction
+    isEdgeFunction,
+    format
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  let handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let handler = format === 'esm' ? 'index.mjs' : 'index.js';
+  // let handler = renameTStoJS(relative(baseDir, entrypointPath));
+
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
@@ -559,4 +589,91 @@ function normalizeRequestedRegions(
   }
 
   return regions;
+}
+
+async function rolldownCompile(
+  workPath: string,
+  baseDir: string,
+  entrypointPath: string,
+  config: Config,
+  meta: Meta,
+  nodeVersion: NodeVersion,
+  isEdgeFunction: boolean,
+  format: 'esm' | 'cjs'
+): Promise<{
+  preparedFiles: Files;
+  shouldAddSourcemapSupport: boolean;
+}> {
+  const preparedFiles: Files = {};
+  const shouldAddSourcemapSupport = false;
+
+  const extension = format === 'esm' ? 'mjs' : 'js';
+
+  // Build with rolldown
+  await rolldownBuild({
+    input: entrypointPath,
+    cwd: workPath,
+    platform: 'node',
+    output: {
+      dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
+      format,
+      entryFileNames: `[name].${extension}`,
+      chunkFileNames: `[name].${extension}`,
+      advancedChunks: {
+        includeDependenciesRecursively: false,
+        groups: [
+          {
+            name: id => {
+              const path = id.slice(workPath.length + 1);
+              const full = join(
+                workPath,
+                '.vercel',
+                'output',
+                'functions',
+                'index.func',
+                path
+              );
+              return full;
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  // Always include package.json from the entrypoint directory
+  const entrypointDir = dirname(entrypointPath);
+  const packageJsonPath = join(workPath, 'package.json');
+  if (existsSync(packageJsonPath)) {
+    const { mode } = lstatSync(packageJsonPath);
+    const source = readFileSync(packageJsonPath);
+    const relPath = relative(baseDir, packageJsonPath);
+    preparedFiles[relPath] = new FileBlob({ data: source, mode });
+    console.log('Added package.json to preparedFiles:', relPath);
+  }
+
+  // Process includeFiles if specified
+  if (config.includeFiles) {
+    const includeFiles =
+      typeof config.includeFiles === 'string'
+        ? [config.includeFiles]
+        : config.includeFiles;
+
+    for (const pattern of includeFiles) {
+      const files = await glob(pattern, workPath);
+      await Promise.all(
+        Object.values(files).map(async entry => {
+          const { fsPath } = entry;
+          const relPath = relative(baseDir, fsPath);
+          preparedFiles[relPath] = entry;
+          console.log('Added includeFile to preparedFiles:', relPath);
+        })
+      );
+    }
+  }
+
+  return {
+    preparedFiles,
+    shouldAddSourcemapSupport,
+  };
 }
