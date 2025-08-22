@@ -1,8 +1,14 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
 import { join, sep } from 'path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs';
+
+import { clearTypeScriptBuildCache } from '../../../node/src/typescript';
+
+beforeEach(() => {
+  clearTypeScriptBuildCache();
+});
 
 const config = {
   outputDirectory: undefined,
@@ -102,13 +108,17 @@ const fixtures = {
   },
   '10-index-ts-no-tsconfig': {
     handler: ['index.js'],
-    moduleType: 'cjs',
+    moduleType: 'esm',
   },
   '11-index-ts-tsconfig-node': {
     handler: ['index.js'],
     moduleType: 'esm',
   },
   '12-index-mts-tsconfig-node-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
+  '13-index-mts-no-tsconfig-node-no-module': {
     handler: ['index.mjs'],
     moduleType: 'esm',
   },

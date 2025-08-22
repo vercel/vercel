@@ -127,7 +127,9 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-    fixConfig(tsConfig, nodeVersionMajor);
+    // Check if this is a .mts file
+    const isMtsFile = ext === '.mts';
+    fixConfig(tsConfig, nodeVersionMajor, pkg, isMtsFile);
 
     // In prod, `.ts` inputs use TypeScript and
     // `.js` inputs use Babel to convert ESM to CJS.
