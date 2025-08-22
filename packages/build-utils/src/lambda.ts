@@ -52,6 +52,11 @@ export interface LambdaOptionsBase {
    * @experimental This feature is experimental and may change.
    */
   experimentalTriggers?: TriggerEvent[];
+  /**
+   * Whether this Lambda supports cancellation.
+   * When true, the Lambda runtime can be terminated mid-execution if the request is cancelled.
+   */
+  supportsCancellation?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -413,7 +418,11 @@ export async function getLambdaOptionsFromFunction({
 }: GetLambdaOptionsFromFunctionOptions): Promise<
   Pick<
     LambdaOptions,
-    'architecture' | 'memory' | 'maxDuration' | 'experimentalTriggers'
+    | 'architecture'
+    | 'memory'
+    | 'maxDuration'
+    | 'experimentalTriggers'
+    | 'supportsCancellation'
   >
 > {
   if (config?.functions) {
@@ -424,6 +433,7 @@ export async function getLambdaOptionsFromFunction({
           memory: fn.memory,
           maxDuration: fn.maxDuration,
           experimentalTriggers: fn.experimentalTriggers,
+          supportsCancellation: fn.supportsCancellation,
         };
       }
     }
