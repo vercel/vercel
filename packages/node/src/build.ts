@@ -151,10 +151,7 @@ async function compile(
   }
 
   let tsCompile: Register;
-  async function compileTypeScript(
-    path: string,
-    source: string
-  ): Promise<string> {
+  function compileTypeScript(path: string, source: string): string {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
@@ -238,7 +235,7 @@ async function compile(
             fsPath.endsWith('.tsx') ||
             fsPath.endsWith('.mts')
           ) {
-            source = await compileTypeScript(fsPath, source.toString());
+            source = compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
