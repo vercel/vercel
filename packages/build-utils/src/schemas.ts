@@ -69,6 +69,9 @@ export const functionsSchema = {
           type: 'array',
           items: triggerEventSchema,
         },
+        supportsCancellation: {
+          type: 'boolean',
+        },
       },
     },
   },

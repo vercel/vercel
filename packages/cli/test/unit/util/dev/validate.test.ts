@@ -651,4 +651,31 @@ describe('validateConfig', () => {
     });
     expect(error).toBeNull();
   });
+
+  it('should allow supportsCancellation boolean', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          supportsCancellation: true,
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid supportsCancellation type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          supportsCancellation: 'true' as any,
+        },
+      },
+    });
+    expect(error?.message).toMatch(
+      "Invalid vercel.json - `functions['api/test.js'].supportsCancellation` should be boolean."
+    );
+    expect(error?.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
 });
