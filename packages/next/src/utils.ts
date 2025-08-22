@@ -1749,6 +1749,12 @@ async function getSourceFilePathFromPage({
   if (page === '/_not-found/page') {
     return '';
   }
+  // if we got here, and didn't find a source global-error file, then it was the one injected
+  // by Next.js for App Router 500 page. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_global-error/page') {
+    return '';
+  }
 
   // Skip warning for internal pages (_app.js, _error.js, _document.js)
   if (!INTERNAL_PAGES.includes(page)) {
