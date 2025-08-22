@@ -2267,6 +2267,31 @@ export const frameworks = [
       every: [{ matchPackage: 'hono' }],
       some: [
         {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
           path: 'index.cjs',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
@@ -2385,6 +2410,31 @@ export const frameworks = [
     detectors: {
       every: [{ matchPackage: 'express' }],
       some: [
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
         {
           path: 'index.cjs',
           matchContent:
