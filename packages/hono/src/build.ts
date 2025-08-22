@@ -17,42 +17,25 @@ export const build: BuildV3 = async args => {
 };
 
 export const findEntrypoint = (files: Files) => {
-  const validEntrypoints = [
-    ['app.cjs'],
-    ['app.js'],
-    ['app.mjs'],
-    ['app.mts'],
-    ['app.ts'],
-    ['index.cjs'],
-    ['index.js'],
-    ['index.mjs'],
-    ['index.mts'],
-    ['index.ts'],
-    ['server.cjs'],
-    ['server.js'],
-    ['server.mjs'],
-    ['server.mts'],
-    ['server.ts'],
-    ['src', 'index.cjs'],
-    ['src', 'index.js'],
-    ['src', 'index.mjs'],
-    ['src', 'index.mts'],
-    ['src', 'index.ts'],
-  ];
+  const validFilenames = [['app'], ['index'], ['server'], ['src', 'index']];
 
-  const entrypoint = validEntrypoints.find(entrypointParts => {
-    const path = entrypointParts.join(sep);
-    return files[path] !== undefined;
+  const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'mts'];
+
+  const validEntrypoints = validFilenames.flatMap(filename =>
+    validExtensions.map(extension => `${filename.join(sep)}.${extension}`)
+  );
+
+  const entrypoint = validEntrypoints.find(entrypoint => {
+    return files[entrypoint] !== undefined;
   });
 
   if (!entrypoint) {
-    throw new Error(`No valid entrypoint found. Valid entrypoints are:
-
-- app.{cjs,js,mjs,mts,ts}
-- index.{cjs,js,mjs,mts,ts}
-- server.{cjs,js,mjs,mts,ts}
-- src/index.{cjs,js,mjs,mts,ts}
-`);
+    const entrypointsForMessage = validFilenames
+      .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
+      .join('\n');
+    throw new Error(
+      `No valid entrypoint found. Valid entrypoints are:\n${entrypointsForMessage}`
+    );
   }
-  return entrypoint.join(sep);
+  return entrypoint;
 };
