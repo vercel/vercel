@@ -1499,8 +1499,8 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
       undici:
-        specifier: 5.28.4
-        version: 5.28.4
+        specifier: 5.29.0
+        version: 5.29.0
     devDependencies:
       '@babel/core':
         specifier: 7.24.4
@@ -17201,6 +17201,13 @@ packages:
 
   /undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
+    engines: {node: '>=14.0'}
+    dependencies:
+      '@fastify/busboy': 2.1.1
+    dev: false
+
+  /undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.1
