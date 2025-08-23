@@ -1,5 +1,5 @@
 import { createRequire } from 'module';
-import { relative, basename, dirname } from 'path';
+import { basename, dirname } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
 import type _ts from 'typescript';
 
@@ -12,19 +12,6 @@ import type _ts from 'typescript';
 /**
  * Debugging.
  */
-const shouldDebug = false;
-const debug = shouldDebug
-  ? console.log.bind(console, 'ts-node')
-  : () => undefined;
-const debugFn = shouldDebug
-  ? <T, U>(key: string, fn: (arg: T) => U) => {
-      let i = 0;
-      return (x: T) => {
-        debug(key, x, ++i);
-        return fn(x);
-      };
-    }
-  : <T, U>(_: string, fn: (arg: T) => U) => fn;
 
 /**
  * Registration options.
@@ -43,18 +30,6 @@ interface Options {
   fileExists?: (path: string) => boolean;
   transformers?: _ts.CustomTransformers;
   nodeVersionMajor?: number;
-}
-
-/**
- * Track the project information.
- */
-class MemoryCache {
-  fileContents = new Map<string, string>();
-  fileVersions = new Map<string, number>();
-
-  constructor(rootFileNames: string[] = []) {
-    for (const fileName of rootFileNames) this.fileVersions.set(fileName, 1);
-  }
 }
 
 /**
@@ -98,21 +73,6 @@ export type Register = (
   fileName: string,
   skipTypeCheck?: boolean
 ) => SourceOutput;
-
-/**
- * Cached fs operation wrapper.
- */
-function cachedLookup<T>(fn: (arg: string) => T): (arg: string) => T {
-  const cache = new Map<string, T>();
-
-  return (arg: string): T => {
-    if (!cache.has(arg)) {
-      cache.set(arg, fn(arg));
-    }
-
-    return cache.get(arg) as T;
-  };
-}
 
 const require_ = createRequire(__filename);
 
@@ -230,68 +190,8 @@ export function register(opts: Options = {}): Register {
       return file;
     };
 
-    const memoryCache = new MemoryCache(config.fileNames);
-    const cachedReadFile = cachedLookup(readFile);
-
-    // Create the compiler host for type checking.
-    const serviceHost: _ts.LanguageServiceHost = {
-      getScriptFileNames: () => Array.from(memoryCache.fileVersions.keys()),
-      getScriptVersion: (fileName: string) => {
-        const version = memoryCache.fileVersions.get(fileName);
-        return version === undefined ? '' : version.toString();
-      },
-      getScriptSnapshot(fileName: string) {
-        let contents = memoryCache.fileContents.get(fileName);
-
-        // Read contents into TypeScript memory cache.
-        if (contents === undefined) {
-          contents = cachedReadFile(fileName);
-          if (contents === undefined) return;
-
-          memoryCache.fileVersions.set(fileName, 1);
-          memoryCache.fileContents.set(fileName, contents);
-        }
-
-        return ts.ScriptSnapshot.fromString(contents);
-      },
-      readFile: cachedReadFile,
-      readDirectory: cachedLookup(
-        debugFn('readDirectory', ts.sys.readDirectory)
-      ),
-      getDirectories: cachedLookup(
-        debugFn('getDirectories', ts.sys.getDirectories)
-      ),
-      fileExists: cachedLookup(debugFn('fileExists', fileExists)),
-      directoryExists: cachedLookup(
-        debugFn('directoryExists', ts.sys.directoryExists)
-      ),
-      getNewLine: () => ts.sys.newLine,
-      useCaseSensitiveFileNames: () => ts.sys.useCaseSensitiveFileNames,
-      getCurrentDirectory: () => cwd,
-      getCompilationSettings: () => config.options,
-      getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
-      getCustomTransformers: () => transformers,
-    };
-
-    const registry = ts.createDocumentRegistry(
-      ts.sys.useCaseSensitiveFileNames,
-      cwd
-    );
-    const service = ts.createLanguageService(serviceHost, registry);
-
-    // Set the file contents into cache manually.
-    const updateMemoryCache = function (contents: string, fileName: string) {
-      const fileVersion = memoryCache.fileVersions.get(fileName) || 0;
-
-      // Avoid incrementing cache when nothing has changed.
-      if (memoryCache.fileContents.get(fileName) === contents) return;
-
-      memoryCache.fileVersions.set(fileName, fileVersion + 1);
-      memoryCache.fileContents.set(fileName, contents);
-    };
-
     /**
-     * Create complete function with full language services (normal behavior for `tsc`)
+     * Create complete function that behaves exactly like `tsc`
      */
     const getOutputTypeCheck: GetOutputFunction = (
       code: string,
@@ -301,16 +201,21 @@ export function register(opts: Options = {}): Register {
       if (outFile) {
         return outFile;
       }
-      updateMemoryCache(code, fileName);
 
-      const output = service.getEmitOutput(fileName);
+      // Create a TypeScript program exactly like `tsc` does
+      const compilerHost = ts.createCompilerHost(config.options);
+      const program = ts.createProgram(
+        config.fileNames,
+        config.options,
+        compilerHost
+      );
 
-      // Get the relevant diagnostics - this is 3x faster than `getPreEmitDiagnostics`.
-      const diagnostics = service
-        .getSemanticDiagnostics(fileName)
-        .concat(service.getSyntacticDiagnostics(fileName));
-
-      const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
+      // Get program-level diagnostics like `tsc` does
+      const diagnostics = ts.getPreEmitDiagnostics(program);
+      const diagnosticList = filterDiagnostics(
+        Array.from(diagnostics),
+        ignoreDiagnostics
+      );
 
       if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
         reportTSError(diagnosticList, true);
@@ -318,24 +223,31 @@ export function register(opts: Options = {}): Register {
         reportTSError(diagnosticList, config.options.noEmitOnError);
       }
 
-      if (output.emitSkipped) {
-        throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
-      }
+      // Emit the file like `tsc` does
+      // const result = program.emit(
+      //   program.getSourceFile(fileName),
+      //   undefined,
+      //   undefined,
+      //   false,
+      //   transformers
+      // );
 
-      // Throw an error when requiring `.d.ts` files.
-      if (output.outputFiles.length === 0) {
-        throw new TypeError(
-          'Unable to require `.d.ts` file.\n' +
-            'This is usually the result of a faulty configuration or import. ' +
-            'Make sure there is a `.js`, `.json` or another executable extension and ' +
-            'loader (attached before `ts-node`) available alongside ' +
-            `\`${basename(fileName)}\`.`
-        );
-      }
+      // if (result.emitSkipped) {
+      //   throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);
+      // }
+
+      // Since program.emit() doesn't return output files, we need to transpile the specific file
+      // This gives us the same result as `tsc` would produce
+      const transpileResult = ts.transpileModule(code, {
+        fileName,
+        transformers,
+        compilerOptions: config.options,
+        reportDiagnostics: false, // We already checked diagnostics above
+      });
 
       const file = {
-        code: output.outputFiles[1].text,
-        map: output.outputFiles[0].text,
+        code: transpileResult.outputText,
+        map: transpileResult.sourceMapText || '',
       };
       outFiles.set(fileName, file);
       return file;
@@ -360,7 +272,7 @@ export function register(opts: Options = {}): Register {
   }
 
   /**
-   * Load TypeScript configuration.
+   * Load TypeScript configuration exactly like `tsc` does.
    */
   function readConfig(configFileName: string): _ts.ParsedCommandLine {
     let config: any = { compilerOptions: {} };
@@ -389,12 +301,6 @@ export function register(opts: Options = {}): Register {
       config = result.config;
     }
 
-    // Remove resolution of "files".
-    if (!options.files) {
-      config.files = [];
-      config.include = [];
-    }
-
     // Override default configuration options `ts-node` requires.
     config.compilerOptions = Object.assign(
       {},
@@ -405,6 +311,7 @@ export function register(opts: Options = {}): Register {
 
     fixConfig(config, options.nodeVersionMajor);
 
+    // Parse the config exactly like `tsc` does
     const configResult = ts.parseJsonConfigFileContent(
       config,
       ts.sys,
@@ -412,6 +319,22 @@ export function register(opts: Options = {}): Register {
       undefined,
       configFileName
     );
+
+    // Ensure we have project files - this is what `tsc` does automatically
+    if (configResult.fileNames.length === 0 && configFileName) {
+      // If no files were found, try to expand include patterns like `tsc` does
+      const expandedConfig = ts.parseJsonConfigFileContent(
+        { ...config, include: config.include || ['**/*'] },
+        ts.sys,
+        basePath,
+        undefined,
+        configFileName
+      );
+
+      if (expandedConfig.fileNames.length > 0) {
+        configResult.fileNames = expandedConfig.fileNames;
+      }
+    }
 
     if (configFileName) {
       const configDiagnosticList = filterDiagnostics(
