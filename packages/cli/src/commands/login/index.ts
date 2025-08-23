@@ -7,6 +7,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
+import chalk from 'chalk';
 
 export default async function login(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -36,6 +37,26 @@ export default async function login(client: Client): Promise<number> {
   if (parsedArgs.flags['--token']) {
     output.error('`--token` may not be used with the "login" command');
     return 2;
+  }
+
+  const obsoleteFlags = Object.keys(parsedArgs.flags);
+
+  if (obsoleteFlags.length) {
+    const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
+    output.warn(`The following flags are deprecated: ${flags}`);
+  }
+
+  const obsoleteArguments = parsedArgs.args.slice(1);
+  if (obsoleteArguments.length) {
+    const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
+    output.warn(`The following arguments are deprecated: ${args}`);
+  }
+
+  if (obsoleteArguments.length || obsoleteFlags.length) {
+    output.print(
+      // TODO: fix link
+      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog')}.\n`
+    );
   }
 
   telemetry.trackCliFlagFuture('login');

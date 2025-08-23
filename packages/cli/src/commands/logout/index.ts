@@ -7,6 +7,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
 import { logout as future } from './future';
+import chalk from 'chalk';
 
 export default async function logout(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -31,6 +32,26 @@ export default async function logout(client: Client): Promise<number> {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 0;
+  }
+
+  const obsoleteFlags = Object.keys(parsedArgs.flags);
+
+  if (obsoleteFlags.length) {
+    const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
+    output.warn(`The following flags are deprecated: ${flags}`);
+  }
+
+  const obsoleteArguments = parsedArgs.args.slice(1);
+  if (obsoleteArguments.length) {
+    const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
+    output.warn(`The following arguments are deprecated: ${args}`);
+  }
+
+  if (obsoleteArguments.length || obsoleteFlags.length) {
+    output.print(
+      // TODO: fix link
+      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog')}.\n`
+    );
   }
 
   return await future(client);
