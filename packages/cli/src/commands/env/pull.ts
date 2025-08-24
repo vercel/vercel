@@ -1,13 +1,22 @@
-import * as dotenvx from '@dotenvx/dotenvx';
 import type { ProjectLinked } from '@vercel-internals/types';
+import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
-import { existsSync, readFileSync } from 'fs';
-import { outputFile } from 'fs-extra';
-import { join, resolve } from 'path';
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  outputFile,
+  readSync,
+} from 'fs-extra';
+import { resolve } from 'path';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { buildDeltaString } from '../../util/env/diff-env-files';
+import {
+  buildDeltaString,
+  createEnvObject,
+  updateEnvFile,
+} from '../../util/env/diff-env-files';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -16,6 +25,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import { getCommandName } from '../../util/pkg-name';
@@ -25,6 +35,27 @@ import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
 import { pullSubcommand } from './command';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
+
+function readHeadSync(path: string, length: number) {
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(path, 'r');
+  try {
+    readSync(fd, buffer, 0, buffer.length, null);
+  } finally {
+    closeSync(fd);
+  }
+  return buffer.toString();
+}
+
+function tryReadHeadSync(path: string, length: number) {
+  try {
+    return readHeadSync(path, length);
+  } catch (err: unknown) {
+    if (!isErrnoException(err) || err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
 
 const VARIABLES_TO_IGNORE = [
   'VERCEL_ANALYTICS_ID',
@@ -60,9 +91,11 @@ export default async function pull(client: Client, argv: string[]) {
   // handle relative or absolute filename
   const [rawFilename] = args;
   const filename = rawFilename || '.env.local';
+  const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
   telemetryClient.trackCliArgumentFilename(args[0]);
+  telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
 
@@ -89,6 +122,7 @@ export default async function pull(client: Client, argv: string[]) {
   await envPullCommandLogic(
     client,
     filename,
+    !!skipConfirmation,
     environment,
     link,
     gitBranch,
@@ -102,6 +136,7 @@ export default async function pull(client: Client, argv: string[]) {
 export async function envPullCommandLogic(
   client: Client,
   filename: string,
+  skipConfirmation: boolean,
   environment: string,
   link: ProjectLinked,
   gitBranch: string | undefined,
@@ -109,7 +144,22 @@ export async function envPullCommandLogic(
   source: EnvRecordsSource
 ) {
   const fullPath = resolve(cwd, filename);
+  const head = tryReadHeadSync(fullPath, CONTENTS_PREFIX.length);
   const exists = existsSync(fullPath);
+
+  if (head === CONTENTS_PREFIX) {
+    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
+  } else if (
+    exists &&
+    !skipConfirmation &&
+    !(await client.input.confirm(
+      `Found existing file ${param(filename)}. Do you want to update?`,
+      false
+    ))
+  ) {
+    output.log('Canceled');
+    return;
+  }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
@@ -128,14 +178,21 @@ export async function envPullCommandLogic(
       gitBranch,
     })
   ).env;
+  const newEnv = Object.fromEntries(
+    Object.entries(records).filter(
+      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
+    )
+  );
 
   let deltaString = '';
-  let oldEnv: Record<string, string | undefined> = {};
+  let oldEnv;
 
   if (exists) {
     try {
-      const fileContent = readFileSync(fullPath, 'utf8');
-      oldEnv = dotenvx.parse(fileContent, { processEnv: {} });
+      oldEnv = await createEnvObject(fullPath);
+      if (oldEnv) {
+        deltaString = buildDeltaString(oldEnv, newEnv);
+      }
     } catch (error) {
       throw new Error(
         `Failed to parse existing env file at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
@@ -151,46 +208,7 @@ export async function envPullCommandLogic(
     }
   }
 
-  const newEnv = Object.fromEntries(
-    Object.entries(records).filter(
-      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
-    )
-  );
-  deltaString = buildDeltaString(oldEnv, newEnv);
-
-  const encrypt = existsSync(join(cwd, '.env.keys'));
-
-  let backupContent: string | null = null;
-  if (exists) {
-    try {
-      backupContent = readFileSync(fullPath, 'utf8');
-    } catch (error) {
-      throw new Error(
-        `Failed to read existing env file for backup at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  // Attempt to set all environment variables atomically
-  try {
-    for (const [key, value] of Object.entries(newEnv)) {
-      dotenvx.set(key, value ?? '', { path: fullPath, encrypt });
-    }
-  } catch (error) {
-    // Restore backup on any failure to ensure atomic operation
-    if (backupContent !== null) {
-      try {
-        await outputFile(fullPath, backupContent, 'utf8');
-      } catch (restoreError) {
-        throw new Error(
-          `Failed to set environment variable and unable to restore backup: ${error instanceof Error ? error.message : String(error)}. Restore error: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`
-        );
-      }
-    }
-    throw new Error(
-      `Failed to set environment variable: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
+  await updateEnvFile(fullPath, newEnv);
 
   if (deltaString) {
     output.print('\n' + deltaString);

@@ -38,7 +38,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -60,6 +60,10 @@ describe('env pull', () => {
         key: `subcommand:pull`,
         value: 'pull',
       },
+      {
+        key: `flag:yes`,
+        value: 'TRUE',
+      },
     ]);
   });
 
@@ -73,7 +77,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--environment', 'preview');
+    client.setArgv('env', 'pull', '--yes', '--environment', 'preview');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `preview` Environment Variables for'
@@ -107,6 +111,7 @@ describe('env pull', () => {
     client.setArgv(
       'env',
       'pull',
+      '--yes',
       '--environment',
       'preview',
       '--git-branch',
@@ -144,6 +149,10 @@ describe('env pull', () => {
         value: 'pull',
       },
       {
+        key: `flag:yes`,
+        value: 'TRUE',
+      },
+      {
         key: `option:git-branch`,
         value: '[REDACTED]',
       },
@@ -164,7 +173,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', 'other.env');
+    client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -188,6 +197,10 @@ describe('env pull', () => {
       {
         key: `argument:filename`,
         value: '[REDACTED]',
+      },
+      {
+        key: `flag:yes`,
+        value: 'TRUE',
       },
     ]);
   });
@@ -233,7 +246,14 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', 'other.env', '--environment', 'production');
+    client.setArgv(
+      'env',
+      'pull',
+      'other.env',
+      '--yes',
+      '--environment',
+      'production'
+    );
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `production` Environment Variables for'
@@ -262,7 +282,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', 'other.env');
+    client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -312,7 +332,7 @@ describe('env pull', () => {
 
       await expect(addPromise).resolves.toEqual(0);
 
-      client.setArgv('env', 'pull');
+      client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
@@ -341,7 +361,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull-delta-corrupt');
     client.cwd = cwd;
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput(
       'Updated .env.local file and added it to .gitignore'
@@ -358,7 +378,7 @@ describe('env pull', () => {
       name: 'env-pull-delta-no-changes',
     });
     client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput('> No changes found.');
     await expect(client.stderr).toOutput(
@@ -394,12 +414,12 @@ describe('env pull', () => {
         ]
       );
 
-      client.setArgv('env', 'pull');
+      client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
       );
-      await expect(client.stderr).toOutput('Changes:\n+ NEW_VAR (Updated)');
+      await expect(client.stderr).toOutput('No changes found.\n');
       await expect(client.stderr).toOutput(
         'Updated .env.local file and added it to .gitignore'
       );
@@ -438,7 +458,7 @@ describe('env pull', () => {
         ]
       );
 
-      client.setArgv('env', 'pull', '.env.testquotes');
+      client.setArgv('env', 'pull', '.env.testquotes', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
@@ -468,7 +488,7 @@ describe('env pull', () => {
       'utf8'
     );
     client.cwd = cwd;
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -519,7 +539,7 @@ describe('env pull', () => {
     );
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -557,7 +577,7 @@ describe('env pull', () => {
     expect(originalContent).toContain('# inline comment here');
     expect(originalContent).toContain('# End of file comment');
 
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -603,7 +623,7 @@ describe('env pull', () => {
     );
     expect(originalContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
 
-    client.setArgv('env', 'pull');
+    client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'

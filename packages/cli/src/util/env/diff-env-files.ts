@@ -1,5 +1,64 @@
+import * as dotenvx from '@dotenvx/dotenvx';
 import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
+import { existsSync, outputFile, readFile } from 'fs-extra';
+import { dirname, join } from 'path';
+
+export async function createEnvObject(
+  envPath: string
+): Promise<Dictionary<string | undefined> | undefined> {
+  const content = await readFile(envPath, 'utf-8');
+  const privateKey = await getEncryptionKey(envPath);
+
+  return dotenvx.parse(content, { processEnv: {}, privateKey });
+}
+
+export async function updateEnvFile(
+  envPath: string,
+  updates: Dictionary<string | undefined>
+): Promise<void> {
+  let backupContent: string | null = null;
+  try {
+    backupContent = await readFile(envPath, 'utf8');
+  } catch (error) {
+    // Continue without backup if file does not exist
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  const privateKey = await getEncryptionKey(envPath);
+
+  try {
+    for (const [key, value] of Object.entries(updates)) {
+      dotenvx.set(key, value ?? '', { path: envPath, encrypt: !!privateKey });
+    }
+  } catch (error) {
+    // Restore backup on any failure to ensure atomic operation
+    if (backupContent !== null) {
+      try {
+        await outputFile(envPath, backupContent, 'utf8');
+      } catch (restoreError) {
+        throw new Error(
+          `Failed to set environment variable and unable to restore backup: ${error instanceof Error ? error.message : String(error)}. Restore error: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`
+        );
+      }
+    }
+    throw new Error(
+      `Failed to set environment variable: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
+async function getEncryptionKey(envPath: string): Promise<string | undefined> {
+  const keysPath = join(dirname(envPath), '.env.keys');
+  if (!existsSync(keysPath)) {
+    return undefined;
+  }
+
+  const keys = await readFile(keysPath, 'utf8');
+  return dotenvx.parse(keys, { processEnv: {} })['PRIVATE_KEY'];
+}
 
 function findChanges(
   oldEnv: Dictionary<string | undefined>,
