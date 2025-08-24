@@ -553,7 +553,7 @@ describe('env pull', () => {
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
   });
 
-  it('should preserve comments in existing .env files', async () => {
+  it('should preserve comments and local values when pulling env vars', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -561,10 +561,10 @@ describe('env pull', () => {
       id: 'vercel-env-pull',
       name: 'vercel-env-pull',
     });
-    const cwd = setupUnitFixture('vercel-env-pull-preserve-comments');
+    const cwd = setupUnitFixture('vercel-env-pull-preserve-file');
     client.cwd = cwd;
 
-    // Read the original file to verify it has comments
+    // Read the original file to verify it has comments and local values
     const originalContent = await fs.readFile(
       path.join(cwd, '.env.local'),
       'utf8'
@@ -576,11 +576,18 @@ describe('env pull', () => {
     expect(originalContent).toContain('# API keys');
     expect(originalContent).toContain('# inline comment here');
     expect(originalContent).toContain('# End of file comment');
+    expect(originalContent).toContain(
+      'SPECIAL_FLAG=local-value-different-from-remote'
+    );
+    expect(originalContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
 
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
+    );
+    await expect(client.stderr).toOutput(
+      'Changes:\n+ SPECIAL_FLAG (Updated)\n\nUpdated .env.local file'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -597,45 +604,6 @@ describe('env pull', () => {
     expect(updatedContent).toContain('# API keys');
     expect(updatedContent).toContain('# inline comment here');
     expect(updatedContent).toContain('# End of file comment');
-
-    // Should also contain the new SPECIAL_FLAG from the server
-    expect(updatedContent).toContain('SPECIAL_FLAG="1"');
-  });
-
-  it('should preserve existing env values that match remote values', async () => {
-    useUser();
-    useTeams('team_dummy');
-    useProject({
-      ...defaultProject,
-      id: 'vercel-env-pull',
-      name: 'vercel-env-pull',
-    });
-    const cwd = setupUnitFixture('vercel-env-pull-preserve-values');
-    client.cwd = cwd;
-
-    // Read the original file
-    const originalContent = await fs.readFile(
-      path.join(cwd, '.env.local'),
-      'utf8'
-    );
-    expect(originalContent).toContain(
-      'SPECIAL_FLAG=local-value-different-from-remote'
-    );
-    expect(originalContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
-
-    client.setArgv('env', 'pull', '--yes');
-    const exitCodePromise = env(client);
-    await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
-    );
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "env"').toEqual(0);
-
-    // Read the file after pull
-    const updatedContent = await fs.readFile(
-      path.join(cwd, '.env.local'),
-      'utf8'
-    );
 
     // The remote SPECIAL_FLAG=1 should override the local value
     expect(updatedContent).toContain('SPECIAL_FLAG=1');

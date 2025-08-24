@@ -189,7 +189,7 @@ export async function envPullCommandLogic(
   if (exists) {
     oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
-      deltaString = buildDeltaString(oldEnv, newEnv);
+      deltaString = buildDeltaString(oldEnv, { ...oldEnv, ...newEnv });
     }
   } else {
     try {
