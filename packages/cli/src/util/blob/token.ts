@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { createEnvObject } from '../env/diff-env-files';
+import { createEnvObject } from '../env/local-env-files';
 
 import type Client from '../client';
 import { getFlagsSpecification } from '../get-flags-specification';

@@ -16,7 +16,7 @@ import {
   buildDeltaString,
   createEnvObject,
   updateEnvFile,
-} from '../../util/env/diff-env-files';
+} from '../../util/env/local-env-files';
 import {
   type EnvRecordsSource,
   pullEnvRecords,

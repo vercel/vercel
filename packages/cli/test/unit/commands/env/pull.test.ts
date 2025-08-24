@@ -699,6 +699,40 @@ describe('env pull', () => {
     expect(rawDevEnv).toContain('SPECIAL_FLAG="1"');
   });
 
+  it('should decrypt existing encrypted values when .env.keys is present', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull-with-encryption');
+    client.cwd = cwd;
+
+    // First, create an existing encrypted .env.local file
+    const envPath = path.join(cwd, '.env.local');
+    await fs.writeFile(
+      envPath,
+      '# Created by Vercel CLI\nEXISTING_VAR="encrypted:123456"\n',
+      'utf8'
+    );
+
+    client.setArgv('env', 'pull');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(envPath, 'utf8');
+    // Should contain the new encrypted value
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="encrypted:');
+    // Should preserve the Created by Vercel CLI header
+    expect(rawDevEnv).toContain('# Created by Vercel CLI');
+  });
+
   describe('[filename]', () => {
     it('tracks filename argument', async () => {
       const project = 'vercel-env-pull';

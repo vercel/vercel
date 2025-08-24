@@ -59,6 +59,7 @@ async function getEncryptionKey(envPath: string): Promise<string | undefined> {
   const keys = dotenvx.parse(await readFile(keysPath, 'utf8'), {
     processEnv: {},
   });
+
   return keys.DOTENV_PRIVATE_KEY;
 }
 
