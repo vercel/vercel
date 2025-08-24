@@ -160,14 +160,36 @@ export async function envPullCommandLogic(
 
   const encrypt = existsSync(join(cwd, '.env.keys'));
 
-  for (const [key, value] of Object.entries(newEnv)) {
+  let backupContent: string | null = null;
+  if (exists) {
     try {
-      dotenvx.set(key, value ?? '', { path: fullPath, encrypt });
+      backupContent = readFileSync(fullPath, 'utf8');
     } catch (error) {
       throw new Error(
-        `Failed to set environment variable ${key}: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to read existing env file for backup at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  // Attempt to set all environment variables atomically
+  try {
+    for (const [key, value] of Object.entries(newEnv)) {
+      dotenvx.set(key, value ?? '', { path: fullPath, encrypt });
+    }
+  } catch (error) {
+    // Restore backup on any failure to ensure atomic operation
+    if (backupContent !== null) {
+      try {
+        await outputFile(fullPath, backupContent, 'utf8');
+      } catch (restoreError) {
+        throw new Error(
+          `Failed to set environment variable and unable to restore backup: ${error instanceof Error ? error.message : String(error)}. Restore error: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`
+        );
+      }
+    }
+    throw new Error(
+      `Failed to set environment variable: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   if (deltaString) {
