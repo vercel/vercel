@@ -338,7 +338,7 @@ describe('env pull', () => {
         'Downloading `development` Environment Variables for'
       );
       await expect(client.stderr).toOutput(
-        '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
+        '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n'
       );
       await expect(client.stderr).toOutput(
         'Updated .env.local file and added it to .gitignore'
@@ -577,7 +577,7 @@ describe('env pull', () => {
     expect(originalContent).toContain('# inline comment here');
     expect(originalContent).toContain('# End of file comment');
     expect(originalContent).toContain(
-      'SPECIAL_FLAG=local-value-different-from-remote'
+      'SPECIAL_FLAG="local-value-different-from-remote"'
     );
     expect(originalContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
 
@@ -606,7 +606,7 @@ describe('env pull', () => {
     expect(updatedContent).toContain('# End of file comment');
 
     // The remote SPECIAL_FLAG=1 should override the local value
-    expect(updatedContent).toContain('SPECIAL_FLAG=1');
+    expect(updatedContent).toContain('SPECIAL_FLAG="1"');
     expect(updatedContent).not.toContain(
       'SPECIAL_FLAG=local-value-different-from-remote'
     );
