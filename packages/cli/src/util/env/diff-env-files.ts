@@ -18,13 +18,15 @@ export async function updateEnvFile(
   updates: Dictionary<string | undefined>
 ): Promise<void> {
   let backupContent: string | null = null;
+
   try {
-    backupContent = await readFile(envPath, 'utf8');
-  } catch (error) {
-    // Continue without backup if file does not exist
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
+    if (existsSync(envPath)) {
+      backupContent = await readFile(envPath, 'utf8');
     }
+  } catch (error) {
+    throw new Error(
+      `Failed to backup existing file: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 
   const privateKey = await getEncryptionKey(envPath);
