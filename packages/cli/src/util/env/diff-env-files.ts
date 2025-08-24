@@ -56,8 +56,10 @@ async function getEncryptionKey(envPath: string): Promise<string | undefined> {
     return undefined;
   }
 
-  const keys = await readFile(keysPath, 'utf8');
-  return dotenvx.parse(keys, { processEnv: {} })['PRIVATE_KEY'];
+  const keys = dotenvx.parse(await readFile(keysPath, 'utf8'), {
+    processEnv: {},
+  });
+  return keys.DOTENV_PRIVATE_KEY;
 }
 
 function findChanges(
