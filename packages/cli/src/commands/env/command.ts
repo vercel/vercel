@@ -166,11 +166,6 @@ export const pullSubcommand = {
       argument: 'NAME',
       deprecated: false,
     },
-    {
-      ...yesOption,
-      description:
-        'Skip the confirmation prompt when removing an environment variable',
-    },
   ],
   examples: [
     {

@@ -35,7 +35,6 @@ async function pullAllEnvFiles(
   await envPullCommandLogic(
     client,
     join('.vercel', environmentFile),
-    !!flags['--yes'],
     environment,
     link,
     flags['--git-branch'],

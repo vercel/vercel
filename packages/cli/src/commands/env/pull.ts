@@ -1,56 +1,30 @@
+import * as dotenvx from '@dotenvx/dotenvx';
+import type { ProjectLinked } from '@vercel-internals/types';
 import chalk from 'chalk';
+import { existsSync, readFileSync } from 'fs';
 import { outputFile } from 'fs-extra';
-import { closeSync, openSync, readSync } from 'fs';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
+import output from '../../output-manager';
 import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
-import param from '../../util/output/param';
-import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { buildDeltaString } from '../../util/env/diff-env-files';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
 } from '../../util/env/get-env-records';
-import {
-  buildDeltaString,
-  createEnvObject,
-} from '../../util/env/diff-env-files';
-import { isErrnoException } from '@vercel/error-utils';
-import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import JSONparse from 'json-parse-better-errors';
-import { formatProject } from '../../util/projects/format-project';
-import type { ProjectLinked } from '@vercel-internals/types';
-import output from '../../output-manager';
-import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
-import { pullSubcommand } from './command';
+import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
+import { getCommandName } from '../../util/pkg-name';
+import { formatProject } from '../../util/projects/format-project';
 import { getLinkedProject } from '../../util/projects/link';
+import { EnvPullTelemetryClient } from '../../util/telemetry/commands/env/pull';
+import { pullSubcommand } from './command';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
-
-function readHeadSync(path: string, length: number) {
-  const buffer = Buffer.alloc(length);
-  const fd = openSync(path, 'r');
-  try {
-    readSync(fd, buffer, 0, buffer.length, null);
-  } finally {
-    closeSync(fd);
-  }
-  return buffer.toString();
-}
-
-function tryReadHeadSync(path: string, length: number) {
-  try {
-    return readHeadSync(path, length);
-  } catch (err: unknown) {
-    if (!isErrnoException(err) || err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-}
 
 const VARIABLES_TO_IGNORE = [
   'VERCEL_ANALYTICS_ID',
@@ -86,11 +60,9 @@ export default async function pull(client: Client, argv: string[]) {
   // handle relative or absolute filename
   const [rawFilename] = args;
   const filename = rawFilename || '.env.local';
-  const skipConfirmation = opts['--yes'];
   const gitBranch = opts['--git-branch'];
 
   telemetryClient.trackCliArgumentFilename(args[0]);
-  telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
 
@@ -117,7 +89,6 @@ export default async function pull(client: Client, argv: string[]) {
   await envPullCommandLogic(
     client,
     filename,
-    !!skipConfirmation,
     environment,
     link,
     gitBranch,
@@ -131,7 +102,6 @@ export default async function pull(client: Client, argv: string[]) {
 export async function envPullCommandLogic(
   client: Client,
   filename: string,
-  skipConfirmation: boolean,
   environment: string,
   link: ProjectLinked,
   gitBranch: string | undefined,
@@ -139,22 +109,7 @@ export async function envPullCommandLogic(
   source: EnvRecordsSource
 ) {
   const fullPath = resolve(cwd, filename);
-  const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
-  const exists = typeof head !== 'undefined';
-
-  if (head === CONTENTS_PREFIX) {
-    output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (
-    exists &&
-    !skipConfirmation &&
-    !(await client.input.confirm(
-      `Found existing file ${param(filename)}. Do you want to overwrite?`,
-      false
-    ))
-  ) {
-    output.log('Canceled');
-    return;
-  }
+  const exists = existsSync(fullPath);
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
@@ -175,29 +130,45 @@ export async function envPullCommandLogic(
   ).env;
 
   let deltaString = '';
-  let oldEnv;
+  let oldEnv: Record<string, string | undefined> = {};
+
   if (exists) {
-    oldEnv = await createEnvObject(fullPath);
-    if (oldEnv) {
-      // Removes any double quotes from `records`, if they exist
-      // We need this because double quotes are stripped from the local .env file,
-      // but `records` is already in the form of a JSON object that doesn't filter
-      // double quotes.
-      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
-      deltaString = buildDeltaString(oldEnv, newEnv);
+    try {
+      const fileContent = readFileSync(fullPath, 'utf8');
+      oldEnv = dotenvx.parse(fileContent, { processEnv: {} });
+    } catch (error) {
+      throw new Error(
+        `Failed to parse existing env file at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  } else {
+    try {
+      await outputFile(fullPath, CONTENTS_PREFIX, 'utf8');
+    } catch (error) {
+      throw new Error(
+        `Failed to create env file at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  const contents =
-    CONTENTS_PREFIX +
-    Object.keys(records)
-      .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
-      .join('\n') +
-    '\n';
+  const newEnv = Object.fromEntries(
+    Object.entries(records).filter(
+      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
+    )
+  );
+  deltaString = buildDeltaString(oldEnv, newEnv);
 
-  await outputFile(fullPath, contents, 'utf8');
+  const encrypt = existsSync(join(cwd, '.env.keys'));
+
+  for (const [key, value] of Object.entries(newEnv)) {
+    try {
+      dotenvx.set(key, value ?? '', { path: fullPath, encrypt });
+    } catch (error) {
+      throw new Error(
+        `Failed to set environment variable ${key}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
 
   if (deltaString) {
     output.print('\n' + deltaString);
@@ -224,12 +195,4 @@ export async function envPullCommandLogic(
       emoji('success')
     )}\n`
   );
-}
-
-function escapeValue(value: string | undefined) {
-  return value
-    ? value
-        .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
-        .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
-    : '';
 }

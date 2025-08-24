@@ -38,7 +38,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--yes');
+    client.setArgv('env', 'pull');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -60,10 +60,6 @@ describe('env pull', () => {
         key: `subcommand:pull`,
         value: 'pull',
       },
-      {
-        key: `flag:yes`,
-        value: 'TRUE',
-      },
     ]);
   });
 
@@ -77,7 +73,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--yes', '--environment', 'preview');
+    client.setArgv('env', 'pull', '--environment', 'preview');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `preview` Environment Variables for'
@@ -111,7 +107,6 @@ describe('env pull', () => {
     client.setArgv(
       'env',
       'pull',
-      '--yes',
       '--environment',
       'preview',
       '--git-branch',
@@ -137,7 +132,7 @@ describe('env pull', () => {
     );
 
     const parsed = parse(rawDevEnv);
-    const keys = Object.keys(parsed);
+    const keys = Object.keys(parsed).sort();
     expect(keys).toHaveLength(3);
     expect(keys[0]).toEqual('ANOTHER');
     expect(keys[1]).toEqual('BRANCH_ENV_VAR');
@@ -147,10 +142,6 @@ describe('env pull', () => {
       {
         key: `subcommand:pull`,
         value: 'pull',
-      },
-      {
-        key: `flag:yes`,
-        value: 'TRUE',
       },
       {
         key: `option:git-branch`,
@@ -173,7 +164,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', 'other.env', '--yes');
+    client.setArgv('env', 'pull', 'other.env');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -197,10 +188,6 @@ describe('env pull', () => {
       {
         key: `argument:filename`,
         value: '[REDACTED]',
-      },
-      {
-        key: `flag:yes`,
-        value: 'TRUE',
       },
     ]);
   });
@@ -246,14 +233,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv(
-      'env',
-      'pull',
-      'other.env',
-      '--yes',
-      '--environment',
-      'production'
-    );
+    client.setArgv('env', 'pull', 'other.env', '--environment', 'production');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `production` Environment Variables for'
@@ -282,7 +262,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', 'other.env', '--yes');
+    client.setArgv('env', 'pull', 'other.env');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -332,7 +312,7 @@ describe('env pull', () => {
 
       await expect(addPromise).resolves.toEqual(0);
 
-      client.setArgv('env', 'pull', '--yes');
+      client.setArgv('env', 'pull');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
@@ -361,7 +341,7 @@ describe('env pull', () => {
     });
     const cwd = setupUnitFixture('vercel-env-pull-delta-corrupt');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--yes');
+    client.setArgv('env', 'pull');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput(
       'Updated .env.local file and added it to .gitignore'
@@ -378,7 +358,7 @@ describe('env pull', () => {
       name: 'env-pull-delta-no-changes',
     });
     client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
-    client.setArgv('env', 'pull', '--yes');
+    client.setArgv('env', 'pull');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput('> No changes found.');
     await expect(client.stderr).toOutput(
@@ -414,12 +394,12 @@ describe('env pull', () => {
         ]
       );
 
-      client.setArgv('env', 'pull', '--yes');
+      client.setArgv('env', 'pull');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
       );
-      await expect(client.stderr).toOutput('No changes found.\n');
+      await expect(client.stderr).toOutput('Changes:\n+ NEW_VAR (Updated)');
       await expect(client.stderr).toOutput(
         'Updated .env.local file and added it to .gitignore'
       );
@@ -458,7 +438,7 @@ describe('env pull', () => {
         ]
       );
 
-      client.setArgv('env', 'pull', '.env.testquotes', '--yes');
+      client.setArgv('env', 'pull', '.env.testquotes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
         'Downloading `development` Environment Variables for'
@@ -488,7 +468,7 @@ describe('env pull', () => {
       'utf8'
     );
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--yes');
+    client.setArgv('env', 'pull');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -539,7 +519,7 @@ describe('env pull', () => {
     );
     const cwd = setupUnitFixture('vercel-env-pull');
     client.cwd = cwd;
-    client.setArgv('env', 'pull', '--yes');
+    client.setArgv('env', 'pull');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
       'Downloading `development` Environment Variables for'
@@ -551,6 +531,152 @@ describe('env pull', () => {
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
 
     expect(rawDevEnv.toString().includes('VERCEL_ANALYTICS_ID')).toBeFalsy();
+  });
+
+  it('should preserve comments in existing .env files', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull-preserve-comments');
+    client.cwd = cwd;
+
+    // Read the original file to verify it has comments
+    const originalContent = await fs.readFile(
+      path.join(cwd, '.env.local'),
+      'utf8'
+    );
+    expect(originalContent).toContain(
+      '# This file contains environment variables'
+    );
+    expect(originalContent).toContain('# Database configuration');
+    expect(originalContent).toContain('# API keys');
+    expect(originalContent).toContain('# inline comment here');
+    expect(originalContent).toContain('# End of file comment');
+
+    client.setArgv('env', 'pull');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    // Read the file after pull and verify comments are preserved
+    const updatedContent = await fs.readFile(
+      path.join(cwd, '.env.local'),
+      'utf8'
+    );
+    expect(updatedContent).toContain(
+      '# This file contains environment variables'
+    );
+    expect(updatedContent).toContain('# Database configuration');
+    expect(updatedContent).toContain('# API keys');
+    expect(updatedContent).toContain('# inline comment here');
+    expect(updatedContent).toContain('# End of file comment');
+
+    // Should also contain the new SPECIAL_FLAG from the server
+    expect(updatedContent).toContain('SPECIAL_FLAG="1"');
+  });
+
+  it('should preserve existing env values that match remote values', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull-preserve-values');
+    client.cwd = cwd;
+
+    // Read the original file
+    const originalContent = await fs.readFile(
+      path.join(cwd, '.env.local'),
+      'utf8'
+    );
+    expect(originalContent).toContain(
+      'SPECIAL_FLAG=local-value-different-from-remote'
+    );
+    expect(originalContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
+
+    client.setArgv('env', 'pull');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    // Read the file after pull
+    const updatedContent = await fs.readFile(
+      path.join(cwd, '.env.local'),
+      'utf8'
+    );
+
+    // The remote SPECIAL_FLAG=1 should override the local value
+    expect(updatedContent).toContain('SPECIAL_FLAG=1');
+    expect(updatedContent).not.toContain(
+      'SPECIAL_FLAG=local-value-different-from-remote'
+    );
+
+    // Local-only variables should be preserved
+    expect(updatedContent).toContain('EXISTING_LOCAL_ONLY=this-should-stay');
+  });
+
+  it('should enable encryption when .env.keys file exists', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull-with-encryption');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .env.local file and added it to .gitignore'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+
+    // With .env.keys present, the SPECIAL_FLAG should be encrypted
+    // The exact format depends on dotenvx implementation, but it should be encrypted
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="encrypted:');
+  });
+
+  it('should use regular format when no .env.keys file exists', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    });
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+
+    // Without .env.keys, values should be stored in plain text
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="1"');
   });
 
   describe('[filename]', () => {

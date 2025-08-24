@@ -1,31 +1,5 @@
 import type { Dictionary } from '@vercel/client';
-import { readFile } from 'fs-extra';
-import { parseEnv } from '../parse-env';
 import chalk from 'chalk';
-import output from '../../output-manager';
-
-export async function createEnvObject(
-  envPath: string
-): Promise<Dictionary<string | undefined> | undefined> {
-  // Originally authored by Tyler Waters under MIT License: https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/lib/parse.js
-  // https://github.com/tswaters/env-file-parser/blob/f17c009b39da599380e069ee72728d1cafdb56b8/LICENSE
-  const envArr = (await readFile(envPath, 'utf-8'))
-    // remove double quotes
-    .replace(/"/g, '')
-    // split on new line
-    .split(/\r?\n|\r/)
-    // filter comments
-    .filter(line => /^[^#]/.test(line))
-    // needs equal sign
-    .filter(line => /=/i.test(line));
-
-  const parsedEnv = parseEnv(envArr);
-  if (Object.keys(parsedEnv).length === 0) {
-    output.debug('Failed to parse env file.');
-    return;
-  }
-  return parsedEnv;
-}
 
 function findChanges(
   oldEnv: Dictionary<string | undefined>,
