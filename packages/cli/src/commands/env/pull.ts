@@ -16,7 +16,7 @@ import {
   buildDeltaString,
   createEnvObject,
   updateEnvFile,
-} from '../../util/env/local-env-files';
+} from '../../util/env/diff-env-files';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -186,17 +186,10 @@ export async function envPullCommandLogic(
 
   let deltaString = '';
   let oldEnv;
-
   if (exists) {
-    try {
-      oldEnv = await createEnvObject(fullPath);
-      if (oldEnv) {
-        deltaString = buildDeltaString(oldEnv, newEnv);
-      }
-    } catch (error) {
-      throw new Error(
-        `Failed to parse existing env file at ${fullPath}: ${error instanceof Error ? error.message : String(error)}`
-      );
+    oldEnv = await createEnvObject(fullPath);
+    if (oldEnv) {
+      deltaString = buildDeltaString(oldEnv, newEnv);
     }
   } else {
     try {

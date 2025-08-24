@@ -1,10 +1,10 @@
 import { describe, beforeEach, expect, it, vi, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { getBlobRWToken } from '../../../../src/util/blob/token';
-import * as envDiffModule from '../../../../src/util/env/local-env-files';
+import * as envDiffModule from '../../../../src/util/env/diff-env-files';
 
 // Mock dependencies
-vi.mock('../../../../src/util/env/local-env-files');
+vi.mock('../../../../src/util/env/diff-env-files');
 
 const mockedCreateEnvObject = vi.mocked(envDiffModule.createEnvObject);
 
