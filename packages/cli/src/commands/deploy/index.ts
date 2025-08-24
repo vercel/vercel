@@ -69,6 +69,7 @@ import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
+import { displayBuildLogs } from '../../util/logs';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -102,6 +103,7 @@ export default async (client: Client): Promise<number> => {
     );
     telemetryClient.trackCliFlagPublic(parsedArguments.flags['--public']);
     telemetryClient.trackCliFlagLogs(parsedArguments.flags['--logs']);
+    telemetryClient.trackCliFlagNoLogs(parsedArguments.flags['--no-logs']);
     telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
     telemetryClient.trackCliFlagWithCache(
       parsedArguments.flags['--with-cache']
@@ -111,6 +113,10 @@ export default async (client: Client): Promise<number> => {
       telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
       output.warn('`--confirm` is deprecated, please use `--yes` instead');
       parsedArguments.flags['--yes'] = parsedArguments.flags['--confirm'];
+    }
+
+    if ('--no-logs' in parsedArguments.flags) {
+      output.warn('`--no-logs` is deprecated and now the default behavior.');
     }
   } catch (error) {
     printError(error);
@@ -463,6 +469,7 @@ export default async (client: Client): Promise<number> => {
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
+  const withLogs = parsedArguments.flags['--logs'] ? true : false;
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -505,7 +512,7 @@ export default async (client: Client): Promise<number> => {
       target,
       skipAutoDetectionConfirmation: autoConfirm,
       noWait,
-      withLogs: parsedArguments.flags['--logs'],
+      withLogs,
       autoAssignCustomDomains,
     };
 
@@ -662,11 +669,33 @@ export default async (client: Client): Promise<number> => {
 
     if (err instanceof BuildError) {
       output.error(err.message || 'Build failed');
-      output.error(
-        `Check your logs at https://${now.url}/_logs or run ${getCommandName(
-          `logs ${now.url}`
-        )}`
-      );
+      output.print('\n');
+      if (withLogs === false) {
+        try {
+          if (now.url) {
+            const failedDeployment = await getDeployment(
+              client,
+              contextName,
+              now.url
+            );
+            const { promise } = displayBuildLogs(
+              client,
+              failedDeployment,
+              false
+            );
+            await promise;
+          }
+        } catch (_) {
+          output.log(
+            `To check build logs run: ${getCommandName(
+              `inspect ${now.url} --logs`
+            )}`
+          );
+          output.log(
+            `Or inspect them in your browser at https://${now.url}/_logs`
+          );
+        }
+      }
 
       return 1;
     }

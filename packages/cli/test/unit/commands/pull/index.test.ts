@@ -133,6 +133,7 @@ describe('pull', () => {
         {
           "orgId": "team_dummy",
           "projectId": "vercel-pull-next",
+          "projectName": "vercel-pull-next",
           "settings": {
             "createdAt": 1555413045188,
           },

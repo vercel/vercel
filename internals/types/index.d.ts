@@ -2,7 +2,7 @@ import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
 import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
-import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
+import type { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
 export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
 export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
@@ -26,12 +26,32 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-export interface AuthConfig {
+interface AuthConfigBase {
   '// Note'?: string;
   '// Docs'?: string;
   token?: string;
   skipWrite?: boolean;
 }
+
+interface LegacyAuthConfig extends AuthConfigBase {
+  /** An Vercel token retrieved using the legacy authentication flow. */
+  token?: string;
+  type?: 'legacy';
+}
+
+interface OAuthAuthConfig extends AuthConfigBase {
+  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
+  token?: string;
+  /**
+   * The absolute time (seconds) when the {@link OAuthAuthConfig.token} expires.
+   * Used to optimistically check if the token is still valid.
+   */
+  expiresAt?: number;
+  refreshToken?: string;
+  type: 'oauth';
+}
+
+type AuthConfig = LegacyAuthConfig | OAuthAuthConfig;
 
 export interface GlobalConfig {
   '// Note'?: string;
@@ -42,11 +62,8 @@ export interface GlobalConfig {
   telemetry?: {
     enabled?: boolean;
   };
-
-  // TODO: legacy - remove
-  updateChannel?: string;
-  desktop?: {
-    teamOrder: any;
+  guidance?: {
+    enabled?: boolean;
   };
 }
 
@@ -376,6 +393,7 @@ export interface Project extends ProjectSettings {
     production?: Deployment;
   };
   customEnvironments?: CustomEnvironment[];
+  rollingRelease?: ProjectRollingRelease;
 }
 
 export interface Org {
@@ -403,6 +421,10 @@ export interface ProjectLink {
    * to the selected project root directory.
    */
   projectRootDirectory?: string;
+  /**
+   * Name of the Vercel Project.
+   */
+  projectName?: string;
 }
 
 export interface PaginationOptions {
@@ -494,6 +516,7 @@ export interface Token {
 
 export interface GitMetadata {
   commitAuthorName?: string | undefined;
+  commitAuthorEmail?: string | undefined;
   commitMessage?: string | undefined;
   commitRef?: string | undefined;
   commitSha?: string | undefined;
@@ -653,4 +676,50 @@ export interface Stdio {
   stdin: ReadableTTY;
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
+}
+export interface ProjectRollingReleaseStage {
+  /** The percentage of traffic to serve to the new deployment */
+  targetPercentage: number;
+  /** duration is the total time to serve a stage, at the given targetPercentage. */
+  duration?: number;
+}
+
+export interface ProjectRollingRelease {
+  enabled: boolean;
+  advancementType: RollingReleaseAdvancementType;
+  stages?: ProjectRollingReleaseStage[] | null;
+}
+
+export type RollingReleaseState = 'ACTIVE' | 'COMPLETE' | 'ABORTED';
+export type RollingReleaseAdvancementType = 'manual-approval' | 'automatic';
+
+export interface RollingReleaseDeploymentSummary {
+  id: string;
+  name: string;
+  url: string;
+  readyState: string;
+  readyStateAt: number;
+  source: string;
+  target: string;
+  createdAt: string;
+}
+export interface RollingReleaseStageSummary {
+  index: number;
+  isFinalStage: boolean;
+  targetPercentage: number;
+  requreApproval: boolean;
+  duration: number | undefined;
+}
+
+export interface RollingReleaseDocument {
+  canaryDeployment: RollingReleaseDeploymentSummary;
+  currentDeployment: RollingReleaseDeploymentSummary;
+  activeStageApproved: boolean;
+  activeStageIndex: number;
+  activeStage: RollingReleaseStageSummary;
+  nextStage: RollingReleaseStageSummary;
+  stages: RollingReleaseDeploymentSummary[];
+  startedAt: number;
+  updatedAt: number;
+  state: RollingReleaseState;
 }

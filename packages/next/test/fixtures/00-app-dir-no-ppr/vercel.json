@@ -74,7 +74,7 @@
       "mustNotContain": "<html",
       "mustContain": ":",
       "headers": {
-        "RSC": 1
+        "rsc": 1
       }
     },
     {
@@ -83,8 +83,8 @@
       "mustNotContain": ".prefetch",
       "mustContain": ":",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -101,8 +101,8 @@
         "x-matched-path": "/nested/blog-fallback-false/first.rsc"
       },
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -114,7 +114,7 @@
         "x-matched-path": "/nested/blog-fallback-false/first.rsc"
       },
       "headers": {
-        "RSC": 1
+        "rsc": 1
       }
     },
     {
@@ -127,8 +127,8 @@
       "status": 200,
       "mustContain": ":",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -142,8 +142,8 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -157,8 +157,8 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -167,7 +167,7 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1
+        "rsc": 1
       }
     },
     {
@@ -181,8 +181,8 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
     {
@@ -191,7 +191,7 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1
+        "rsc": 1
       }
     },
     {
@@ -208,7 +208,7 @@
       "path": "/catch-all",
       "status": 200,
       "headers": {
-        "RSC": 1
+        "rsc": 1
       },
       "mustNotContain": "<html",
       "mustContain": "catch-all"
@@ -217,8 +217,8 @@
       "path": "/catch-all",
       "status": 200,
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       },
       "mustNotContain": "<html",
       "mustContain": ":"
@@ -237,7 +237,7 @@
       "path": "/dynamic/category-1/id-1",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -246,8 +246,8 @@
       "path": "/dynamic/category-1/id-1",
       "status": 200,
       "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1"
+        "rsc": "1",
+        "next-router-prefetch": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component"
@@ -259,15 +259,18 @@
       "path": "/docs/categories/foo?_rsc=f7pci",
       "status": 200,
       "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1"
+        "rsc": "1",
+        "next-router-prefetch": "1"
       },
       "bodyMustBe": "{}"
     },
     {
       "path": "/ssg",
       "status": 200,
-      "mustContain": "hello from /ssg"
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/client-nested",
@@ -275,8 +278,8 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "Next-Router-Prefetch": "1",
-        "RSC": "1"
+        "next-router-prefetch": "1",
+        "rsc": "1"
       },
       "responseHeaders": {
         "content-type": "text/x-component"
@@ -288,14 +291,17 @@
       "mustContain": "hello",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       }
     },
     {
       "path": "/ssg",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -304,11 +310,12 @@
       "path": "/ssg",
       "status": 200,
       "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
         "content-type": "text/x-component"
       },
       "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1"
+        "rsc": "1",
+        "next-router-prefetch": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -336,13 +343,19 @@
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
-      "mustContain": "hello from app/dashboard/deployments/[id]/settings"
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/dashboard/deployments/123/settings",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -350,13 +363,19 @@
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
-      "mustContain": "catchall"
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/dashboard/deployments/catchall/something",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -364,13 +383,16 @@
     {
       "path": "/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -379,10 +401,11 @@
       "path": "/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component"
+        "content-type": "text/x-component",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -429,7 +452,7 @@
       "path": "/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -438,7 +461,7 @@
       "path": "/gsp/one",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -447,7 +470,7 @@
       "path": "/gsp/two",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -461,7 +484,7 @@
         "x-matched-path": "/test-page.rsc"
       },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       }
     },
     {
@@ -473,8 +496,8 @@
         "x-matched-path": "/test-page.rsc"
       },
       "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1"
+        "rsc": "1",
+        "next-router-prefetch": "1"
       }
     },
     {
@@ -482,7 +505,7 @@
       "status": 200,
       "mustContain": "hello world",
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       }
     },
     {
@@ -490,8 +513,8 @@
       "status": 200,
       "mustContain": "hello world",
       "headers": {
-        "RSC": "1",
-        "Next-Router-Prefetch": "1"
+        "rsc": "1",
+        "next-router-prefetch": "1"
       }
     }
   ]

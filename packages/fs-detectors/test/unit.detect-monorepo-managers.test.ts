@@ -7,6 +7,7 @@ describe('monorepo-managers', () => {
   describe.each([
     ['28-turborepo-with-yarn-workspaces', 'turbo'],
     ['31-turborepo-in-package-json', 'turbo'],
+    ['61-turborepo-with-turbo-jsonc', 'turbo'],
     ['22-pnpm', null],
     ['39-nx-monorepo', 'nx'],
     ['40-rush-monorepo', 'rush'],

@@ -9,6 +9,7 @@ import {
   resolve,
   sep,
   parse as parsePath,
+  extname,
 } from 'path';
 import { Project } from 'ts-morph';
 import { nodeFileTrace } from '@vercel/nft';
@@ -27,6 +28,7 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  execCommand,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -37,7 +39,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 import {
@@ -94,6 +96,9 @@ function renameTStoJS(path: string) {
   }
   if (path.endsWith('.tsx')) {
     return path.slice(0, -4) + '.js';
+  }
+  if (path.endsWith('.mts')) {
+    return path.slice(0, -4) + '.mjs';
   }
   return path;
 }
@@ -220,7 +225,8 @@ async function compile(
 
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-            fsPath.endsWith('.tsx')
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -290,6 +296,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mts') &&
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
@@ -360,14 +367,21 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
-export const build: BuildV3 = async ({
+export const build = async ({
   files,
   entrypoint,
+  shim,
+  useWebApi,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}) => {
+  considerBuildCommand = false,
+}: Parameters<BuildV3>[0] & {
+  shim?: (handler: string) => string;
+  useWebApi?: boolean;
+  considerBuildCommand?: boolean;
+}): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -380,19 +394,38 @@ export const build: BuildV3 = async ({
       meta,
     });
 
-  await runPackageJsonScript(
-    entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
-    spawnOpts,
-    config.projectSettings?.createdAt
-  );
+  const projectBuildCommand = config.projectSettings?.buildCommand;
+
+  // For traditional api-folder builds, the `build` script or project build command isn't used.
+  // but we're reusing the node builder for hono and express, where they should be treated as the
+  // primary builder
+  if (projectBuildCommand && considerBuildCommand) {
+    await execCommand(projectBuildCommand, {
+      ...spawnOpts,
+
+      // Yarn v2 PnP mode may be activated, so force
+      // "node-modules" linker style
+      env: {
+        YARN_NODE_LINKER: 'node-modules',
+        ...spawnOpts.env,
+      },
+
+      cwd: workPath,
+    });
+  } else {
+    const possibleScripts = considerBuildCommand
+      ? ['vercel-build', 'now-build', 'build']
+      : ['vercel-build', 'now-build'];
+
+    await runPackageJsonScript(
+      entrypointFsDirname,
+      possibleScripts,
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
+  }
 
   const isMiddleware = config.middleware === true;
-
-  // Will output an `EdgeFunction` for when `config.middleware = true`
-  // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -421,18 +454,11 @@ export const build: BuildV3 = async ({
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
   if (isMiddleware) {
-    if (!isEdgeFunction) {
-      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
-      throw new Error(
-        `Middleware file can not be a Node.js Serverless Function`
-      );
-    }
-
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
@@ -454,6 +480,30 @@ export const build: BuildV3 = async ({
         override: true,
       },
     ];
+  }
+
+  if (shim) {
+    const handlerFilename = basename(handler);
+    const handlerDir = dirname(handler);
+    const extension = extname(handlerFilename);
+    const extMap: Record<string, string> = {
+      '.ts': '.js',
+      '.mts': '.mjs',
+      '.mjs': '.mjs',
+      '.cjs': '.cjs',
+      '.js': '.js',
+    };
+    const ext = extMap[extension];
+    if (!ext) {
+      throw new Error(`Unsupported extension for ${entrypoint}`);
+    }
+    const filename = `shim${ext}`;
+    const shimHandler =
+      handlerDir === '.' ? filename : join(handlerDir, filename);
+    preparedFiles[shimHandler] = new FileBlob({
+      data: shim(handlerFilename),
+    });
+    handler = shimHandler;
   }
 
   if (isEdgeFunction) {
@@ -478,14 +528,35 @@ export const build: BuildV3 = async ({
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers,
+      useWebApi: isMiddleware ? true : useWebApi,
+      shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
+      regions: normalizeRequestedRegions(
+        staticConfig?.preferredRegion ?? staticConfig?.regions
+      ),
     });
   }
 
   return { routes, output };
 };
+
+function normalizeRequestedRegions(
+  regions: BaseFunctionConfig['regions'] | BaseFunctionConfig['preferredRegion']
+): NodejsLambda['regions'] {
+  if (regions === 'all') {
+    return ['all'];
+  } else if (regions === 'auto' || regions === 'default') {
+    return undefined;
+  }
+
+  if (typeof regions === 'string') {
+    return [regions];
+  }
+
+  return regions;
+}

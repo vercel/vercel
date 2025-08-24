@@ -124,6 +124,15 @@ export class TelemetryClient {
     });
   }
 
+  protected trackAgenticUse(agent: string | false) {
+    if (agent) {
+      this.track({
+        key: 'agent',
+        value: agent,
+      });
+    }
+  }
+
   protected trackPlatform() {
     this.track({
       key: 'platform',
@@ -182,16 +191,8 @@ export class TelemetryClient {
     });
   }
 
-  trackCliFlagFuture(command: string, subcommands?: string | string[]) {
-    let subcommand: string | undefined;
-    if (subcommands) {
-      subcommand = Array.isArray(subcommands) ? subcommands[0] : subcommands;
-    }
-
-    this.track({
-      key: 'flag:future',
-      value: subcommand ? `${command}:${subcommand}` : command,
-    });
+  trackCliFlagFuture(command: 'login') {
+    this.track({ key: 'flag:future', value: command });
   }
 }
 

@@ -5,10 +5,6 @@ import { eraseLines } from 'ansi-escapes';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
-import {
-  writeToAuthConfigFile,
-  writeToConfigFile,
-} from '../../util/config/files';
 import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
@@ -17,9 +13,8 @@ import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
   deviceAccessTokenRequest,
-  processDeviceAccessTokenResponse,
+  processTokenResponse,
   isOAuthError,
-  verifyJWT,
 } from '../../util/oauth';
 import o from '../../output-manager';
 
@@ -105,11 +100,10 @@ export async function login(client: Client): Promise<number> {
         `'Device Access Token response:', ${await tokenResponse.clone().text()}`
       );
 
-      const [tokenError, token] =
-        await processDeviceAccessTokenResponse(tokenResponse);
+      const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
-      if (isOAuthError(tokenError)) {
-        const { code } = tokenError;
+      if (isOAuthError(tokensError)) {
+        const { code } = tokensError;
         switch (code) {
           case 'authorization_pending':
             continue;
@@ -120,46 +114,36 @@ export async function login(client: Client): Promise<number> {
             );
             continue;
           default:
-            return tokenError.cause;
+            return tokensError.cause;
         }
       }
 
-      if (tokenError) return tokenError;
+      if (tokensError) return tokensError;
+
+      // If we get here, we throw away any possible token errors like polling, or timeouts
+      error = undefined;
 
       o.print(eraseLines(2));
 
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
 
-      // Save the user's authentication token to the configuration file.
-      client.authConfig.token = token.access_token;
-      error = undefined;
+      client.updateAuthConfig({
+        token: tokens.access_token,
+        type: 'oauth',
+        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+        refreshToken: tokens.refresh_token,
+      });
 
-      const [accessTokenError, accessToken] = await verifyJWT(
-        token.access_token
-      );
-
-      if (accessTokenError) {
-        return accessTokenError;
-      }
-
-      o.debug('access_token verified');
-
-      if (accessToken.team_id) {
-        o.debug('Current team updated');
-        client.config.currentTeam = accessToken.team_id;
-      } else {
-        o.debug('Current team deleted');
-        delete client.config.currentTeam;
-      }
+      client.updateConfig({ currentTeam: undefined });
 
       // If we have a brand new login, update `currentTeam`
       if (isInitialLogin) {
-        await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
+        await updateCurrentTeamAfterLogin(client);
       }
 
-      writeToAuthConfigFile(client.authConfig);
-      writeToConfigFile(client.config);
+      client.writeToAuthConfigFile();
+      client.writeToConfigFile();
 
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 

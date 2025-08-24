@@ -31,6 +31,7 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import {
@@ -1023,14 +1024,17 @@ export const build: BuildV2 = async buildOptions => {
         // /_next
         { handle: 'miss' },
         {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-          ),
+          src: path.posix.join('/', entryDirectory, '_next/static/.+'),
           status: 404,
           check: true,
-          dest: '$0',
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/not-found.txt'
+          ),
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+          },
         },
 
         // Dynamic routes
@@ -1456,13 +1460,34 @@ export const build: BuildV2 = async buildOptions => {
 
     const isAppPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.ppr === true ||
-        requiredServerFilesManifest.config.experimental?.ppr === 'incremental'
+        requiredServerFilesManifest.config.experimental?.ppr ===
+          'incremental' ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
+      : false;
+
+    // When this is true, then it means all routes are PPR enabled.
+    const isAppFullPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
       : false;
 
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
         true
       : false;
+
+    // We read this from the routes manifest instead of the config because we
+    // expect that the flag will be deprecated in the future and the manifest
+    // will be the source of truth.
+    const isAppClientParamParsingEnabled =
+      routesManifest?.rsc?.clientParamParsing ?? false;
+
+    const clientParamParsingOrigins = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental
+          ?.clientParamParsingOrigins
+      : undefined;
 
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
@@ -1520,7 +1545,10 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
+        isAppClientParamParsingEnabled,
+        clientParamParsingOrigins,
       });
     }
 
@@ -1648,7 +1676,6 @@ export const build: BuildV2 = async buildOptions => {
       );
 
       for (const page of mergedPageKeys) {
-        const tracedFiles: { [key: string]: FileFsRef } = {};
         const fileList = parentFilesMap.get(
           path.relative(baseDir, pages[page].fsPath)
         );
@@ -1660,16 +1687,16 @@ export const build: BuildV2 = async buildOptions => {
         }
         const reasons = result.reasons;
 
-        await Promise.all(
-          Array.from(fileList).map(
-            collectTracedFiles(
-              baseDir,
-              lstatResults,
-              lstatSema,
-              reasons,
-              tracedFiles
+        const tracedFiles: {
+          [filePath: string]: FileFsRef;
+        } = Object.fromEntries(
+          (
+            await Promise.all(
+              Array.from(fileList).map(
+                collectTracedFiles(baseDir, lstatResults, lstatSema, reasons)
+              )
             )
-          )
+          ).filter((entry): entry is [string, FileFsRef] => !!entry)
         );
         pageTraces[page] = tracedFiles;
       }
@@ -1961,7 +1988,12 @@ export const build: BuildV2 = async buildOptions => {
               '___next_launcher.cjs'
             )]: new FileBlob({ data: launcher }),
           };
-          let lambdaOptions: { memory?: number; maxDuration?: number } = {};
+          let lambdaOptions: {
+            architecture?: NodejsLambda['architecture'];
+            memory?: number;
+            maxDuration?: number;
+            experimentalTriggers?: TriggerEvent[];
+          } = {};
 
           if (config && config.functions) {
             lambdaOptions = await getLambdaOptionsFromFunction({
@@ -2041,7 +2073,9 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
-      isAppClientSegmentCacheEnabled: false,
+      isAppClientParamParsingEnabled,
+      isAppClientSegmentCacheEnabled,
+      prerenderManifest,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -2072,7 +2106,9 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientParamParsingEnabled: false,
         isAppClientSegmentCacheEnabled: false,
+        prerenderManifest,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2270,11 +2306,10 @@ export const build: BuildV2 = async buildOptions => {
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      // The following flags are not supported in this version of the builder.
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
-      // Relevant Next.js versions will be handled by server-build.ts, which
-      // does correctly configure this variable.
-      shouldSkipVaryHeader: false,
+      isAppClientParamParsingEnabled: false,
     });
 
     await Promise.all(
@@ -2667,14 +2702,13 @@ export const build: BuildV2 = async buildOptions => {
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
       {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-        ),
+        src: path.join('/', entryDirectory, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: '$0',
+        dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files

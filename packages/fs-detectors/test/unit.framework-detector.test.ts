@@ -90,6 +90,16 @@ describe('DetectorFilesystem', () => {
     expect(readFileSpy).not.toHaveBeenCalled();
   });
 
+  it('should ignore nested potential files for caching', async () => {
+    const files = {
+      'package.json': '{}',
+      'packages/app1/package.json': '{}',
+    };
+    const fs = new VirtualFilesystem(files);
+    await fs.readdir('packages', { potentialFiles: ['app1/package.json'] });
+    expect(await fs.hasPath('packages/app1/package.json')).toEqual(true);
+  });
+
   it('should be able to change directories', async () => {
     const nextPackageJson = JSON.stringify({
       dependencies: {
@@ -557,6 +567,80 @@ describe('detectFrameworks()', () => {
       f => f.slug
     );
     expect(slugs).toEqual(['remix']);
+  });
+
+  describe('Hono', () => {
+    const importSyntaxes = [
+      'import { Hono } from "hono"',
+      "import { Hono } from 'hono'",
+      'const H = require("hono")',
+      'const H = require("hono")',
+      'import("hono")',
+    ];
+
+    const filePaths = ['index.ts', 'index.js', 'src/index.ts', 'src/index.js'];
+
+    // Test each import syntax with each file path
+    importSyntaxes.forEach(syntax => {
+      filePaths.forEach(filePath => {
+        it(`Should detect Hono with syntax "${syntax}" in ${filePath}`, async () => {
+          const fs = new VirtualFilesystem({
+            'package.json': JSON.stringify({
+              dependencies: {
+                hono: 'latest',
+              },
+            }),
+            [filePath]: syntax,
+          });
+
+          const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+            f => f.slug
+          );
+          expect(slugs).toEqual(['hono']);
+        });
+      });
+    });
+
+    it('Should not detect Hono without the package', async () => {
+      const fs = new VirtualFilesystem({
+        'package.json': JSON.stringify({
+          dependencies: {},
+        }),
+        'index.ts': 'import { Hono } from "hono"',
+      });
+
+      const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+        f => f.slug
+      );
+      expect(slugs).toEqual([]);
+    });
+
+    // Test false positives - should not detect Hono
+    const falsePositiveCases = [
+      // Variable names containing "hono"
+      'const hono = "something"',
+      'let hono = "web framework"',
+      'var hono = "framework"',
+      'const myHono = "app"',
+      'const honoApp = "application"',
+      'const appHono = "server"',
+    ];
+
+    falsePositiveCases.forEach((code, index) => {
+      it(`Should not detect Hono in false positive case ${index + 1}: "${code.substring(0, 50)}..."`, async () => {
+        const fs = new VirtualFilesystem({
+          'package.json': JSON.stringify({
+            dependencies: {},
+          }),
+          'index.ts': code,
+        });
+
+        const slugs = (await detectFrameworks({ fs, frameworkList })).map(
+          f => f.slug
+        );
+        expect(slugs).toEqual([]);
+      });
+    });
   });
 
   it('Should detect "hydrogen" template as `hydrogen`', async () => {

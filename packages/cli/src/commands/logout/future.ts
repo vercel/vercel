@@ -1,19 +1,15 @@
 import { errorToString } from '@vercel/error-utils';
 import type Client from '../../util/client';
-import {
-  writeToAuthConfigFile,
-  writeToConfigFile,
-} from '../../util/config/files';
 import { getCommandName } from '../../util/pkg-name';
 import { revocationRequest, processRevocationResponse } from '../../util/oauth';
 import o from '../../output-manager';
 
 export async function logout(client: Client): Promise<number> {
-  const { config, authConfig } = client;
+  const { authConfig } = client;
 
   if (!authConfig.token) {
     o.note(
-      `Not currently logged in, so ${getCommandName('logout --future')} did nothing`
+      `Not currently logged in, so ${getCommandName('logout')} did nothing`
     );
     return 0;
   }
@@ -35,17 +31,12 @@ export async function logout(client: Client): Promise<number> {
     logoutError = true;
   }
 
-  delete config.currentTeam;
-
-  // The new user might have completely different teams, so
-  // we should wipe the order.
-  if (config.desktop) delete config.desktop.teamOrder;
-
-  delete authConfig.token;
-
   try {
-    writeToConfigFile(config);
-    writeToAuthConfigFile(authConfig);
+    client.updateConfig({ currentTeam: undefined });
+    client.writeToConfigFile();
+
+    client.emptyAuthConfig();
+    client.writeToAuthConfigFile();
     o.debug('Configuration has been deleted');
 
     if (!logoutError) {

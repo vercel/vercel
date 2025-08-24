@@ -5,7 +5,7 @@
 [See our Firewall docs for detailed documentation of @vercel/firewall.](https://vercel.com/docs/vercel-waf/rate-limiting-sdk)
 
 ```ts
-import { unstable_checkRateLimit as checkRateLimit } from '@vercel/firewall';
+import { checkRateLimit } from '@vercel/firewall';
 
 export async function POST() {
   const { rateLimited } = await checkRateLimit('my-rate-limit-id');

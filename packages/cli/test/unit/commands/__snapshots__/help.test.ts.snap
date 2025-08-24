@@ -3767,6 +3767,7 @@ exports[`help command > project help output snapshots > project list help output
 
   Options:
 
+       --json             Output in JSON format                                                                              
   -N,  --next <MS>        Show next page of results                                                                          
        --update-required  A list of projects affected by an upcoming deprecation                                             
 
@@ -3789,6 +3790,10 @@ exports[`help command > project help output snapshots > project list help output
   - Paginate projects, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel project ls --next 1584722256178
+
+  - List projects using a deprecated Node.js version in JSON format
+
+    $ vercel project ls --update-required --json
 
 "
 `;

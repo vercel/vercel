@@ -665,73 +665,150 @@ describe('deploy', () => {
     });
   });
 
-  it('should print and follow build logs while deploying', async () => {
-    const user = useUser();
-    useTeams('team_dummy');
-    useProject({
-      ...defaultProject,
-      name: 'node',
-      id: 'QmbKpqpiUqbcke',
-    });
-    const deployment = useDeployment({ creator: user, state: 'BUILDING' });
-    deployment.aliasAssigned = false;
-    client.scenario.post(`/v13/deployments`, (req, res) => {
-      res.json(
-        res.json({
-          creator: {
-            uid: user.id,
-            username: user.username,
-          },
-          id: deployment.id,
-          readyState: deployment.readyState,
-          aliasAssigned: false,
-          alias: [],
-        })
-      );
-    });
-    useBuildLogs({
-      deployment,
-      logProducer: async function* () {
-        yield { created: 1717426870339, text: 'Hello, world!' };
-        await sleep(100);
-        yield { created: 1717426870439, text: 'slow...' };
-        await sleep(100);
-        yield { created: 1717426870540, text: 'Bye...' };
-      },
-    });
+  describe('build logs', () => {
+    let deployment: ReturnType<typeof useDeployment>;
 
-    let exitCode: number | undefined;
-    const runCommand = async () => {
-      const repoRoot = setupUnitFixture('commands/deploy/node');
-      client.cwd = repoRoot;
-      client.setArgv('deploy', '--logs');
-      exitCode = await deploy(client);
-    };
-
+    const outputLine1 = 'Hello, world!';
+    const outputLine2 = 'slow...';
+    const outputLine3 = 'Bye...';
     const slowlyDeploy = async () => {
       await sleep(500);
       deployment.readyState = 'READY';
       deployment.aliasAssigned = true;
     };
 
-    await Promise.all<void>([runCommand(), slowlyDeploy()]);
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'node',
+        id: 'QmbKpqpiUqbcke',
+      });
+      deployment = useDeployment({ creator: user, state: 'BUILDING' });
+      deployment.aliasAssigned = false;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json(
+          res.json({
+            creator: {
+              uid: user.id,
+              username: user.username,
+            },
+            id: deployment.id,
+            readyState: deployment.readyState,
+            aliasAssigned: false,
+            alias: [],
+          })
+        );
+      });
+      client.scenario.get(`/v9/projects/:id`, (_req, res) => {
+        res.json({
+          ...defaultProject,
+          name: 'node',
+          id: 'QmbKpqpiUqbcke',
+        });
+      });
+      useBuildLogs({
+        deployment,
+        logProducer: async function* () {
+          yield { created: 1717426870339, text: 'Hello, world!' };
+          await sleep(100);
+          yield { created: 1717426870439, text: 'slow...' };
+          await sleep(100);
+          yield { created: 1717426870540, text: 'Bye...' };
+        },
+      });
+    });
 
-    // remove first 3 lines which contains randomized data
-    expect(client.getFullOutput().split('\n').slice(3).join('\n'))
-      .toMatchInlineSnapshot(`
-        "Building
-        2024-06-03T15:01:10.339Z  Hello, world!
-        2024-06-03T15:01:10.439Z  slow...
-        2024-06-03T15:01:10.540Z  Bye...
-        "
-      `);
-    expect(exitCode).toEqual(0);
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      {
-        key: 'flag:logs',
-        value: 'TRUE',
-      },
-    ]);
+    it('should print and follow build logs while deploying with --logs', async () => {
+      let exitCode: number | undefined;
+      const runCommand = async () => {
+        const repoRoot = setupUnitFixture('commands/deploy/node');
+        client.cwd = repoRoot;
+        client.setArgv('deploy', '--logs');
+        exitCode = await deploy(client);
+      };
+
+      const slowlyDeploy = async () => {
+        await sleep(500);
+        deployment.readyState = 'READY';
+        deployment.aliasAssigned = true;
+      };
+
+      await Promise.all<void>([runCommand(), slowlyDeploy()]);
+
+      const outputLines = client.getFullOutput().split('\n');
+
+      // remove first 3 lines which contain warning and randomized data
+      expect(outputLines.slice(3).join('\n')).toMatchInlineSnapshot(`
+          "Building
+          2024-06-03T15:01:10.339Z  ${outputLine1}
+          2024-06-03T15:01:10.439Z  ${outputLine2}
+          2024-06-03T15:01:10.540Z  ${outputLine3}
+          "
+        `);
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:logs',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should not print and follow build logs while deploying by default', async () => {
+      let exitCode: number | undefined;
+      const runCommand = async () => {
+        const repoRoot = setupUnitFixture('commands/deploy/node');
+        client.cwd = repoRoot;
+        client.setArgv('deploy');
+        exitCode = await deploy(client);
+      };
+
+      await Promise.all<void>([runCommand(), slowlyDeploy()]);
+
+      // remove first 3 lines which contains randomized data
+      expect(client.getFullOutput().split('\n').slice(3).join('\n'))
+        .toMatchInlineSnapshot(`
+          "Building
+          Building
+          Completing
+          "
+        `);
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should not print and follow build logs while deploying with --no-logs', async () => {
+      let exitCode: number | undefined;
+      const runCommand = async () => {
+        const repoRoot = setupUnitFixture('commands/deploy/node');
+        client.cwd = repoRoot;
+        client.setArgv('deploy', '--no-logs');
+        exitCode = await deploy(client);
+      };
+
+      const slowlyDeploy = async () => {
+        await sleep(500);
+        deployment.readyState = 'READY';
+        deployment.aliasAssigned = true;
+      };
+
+      await Promise.all<void>([runCommand(), slowlyDeploy()]);
+
+      const output = client.getFullOutput();
+
+      expect(output).not.toContain(outputLine1);
+      expect(output).not.toContain(outputLine2);
+      expect(output).not.toContain(outputLine3);
+
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:no-logs',
+          value: 'TRUE',
+        },
+      ]);
+    });
   });
 
   describe('calls createDeploy with the appropriate arguments', () => {
@@ -1243,6 +1320,11 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Want to modify these settings?');
         client.stdin.write('\n');
 
+        await expect(client.stderr).toOutput(
+          'Do you want to change additional project settings?'
+        );
+        client.stdin.write('\n');
+
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
       });
@@ -1276,6 +1358,11 @@ describe('deploy', () => {
         client.stdin.write('\n');
 
         await expect(client.stderr).toOutput('Want to modify these settings?');
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput(
+          'Do you want to change additional project settings?'
+        );
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;

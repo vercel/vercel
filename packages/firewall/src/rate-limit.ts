@@ -26,7 +26,7 @@
  * ```
  *
  */
-export async function unstable_checkRateLimit(
+export async function checkRateLimit(
   rateLimitId: string,
   options?: {
     /** The host name on which the rate limit rules are defined */
@@ -65,7 +65,8 @@ export async function unstable_checkRateLimit(
   if (!requestHeaders && isUsingNextJs) {
     const { headers } = await import('next/headers');
     try {
-      requestHeaders = headers();
+      // await for next.js >15
+      requestHeaders = await headers();
     } catch {
       // Ignore
     }
@@ -147,6 +148,8 @@ export async function unstable_checkRateLimit(
     `Unexpected rate-limit API response status '${rateLimitId}': ${response.status}`
   );
 }
+
+export { checkRateLimit as unstable_checkRateLimit };
 
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();

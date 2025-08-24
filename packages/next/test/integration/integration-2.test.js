@@ -422,7 +422,7 @@ it('should handle edge functions in app with basePath', async () => {
   expect(output['test/test.rsc'].type).toBe('EdgeFunction');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('Prerender');
 
   const lambdas = new Set();
   const edgeFunctions = new Set();
@@ -434,7 +434,7 @@ it('should handle edge functions in app with basePath', async () => {
       edgeFunctions.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(0);
   expect(edgeFunctions.size).toBe(4);
 });
 
@@ -449,7 +449,7 @@ it('should not generate lambdas that conflict with static index route in app wit
   expect(output['test/index.rsc'].type).toBe('Prerender');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('Prerender');
 
   const lambdas = new Set();
 
@@ -458,7 +458,7 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(0);
 });
 
 describe('PPR', () => {
@@ -544,7 +544,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
@@ -564,7 +564,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     // Validate that these two lambdas are the same.
     expect(output['chat/index']).toBeDefined();
@@ -609,24 +609,22 @@ describe('rewrite headers', () => {
     routes = output.buildResult.routes;
   });
 
-  it('should add rewrite headers before the original rewrite', () => {
+  it('should add rewrite headers to the original rewrite', () => {
     let route = routes.filter(r => r.src?.includes('/hello/sam'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/hello/samantha',
       'x-nextjs-rewritten-query': undefined,
     });
-    expect(route[1].headers).toBeUndefined();
   });
 
   it('should add rewrite query headers', () => {
     let route = routes.filter(r => r.src?.includes('/hello/fred'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/other',
       'x-nextjs-rewritten-query': 'key=value',
     });
-    expect(route[1].headers).toBeUndefined();
   });
 
   it('should not add external rewrite headers', () => {
@@ -637,40 +635,11 @@ describe('rewrite headers', () => {
 
   it('should strip the hash from the rewritten path', () => {
     const route = routes.filter(r => r.src?.includes('suffix'));
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/$1',
       'x-nextjs-rewritten-query': 'suffix=$1',
     });
-  });
-
-  it('should not add rewrite headers when it is excluded with missing', () => {
-    const route = routes.filter(r => r.src?.includes('missing'));
-    expect(route.length).toBe(1);
-    expect(route[0].headers).toBeUndefined();
-  });
-
-  it('should combine has rules', () => {
-    const route = routes.filter(r => r.src?.includes('/hello/has'));
-    expect(route.length).toBe(2);
-    expect(route[0].headers).toEqual({
-      'x-nextjs-rewritten-path': '/other',
-      'x-nextjs-rewritten-query': undefined,
-    });
-    expect(route[0].has).toEqual([
-      {
-        type: 'header',
-        key: 'x-other-header',
-        value: 'other-value',
-      },
-      {
-        type: 'header',
-        key: 'rsc',
-        value: '1',
-      },
-    ]);
-
-    expect(route[1].headers).toBeUndefined();
   });
 });
 
@@ -683,24 +652,16 @@ describe('rewrite headers with rewrite', () => {
     routes = output.buildResult.routes;
   });
 
-  it('should add rewrite headers before the original rewrite', () => {
+  it('should add rewrite headers to the original rewrite', () => {
     let route = routes.filter(
       r => r.src === '^(?:/(en|fi|sv|fr|nb))(?:/)?(?<rscsuff>\\.rsc)?$'
     );
-    expect(route.length).toBe(2);
+    expect(route.length).toBe(1);
 
-    // Header without the actual rewrite.
     expect(route[0].headers).toEqual({
       'x-nextjs-rewritten-path': '/$1/landing',
       'x-nextjs-rewritten-query': undefined,
     });
-    expect(route[0].continue).toBe(true);
-    expect(route[0].check).toBeUndefined();
-
-    // Actual rewrite.
-    expect(route[1].headers).toBeUndefined();
-    expect(route[1].continue).toBeUndefined();
-    expect(route[1].check).toBe(true);
   });
 });
 
@@ -751,5 +712,31 @@ describe('cache-control', () => {
 
     expect(outputEntry.expiration).toBe(false);
     expect(outputEntry.staleExpiration).toBeUndefined();
+  });
+});
+
+describe('action-headers', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-actions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should add action name meta routes', async () => {
+    const foundActionNames = [];
+
+    for (const route of buildResult.routes || []) {
+      if (route.has?.[0].key === 'next-action' && route.transforms) {
+        foundActionNames.push(route.transforms[0].args);
+      }
+    }
+    expect(foundActionNames.length).toBe(5);
+    expect(foundActionNames.sort()).toMatchSnapshot();
   });
 });

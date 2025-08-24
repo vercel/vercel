@@ -119,6 +119,13 @@ export const deployCommand = {
       description: 'Print the build logs',
     },
     {
+      name: 'no-logs',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+      description: 'Do not print the build logs',
+    },
+    {
       name: 'name',
       shorthand: 'n',
       type: String,

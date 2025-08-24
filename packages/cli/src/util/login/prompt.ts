@@ -6,13 +6,14 @@ import type { LoginResult, SAMLError } from './types';
 import doSamlLogin from './saml';
 import doEmailLogin from './email';
 import doGithubLogin from './github';
+import doGoogleLogin from './google';
 import doGitlabLogin from './gitlab';
 import doBitbucketLogin from './bitbucket';
 import output from '../../output-manager';
 
 export default async function prompt(
   client: Client,
-  error?: Pick<SAMLError, 'teamId'>,
+  error?: Pick<SAMLError, 'teamId' | 'scope'>,
   outOfBand?: boolean,
   ssoUserId?: string
 ) {
@@ -20,6 +21,7 @@ export default async function prompt(
 
   const choices = [
     { name: 'Continue with GitHub', value: 'github', short: 'github' },
+    { name: 'Continue with Google', value: 'google', short: 'google' },
     { name: 'Continue with GitLab', value: 'gitlab', short: 'gitlab' },
     { name: 'Continue with Bitbucket', value: 'bitbucket', short: 'bitbucket' },
     { name: 'Continue with Email', value: 'email', short: 'email' },
@@ -37,7 +39,9 @@ export default async function prompt(
     choices,
   });
 
-  if (choice === 'github') {
+  if (choice === 'google') {
+    result = await doGoogleLogin(client, outOfBand, ssoUserId);
+  } else if (choice === 'github') {
     result = await doGithubLogin(client, outOfBand, ssoUserId);
   } else if (choice === 'gitlab') {
     result = await doGitlabLogin(client, outOfBand, ssoUserId);
@@ -48,7 +52,9 @@ export default async function prompt(
     result = await doEmailLogin(client, email, ssoUserId);
   } else if (choice === 'saml') {
     const slug =
-      error?.teamId || (await readInput(client, 'Enter your Team slug:'));
+      error?.scope ||
+      error?.teamId ||
+      (await readInput(client, 'Enter your Team slug:'));
     result = await doSamlLogin(client, slug, outOfBand, ssoUserId);
   }
 

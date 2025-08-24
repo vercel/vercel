@@ -29,7 +29,7 @@
       "mustContain": "index app page",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1
+        "rsc": 1
       }
     },
     {
@@ -38,11 +38,11 @@
       "mustContain": ":",
       "mustNotContain": "<html",
       "headers": {
-        "RSC": 1,
-        "Next-Router-Prefetch": 1
+        "rsc": 1,
+        "next-router-prefetch": 1
       }
     },
-
+    
     {
       "path": "/hello/world/dashboard/hello",
       "status": 200,
@@ -57,7 +57,7 @@
       "path": "/hello/world/dynamic/category-1/id-1",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -65,13 +65,19 @@
     {
       "path": "/hello/world/ssg",
       "status": 200,
-      "mustContain": "hello from /ssg"
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/hello/world/ssg",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -99,13 +105,19 @@
     {
       "path": "/hello/world/dashboard/deployments/123/settings",
       "status": 200,
-      "mustContain": "hello from app/dashboard/deployments/[id]/settings"
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/hello/world/dashboard/deployments/123/settings",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -113,13 +125,19 @@
     {
       "path": "/hello/world/dashboard/deployments/catchall/something",
       "status": 200,
-      "mustContain": "catchall"
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/hello/world/dashboard/deployments/catchall/something",
       "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -127,13 +145,16 @@
     {
       "path": "/hello/world/dashboard",
       "status": 200,
-      "mustContain": "hello from app/dashboard"
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
     },
     {
       "path": "/hello/world/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
@@ -142,10 +163,11 @@
       "path": "/hello/world/dashboard",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "responseHeaders": {
-        "content-type": "text/x-component"
+        "content-type": "text/x-component",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
       }
     },
     {
@@ -192,7 +214,7 @@
       "path": "/hello/world/",
       "status": 200,
       "headers": {
-        "RSC": "1"
+        "rsc": "1"
       },
       "mustContain": ":{",
       "mustNotContain": "<html"
