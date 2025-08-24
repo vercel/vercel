@@ -3,14 +3,22 @@ import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { existsSync, outputFile, readFile } from 'fs-extra';
 import { dirname, join } from 'path';
+import output from '../../output-manager';
 
 export async function createEnvObject(
   envPath: string
 ): Promise<Dictionary<string | undefined> | undefined> {
-  const content = await readFile(envPath, 'utf-8');
-  const privateKey = await getEncryptionKey(envPath);
+  try {
+    const content = await readFile(envPath, 'utf-8');
+    const privateKey = await getEncryptionKey(envPath);
 
-  return dotenvx.parse(content, { processEnv: {}, privateKey });
+    return dotenvx.parse(content, { processEnv: {}, privateKey });
+  } catch (error) {
+    output.debug(
+      `Failed to parse env file: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return undefined;
+  }
 }
 
 export async function updateEnvFile(
@@ -58,11 +66,16 @@ async function getEncryptionKey(envPath: string): Promise<string | undefined> {
     return undefined;
   }
 
-  const keys = dotenvx.parse(await readFile(keysPath, 'utf8'), {
-    processEnv: {},
-  });
-
-  return keys.DOTENV_PRIVATE_KEY;
+  try {
+    const content = await readFile(keysPath, 'utf8');
+    const keys = dotenvx.parse(content, { processEnv: {} });
+    return keys.DOTENV_PRIVATE_KEY;
+  } catch (error) {
+    output.debug(
+      `Failed to read encryption key from ${keysPath}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return undefined;
+  }
 }
 
 function findChanges(
