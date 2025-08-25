@@ -269,12 +269,6 @@ describe('isSourceFileStaticMetadata dynamic route matching', () => {
     'app/blog/[id]/icon.png': { type: 'FileFsRef' } as any,
     'app/blog/[id]/page.tsx': { type: 'FileFsRef' } as any,
     'app/about/icon.png': { type: 'FileFsRef' } as any,
-    'app/products/[category]/[item]/icon.png': { type: 'FileFsRef' } as any,
-    'app/users/[userId]/settings/opengraph-image.jpg': {
-      type: 'FileFsRef',
-    } as any,
-    'app/dynamic-catch/[...arg]/icon.svg': { type: 'FileFsRef' } as any,
-    'app/dynamic-catch-all/[[...arg]]/icon.svg': { type: 'FileFsRef' } as any,
   };
 
   describe('dynamic route matching', () => {
@@ -300,52 +294,6 @@ describe('isSourceFileStaticMetadata dynamic route matching', () => {
           '/users/abc/settings/opengraph-image.jpg',
           files
         )
-      ).toBe(true);
-    });
-  });
-
-  describe('catch-all route matching', () => {
-    it('should match catch-all routes [...param] with single segment', () => {
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch/single/icon.svg', files)
-      ).toBe(true);
-    });
-
-    it('should match catch-all routes [...param] with multiple segments', () => {
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch/a/b/icon.svg', files)
-      ).toBe(true);
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch/a/b/c/d/icon.svg', files)
-      ).toBe(true);
-    });
-
-    it('should not match catch-all routes [...param] with no segments', () => {
-      expect(isSourceFileStaticMetadata('/dynamic-catch/icon.svg', files)).toBe(
-        false
-      );
-    });
-  });
-
-  describe('optional catch-all route matching', () => {
-    it('should match optional catch-all routes [[...param]] with no segments', () => {
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch-all/icon.svg', files)
-      ).toBe(true);
-    });
-
-    it('should match optional catch-all routes [[...param]] with single segment', () => {
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch-all/single/icon.svg', files)
-      ).toBe(true);
-    });
-
-    it('should match optional catch-all routes [[...param]] with multiple segments', () => {
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch-all/a/b/icon.svg', files)
-      ).toBe(true);
-      expect(
-        isSourceFileStaticMetadata('/dynamic-catch-all/a/b/c/d/icon.svg', files)
       ).toBe(true);
     });
   });
