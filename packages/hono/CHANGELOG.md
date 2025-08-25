@@ -1,5 +1,12 @@
 # @vercel/hono
 
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`0985931965d9ba8f2a0198f34a4a4838c341769a`](https://github.com/vercel/vercel/commit/0985931965d9ba8f2a0198f34a4a4838c341769a)]:
+  - @vercel/node@5.3.15
+
 ## 0.0.15
 
 ### Patch Changes
