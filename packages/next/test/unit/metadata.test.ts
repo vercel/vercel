@@ -1,4 +1,8 @@
-import { isStaticMetadataRoute } from '../../src/metadata';
+import { Files } from '@vercel/build-utils';
+import {
+  isStaticMetadataRoute,
+  isSourceFileStaticMetadata,
+} from '../../src/metadata';
 
 describe('isStaticMetadataRoute', () => {
   describe('robots.txt', () => {
@@ -8,8 +12,8 @@ describe('isStaticMetadataRoute', () => {
     });
 
     it('should not match robots.txt with additional path segments', () => {
-      expect(isStaticMetadataRoute('/folder/robots.txt')).toBe(false);
       expect(isStaticMetadataRoute('/robots.txt/extra')).toBe(false);
+      expect(isStaticMetadataRoute('/folder/robots.txt')).toBe(false);
     });
   });
 
@@ -256,6 +260,99 @@ describe('isStaticMetadataRoute', () => {
     it('should not match empty or invalid paths', () => {
       expect(isStaticMetadataRoute('')).toBe(false);
       expect(isStaticMetadataRoute('/')).toBe(false);
+    });
+  });
+});
+
+describe('isSourceFileStaticMetadata dynamic route matching', () => {
+  const files: Files = {
+    'app/blog/[id]/icon.png': { type: 'FileFsRef' } as any,
+    'app/blog/[id]/page.tsx': { type: 'FileFsRef' } as any,
+    'app/about/icon.png': { type: 'FileFsRef' } as any,
+    'app/products/[category]/[item]/icon.png': { type: 'FileFsRef' } as any,
+    'app/users/[userId]/settings/opengraph-image.jpg': {
+      type: 'FileFsRef',
+    } as any,
+  };
+
+  describe('dynamic route matching', () => {
+    it('should match single dynamic segment', () => {
+      expect(isSourceFileStaticMetadata('/blog/1/icon.png', files)).toBe(true);
+      expect(isSourceFileStaticMetadata('/blog/123/icon.png', files)).toBe(
+        true
+      );
+      expect(isSourceFileStaticMetadata('/blog/abc/icon.png', files)).toBe(
+        true
+      );
+    });
+
+    it('should match deeply nested dynamic routes', () => {
+      expect(
+        isSourceFileStaticMetadata(
+          '/users/123/settings/opengraph-image.jpg',
+          files
+        )
+      ).toBe(true);
+      expect(
+        isSourceFileStaticMetadata(
+          '/users/abc/settings/opengraph-image.jpg',
+          files
+        )
+      ).toBe(true);
+    });
+  });
+
+  describe('static route matching', () => {
+    it('should match static routes', () => {
+      expect(isSourceFileStaticMetadata('/about/icon.png', files)).toBe(true);
+    });
+  });
+
+  describe('non-matching cases', () => {
+    it('should not match routes with extra segments', () => {
+      expect(isSourceFileStaticMetadata('/blog/1/2/icon.png', files)).toBe(
+        false
+      );
+      expect(
+        isSourceFileStaticMetadata(
+          '/products/electronics/laptop/extra/favicon.ico',
+          files
+        )
+      ).toBe(false);
+    });
+
+    it('should not match routes with missing segments', () => {
+      expect(isSourceFileStaticMetadata('/blog/icon.png', files)).toBe(false);
+      expect(isSourceFileStaticMetadata('/products/favicon.ico', files)).toBe(
+        false
+      );
+    });
+
+    it('should not match unknown routes', () => {
+      expect(isSourceFileStaticMetadata('/unknown/icon.png', files)).toBe(
+        false
+      );
+      expect(isSourceFileStaticMetadata('/blog/1/unknown.png', files)).toBe(
+        false
+      );
+    });
+
+    it('should not match non-metadata files', () => {
+      expect(isSourceFileStaticMetadata('/blog/1/page.tsx', files)).toBe(false);
+    });
+  });
+
+  describe('with group suffix handling', () => {
+    it('should match dynamic routes with group suffix', () => {
+      expect(isSourceFileStaticMetadata('/blog/1/icon.png-abc123', files)).toBe(
+        true
+      );
+      expect(
+        isSourceFileStaticMetadata(
+          '/products/electronics/laptop/icon.png-xyz789',
+          files
+        )
+      ).toBe(true);
     });
   });
 });

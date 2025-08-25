@@ -52,7 +52,7 @@ import {
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
-import { isStaticMetadataRoute } from './metadata';
+import { getContentTypeFromFile, isSourceFileStaticMetadata } from './metadata';
 
 type stringMap = { [key: string]: string };
 
@@ -78,59 +78,6 @@ const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
 function isDynamicRoute(route: string): boolean {
   route = route.startsWith('/') ? route : `/${route}`;
   return TEST_DYNAMIC_ROUTE.test(route);
-}
-
-/**
- * Check if a route is a static metadata route and has corresponding source file
- */
-function getContentTypeFromFile(fileRef: File): string | undefined {
-  if (!fileRef || !('fsPath' in fileRef)) {
-    return undefined;
-  }
-
-  const ext = path.extname(fileRef.fsPath).slice(1);
-  switch (ext) {
-    case 'ico':
-      return 'image/x-icon';
-    case 'png':
-      return 'image/png';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'gif':
-      return 'image/gif';
-    case 'svg':
-      return 'image/svg+xml';
-    case 'txt':
-      return 'text/plain';
-    case 'xml':
-      return 'application/xml';
-    case 'json':
-      return 'application/json';
-    case 'webmanifest':
-      return 'application/manifest+json';
-    default:
-      break;
-  }
-  return undefined;
-}
-
-function isSourceFileStaticMetadata(route: string, files: Files): boolean {
-  const pathname = route.replace(/\/route$/, '');
-  const isMetadataPattern = isStaticMetadataRoute(pathname);
-
-  if (isMetadataPattern) {
-    // strip the suffix from pathname
-    const normalizedPathname = pathname.replace(/-\w{6}$/, '');
-    // A set of files in relative paths of source files
-    // app/page.tsx app/icon.svg
-    const filesSet = new Set(Object.keys(files));
-    const hasStaticSourceFile = filesSet.has(`app${normalizedPathname}`);
-
-    return hasStaticSourceFile;
-  }
-
-  return false;
 }
 
 /**

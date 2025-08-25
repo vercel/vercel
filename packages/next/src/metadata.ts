@@ -1,3 +1,6 @@
+import path from 'path';
+import { type File, type Files } from '@vercel/build-utils';
+
 const STATIC_METADATA_IMAGES = {
   icon: {
     filename: 'icon',
@@ -44,4 +47,89 @@ export function isStaticMetadataRoute(pathname: string) {
   const matched = metadataRouteFilesRegex.some(r => r.test(pathname));
 
   return matched;
+}
+
+/**
+ * Check if a route pattern matches a given pathname
+ * e.g. /blog/[id]/icon.png matches /blog/1/icon.png
+ */
+function matchesRoute(pattern: string, pathname: string): boolean {
+  // Convert pattern like /blog/[id]/icon.png to regex
+  const regexPattern = pattern
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex characters first
+    .replace(/\\\[([^\]]+)\\\]/g, '([^/]+)'); // Replace escaped [param] with capture groups
+
+  const regex = new RegExp(`^${regexPattern}$`);
+  return regex.test(pathname);
+}
+
+/**
+ * Check if a route is a static metadata route and has corresponding source file
+ */
+export function getContentTypeFromFile(fileRef: File): string | undefined {
+  if (!fileRef || !('fsPath' in fileRef)) {
+    return undefined;
+  }
+
+  const ext = path.extname(fileRef.fsPath).slice(1);
+  switch (ext) {
+    case 'ico':
+      return 'image/x-icon';
+    case 'png':
+      return 'image/png';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'svg':
+      return 'image/svg+xml';
+    case 'txt':
+      return 'text/plain';
+    case 'xml':
+      return 'application/xml';
+    case 'json':
+    case 'webmanifest':
+      return 'application/manifest+json';
+    default:
+      break;
+  }
+  return undefined;
+}
+
+export function isSourceFileStaticMetadata(
+  route: string,
+  files: Files
+): boolean {
+  const pathname = route.replace(/\/route$/, '');
+  const isMetadataPattern = isStaticMetadataRoute(pathname);
+
+  if (isMetadataPattern) {
+    // strip the suffix from pathname
+    const normalizedPathname = pathname.replace(/-\w{6}$/, '');
+    // A set of files in relative paths of source files
+    // app/page.tsx app/icon.svg
+    const filesSet = new Set(Object.keys(files));
+    const targetPath = `app${normalizedPathname}`;
+    const hasStaticSourceFile = filesSet.has(targetPath);
+
+    if (hasStaticSourceFile) {
+      return true;
+    }
+
+    // Check for dynamic route matches
+    // e.g. /blog/1/icon.png should match /blog/[id]/icon.png
+    for (const filePath of filesSet) {
+      if (
+        filePath.startsWith('app/') &&
+        matchesRoute(`${filePath.slice(3)}`, normalizedPathname)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  return false;
 }
