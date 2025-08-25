@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 2.0.2
+
+### Patch Changes
+
+- fix "Cannot find module" error caused by dynamically importing files without their extensions ([#13815](https://github.com/vercel/vercel/pull/13815))
+
 ## 2.0.1
 
 ### Patch Changes

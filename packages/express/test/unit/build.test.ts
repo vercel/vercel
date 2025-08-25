@@ -128,6 +128,10 @@ const fixtures: Record<
       outputDirectory: 'dist',
     },
   },
+  '14-app-js-no-module': {
+    handler: ['app.js'],
+    moduleType: 'cjs',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];

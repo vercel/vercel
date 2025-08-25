@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.8.1
+
+### Patch Changes
+
+- Add support for app.js as a server entrypoint ([#13798](https://github.com/vercel/vercel/pull/13798))
+
 ## 3.8.0
 
 ### Minor Changes
