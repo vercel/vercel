@@ -36,13 +36,12 @@ export default async function logout(client: Client): Promise<number> {
     return 0;
   }
 
-  function filterDeprecated(flag: string) {
+  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
     const option =
       logoutCommand.options[flag as keyof typeof logoutCommand.options];
     if (typeof option === 'number') return;
     return 'deprecated' in option && option.deprecated;
-  }
-  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(filterDeprecated);
+  });
 
   if (obsoleteFlags.length) {
     const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
