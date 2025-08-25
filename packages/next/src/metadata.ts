@@ -7,10 +7,6 @@ const STATIC_METADATA_IMAGES = {
     filename: 'apple-icon',
     extensions: ['jpg', 'jpeg', 'png'],
   },
-  favicon: {
-    filename: 'favicon',
-    extensions: ['ico'],
-  },
   openGraph: {
     filename: 'opengraph-image',
     extensions: ['jpg', 'jpeg', 'png', 'gif'],
@@ -29,8 +25,8 @@ export function isStaticMetadataRoute(pathname: string) {
   const metadataRouteFilesRegex = [
     new RegExp(`^[\\\\/]robots\\.txt$`),
     new RegExp(`^[\\\\/]manifest\\.(webmanifest|json)$`),
-    new RegExp(`^[\\\\/]favicon\\.ico$`),
     new RegExp(`[\\\\/]sitemap\\.xml$`),
+    new RegExp(`^[\\\\/]favicon\\.ico$`),
     new RegExp(
       `[\\\\/]${STATIC_METADATA_IMAGES.icon.filename}${suffixMatcher}${`\\.(?:${STATIC_METADATA_IMAGES.icon.extensions.join('|')})`}${groupSuffix}$`
     ),
