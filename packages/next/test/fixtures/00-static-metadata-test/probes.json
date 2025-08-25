@@ -49,7 +49,7 @@
       "path": "/manifest.json",
       "status": 200,
       "responseHeaders": {
-        "content-type": "application/json"
+        "content-type": "application/manifest+json"
       },
       "mustContain": "My Next.js Application"
     },
