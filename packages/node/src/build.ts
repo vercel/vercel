@@ -46,7 +46,7 @@ import type {
   BuildResultV3,
 } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
-import { build as rolldownBuild } from 'rolldown';
+import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
 
 import { Register, register } from './typescript';
 import {
@@ -462,7 +462,7 @@ export const build = async ({
     );
     preparedFiles = rolldownResult.preparedFiles;
     shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
-    handler = rolldownResult.handler;
+    // handler = rolldownResult.handler;
   } else {
     debug('Tracing input files...');
     const traceTime = Date.now();
@@ -621,41 +621,64 @@ async function rolldownCompile(
 
   const extension = format === 'esm' ? 'mjs' : 'js';
 
+  const externalPathPlugin: RolldownPlugin = {
+    name: 'external-path-transformer',
+    // moduleParsed(info) {
+    //   info.importedIds = info.importedIds.map(id => {
+    //     if (id.includes('node_modules')) {
+    //       return relative(workPath, id);
+    //     }
+    //     return id;
+    //   });
+    //   console.log('moduleParsed', info);
+    //   // return info;
+    // },
+    // writeBundle(a) {
+    //   console.log('writeBundle', a);
+    // },
+    // load(id) {
+    //   console.log('load', id);
+    //   return null;
+    // },
+    // augmentChunkHash(a) {
+    //   console.dir(a.imports, { depth: 6 });
+    //   a
+    //   return '';
+    // },
+    // resolveId(source: string, importer: string | undefined) {
+    //   console.log('resolveId', source, importer);
+    //   // Only process node_modules imports
+    //   // if (source.includes('node_modules')) {
+    //   //   // Transform the full path to a relative one from workPath
+    //   //   const relativePath = relative(workPath, source);
+    //   //   console.log(`Transforming external path: ${source} -> ${relativePath}`);
+    //   //   return relativePath;
+    //   // }
+    //   return null; // Let rolldown handle other imports normally
+    // },
+  };
+
   // Build with rolldown
   await rolldownBuild({
     input: entrypointPath,
     cwd: workPath,
     platform: 'node',
-    // Setting this value, the source files will rewrite the import as the full path (eg. /Users/jeff/code/.etc)
-    // So instead we're including them in the chunking process so they're rewritten to the output directory
-    // external: /node_modules/,
+    external: /node_modules/,
+    makeAbsoluteExternalsRelative: true, // or "ifRelativeSource"
+    plugins: [externalPathPlugin], // Add your custom plugin
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
       format,
-      entryFileNames: `[name].${extension}`,
-      chunkFileNames: `[name].${extension}`,
-      advancedChunks: {
-        // We don't want to include dependencies recursively, because we're rewriting the imports to the output directory
-        // And want each to have their own "chunk"
-        includeDependenciesRecursively: false,
-        groups: [
-          {
-            name: id => {
-              const path = id.slice(workPath.length + 1);
-              return join(
-                workPath,
-                '.vercel',
-                'output',
-                'functions',
-                'index.func',
-                path
-              );
-            },
-          },
-        ],
-      },
+      preserveModules: true,
     },
   });
+
+  // for (const file of fileList) {
+  //   const fsPath = resolve(workPath, file);
+  //   const { mode } = lstatSync(fsPath);
+  //   const source = readFileSync(fsPath);
+  //   preparedFiles[file] = new FileBlob({ data: source, mode });
+  // }
 
   // Process includeFiles if specified
   if (config.includeFiles) {
