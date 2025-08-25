@@ -52,6 +52,7 @@ import {
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
+import { isStaticMetadataRoute } from './metadata';
 
 type stringMap = { [key: string]: string };
 
@@ -77,6 +78,51 @@ const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
 function isDynamicRoute(route: string): boolean {
   route = route.startsWith('/') ? route : `/${route}`;
   return TEST_DYNAMIC_ROUTE.test(route);
+}
+
+/**
+ * Check if a route is a static metadata route and has corresponding source file
+ */
+function getContentTypeFromFile(fileRef: any): string | undefined {
+  if (!fileRef || !fileRef.fsPath) {
+    return undefined;
+  }
+
+  const ext = path.extname(fileRef.fsPath).slice(1);
+  switch (ext) {
+    case 'ico':
+      return 'image/x-icon';
+    case 'png':
+      return 'image/png';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'svg':
+      return 'image/svg+xml';
+    default:
+      break;
+  }
+  return undefined;
+}
+
+function isSourceFileStaticMetadata(route: string, files: Files): boolean {
+  const pathname = route.replace(/\/route$/, '');
+  const isMetadataPattern = isStaticMetadataRoute(pathname);
+
+  if (isMetadataPattern) {
+    // strip the suffix from pathname
+    const normalizedPathname = pathname.replace(/-\w{6}$/, '');
+    // A set of files in relative paths of source files
+    // app/page.tsx app/icon.svg
+    const filesSet = new Set(Object.keys(files));
+    const hasStaticSourceFile = filesSet.has(`app${normalizedPathname}`);
+
+    return hasStaticSourceFile;
+  }
+
+  return false;
 }
 
 /**
@@ -2316,6 +2362,7 @@ type OnPrerenderRouteArgs = {
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
   isAppClientParamParsingEnabled: boolean;
+  files: Record<string, any>;
 };
 let prerenderGroup = 1;
 
@@ -2355,6 +2402,7 @@ export const onPrerenderRoute =
       isAppPPREnabled,
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
+      files,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2922,37 +2970,47 @@ export const onPrerenderRoute =
         }
       }
 
-      prerenders[outputPathPage] = new Prerender({
-        expiration: initialRevalidate,
-        staleExpiration: initialExpire,
-        lambda,
-        allowQuery: htmlAllowQuery,
-        fallback: htmlFallbackFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-        experimentalBypassFor,
-        initialStatus,
-        initialHeaders,
-        sourcePath,
-        experimentalStreamingLambdaPath,
-        chain,
-        allowHeader,
+      // If this is a static metadata file that should output FileRef instead of Prerender
+      if (
+        htmlFallbackFsRef &&
+        isSourceFileStaticMetadata(srcRoute || outputPathPage, files)
+      ) {
+        const contentType = getContentTypeFromFile(htmlFallbackFsRef);
+        htmlFallbackFsRef.contentType = contentType;
+        prerenders[outputPathPage] = htmlFallbackFsRef;
+      } else {
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          staleExpiration: initialExpire,
+          lambda,
+          allowQuery: htmlAllowQuery,
+          fallback: htmlFallbackFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+          experimentalBypassFor,
+          initialStatus,
+          initialHeaders,
+          sourcePath,
+          experimentalStreamingLambdaPath,
+          chain,
+          allowHeader,
 
-        ...(isNotFound
-          ? {
-              initialStatus: 404,
-            }
-          : {}),
+          ...(isNotFound
+            ? {
+                initialStatus: 404,
+              }
+            : {}),
 
-        ...(rscEnabled
-          ? {
-              initialHeaders: {
-                ...initialHeaders,
-                vary: rscVaryHeader,
-              },
-            }
-          : {}),
-      });
+          ...(rscEnabled
+            ? {
+                initialHeaders: {
+                  ...initialHeaders,
+                  vary: rscVaryHeader,
+                },
+              }
+            : {}),
+        });
+      }
 
       const normalizePathData = (pathData: string) => {
         if (
@@ -3289,18 +3347,18 @@ export async function getStaticFiles(
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
-    staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
-      nextStaticFiles[file];
+    const outputPath = path.posix.join(entryDirectory, `_next/static/${file}`);
+    staticFiles[outputPath] = nextStaticFiles[file];
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
-    staticDirectoryFiles[path.posix.join(entryDirectory, 'static', file)] =
-      staticFolderFiles[file];
+    const outputPath = path.posix.join(entryDirectory, 'static', file);
+    staticDirectoryFiles[outputPath] = staticFolderFiles[file];
   }
 
   for (const file of Object.keys(publicFolderFiles)) {
-    publicDirectoryFiles[path.posix.join(entryDirectory, file)] =
-      publicFolderFiles[file];
+    const outputPath = path.posix.join(entryDirectory, file);
+    publicDirectoryFiles[outputPath] = publicFolderFiles[file];
   }
 
   console.timeEnd(collectLabel);
