@@ -83,8 +83,8 @@ function isDynamicRoute(route: string): boolean {
 /**
  * Check if a route is a static metadata route and has corresponding source file
  */
-function getContentTypeFromFile(fileRef: any): string | undefined {
-  if (!fileRef || !fileRef.fsPath) {
+function getContentTypeFromFile(fileRef: File): string | undefined {
+  if (!fileRef || !('fsPath' in fileRef)) {
     return undefined;
   }
 
@@ -101,6 +101,14 @@ function getContentTypeFromFile(fileRef: any): string | undefined {
       return 'image/gif';
     case 'svg':
       return 'image/svg+xml';
+    case 'txt':
+      return 'text/plain';
+    case 'xml':
+      return 'application/xml';
+    case 'json':
+      return 'application/json';
+    case 'webmanifest':
+      return 'application/manifest+json';
     default:
       break;
   }
