@@ -79,35 +79,26 @@ function matchesRoute(pattern: string, pathname: string): boolean {
 /**
  * Check if a route is a static metadata route and has corresponding source file
  */
+const CONTENT_TYPE_MAP: Record<string, string> = {
+  ico: 'image/x-icon',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  txt: 'text/plain',
+  xml: 'application/xml',
+  json: 'application/manifest+json',
+  webmanifest: 'application/manifest+json',
+};
+
 export function getContentTypeFromFile(fileRef: File): string | undefined {
   if (!fileRef || !('fsPath' in fileRef)) {
     return undefined;
   }
 
   const ext = path.extname(fileRef.fsPath).slice(1);
-  switch (ext) {
-    case 'ico':
-      return 'image/x-icon';
-    case 'png':
-      return 'image/png';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'gif':
-      return 'image/gif';
-    case 'svg':
-      return 'image/svg+xml';
-    case 'txt':
-      return 'text/plain';
-    case 'xml':
-      return 'application/xml';
-    case 'json':
-    case 'webmanifest':
-      return 'application/manifest+json';
-    default:
-      break;
-  }
-  return undefined;
+  return CONTENT_TYPE_MAP[ext];
 }
 
 export function isSourceFileStaticMetadata(
