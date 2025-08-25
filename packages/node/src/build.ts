@@ -29,6 +29,7 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  normalizePath,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -477,10 +478,12 @@ export const build = async ({
    * to set the entrypoint to the output directory if it's specified.
    */
   if (config.projectSettings?.outputDirectory) {
-    const outputDirFiles = await glob(
-      '**/*',
-      join(workPath, config.projectSettings.outputDirectory)
+    const outputDirPath = join(
+      workPath,
+      config.projectSettings.outputDirectory
     );
+    const normalizedOutputDirPath = normalizePath(outputDirPath);
+    const outputDirFiles = await glob('**/*', normalizedOutputDirPath);
     const outputDirEntrypoint = entrypointCallback?.(outputDirFiles);
     if (outputDirEntrypoint) {
       const outputDirEntrypointPath = join(
