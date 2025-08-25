@@ -472,7 +472,7 @@ export const build = async ({
   }
 
   /**
-   * Even if the project handles the build proces, we still want to run the output
+   * Even if the project handles the build process, we still want to run the output
    * through our compiler so it can be processed by NFT. The code below allows us
    * to set the entrypoint to the output directory if it's specified.
    */
