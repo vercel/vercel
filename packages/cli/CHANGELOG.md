@@ -1,5 +1,17 @@
 # vercel
 
+## 46.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`0985931965d9ba8f2a0198f34a4a4838c341769a`](https://github.com/vercel/vercel/commit/0985931965d9ba8f2a0198f34a4a4838c341769a)]:
+  - @vercel/next@4.12.1
+  - @vercel/node@5.3.15
+  - @vercel/redwood@2.3.5
+  - @vercel/remix-builder@5.4.11
+  - @vercel/express@0.0.8
+  - @vercel/hono@0.0.16
+
 ## 46.0.3
 
 ### Patch Changes
