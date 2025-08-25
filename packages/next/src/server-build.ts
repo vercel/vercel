@@ -112,6 +112,7 @@ export async function serverBuild({
   config = {},
   functionsConfigManifest,
   privateOutputs,
+  files,
   baseDir,
   workPath,
   entryPath,
@@ -194,6 +195,7 @@ export async function serverBuild({
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
+  files: Files;
   /**
    * When this is true, then it means all routes are PPR enabled. PPR is not
    * enabled in incremental mode and all routes will be prerendered.
@@ -1620,6 +1622,7 @@ export async function serverBuild({
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
     isAppClientParamParsingEnabled,
+    files,
   });
 
   await Promise.all(
