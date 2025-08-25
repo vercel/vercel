@@ -59,6 +59,5 @@ export default async function login(client: Client): Promise<number> {
     );
   }
 
-  telemetry.trackCliFlagFuture('login');
   return await future(client);
 }
