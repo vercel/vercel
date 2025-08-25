@@ -2980,11 +2980,14 @@ export const onPrerenderRoute =
 
       // If this is a static metadata file that should output FileRef instead of Prerender
       if (
+        routeKey &&
         htmlFallbackFsRef &&
-        isSourceFileStaticMetadata(srcRoute || outputPathPage, files)
+        isSourceFileStaticMetadata(routeKey, files)
       ) {
         const contentType = getContentTypeFromFile(htmlFallbackFsRef);
-        htmlFallbackFsRef.contentType = contentType;
+        if (contentType) {
+          htmlFallbackFsRef.contentType = contentType;
+        }
         prerenders[outputPathPage] = htmlFallbackFsRef;
       } else {
         prerenders[outputPathPage] = new Prerender({
