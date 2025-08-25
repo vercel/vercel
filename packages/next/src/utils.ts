@@ -2922,37 +2922,51 @@ export const onPrerenderRoute =
         }
       }
 
-      prerenders[outputPathPage] = new Prerender({
-        expiration: initialRevalidate,
-        staleExpiration: initialExpire,
-        lambda,
-        allowQuery: htmlAllowQuery,
-        fallback: htmlFallbackFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-        experimentalBypassFor,
-        initialStatus,
-        initialHeaders,
-        sourcePath,
-        experimentalStreamingLambdaPath,
-        chain,
-        allowHeader,
+      const bodyFilePath = appDir
+        ? path.join(appDir, `${routeFileNoExt}.body`)
+        : null;
+      if (
+        isMetadataRoute(routeFileNoExt) &&
+        bodyFilePath &&
+        fs.existsSync(bodyFilePath)
+      ) {
+        prerenders[outputPathPage] = new FileFsRef({
+          fsPath: bodyFilePath,
+          contentType: getMetadataContentType(routeFileNoExt),
+        });
+      } else {
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          staleExpiration: initialExpire,
+          lambda,
+          allowQuery: htmlAllowQuery,
+          fallback: htmlFallbackFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+          experimentalBypassFor,
+          initialStatus,
+          initialHeaders,
+          sourcePath,
+          experimentalStreamingLambdaPath,
+          chain,
+          allowHeader,
 
-        ...(isNotFound
-          ? {
-              initialStatus: 404,
-            }
-          : {}),
+          ...(isNotFound
+            ? {
+                initialStatus: 404,
+              }
+            : {}),
 
-        ...(rscEnabled
-          ? {
-              initialHeaders: {
-                ...initialHeaders,
-                vary: rscVaryHeader,
-              },
-            }
-          : {}),
-      });
+          ...(rscEnabled
+            ? {
+                initialHeaders: {
+                  ...initialHeaders,
+                  vary: rscVaryHeader,
+                },
+              }
+            : {}),
+        });
+      }
 
       const normalizePathData = (pathData: string) => {
         if (
@@ -4262,6 +4276,47 @@ export async function getVariantsManifest(
     await fs.readJSON(pathVariantsManifest);
 
   return variantsManifest;
+}
+
+export function isMetadataRoute(routeFileNoExt: string): boolean {
+  const metadataPatterns = [
+    /\/robots\.(txt)$/,
+    /\/manifest\.(webmanifest|json)$/,
+    /\/favicon\.ico$/,
+    /\/sitemap\.xml$/,
+    /\/icon\d?(-\w{6})?\.(ico|jpg|jpeg|png|svg)$/,
+    /\/apple-icon\d?(-\w{6})?\.(jpg|jpeg|png)$/,
+    /\/opengraph-image\d?(-\w{6})?\.(jpg|jpeg|png|gif)$/,
+    /\/twitter-image\d?(-\w{6})?\.(jpg|jpeg|png|gif)$/,
+  ];
+
+  return metadataPatterns.some(pattern => pattern.test(routeFileNoExt));
+}
+
+const contentTypeMap: Record<string, string> = {
+  '.xml': 'application/xml',
+  '.txt': 'text/plain',
+  '.webmanifest': 'application/manifest+json',
+  '.json': 'application/json',
+  '.ico': 'image/x-icon',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+};
+
+export function getMetadataContentType(metadataRoute: string): string {
+  const extension = path.extname(metadataRoute);
+  const contentType = contentTypeMap[extension];
+
+  if (!contentType) {
+    throw new Error(
+      `Invalid extension for metadata route was given: ${JSON.stringify({ route: metadataRoute, extension })}`
+    );
+  }
+
+  return contentType;
 }
 
 export async function getServerlessPages(params: {

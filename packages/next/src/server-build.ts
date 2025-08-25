@@ -56,6 +56,7 @@ import {
   getPostponeResumeOutput,
   getNodeMiddleware,
   getServerActionMetaRoutes,
+  isMetadataRoute,
 } from './utils';
 import { INTERNAL_PAGES } from './constants';
 import {
@@ -1536,6 +1537,14 @@ export async function serverBuild({
     const edgeFunctions = middleware.edgeFunctions;
 
     for (const page of Object.values(appPathRoutesManifest)) {
+      // Skip RSC generation for metadata routes
+      if (isMetadataRoute(page)) {
+        const bodyFilePath = appDir ? path.join(appDir, `${page}.body`) : null;
+        if (bodyFilePath && fs.existsSync(bodyFilePath)) {
+          continue;
+        }
+      }
+
       const pathname = path.posix.join(
         './',
         entryDirectory,
