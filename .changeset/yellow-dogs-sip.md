@@ -5,4 +5,4 @@
 "@vercel/remix-builder": patch
 ---
 
-[next][node][redwood][remix] bump `sharp@0.30.1`
+[next][node][redwood][remix] bump `@vercel/nft@0.30.1`
