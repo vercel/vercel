@@ -39,6 +39,8 @@ module.exports = function setupTests(groupIndex) {
   }
 
   const fixturesToSkip = [
+    // not available on AL2023
+    'zola-v0',
     // https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
     'ember-v3',
     '53-native-gems',

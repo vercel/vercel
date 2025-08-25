@@ -1,12 +1,15 @@
 {
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "node build.js"
   },
   "dependencies": {
-    "puppeteer": "20.8.2"
+    "@sparticuz/chromium": "^138.0.2",
+    "puppeteer": "24.16.2",
+    "puppeteer-core": "^24.17.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
