@@ -1,0 +1,49 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index"
+    },
+    {
+      "path": "/foo",
+      "status": 200,
+      "mustContain": "foo"
+    },
+    {
+      "path": "/favicon.ico",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/x-icon"
+      }
+    },
+    {
+      "path": "/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/twitter-image.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    },
+    {
+      "path": "/foo/icon.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    },
+    {
+      "path": "/opengraph-image.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    }
+  ]
+}
