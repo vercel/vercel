@@ -53,7 +53,13 @@ export default async function login(client: Client): Promise<number> {
     return 2;
   }
 
-  const obsoleteFlags = Object.keys(parsedArgs.flags);
+  function filterDeprecated(flag: string) {
+    const option =
+      loginCommand.options[flag as keyof typeof loginCommand.options];
+    if (typeof option === 'number') return;
+    return 'deprecated' in option && option.deprecated;
+  }
+  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(filterDeprecated);
 
   if (obsoleteFlags.length) {
     const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
