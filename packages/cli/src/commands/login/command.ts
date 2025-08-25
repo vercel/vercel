@@ -7,7 +7,7 @@ export const loginCommand = {
   arguments: [
     {
       name: 'email or team id',
-      required: true,
+      required: false,
     },
   ],
   options: [
