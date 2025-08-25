@@ -479,15 +479,31 @@ async function checkTurboSupportsCorepack(
   if (turboVersionSpecifierSupportsCorepack(turboVersionRange)) {
     return true;
   }
+
+  // Check for both turbo.json and turbo.jsonc
   const turboJsonPath = path.join(rootDir, 'turbo.json');
-  const turboJsonExists = await fs.pathExists(turboJsonPath);
+  const turboJsoncPath = path.join(rootDir, 'turbo.jsonc');
+  const [turboJsonExists, turboJsoncExists] = await Promise.all([
+    fs.pathExists(turboJsonPath),
+    fs.pathExists(turboJsoncPath),
+  ]);
 
   let turboJson: null | unknown = null;
+  let turboConfigPath: string | null = null;
+
   if (turboJsonExists) {
+    turboConfigPath = turboJsonPath;
+  } else if (turboJsoncExists) {
+    turboConfigPath = turboJsoncPath;
+  }
+
+  if (turboConfigPath) {
     try {
-      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+      turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
     } catch (err) {
-      console.warn(`WARNING: Failed to parse turbo.json`);
+      console.warn(
+        `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
+      );
     }
   }
 
