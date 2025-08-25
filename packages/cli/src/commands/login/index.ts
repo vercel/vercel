@@ -1,35 +1,29 @@
-import { validate as validateEmail } from 'email-validator';
-import chalk from 'chalk';
-import hp from '../../util/humanize-path';
 import { parseArguments } from '../../util/get-args';
-import prompt from '../../util/login/prompt';
-import doSamlLogin from '../../util/login/saml';
-import doEmailLogin from '../../util/login/email';
-import doGithubLogin from '../../util/login/github';
-import doGitlabLogin from '../../util/login/gitlab';
-import doBitbucketLogin from '../../util/login/bitbucket';
-import { prependEmoji, emoji } from '../../util/emoji';
-import { getCommandName } from '../../util/pkg-name';
-import getGlobalPathConfig from '../../util/config/global-path';
-import {
-  writeToAuthConfigFile,
-  writeToConfigFile,
-} from '../../util/config/files';
 import type Client from '../../util/client';
-import type { LoginResult } from '../../util/login/types';
 import { help } from '../help';
 import { loginCommand } from './command';
-import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
-import { login as future } from './future';
+import chalk from 'chalk';
+import readline from 'node:readline';
+import * as open from 'open';
+import { eraseLines } from 'ansi-escapes';
+import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
+import getGlobalPathConfig from '../../util/config/global-path';
+import { getCommandName } from '../../util/pkg-name';
+import { emoji } from '../../util/emoji';
+import hp from '../../util/humanize-path';
+import {
+  deviceAuthorizationRequest,
+  processDeviceAuthorizationResponse,
+  deviceAccessTokenRequest,
+  processTokenResponse,
+  isOAuthError,
+} from '../../util/oauth';
 
 export default async function login(client: Client): Promise<number> {
-  // user is not currently authenticated on this machine
-  const isInitialLogin = !client.authConfig.token;
-
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
@@ -48,11 +42,6 @@ export default async function login(client: Client): Promise<number> {
     return 1;
   }
 
-  if (parsedArgs.flags['--future']) {
-    telemetry.trackCliFlagFuture('login');
-    return await future(client);
-  }
-
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
@@ -64,63 +53,178 @@ export default async function login(client: Client): Promise<number> {
     return 2;
   }
 
-  const input = parsedArgs.args[1];
+  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
+    const option =
+      loginCommand.options[flag as keyof typeof loginCommand.options];
+    if (typeof option === 'number') return;
+    return 'deprecated' in option && option.deprecated;
+  });
 
-  let result: LoginResult = 1;
+  if (obsoleteFlags.length) {
+    const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
+    output.warn(`The following flags are deprecated: ${flags}`);
+  }
 
-  if (input) {
-    // Email or Team slug was provided via command line
-    if (validateEmail(input)) {
-      result = await doEmailLogin(client, input);
-    } else {
-      result = await doSamlLogin(client, input, parsedArgs.flags['--oob']);
+  const obsoleteArguments = parsedArgs.args.slice(1);
+  if (obsoleteArguments.length) {
+    const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
+    output.warn(`The following arguments are deprecated: ${args}`);
+  }
+
+  if (obsoleteArguments.length || obsoleteFlags.length) {
+    output.print(
+      // TODO: fix link
+      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog')}.\n`
+    );
+  }
+
+  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
+
+  output.debug(
+    `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`
+  );
+
+  const [deviceAuthorizationError, deviceAuthorization] =
+    await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
+
+  if (deviceAuthorizationError) {
+    printError(deviceAuthorizationError);
+    return 1;
+  }
+
+  const {
+    device_code,
+    user_code,
+    verification_uri,
+    verification_uri_complete,
+    expiresAt,
+    interval,
+  } = deviceAuthorization;
+
+  const rl = readline
+    .createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+    // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
+    .on('SIGINT', () => process.exit(0));
+
+  rl.question(
+    `
+  Visit ${chalk.bold(
+    output.link(
+      verification_uri.replace('https://', ''),
+      verification_uri_complete,
+      { color: false, fallback: () => verification_uri_complete }
+    )
+  )}${output.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
+  ${chalk.grey('Press [ENTER] to open the browser')}
+`,
+    () => {
+      open.default(verification_uri_complete);
+      output.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
+      output.spinner('Waiting for authentication...');
+      rl.close();
     }
-  } else if (parsedArgs.flags['--github']) {
-    result = await doGithubLogin(client, parsedArgs.flags['--oob']);
-  } else if (parsedArgs.flags['--gitlab']) {
-    result = await doGitlabLogin(client, parsedArgs.flags['--oob']);
-  } else if (parsedArgs.flags['--bitbucket']) {
-    result = await doBitbucketLogin(client, parsedArgs.flags['--oob']);
-  } else {
-    // Interactive mode
-    result = await prompt(client, undefined, parsedArgs.flags['--oob']);
-  }
-
-  // The login function failed, so it returned an exit code
-  if (typeof result === 'number') {
-    return result;
-  }
-
-  // Save the user's authentication token to the configuration file.
-  client.authConfig.token = result.token;
-
-  if (result.teamId) {
-    client.config.currentTeam = result.teamId;
-  } else {
-    delete client.config.currentTeam;
-  }
-
-  // If we have a brand new login, update `currentTeam`
-  if (isInitialLogin) {
-    await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
-  }
-
-  writeToAuthConfigFile(client.authConfig);
-  writeToConfigFile(client.config);
-
-  output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
-
-  output.print(
-    `${chalk.cyan('Congratulations!')} ` +
-      `You are now logged in. In order to deploy something, run ${getCommandName()}.\n`
   );
 
-  output.print(
-    `${prependEmoji(
-      `Connect your Git Repositories to deploy every branch push automatically (https://vercel.link/git).`,
-      emoji('tip')
-    )}\n`
+  output.spinner('Waiting for authentication...');
+
+  let intervalMs = interval * 1000;
+  let error: Error | undefined = new Error(
+    'Timed out waiting for authentication. Please try again.'
   );
 
-  return 0;
+  async function pollForToken(): Promise<Error | undefined> {
+    while (Date.now() < expiresAt) {
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+
+      // TODO: Handle connection timeouts and add interval backoff
+      const [tokenResponseError, tokenResponse] =
+        await deviceAccessTokenRequest({ device_code });
+
+      if (tokenResponseError) {
+        // 2x backoff on connection timeouts per spec https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
+        if (tokenResponseError.message.includes('timeout')) {
+          intervalMs *= 2;
+          output.debug(
+            `Connection timeout. Slowing down, polling every ${intervalMs / 1000}s...`
+          );
+          continue;
+        }
+        return tokenResponseError;
+      }
+
+      output.debug(
+        `'Device Access Token response:', ${await tokenResponse.clone().text()}`
+      );
+
+      const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+
+      if (isOAuthError(tokensError)) {
+        const { code } = tokensError;
+        switch (code) {
+          case 'authorization_pending':
+            continue;
+          case 'slow_down':
+            intervalMs += 5 * 1000;
+            output.debug(
+              `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
+            );
+            continue;
+          default:
+            return tokensError.cause;
+        }
+      }
+
+      if (tokensError) return tokensError;
+
+      // If we get here, we throw away any possible token errors like polling, or timeouts
+      error = undefined;
+
+      output.print(eraseLines(2));
+
+      // user is not currently authenticated on this machine
+      const isInitialLogin = !client.authConfig.token;
+
+      client.updateAuthConfig({
+        token: tokens.access_token,
+        type: 'oauth',
+        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+        refreshToken: tokens.refresh_token,
+      });
+
+      client.updateConfig({ currentTeam: undefined });
+
+      // If we have a brand new login, update `currentTeam`
+      if (isInitialLogin) {
+        await updateCurrentTeamAfterLogin(client);
+      }
+
+      client.writeToAuthConfigFile();
+      client.writeToConfigFile();
+
+      output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+
+      output.print(`
+  ${chalk.cyan('Congratulations!')} You are now signed in.
+
+  To deploy something, run ${getCommandName()}.
+
+  ${emoji('tip')} To deploy every commit automatically,
+  connect a Git Repository (${chalk.bold(output.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+
+      return;
+    }
+  }
+
+  error = await pollForToken();
+
+  output.stopSpinner();
+  rl.close();
+
+  if (!error) return 0;
+
+  printError(error);
+  return 1;
 }
