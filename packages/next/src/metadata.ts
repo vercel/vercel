@@ -52,12 +52,25 @@ export function isStaticMetadataRoute(pathname: string) {
 /**
  * Check if a route pattern matches a given pathname
  * e.g. /blog/[id]/icon.png matches /blog/1/icon.png
+ * e.g. /blog/[...slug]/icon.png matches /blog/a/b/c/icon.png
+ * e.g. /blog/[[...slug]]/icon.png matches /blog/icon.png and /blog/a/b/icon.png
  */
 function matchesRoute(pattern: string, pathname: string): boolean {
-  // Convert pattern like /blog/[id]/icon.png to regex
-  const regexPattern = pattern
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex characters first
-    .replace(/\\\[([^\]]+)\\\]/g, '([^/]+)'); // Replace escaped [param] with capture groups
+  // Simple pattern matching for Next.js dynamic routes
+  let regexPattern = pattern;
+
+  // Handle optional catch-all routes [[...param]] - matches zero or more path segments
+  // This needs to handle the case where there are zero segments, so we make the whole segment optional
+  regexPattern = regexPattern.replace(/\/\[\[\.\.\..*?\]\]/g, '(?:/.*)?');
+
+  // Handle catch-all routes [...param] - matches one or more path segments
+  regexPattern = regexPattern.replace(/\[\.\.\..*?\]/g, '.+');
+
+  // Handle regular dynamic routes [param] - matches one path segment
+  regexPattern = regexPattern.replace(/\[.*?\]/g, '[^/]+');
+
+  // Escape literal dots in file extensions only (not the wildcards we just added)
+  regexPattern = regexPattern.replace(/(\w)\./g, '$1\\.');
 
   const regex = new RegExp(`^${regexPattern}$`);
   return regex.test(pathname);
