@@ -95,9 +95,8 @@ function findChanges(
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
     }
-    delete oldEnv[key];
   }
-  const removed = Object.keys(oldEnv);
+  const removed = Object.keys(oldEnv).filter(key => !(key in newEnv));
 
   return {
     added,
