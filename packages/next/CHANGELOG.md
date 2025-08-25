@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.12.0
+
+### Minor Changes
+
+- Add client param parsing support with experimental flag ([#13740](https://github.com/vercel/vercel/pull/13740))
+
+### Patch Changes
+
+- Add clientParamParsingOrigins configuration for secure external rewrite headers ([#13799](https://github.com/vercel/vercel/pull/13799))
+
 ## 4.11.3
 
 ### Patch Changes

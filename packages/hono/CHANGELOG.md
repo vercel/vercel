@@ -1,5 +1,14 @@
 # @vercel/hono
 
+## 0.0.15
+
+### Patch Changes
+
+- Add support for app.js as a server entrypoint ([#13798](https://github.com/vercel/vercel/pull/13798))
+
+- Updated dependencies []:
+  - @vercel/node@5.3.14
+
 ## 0.0.14
 
 ### Patch Changes
