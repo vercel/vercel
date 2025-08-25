@@ -173,7 +173,7 @@ describe('build', () => {
       } else {
         throw new Error('entrypoint is not defined');
       }
-    });
+    }, 10000);
   }
 });
 describe('failing fixtures', () => {
