@@ -558,7 +558,7 @@ describe('deploy', () => {
       source: 'cli',
       version: 2,
       projectSettings: {
-        nodeVersion: '18.x',
+        nodeVersion: '20.x',
         sourceFilesOutsideRootDirectory: true,
       },
     });
