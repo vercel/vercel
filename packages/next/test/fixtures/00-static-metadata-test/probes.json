@@ -32,7 +32,7 @@
       }
     },
     {
-      "path": "/foo/icon.png",
+      "path": "/foo/icon-mxheo5.png",
       "status": 200,
       "responseHeaders": {
         "content-type": "image/png"
@@ -42,7 +42,7 @@
       "path": "/opengraph-image.png",
       "status": 200,
       "responseHeaders": {
-        "content-type": "image/png"
+        "content-type": "text/plain;charset=UTF-8"
       }
     }
   ]
