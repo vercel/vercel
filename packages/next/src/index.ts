@@ -1549,6 +1549,7 @@ export const build: BuildV2 = async buildOptions => {
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
         clientParamParsingOrigins,
+        files,
       });
     }
 
@@ -2310,6 +2311,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
+      files,
     });
 
     await Promise.all(
