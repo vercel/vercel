@@ -1,5 +1,5 @@
 import path from 'path';
-import { type File, type Files } from '@vercel/build-utils';
+import { FileFsRef, type File, type Files } from '@vercel/build-utils';
 
 const STATIC_METADATA_IMAGES = {
   icon: {
@@ -44,9 +44,7 @@ export function isStaticMetadataRoute(pathname: string) {
     ),
   ];
 
-  const matched = metadataRouteFilesRegex.some(r => r.test(pathname));
-
-  return matched;
+  return metadataRouteFilesRegex.some(regex => regex.test(pathname));
 }
 
 /**
@@ -60,7 +58,9 @@ function matchesRoute(pattern: string, pathname: string): boolean {
     .replace(/\\\[([^\]]+)\\\]/g, '([^/]+)'); // Replace escaped [param] with capture groups
 
   const regex = new RegExp(`^${regexPattern}$`);
-  return regex.test(pathname);
+  const result = regex.test(pathname);
+
+  return result;
 }
 
 /**
@@ -88,16 +88,16 @@ export function getContentTypeFromFile(fileRef: File): string | undefined {
   return CONTENT_TYPE_MAP[ext];
 }
 
-export function isSourceFileStaticMetadata(
-  route: string,
+export function getSourceFileRefOfStaticMetadata(
+  routeKey: string,
   files: Files
-): boolean {
-  const pathname = route.replace(/\/route$/, '');
-  const isMetadataPattern = isStaticMetadataRoute(pathname);
+): FileFsRef | undefined {
+  const isMetadataPattern = isStaticMetadataRoute(routeKey);
 
   if (isMetadataPattern) {
-    // strip the suffix from pathname
-    const normalizedPathname = pathname.replace(/-\w{6}$/, '');
+    // strip the suffix from routeKey
+    const normalizedPathname = routeKey.replace(/-\w{6}$/, '');
+
     // A set of files in relative paths of source files
     // app/page.tsx app/icon.svg
     const filesSet = new Set(Object.keys(files));
@@ -105,22 +105,23 @@ export function isSourceFileStaticMetadata(
     const hasStaticSourceFile = filesSet.has(targetPath);
 
     if (hasStaticSourceFile) {
-      return true;
+      return files[targetPath] as FileFsRef;
     }
 
     // Check for dynamic route matches
     // e.g. /blog/1/icon.png should match /blog/[id]/icon.png
     for (const filePath of filesSet) {
-      if (
-        filePath.startsWith('app/') &&
-        matchesRoute(`${filePath.slice(3)}`, normalizedPathname)
-      ) {
-        return true;
+      if (filePath.startsWith('app/')) {
+        const pattern = filePath.slice(3);
+        const matches = matchesRoute(pattern, normalizedPathname);
+        if (matches) {
+          return files[filePath] as FileFsRef;
+        }
       }
     }
 
-    return false;
+    return undefined;
   }
 
-  return false;
+  return undefined;
 }

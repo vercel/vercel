@@ -1,7 +1,7 @@
 import { Files } from '@vercel/build-utils';
 import {
   isStaticMetadataRoute,
-  isSourceFileStaticMetadata,
+  getSourceFileRefOfStaticMetadata,
 } from '../../src/metadata';
 
 describe('isStaticMetadataRoute', () => {
@@ -264,7 +264,7 @@ describe('isStaticMetadataRoute', () => {
   });
 });
 
-describe('isSourceFileStaticMetadata dynamic route matching', () => {
+describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
   const files: Files = {
     'app/blog/[id]/icon.png': { type: 'FileFsRef' } as any,
     'app/blog/[id]/page.tsx': { type: 'FileFsRef' } as any,
@@ -273,24 +273,26 @@ describe('isSourceFileStaticMetadata dynamic route matching', () => {
 
   describe('dynamic route matching', () => {
     it('should match single dynamic segment', () => {
-      expect(isSourceFileStaticMetadata('/blog/1/icon.png', files)).toBe(true);
-      expect(isSourceFileStaticMetadata('/blog/123/icon.png', files)).toBe(
+      expect(getSourceFileRefOfStaticMetadata('/blog/1/icon.png', files)).toBe(
         true
       );
-      expect(isSourceFileStaticMetadata('/blog/abc/icon.png', files)).toBe(
-        true
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/blog/123/icon.png', files)
+      ).toBe(true);
+      expect(
+        getSourceFileRefOfStaticMetadata('/blog/abc/icon.png', files)
+      ).toBe(true);
     });
 
     it('should match deeply nested dynamic routes', () => {
       expect(
-        isSourceFileStaticMetadata(
+        getSourceFileRefOfStaticMetadata(
           '/users/123/settings/opengraph-image.jpg',
           files
         )
       ).toBe(true);
       expect(
-        isSourceFileStaticMetadata(
+        getSourceFileRefOfStaticMetadata(
           '/users/abc/settings/opengraph-image.jpg',
           files
         )
@@ -300,17 +302,19 @@ describe('isSourceFileStaticMetadata dynamic route matching', () => {
 
   describe('static route matching', () => {
     it('should match static routes', () => {
-      expect(isSourceFileStaticMetadata('/about/icon.png', files)).toBe(true);
+      expect(getSourceFileRefOfStaticMetadata('/about/icon.png', files)).toBe(
+        true
+      );
     });
   });
 
   describe('non-matching cases', () => {
     it('should not match routes with extra segments', () => {
-      expect(isSourceFileStaticMetadata('/blog/1/2/icon.png', files)).toBe(
-        false
-      );
       expect(
-        isSourceFileStaticMetadata(
+        getSourceFileRefOfStaticMetadata('/blog/1/2/icon.png', files)
+      ).toBe(false);
+      expect(
+        getSourceFileRefOfStaticMetadata(
           '/products/electronics/laptop/extra/favicon.ico',
           files
         )
@@ -318,33 +322,37 @@ describe('isSourceFileStaticMetadata dynamic route matching', () => {
     });
 
     it('should not match routes with missing segments', () => {
-      expect(isSourceFileStaticMetadata('/blog/icon.png', files)).toBe(false);
-      expect(isSourceFileStaticMetadata('/products/favicon.ico', files)).toBe(
+      expect(getSourceFileRefOfStaticMetadata('/blog/icon.png', files)).toBe(
         false
       );
+      expect(
+        getSourceFileRefOfStaticMetadata('/products/favicon.ico', files)
+      ).toBe(false);
     });
 
     it('should not match unknown routes', () => {
-      expect(isSourceFileStaticMetadata('/unknown/icon.png', files)).toBe(
+      expect(getSourceFileRefOfStaticMetadata('/unknown/icon.png', files)).toBe(
         false
       );
-      expect(isSourceFileStaticMetadata('/blog/1/unknown.png', files)).toBe(
-        false
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/blog/1/unknown.png', files)
+      ).toBe(false);
     });
 
     it('should not match non-metadata files', () => {
-      expect(isSourceFileStaticMetadata('/blog/1/page.tsx', files)).toBe(false);
+      expect(getSourceFileRefOfStaticMetadata('/blog/1/page.tsx', files)).toBe(
+        false
+      );
     });
   });
 
   describe('with group suffix handling', () => {
     it('should match dynamic routes with group suffix', () => {
-      expect(isSourceFileStaticMetadata('/blog/1/icon.png-abc123', files)).toBe(
-        true
-      );
       expect(
-        isSourceFileStaticMetadata(
+        getSourceFileRefOfStaticMetadata('/blog/1/icon.png-abc123', files)
+      ).toBe(true);
+      expect(
+        getSourceFileRefOfStaticMetadata(
           '/products/electronics/laptop/icon.png-xyz789',
           files
         )

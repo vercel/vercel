@@ -52,7 +52,10 @@ import {
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
-import { getContentTypeFromFile, isSourceFileStaticMetadata } from './metadata';
+import {
+  getContentTypeFromFile,
+  getSourceFileRefOfStaticMetadata,
+} from './metadata';
 
 type stringMap = { [key: string]: string };
 
@@ -2926,16 +2929,19 @@ export const onPrerenderRoute =
       }
 
       // If this is a static metadata file that should output FileRef instead of Prerender
-      if (
-        routeKey &&
-        htmlFallbackFsRef &&
-        isSourceFileStaticMetadata(routeKey, files)
-      ) {
-        const contentType = getContentTypeFromFile(htmlFallbackFsRef);
+      const staticMetadataFile = getSourceFileRefOfStaticMetadata(
+        routeKey,
+        files
+      );
+      if (staticMetadataFile) {
+        const metadataFsRef = new FileFsRef({
+          fsPath: staticMetadataFile.fsPath,
+        });
+        const contentType = getContentTypeFromFile(staticMetadataFile);
         if (contentType) {
-          htmlFallbackFsRef.contentType = contentType;
+          metadataFsRef.contentType = contentType;
         }
-        prerenders[outputPathPage] = htmlFallbackFsRef;
+        prerenders[outputPathPage] = metadataFsRef;
       } else {
         prerenders[outputPathPage] = new Prerender({
           expiration: initialRevalidate,
