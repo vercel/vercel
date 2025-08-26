@@ -67,6 +67,7 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -1622,7 +1623,7 @@ export async function serverBuild({
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
     isAppClientParamParsingEnabled,
-    files,
+    appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
   });
 
   await Promise.all(

@@ -2,6 +2,7 @@ import { Files } from '@vercel/build-utils';
 import {
   isStaticMetadataRoute,
   getSourceFileRefOfStaticMetadata,
+  getAppRouterPathnameFilesMap,
 } from '../../src/metadata';
 
 describe('isStaticMetadataRoute', () => {
@@ -266,18 +267,34 @@ describe('isStaticMetadataRoute', () => {
 
 describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
   const files: Files = {
-    'app/blog/[id]/icon.png': { type: 'FileFsRef' } as any,
-    'app/blog/[id]/page.tsx': { type: 'FileFsRef' } as any,
-    'app/about/icon.png': { type: 'FileFsRef' } as any,
+    'app/blog/[id]/icon.png': {
+      type: 'FileFsRef',
+      fsPath: 'app/blog/[id]/icon.png',
+    } as any,
+    'app/blog/[id]/page.tsx': {
+      type: 'FileFsRef',
+      fsPath: 'app/blog/[id]/page.tsx',
+    } as any,
+    'app/about/icon.png': {
+      type: 'FileFsRef',
+      fsPath: 'app/about/icon.png',
+    } as any,
   };
+  const appPathnameFilesMap = getAppRouterPathnameFilesMap(files);
 
   describe('dynamic route matching', () => {
     it('should match single dynamic segment', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/[id]/icon.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/[id]/icon.png',
+          appPathnameFilesMap
+        )
       ).toBeDefined();
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/random/icon.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/random/icon.png',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
     });
 
@@ -285,13 +302,13 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
       expect(
         getSourceFileRefOfStaticMetadata(
           '/users/123/settings/opengraph-image.jpg',
-          files
+          appPathnameFilesMap
         )
       ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata(
           '/users/abc/settings/opengraph-image.jpg',
-          files
+          appPathnameFilesMap
         )
       ).toBeUndefined();
     });
@@ -300,7 +317,7 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
   describe('static route matching', () => {
     it('should match static routes', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/about/icon.png', files)
+        getSourceFileRefOfStaticMetadata('/about/icon.png', appPathnameFilesMap)
       ).toBeDefined();
     });
   });
@@ -308,37 +325,52 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
   describe('non-matching cases', () => {
     it('should not match routes with extra segments', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/1/2/icon.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/1/2/icon.png',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata(
           '/products/electronics/laptop/extra/favicon.ico',
-          files
+          appPathnameFilesMap
         )
       ).toBeUndefined();
     });
 
     it('should not match routes with missing segments', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/icon.png', files)
+        getSourceFileRefOfStaticMetadata('/blog/icon.png', appPathnameFilesMap)
       ).toBeUndefined();
       expect(
-        getSourceFileRefOfStaticMetadata('/products/favicon.ico', files)
+        getSourceFileRefOfStaticMetadata(
+          '/products/favicon.ico',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
     });
 
     it('should not match unknown routes', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/unknown/icon.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/unknown/icon.png',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/1/unknown.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/1/unknown.png',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
     });
 
     it('should not match non-metadata files', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/1/page.tsx', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/1/page.tsx',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
     });
   });
@@ -346,10 +378,16 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
   describe('with group suffix handling', () => {
     it('should match dynamic routes with group suffix', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/[id]/icon.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/[id]/icon.png',
+          appPathnameFilesMap
+        )
       ).toBeDefined();
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/1/icon-xyz789.png', files)
+        getSourceFileRefOfStaticMetadata(
+          '/blog/1/icon-xyz789.png',
+          appPathnameFilesMap
+        )
       ).toBeUndefined();
     });
   });

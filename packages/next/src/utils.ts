@@ -2320,7 +2320,7 @@ type OnPrerenderRouteArgs = {
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
   isAppClientParamParsingEnabled: boolean;
-  files: Record<string, any>;
+  appPathnameFilesMap: Map<string, FileFsRef>;
 };
 let prerenderGroup = 1;
 
@@ -2360,7 +2360,7 @@ export const onPrerenderRoute =
       isAppPPREnabled,
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
-      files,
+      appPathnameFilesMap,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2931,7 +2931,7 @@ export const onPrerenderRoute =
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
         routeKey,
-        files
+        appPathnameFilesMap
       );
       if (staticMetadataFile) {
         const metadataFsRef = new FileFsRef({

@@ -142,29 +142,36 @@ export function getContentTypeFromFile(fileRef: FileFsRef): string | undefined {
 
 export function getSourceFileRefOfStaticMetadata(
   routeKey: string,
-  files: Files
+  appPathnameFilesMap: Map<string, FileFsRef>
 ): FileFsRef | undefined {
   const isMetadataPattern = isStaticMetadataRoute(routeKey);
 
   if (isMetadataPattern) {
-    // strip the suffix from routeKey, but preserve the extension
-    // e.g. /foo/icon-<suffix>.png -> /foo/icon.png
-    // const normalizedPathname = routeKey //.replace(/-\w{6}(\.[^.]+)?$/, '$1');
-
-    // A set of files in relative paths of source files.
-    // key is the pathname, value is the file ref.
-    // { /foo/icon.svg -> ... }
-    const appFilesMap = new Map(
-      Object.entries(files)
-        .filter(([key]) => key.startsWith('app/'))
-        .map(([key, value]) => [normalizeAppPath(key.slice(3)), value])
-    );
-
-    const hasStaticSourceFile = appFilesMap.has(routeKey);
+    const hasStaticSourceFile = appPathnameFilesMap.has(routeKey);
 
     if (hasStaticSourceFile) {
-      return appFilesMap.get(routeKey) as FileFsRef;
+      return appPathnameFilesMap.get(routeKey) as FileFsRef;
     }
   }
   return undefined;
+}
+
+// strip the suffix from routeKey, but preserve the extension
+// e.g. /foo/icon-<suffix>.png -> /foo/icon.png
+// const normalizedPathname = routeKey //.replace(/-\w{6}(\.[^.]+)?$/, '$1');
+
+// A set of files in relative paths of source files.
+// key is the pathname, value is the file ref.
+// { /foo/icon.svg -> ... }
+export function getAppRouterPathnameFilesMap(files: Files) {
+  const appPathnameFilesMap = new Map<string, FileFsRef>();
+
+  for (const [filePath, fileRef] of Object.entries(files)) {
+    if (filePath.startsWith('app/') && 'fsPath' in fileRef) {
+      const normalizedPath = normalizeAppPath(filePath.slice(3));
+      appPathnameFilesMap.set(normalizedPath, fileRef);
+    }
+  }
+
+  return appPathnameFilesMap;
 }
