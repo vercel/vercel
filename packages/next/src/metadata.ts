@@ -158,8 +158,6 @@ export function getSourceFileRefOfStaticMetadata(
 
 // strip the suffix from routeKey, but preserve the extension
 // e.g. /foo/icon-<suffix>.png -> /foo/icon.png
-// const normalizedPathname = routeKey //.replace(/-\w{6}(\.[^.]+)?$/, '$1');
-
 // A set of files in relative paths of source files.
 // key is the pathname, value is the file ref.
 // { /foo/icon.svg -> ... }
