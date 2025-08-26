@@ -1,6 +1,6 @@
 {
   "name": "@vercel/redwood",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",
