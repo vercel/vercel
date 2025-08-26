@@ -1,0 +1,216 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+
+// Simple Button Component
+function Button({ children, onClick, variant = "default", className = "" }) {
+  const base =
+    "inline-flex items-center justify-center rounded-2xl px-6 py-3 font-medium transition-colors shadow-md";
+  const styles =
+    variant === "default"
+      ? "bg-purple-600 text-white hover:bg-purple-700"
+      : "border border-gray-300 text-gray-700 hover:bg-gray-100";
+  return (
+    <button onClick={onClick} className={`${base} ${styles} ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+// Navbar Component
+function Navbar() {
+  const links = [
+    { href: "/", label: "Home" },
+    { href: "/mood-check", label: "Mood Check" },
+    { href: "/resources", label: "Resources" },
+    { href: "/community", label: "Community" },
+    { href: "/journal", label: "Journal" },
+    { href: "/parents", label: "Parents" },
+    { href: "/about", label: "About" },
+  ];
+  return (
+    <nav className="flex gap-6 p-4 bg-white shadow rounded-xl mb-6 justify-center">
+      {links.map((link) => (
+        <Link key={link.href} href={link.href} className="text-gray-700 hover:text-purple-600 font-medium">
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+// Crisis Help Button
+function CrisisButton() {
+  return (
+    <a
+      href="tel:988"
+      className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-full shadow-lg font-semibold"
+    >
+      📞 Get Help Now
+    </a>
+  );
+}
+
+// Mood Check Component
+function MoodCheckForm() {
+  const moods = ["😊 Happy", "😐 Okay", "😔 Sad", "😡 Angry", "😰 Anxious"];
+  const [mood, setMood] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) {
+    return (
+      <div className="p-6 bg-white rounded-2xl shadow-md">
+        <h2 className="text-2xl font-bold">Your Mood: {mood}</h2>
+        <ul className="list-disc list-inside mt-3 space-y-1">
+          <li>🎧 Listen to a 2-min breathing track</li>
+          <li>📝 Write one positive thought in your journal</li>
+          <li>📱 Share your mood in the community space</li>
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow-md">
+      <h2 className="text-xl font-semibold mb-4">How are you feeling right now?</h2>
+      <div className="flex flex-wrap gap-2">
+        {moods.map((m) => (
+          <Button key={m} variant={mood === m ? "default" : "outline"} onClick={() => setMood(m)}>
+            {m}
+          </Button>
+        ))}
+      </div>
+      <Button onClick={() => setSubmitted(true)} className="mt-6 w-full">
+        See Suggestions
+      </Button>
+    </div>
+  );
+}
+
+// Journal Component
+function JournalEditor() {
+  const [entry, setEntry] = useState("");
+  const [saved, setSaved] = useState([]);
+
+  useEffect(() => {
+    const data = localStorage.getItem("journal");
+    if (data) setSaved(JSON.parse(data));
+  }, []);
+
+  const saveEntry = () => {
+    const newEntries = [...saved, entry];
+    localStorage.setItem("journal", JSON.stringify(newEntries));
+    setSaved(newEntries);
+    setEntry("");
+  };
+
+  return (
+    <div>
+      <textarea
+        value={entry}
+        onChange={(e) => setEntry(e.target.value)}
+        placeholder="Write your thoughts..."
+        className="w-full p-3 border rounded-xl shadow-sm"
+      />
+      <Button onClick={saveEntry} className="mt-3">Save</Button>
+      <h2 className="mt-6 font-bold">Past Entries</h2>
+      <ul className="mt-2 space-y-2">
+        {saved.map((s, i) => (
+          <li key={i} className="p-3 bg-white rounded-xl shadow">{s}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Resource Card
+function ResourceCard({ title, type, link }) {
+  return (
+    <a href={link} target="_blank" className="p-4 bg-white rounded-2xl shadow hover:shadow-lg transition block">
+      <h2 className="font-bold text-lg">{title}</h2>
+      <p className="text-sm text-gray-500">{type}</p>
+    </a>
+  );
+}
+
+// Main App (Simulating Routing with Sections)
+export default function App() {
+  const [page, setPage] = useState("home");
+
+  return (
+    <div className="bg-gradient-to-br from-teal-100 via-white to-purple-100 min-h-screen p-4">
+      <Navbar />
+
+      {page === "home" && (
+        <div className="relative flex flex-col items-center justify-center text-center py-32 overflow-hidden">
+          <motion.div
+            animate={{ opacity: [0.2, 0.4, 0.2] }}
+            transition={{ repeat: Infinity, duration: 6 }}
+            className="absolute inset-0 bg-gradient-to-tr from-teal-300 via-purple-400 to-pink-300 blur-3xl"
+          />
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="relative text-4xl md:text-6xl font-bold text-gray-800 drop-shadow-lg"
+          >
+            Feeling off? Take a 60-sec check-in 🌱
+          </motion.h1>
+          <p className="relative mt-4 text-lg text-gray-700 max-w-2xl">
+            Quick tools, real people, zero judgement.
+          </p>
+          <div className="relative mt-8 flex gap-4">
+            <Button onClick={() => setPage("mood")}>Start Mood Check</Button>
+            <Button variant="outline" onClick={() => setPage("resources")}>Explore Resources</Button>
+          </div>
+        </div>
+      )}
+
+      {page === "mood" && <MoodCheckForm />}
+
+      {page === "resources" && (
+        <div>
+          <h1 className="text-3xl font-bold mb-6">Resources</h1>
+          <div className="grid md:grid-cols-3 gap-4">
+            <ResourceCard title="Breathing Exercise" type="Audio" link="#" />
+            <ResourceCard title="Dealing with Stress" type="Guide" link="#" />
+            <ResourceCard title="Mindful Morning Routine" type="Video" link="#" />
+          </div>
+        </div>
+      )}
+
+      {page === "community" && (
+        <div>
+          <h1 className="text-3xl font-bold mb-6">Community</h1>
+          <p className="text-gray-600">
+            Safe peer support is coming soon. Moderated groups will be here.
+          </p>
+        </div>
+      )}
+
+      {page === "journal" && <JournalEditor />}
+
+      {page === "parents" && (
+        <div>
+          <h1 className="text-3xl font-bold mb-6">Parent Hub</h1>
+          <ul className="list-disc list-inside space-y-2">
+            <li>How to talk about stress with your teen</li>
+            <li>Signs of anxiety and depression</li>
+            <li>When to seek professional help</li>
+          </ul>
+        </div>
+      )}
+
+      {page === "about" && (
+        <div>
+          <h1 className="text-3xl font-bold mb-6">About MindSpace</h1>
+          <p className="text-gray-600">
+            MindSpace is a safe digital home for Gen Z and Gen Alpha to check in, learn coping tools, share stories, and get help.
+          </p>
+        </div>
+      )}
+
+      <CrisisButton />
+    </div>
+  );
+}
