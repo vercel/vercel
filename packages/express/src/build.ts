@@ -13,6 +13,9 @@ export const build: BuildV3 = async args => {
     ...args,
     entrypoint,
     considerBuildCommand: true,
+    entrypointCallback: (preparedFiles: Files) => {
+      return findEntrypoint(preparedFiles);
+    },
   });
 };
 
