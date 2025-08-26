@@ -51,22 +51,6 @@ export function isStaticMetadataRoute(pathname: string) {
 }
 
 /**
- * Check if a route pattern matches a given pathname
- * e.g. /blog/[id]/icon.png matches /blog/1/icon.png
- */
-function matchesRoute(pattern: string, pathname: string): boolean {
-  // Convert pattern like /blog/[id]/icon.png to regex
-  const regexPattern = pattern
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex characters first
-    .replace(/\\\[([^\]]+)\\\]/g, '([^/]+)'); // Replace escaped [param] with capture groups
-
-  const regex = new RegExp(`^${regexPattern}$`);
-  const result = regex.test(pathname);
-
-  return result;
-}
-
-/**
  * Check if a route is a static metadata route and has corresponding source file
  */
 const CONTENT_TYPE_MAP: Record<string, string> = {
@@ -180,18 +164,6 @@ export function getSourceFileRefOfStaticMetadata(
 
     if (hasStaticSourceFile) {
       return appFilesMap.get(routeKey) as FileFsRef;
-    }
-
-    // Check for dynamic route matches
-    // e.g. /blog/1/icon.png should match /blog/[id]/icon.png
-    for (const [filePath, fileRef] of appFilesMap) {
-      if (filePath.startsWith('app/')) {
-        const pattern = filePath.slice(3);
-        const matches = matchesRoute(pattern, routeKey);
-        if (matches) {
-          return fileRef as FileFsRef;
-        }
-      }
     }
   }
   return undefined;
