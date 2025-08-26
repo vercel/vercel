@@ -65,6 +65,7 @@ async function compileUserCode(
   let handler: any;
   let mod: any;
 
+  console.log({ id });
   const originalListen = http.Server.prototype.listen;
   try {
     // @ts-expect-error
@@ -127,7 +128,10 @@ async function compileUserCode(
     if (typeof mod.listen === 'function') {
       return mod(req, res);
     }
-    return handler(req, res);
+    if (handler) {
+      return handler(req, res);
+    }
+    return mod(req, res);
   };
 }
 
