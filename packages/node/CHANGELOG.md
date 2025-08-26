@@ -1,5 +1,20 @@
 # @vercel/node
 
+## 5.3.15
+
+### Patch Changes
+
+- Add support for specifying an output directory for Express and Hono apps ([#13805](https://github.com/vercel/vercel/pull/13805))
+
+- [next][node][redwood][remix] bump `@vercel/nft@0.30.1` ([#13818](https://github.com/vercel/vercel/pull/13818))
+
+## 5.3.14
+
+### Patch Changes
+
+- Updated dependencies [[`28a41c6fddc7a3bc92fa54279063428b329e3104`](https://github.com/vercel/vercel/commit/28a41c6fddc7a3bc92fa54279063428b329e3104)]:
+  - @vercel/build-utils@11.0.2
+
 ## 5.3.13
 
 ### Patch Changes

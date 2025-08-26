@@ -1,9 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "build": "mkdocs build && mv site public"
+    "build": "python3 -m mkdocs build && mv site public"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }

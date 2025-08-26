@@ -388,6 +388,7 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
     experimentalTriggers?: TriggerEvent[];
+    supportsCancellation?: boolean;
   };
 }
 

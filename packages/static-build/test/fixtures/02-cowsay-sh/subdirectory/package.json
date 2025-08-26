@@ -3,6 +3,6 @@
     "yodasay": "^1.1.6"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }

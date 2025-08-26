@@ -80,27 +80,17 @@ You can run the server for the transport built with:
 - HTTP: `node dist/http.js`
 - STDIO: `node dist/stdio.js`
 
-Given the selected transport method, you will have a custom start script added to the `package.json` file.
+Alternatively, you can use the script which will automatically start the appropriate transport based on your project configuration:
 
-For HTTP:
-
-```bash
-npm run start-http
+```
+npm run start
 # or
-yarn start-http
+yarn start
 # or
-pnpm start-http
+pnpm start
 ```
 
-For STDIO:
-
-```bash
-npm run start-stdio
-# or
-yarn start-stdio
-# or
-pnpm start-stdio
-```
+The start script will automatically run either the HTTP or STDIO transport depending on which transport method was selected when you initialized the project.
 
 ## Learn More
 

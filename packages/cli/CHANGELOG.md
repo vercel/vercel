@@ -1,5 +1,31 @@
 # vercel
 
+## 46.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`9cc5e3a04f4158545e55a9c0c66c13ac51db1ce1`](https://github.com/vercel/vercel/commit/9cc5e3a04f4158545e55a9c0c66c13ac51db1ce1), [`0985931965d9ba8f2a0198f34a4a4838c341769a`](https://github.com/vercel/vercel/commit/0985931965d9ba8f2a0198f34a4a4838c341769a)]:
+  - @vercel/express@0.0.8
+  - @vercel/hono@0.0.16
+  - @vercel/node@5.3.15
+  - @vercel/next@4.12.1
+  - @vercel/redwood@2.3.5
+  - @vercel/remix-builder@5.4.11
+
+## 46.0.3
+
+### Patch Changes
+
+- Add support for the supportsCancellation function flag ([#13807](https://github.com/vercel/vercel/pull/13807))
+
+- Updated dependencies [[`28a41c6fddc7a3bc92fa54279063428b329e3104`](https://github.com/vercel/vercel/commit/28a41c6fddc7a3bc92fa54279063428b329e3104), [`2876dace493b97f4cae7f3839484ee36ed8ac363`](https://github.com/vercel/vercel/commit/2876dace493b97f4cae7f3839484ee36ed8ac363), [`f63fbb7853cc9991716c0fc57fd5f480b2706964`](https://github.com/vercel/vercel/commit/f63fbb7853cc9991716c0fc57fd5f480b2706964), [`ba284f86454412ab209e0a972c14ed218401c6cc`](https://github.com/vercel/vercel/commit/ba284f86454412ab209e0a972c14ed218401c6cc)]:
+  - @vercel/build-utils@11.0.2
+  - @vercel/express@0.0.7
+  - @vercel/hono@0.0.15
+  - @vercel/next@4.12.0
+  - @vercel/node@5.3.14
+  - @vercel/static-build@2.7.19
+
 ## 46.0.2
 
 ### Patch Changes

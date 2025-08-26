@@ -112,6 +112,10 @@ const fixtures = {
     handler: ['index.mjs'],
     moduleType: 'esm',
   },
+  '13-app-js-no-module': {
+    handler: ['app.js'],
+    moduleType: 'cjs',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
