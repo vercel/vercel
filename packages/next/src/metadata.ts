@@ -1,6 +1,7 @@
 import path from 'path';
-import { FileFsRef, type File, type Files } from '@vercel/build-utils';
+import { FileFsRef, type Files } from '@vercel/build-utils';
 
+// Mirror from Next.js: https://github.com/vercel/next.js/blob/4b66771895737170a06be242be1e5afc760142d4/packages/next/src/lib/metadata/is-metadata-route.ts#L54
 const STATIC_METADATA_IMAGES = {
   icon: {
     filename: 'icon',
@@ -20,31 +21,33 @@ const STATIC_METADATA_IMAGES = {
   },
 };
 
+// The -\w{6} is the suffix that normalized from group routes;
+const groupSuffix = '(-\\w{6})?';
+const suffixMatcher = '\\d?';
+
+// The following regex patterns match static metadata files
+// Pattern: <filename><number suffix><group suffix><extension>
+const METADATA_STATIC_FILE_REGEX = [
+  new RegExp(`^[\\\\/]robots\\.txt$`),
+  new RegExp(`^[\\\\/]manifest\\.(webmanifest|json)$`),
+  new RegExp(`[\\\\/]sitemap\\.xml$`),
+  new RegExp(`^[\\\\/]favicon\\.ico$`),
+  new RegExp(
+    `[\\\\/]${STATIC_METADATA_IMAGES.icon.filename}${suffixMatcher}${groupSuffix}${`\\.(?:${STATIC_METADATA_IMAGES.icon.extensions.join('|')})`}$`
+  ),
+  new RegExp(
+    `[\\\\/]${STATIC_METADATA_IMAGES.apple.filename}${suffixMatcher}${groupSuffix}${`\\.(?:${STATIC_METADATA_IMAGES.apple.extensions.join('|')})`}$`
+  ),
+  new RegExp(
+    `[\\\\/]${STATIC_METADATA_IMAGES.openGraph.filename}${suffixMatcher}${groupSuffix}${`\\.(?:${STATIC_METADATA_IMAGES.openGraph.extensions.join('|')})`}$`
+  ),
+  new RegExp(
+    `[\\\\/]${STATIC_METADATA_IMAGES.twitter.filename}${suffixMatcher}${groupSuffix}${`\\.(?:${STATIC_METADATA_IMAGES.twitter.extensions.join('|')})`}$`
+  ),
+];
+
 export function isStaticMetadataRoute(pathname: string) {
-  // The -\w{6} is the suffix that normalized from group routes;
-  const groupSuffix = '(-\\w{6})?';
-  const suffixMatcher = '\\d?';
-
-  const metadataRouteFilesRegex = [
-    new RegExp(`^[\\\\/]robots\\.txt$`),
-    new RegExp(`^[\\\\/]manifest\\.(webmanifest|json)$`),
-    new RegExp(`[\\\\/]sitemap\\.xml$`),
-    new RegExp(`^[\\\\/]favicon\\.ico$`),
-    new RegExp(
-      `[\\\\/]${STATIC_METADATA_IMAGES.icon.filename}${suffixMatcher}${`\\.(?:${STATIC_METADATA_IMAGES.icon.extensions.join('|')})`}${groupSuffix}$`
-    ),
-    new RegExp(
-      `[\\\\/]${STATIC_METADATA_IMAGES.apple.filename}${suffixMatcher}${`\\.(?:${STATIC_METADATA_IMAGES.apple.extensions.join('|')})`}${groupSuffix}$`
-    ),
-    new RegExp(
-      `[\\\\/]${STATIC_METADATA_IMAGES.openGraph.filename}${suffixMatcher}${`\\.(?:${STATIC_METADATA_IMAGES.openGraph.extensions.join('|')})`}${groupSuffix}$`
-    ),
-    new RegExp(
-      `[\\\\/]${STATIC_METADATA_IMAGES.twitter.filename}${suffixMatcher}${`\\.(?:${STATIC_METADATA_IMAGES.twitter.extensions.join('|')})`}${groupSuffix}$`
-    ),
-  ];
-
-  return metadataRouteFilesRegex.some(regex => regex.test(pathname));
+  return METADATA_STATIC_FILE_REGEX.some(regex => regex.test(pathname));
 }
 
 /**
@@ -79,11 +82,76 @@ const CONTENT_TYPE_MAP: Record<string, string> = {
   webmanifest: 'application/manifest+json',
 };
 
-export function getContentTypeFromFile(fileRef: File): string | undefined {
-  if (!fileRef || !('fsPath' in fileRef)) {
-    return undefined;
+// Mirror from Next.js: https://github.com/vercel/next.js/blob/4b66771895737170a06be242be1e5afc760142d4/packages/next/src/shared/lib/hash.ts#L8
+function djb2Hash(str: string) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) + hash + char) & 0xffffffff;
+  }
+  return hash >>> 0;
+}
+
+// Mirror from Next.js: https://github.com/vercel/next.js/blob/4b66771895737170a06be242be1e5afc760142d4/packages/next/src/lib/metadata/get-metadata-route.ts#L28
+function getMetadataRouteSuffix(page: string) {
+  // Remove the last segment and get the parent pathname
+  // e.g. /parent/a/b/c -> /parent/a/b
+  // e.g. /parent/opengraph-image -> /parent
+  const parentPathname = path.dirname(page);
+  // Only apply suffix to metadata routes except for sitemaps
+  if (page.endsWith('/sitemap')) {
+    return '';
   }
 
+  // Calculate the hash suffix based on the parent path
+  let suffix = '';
+  // Check if there's any special characters in the parent pathname.
+  const segments = parentPathname.split('/');
+  if (
+    segments.some(
+      seg =>
+        (seg.startsWith('(') && seg.endsWith(')')) ||
+        (seg.startsWith('@') && seg !== '@children')
+    )
+  ) {
+    // Hash the parent path to get a unique suffix
+    suffix = djb2Hash(parentPathname).toString(36).slice(0, 6);
+  }
+  return suffix;
+}
+
+// Remove group segments and parallel segments, and attach the suffix to file basename
+// e.g.: /(group)/foo/icon.svg -> /foo/icon-mxheo5.svg
+function normalizeAppPath(route: string) {
+  const normalized = route.split('/').reduce((pathname, segment) => {
+    // Empty segments are ignored.
+    if (!segment) {
+      return pathname;
+    }
+
+    // Groups are ignored.
+    if (segment.startsWith('(') && segment.endsWith(')')) {
+      return pathname;
+    }
+
+    // Parallel segments are ignored.
+    if (segment[0] === '@') {
+      return pathname;
+    }
+
+    return `${pathname}/${segment}`;
+  }, '');
+
+  const { dir, name, ext } = path.parse(normalized);
+  const suffix = getMetadataRouteSuffix(route);
+  const pathname = path.posix.join(
+    dir,
+    `${name}${suffix ? `-${suffix}` : ''}${ext}`
+  );
+  return pathname;
+}
+
+export function getContentTypeFromFile(fileRef: FileFsRef): string | undefined {
   const ext = path.extname(fileRef.fsPath).slice(1);
   return CONTENT_TYPE_MAP[ext];
 }
@@ -95,33 +163,36 @@ export function getSourceFileRefOfStaticMetadata(
   const isMetadataPattern = isStaticMetadataRoute(routeKey);
 
   if (isMetadataPattern) {
-    // strip the suffix from routeKey
-    const normalizedPathname = routeKey.replace(/-\w{6}$/, '');
+    // strip the suffix from routeKey, but preserve the extension
+    // e.g. /foo/icon-<suffix>.png -> /foo/icon.png
+    // const normalizedPathname = routeKey //.replace(/-\w{6}(\.[^.]+)?$/, '$1');
 
-    // A set of files in relative paths of source files
-    // app/page.tsx app/icon.svg
-    const filesSet = new Set(Object.keys(files));
-    const targetPath = `app${normalizedPathname}`;
-    const hasStaticSourceFile = filesSet.has(targetPath);
+    // A set of files in relative paths of source files.
+    // key is the pathname, value is the file ref.
+    // { /foo/icon.svg -> ... }
+    const appFilesMap = new Map(
+      Object.entries(files)
+        .filter(([key]) => key.startsWith('app/'))
+        .map(([key, value]) => [normalizeAppPath(key.slice(3)), value])
+    );
+
+    const hasStaticSourceFile = appFilesMap.has(routeKey);
 
     if (hasStaticSourceFile) {
-      return files[targetPath] as FileFsRef;
+      return appFilesMap.get(routeKey) as FileFsRef;
     }
 
     // Check for dynamic route matches
     // e.g. /blog/1/icon.png should match /blog/[id]/icon.png
-    for (const filePath of filesSet) {
+    for (const [filePath, fileRef] of appFilesMap) {
       if (filePath.startsWith('app/')) {
         const pattern = filePath.slice(3);
-        const matches = matchesRoute(pattern, normalizedPathname);
+        const matches = matchesRoute(pattern, routeKey);
         if (matches) {
-          return files[filePath] as FileFsRef;
+          return fileRef as FileFsRef;
         }
       }
     }
-
-    return undefined;
   }
-
   return undefined;
 }

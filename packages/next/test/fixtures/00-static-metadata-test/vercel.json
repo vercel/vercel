@@ -1,4 +1,12 @@
 {
+  "version": 2,
+  "uploadNowJson": true,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
   "probes": [
     {
       "path": "/",
