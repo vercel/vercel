@@ -16,6 +16,7 @@ import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
 import { Awaiter } from '../awaiter.js';
+import http, { Server } from 'http';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -61,38 +62,55 @@ async function compileUserCode(
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
-  let listener = await import(id);
+  let handler: any;
+  let mod: any;
+
+  const originalListen = http.Server.prototype.listen;
+  try {
+    // @ts-expect-error
+    http.Server.prototype.listen = function (this: Server) {
+      // https://github.com/nodejs/node/blob/af77e4bf2f8bee0bc23f6ee129d6ca97511d34b9/lib/_http_server.js#L557
+      // @ts-expect-error
+      handler = this._events.request;
+
+      // Restore original listen method
+      http.Server.prototype.listen = originalListen;
+    };
+    mod = await import(id);
+  } finally {
+    http.Server.prototype.listen = originalListen;
+  }
 
   /**
    * In some cases we might have nested default props due to TS => JS
    */
   for (let i = 0; i < 5; i++) {
-    if (listener.default) listener = listener.default;
+    if (mod.default) mod = mod.default;
   }
 
   const shouldUseWebHandlers =
     options.isMiddleware ||
-    HTTP_METHODS.some(method => typeof listener[method] === 'function') ||
-    typeof listener.fetch === 'function';
+    HTTP_METHODS.some(method => typeof mod[method] === 'function') ||
+    typeof mod.fetch === 'function';
 
   if (shouldUseWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
 
-    let handler = listener;
+    handler = mod;
     if (options.isMiddleware) {
       handler = HTTP_METHODS.reduce(
         (acc, method) => {
-          acc[method] = listener;
+          acc[method] = mod;
           return acc;
         },
         {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
       );
     }
-    if (typeof listener.fetch === 'function') {
+    if (typeof mod.fetch === 'function') {
       handler = HTTP_METHODS.reduce(
         (acc, method) => {
-          acc[method] = listener.fetch;
+          acc[method] = mod.fetch;
           return acc;
         },
         {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
@@ -103,11 +121,13 @@ async function compileUserCode(
 
   return async (req: IncomingMessage, res: ServerResponse) => {
     // Only add helpers if the listener isn't an express server
-    if (options.shouldAddHelpers && typeof listener.listen !== 'function') {
+    if (options.shouldAddHelpers && typeof mod.listen !== 'function') {
       await addHelpers(req, res);
     }
-
-    return listener(req, res);
+    if (typeof mod.listen === 'function') {
+      return mod(req, res);
+    }
+    return handler(req, res);
   };
 }
 
