@@ -65,7 +65,6 @@ async function compileUserCode(
   let handler: any;
   let mod: any;
 
-  console.log({ id });
   const originalListen = http.Server.prototype.listen;
   try {
     // @ts-expect-error
