@@ -45,10 +45,9 @@ describe('Static Metadata Integration Test', () => {
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
 
-    // TODO: currently we're limited to locate the original input
     // Verify grouped route static metadata
-    // expect(output['foo/icon-mxheo5.png']).toBeDefined();
-    // expect(output['foo/icon-mxheo5.png'].type).toBe('FileFsRef');
+    expect(output['foo/icon-mxheo5.png']).toBeDefined();
+    expect(output['foo/icon-mxheo5.png'].type).toBe('FileFsRef');
 
     // Verify dynamic route static metadata
     expect(output['dynamic/[id]/sitemap.xml']).toBeDefined();
