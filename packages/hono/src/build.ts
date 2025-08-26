@@ -4,7 +4,7 @@ import { build as nodeBuild } from '@vercel/node';
 import { sep } from 'path';
 import fs from 'fs';
 
-const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
+const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']hono["']\s*(?:\))?/g;
 
 export const build: BuildV3 = async args => {
   const entrypoint = findEntrypoint(args.files);
