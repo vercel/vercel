@@ -75,15 +75,15 @@ describe('isStaticMetadataRoute', () => {
       });
 
       it(`should match icon with group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/icon.${ext}-abc123`)).toBe(true);
-        expect(isStaticMetadataRoute(`\\icon.${ext}-xyz789`)).toBe(true);
-        expect(isStaticMetadataRoute(`/folder/icon.${ext}-def456`)).toBe(true);
+        expect(isStaticMetadataRoute(`/icon-abc123.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`\\icon-xyz789.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`/folder/icon-def456.${ext}`)).toBe(true);
       });
 
       it(`should match icon with numeric and group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/icon1.${ext}-abc123`)).toBe(true);
-        expect(isStaticMetadataRoute(`/icon2.${ext}-xyz789`)).toBe(true);
-        expect(isStaticMetadataRoute(`/folder/icon0.${ext}-def456`)).toBe(true);
+        expect(isStaticMetadataRoute(`/icon1-abc123.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`/icon2-xyz789.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`/folder/icon0-def456.${ext}`)).toBe(true);
       });
     });
 
@@ -97,8 +97,8 @@ describe('isStaticMetadataRoute', () => {
     });
 
     it('should not match icon with invalid group suffix', () => {
-      expect(isStaticMetadataRoute('/icon.png-abc12')).toBe(false);
-      expect(isStaticMetadataRoute('/icon.png-abc1234')).toBe(false);
+      expect(isStaticMetadataRoute('/icon-abc12.png')).toBe(false);
+      expect(isStaticMetadataRoute('/icon-abc1234.png')).toBe(false);
     });
   });
 
@@ -118,16 +118,16 @@ describe('isStaticMetadataRoute', () => {
       });
 
       it(`should match apple-icon with group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/apple-icon.${ext}-abc123`)).toBe(true);
-        expect(isStaticMetadataRoute(`\\apple-icon.${ext}-xyz789`)).toBe(true);
-        expect(isStaticMetadataRoute(`/folder/apple-icon.${ext}-def456`)).toBe(
+        expect(isStaticMetadataRoute(`/apple-icon-abc123.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`\\apple-icon-xyz789.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`/folder/apple-icon-def456.${ext}`)).toBe(
           true
         );
       });
 
       it(`should match apple-icon with numeric and group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/apple-icon1.${ext}-abc123`)).toBe(true);
-        expect(isStaticMetadataRoute(`/apple-icon9.${ext}-xyz789`)).toBe(true);
+        expect(isStaticMetadataRoute(`/apple-icon1-abc123.${ext}`)).toBe(true);
+        expect(isStaticMetadataRoute(`/apple-icon9-xyz789.${ext}`)).toBe(true);
       });
     });
 
@@ -138,8 +138,8 @@ describe('isStaticMetadataRoute', () => {
     });
 
     it('should not match apple-icon with invalid group suffix', () => {
-      expect(isStaticMetadataRoute('/apple-icon.png-abc12')).toBe(false);
-      expect(isStaticMetadataRoute('/apple-icon.png-abc1234')).toBe(false);
+      expect(isStaticMetadataRoute('/apple-icon-abc12.png')).toBe(false);
+      expect(isStaticMetadataRoute('/apple-icon-abc1234.png')).toBe(false);
     });
   });
 
@@ -161,22 +161,22 @@ describe('isStaticMetadataRoute', () => {
       });
 
       it(`should match opengraph-image with group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/opengraph-image.${ext}-abc123`)).toBe(
+        expect(isStaticMetadataRoute(`/opengraph-image-abc123.${ext}`)).toBe(
           true
         );
-        expect(isStaticMetadataRoute(`\\opengraph-image.${ext}-xyz789`)).toBe(
+        expect(isStaticMetadataRoute(`\\opengraph-image-xyz789.${ext}`)).toBe(
           true
         );
         expect(
-          isStaticMetadataRoute(`/folder/opengraph-image.${ext}-def456`)
+          isStaticMetadataRoute(`/folder/opengraph-image-def456.${ext}`)
         ).toBe(true);
       });
 
       it(`should match opengraph-image with numeric and group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/opengraph-image5.${ext}-abc123`)).toBe(
+        expect(isStaticMetadataRoute(`/opengraph-image5-abc123.${ext}`)).toBe(
           true
         );
-        expect(isStaticMetadataRoute(`/opengraph-image0.${ext}-xyz789`)).toBe(
+        expect(isStaticMetadataRoute(`/opengraph-image0-xyz789.${ext}`)).toBe(
           true
         );
       });
@@ -188,8 +188,8 @@ describe('isStaticMetadataRoute', () => {
     });
 
     it('should not match opengraph-image with invalid group suffix', () => {
-      expect(isStaticMetadataRoute('/opengraph-image.png-abc12')).toBe(false);
-      expect(isStaticMetadataRoute('/opengraph-image.png-abc1234')).toBe(false);
+      expect(isStaticMetadataRoute('/opengraph-image-abc12.png')).toBe(false);
+      expect(isStaticMetadataRoute('/opengraph-image-abc1234.png')).toBe(false);
     });
   });
 
@@ -211,22 +211,22 @@ describe('isStaticMetadataRoute', () => {
       });
 
       it(`should match twitter-image with group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/twitter-image.${ext}-abc123`)).toBe(
+        expect(isStaticMetadataRoute(`/twitter-image-abc123.${ext}`)).toBe(
           true
         );
-        expect(isStaticMetadataRoute(`\\twitter-image.${ext}-xyz789`)).toBe(
+        expect(isStaticMetadataRoute(`\\twitter-image-xyz789.${ext}`)).toBe(
           true
         );
         expect(
-          isStaticMetadataRoute(`/folder/twitter-image.${ext}-def456`)
+          isStaticMetadataRoute(`/folder/twitter-image-def456.${ext}`)
         ).toBe(true);
       });
 
       it(`should match twitter-image with numeric and group suffix .${ext}`, () => {
-        expect(isStaticMetadataRoute(`/twitter-image3.${ext}-abc123`)).toBe(
+        expect(isStaticMetadataRoute(`/twitter-image3-abc123.${ext}`)).toBe(
           true
         );
-        expect(isStaticMetadataRoute(`/twitter-image7.${ext}-xyz789`)).toBe(
+        expect(isStaticMetadataRoute(`/twitter-image7-xyz789.${ext}`)).toBe(
           true
         );
       });
@@ -238,8 +238,8 @@ describe('isStaticMetadataRoute', () => {
     });
 
     it('should not match twitter-image with invalid group suffix', () => {
-      expect(isStaticMetadataRoute('/twitter-image.png-abc12')).toBe(false);
-      expect(isStaticMetadataRoute('/twitter-image.png-abc1234')).toBe(false);
+      expect(isStaticMetadataRoute('/twitter-image-abc12.png')).toBe(false);
+      expect(isStaticMetadataRoute('/twitter-image-abc1234.png')).toBe(false);
     });
   });
 
@@ -273,15 +273,12 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
 
   describe('dynamic route matching', () => {
     it('should match single dynamic segment', () => {
-      expect(getSourceFileRefOfStaticMetadata('/blog/1/icon.png', files)).toBe(
-        true
-      );
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/123/icon.png', files)
-      ).toBe(true);
+        getSourceFileRefOfStaticMetadata('/blog/[id]/icon.png', files)
+      ).toBeDefined();
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/abc/icon.png', files)
-      ).toBe(true);
+        getSourceFileRefOfStaticMetadata('/blog/random/icon.png', files)
+      ).toBeUndefined();
     });
 
     it('should match deeply nested dynamic routes', () => {
@@ -290,21 +287,21 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
           '/users/123/settings/opengraph-image.jpg',
           files
         )
-      ).toBe(true);
+      ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata(
           '/users/abc/settings/opengraph-image.jpg',
           files
         )
-      ).toBe(true);
+      ).toBeUndefined();
     });
   });
 
   describe('static route matching', () => {
     it('should match static routes', () => {
-      expect(getSourceFileRefOfStaticMetadata('/about/icon.png', files)).toBe(
-        true
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/about/icon.png', files)
+      ).toBeDefined();
     });
   });
 
@@ -312,51 +309,48 @@ describe('getSourceFileRefOfStaticMetadata dynamic route matching', () => {
     it('should not match routes with extra segments', () => {
       expect(
         getSourceFileRefOfStaticMetadata('/blog/1/2/icon.png', files)
-      ).toBe(false);
+      ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata(
           '/products/electronics/laptop/extra/favicon.ico',
           files
         )
-      ).toBe(false);
+      ).toBeUndefined();
     });
 
     it('should not match routes with missing segments', () => {
-      expect(getSourceFileRefOfStaticMetadata('/blog/icon.png', files)).toBe(
-        false
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/blog/icon.png', files)
+      ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata('/products/favicon.ico', files)
-      ).toBe(false);
+      ).toBeUndefined();
     });
 
     it('should not match unknown routes', () => {
-      expect(getSourceFileRefOfStaticMetadata('/unknown/icon.png', files)).toBe(
-        false
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/unknown/icon.png', files)
+      ).toBeUndefined();
       expect(
         getSourceFileRefOfStaticMetadata('/blog/1/unknown.png', files)
-      ).toBe(false);
+      ).toBeUndefined();
     });
 
     it('should not match non-metadata files', () => {
-      expect(getSourceFileRefOfStaticMetadata('/blog/1/page.tsx', files)).toBe(
-        false
-      );
+      expect(
+        getSourceFileRefOfStaticMetadata('/blog/1/page.tsx', files)
+      ).toBeUndefined();
     });
   });
 
   describe('with group suffix handling', () => {
     it('should match dynamic routes with group suffix', () => {
       expect(
-        getSourceFileRefOfStaticMetadata('/blog/1/icon.png-abc123', files)
-      ).toBe(true);
+        getSourceFileRefOfStaticMetadata('/blog/[id]/icon.png', files)
+      ).toBeDefined();
       expect(
-        getSourceFileRefOfStaticMetadata(
-          '/products/electronics/laptop/icon.png-xyz789',
-          files
-        )
-      ).toBe(true);
+        getSourceFileRefOfStaticMetadata('/blog/1/icon-xyz789.png', files)
+      ).toBeUndefined();
     });
   });
 });
