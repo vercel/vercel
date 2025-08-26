@@ -55,6 +55,7 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
+  considerBuildCommand: boolean;
 }
 
 const require_ = createRequire(__filename);
@@ -68,6 +69,7 @@ async function downloadInstallAndBundle({
   workPath,
   config,
   meta,
+  considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -78,14 +80,28 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    [],
-    spawnOpts,
-    meta,
-    nodeVersion,
-    config.projectSettings?.createdAt
-  );
+
+  const installCommand = config.projectSettings?.installCommand;
+  if (typeof installCommand === 'string' && considerBuildCommand) {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
+  }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -377,22 +393,39 @@ export const build = async ({
   config = {},
   meta = {},
   considerBuildCommand = false,
+  entrypointCallback,
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
   considerBuildCommand?: boolean;
+  /**
+   * It's possible to specify a build script that may result in a different entrypoint.
+   * For example `tsc -p tsconfig.builds.json` which puts things in a `dist` directory.
+   *
+   * If the project settings output directory is specified, we will look there for a valid
+   * entrypoint for the node app. To find it, then entrypointCallback allows the builders calling
+   * this function to provide the entrypoint detection logic
+   */
+  entrypointCallback?: (preparedFiles: Files) => string | undefined;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
+  const {
+    entrypointPath: _entrypointPath,
+    entrypointFsDirname,
+    nodeVersion,
+    spawnOpts,
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+    considerBuildCommand,
+  });
+
+  let entrypointPath = _entrypointPath;
 
   const projectBuildCommand = config.projectSettings?.buildCommand;
 
@@ -436,6 +469,31 @@ export const build = async ({
 
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
+  }
+
+  /**
+   * Even if the project handles the build process, we still want to run the output
+   * through our compiler so it can be processed by NFT. The code below allows us
+   * to set the entrypoint to the output directory if it's specified.
+   */
+  if (config.projectSettings?.outputDirectory) {
+    const outputDirFiles = await glob(
+      '**/*',
+      join(workPath, config.projectSettings.outputDirectory)
+    );
+    const outputDirEntrypoint = entrypointCallback?.(outputDirFiles);
+    if (outputDirEntrypoint) {
+      const outputDirEntrypointPath = join(
+        workPath,
+        config.projectSettings.outputDirectory,
+        outputDirEntrypoint
+      );
+      entrypointPath = outputDirEntrypointPath;
+    } else {
+      console.warn(
+        `No entrypoint found in output directory ${config.projectSettings.outputDirectory}. Using the original entrypoint of ${entrypoint}.`
+      );
+    }
   }
 
   debug('Tracing input files...');
