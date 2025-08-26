@@ -343,7 +343,7 @@ importers:
         specifier: 11.0.2
         version: link:../build-utils
       '@vercel/express':
-        specifier: 0.0.7
+        specifier: 0.0.8
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -352,25 +352,25 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.15
+        specifier: 0.0.16
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.3
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.12.0
+        specifier: 4.12.1
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.14
+        specifier: 5.3.15
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.3.4
+        specifier: 2.3.5
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.4.10
+        specifier: 5.4.11
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.2.1
@@ -924,7 +924,7 @@ importers:
   packages/express:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.14
+        specifier: 5.3.15
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1
@@ -1251,7 +1251,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.14
+        specifier: 5.3.15
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.1
