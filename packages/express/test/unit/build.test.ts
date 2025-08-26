@@ -132,6 +132,24 @@ const fixtures: Record<
     handler: ['app.js'],
     moduleType: 'cjs',
   },
+  '15-src-server-js-no-module': {
+    handler: ['src', 'server.js'],
+    moduleType: 'cjs',
+  },
+  '16-src-app-js-no-module': {
+    handler: ['src', 'app.js'],
+    moduleType: 'cjs',
+  },
+  '17-multiple-matches': {
+    // matches alphabetically first
+    handler: ['src', 'app.js'],
+    moduleType: 'cjs',
+  },
+  '18-multiple-matches-with-no-exp': {
+    // src/app.js is alphabetically first, but its contents don't match the regex
+    handler: ['src', 'index.js'],
+    moduleType: 'cjs',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
