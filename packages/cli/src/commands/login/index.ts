@@ -101,6 +101,7 @@ export default async function login(client: Client): Promise<number> {
     interval,
   } = deviceAuthorization;
 
+  let rlClosed = false;
   const rl = readline
     .createInterface({
       input: process.stdin,
@@ -125,6 +126,7 @@ export default async function login(client: Client): Promise<number> {
       output.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
       output.spinner('Waiting for authentication...');
       rl.close();
+      rlClosed = true;
     }
   );
 
@@ -221,7 +223,9 @@ export default async function login(client: Client): Promise<number> {
   error = await pollForToken();
 
   output.stopSpinner();
-  rl.close();
+  if (!rlClosed) {
+    rl.close();
+  }
 
   if (!error) return 0;
 
