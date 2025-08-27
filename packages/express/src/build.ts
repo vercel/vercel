@@ -52,6 +52,12 @@ export const findEntrypoint = (files: Files | Record<string, FileFsRef>) => {
         const matchesContent = content.match(REGEX);
         return matchesContent !== null;
       }
+      if (file.type === 'FileRef') {
+        // we don't expect any of these since the Files is actuall FilesFsRef
+        // https://github.com/vercel/vercel/blob/2fb1eaf0bab62039881e1fb0fbcb64a674c47e6e/packages/cli/src/commands/build/index.ts#L510
+        // but return true here to be safe.
+        return true;
+      }
     }
     return false;
   });
