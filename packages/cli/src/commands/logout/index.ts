@@ -37,9 +37,9 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
-    const option =
-      logoutCommand.options[flag as keyof typeof logoutCommand.options];
-    if (typeof option === 'number') return;
+    const flagKey = flag.replace('--', '');
+    const option = logoutCommand.options.find(o => o.name === flagKey);
+    if (!option || typeof option === 'number') return;
     return 'deprecated' in option && option.deprecated;
   });
 
