@@ -9,42 +9,8 @@
 
 console.log('🔒 Cookie Security Validation Verification\n');
 
-// Import validation functions (would normally be from the built module)
-function isValidCookieName(name) {
-  if (!name || typeof name !== 'string') return false;
-  
-  // Check for control characters (0-31, 127)
-  for (let i = 0; i < name.length; i++) {
-    const charCode = name.charCodeAt(i);
-    if (charCode <= 31 || charCode === 127) return false;
-  }
-  
-  // Check for separator characters that could break cookie parsing
-  const separators = '()<>@,;:\\"/?={}[]';
-  for (const char of separators) {
-    if (name.includes(char)) return false;
-  }
-  
-  // Check for space and tab
-  if (name.includes(' ') || name.includes('\t')) return false;
-  
-  return true;
-}
-
-function isValidCookieValue(value) {
-  if (typeof value !== 'string') return false;
-  if (value === '') return true;
-  
-  for (let i = 0; i < value.length; i++) {
-    const charCode = value.charCodeAt(i);
-    // Control characters are not allowed
-    if (charCode <= 31 || charCode === 127) return false;
-    // Characters that break cookie parsing: " , ; \\
-    if (charCode === 34 || charCode === 44 || charCode === 59 || charCode === 92) return false;
-  }
-  
-  return true;
-}
+// Import validation functions from the compiled module
+const { isValidCookieName, isValidCookieValue } = require('./dist/cookie-validation');
 
 // Test scenarios from the original issue report
 const securityTests = [

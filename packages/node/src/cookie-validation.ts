@@ -128,11 +128,6 @@ export function isValidCookieDomain(domain: string): boolean {
     return false;
   }
   
-  // Must not contain consecutive dots
-  if (normalizedDomain.includes('..')) {
-    return false;
-  }
-  
   // Must contain at least one dot (except for localhost and similar)
   const parts = normalizedDomain.split('.');
   if (parts.length < 2 && !['localhost'].includes(normalizedDomain.toLowerCase())) {
