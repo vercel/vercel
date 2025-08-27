@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- ([#13705](https://github.com/vercel/vercel/pull/13705))
+- Change `vc teams ls` command header to "Team name" ([#13705](https://github.com/vercel/vercel/pull/13705))
 
 - Updated dependencies []:
   - @vercel/express@0.0.9
