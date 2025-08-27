@@ -342,6 +342,9 @@ importers:
       '@vercel/build-utils':
         specifier: 11.0.2
         version: link:../build-utils
+      '@vercel/detect-agent':
+        specifier: 0.2.0
+        version: link:../detect-agent
       '@vercel/express':
         specifier: 0.0.9
         version: link:../express
@@ -523,9 +526,6 @@ importers:
       '@vercel/client':
         specifier: 15.3.15
         version: link:../client
-      '@vercel/detect-agent':
-        specifier: 0.2.0
-        version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
@@ -14816,6 +14816,7 @@ packages:
 
   /path-match@1.2.4:
     resolution: {integrity: sha512-UWlehEdqu36jmh4h5CWJ7tARp1OEVKGHKm6+dg9qMq5RKUTV5WJrGgaZ3dN2m7WFAXDbjlHzvJvL/IUpy84Ktw==}
+    deprecated: This package is archived and no longer maintained. For support, visit https://github.com/expressjs/express/discussions
     dependencies:
       http-errors: 1.4.0
       path-to-regexp: 1.9.0

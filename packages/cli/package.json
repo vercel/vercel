@@ -36,6 +36,7 @@
   "dependencies": {
     "@vercel/blob": "1.0.2",
     "@vercel/build-utils": "11.0.2",
+    "@vercel/detect-agent": "0.2.0",
     "@vercel/fun": "1.1.6",
     "@vercel/go": "3.2.3",
     "@vercel/express": "0.0.9",
