@@ -665,7 +665,7 @@ async function doBuild(
           throw new NowBuildError({
             code: 'NODEJS_DISCONTINUED_VERSION',
             message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
-            link: 'https://vercel.com/docs/functions/runtimes#official-runtimes',
+            link: 'https://vercel.link/function-runtimes',
           });
         }
       }
