@@ -150,6 +150,10 @@ const fixtures: Record<
     handler: ['src', 'index.js'],
     moduleType: 'cjs',
   },
+  '19-index-cts-module-tsconfig': {
+    handler: ['index.cjs'],
+    moduleType: 'cjs',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];

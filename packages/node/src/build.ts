@@ -116,6 +116,9 @@ function renameTStoJS(path: string) {
   if (path.endsWith('.mts')) {
     return path.slice(0, -4) + '.mjs';
   }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
+  }
   return path;
 }
 
@@ -242,7 +245,8 @@ async function compile(
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
             fsPath.endsWith('.tsx') ||
-            fsPath.endsWith('.mts')
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
