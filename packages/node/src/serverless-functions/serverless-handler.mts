@@ -86,11 +86,12 @@ async function compileUserCode(
   const originalListen = http.Server.prototype.listen;
   http.Server.prototype.listen = function (this: Server) {
     server = this as Server;
+    // ensure this stubbed implementation is only called once
+    // and is immediately restored
+    http.Server.prototype.listen = originalListen;
     return this;
   };
   let listener = await import(id);
-  // Restore original listen method
-  http.Server.prototype.listen = originalListen;
 
   /**
    * In some cases we might have nested default props due to TS => JS
