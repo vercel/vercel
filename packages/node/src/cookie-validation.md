@@ -12,9 +12,9 @@ This module provides cookie validation utilities to prevent security vulnerabili
 ## Validation Rules
 
 ### Cookie Names
-- Must only contain alphanumeric characters, hyphens, and underscores
-- Cannot contain control characters (0-31, 127)
-- Cannot contain separator characters: `()<>@,;:\"/?={}[]` or spaces
+- Must be a valid `token` as defined by RFC 6265.
+- Cannot contain control characters (US-ASCII 0-31 and 127).
+- Cannot contain separator characters such as `()<>@,;:\"/?={}[]` or spaces.
 
 ### Cookie Values
 - Cannot contain control characters (0-31, 127)
