@@ -20,25 +20,13 @@ export function isValidCookieName(name: string): boolean {
   // CTLs = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
   
   // Check for control characters (0-31, 127)
-  for (let i = 0; i < name.length; i++) {
-    const charCode = name.charCodeAt(i);
-    if (charCode <= 31 || charCode === 127) {
-      return false;
-    }
-  }
-  
-  // Check for separator characters
-  const separators = '()<>@,;:\\"/?={}[]';
-  for (const char of separators) {
-    if (name.includes(char)) {
-      return false;
-    }
-  }
-  
-  // Check for space and tab
-  if (name.includes(' ') || name.includes('\t')) {
+  // Regex for invalid characters: control characters and separators including '='.
+  const INVALID_CHARS_REGEX = /[\x00-\x1F\x7F()<>@,;:\\"\/\[\]?{}\t =]/;
+  if (INVALID_CHARS_REGEX.test(name)) {
     return false;
   }
+  
+  return true;
   
   return true;
 }
