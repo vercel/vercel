@@ -78,21 +78,28 @@ function getCookieParser(req: IncomingMessage) {
   return function parseCookie(): VercelRequestCookies {
     const header: undefined | string | string[] = req.headers.cookie;
     if (!header) return {};
-    const { parse } = require('cookie');
-    const rawCookies = parse(Array.isArray(header) ? header.join(';') : header);
     
-    // Validate cookie names and values for security
-    const validatedCookies: VercelRequestCookies = {};
-    for (const [name, value] of Object.entries(rawCookies)) {
-      // Only include cookies with valid names and values
-      if (isValidCookieName(name) && isValidCookieValue(String(value))) {
-        validatedCookies[name] = value;
+    try {
+      const { parse } = require('cookie');
+      const rawCookies = parse(Array.isArray(header) ? header.join(';') : header);
+      
+      // Validate cookie names and values for security
+      const validatedCookies: VercelRequestCookies = {};
+      for (const [name, value] of Object.entries(rawCookies)) {
+        // Only include cookies with valid names and values according to RFC 6265
+        if (isValidCookieName(name) && isValidCookieValue(String(value))) {
+          validatedCookies[name] = value;
+        }
+        // Invalid cookies are silently dropped to prevent security issues
+        // This maintains backward compatibility while improving security
       }
-      // Silently drop invalid cookies to prevent security issues
-      // In production, you might want to log these for monitoring
+      
+      return validatedCookies;
+    } catch (error) {
+      // If cookie parsing fails completely, return empty object
+      // This prevents any malformed cookie headers from crashing the application
+      return {};
     }
-    
-    return validatedCookies;
   };
 }
 
