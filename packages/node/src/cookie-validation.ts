@@ -27,8 +27,6 @@ export function isValidCookieName(name: string): boolean {
   }
   
   return true;
-  
-  return true;
 }
 
 /**
@@ -47,20 +45,10 @@ export function isValidCookieValue(value: string): boolean {
   
   // RFC 6265: cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
   // cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
-  // Essentially: any ASCII character except control chars, whitespace, double quote, comma, semicolon, and backslash
-  
-  for (let i = 0; i < value.length; i++) {
-    const charCode = value.charCodeAt(i);
-    
-    // Control characters (0-31, 127) are not allowed
-    if (charCode <= 31 || charCode === 127) {
-      return false;
-    }
-    
-    // Specific characters that are not allowed: " , ; \
-    if (charCode === 34 || charCode === 44 || charCode === 59 || charCode === 92) {
-      return false;
-    }
+  // Excludes CTLs, whitespace, DQUOTE, comma, semicolon, and backslash.
+  const INVALID_CHARS_REGEX = /[\x00-\x1F\x7F\s",;\\]/;
+  if (INVALID_CHARS_REGEX.test(value)) {
+    return false;
   }
   
   return true;

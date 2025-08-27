@@ -77,6 +77,11 @@ describe('Cookie Validation', () => {
       expect(isValidCookieValue('value\\test')).toBe(false); // backslash
     });
 
+    test('should reject cookie values with whitespace characters', () => {
+      expect(isValidCookieValue('value test')).toBe(false); // space
+      expect(isValidCookieValue('value\ttest')).toBe(false); // tab (also covered in control chars)
+    });
+
     test('should handle non-string values', () => {
       expect(isValidCookieValue(123 as any)).toBe(false);
       expect(isValidCookieValue(null as any)).toBe(false);
