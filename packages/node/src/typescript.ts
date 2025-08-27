@@ -271,6 +271,17 @@ export function register(opts: Options = {}): Register {
       getCompilationSettings: () => config.options,
       getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
       getCustomTransformers: () => transformers,
+      resolveModuleNames: (moduleNames: string[], containingFile: string) => {
+        return moduleNames.map(moduleName => {
+          const result = ts.resolveModuleName(
+            moduleName,
+            containingFile,
+            config.options,
+            ts.sys
+          );
+          return result.resolvedModule;
+        });
+      },
     };
 
     const registry = ts.createDocumentRegistry(
