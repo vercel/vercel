@@ -149,6 +149,9 @@ export async function unstable_checkRateLimit(
 }
 
 async function hashString(input: string): Promise<string> {
+  if (typeof input !== 'string') {
+    throw new TypeError('Hash input must be a string');
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
   const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);

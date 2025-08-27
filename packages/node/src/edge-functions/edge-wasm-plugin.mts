@@ -88,5 +88,8 @@ export function createEdgeWasmPlugin() {
 }
 
 function sha1(data: string | Buffer) {
+  if (typeof data !== 'string' && !Buffer.isBuffer(data)) {
+    throw new TypeError('SHA1 input must be a string or Buffer');
+  }
   return createHash('sha1').update(data).digest('hex');
 }
