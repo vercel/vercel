@@ -1,5 +1,11 @@
 # @vercel/static-config
 
+## 3.1.2
+
+### Patch Changes
+
+- fix validation of vercel.json for request cancellation ([#13831](https://github.com/vercel/vercel/pull/13831))
+
 ## 3.1.1
 
 ### Patch Changes

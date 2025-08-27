@@ -1,5 +1,20 @@
 # vercel
 
+## 46.0.5
+
+### Patch Changes
+
+- Change `vc teams ls` command header to "Team name" ([#13705](https://github.com/vercel/vercel/pull/13705))
+
+- Updated dependencies []:
+  - @vercel/express@0.0.9
+  - @vercel/hono@0.0.17
+  - @vercel/hydrogen@1.2.4
+  - @vercel/node@5.3.16
+  - @vercel/redwood@2.3.6
+  - @vercel/remix-builder@5.4.12
+  - @vercel/static-build@2.7.20
+
 ## 46.0.4
 
 ### Patch Changes
