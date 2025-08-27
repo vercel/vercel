@@ -816,7 +816,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // top level "error" also contains the same error
@@ -826,7 +826,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // `config.json` contains `version`
