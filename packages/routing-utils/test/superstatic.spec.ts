@@ -1383,3 +1383,39 @@ test('convertTrailingSlash disabled', () => {
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);
 });
+
+test('namedGroupsRegex performance is safe and efficient', () => {
+  // Test the namedGroupsRegex pattern used in collectHasSegments
+  const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
+  
+  // Test with valid named group patterns
+  const validPatterns = [
+    '(?<name>.*)',
+    '(?<host>.*).(?<subdomain>.*)',
+    '(?<id>[0-9]+)',
+  ];
+  
+  validPatterns.forEach(pattern => {
+    const matches = Array.from(pattern.matchAll(namedGroupsRegex));
+    deepEqual(matches.length > 0, true, `Pattern ${pattern} should have matches`);
+  });
+  
+  // Test with large inputs to ensure no ReDoS risk - should complete quickly
+  const largeInputs = [
+    '(?<' + 'a'.repeat(1000) + '>',
+    '(?<name' + '123'.repeat(200) + '>.*)',
+    '(?<' + 'aB'.repeat(200) + '>pattern)',
+  ];
+  
+  largeInputs.forEach(input => {
+    const start = Date.now();
+    const matches = Array.from(input.matchAll(namedGroupsRegex));
+    const duration = Date.now() - start;
+    
+    // Should complete very quickly (under 10ms) - this regex is safe
+    deepEqual(duration < 10, true, `Pattern matching should be fast for large input`);
+    
+    // Should find exactly one match for these valid patterns
+    deepEqual(matches.length, 1, `Should find one match in: ${input.substring(0, 20)}...`);
+  });
+});
