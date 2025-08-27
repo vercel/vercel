@@ -1,64 +1,43 @@
 const babel = require('@babel/core'); // eslint-disable-line @typescript-eslint/no-var-requires
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pluginTransformModulesCommonJs = require('@babel/plugin-transform-modules-commonjs');
-const { basename } = require('path');
 
 // Security limits for Babel compilation
-const MAX_SOURCE_SIZE = 1024 * 1024; // 1MB max source size
-const COMPILATION_TIMEOUT = 30000; // 30 second timeout
+const MAX_SOURCE_SIZE = 5 * 1024 * 1024; // 5MB max source size (reasonable for large files)
 
-// Validate and sanitize filename to prevent path traversal attacks
+// Validate filename to prevent path traversal attacks while allowing legitimate paths
 function validateFilename(filename: string): string {
   if (!filename || typeof filename !== 'string') {
-    throw new Error('Invalid filename provided');
+    throw new Error('Filename must be a non-empty string');
   }
   
-  // Check for path traversal attempts before using basename
-  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-    throw new Error('Invalid filename provided');
+  // Prevent path traversal attacks while allowing legitimate relative paths
+  if (filename.includes('..')) {
+    throw new Error('Filename cannot contain path traversal sequences');
   }
   
-  // Only use basename to prevent path traversal
-  const safeName = basename(filename);
-  
-  // Validate filename pattern (alphanumeric, dots, hyphens, underscores)
-  if (!/^[a-zA-Z0-9._-]+$/.test(safeName)) {
-    throw new Error('Filename contains invalid characters');
+  // Prevent null bytes which can cause security issues
+  if (filename.includes('\0')) {
+    throw new Error('Filename cannot contain null bytes');
   }
   
-  // Prevent extremely long filenames
-  if (safeName.length > 255) {
-    throw new Error('Filename too long');
+  // Prevent extremely long paths (DoS prevention)
+  if (filename.length > 1000) {
+    throw new Error('Filename path is too long');
   }
   
-  return safeName;
+  return filename;
 }
 
-// Validate and sanitize source code
+// Validate source code for basic security and size limits
 function validateSource(source: string): string {
   if (typeof source !== 'string') {
-    throw new Error('Source must be a string');
+    throw new Error('Source code must be a string');
   }
   
-  // Check source size limit
+  // Prevent extremely large source files (DoS prevention)
   if (source.length > MAX_SOURCE_SIZE) {
     throw new Error(`Source code exceeds maximum size of ${MAX_SOURCE_SIZE} bytes`);
-  }
-  
-  // Basic content validation - detect potentially malicious patterns
-  const suspiciousPatterns = [
-    /eval\s*\(/gi,
-    /Function\s*\(/gi,
-    /setTimeout\s*\(/gi,
-    /setInterval\s*\(/gi,
-    /__proto__/gi,
-    /constructor\s*\.\s*constructor/gi,
-  ];
-  
-  for (const pattern of suspiciousPatterns) {
-    if (pattern.test(source)) {
-      throw new Error('Source code contains potentially unsafe patterns');
-    }
   }
   
   return source;
@@ -69,15 +48,13 @@ export function compile(
   source: string
 ): { code: string; map: any } {
   try {
-    // Validate and sanitize inputs
-    const safeFilename = validateFilename(filename);
-    const safeSource = validateSource(source);
+    // Validate inputs for basic security
+    const validatedFilename = validateFilename(filename);
+    const validatedSource = validateSource(source);
     
-    // Set up timeout for compilation
-    const startTime = Date.now();
-    
-    const result = babel.transform(safeSource, {
-      filename: safeFilename,
+    // Perform Babel transformation with security-conscious configuration
+    const result = babel.transform(validatedSource, {
+      filename: validatedFilename,
       configFile: false,
       babelrc: false,
       highlightCode: false,
@@ -100,12 +77,6 @@ export function compile(
       plugins: [pluginTransformModulesCommonJs],
     });
     
-    // Check if compilation took too long
-    const compilationTime = Date.now() - startTime;
-    if (compilationTime > COMPILATION_TIMEOUT) {
-      throw new Error('Compilation timeout exceeded');
-    }
-    
     if (!result || !result.code) {
       throw new Error('Babel compilation produced no output');
     }
@@ -113,16 +84,18 @@ export function compile(
     return result;
   } catch (error) {
     // Sanitize error messages to prevent information disclosure
-    const errorMessage = error instanceof Error ? error.message : 'Unknown compilation error';
+    let errorMessage = 'Babel compilation failed';
     
-    // Filter out potentially sensitive information from error messages
-    const sanitizedMessage = errorMessage
-      .replace(/\/[^\s]+/g, '[PATH_REDACTED]') // Remove absolute paths
-      .replace(/[A-Za-z]:[^\s]+/g, '[PATH_REDACTED]') // Remove Windows paths
-      .replace(/line \d+/gi, '[LINE_REDACTED]') // Remove line numbers (case insensitive)
-      .replace(/column \d+/gi, '[COLUMN_REDACTED]') // Remove column numbers (case insensitive)
-      .replace(/\(\d+:\d+\)/g, '([LINE_REDACTED]:[COLUMN_REDACTED])'); // Remove (line:col) format
+    if (error instanceof Error) {
+      // Keep the error message but remove potentially sensitive file paths
+      const sanitizedMessage = error.message
+        .replace(/\/[^\s,;]+/g, '[PATH]') // Remove absolute paths
+        .replace(/[A-Za-z]:[^\s,;]+/g, '[PATH]') // Remove Windows paths
+        .replace(/(\s|^)\/[^\/\s]+/g, ' [PATH]'); // Remove relative paths starting with /
+      
+      errorMessage = `Babel compilation failed: ${sanitizedMessage}`;
+    }
     
-    throw new Error(`Babel compilation failed: ${sanitizedMessage}`);
+    throw new Error(errorMessage);
   }
 }
