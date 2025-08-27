@@ -12,7 +12,7 @@ function validateFilename(filename: string): string {
   }
   
   // Prevent path traversal attacks while allowing legitimate relative paths
-  if (filename.includes('..')) {
+  if (filename.split(/[\/\\]/).includes('..')) {
     throw new Error('Filename cannot contain path traversal sequences');
   }
   
