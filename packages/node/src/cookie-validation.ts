@@ -1,0 +1,146 @@
+/**
+ * Cookie validation utilities according to RFC 6265
+ * 
+ * This module provides validation functions for cookie names, values, paths, and domains
+ * to prevent security vulnerabilities and ensure compliance with HTTP cookie standards.
+ */
+
+/**
+ * Validates a cookie name according to RFC 6265
+ * Cookie names must not contain control characters, separators, or special characters
+ */
+export function isValidCookieName(name: string): boolean {
+  if (!name || typeof name !== 'string') {
+    return false;
+  }
+  
+  // RFC 6265: cookie-name = token
+  // token = 1*<any CHAR except CTLs or separators>
+  // separators = "(" | ")" | "<" | ">" | "@" | "," | ";" | ":" | "\" | <"> | "/" | "[" | "]" | "?" | "=" | "{" | "}" | SP | HT
+  // CTLs = <any US-ASCII control character (octets 0 - 31) and DEL (127)>
+  
+  // Check for control characters (0-31, 127)
+  // Regex for invalid characters: control characters and separators including '='.
+  const INVALID_CHARS_REGEX = /[\x00-\x1F\x7F()<>@,;:\\"\/\[\]?{}\t =]/;
+  if (INVALID_CHARS_REGEX.test(name)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Validates a cookie value according to RFC 6265
+ * Cookie values have specific character restrictions
+ */
+export function isValidCookieValue(value: string): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  
+  // Empty values are allowed
+  if (value === '') {
+    return true;
+  }
+  
+  // RFC 6265: cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+  // cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+  // Excludes CTLs, whitespace, DQUOTE, comma, semicolon, and backslash.
+  const INVALID_CHARS_REGEX = /[\x00-\x1F\x7F\s",;\\]/;
+  if (INVALID_CHARS_REGEX.test(value)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Validates a cookie path according to RFC 6265
+ */
+export function isValidCookiePath(path: string): boolean {
+  if (typeof path !== 'string') {
+    return false;
+  }
+  
+  // Empty path defaults to request path, which is valid
+  if (path === '') {
+    return true;
+  }
+  
+  // Path must start with '/'
+  if (!path.startsWith('/')) {
+    return false;
+  }
+  
+  // Check for control characters
+  for (let i = 0; i < path.length; i++) {
+    const charCode = path.charCodeAt(i);
+    if (charCode <= 31 || charCode === 127) {
+      return false;
+    }
+  }
+  
+  // Path should not contain semicolon as it's used as cookie delimiter
+  if (path.includes(';')) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Validates a cookie domain according to RFC 6265
+ */
+export function isValidCookieDomain(domain: string): boolean {
+  if (typeof domain !== 'string') {
+    return false;
+  }
+  
+  // Empty domain uses request host, which is valid
+  if (domain === '') {
+    return true;
+  }
+  
+  // Domain can start with a dot (for subdomain matching)
+  const normalizedDomain = domain.startsWith('.') ? domain.slice(1) : domain;
+  
+  // Basic domain name validation
+  // Must contain only letters, numbers, dots, and hyphens
+  if (!/^[a-zA-Z0-9.-]+$/.test(normalizedDomain)) {
+    return false;
+  }
+  
+  // Must not start or end with hyphen or dot
+  if (normalizedDomain.startsWith('-') || normalizedDomain.endsWith('-') ||
+      normalizedDomain.startsWith('.') || normalizedDomain.endsWith('.')) {
+    return false;
+  }
+  
+  // Must contain at least one dot (except for localhost and similar)
+  const parts = normalizedDomain.split('.');
+  if (parts.length < 2 && !['localhost'].includes(normalizedDomain.toLowerCase())) {
+    return false;
+  }
+  
+  // Each part must not be empty and must not start with hyphen
+  for (const part of parts) {
+    if (!part || part.startsWith('-') || part.endsWith('-')) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Sanitizes a cookie name by removing invalid characters
+ * This is a fallback for cases where we want to be permissive
+ */
+export function sanitizeCookieName(name: string): string {
+  if (typeof name !== 'string') {
+    return '';
+  }
+  
+  // Keep only valid characters: letters, numbers, underscore, hyphen
+  return name.replace(/[^a-zA-Z0-9_-]/g, '');
+}

@@ -5,6 +5,7 @@ import { parse as parseURL } from 'url';
 import { parse as parseContentType } from 'content-type';
 import { parse as parseQS } from 'querystring';
 import etag from 'etag';
+import { isValidCookieName, isValidCookieValue } from '../cookie-validation';
 
 type VercelRequestCookies = { [key: string]: string };
 type VercelRequestQuery = { [key: string]: string | string[] };
@@ -77,8 +78,28 @@ function getCookieParser(req: IncomingMessage) {
   return function parseCookie(): VercelRequestCookies {
     const header: undefined | string | string[] = req.headers.cookie;
     if (!header) return {};
-    const { parse } = require('cookie');
-    return parse(Array.isArray(header) ? header.join(';') : header);
+    
+    try {
+      const { parse } = require('cookie');
+      const rawCookies = parse(Array.isArray(header) ? header.join(';') : header);
+      
+      // Validate cookie names and values for security
+      const validatedCookies: VercelRequestCookies = {};
+      for (const [name, value] of Object.entries(rawCookies)) {
+        // Only include cookies with valid names and values according to RFC 6265
+        if (isValidCookieName(name) && isValidCookieValue(String(value))) {
+          validatedCookies[name] = value;
+        }
+        // Invalid cookies are silently dropped to prevent security issues
+        // This maintains backward compatibility while improving security
+      }
+      
+      return validatedCookies;
+    } catch (error) {
+      // If cookie parsing fails completely, return empty object
+      // This prevents any malformed cookie headers from crashing the application
+      return {};
+    }
   };
 }
 
