@@ -45,9 +45,14 @@ export const HTTP_METHODS = [
 ];
 
 async function createServerlessServer(
-  userCode: ServerlessFunctionSignature
+  userCode: ServerlessFunctionSignature | Server
 ): Promise<{ url: URL; onExit: () => Promise<void> }> {
-  const server = createServer(userCode);
+  let server: Server;
+  if (typeof userCode === 'function') {
+    server = createServer(userCode);
+  } else {
+    server = userCode;
+  }
   return {
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
     onExit: promisify(server.close.bind(server)),
@@ -62,55 +67,61 @@ async function compileUserCode(
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
-  let handler: any;
-  let mod: any;
 
+  let server: Server | null = null;
+
+  /**
+   * Override the listen method while we import the module,
+   * so we can capture the server instance it invokes (if it does)
+   *
+   * This will cause the `.listen()` to be stubbed once and then restored, so
+   * the arguments supplied will be ignored. Eg.
+   *
+   * app.listen(3000, () => {
+   *   console.log('Server is running on port 3000')
+   * })
+   *
+   * The port 3000 and console.log statement will not be executed.
+   */
   const originalListen = http.Server.prototype.listen;
-  try {
-    // @ts-expect-error
-    http.Server.prototype.listen = function (this: Server) {
-      // https://github.com/nodejs/node/blob/af77e4bf2f8bee0bc23f6ee129d6ca97511d34b9/lib/_http_server.js#L557
-      // @ts-expect-error
-      handler = this._events.request;
-
-      // Restore original listen method
-      http.Server.prototype.listen = originalListen;
-    };
-    mod = await import(id);
-  } finally {
-    http.Server.prototype.listen = originalListen;
-  }
+  http.Server.prototype.listen = function (this: Server) {
+    server = this as Server;
+    return this;
+  };
+  let listener = await import(id);
+  // Restore original listen method
+  http.Server.prototype.listen = originalListen;
 
   /**
    * In some cases we might have nested default props due to TS => JS
    */
   for (let i = 0; i < 5; i++) {
-    if (mod.default) mod = mod.default;
+    if (listener.default) listener = listener.default;
   }
 
   const shouldUseWebHandlers =
     options.isMiddleware ||
-    HTTP_METHODS.some(method => typeof mod[method] === 'function') ||
-    typeof mod.fetch === 'function';
+    HTTP_METHODS.some(method => typeof listener[method] === 'function') ||
+    typeof listener.fetch === 'function';
 
   if (shouldUseWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
 
-    handler = mod;
+    let handler = listener;
     if (options.isMiddleware) {
       handler = HTTP_METHODS.reduce(
         (acc, method) => {
-          acc[method] = mod;
+          acc[method] = listener;
           return acc;
         },
         {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
       );
     }
-    if (typeof mod.fetch === 'function') {
+    if (typeof listener.fetch === 'function') {
       handler = HTTP_METHODS.reduce(
         (acc, method) => {
-          acc[method] = mod.fetch;
+          acc[method] = listener.fetch;
           return acc;
         },
         {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
@@ -119,18 +130,19 @@ async function compileUserCode(
     return getWebExportsHandler(handler, HTTP_METHODS);
   }
 
+  // If we have a server instance, server.listen() was called from the module, we can use
+  // we can proxy requests to it instead of initializing our own server
+  if (server) {
+    return server;
+  }
+
   return async (req: IncomingMessage, res: ServerResponse) => {
     // Only add helpers if the listener isn't an express server
-    if (options.shouldAddHelpers && typeof mod.listen !== 'function') {
+    if (options.shouldAddHelpers && typeof listener.listen !== 'function') {
       await addHelpers(req, res);
     }
-    if (typeof mod.listen === 'function') {
-      return mod(req, res);
-    }
-    if (handler) {
-      return handler(req, res);
-    }
-    return mod(req, res);
+
+    return listener(req, res);
   };
 }
 
