@@ -32,7 +32,7 @@ export const findEntrypoint = (files: Files | Record<string, FileFsRef>) => {
     ['src', 'server'],
   ];
 
-  const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'mts', 'cts'];
+  const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
   const validEntrypoints = validFilenames.flatMap(filename =>
     validExtensions.map(extension => `${filename.join(sep)}.${extension}`)
