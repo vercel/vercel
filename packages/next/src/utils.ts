@@ -3064,11 +3064,23 @@ export const onPrerenderRoute =
             rscContentTypeHeader
           )}`;
 
+          // If the application has client segment cache, client segment
+          // parsing, and ppr enabled, then we can use a blank allowQuery
+          // for the segment prerenders. This is because we know that the
+          // segments do not vary based on the route parameters. It's important
+          // that this mirrors the logic in the segment prerender below so that
+          // they are both part of the same prerender group and are revalidated
+          // together.
+          let rdcRSCAllowQuery = allowQuery;
+          if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
+            rdcRSCAllowQuery = [];
+          }
+
           prerenders[normalizePathData(outputPathData)] = new Prerender({
             expiration: initialRevalidate,
             staleExpiration: initialExpire,
             lambda,
-            allowQuery,
+            allowQuery: rdcRSCAllowQuery,
             fallback: isFallback
               ? null
               : new FileBlob({
