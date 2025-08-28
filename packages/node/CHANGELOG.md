@@ -1,5 +1,15 @@
 # @vercel/node
 
+## 5.3.17
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- Add support for http listener when it's not default exported ([#13826](https://github.com/vercel/vercel/pull/13826))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13840](https://github.com/vercel/vercel/pull/13840))
+
 ## 5.3.16
 
 ### Patch Changes
