@@ -1,0 +1,12 @@
+{
+  "name": "express",
+  "type": "module",
+  "dependencies": {
+    "express": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.17",
+    "@types/express": "5.0.0",
+    "typescript": "5.8.3"
+  }
+}

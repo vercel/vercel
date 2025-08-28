@@ -16,6 +16,7 @@ import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
 import { Awaiter } from '../awaiter.js';
+import http, { Server } from 'http';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -44,9 +45,14 @@ export const HTTP_METHODS = [
 ];
 
 async function createServerlessServer(
-  userCode: ServerlessFunctionSignature
+  userCode: ServerlessFunctionSignature | Server
 ): Promise<{ url: URL; onExit: () => Promise<void> }> {
-  const server = createServer(userCode);
+  let server: Server;
+  if (typeof userCode === 'function') {
+    server = createServer(userCode);
+  } else {
+    server = userCode;
+  }
   return {
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
     onExit: promisify(server.close.bind(server)),
@@ -61,7 +67,32 @@ async function compileUserCode(
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
+
+  let server: Server | null = null;
+
+  /**
+   * Override the listen method while we import the module,
+   * so we can capture the server instance it invokes (if it does)
+   *
+   * This will cause the `.listen()` to be stubbed once and then restored, so
+   * the arguments supplied will be ignored. Eg.
+   *
+   * app.listen(3000, () => {
+   *   console.log('Server is running on port 3000')
+   * })
+   *
+   * The port 3000 and console.log statement will not be executed.
+   */
+  const originalListen = http.Server.prototype.listen;
+  http.Server.prototype.listen = function (this: Server) {
+    server = this as Server;
+    // Restore original listen method
+    http.Server.prototype.listen = originalListen;
+    return this;
+  };
   let listener = await import(id);
+  // Restore original listen method
+  http.Server.prototype.listen = originalListen;
 
   /**
    * In some cases we might have nested default props due to TS => JS
@@ -99,6 +130,12 @@ async function compileUserCode(
       );
     }
     return getWebExportsHandler(handler, HTTP_METHODS);
+  }
+
+  // If we have a server instance, server.listen() was called from the module, we can use
+  // we can proxy requests to it instead of initializing our own server
+  if (server) {
+    return server;
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
