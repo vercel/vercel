@@ -36,7 +36,7 @@ describe('logout', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = logout(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
