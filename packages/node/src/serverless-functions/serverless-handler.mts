@@ -86,6 +86,8 @@ async function compileUserCode(
   const originalListen = http.Server.prototype.listen;
   http.Server.prototype.listen = function (this: Server) {
     server = this as Server;
+    // Restore original listen method
+    http.Server.prototype.listen = originalListen;
     return this;
   };
   let listener = await import(id);
