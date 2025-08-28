@@ -147,7 +147,7 @@ importers:
         specifier: 11.0.2
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.8.1
+        specifier: 3.8.2
         version: link:../packages/frameworks
 
   internals/constants:
@@ -346,7 +346,7 @@ importers:
         specifier: 0.2.0
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.9
+        specifier: 0.0.10
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -355,16 +355,16 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.17
+        specifier: 0.0.18
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.12.1
+        specifier: 4.12.2
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.16
+        specifier: 5.3.17
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
@@ -530,10 +530,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.1
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.15
+        specifier: 5.4.16
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -924,7 +924,7 @@ importers:
   packages/express:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.16
+        specifier: 5.3.17
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1031,7 +1031,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.1
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1251,7 +1251,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.16
+        specifier: 5.3.17
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1914,10 +1914,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.1
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.15
+        specifier: 5.4.16
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
