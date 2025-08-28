@@ -2697,6 +2697,7 @@ export const frameworks = [
     name: 'xmcp',
     slug: 'xmcp',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/xmcp.svg',
+    demo: 'https://xmcp-template.vercel.app/',
     tagline: 'The MCP framework for building AI-powered tools',
     description:
       'A framework for building Model Context Protocol servers with zero configuration.',
