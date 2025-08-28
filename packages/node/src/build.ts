@@ -29,6 +29,8 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -80,6 +82,23 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
+
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    nodeVersion,
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
 
   const installCommand = config.projectSettings?.installCommand;
   if (typeof installCommand === 'string' && considerBuildCommand) {
