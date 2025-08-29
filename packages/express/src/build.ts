@@ -18,7 +18,7 @@ const validFilenames = [
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
-  .map(filename => `- ${filename.join('/')}.{${validExtensions.join(',')}}`)
+  .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
   .join('\n');
 
 export const build: BuildV3 = async args => {
@@ -37,6 +37,7 @@ export const build: BuildV3 = async args => {
       const entrypointGlob = `{${validFilenames
         .map(entrypoint => `${entrypoint.join('/')}`)
         .join(',')}}.{${validExtensions.join(',')}}`;
+
       const dir = args.config.projectSettings?.outputDirectory?.replace(
         /^\/+|\/+$/g,
         ''
@@ -54,9 +55,9 @@ export const build: BuildV3 = async args => {
           `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
         );
       }
-      const entrypointFromRoot = findEntrypoint(
-        await glob(entrypointGlob, args.workPath)
-      );
+      const files = await glob(entrypointGlob, args.workPath);
+      console.log('files', files);
+      const entrypointFromRoot = findEntrypoint(files);
       if (entrypointFromRoot) {
         return entrypointFromRoot;
       }
