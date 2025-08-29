@@ -29,6 +29,8 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -81,6 +83,23 @@ async function downloadInstallAndBundle({
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    nodeVersion,
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
+
   const installCommand = config.projectSettings?.installCommand;
   if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
@@ -115,6 +134,9 @@ function renameTStoJS(path: string) {
   }
   if (path.endsWith('.mts')) {
     return path.slice(0, -4) + '.mjs';
+  }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
   }
   return path;
 }
@@ -242,7 +264,8 @@ async function compile(
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
             fsPath.endsWith('.tsx') ||
-            fsPath.endsWith('.mts')
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
