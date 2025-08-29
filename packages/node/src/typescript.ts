@@ -44,7 +44,6 @@ interface Options {
   transformers?: _ts.CustomTransformers;
   nodeVersionMajor?: number;
   pkg?: { type?: string };
-  isMtsFile?: boolean;
 }
 
 /**
@@ -423,7 +422,17 @@ export function register(opts: Options = {}): Register {
       TS_NODE_COMPILER_OPTIONS
     );
 
-    fixConfig(config, options.nodeVersionMajor, options.pkg, options.isMtsFile);
+    const moduleTypeExtension = options.project?.endsWith('.cts')
+      ? 'cts'
+      : options.project?.endsWith('.mts')
+        ? 'mts'
+        : undefined;
+    fixConfig(
+      config,
+      options.nodeVersionMajor,
+      options.pkg,
+      moduleTypeExtension
+    );
 
     const configResult = ts.parseJsonConfigFileContent(
       config,
@@ -477,7 +486,7 @@ export function fixConfig(
   config: { compilerOptions: any },
   nodeVersionMajor = 12,
   pkg?: { type?: string },
-  isMtsFile?: boolean
+  moduleTypeExtension?: 'cts' | 'mts'
 ) {
   if (!config.compilerOptions) {
     config.compilerOptions = {};
@@ -515,7 +524,7 @@ export function fixConfig(
   // If not specified, the default Node.js module is CommonJS.
   // However, if package.json has "type": "module" or the file is .mts, use ESNext instead.
   if (config.compilerOptions.module === undefined) {
-    if (pkg?.type === 'module' || isMtsFile) {
+    if (pkg?.type === 'module' && moduleTypeExtension !== 'cts') {
       config.compilerOptions.module = 'ESNext';
     } else {
       config.compilerOptions.module = 'CommonJS';
