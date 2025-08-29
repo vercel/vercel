@@ -395,8 +395,11 @@ export async function serverBuild({
         // need to add the rewrite headers.
         if (origin && !isAllowedOrigin) continue;
 
-        (rewrite as RouteWithSrc).headers = {
-          ...(rewrite as RouteWithSrc).headers,
+        // Merge existing headers with optional path/query additions and only
+        // set `headers` when non-empty to satisfy the routing-utils schema
+        // (`minProperties: 1`); an empty object would not validate.
+        const mergedHeaders = {
+          ...((rewrite as RouteWithSrc).headers || {}),
 
           ...(pathname
             ? {
@@ -409,7 +412,13 @@ export async function serverBuild({
                 [rewriteHeaders.queryHeader]: query,
               }
             : {}),
-        };
+        } as RouteWithSrc['headers'];
+
+        if (mergedHeaders && Object.keys(mergedHeaders).length > 0) {
+          (rewrite as RouteWithSrc).headers = mergedHeaders;
+        } else {
+          delete (rewrite as RouteWithSrc).headers;
+        }
       }
     };
 
