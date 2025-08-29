@@ -2836,6 +2836,14 @@ export const onPrerenderRoute =
         }
       }
 
+      // Using the allowQuery configuration based on the routes manifest keys,
+      // we will use it's values to filter the query parameters that are added
+      // from the named regular expression matches to the resume lambda call.
+      // This ensures that the resume lambda will only receive the query
+      // parameters that are allowed and not other query parameters that might
+      // pollute the regular expression that's used to facilitate matching.
+      const filterRegexMatches = allowQuery ? [...allowQuery] : [];
+
       const rscEnabled = !!routesManifest?.rsc;
       const rscVaryHeader =
         routesManifest?.rsc?.varyHeader ||
@@ -2861,6 +2869,7 @@ export const onPrerenderRoute =
         chain = {
           outputPath: pathnameToOutputName(entryDirectory, routeKey),
           headers: routesManifest.ppr.chain.headers,
+          filterRegexMatches,
         };
       } else if (
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
@@ -2899,6 +2908,7 @@ export const onPrerenderRoute =
         chain = {
           outputPath: paths.output,
           headers: { 'x-matched-path': paths.pathname },
+          filterRegexMatches,
         };
       }
 
@@ -3094,6 +3104,7 @@ export const onPrerenderRoute =
             chain: {
               outputPath: normalizePathData(outputPathData),
               headers: routesManifest.ppr.chain.headers,
+              filterRegexMatches,
             },
             ...(isNotFound ? { initialStatus: 404 } : {}),
             initialHeaders: {

@@ -597,6 +597,12 @@ export interface Chain {
    * The headers to send when making the request to append to the response.
    */
   headers: Record<string, string>;
+
+  /**
+   * This is used to filter the query parameters that are added from the named
+   * regular expression matches.
+   */
+  filterRegexMatches: string[];
 }
 
 /**
