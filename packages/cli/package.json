@@ -34,6 +34,7 @@
     "node": ">= 18"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "1.49.0",
     "@vercel/blob": "1.0.2",
     "@vercel/build-utils": "11.0.2",
     "@vercel/detect-agent": "0.2.0",
