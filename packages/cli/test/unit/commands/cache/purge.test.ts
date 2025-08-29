@@ -41,6 +41,9 @@ describe('cache purge', () => {
     client.setArgv('cache', 'purge', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully purged the CDN cache and Data cache'
+    );
   });
 
   it('should succeed without --type=all', async () => {
@@ -53,6 +56,9 @@ describe('cache purge', () => {
     client.setArgv('cache', 'purge', '--type=all', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput(
+      'Successfully purged the CDN cache and Data cache'
+    );
   });
 
   it('should succeed with --type=cdn', async () => {
@@ -62,6 +68,7 @@ describe('cache purge', () => {
     client.setArgv('cache', 'purge', '--type=cdn', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged the CDN cache');
   });
 
   it('should succeed with --type=data', async () => {
@@ -71,5 +78,56 @@ describe('cache purge', () => {
     client.setArgv('cache', 'purge', '--type=data', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged the Data cache');
+  });
+
+  it('should error when both --type and --tag used', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      // TODO: how to test body?
+      res.end();
+    });
+    client.setArgv('cache', 'purge', '--type=data', '--tag=foo', '--yes');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `Error: --type must be 'all' when using --tag`
+    );
+  });
+
+  it('should succeed with --tag=foo', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      res.end();
+    });
+    client.setArgv('cache', 'purge', '--tag=foo', '--yes');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged 1 tag');
+  });
+
+  it('should succeed with --tag=foo,bar,baz', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      res.end();
+    });
+    client.setArgv('cache', 'purge', '--tag=foo,bar,baz', '--yes');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged 3 tags');
+  });
+
+  it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=true --stale-if-error=false', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      res.end();
+    });
+    client.setArgv(
+      'cache',
+      'purge',
+      '--tag=foo,bar,baz',
+      '--stale-while-revalidate=true',
+      '--stale-if-error=false',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged 3 tags');
   });
 });
