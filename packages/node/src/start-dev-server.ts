@@ -127,9 +127,7 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     const nodeVersionMajor = Number(process.versions.node.split('.')[0]);
-    const moduleTypeExtension =
-      ext === '.mts' ? 'mts' : ext === '.cts' ? 'cts' : undefined;
-    fixConfig(tsConfig, nodeVersionMajor, pkg, moduleTypeExtension);
+    fixConfig(tsConfig, nodeVersionMajor);
 
     // In prod, `.ts` inputs use TypeScript and
     // `.js` inputs use Babel to convert ESM to CJS.
