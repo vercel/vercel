@@ -2,5 +2,4 @@
 "@vercel/next": patch
 ---
 
-Avoid setting an empty `rewrite.headers` in Next.js server build to satisfy routing-utils schema (`minProperties: 1`). This prevents validation failures when no path/query headers are added.
-
+Skip adding rewrite headers when the destination has no rewritten pathname or query (and when external origin is not allowed). This prevents generating an empty `rewrite.headers` object that fails schema validation and restores previous behavior for external or no-op rewrites.
