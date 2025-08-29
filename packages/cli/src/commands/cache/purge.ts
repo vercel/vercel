@@ -1,3 +1,4 @@
+import plural from 'pluralize';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
@@ -61,7 +62,27 @@ export default async function purge(
     );
     return 1;
   }
-  const typeDesciption = cacheTypeMap[type as keyof typeof cacheTypeMap];
+
+  const tag = parsedArgs.flags['--tag'];
+  const swr = parsedArgs.flags['--stale-while-revalidate'];
+  const sie = parsedArgs.flags['--stale-if-error'];
+
+  telemetry.trackCliOptionTag(tag);
+  telemetry.trackCliOptionStaleWhileRevalidate(swr);
+  telemetry.trackCliOptionStaleIfError(sie);
+
+  const tags = tag?.split(',').map(t => t.trim());
+  const staleWhileRevalidate = ['true', 'false'].includes(swr!)
+    ? Boolean(swr)
+    : swr?.split(',').map(t => parseInt(t.trim(), 10));
+  const staleIfError = ['true', 'false'].includes(sie!)
+    ? Boolean(sie)
+    : sie?.split(',').map(t => parseInt(t.trim(), 10));
+
+  const typeDesciption = tags?.length
+    ? plural('tag', tags.length, true)
+    : cacheTypeMap[type as keyof typeof cacheTypeMap];
+
   const msg = `You are about to purge ${typeDesciption} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
@@ -78,29 +99,43 @@ export default async function purge(
       return 0;
     }
   }
-
   const requests = [];
 
-  if (type === 'cdn' || type === 'all') {
+  if (tags?.length) {
+    if (type !== 'all') {
+      output.error(`--type must be 'all' when using --tag`);
+      return 1;
+    }
     requests.push(
-      client.fetch(`/v1/edge-cache/purge-all?${query}`, {
+      client.fetch(`/v1/edge-cache/purge-tags?${query}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ tags, staleWhileRevalidate, staleIfError }),
       })
     );
-  }
-
-  if (type === 'data' || type === 'all') {
-    requests.push(
-      client.fetch(`/v1/data-cache/purge-all?${query}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-    );
+  } else {
+    if (type === 'cdn' || type === 'all') {
+      requests.push(
+        client.fetch(`/v1/edge-cache/purge-all?${query}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+      );
+    }
+    if (type === 'data' || type === 'all') {
+      requests.push(
+        client.fetch(`/v1/data-cache/purge-all?${query}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+      );
+    }
   }
 
   await Promise.all(requests);
