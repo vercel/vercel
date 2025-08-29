@@ -36,7 +36,7 @@ describe('toNodeHeaders security fix', () => {
     expect(result).toEqual({});
   });
 
-  it('should handle headers with multiple values correctly', () => {
+  it('should handle multiple values for a header by comma-separating them', () => {
     const headers = new Headers();
     headers.append('set-cookie', 'cookie1=value1');
     headers.append('set-cookie', 'cookie2=value2');
@@ -46,8 +46,9 @@ describe('toNodeHeaders security fix', () => {
     expect(Array.isArray(result)).toBe(false);
     expect(typeof result).toBe('object');
     
-    // Note: Headers.prototype[Symbol.iterator] returns the last value for duplicate keys
-    // This behavior is consistent with the original flat() approach
+    // Note: The Headers API iterator combines multiple values for the same header
+    // into a single comma-separated string. This behavior is consistent with the
+    // original `flat()` approach.
     expect(result['set-cookie']).toBe('cookie1=value1, cookie2=value2');
   });
 
