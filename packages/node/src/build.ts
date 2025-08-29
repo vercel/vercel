@@ -190,9 +190,12 @@ async function compile(
     if (!tsCompile) {
       // Find package.json to determine module type
       const pathDir = join(workPath, dirname(path));
-      let pkg = pkgCache.get(pathDir)
+      let pkg: { type?: string } = {};
 
-      if (!pkg) {
+      // Check if we already have the package.json in cache
+      if (pkgCache.has(pathDir)) {
+        pkg = pkgCache.get(pathDir) || {};
+      } else {
         // Load package.json and add to cache
         try {
           const pathToPkg = await walkParentDirs({
@@ -213,16 +216,12 @@ async function compile(
         }
       }
 
-      // Check if this is a .mts file
-      const isMtsFile = path.endsWith('.mts');
-
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
         pkg,
-        isMtsFile,
       });
     }
     const { code, map } = tsCompile(source, path);
