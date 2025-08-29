@@ -43,7 +43,6 @@ export const build: BuildV3 = async args => {
       );
       // if an output directory is specified, look there first for an entrypoint
       if (dir) {
-        console.log('dir', dir);
         const entrypointFromOutputDir = findEntrypoint(
           await glob(entrypointGlob, join(args.workPath, dir))
         );
@@ -67,7 +66,7 @@ export const build: BuildV3 = async args => {
           mainPackageEntrypoint,
           args.workPath
         );
-        if (entrypointFromPackageJson) {
+        if (entrypointFromPackageJson[mainPackageEntrypoint]) {
           if (
             checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])
           ) {

@@ -18,7 +18,7 @@ const validFilenames = [
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
-  .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
+  .map(filename => `- ${filename.join('/')}.{${validExtensions.join(',')}}`)
   .join('\n');
 
 export const build: BuildV3 = async args => {
@@ -35,7 +35,7 @@ export const build: BuildV3 = async args => {
     considerBuildCommand: true,
     entrypointCallback: async () => {
       const entrypointGlob = `{${validFilenames
-        .map(entrypoint => `${entrypoint.join(sep)}`)
+        .map(entrypoint => `${entrypoint.join('/')}`)
         .join(',')}}.{${validExtensions.join(',')}}`;
       const dir = args.config.projectSettings?.outputDirectory?.replace(
         /^\/+|\/+$/g,
@@ -43,7 +43,6 @@ export const build: BuildV3 = async args => {
       );
       // if an output directory is specified, look there first for an entrypoint
       if (dir) {
-        console.log('dir', dir);
         const entrypointFromOutputDir = findEntrypoint(
           await glob(entrypointGlob, join(args.workPath, dir))
         );
@@ -67,7 +66,7 @@ export const build: BuildV3 = async args => {
           mainPackageEntrypoint,
           args.workPath
         );
-        if (entrypointFromPackageJson) {
+        if (entrypointFromPackageJson[mainPackageEntrypoint]) {
           if (
             checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])
           ) {
