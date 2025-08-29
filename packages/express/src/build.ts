@@ -92,7 +92,7 @@ export const build: BuildV3 = async args => {
 
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
   const validEntrypoints = validFilenames.flatMap(filename =>
-    validExtensions.map(extension => `${filename.join(sep)}.${extension}`)
+    validExtensions.map(extension => `${filename.join('/')}.${extension}`)
   );
 
   const entrypoints = validEntrypoints.filter(entrypoint => {
