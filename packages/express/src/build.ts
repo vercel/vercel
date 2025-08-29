@@ -1,24 +1,24 @@
 import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: hono-framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
-import { join, sep } from 'path';
+import { join } from 'path';
 import fs from 'fs';
 
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
 
 const validFilenames = [
-  ['app'],
-  ['index'],
-  ['server'],
-  ['src', 'app'],
-  ['src', 'index'],
-  ['src', 'server'],
+  'app',
+  'index',
+  'server',
+  'src/app',
+  'src/index',
+  'src/server',
 ];
 
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
-  .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
+  .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
   .join('\n');
 
 export const build: BuildV3 = async args => {
@@ -35,7 +35,7 @@ export const build: BuildV3 = async args => {
     considerBuildCommand: true,
     entrypointCallback: async () => {
       const entrypointGlob = `{${validFilenames
-        .map(entrypoint => `${entrypoint.join('/')}`)
+        .map(entrypoint => `${entrypoint}`)
         .join(',')}}.{${validExtensions.join(',')}}`;
 
       const dir = args.config.projectSettings?.outputDirectory?.replace(
@@ -56,15 +56,7 @@ export const build: BuildV3 = async args => {
         );
       }
       const files = await glob(entrypointGlob, args.workPath);
-      console.log('files', files, entrypointGlob);
-      const dir2 = await fs.promises.readdir(args.workPath);
-      console.log('dir2', dir2);
-      const dir3 = await fs.promises.readdir(join(args.workPath, 'src'));
-      console.log('dir3', dir3);
-      const directGlob = await glob('src/index.js', join(args.workPath));
-      console.log('directGlob', directGlob);
       const entrypointFromRoot = findEntrypoint(files);
-      console.log('entrypointFromRoot', entrypointFromRoot);
       if (entrypointFromRoot) {
         return entrypointFromRoot;
       }
@@ -92,7 +84,7 @@ export const build: BuildV3 = async args => {
 
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
   const validEntrypoints = validFilenames.flatMap(filename =>
-    validExtensions.map(extension => `${filename.join('/')}.${extension}`)
+    validExtensions.map(extension => `${filename}.${extension}`)
   );
 
   const entrypoints = validEntrypoints.filter(entrypoint => {

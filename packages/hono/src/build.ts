@@ -1,24 +1,24 @@
 import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: hono-framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
-import { join, sep } from 'path';
+import { join } from 'path';
 import fs from 'fs';
 
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']hono["']\s*(?:\))?/g;
 
 const validFilenames = [
-  ['app'],
-  ['index'],
-  ['server'],
-  ['src', 'app'],
-  ['src', 'index'],
-  ['src', 'server'],
+  'app',
+  'index',
+  'server',
+  'src/app',
+  'src/index',
+  'src/server',
 ];
 
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
-  .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
+  .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
   .join('\n');
 
 export const build: BuildV3 = async args => {
@@ -35,8 +35,9 @@ export const build: BuildV3 = async args => {
     considerBuildCommand: true,
     entrypointCallback: async () => {
       const entrypointGlob = `{${validFilenames
-        .map(entrypoint => `${entrypoint.join(sep)}`)
+        .map(entrypoint => `${entrypoint}`)
         .join(',')}}.{${validExtensions.join(',')}}`;
+
       const dir = args.config.projectSettings?.outputDirectory?.replace(
         /^\/+|\/+$/g,
         ''
@@ -54,9 +55,8 @@ export const build: BuildV3 = async args => {
           `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
         );
       }
-      const entrypointFromRoot = findEntrypoint(
-        await glob(entrypointGlob, args.workPath)
-      );
+      const files = await glob(entrypointGlob, args.workPath);
+      const entrypointFromRoot = findEntrypoint(files);
       if (entrypointFromRoot) {
         return entrypointFromRoot;
       }
@@ -84,7 +84,7 @@ export const build: BuildV3 = async args => {
 
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
   const validEntrypoints = validFilenames.flatMap(filename =>
-    validExtensions.map(extension => `${filename.join(sep)}.${extension}`)
+    validExtensions.map(extension => `${filename}.${extension}`)
   );
 
   const entrypoints = validEntrypoints.filter(entrypoint => {

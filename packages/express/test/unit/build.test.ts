@@ -73,120 +73,120 @@ const fixtures: Record<
     };
   }
 > = {
-  // '01-index-js-no-module': {
-  //   handler: ['index.js'],
-  //   moduleType: 'cjs',
-  // },
+  '01-index-js-no-module': {
+    handler: ['index.js'],
+    moduleType: 'cjs',
+  },
   '02-src-index-js-no-module': {
     handler: ['src', 'index.js'],
     moduleType: 'cjs',
   },
-  // '03-server-js-no-module': {
-  //   handler: ['server.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '04-index-mjs-no-module': {
-  //   handler: ['index.mjs'],
-  //   moduleType: 'esm',
-  // },
-  // '05-index-mjs-no-module': {
-  //   handler: ['index.mjs'],
-  //   moduleType: 'esm',
-  // },
-  // '06-server-mjs-no-module': {
-  //   handler: ['server.mjs'],
-  //   moduleType: 'esm',
-  // },
-  // '07-index-ts-no-module-no-tsconfig': {
-  //   handler: ['index.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '08-src-index-ts-no-module-no-tsconfig': {
-  //   handler: ['src', 'index.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '09-server-ts-no-module-no-tsconfig': {
-  //   handler: ['server.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '10-index-ts-no-tsconfig': {
-  //   handler: ['index.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '11-index-ts-tsconfig-node': {
-  //   handler: ['index.js'],
-  //   moduleType: 'esm',
-  // },
-  // '12-index-mts-tsconfig-node-no-module': {
-  //   handler: ['index.mjs'],
-  //   moduleType: 'esm',
-  // },
-  // '13-index-ts-output-directory': {
-  //   handler: ['dist', 'index.js'],
-  //   moduleType: 'esm',
-  //   projectSettings: {
-  //     outputDirectory: 'dist',
-  //   },
-  // },
-  // '14-app-js-no-module': {
-  //   handler: ['app.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '15-src-server-js-no-module': {
-  //   handler: ['src', 'server.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '16-src-app-js-no-module': {
-  //   handler: ['src', 'app.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '17-multiple-matches': {
-  //   // matches alphabetically first
-  //   handler: ['src', 'app.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '18-multiple-matches-with-no-exp': {
-  //   // src/app.js is alphabetically first, but its contents don't match the regex
-  //   handler: ['src', 'index.js'],
-  //   moduleType: 'cjs',
-  // },
-  // '19-index-cts-module-tsconfig': {
-  //   handler: ['index.cjs'],
-  //   moduleType: 'cjs',
-  // },
-  // '20-main-field': {
-  //   handler: ['main.js'],
-  //   moduleType: 'esm',
-  // },
-  // '21-main-field-with-build-step': {
-  //   handler: ['dist', 'main.js'],
-  //   moduleType: 'esm',
-  // },
+  '03-server-js-no-module': {
+    handler: ['server.js'],
+    moduleType: 'cjs',
+  },
+  '04-index-mjs-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
+  '05-index-mjs-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
+  '06-server-mjs-no-module': {
+    handler: ['server.mjs'],
+    moduleType: 'esm',
+  },
+  '07-index-ts-no-module-no-tsconfig': {
+    handler: ['index.js'],
+    moduleType: 'cjs',
+  },
+  '08-src-index-ts-no-module-no-tsconfig': {
+    handler: ['src', 'index.js'],
+    moduleType: 'cjs',
+  },
+  '09-server-ts-no-module-no-tsconfig': {
+    handler: ['server.js'],
+    moduleType: 'cjs',
+  },
+  '10-index-ts-no-tsconfig': {
+    handler: ['index.js'],
+    moduleType: 'cjs',
+  },
+  '11-index-ts-tsconfig-node': {
+    handler: ['index.js'],
+    moduleType: 'esm',
+  },
+  '12-index-mts-tsconfig-node-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
+  '13-index-ts-output-directory': {
+    handler: ['dist', 'index.js'],
+    moduleType: 'esm',
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+  '14-app-js-no-module': {
+    handler: ['app.js'],
+    moduleType: 'cjs',
+  },
+  '15-src-server-js-no-module': {
+    handler: ['src', 'server.js'],
+    moduleType: 'cjs',
+  },
+  '16-src-app-js-no-module': {
+    handler: ['src', 'app.js'],
+    moduleType: 'cjs',
+  },
+  '17-multiple-matches': {
+    // matches alphabetically first
+    handler: ['src', 'app.js'],
+    moduleType: 'cjs',
+  },
+  '18-multiple-matches-with-no-exp': {
+    // src/app.js is alphabetically first, but its contents don't match the regex
+    handler: ['src', 'index.js'],
+    moduleType: 'cjs',
+  },
+  '19-index-cts-module-tsconfig': {
+    handler: ['index.cjs'],
+    moduleType: 'cjs',
+  },
+  '20-main-field': {
+    handler: ['main.js'],
+    moduleType: 'esm',
+  },
+  '21-main-field-with-build-step': {
+    handler: ['dist', 'main.js'],
+    moduleType: 'esm',
+  },
 };
 
-// const failingFixtures: Record<
-//   string,
-//   {
-//     projectSettings?: {
-//       outputDirectory?: string;
-//     };
-//   }
-// > = {
-//   '01-server-ts-no-module-no-tsconfig': {},
-//   '02-missing-entrypoint': {},
-//   '03-missing-entrypoint-with-build-and-main': {},
-//   '04-missing-entrypoint-with-build-and-output-dir': {
-//     projectSettings: {
-//       outputDirectory: 'dist',
-//     },
-//   },
-//   '05-missing-entrypoint-with-main': {},
-//   '06-missing-entrypoint-with-output-dir': {
-//     projectSettings: {
-//       outputDirectory: 'dist',
-//     },
-//   },
-// };
+const failingFixtures: Record<
+  string,
+  {
+    projectSettings?: {
+      outputDirectory?: string;
+    };
+  }
+> = {
+  '01-server-ts-no-module-no-tsconfig': {},
+  '02-missing-entrypoint': {},
+  '03-missing-entrypoint-with-build-and-main': {},
+  '04-missing-entrypoint-with-build-and-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+  '05-missing-entrypoint-with-main': {},
+  '06-missing-entrypoint-with-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+};
 
 describe('build', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
@@ -227,37 +227,37 @@ describe('build', () => {
       }
     }, 10000);
   }
-  // describe('failing fixtures', () => {
-  //   for (const [fixtureName, fixtureConfig] of Object.entries(
-  //     failingFixtures
-  //   )) {
-  //     it(`should fail to build${fixtureName}`, async () => {
-  //       const workPath = join(__dirname, '../failing-fixtures', fixtureName);
+  describe('failing fixtures', () => {
+    for (const [fixtureName, fixtureConfig] of Object.entries(
+      failingFixtures
+    )) {
+      it(`should fail to build${fixtureName}`, async () => {
+        const workPath = join(__dirname, '../failing-fixtures', fixtureName);
 
-  //       const fileList = readDirectoryRecursively(workPath);
+        const fileList = readDirectoryRecursively(workPath);
 
-  //       const files = createFiles(workPath, fileList);
+        const files = createFiles(workPath, fileList);
 
-  //       expect(
-  //         build({
-  //           files,
-  //           workPath,
-  //           config: {
-  //             ...config,
-  //             projectSettings: {
-  //               ...config.projectSettings,
-  //               ...fixtureConfig.projectSettings,
-  //             },
-  //           },
-  //           meta,
-  //           // Entrypoint is just used as the BOA function name
-  //           entrypoint: 'this value is not used',
-  //           repoRootPath: workPath,
-  //         })
-  //       ).rejects.toThrowError();
-  //     });
-  //   }
-  // });
+        expect(
+          build({
+            files,
+            workPath,
+            config: {
+              ...config,
+              projectSettings: {
+                ...config.projectSettings,
+                ...fixtureConfig.projectSettings,
+              },
+            },
+            meta,
+            // Entrypoint is just used as the BOA function name
+            entrypoint: 'this value is not used',
+            repoRootPath: workPath,
+          })
+        ).rejects.toThrowError();
+      });
+    }
+  });
 });
 
 async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {
