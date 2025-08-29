@@ -524,7 +524,10 @@ export function fixConfig(
   // If not specified, the default Node.js module is CommonJS.
   // However, if package.json has "type": "module" or the file is .mts, use ESNext instead.
   if (config.compilerOptions.module === undefined) {
-    if ((pkg?.type === 'module' && moduleTypeExtension !== 'cts') || moduleTypeExtension === 'mts') {
+    if (
+      (pkg?.type === 'module' && moduleTypeExtension !== 'cts') ||
+      moduleTypeExtension === 'mts'
+    ) {
       config.compilerOptions.module = 'ESNext';
     } else {
       config.compilerOptions.module = 'CommonJS';

@@ -126,6 +126,10 @@ const fixtures = {
     handler: ['app.js'],
     moduleType: 'cjs',
   },
+  '14-index-cts-no-tsconfig-node-module': {
+    handler: ['index.cjs'],
+    moduleType: 'cjs',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
