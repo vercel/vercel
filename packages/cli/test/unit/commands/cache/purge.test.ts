@@ -130,4 +130,21 @@ describe('cache purge', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Successfully purged 3 tags');
   });
+
+  it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=100,200,300 --stale-if-error=400,500,600', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      res.end();
+    });
+    client.setArgv(
+      'cache',
+      'purge',
+      '--tag=foo,bar,baz',
+      '--stale-while-revalidate=100,200,300',
+      '--stale-if-error=400,500,600',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged 3 tags');
+  });
 });

@@ -72,18 +72,20 @@ export default async function purge(
   telemetry.trackCliOptionStaleIfError(sie);
 
   const tags = tag?.split(',').map(t => t.trim());
-  const staleWhileRevalidate = ['true', 'false'].includes(swr!)
-    ? Boolean(swr)
-    : swr?.split(',').map(t => parseInt(t.trim(), 10));
-  const staleIfError = ['true', 'false'].includes(sie!)
-    ? Boolean(sie)
-    : sie?.split(',').map(t => parseInt(t.trim(), 10));
+  const staleWhileRevalidate =
+    swr && ['true', 'false'].includes(swr)
+      ? Boolean(swr)
+      : swr?.split(',').map(t => parseInt(t.trim(), 10));
+  const staleIfError =
+    sie && ['true', 'false'].includes(sie)
+      ? Boolean(sie)
+      : sie?.split(',').map(t => parseInt(t.trim(), 10));
 
-  const typeDesciption = tags?.length
+  const typeDescription = tags?.length
     ? plural('tag', tags.length, true)
     : cacheTypeMap[type as keyof typeof cacheTypeMap];
 
-  const msg = `You are about to purge ${typeDesciption} for project ${project.name}`;
+  const msg = `You are about to purge ${typeDescription} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {
@@ -141,7 +143,7 @@ export default async function purge(
   await Promise.all(requests);
 
   output.print(
-    prependEmoji(`Successfully purged ${typeDesciption}`, emoji('success')) +
+    prependEmoji(`Successfully purged ${typeDescription}`, emoji('success')) +
       `\n`
   );
   return 0;
