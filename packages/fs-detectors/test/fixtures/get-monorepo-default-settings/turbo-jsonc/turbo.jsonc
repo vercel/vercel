@@ -1,0 +1,9 @@
+// This is a comment in turbo.jsonc
+{
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    }
+  }
+}

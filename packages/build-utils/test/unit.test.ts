@@ -935,6 +935,17 @@ it('should handle turborepo project with comments in turbo.json', async () => {
   expect(result.turboSupportsCorepackHome).toEqual(true);
 });
 
+it('should handle turborepo project with turbo.jsonc', async () => {
+  const base = path.join(
+    __dirname,
+    'fixtures',
+    '44-turborepo-with-turbo-jsonc'
+  );
+  const fixture = path.join(base, '/apps/web');
+  const result = await scanParentDirs(fixture, true, base);
+  expect(result.turboSupportsCorepackHome).toEqual(true);
+});
+
 it('should detect turborepo project not supporting corepack', async () => {
   const base = path.join(
     __dirname,
