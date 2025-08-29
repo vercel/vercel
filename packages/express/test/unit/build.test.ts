@@ -154,6 +154,14 @@ const fixtures: Record<
     handler: ['index.cjs'],
     moduleType: 'cjs',
   },
+  '20-main-field': {
+    handler: ['main.js'],
+    moduleType: 'esm',
+  },
+  '21-main-field-with-build-step': {
+    handler: ['dist', 'main.js'],
+    moduleType: 'esm',
+  },
 };
 
 const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
@@ -178,7 +186,7 @@ describe('build', () => {
         },
         meta,
         // Entrypoint is just used as the BOA function name
-        entrypoint: 'this value is not used',
+        entrypoint: 'package.json',
         repoRootPath: workPath,
       });
 
