@@ -16,6 +16,7 @@ const validFilenames = [
 ];
 
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
+
 const entrypointsForMessage = validFilenames
   .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
   .join('\n');
@@ -42,14 +43,16 @@ export const build: BuildV3 = async args => {
       );
       // if an output directory is specified, look there first for an entrypoint
       if (dir) {
+        console.log('dir', dir);
         const entrypointFromOutputDir = findEntrypoint(
           await glob(entrypointGlob, join(args.workPath, dir))
         );
         if (entrypointFromOutputDir) {
           return join(dir, entrypointFromOutputDir);
         }
+
         throw new Error(
-          `No entrypoint found in output directory: ${dir}. Please add one of the following files to your project: \n${entrypointsForMessage}`
+          `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
         );
       }
       const entrypointFromRoot = findEntrypoint(
@@ -59,20 +62,22 @@ export const build: BuildV3 = async args => {
         return entrypointFromRoot;
       }
 
-      const entrypointFromPackageJson = await glob(
-        mainPackageEntrypoint,
-        args.workPath
-      );
-      if (entrypointFromPackageJson) {
-        if (
-          checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])
-        ) {
-          return mainPackageEntrypoint;
+      if (mainPackageEntrypoint) {
+        const entrypointFromPackageJson = await glob(
+          mainPackageEntrypoint,
+          args.workPath
+        );
+        if (entrypointFromPackageJson) {
+          if (
+            checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])
+          ) {
+            return mainPackageEntrypoint;
+          }
         }
       }
 
       throw new Error(
-        `No entrypoint found. Please add one of the following files to your project: \n${entrypointsForMessage}`
+        `No entrypoint found. Searched for: \n${entrypointsForMessage}`
       );
     },
   });
@@ -118,11 +123,19 @@ const findMainPackageEntrypoint = (
   if (packageJson) {
     if (packageJson.type === 'FileFsRef') {
       const packageJsonContent = fs.readFileSync(packageJson.fsPath, 'utf-8');
-      const packageJsonJson = JSON.parse(packageJsonContent);
-      const main = packageJsonJson.main;
-      if (main) {
-        return main;
+      let packageJsonJson: object;
+      try {
+        packageJsonJson = JSON.parse(packageJsonContent);
+      } catch (_e) {
+        packageJsonJson = {};
+      }
+      if (
+        'main' in packageJsonJson &&
+        typeof packageJsonJson.main === 'string'
+      ) {
+        return packageJsonJson.main;
       }
     }
   }
+  return null;
 };
