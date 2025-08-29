@@ -123,13 +123,6 @@ const require_ = createRequire(__filename);
 const configFileToBuildMap = new Map<string, GetOutputFunction>();
 
 /**
- * Clear the build cache, used for tests.
- */
-export function clearTypeScriptBuildCache() {
-  configFileToBuildMap.clear();
-}
-
-/**
  * Register TypeScript compiler.
  */
 export function register(opts: Options = {}): Register {
@@ -200,7 +193,9 @@ export function register(opts: Options = {}): Register {
     const cachedGetOutput = configFileToBuildMap.get(configFileName);
 
     if (cachedGetOutput) {
-      return cachedGetOutput;
+      if (process.env.NODE_ENV !== 'test') {
+        return cachedGetOutput;
+      }
     }
 
     const outFiles = new Map<string, SourceOutput>();
