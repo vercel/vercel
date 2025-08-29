@@ -151,12 +151,9 @@ async function compile(
     if (!tsCompile) {
       // Find package.json to determine module type
       const pathDir = join(workPath, dirname(path));
-      let pkg: { type?: string } = {};
+      let pkg = pkgCache.get(pathDir)
 
-      // Check if we already have the package.json in cache
-      if (pkgCache.has(pathDir)) {
-        pkg = pkgCache.get(pathDir) || {};
-      } else {
+      if (!pkg) {
         // Load package.json and add to cache
         try {
           const pathToPkg = await walkParentDirs({
