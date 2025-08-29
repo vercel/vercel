@@ -56,7 +56,9 @@ export const build: BuildV3 = async args => {
         );
       }
       const files = await glob(entrypointGlob, args.workPath);
-      console.log('files', files);
+      console.log('files', files, entrypointGlob);
+      const dir2 = await fs.promises.readdir(args.workPath);
+      console.log('dir2', dir2);
       const entrypointFromRoot = findEntrypoint(files);
       if (entrypointFromRoot) {
         return entrypointFromRoot;
