@@ -108,12 +108,9 @@ export const findEntrypoint = (files: Record<string, FileFsRef>) => {
 };
 
 const checkMatchesRegex = (file: FileFsRef) => {
-  if (file.type === 'FileFsRef') {
-    const content = fs.readFileSync(file.fsPath, 'utf-8');
-    const matchesContent = content.match(REGEX);
-    return matchesContent !== null;
-  }
-  return false;
+  const content = fs.readFileSync(file.fsPath, 'utf-8');
+  const matchesContent = content.match(REGEX);
+  return matchesContent !== null;
 };
 
 const findMainPackageEntrypoint = (
