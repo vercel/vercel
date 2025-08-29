@@ -493,8 +493,6 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
-  console.log({ config });
-
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
