@@ -2267,6 +2267,36 @@ export const frameworks = [
       every: [{ matchPackage: 'hono' }],
       some: [
         {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
           path: 'index.cjs',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
@@ -2288,6 +2318,11 @@ export const frameworks = [
         },
         {
           path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
         },
@@ -2317,6 +2352,11 @@ export const frameworks = [
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
         },
         {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
           path: 'src/index.cjs',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
@@ -2341,6 +2381,72 @@ export const frameworks = [
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
         },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
       ],
     },
     settings: {
@@ -2362,6 +2468,272 @@ export const frameworks = [
     },
     dependency: 'hono',
     getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Express',
+    slug: 'express',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
+    tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
+    description: 'Fast, unopinionated, minimalist web framework for Node.js',
+    website: 'https://expressjs.com',
+    useRuntime: { src: 'index.js', use: '@vercel/express' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: 'express' }],
+      some: [
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'express',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'xmcp',
+    slug: 'xmcp',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/xmcp.svg',
+    demo: 'https://xmcp-template.vercel.app/',
+    tagline: 'The MCP framework for building AI-powered tools',
+    description:
+      'A framework for building Model Context Protocol servers with zero configuration.',
+    website: 'https://xmcp.dev',
+    detectors: {
+      some: [
+        {
+          path: 'xmcp.config.ts',
+        },
+        {
+          path: 'xmcp.config.js',
+        },
+        {
+          matchPackage: 'xmcp',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `xmcp build`',
+        value: 'xmcp build --vercel',
+      },
+      devCommand: {
+        value: 'xmcp dev',
+        placeholder: 'xmcp dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'xmcp',
+    getOutputDirName: async () => 'dist',
   },
   {
     name: 'Other',

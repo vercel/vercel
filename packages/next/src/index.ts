@@ -100,6 +100,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -1024,14 +1025,17 @@ export const build: BuildV2 = async buildOptions => {
         // /_next
         { handle: 'miss' },
         {
-          src: path.posix.join(
-            '/',
-            entryDirectory,
-            '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-          ),
+          src: path.posix.join('/', entryDirectory, '_next/static/.+'),
           status: 404,
           check: true,
-          dest: '$0',
+          dest: path.posix.join(
+            '/',
+            entryDirectory,
+            '_next/static/not-found.txt'
+          ),
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+          },
         },
 
         // Dynamic routes
@@ -1463,10 +1467,28 @@ export const build: BuildV2 = async buildOptions => {
           true
       : false;
 
+    // When this is true, then it means all routes are PPR enabled.
+    const isAppFullPPREnabled = requiredServerFilesManifest
+      ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
+        requiredServerFilesManifest.config.experimental?.cacheComponents ===
+          true
+      : false;
+
     const isAppClientSegmentCacheEnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest.config.experimental?.clientSegmentCache ===
         true
       : false;
+
+    // We read this from the routes manifest instead of the config because we
+    // expect that the flag will be deprecated in the future and the manifest
+    // will be the source of truth.
+    const isAppClientParamParsingEnabled =
+      routesManifest?.rsc?.clientParamParsing ?? false;
+
+    const clientParamParsingOrigins = requiredServerFilesManifest
+      ? requiredServerFilesManifest.config.experimental
+          ?.clientParamParsingOrigins
+      : undefined;
 
     if (requiredServerFilesManifest) {
       if (!routesManifest) {
@@ -1524,7 +1546,11 @@ export const build: BuildV2 = async buildOptions => {
         variantsManifest,
         experimentalPPRRoutes,
         isAppPPREnabled,
+        isAppFullPPREnabled,
         isAppClientSegmentCacheEnabled,
+        isAppClientParamParsingEnabled,
+        clientParamParsingOrigins,
+        files,
       });
     }
 
@@ -1969,6 +1995,7 @@ export const build: BuildV2 = async buildOptions => {
             memory?: number;
             maxDuration?: number;
             experimentalTriggers?: TriggerEvent[];
+            supportsCancellation?: boolean;
           } = {};
 
           if (config && config.functions) {
@@ -2049,6 +2076,9 @@ export const build: BuildV2 = async buildOptions => {
       bypassToken: prerenderManifest.bypassToken || '',
       isServerMode,
       isAppPPREnabled: false,
+      isAppClientParamParsingEnabled,
+      isAppClientSegmentCacheEnabled,
+      prerenderManifest,
     }).then(arr =>
       localizeDynamicRoutes(
         arr,
@@ -2079,6 +2109,9 @@ export const build: BuildV2 = async buildOptions => {
         bypassToken: prerenderManifest.bypassToken || '',
         isServerMode,
         isAppPPREnabled: false,
+        isAppClientParamParsingEnabled: false,
+        isAppClientSegmentCacheEnabled: false,
+        prerenderManifest,
       }).then(arr =>
         arr.map(route => {
           route.src = route.src.replace('^', `^${dynamicPrefix}`);
@@ -2276,8 +2309,11 @@ export const build: BuildV2 = async buildOptions => {
       appPathRoutesManifest,
       isSharedLambdas,
       canUsePreviewMode,
+      // The following flags are not supported in this version of the builder.
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
+      isAppClientParamParsingEnabled: false,
+      appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
     });
 
     await Promise.all(
@@ -2670,14 +2706,13 @@ export const build: BuildV2 = async buildOptions => {
       // handle: miss is called before rewrites and to prevent rewriting /_next
       { handle: 'miss' },
       {
-        src: path.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-        ),
+        src: path.join('/', entryDirectory, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: '$0',
+        dest: path.join('/', entryDirectory, '_next/static/not-found.txt'),
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files

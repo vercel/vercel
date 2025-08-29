@@ -1,5 +1,55 @@
 # @vercel/next
 
+## 4.12.3
+
+### Patch Changes
+
+- Add emitting supportsCancellation ([#13841](https://github.com/vercel/vercel/pull/13841))
+
+## 4.12.2
+
+### Patch Changes
+
+- Optimize segment prerender with blank allowQuery for client parsing ([#13838](https://github.com/vercel/vercel/pull/13838))
+
+  When client segment cache, parsing, and PPR are enabled, use empty allowQuery for segment prerenders since segments don't vary based on route parameters. This ensures both RSC and segment prerenders are in the same group and revalidated together, improving cache efficiency.
+
+## 4.12.1
+
+### Patch Changes
+
+- [next][node][redwood][remix] bump `@vercel/nft@0.30.1` ([#13818](https://github.com/vercel/vercel/pull/13818))
+
+## 4.12.0
+
+### Minor Changes
+
+- Add client param parsing support with experimental flag ([#13740](https://github.com/vercel/vercel/pull/13740))
+
+### Patch Changes
+
+- Add clientParamParsingOrigins configuration for secure external rewrite headers ([#13799](https://github.com/vercel/vercel/pull/13799))
+
+## 4.11.3
+
+### Patch Changes
+
+- Handle building for app router without internal pages entries ([#13704](https://github.com/vercel/vercel/pull/13704))
+
+- Add action metadata routes ([#13775](https://github.com/vercel/vercel/pull/13775))
+
+## 4.11.2
+
+### Patch Changes
+
+- Return plain text 404 for `/_next/static/` paths instead of HTML to prevent SEO issues. ([#12906](https://github.com/vercel/vercel/pull/12906))
+
+## 4.11.1
+
+### Patch Changes
+
+- Handle generated function config ([#13720](https://github.com/vercel/vercel/pull/13720))
+
 ## 4.11.0
 
 ### Minor Changes

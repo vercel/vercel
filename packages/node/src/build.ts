@@ -28,6 +28,9 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -54,6 +57,7 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
+  considerBuildCommand: boolean;
 }
 
 const require_ = createRequire(__filename);
@@ -67,6 +71,7 @@ async function downloadInstallAndBundle({
   workPath,
   config,
   meta,
+  considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -77,14 +82,45 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    [],
-    spawnOpts,
-    meta,
+
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
-    config.projectSettings?.createdAt
-  );
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
+
+  const installCommand = config.projectSettings?.installCommand;
+  if (typeof installCommand === 'string' && considerBuildCommand) {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
+  }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -98,6 +134,9 @@ function renameTStoJS(path: string) {
   }
   if (path.endsWith('.mts')) {
     return path.slice(0, -4) + '.mjs';
+  }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
   }
   return path;
 }
@@ -261,7 +300,8 @@ async function compile(
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
             fsPath.endsWith('.tsx') ||
-            fsPath.endsWith('.mts')
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = await compileTypeScript(fsPath, source.toString());
           }
@@ -411,29 +451,71 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  considerBuildCommand = false,
+  entrypointCallback,
 }: Parameters<BuildV3>[0] & {
   shim?: (handler: string) => string;
   useWebApi?: boolean;
+  considerBuildCommand?: boolean;
+  /**
+   * It's possible to specify a build script that may result in a different entrypoint.
+   * For example `tsc -p tsconfig.builds.json` which puts things in a `dist` directory.
+   *
+   * If the project settings output directory is specified, we will look there for a valid
+   * entrypoint for the node app. To find it, then entrypointCallback allows the builders calling
+   * this function to provide the entrypoint detection logic
+   */
+  entrypointCallback?: (preparedFiles: Files) => string | undefined;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
-
-  await runPackageJsonScript(
+  const {
+    entrypointPath: _entrypointPath,
     entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
+    nodeVersion,
     spawnOpts,
-    config.projectSettings?.createdAt
-  );
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+    considerBuildCommand,
+  });
+
+  let entrypointPath = _entrypointPath;
+
+  const projectBuildCommand = config.projectSettings?.buildCommand;
+
+  // For traditional api-folder builds, the `build` script or project build command isn't used.
+  // but we're reusing the node builder for hono and express, where they should be treated as the
+  // primary builder
+  if (projectBuildCommand && considerBuildCommand) {
+    await execCommand(projectBuildCommand, {
+      ...spawnOpts,
+
+      // Yarn v2 PnP mode may be activated, so force
+      // "node-modules" linker style
+      env: {
+        YARN_NODE_LINKER: 'node-modules',
+        ...spawnOpts.env,
+      },
+
+      cwd: workPath,
+    });
+  } else {
+    const possibleScripts = considerBuildCommand
+      ? ['vercel-build', 'now-build', 'build']
+      : ['vercel-build', 'now-build'];
+
+    await runPackageJsonScript(
+      entrypointFsDirname,
+      possibleScripts,
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
+  }
 
   const isMiddleware = config.middleware === true;
   let isEdgeFunction = isMiddleware;
@@ -446,6 +528,31 @@ export const build = async ({
 
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
+  }
+
+  /**
+   * Even if the project handles the build process, we still want to run the output
+   * through our compiler so it can be processed by NFT. The code below allows us
+   * to set the entrypoint to the output directory if it's specified.
+   */
+  if (config.projectSettings?.outputDirectory) {
+    const outputDirFiles = await glob(
+      '**/*',
+      join(workPath, config.projectSettings.outputDirectory)
+    );
+    const outputDirEntrypoint = entrypointCallback?.(outputDirFiles);
+    if (outputDirEntrypoint) {
+      const outputDirEntrypointPath = join(
+        workPath,
+        config.projectSettings.outputDirectory,
+        outputDirEntrypoint
+      );
+      entrypointPath = outputDirEntrypointPath;
+    } else {
+      console.warn(
+        `No entrypoint found in output directory ${config.projectSettings.outputDirectory}. Using the original entrypoint of ${entrypoint}.`
+      );
+    }
   }
 
   debug('Tracing input files...');

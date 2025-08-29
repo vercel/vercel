@@ -1,5 +1,54 @@
 # @vercel/node
 
+## 5.3.17
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- Add support for http listener when it's not default exported ([#13826](https://github.com/vercel/vercel/pull/13826))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13840](https://github.com/vercel/vercel/pull/13840))
+
+## 5.3.16
+
+### Patch Changes
+
+- Updated dependencies [[`6260486192ca407fc2d91f317ed81533548b8629`](https://github.com/vercel/vercel/commit/6260486192ca407fc2d91f317ed81533548b8629)]:
+  - @vercel/static-config@3.1.2
+
+## 5.3.15
+
+### Patch Changes
+
+- Add support for specifying an output directory for Express and Hono apps ([#13805](https://github.com/vercel/vercel/pull/13805))
+
+- [next][node][redwood][remix] bump `@vercel/nft@0.30.1` ([#13818](https://github.com/vercel/vercel/pull/13818))
+
+## 5.3.14
+
+### Patch Changes
+
+- Updated dependencies [[`28a41c6fddc7a3bc92fa54279063428b329e3104`](https://github.com/vercel/vercel/commit/28a41c6fddc7a3bc92fa54279063428b329e3104)]:
+  - @vercel/build-utils@11.0.2
+
+## 5.3.13
+
+### Patch Changes
+
+- Support running project build script for node builder if its being treated as the project's primary builder ([#13767](https://github.com/vercel/vercel/pull/13767))
+
+## 5.3.12
+
+### Patch Changes
+
+- Add `.mts` support to node builder ([#13687](https://github.com/vercel/vercel/pull/13687))
+
+- Skip lib check on node dev server ([#13696](https://github.com/vercel/vercel/pull/13696))
+
+- Updated dependencies [[`8a020e07c2116833bbe39ee43f62efad9f7de0de`](https://github.com/vercel/vercel/commit/8a020e07c2116833bbe39ee43f62efad9f7de0de)]:
+  - @vercel/build-utils@11.0.1
+
 ## 5.3.11
 
 ### Patch Changes

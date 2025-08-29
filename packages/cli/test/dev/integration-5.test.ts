@@ -437,6 +437,22 @@ test(
   })
 );
 
+describe('[vercel dev] Express', () => {
+  test(
+    '[vercel dev] Express no export',
+    testFixtureStdio(
+      'express-no-export',
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('message', 'Hello Express!');
+      },
+      { skipDeploy: true }
+    )
+  );
+});
+
 describe('[vercel dev] ESM edge functions', () => {
   test(
     '[vercel dev] ESM .js type=module',

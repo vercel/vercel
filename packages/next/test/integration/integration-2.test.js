@@ -422,7 +422,7 @@ it('should handle edge functions in app with basePath', async () => {
   expect(output['test/test.rsc'].type).toBe('EdgeFunction');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('Prerender');
 
   const lambdas = new Set();
   const edgeFunctions = new Set();
@@ -434,7 +434,7 @@ it('should handle edge functions in app with basePath', async () => {
       edgeFunctions.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(0);
   expect(edgeFunctions.size).toBe(4);
 });
 
@@ -449,7 +449,7 @@ it('should not generate lambdas that conflict with static index route in app wit
   expect(output['test/index.rsc'].type).toBe('Prerender');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Lambda');
+  expect(output['test/_not-found'].type).toBe('Prerender');
 
   const lambdas = new Set();
 
@@ -458,7 +458,7 @@ it('should not generate lambdas that conflict with static index route in app wit
       lambdas.add(item);
     }
   }
-  expect(lambdas.size).toBe(1);
+  expect(lambdas.size).toBe(0);
 });
 
 describe('PPR', () => {
@@ -544,7 +544,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     expect(output['index']).toBeDefined();
     expect(output['index'].type).toBe('Prerender');
@@ -564,7 +564,7 @@ describe('PPR', () => {
       }
     }
 
-    expect(lambdas.size).toBe(2);
+    expect(lambdas.size).toBe(1);
 
     // Validate that these two lambdas are the same.
     expect(output['chat/index']).toBeDefined();
@@ -712,5 +712,31 @@ describe('cache-control', () => {
 
     expect(outputEntry.expiration).toBe(false);
     expect(outputEntry.staleExpiration).toBeUndefined();
+  });
+});
+
+describe('action-headers', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, '../fixtures/00-app-dir-actions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should add action name meta routes', async () => {
+    const foundActionNames = [];
+
+    for (const route of buildResult.routes || []) {
+      if (route.has?.[0].key === 'next-action' && route.transforms) {
+        foundActionNames.push(route.transforms[0].args);
+      }
+    }
+    expect(foundActionNames.length).toBe(5);
+    expect(foundActionNames.sort()).toMatchSnapshot();
   });
 });

@@ -33,7 +33,7 @@ describe('link', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -506,7 +506,7 @@ describe('link', () => {
     client.stdin.write('\n');
 
     await expect(client.stderr).toOutput(
-      'Want to use the default Deployment Protection settings?'
+      'Do you want to change additional project settings?'
     );
     client.stdin.write('\n');
 
