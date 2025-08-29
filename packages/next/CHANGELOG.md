@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.12.3
+
+### Patch Changes
+
+- Add emitting supportsCancellation ([#13841](https://github.com/vercel/vercel/pull/13841))
+
 ## 4.12.2
 
 ### Patch Changes
