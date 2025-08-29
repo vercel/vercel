@@ -22,8 +22,6 @@ const entrypointsForMessage = validFilenames
   .join('\n');
 
 export const build: BuildV3 = async args => {
-  const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
-
   // Introducing new behavior for the node builder where Typescript errors always
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
@@ -34,52 +32,55 @@ export const build: BuildV3 = async args => {
     entrypoint: 'package.json',
     considerBuildCommand: true,
     entrypointCallback: async () => {
-      const entrypointGlob = `{${validFilenames
-        .map(entrypoint => `${entrypoint}`)
-        .join(',')}}.{${validExtensions.join(',')}}`;
-
-      const dir = args.config.projectSettings?.outputDirectory?.replace(
-        /^\/+|\/+$/g,
-        ''
-      );
-      // if an output directory is specified, look there first for an entrypoint
-      if (dir) {
-        const entrypointFromOutputDir = findEntrypoint(
-          await glob(entrypointGlob, join(args.workPath, dir))
-        );
-        if (entrypointFromOutputDir) {
-          return join(dir, entrypointFromOutputDir);
-        }
-
-        throw new Error(
-          `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
-        );
-      }
-      const files = await glob(entrypointGlob, args.workPath);
-      const entrypointFromRoot = findEntrypoint(files);
-      if (entrypointFromRoot) {
-        return entrypointFromRoot;
-      }
-
-      if (mainPackageEntrypoint) {
-        const entrypointFromPackageJson = await glob(
-          mainPackageEntrypoint,
-          args.workPath
-        );
-        if (entrypointFromPackageJson[mainPackageEntrypoint]) {
-          if (
-            checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])
-          ) {
-            return mainPackageEntrypoint;
-          }
-        }
-      }
-
-      throw new Error(
-        `No entrypoint found. Searched for: \n${entrypointsForMessage}`
-      );
+      return entrypointCallback(args);
     },
   });
+};
+
+export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
+  const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
+  const entrypointGlob = `{${validFilenames
+    .map(entrypoint => `${entrypoint}`)
+    .join(',')}}.{${validExtensions.join(',')}}`;
+
+  const dir = args.config.projectSettings?.outputDirectory?.replace(
+    /^\/+|\/+$/g,
+    ''
+  );
+  // if an output directory is specified, look there first for an entrypoint
+  if (dir) {
+    const entrypointFromOutputDir = findEntrypoint(
+      await glob(entrypointGlob, join(args.workPath, dir))
+    );
+    if (entrypointFromOutputDir) {
+      return join(dir, entrypointFromOutputDir);
+    }
+
+    throw new Error(
+      `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
+    );
+  }
+  const files = await glob(entrypointGlob, args.workPath);
+  const entrypointFromRoot = findEntrypoint(files);
+  if (entrypointFromRoot) {
+    return entrypointFromRoot;
+  }
+
+  if (mainPackageEntrypoint) {
+    const entrypointFromPackageJson = await glob(
+      mainPackageEntrypoint,
+      args.workPath
+    );
+    if (entrypointFromPackageJson[mainPackageEntrypoint]) {
+      if (checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])) {
+        return mainPackageEntrypoint;
+      }
+    }
+  }
+
+  throw new Error(
+    `No entrypoint found. Searched for: \n${entrypointsForMessage}`
+  );
 };
 
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
