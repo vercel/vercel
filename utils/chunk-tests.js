@@ -10,7 +10,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['18', '20', '22'],
+      nodeVersions: ['20', '22', '24'],
     },
   ],
   [
@@ -52,7 +52,7 @@ const runnersMap = new Map([
       max: 5,
       runners: ['ubuntu-latest'],
       testScript: 'test',
-      nodeVersions: ['18'],
+      nodeVersions: ['20'],
     },
   ],
   [
@@ -145,7 +145,7 @@ async function getChunkedTests() {
           min,
           max,
           testScript,
-          nodeVersions = ['18'],
+          nodeVersions = ['20'],
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
