@@ -37,7 +37,7 @@ function toWebHeaders(nodeHeaders) {
 }
 
 function toNodeHeaders(webHeaders) {
-  return webHeaders.raw?.() || [...webHeaders].flat();
+  return webHeaders.raw?.() || Object.fromEntries([...webHeaders]);
 }
 
 function createRemixRequest(req, res) {
