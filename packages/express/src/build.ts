@@ -64,6 +64,7 @@ export const build: BuildV3 = async args => {
       const directGlob = await glob('src/index.js', join(args.workPath));
       console.log('directGlob', directGlob);
       const entrypointFromRoot = findEntrypoint(files);
+      console.log('entrypointFromRoot', entrypointFromRoot);
       if (entrypointFromRoot) {
         return entrypointFromRoot;
       }
