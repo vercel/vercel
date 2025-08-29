@@ -20,4 +20,28 @@ export class CachePurgeTelemetryClient
       });
     }
   }
+  trackCliOptionTag(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'tag',
+        value,
+      });
+    }
+  }
+  trackCliOptionStaleWhileRevalidate(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'staleWhileRevalidate',
+        value,
+      });
+    }
+  }
+  trackCliOptionStaleIfError(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'staleIfError',
+        value,
+      });
+    }
+  }
 }

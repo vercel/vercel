@@ -16,6 +16,30 @@ export const purgeSubcommand = {
       argument: 'TYPE',
       deprecated: false,
     },
+    {
+      name: 'tag',
+      description: 'Tag to purge',
+      shorthand: null,
+      type: String,
+      argument: 'TAG',
+      deprecated: false,
+    },
+    {
+      name: 'stale-while-revalidate',
+      description: 'Serve stale while revalidating in the background',
+      shorthand: null,
+      type: String,
+      argument: 'SWR',
+      deprecated: false,
+    },
+    {
+      name: 'stale-if-error',
+      description: 'Serve stale if revalidation fails',
+      shorthand: null,
+      type: String,
+      argument: 'SIE',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -29,6 +53,22 @@ export const purgeSubcommand = {
     {
       name: 'Purge only the data cache',
       value: `${packageName} cache purge --type data`,
+    },
+    {
+      name: 'Purge only a specific tag, "my-post"',
+      value: `${packageName} cache purge --tag my-post`,
+    },
+    {
+      name: 'Purge multiple tags, "my-post" and "my-blog"',
+      value: `${packageName} cache purge --tag my-post,my-blog`,
+    },
+    {
+      name: 'Purge tag "my-post" causing the next request to serve stale and revalidate in the background',
+      value: `${packageName} cache purge --tag my-post --stale-while-revalidate true --stale-if-error true`,
+    },
+    {
+      name: 'Purge tag "my-post" causing the next request to serve stale and revalidate in the background for a specific amount of seconds',
+      value: `${packageName} cache purge --tag my-post --stale-while-revalidate 604800 --stale-if-error 604800`,
     },
   ],
 } as const;
