@@ -316,7 +316,7 @@ describe('frameworks', () => {
           assert.equal(
             deployment.public,
             true,
-            `Demo URL ${f.demo} is not "public"`
+            `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
           );
         })
     );
