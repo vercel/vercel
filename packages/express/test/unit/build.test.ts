@@ -111,7 +111,7 @@ const fixtures: Record<
   },
   '10-index-ts-no-tsconfig': {
     handler: ['index.js'],
-    moduleType: 'cjs',
+    moduleType: 'esm',
   },
   '11-index-ts-tsconfig-node': {
     handler: ['index.js'],
