@@ -192,9 +192,7 @@ export function register(opts: Options = {}): Register {
     const cachedGetOutput = configFileToBuildMap.get(configFileName);
 
     if (cachedGetOutput) {
-      if (process.env.NODE_ENV !== 'test') {
-        return cachedGetOutput;
-      }
+      return cachedGetOutput;
     }
 
     const outFiles = new Map<string, SourceOutput>();
