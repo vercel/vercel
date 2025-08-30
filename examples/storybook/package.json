@@ -14,7 +14,7 @@
     "@types/node": "20.2.5",
     "@types/react": "18.2.8",
     "@types/react-dom": "18.2.4",
-    "next": "15.2.4",
+    "next": "15.4.7",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "typescript": "5.1.3"
