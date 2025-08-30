@@ -182,46 +182,14 @@ async function compile(
   }
 
   let tsCompile: Register;
-  async function compileTypeScript(
-    path: string,
-    source: string
-  ): Promise<string> {
+  function compileTypeScript(path: string, source: string): string {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
-      // Find package.json to determine module type
-      const pathDir = join(workPath, dirname(path));
-      let pkg: { type?: string } = {};
-
-      // Check if we already have the package.json in cache
-      if (pkgCache.has(pathDir)) {
-        pkg = pkgCache.get(pathDir) || {};
-      } else {
-        // Load package.json and add to cache
-        try {
-          const pathToPkg = await walkParentDirs({
-            base: workPath,
-            start: pathDir,
-            filename: 'package.json',
-          });
-          if (pathToPkg) {
-            pkg = require_(pathToPkg);
-          } else {
-            pkg = {};
-          }
-          pkgCache.set(pathDir, pkg);
-        } catch (error) {
-          // Ignore errors when reading package.json
-          pkg = {};
-          pkgCache.set(pathDir, pkg);
-        }
-      }
-
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
-        pkg,
       });
     }
     const { code, map } = tsCompile(source, path);

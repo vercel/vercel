@@ -43,7 +43,6 @@ interface Options {
   fileExists?: (path: string) => boolean;
   transformers?: _ts.CustomTransformers;
   nodeVersionMajor?: number;
-  pkg?: { type?: string };
 }
 
 /**
