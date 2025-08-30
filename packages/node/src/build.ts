@@ -267,7 +267,7 @@ async function compile(
             fsPath.endsWith('.mts') ||
             fsPath.endsWith('.cts')
           ) {
-            source = await compileTypeScript(fsPath, source.toString());
+            source = compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
