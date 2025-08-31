@@ -212,7 +212,7 @@ export function sourceToRegex(source: string): {
   return { src: r.source, segments };
 }
 
-const namedGroupsRegex = /\(\?<([a-zA-Z]\w*)>/g;
+const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
 
 const normalizeHasKeys = (hasItems: HasField = []) => {
   for (const hasItem of hasItems) {
