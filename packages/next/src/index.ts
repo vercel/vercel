@@ -913,9 +913,24 @@ export const build: BuildV2 = async buildOptions => {
                 src: path.posix.join('/', entryDirectory, '_next/image/?'),
                 dest: '/_next/image',
                 check: true,
+                headers: {
+                  // Add Vary header to ensure image responses that depend on
+                  // request headers are cached separately for different header values
+                  vary: 'Cookie, Authorization',
+                },
               },
             ]
           : []),
+
+        // Add Vary headers to direct _next/image requests to ensure image responses
+        // that depend on request headers are cached separately for different header values
+        {
+          src: '/_next/image',
+          headers: {
+            vary: 'Cookie, Authorization',
+          },
+          continue: true,
+        },
 
         // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
         // if no match to prevent rewriting _next/data unexpectedly
@@ -2546,12 +2561,27 @@ export const build: BuildV2 = async buildOptions => {
       ...(routesManifest?.basePath
         ? [
             {
-              src: path.join('/', entryDirectory, '_next/image/?'),
+              src: path.posix.join('/', entryDirectory, '_next/image/?'),
               dest: '/_next/image',
               check: true,
+              headers: {
+                // Add Vary header to ensure image responses that depend on
+                // request headers are cached separately for different header values
+                vary: 'Cookie, Authorization',
+              },
             },
           ]
         : []),
+
+      // Add Vary headers to direct _next/image requests to ensure image responses
+      // that depend on request headers are cached separately for different header values
+      {
+        src: '/_next/image',
+        headers: {
+          vary: 'Cookie, Authorization',
+        },
+        continue: true,
+      },
 
       // No-op _next/data rewrite to trigger handle: 'rewrites' and then 404
       // if no match to prevent rewriting _next/data unexpectedly
