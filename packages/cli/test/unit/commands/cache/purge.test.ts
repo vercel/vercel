@@ -96,6 +96,9 @@ describe('cache purge', () => {
 
   it('should succeed with --tag=foo', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      expect(req.body).toEqual({
+        tags: ['foo'],
+      });
       res.end();
     });
     client.setArgv('cache', 'purge', '--tag=foo', '--yes');
@@ -106,6 +109,9 @@ describe('cache purge', () => {
 
   it('should succeed with --tag=foo,bar,baz', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      expect(req.body).toEqual({
+        tags: ['foo', 'bar', 'baz'],
+      });
       res.end();
     });
     client.setArgv('cache', 'purge', '--tag=foo,bar,baz', '--yes');
@@ -116,6 +122,11 @@ describe('cache purge', () => {
 
   it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=true --stale-if-error=false', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      expect(req.body).toEqual({
+        tags: ['foo', 'bar', 'baz'],
+        staleWhileRevalidate: true,
+        staleIfError: false,
+      });
       res.end();
     });
     client.setArgv(
@@ -133,6 +144,11 @@ describe('cache purge', () => {
 
   it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=100,200,300 --stale-if-error=400,500,600', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      expect(req.body).toEqual({
+        tags: ['foo', 'bar', 'baz'],
+        staleWhileRevalidate: [100, 200, 300],
+        staleIfError: [400, 500, 600],
+      });
       res.end();
     });
     client.setArgv(
