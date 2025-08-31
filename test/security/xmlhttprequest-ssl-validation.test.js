@@ -11,8 +11,9 @@ const path = require('path');
 
 describe('XMLHttpRequest SSL Certificate Validation', () => {
   test('should enforce secure xmlhttprequest-ssl version across all packages', () => {
-    // Check that all package-lock.json files use the secure version
+    // Check that all package-lock.json and pnpm-lock.yaml files use the secure version
     const packageLockFiles = [];
+    const pnpmLockFiles = [];
     
     function findPackageLocks(dir) {
       const items = fs.readdirSync(dir);
@@ -24,17 +25,20 @@ describe('XMLHttpRequest SSL Certificate Validation', () => {
           findPackageLocks(fullPath);
         } else if (item === 'package-lock.json') {
           packageLockFiles.push(fullPath);
+        } else if (item === 'pnpm-lock.yaml') {
+          pnpmLockFiles.push(fullPath);
         }
       }
     }
     
     findPackageLocks(path.join(__dirname, '../../'));
     
-    // Check each package-lock.json for vulnerable xmlhttprequest-ssl versions
+    // Check each package-lock.json and pnpm-lock.yaml for vulnerable xmlhttprequest-ssl versions
     // But be lenient for test fixtures - only report, don't fail the test
     const vulnerableFiles = [];
     const secureVersion = '4.0.0';
     
+    // Check package-lock.json files
     for (const lockFile of packageLockFiles) {
       const content = fs.readFileSync(lockFile, 'utf8');
       
@@ -47,7 +51,8 @@ describe('XMLHttpRequest SSL Certificate Validation', () => {
           if (!version.includes('4.0.0') && !version.startsWith('~4.') && !version.startsWith('^4.')) {
             vulnerableFiles.push({
               file: lockFile,
-              version: version
+              version: version,
+              lockType: 'npm'
             });
           }
         }
@@ -61,7 +66,30 @@ describe('XMLHttpRequest SSL Certificate Validation', () => {
           if (version !== secureVersion) {
             vulnerableFiles.push({
               file: lockFile,
-              resolvedVersion: version
+              resolvedVersion: version,
+              lockType: 'npm'
+            });
+          }
+        }
+      }
+    }
+    
+    // Check pnpm-lock.yaml files
+    for (const lockFile of pnpmLockFiles) {
+      const content = fs.readFileSync(lockFile, 'utf8');
+      
+      // Check for xmlhttprequest-ssl package entries in pnpm format
+      // Format: /xmlhttprequest-ssl@version: (may have leading spaces)
+      const pnpmMatches = content.match(/^\s*\/xmlhttprequest-ssl@([^:]+):/gm);
+      if (pnpmMatches) {
+        for (const match of pnpmMatches) {
+          const version = match.match(/@([^:]+):/)[1];
+          // Check if this version is vulnerable (not 4.0.0 or newer)
+          if (version !== secureVersion && !version.startsWith('4.') && !version.includes('4.0.0')) {
+            vulnerableFiles.push({
+              file: lockFile,
+              version: version,
+              lockType: 'pnpm'
             });
           }
         }
@@ -80,7 +108,7 @@ describe('XMLHttpRequest SSL Certificate Validation', () => {
       
       if (productionFiles.length > 0) {
         const fileList = productionFiles.map(f => 
-          `  - ${f.file}: ${f.version || f.resolvedVersion}`
+          `  - ${f.file} (${f.lockType}): ${f.version || f.resolvedVersion}`
         ).join('\n');
         
         throw new Error(
@@ -92,6 +120,9 @@ describe('XMLHttpRequest SSL Certificate Validation', () => {
       // Just log test fixture findings
       if (testFixtureFiles.length > 0) {
         console.log(`Note: Found ${testFixtureFiles.length} test fixtures with old xmlhttprequest-ssl versions. These will be overridden by package.json overrides for new installs.`);
+        testFixtureFiles.forEach(f => {
+          console.log(`  - ${f.file} (${f.lockType}): ${f.version || f.resolvedVersion}`);
+        });
       }
     }
   });
