@@ -42,19 +42,14 @@ async function verifyTmpSecurity() {
       console.log('   Security overrides: ❌ Missing');
     }
     
-    console.log('\n🧪 Security test result from previous verification:');
-    console.log('   ✅ SECURE: Symlink attacks are properly blocked');
-    console.log('   ✅ SECURE: No files created outside tmpdir');
-    console.log('   ✅ SECURE: Proper error handling for malicious paths');
-    
     console.log('\n📋 Security Report:');
-    console.log('   Status: ✅ SECURE');
+    console.log('   Status: ✅ CONFIGURATION SECURE');
     console.log(`   Version: tmp-promise@${tmpPromiseVersion}`);
-    console.log('   Protection: Version predates vulnerability + overrides');
+    console.log('   Protection: Version predates vulnerability + overrides in place.');
     
-    console.log('\n🎉 Vercel codebase is protected against tmp symlink vulnerability!');
+    console.log('\n🎉 Vercel codebase is protected at a configuration level against the tmp symlink vulnerability!');
     console.log('   See SECURITY-tmp.md for detailed information.');
-    console.log('   Run security tests: packages/cli/test/unit/util/tmp-security.test.ts');
+    console.log('   To verify behavior, run security tests: `pnpm test packages/cli/test/unit/util/tmp-security.test.ts`');
     
   } catch (error) {
     console.error('❌ Verification failed:', error.message);
