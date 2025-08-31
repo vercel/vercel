@@ -2561,7 +2561,7 @@ export const build: BuildV2 = async buildOptions => {
       ...(routesManifest?.basePath
         ? [
             {
-              src: path.join('/', entryDirectory, '_next/image/?'),
+              src: path.posix.join('/', entryDirectory, '_next/image/?'),
               dest: '/_next/image',
               check: true,
               headers: {
