@@ -92,4 +92,4 @@ function _resolvePathSync(name, tmpDir) {
 
 - [Original vulnerability report](https://github.com/raszi/node-tmp/issues/207)
 - [tmp package documentation](https://github.com/raszi/node-tmp)
-- [Security test file](../packages/cli/test/unit/util/tmp-security.test.ts)
+- [Security test file](./packages/cli/test/unit/util/tmp-security.test.ts)
