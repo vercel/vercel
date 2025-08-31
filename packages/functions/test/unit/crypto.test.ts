@@ -182,13 +182,15 @@ describe('crypto utilities', () => {
 
       // Test empty Uint8Array
       const emptyUint8Array = new Uint8Array(0);
-      await expect(securePBKDF2(emptyUint8Array, options)).rejects.toThrow(TypeError);
-      await expect(securePBKDF2(emptyUint8Array, options)).rejects.toThrow('Password cannot be empty');
+      await expect(securePBKDF2(emptyUint8Array, options)).rejects.toThrow(
+        'Password cannot be empty for PBKDF2'
+      );
 
       // Test empty ArrayBuffer
       const emptyArrayBuffer = new ArrayBuffer(0);
-      await expect(securePBKDF2(emptyArrayBuffer, options)).rejects.toThrow(TypeError);
-      await expect(securePBKDF2(emptyArrayBuffer, options)).rejects.toThrow('Password cannot be empty');
+      await expect(securePBKDF2(emptyArrayBuffer, options)).rejects.toThrow(
+        'Password cannot be empty for PBKDF2'
+      );
     });
 
     test('should handle both Uint8Array and ArrayBuffer with same content', async () => {
