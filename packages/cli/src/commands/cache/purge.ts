@@ -74,11 +74,11 @@ export default async function purge(
   const tags = tag?.split(',').map(t => t.trim());
   const staleWhileRevalidate =
     swr && ['true', 'false'].includes(swr)
-      ? Boolean(swr)
+      ? JSON.parse(swr)
       : swr?.split(',').map(t => parseInt(t.trim(), 10));
   const staleIfError =
     sie && ['true', 'false'].includes(sie)
-      ? Boolean(sie)
+      ? JSON.parse(sie)
       : sie?.split(',').map(t => parseInt(t.trim(), 10));
 
   const typeDescription = tags?.length
