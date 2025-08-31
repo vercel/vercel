@@ -170,6 +170,48 @@ describe('crypto utilities', () => {
       await expect(securePBKDF2(undefined as any, options)).rejects.toThrow(TypeError);
     });
 
+    test('should throw TypeError for empty password content', async () => {
+      const salt = generateSalt(16);
+      
+      const options: PBKDF2Options = {
+        algorithm: 'SHA-256',
+        iterations: 1000,
+        keyLength: 32,
+        salt,
+      };
+
+      // Test empty Uint8Array
+      const emptyUint8Array = new Uint8Array(0);
+      await expect(securePBKDF2(emptyUint8Array, options)).rejects.toThrow(
+        'Password cannot be empty for PBKDF2'
+      );
+
+      // Test empty ArrayBuffer
+      const emptyArrayBuffer = new ArrayBuffer(0);
+      await expect(securePBKDF2(emptyArrayBuffer, options)).rejects.toThrow(
+        'Password cannot be empty for PBKDF2'
+      );
+    });
+
+    test('should handle both Uint8Array and ArrayBuffer with same content', async () => {
+      const passwordData = [116, 101, 115, 116]; // "test"
+      const passwordUint8Array = new Uint8Array(passwordData);
+      const passwordArrayBuffer = passwordUint8Array.buffer.slice();
+      const salt = generateSalt(16);
+      
+      const options: PBKDF2Options = {
+        algorithm: 'SHA-256',
+        iterations: 1000,
+        keyLength: 32,
+        salt,
+      };
+
+      const result1 = await securePBKDF2(passwordUint8Array, options);
+      const result2 = await securePBKDF2(passwordArrayBuffer, options);
+      
+      expect(bufferToHex(result1)).toBe(bufferToHex(result2));
+    });
+
     test('should throw TypeError for missing salt', async () => {
       const password = new TextEncoder().encode('test-password');
       

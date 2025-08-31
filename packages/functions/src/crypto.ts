@@ -70,6 +70,12 @@ export async function securePBKDF2(
     throw new TypeError('Password is required for PBKDF2');
   }
 
+  // Validate password has actual content (not empty)
+  const passwordLength = password instanceof ArrayBuffer ? password.byteLength : password.length;
+  if (passwordLength === 0) {
+    throw new TypeError('Password cannot be empty for PBKDF2');
+  }
+
   if (!options.salt) {
     throw new TypeError('Salt is required for PBKDF2');
   }
