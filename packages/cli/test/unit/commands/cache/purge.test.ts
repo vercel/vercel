@@ -94,7 +94,7 @@ describe('cache purge', () => {
     );
   });
 
-  it('should succeed with --tag=foo', async () => {
+  it('should succeed with --tag', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
       expect(req.body).toEqual({
         tags: ['foo'],
@@ -107,7 +107,7 @@ describe('cache purge', () => {
     await expect(client.stderr).toOutput('Successfully purged 1 tag');
   });
 
-  it('should succeed with --tag=foo,bar,baz', async () => {
+  it('should succeed with multiple tags', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
       expect(req.body).toEqual({
         tags: ['foo', 'bar', 'baz'],
@@ -120,7 +120,7 @@ describe('cache purge', () => {
     await expect(client.stderr).toOutput('Successfully purged 3 tags');
   });
 
-  it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=true --stale-if-error=false', async () => {
+  it('should succeed with multiple tags and swr true and sie false', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
       expect(req.body).toEqual({
         tags: ['foo', 'bar', 'baz'],
@@ -142,7 +142,7 @@ describe('cache purge', () => {
     await expect(client.stderr).toOutput('Successfully purged 3 tags');
   });
 
-  it('should succeed with --tag=foo,bar,baz --stale-while-revalidate=100,200,300 --stale-if-error=400,500,600', async () => {
+  it('should succeed with multiple tags and multiple sie ints and multiple swr ints', async () => {
     client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
       expect(req.body).toEqual({
         tags: ['foo', 'bar', 'baz'],
@@ -157,6 +157,28 @@ describe('cache purge', () => {
       '--tag=foo,bar,baz',
       '--stale-while-revalidate=100,200,300',
       '--stale-if-error=400,500,600',
+      '--yes'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Successfully purged 3 tags');
+  });
+
+  it('should succeed with whitespace in tags, sie ints, swr ints', async () => {
+    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
+      expect(req.body).toEqual({
+        tags: ['foo', 'bar', 'baz'],
+        staleWhileRevalidate: [100, 200, 300],
+        staleIfError: [400, 500, 600],
+      });
+      res.end();
+    });
+    client.setArgv(
+      'cache',
+      'purge',
+      '--tag=foo,bar,baz',
+      '--stale-while-revalidate=100 , 200 , 300',
+      '--stale-if-error=400,  500 , 600 ',
       '--yes'
     );
     const exitCode = await cache(client);
