@@ -32,8 +32,7 @@ describe('Image Optimization Vary Headers', () => {
     
     // Verify the Vary header includes Cookie and Authorization
     imageRoutesWithVary.forEach(route => {
-      expect(route.headers.vary).toContain('Cookie');
-      expect(route.headers.vary).toContain('Authorization');
+      expect(route.headers.vary).toBe('Cookie, Authorization');
     });
   });
 
@@ -47,8 +46,7 @@ describe('Image Optimization Vary Headers', () => {
     directImageRoutes.forEach(route => {
       expect(route.headers).toBeDefined();
       expect(route.headers.vary).toBeDefined();
-      expect(route.headers.vary).toContain('Cookie');
-      expect(route.headers.vary).toContain('Authorization');
+      expect(route.headers.vary).toBe('Cookie, Authorization');
       expect(route.continue).toBe(true);
     });
   });
