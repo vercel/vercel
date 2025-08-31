@@ -19,10 +19,10 @@ the global `Request`, `node-fetch` and other types.
 
 #### Type declaration
 
-| Name  | Type                                     |
-| :---- | :--------------------------------------- |
-| `get` | (`name`: `string`) => `null` \| `string` |
+| Name | Type |
+| :------ | :------ |
+| `get` | (`name`: `string`) => ``null`` \| `string` |
 
 #### Defined in
 
-[packages/functions/src/headers.ts:40](https://github.com/vercel/vercel/blob/main/packages/functions/src/headers.ts#L40)
+[packages/functions/src/headers.ts:40](https://github.com/ElProConLag/vercel/blob/main/packages/functions/src/headers.ts#L40)

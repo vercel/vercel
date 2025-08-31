@@ -6,7 +6,7 @@ The init object for the `awsCredentialsProvider` function.
 
 ## Hierarchy
 
-- [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)<`FromWebTokenInit`, `"webIdentityToken"`\>
+- [`Omit`]( https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys )<`FromWebTokenInit`, ``"webIdentityToken"``\>
 
   ↳ **`AwsCredentialsProviderInit`**
 
@@ -40,9 +40,9 @@ Omit.clientConfig
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.609.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:135
+node_modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0_@aws-sdk+client-sts@3.821.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:135
 
----
+___
 
 ### clientPlugins
 
@@ -56,9 +56,9 @@ Omit.clientPlugins
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.609.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:139
+node_modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0_@aws-sdk+client-sts@3.821.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:139
 
----
+___
 
 ### durationSeconds
 
@@ -70,7 +70,7 @@ The duration, in seconds, of the role session. Defaults to 3600 seconds.
 
 Omit.durationSeconds
 
----
+___
 
 ### logger
 
@@ -89,7 +89,7 @@ Omit.logger
 
 node_modules/.pnpm/@aws-sdk+types@3.609.0/node_modules/@aws-sdk/types/dist-types/credentials.d.ts:31
 
----
+___
 
 ### parentClientConfig
 
@@ -114,8 +114,8 @@ the outer client.
 
 #### Type declaration
 
-| Name      | Type                              |
-| :-------- | :-------------------------------- |
+| Name | Type |
+| :------ | :------ |
 | `region?` | `string` \| `Provider`<`string`\> |
 
 #### Inherited from
@@ -126,7 +126,7 @@ Omit.parentClientConfig
 
 node_modules/.pnpm/@aws-sdk+types@3.609.0/node_modules/@aws-sdk/types/dist-types/credentials.d.ts:45
 
----
+___
 
 ### policy
 
@@ -138,11 +138,11 @@ An IAM policy in JSON format that you want to use as an inline session policy.
 
 Omit.policy
 
----
+___
 
 ### policyArns
 
-• **policyArns**: `undefined` \| { `arn?`: `string` }[]
+• **policyArns**: `undefined` \| { `arn?`: `string`  }[]
 
 ARNs of the IAM managed policies that you want to use as managed session policies.
 
@@ -150,7 +150,7 @@ ARNs of the IAM managed policies that you want to use as managed session policie
 
 Omit.policyArns
 
----
+___
 
 ### providerId
 
@@ -162,7 +162,7 @@ The fully qualified host component of the domain name of the identity provider.
 
 Omit.providerId
 
----
+___
 
 ### roleArn
 
@@ -174,27 +174,27 @@ ARN of the role that the caller is assuming.
 
 Omit.roleArn
 
----
+___
 
 ### roleAssumerWithWebIdentity
 
-• `Optional` **roleAssumerWithWebIdentity**: (`params`: `AssumeRoleWithWebIdentityParams`) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`AwsCredentialIdentity`\>
+• `Optional` **roleAssumerWithWebIdentity**: (`params`: `AssumeRoleWithWebIdentityParams`) => [`Promise`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise )<`AwsCredentialIdentity`\>
 
 #### Type declaration
 
-▸ (`params`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`AwsCredentialIdentity`\>
+▸ (`params`): [`Promise`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise )<`AwsCredentialIdentity`\>
 
 A function that assumes a role with web identity and returns a promise fulfilled with credentials for the assumed role.
 
 ##### Parameters
 
-| Name     | Type                              |
-| :------- | :-------------------------------- |
+| Name | Type |
+| :------ | :------ |
 | `params` | `AssumeRoleWithWebIdentityParams` |
 
 ##### Returns
 
-[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`AwsCredentialIdentity`\>
+[`Promise`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise )<`AwsCredentialIdentity`\>
 
 #### Inherited from
 
@@ -202,9 +202,9 @@ Omit.roleAssumerWithWebIdentity
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.609.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:130
+node_modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0_@aws-sdk+client-sts@3.821.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:130
 
----
+___
 
 ### roleSessionName
 
@@ -218,4 +218,4 @@ Omit.roleSessionName
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.609.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:123
+node_modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0_@aws-sdk+client-sts@3.821.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:123
