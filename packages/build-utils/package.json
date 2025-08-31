@@ -57,5 +57,8 @@
     "yazl": "2.5.1",
     "vitest": "2.0.1",
     "json5": "2.2.3"
-  }
+  },
+  "dependencies": {
+    "shell-quote": "^1.8.3"
+}
 }
