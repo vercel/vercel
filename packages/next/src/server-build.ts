@@ -2028,9 +2028,24 @@ export async function serverBuild({
               src: path.posix.join('/', entryDirectory, '_next/image/?'),
               dest: '/_next/image',
               check: true,
+              headers: {
+                // Add Vary header to ensure image responses that depend on
+                // request headers are cached separately for different header values
+                vary: 'Cookie, Authorization',
+              },
             },
           ]
         : []),
+
+      // Add Vary headers to direct _next/image requests to ensure image responses
+      // that depend on request headers are cached separately for different header values
+      {
+        src: '/_next/image',
+        headers: {
+          vary: 'Cookie, Authorization',
+        },
+        continue: true,
+      },
 
       // normalize _next/data URL before processing rewrites
       ...normalizeNextDataRoute(),
