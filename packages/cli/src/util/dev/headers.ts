@@ -35,7 +35,7 @@ const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
   // Security-sensitive headers to prevent SSRF and other attacks
   'authorization',
   'x-forwarded-for',
-  'x-forwarded-host', 
+  'x-forwarded-host',
   'x-forwarded-proto',
   'x-forwarded-port',
   'x-forwarded-prefix',
@@ -44,6 +44,10 @@ const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
   'x-original-forwarded-for',
   'x-cluster-client-ip',
   'forwarded',
+  'via',
+  'true-client-ip',
+  'cf-connecting-ip',
+  'fastly-client-ip',
   
   // Vercel-specific internal headers
   'x-vercel-deployment-url',
