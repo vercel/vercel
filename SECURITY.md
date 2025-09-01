@@ -7,3 +7,4 @@
 ## Known Security Measures
 
 - **tmp Package Protection**: See [SECURITY-tmp.md](./SECURITY-tmp.md) for details on mitigations against symbolic link vulnerabilities in the tmp package.
+- **JSZip Path Traversal Protection**: See [SECURITY-jszip.md](./SECURITY-jszip.md) for details on protections against JSZip loadAsync path traversal vulnerabilities.
