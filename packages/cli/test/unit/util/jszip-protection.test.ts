@@ -184,7 +184,7 @@ describe('jszip-protection', () => {
         .toThrow('JSZip security violation');
     });
 
-    it('should not call callback for any files if unsafe path found', () => {
+    it('should call callback for safe files before throwing on an unsafe path', () => {
       const mixedFiles = {
         'safe.txt': { content: 'safe' },
         '../../evil.txt': { content: 'malicious' }
