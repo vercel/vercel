@@ -4,11 +4,12 @@
  * BSD-2 Copyright (c) 2014 Max Ogden and other contributors
  */
 
-import path from 'path';
+import * as path from 'path';
 import pipe from 'promisepipe';
 import * as fs from 'fs-extra';
 import { streamToBuffer } from '@vercel/build-utils';
 import { Entry, ZipFile, fromBuffer as zipFromBuffer } from 'yauzl-promise';
+import { isZipEntryPathSafe } from '../security/zip-path-validator';
 
 async function* createZipIterator(zipFile: ZipFile) {
   let entry: Entry;
@@ -20,15 +21,25 @@ async function* createZipIterator(zipFile: ZipFile) {
 export async function unzip(buffer: Buffer, dir: string): Promise<void> {
   const zipFile = await zipFromBuffer(buffer);
   for await (const entry of createZipIterator(zipFile)) {
+    // Enhanced security: Use the new zip path validator for comprehensive protection
+    // This must be done BEFORE any other processing to ensure all paths are validated
+    if (!isZipEntryPathSafe(entry.fileName, dir)) {
+      throw new Error(
+        `Path traversal detected in zip entry: "${entry.fileName}". This could be a security attack attempting to write files outside the extraction directory.`
+      );
+    }
+
     if (entry.fileName.startsWith('__MACOSX/')) continue;
 
     try {
+
       const destDir = path.dirname(path.join(dir, entry.fileName));
       await fs.mkdirp(destDir);
 
       const canonicalDestDir = await fs.realpath(destDir);
       const relativeDestDir = path.relative(dir, canonicalDestDir);
 
+      // Keep existing protection as an additional safety measure
       if (relativeDestDir.split(path.sep).includes('..')) {
         throw new Error(
           `Out of bound path "${canonicalDestDir}" found while processing file ${entry.fileName}`
