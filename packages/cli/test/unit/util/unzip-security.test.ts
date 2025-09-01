@@ -3,7 +3,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import { ZipFile } from 'yauzl-promise';
-// @ts-ignore
+// @ts-expect-error: yazl has no TypeScript types available
 import yazl from 'yazl';
 import { unzip } from '../../../src/util/build/unzip';
 
