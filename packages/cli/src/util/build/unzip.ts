@@ -21,15 +21,17 @@ async function* createZipIterator(zipFile: ZipFile) {
 export async function unzip(buffer: Buffer, dir: string): Promise<void> {
   const zipFile = await zipFromBuffer(buffer);
   for await (const entry of createZipIterator(zipFile)) {
+    // Enhanced security: Use the new zip path validator for comprehensive protection
+    // This must be done BEFORE any other processing to ensure all paths are validated
+    if (!isZipEntryPathSafe(entry.fileName, dir)) {
+      throw new Error(
+        `Path traversal detected in zip entry: "${entry.fileName}". This could be a security attack attempting to write files outside the extraction directory.`
+      );
+    }
+
     if (entry.fileName.startsWith('__MACOSX/')) continue;
 
     try {
-      // Enhanced security: Use the new zip path validator for comprehensive protection
-      if (!isZipEntryPathSafe(entry.fileName, dir)) {
-        throw new Error(
-          `Path traversal detected in zip entry: "${entry.fileName}". This could be a security attack attempting to write files outside the extraction directory.`
-        );
-      }
 
       const destDir = path.dirname(path.join(dir, entry.fileName));
       await fs.mkdirp(destDir);

@@ -140,7 +140,7 @@ describe('unzip path traversal security', () => {
     expect(await fs.pathExists(path.join(testDir, '.gitignore'))).toBe(true);
   });
 
-  it('should skip __MACOSX entries without validating them', async () => {
+  it('should validate all paths including __MACOSX entries for security', async () => {
     const entries = [
       { name: '__MACOSX/file.txt', content: 'Mac metadata' },
       { name: '__MACOSX/../../../evil.txt', content: 'Mac traversal attempt' },
@@ -149,14 +149,30 @@ describe('unzip path traversal security', () => {
 
     const zipBuffer = await createZipBuffer(entries);
     
-    // Should still block the traversal attempt even in __MACOSX entries
-    // Note: The current implementation skips __MACOSX files before validation,
-    // but this test documents expected behavior if that changes
+    // Should block the traversal attempt even in __MACOSX entries for defense-in-depth
+    // The security validation now happens before any processing decisions
+    await expect(unzip(zipBuffer, testDir)).rejects.toThrow('Path traversal detected');
+  });
+
+  it('should skip legitimate __MACOSX entries after security validation', async () => {
+    const entries = [
+      { name: '__MACOSX/._file.txt', content: 'Mac metadata' },
+      { name: '__MACOSX/folder/._file.txt', content: 'Mac metadata' },
+      { name: 'good.txt', content: 'Safe content' }
+    ];
+
+    const zipBuffer = await createZipBuffer(entries);
+    
+    // Should pass security validation and then skip legitimate __MACOSX entries
     await expect(unzip(zipBuffer, testDir)).resolves.not.toThrow();
 
     // Verify only safe file was extracted
     expect(await fs.pathExists(path.join(testDir, 'good.txt'))).toBe(true);
     expect(await fs.pathExists(path.join(testDir, '__MACOSX'))).toBe(false);
+    
+    // Verify content
+    const content = await fs.readFile(path.join(testDir, 'good.txt'), 'utf8');
+    expect(content).toBe('Safe content');
   });
 
   it('should provide detailed error messages for security violations', async () => {
