@@ -90,14 +90,14 @@ export function applyOverriddenHeaders(
 
   // Delete headers.
   for (const key of Object.keys(reqHeaders)) {
-    if (!NONOVERRIDABLE_HEADERS.has(key) && !overriddenKeys.has(key)) {
+    if (!NONOVERRIDABLE_HEADERS.has(key.toLowerCase()) && !overriddenKeys.has(key)) {
       delete reqHeaders[key];
     }
   }
 
   // Update or add headers.
   for (const key of overriddenKeys.keys()) {
-    if (NONOVERRIDABLE_HEADERS.has(key)) {
+    if (NONOVERRIDABLE_HEADERS.has(key.toLowerCase())) {
       continue;
     }
 
