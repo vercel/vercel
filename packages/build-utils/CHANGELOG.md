@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 11.0.2
+
+### Patch Changes
+
+- Add support for the supportsCancellation function flag ([#13807](https://github.com/vercel/vercel/pull/13807))
+
+## 11.0.1
+
+### Patch Changes
+
+- Fix 404 status for /api routes when using Hono with the vercel dev server ([#13706](https://github.com/vercel/vercel/pull/13706))
+
+## 11.0.0
+
+### Major Changes
+
+- Add support for vlt as a package manager ([#13591](https://github.com/vercel/vercel/pull/13591))
+
 ## 10.6.7
 
 ### Patch Changes

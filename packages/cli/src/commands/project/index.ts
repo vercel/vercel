@@ -56,14 +56,14 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('project');
     output.print(help(projectCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, { parent: projectCommand, columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   if (!parsedArgs.args[1]) {

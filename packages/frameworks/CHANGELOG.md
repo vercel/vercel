@@ -1,5 +1,50 @@
 # @vercel/frameworks
 
+## 3.8.2
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- - Expand framework detection to src/app and src/server files. ([#13828](https://github.com/vercel/vercel/pull/13828))
+  - Improve handling when multiple entrypoints are detected.
+
+## 3.8.1
+
+### Patch Changes
+
+- Add support for app.js as a server entrypoint ([#13798](https://github.com/vercel/vercel/pull/13798))
+
+## 3.8.0
+
+### Minor Changes
+
+- Add xmcp zero-config Framework Preset ([#13770](https://github.com/vercel/vercel/pull/13770))
+
+## 3.7.7
+
+### Patch Changes
+
+- Add Express to frameworks detection ([#13754](https://github.com/vercel/vercel/pull/13754))
+
+## 3.7.6
+
+### Patch Changes
+
+- Fix issue where .mjs files weren't transpiled properly for Hono ([#13658](https://github.com/vercel/vercel/pull/13658))
+
+## 3.7.5
+
+### Patch Changes
+
+- Support `server.ts` for hono entrypoint ([#13638](https://github.com/vercel/vercel/pull/13638))
+
+## 3.7.4
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
 ## 3.7.3
 
 ### Patch Changes

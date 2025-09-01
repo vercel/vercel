@@ -56,7 +56,7 @@ export default async function login(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   if (parsedArgs.flags['--token']) {

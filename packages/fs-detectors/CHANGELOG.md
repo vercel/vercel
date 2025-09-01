@@ -1,5 +1,58 @@
 # @vercel/fs-detectors
 
+## 5.4.16
+
+### Patch Changes
+
+- Updated dependencies [[`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed), [`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed)]:
+  - @vercel/frameworks@3.8.2
+
+## 5.4.15
+
+### Patch Changes
+
+- Updated dependencies [[`2876dace493b97f4cae7f3839484ee36ed8ac363`](https://github.com/vercel/vercel/commit/2876dace493b97f4cae7f3839484ee36ed8ac363)]:
+  - @vercel/frameworks@3.8.1
+
+## 5.4.14
+
+### Patch Changes
+
+- Updated dependencies [[`724127d24f469b495e64e50ee152b7cc66f50153`](https://github.com/vercel/vercel/commit/724127d24f469b495e64e50ee152b7cc66f50153)]:
+  - @vercel/frameworks@3.8.0
+
+## 5.4.13
+
+### Patch Changes
+
+- Updated dependencies [[`277c78cd16d7c8c9e5a9da92953af1b94a4c94bc`](https://github.com/vercel/vercel/commit/277c78cd16d7c8c9e5a9da92953af1b94a4c94bc)]:
+  - @vercel/frameworks@3.7.7
+
+## 5.4.12
+
+### Patch Changes
+
+- Updated dependencies [[`b1993ee3af72d12859bbc621744b687fbc968a1b`](https://github.com/vercel/vercel/commit/b1993ee3af72d12859bbc621744b687fbc968a1b)]:
+  - @vercel/frameworks@3.7.6
+
+## 5.4.11
+
+### Patch Changes
+
+- Fix incorrect caching for DetectorFilesystem.readdir ([#13645](https://github.com/vercel/vercel/pull/13645))
+
+- Updated dependencies [[`99ec6718b0ddffac67a8a66608c718fce99bf542`](https://github.com/vercel/vercel/commit/99ec6718b0ddffac67a8a66608c718fce99bf542)]:
+  - @vercel/frameworks@3.7.5
+
+## 5.4.10
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+- Updated dependencies [[`4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9`](https://github.com/vercel/vercel/commit/4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9)]:
+  - @vercel/frameworks@3.7.4
+
 ## 5.4.9
 
 ### Patch Changes

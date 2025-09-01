@@ -18,46 +18,19 @@
 
 ▸ **awsCredentialsProvider**(`init`): `AwsCredentialIdentityProvider`
 
-Obtains the Vercel OIDC token and creates an AWS credential provider function
-that gets AWS credentials by calling STS AssumeRoleWithWebIdentity API.
-
-**`Example`**
-
-```js
-import * as s3 from '@aws-sdk/client-s3';
-import { awsCredentialsProvider } from '@vercel/functions/oidc';
-
-const s3Client = new s3.S3Client({
-  credentials: awsCredentialsProvider({
-    roleArn: 'arn:aws:iam::1234567890:role/RoleA',
-    clientConfig: { region: 'us-west-2' },
-    clientPlugins: [addFooHeadersPlugin],
-    roleAssumerWithWebIdentity: customRoleAssumer,
-    roleSessionName: 'session_123',
-    providerId: 'graph.facebook.com',
-    policyArns: [{ arn: 'arn:aws:iam::1234567890:policy/SomePolicy' }],
-    policy:
-      '{"Statement": [{"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]}',
-    durationSeconds: 7200,
-  }),
-});
-```
-
 #### Parameters
 
-| Name   | Type                                                                             | Description                |
-| :----- | :------------------------------------------------------------------------------- | :------------------------- |
-| `init` | [`AwsCredentialsProviderInit`](../interfaces/oidc.AwsCredentialsProviderInit.md) | The initialization object. |
+| Name   | Type                                                                             |
+| :----- | :------------------------------------------------------------------------------- |
+| `init` | [`AwsCredentialsProviderInit`](../interfaces/oidc.AwsCredentialsProviderInit.md) |
 
 #### Returns
 
 `AwsCredentialIdentityProvider`
 
-A function that provides AWS credentials.
-
 #### Defined in
 
-[packages/functions/src/oidc/aws-credentials-provider.ts:60](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L60)
+[packages/functions/src/oidc/aws-credentials-provider.ts:70](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/aws-credentials-provider.ts#L70)
 
 ---
 
@@ -72,9 +45,13 @@ Do not cache this value, as it is subject to change in production!
 This function is used to retrieve the OIDC token from the request context or the environment variable.
 It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
 
+Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
+
 **`Throws`**
 
-If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set.
+If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
+is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
+or the token refresh request fails.
 
 **`Example`**
 
@@ -97,7 +74,7 @@ A promise that resolves to the OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:25](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L25)
+packages/oidc/dist/get-vercel-oidc-token.d.ts:27
 
 ---
 
@@ -111,6 +88,8 @@ Do not cache this value, as it is subject to change in production!
 
 This function is used to retrieve the OIDC token from the request context or the environment variable.
 It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
+
+This function will not refresh the token if it is expired. For refreshing the token, use the @{link getVercelOidcToken} function.
 
 **`Throws`**
 
@@ -132,4 +111,4 @@ The OIDC token.
 
 #### Defined in
 
-[packages/functions/src/oidc/get-vercel-oidc-token.ts:48](https://github.com/vercel/vercel/blob/main/packages/functions/src/oidc/get-vercel-oidc-token.ts#L48)
+packages/oidc/dist/get-vercel-oidc-token.d.ts:49

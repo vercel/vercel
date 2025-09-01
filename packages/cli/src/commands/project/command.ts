@@ -52,6 +52,13 @@ export const listSubcommand = {
   options: [
     nextOption,
     {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output in JSON format',
+    },
+    {
       name: 'update-required',
       description: 'A list of projects affected by an upcoming deprecation',
       shorthand: null,
@@ -63,6 +70,10 @@ export const listSubcommand = {
     {
       name: 'Paginate projects, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} project ls --next 1584722256178`,
+    },
+    {
+      name: 'List projects using a deprecated Node.js version in JSON format',
+      value: `${packageName} project ls --update-required --json`,
     },
   ],
 } as const;

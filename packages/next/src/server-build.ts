@@ -14,7 +14,7 @@ import {
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle } from '@vercel/routing-utils';
+import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
 import { MAX_AGE_ONE_YEAR } from '.';
 import {
   NextRequiredServerFilesManifest,
@@ -55,8 +55,9 @@ import {
   RenderingMode,
   getPostponeResumeOutput,
   getNodeMiddleware,
-  getStaticSegmentRoutes,
+  getServerActionMetaRoutes,
 } from './utils';
+import { INTERNAL_PAGES } from './constants';
 import {
   nodeFileTrace,
   NodeFileTraceReasons,
@@ -66,6 +67,7 @@ import resolveFrom from 'resolve-from';
 import fs, { lstat } from 'fs-extra';
 import escapeStringRegexp from 'escape-string-regexp';
 import prettyBytes from 'pretty-bytes';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 // related PR: https://github.com/vercel/next.js/pull/30046
 const CORRECT_NOT_FOUND_ROUTES_VERSION = 'v12.0.1';
@@ -111,6 +113,7 @@ export async function serverBuild({
   config = {},
   functionsConfigManifest,
   privateOutputs,
+  files,
   baseDir,
   workPath,
   entryPath,
@@ -147,7 +150,10 @@ export async function serverBuild({
   variantsManifest,
   experimentalPPRRoutes,
   isAppPPREnabled,
+  isAppFullPPREnabled,
   isAppClientSegmentCacheEnabled,
+  isAppClientParamParsingEnabled,
+  clientParamParsingOrigins,
 }: {
   appPathRoutesManifest?: Record<string, string>;
   dynamicPages: string[];
@@ -190,7 +196,15 @@ export async function serverBuild({
   variantsManifest: VariantsManifest | null;
   experimentalPPRRoutes: ReadonlySet<string>;
   isAppPPREnabled: boolean;
+  files: Files;
+  /**
+   * When this is true, then it means all routes are PPR enabled. PPR is not
+   * enabled in incremental mode and all routes will be prerendered.
+   */
+  isAppFullPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
+  isAppClientParamParsingEnabled: boolean;
+  clientParamParsingOrigins: string[] | undefined;
 }): Promise<BuildResult> {
   if (isAppPPREnabled) {
     debug(
@@ -200,6 +214,14 @@ export async function serverBuild({
   }
 
   lambdaPages = Object.assign({}, lambdaPages, lambdaAppPaths);
+
+  // When the entire application has PPR enabled (all the routes) and both
+  // client param parsing and client segment cache are enabled we do not need
+  // the .prefetch.rsc routing.
+  const shouldSkipPrefetchRSCHandling =
+    isAppFullPPREnabled &&
+    isAppClientParamParsingEnabled &&
+    isAppClientSegmentCacheEnabled;
 
   const experimentalAllowBundling = Boolean(
     process.env.NEXT_EXPERIMENTAL_FUNCTION_BUNDLING
@@ -211,7 +233,6 @@ export async function serverBuild({
   const lambdas: { [key: string]: Lambda } = {};
   const prerenders: { [key: string]: Prerender } = {};
   const lambdaPageKeys = Object.keys(lambdaPages);
-  const internalPages = ['_app.js', '_error.js', '_document.js'];
   const pageBuildTraces = await glob('**/*.js.nft.json', pagesDir);
   const isEmptyAllowQueryForPrendered = semver.gte(
     nextVersion,
@@ -275,6 +296,30 @@ export async function serverBuild({
           protocol = 'https://';
         }
 
+        let origin: string | null = null;
+        if (protocol) {
+          const urlWithoutProtocol = rewrite.dest.substring(protocol.length);
+
+          // Find the first occurrence of any URL delimiter
+          const delimiters = ['/', '?', '#'];
+          let endIndex = -1;
+
+          for (const delimiter of delimiters) {
+            const index = urlWithoutProtocol.indexOf(delimiter);
+            if (index !== -1) {
+              endIndex = endIndex === -1 ? index : Math.min(endIndex, index);
+            }
+          }
+
+          if (endIndex === -1) {
+            // No delimiters found, the entire URL is the origin
+            origin = rewrite.dest;
+          } else {
+            // Extract up to the first delimiter
+            origin = protocol + urlWithoutProtocol.substring(0, endIndex);
+          }
+        }
+
         // We only support adding rewrite headers to routes that do not have
         // a protocol, so don't bother trying to parse the pathname if there is
         // a protocol.
@@ -336,95 +381,35 @@ export async function serverBuild({
         const { rewriteHeaders } = routesManifest;
         if (!rewriteHeaders) continue;
 
-        // If the rewrite was external or didn't include a pathname or query,
-        // we don't need to add the rewrite headers.
-        if (protocol || (!pathname && !query)) continue;
+        // Check to see if this is a non-relative rewrite. If it is, we need
+        // to check to see if it's an allowed origin to receive the rewritten
+        // headers.
+        const isAllowedOrigin =
+          origin && clientParamParsingOrigins
+            ? clientParamParsingOrigins.some(allowedOrigin =>
+                new RegExp(allowedOrigin).test(origin!)
+              )
+            : false;
 
-        const missing =
-          'missing' in rewrite && rewrite.missing ? rewrite.missing : [];
+        // If the rewrite was external and the origin is not allowed, we don't
+        // need to add the rewrite headers.
+        if (origin && !isAllowedOrigin) continue;
 
-        // Find any rules that could conflict with our new rule.
-        let found = missing.filter(
-          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
-        );
+        (rewrite as RouteWithSrc).headers = {
+          ...(rewrite as RouteWithSrc).headers,
 
-        // If we found a `missing` rule that would conflict with our rule,
-        // skip adding this rewrite.
-        if (
-          found.some(
-            m =>
-              // These are rules that don't have a value check or those that
-              // have their value set to '1'.
-              !m.value || m.value === '1'
-          )
-        ) {
-          continue;
-        }
+          ...(pathname
+            ? {
+                [rewriteHeaders.pathHeader]: pathname,
+              }
+            : {}),
 
-        const has =
-          'has' in rewrite && rewrite.has
-            ? // As we mutate the array below, we need to clone it to avoid
-              // mutating the original
-              [...rewrite.has]
-            : [];
-
-        // Find any rules that could conflict with our new rule.
-        found = has.filter(
-          h => h.type === 'header' && h.key.toLowerCase() === rscHeader
-        );
-
-        // If we found a `has` rule that would conflict with our rule,
-        // skip adding this rewrite.
-        if (
-          found.some(
-            h =>
-              // These are rules that have a value set to anything other than
-              // '1'.
-              h.value && h.value !== '1'
-          )
-        ) {
-          continue;
-        }
-
-        // Remove any existing RSC header rules as we'll add our own.
-        for (const h of found) {
-          has.splice(has.indexOf(h), 1);
-        }
-
-        // Add our new RSC header rule.
-        has.push({ type: 'header', key: rscHeader, value: '1' });
-
-        // Create a new rewrite that adds the rsc header to the rule.
-        const headers: Record<string, string> =
-          'headers' in rewrite && rewrite.headers
-            ? // Clone the existing headers to avoid mutating the original
-              // object.
-              { ...rewrite.headers }
-            : {};
-
-        const updated: Route = {
-          ...rewrite,
-          // We don't want to perform the actual rewrite here, instead we want
-          // to just add the headers associated with the rewrite.
-          dest: undefined,
-          // We don't want to check here, so omit the check property but we do
-          // want to maintain the order of the rewrites, so add the continue
-          // property.
-          check: undefined,
-          continue: true,
-          has,
-          headers,
+          ...(query
+            ? {
+                [rewriteHeaders.queryHeader]: query,
+              }
+            : {}),
         };
-
-        // If the pathname was rewritten, add it to the headers.
-        if (pathname) headers[rewriteHeaders.pathHeader] = pathname;
-
-        // If the query was rewritten, add it to the headers.
-        if (query) headers[rewriteHeaders.queryHeader] = query;
-
-        // Insert the updated rewrite before the original rewrite.
-        rewrites.splice(i, 0, updated);
-        i++;
       }
     };
 
@@ -492,6 +477,11 @@ export async function serverBuild({
   const lstatResults: { [key: string]: ReturnType<typeof lstat> } = {};
   const nonLambdaSsgPages = new Set<string>();
   const static404Pages = new Set<string>(static404Page ? [static404Page] : []);
+
+  // Only include internal pages that are actually existed
+  const internalPages = [...INTERNAL_PAGES].filter(page => {
+    return lambdaPages[page];
+  });
 
   Object.keys(prerenderManifest.staticRoutes).forEach(route => {
     const result = onPrerenderRouteInitial(
@@ -968,7 +958,7 @@ export async function serverBuild({
     for (const page of mergedPageKeys) {
       const originalPagePath = getOriginalPagePath(page);
       const pageBuildTrace = getBuildTraceFile(originalPagePath);
-      let fileList: string[];
+      let fileList: string[] = [];
       let reasons: NodeFileTraceReasons;
 
       if (pageBuildTrace) {
@@ -1021,17 +1011,10 @@ export async function serverBuild({
         });
         reasons = new Map();
       } else {
+        const lambdaPage = lambdaPages[page];
         fileList = Array.from(
-          parentFilesMap?.get(
-            path.relative(baseDir, lambdaPages[page].fsPath)
-          ) || []
+          parentFilesMap?.get(path.relative(baseDir, lambdaPage.fsPath)) || []
         );
-
-        if (!fileList) {
-          throw new Error(
-            `Invariant: Failed to trace ${page}, missing fileList`
-          );
-        }
         reasons = traceResult?.reasons || new Map();
       }
 
@@ -1381,6 +1364,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
@@ -1639,6 +1623,8 @@ export async function serverBuild({
     isEmptyAllowQueryForPrendered,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
+    appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
   });
 
   await Promise.all(
@@ -1695,13 +1681,6 @@ export async function serverBuild({
     (middleware.staticRoutes.length > 0 || nodeMiddleware) &&
     semver.gte(nextVersion, NEXT_DATA_MIDDLEWARE_RESOLVING_VERSION);
 
-  const staticSegmentRoutes = isAppClientSegmentCacheEnabled
-    ? await getStaticSegmentRoutes({
-        entryDirectory,
-        routesManifest,
-      })
-    : [];
-
   const dynamicRoutes = await getDynamicRoutes({
     entryPath,
     entryDirectory,
@@ -1715,6 +1694,8 @@ export async function serverBuild({
     dynamicMiddlewareRouteMap: middleware.dynamicRouteMap,
     isAppPPREnabled,
     isAppClientSegmentCacheEnabled,
+    isAppClientParamParsingEnabled,
+    prerenderManifest,
   }).then(arr =>
     localizeDynamicRoutes(
       arr,
@@ -1742,16 +1723,21 @@ export async function serverBuild({
       outputDirectory,
       `server/pages-manifest.json`
     );
-
     const pagesData = await fs.readJSON(pagesManifest);
     const pagesEntries = Object.keys(pagesData);
 
     for (const page of pagesEntries) {
       const pathName = page.startsWith('/') ? page.slice(1) : page;
-      pagesPlaceholderRscEntries[`${pathName}.rsc`] = new FileBlob({
+      const dummyBlob = new FileBlob({
         data: '{}',
         contentType: 'application/json',
       });
+      pagesPlaceholderRscEntries[`${pathName}.rsc`] = dummyBlob;
+
+      if (isAppClientSegmentCacheEnabled) {
+        pagesPlaceholderRscEntries[`${pathName}.segments/_tree.segment.rsc`] =
+          dummyBlob;
+      }
     }
   }
 
@@ -1932,6 +1918,22 @@ export async function serverBuild({
     }
   }
 
+  const shouldHandleSegmentToRsc = Boolean(
+    isAppClientSegmentCacheEnabled &&
+      rscPrefetchHeader &&
+      prefetchSegmentHeader &&
+      prefetchSegmentDirSuffix &&
+      prefetchSegmentSuffix &&
+      // When the entire application has PPR enabled (all the routes) and both
+      // client param parsing and client segment cache are enabled we do not
+      // need the .prefetch.rsc rewrite.
+      !shouldSkipPrefetchRSCHandling
+  );
+
+  const serverActionMetaRoutes = await getServerActionMetaRoutes(
+    path.join(entryPath, outputDirectory)
+  );
+
   return {
     wildcard: wildcardConfig,
     images: getImagesConfig(imagesManifest),
@@ -1953,6 +1955,18 @@ export async function serverBuild({
             __next_data_catchall: nextDataCatchallOutput,
           }
         : {}),
+      // When bots crawl a site, they may render the page after awhile (e.g. re-sync),
+      // and the sub-assets may not be available then. In this case, the link to
+      // static assets could be not found, and return a 404 HTML. This behavior can
+      // bait the bots as if they found 404 pages. In Next.js it is handled on the
+      // server to return a plain text "Not Found". However, as we handle the "_next/static/"
+      // routes in Vercel CLI, the Next.js behavior is overwritten. Therefore, create a
+      // ".txt" file with "Not Found" content and rewrite any not found static assets to it.
+      [path.posix.join('.', entryDirectory, '_next/static/not-found.txt')]:
+        new FileBlob({
+          data: 'Not Found',
+          contentType: 'text/plain',
+        }),
     },
     routes: [
       /*
@@ -2120,6 +2134,8 @@ export async function serverBuild({
 
       ...redirects,
 
+      ...serverActionMetaRoutes,
+
       // middleware comes directly after redirects but before
       // beforeFiles rewrites as middleware is not a "file" route
       ...(routesManifest?.skipMiddlewareUrlNormalize
@@ -2270,7 +2286,9 @@ export async function serverBuild({
                   },
                 ]
               : []),
-            ...(rscPrefetchHeader && isAppPPREnabled
+            ...(rscPrefetchHeader &&
+            isAppPPREnabled &&
+            !shouldSkipPrefetchRSCHandling
               ? [
                   {
                     src: `^${path.posix.join('/', entryDirectory, '/')}$`,
@@ -2278,6 +2296,7 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: rscPrefetchHeader,
+                        value: '1',
                       },
                     ],
                     dest: path.posix.join(
@@ -2299,6 +2318,7 @@ export async function serverBuild({
                       {
                         type: 'header',
                         key: rscPrefetchHeader,
+                        value: '1',
                       },
                     ],
                     dest: path.posix.join(
@@ -2318,6 +2338,7 @@ export async function serverBuild({
                 {
                   type: 'header',
                   key: rscHeader,
+                  value: '1',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/index.rsc'),
@@ -2335,6 +2356,7 @@ export async function serverBuild({
                 {
                   type: 'header',
                   key: rscHeader,
+                  value: '1',
                 },
               ],
               dest: path.posix.join('/', entryDirectory, '/$1.rsc'),
@@ -2399,28 +2421,36 @@ export async function serverBuild({
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
         ? [
-            {
-              src: path.posix.join('/', entryDirectory, '/\\.prefetch\\.rsc$'),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `/__index${RSC_PREFETCH_SUFFIX}`
-              ),
-              check: true,
-            },
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                '(.+)/\\.prefetch\\.rsc$'
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                `$1${RSC_PREFETCH_SUFFIX}`
-              ),
-              check: true,
-            },
+            ...(shouldSkipPrefetchRSCHandling
+              ? []
+              : [
+                  {
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '/\\.prefetch\\.rsc$'
+                    ),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `/__index${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    check: true,
+                  },
+                  {
+                    src: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      '(.+)/\\.prefetch\\.rsc$'
+                    ),
+                    dest: path.posix.join(
+                      '/',
+                      entryDirectory,
+                      `$1${RSC_PREFETCH_SUFFIX}`
+                    ),
+                    check: true,
+                  },
+                ]),
             {
               src: path.posix.join('/', entryDirectory, '/\\.rsc$'),
               dest: path.posix.join('/', entryDirectory, `/index.rsc`),
@@ -2447,14 +2477,17 @@ export async function serverBuild({
       // We need to make sure to 404 for /_next after handle: miss since
       // handle: miss is called before rewrites and to prevent rewriting /_next
       {
-        src: path.posix.join(
-          '/',
-          entryDirectory,
-          '_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media)/.+'
-        ),
+        src: path.posix.join('/', entryDirectory, '_next/static/.+'),
         status: 404,
         check: true,
-        dest: '$0',
+        dest: path.posix.join(
+          '/',
+          entryDirectory,
+          '_next/static/not-found.txt'
+        ),
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+        },
       },
 
       // remove locale prefixes to check public files and
@@ -2510,6 +2543,18 @@ export async function serverBuild({
                 .map(locale => escapeStringRegexp(locale))
                 .join('|')})/(.*)`,
               dest: `${path.posix.join('/', entryDirectory, '/')}$1`,
+              check: true,
+            },
+          ]
+        : []),
+
+      // If it didn't match any of the static routes or dynamic ones, then we
+      // should fallback to either prefetch or normal RSC request
+      ...(shouldHandleSegmentToRsc
+        ? [
+            {
+              src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
+              dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
               check: true,
             },
           ]
@@ -2610,8 +2655,6 @@ export async function serverBuild({
           ]
         : []),
 
-      ...staticSegmentRoutes,
-
       // Dynamic routes (must come after dataRoutes as dataRoutes are more
       // specific)
       ...dynamicRoutes,
@@ -2643,30 +2686,6 @@ export async function serverBuild({
                 '/(.*).json'
               )}`,
               dest: '__next_data_catchall',
-            },
-          ]
-        : []),
-
-      // If it didn't match any of the static routes or dynamic ones, then we
-      // should fallback to the regular RSC request.
-      ...(isAppClientSegmentCacheEnabled &&
-      rscPrefetchHeader &&
-      prefetchSegmentHeader &&
-      prefetchSegmentDirSuffix &&
-      prefetchSegmentSuffix
-        ? [
-            {
-              src: path.posix.join(
-                '/',
-                entryDirectory,
-                `/(?<path>.+)${escapeStringRegexp(prefetchSegmentDirSuffix)}/.+${escapeStringRegexp(prefetchSegmentSuffix)}$`
-              ),
-              dest: path.posix.join(
-                '/',
-                entryDirectory,
-                isAppPPREnabled ? '/$path.prefetch.rsc' : '/$path.rsc'
-              ),
-              check: true,
             },
           ]
         : []),

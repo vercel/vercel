@@ -271,6 +271,17 @@ export function register(opts: Options = {}): Register {
       getCompilationSettings: () => config.options,
       getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
       getCustomTransformers: () => transformers,
+      resolveModuleNames: (moduleNames: string[], containingFile: string) => {
+        return moduleNames.map(moduleName => {
+          const result = ts.resolveModuleName(
+            moduleName,
+            containingFile,
+            config.options,
+            ts.sys
+          );
+          return result.resolvedModule;
+        });
+      },
     };
 
     const registry = ts.createDocumentRegistry(
@@ -312,7 +323,11 @@ export function register(opts: Options = {}): Register {
 
       const diagnosticList = filterDiagnostics(diagnostics, ignoreDiagnostics);
 
-      reportTSError(diagnosticList, config.options.noEmitOnError);
+      if (process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS) {
+        reportTSError(diagnosticList, true);
+      } else {
+        reportTSError(diagnosticList, config.options.noEmitOnError);
+      }
 
       if (output.emitSkipped) {
         throw new TypeError(`${relative(cwd, fileName)}: Emit skipped`);

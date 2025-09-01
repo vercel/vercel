@@ -180,6 +180,11 @@ export interface ShouldServeOptions {
    * in `vercel.json`.
    */
   config: Config;
+
+  /**
+   * Whether another builder has already matched the given request.
+   */
+  hasMatched?: boolean;
 }
 
 /**
@@ -383,6 +388,7 @@ export interface BuilderFunctions {
     includeFiles?: string;
     excludeFiles?: string;
     experimentalTriggers?: TriggerEvent[];
+    supportsCancellation?: boolean;
   };
 }
 

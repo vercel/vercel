@@ -1,5 +1,91 @@
 # @vercel/next
 
+## 4.12.3
+
+### Patch Changes
+
+- Add emitting supportsCancellation ([#13841](https://github.com/vercel/vercel/pull/13841))
+
+## 4.12.2
+
+### Patch Changes
+
+- Optimize segment prerender with blank allowQuery for client parsing ([#13838](https://github.com/vercel/vercel/pull/13838))
+
+  When client segment cache, parsing, and PPR are enabled, use empty allowQuery for segment prerenders since segments don't vary based on route parameters. This ensures both RSC and segment prerenders are in the same group and revalidated together, improving cache efficiency.
+
+## 4.12.1
+
+### Patch Changes
+
+- [next][node][redwood][remix] bump `@vercel/nft@0.30.1` ([#13818](https://github.com/vercel/vercel/pull/13818))
+
+## 4.12.0
+
+### Minor Changes
+
+- Add client param parsing support with experimental flag ([#13740](https://github.com/vercel/vercel/pull/13740))
+
+### Patch Changes
+
+- Add clientParamParsingOrigins configuration for secure external rewrite headers ([#13799](https://github.com/vercel/vercel/pull/13799))
+
+## 4.11.3
+
+### Patch Changes
+
+- Handle building for app router without internal pages entries ([#13704](https://github.com/vercel/vercel/pull/13704))
+
+- Add action metadata routes ([#13775](https://github.com/vercel/vercel/pull/13775))
+
+## 4.11.2
+
+### Patch Changes
+
+- Return plain text 404 for `/_next/static/` paths instead of HTML to prevent SEO issues. ([#12906](https://github.com/vercel/vercel/pull/12906))
+
+## 4.11.1
+
+### Patch Changes
+
+- Handle generated function config ([#13720](https://github.com/vercel/vercel/pull/13720))
+
+## 4.11.0
+
+### Minor Changes
+
+- Improve fallback root params handling with hasFallbackRootParams flag ([#13653](https://github.com/vercel/vercel/pull/13653))
+
+  - Add hasFallbackRootParams flag to RoutesManifestRoute type for simplified route regex generation
+  - Update route handling logic to conditionally apply fallback root params processing
+  - Enhance prerender manifest structure with fallback root params support
+
+## 4.10.11
+
+### Patch Changes
+
+- fix routing issue when clientSegmentCache is enabled ([#13625](https://github.com/vercel/vercel/pull/13625))
+
+## 4.10.10
+
+### Patch Changes
+
+- Ensure RSC headers have exact value '1' for proper routing and prefetch handling consistency ([#13644](https://github.com/vercel/vercel/pull/13644))
+
+- fix erroneous source file warning when using dynamic not-found ([#13641](https://github.com/vercel/vercel/pull/13641))
+
+## 4.10.9
+
+### Patch Changes
+
+- Only route prefetches to a static file if the prefetch header value is '1' ([#13547](https://github.com/vercel/vercel/pull/13547))
+
+## 4.10.8
+
+### Patch Changes
+
+- Reduce segment routes ([#13602](https://github.com/vercel/vercel/pull/13602))
+
 ## 4.10.7
 
 ### Patch Changes
