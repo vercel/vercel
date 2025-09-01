@@ -51,12 +51,6 @@ export function isZipEntryPathSafe(entryPath: string, allowedBasePath: string): 
     return false;
   }
   
-  // Additional check: ensure no part of the path contains '..'
-  const pathParts = normalizedEntry.split(path.sep);
-  if (pathParts.includes('..')) {
-    return false;
-  }
-  
   // Additional security: check for Windows-style path traversal even on Unix systems
   // This prevents attacks that rely on cross-platform path interpretation differences
   if (normalizedEntry.includes('\\..\\') || normalizedEntry.includes('\\..') || normalizedEntry.includes('..\\')) {
