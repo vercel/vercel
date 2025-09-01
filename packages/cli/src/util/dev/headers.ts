@@ -19,17 +19,38 @@ export function nodeHeadersToFetchHeaders(
 
 /**
  * Request headers that are not allowed to be overridden by a middleware.
+ * These headers are protected to prevent security vulnerabilities including SSRF attacks.
  */
 const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
+  // Basic HTTP protocol headers
   'host',
   'connection',
   'content-length',
   'transfer-encoding',
   'keep-alive',
-  'transfer-encoding',
   'te',
   'upgrade',
   'trailer',
+  
+  // Security-sensitive headers to prevent SSRF and other attacks
+  'authorization',
+  'x-forwarded-for',
+  'x-forwarded-host', 
+  'x-forwarded-proto',
+  'x-forwarded-port',
+  'x-forwarded-prefix',
+  'x-real-ip',
+  'x-client-ip',
+  'x-original-forwarded-for',
+  'x-cluster-client-ip',
+  'forwarded',
+  
+  // Vercel-specific internal headers
+  'x-vercel-deployment-url',
+  'x-vercel-forwarded-for',
+  'x-vercel-id',
+  'x-vercel-cache',
+  'x-vercel-edge',
 ]);
 
 /**
@@ -42,6 +63,9 @@ const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
  *
  * `x-middleware-request-*` is the new value for each header. This can't be
  * omitted, even if the header is not being modified.
+ * 
+ * Security: Headers in NONOVERRIDABLE_HEADERS are protected from modification
+ * to prevent SSRF attacks and other security vulnerabilities.
  *
  */
 export function applyOverriddenHeaders(
