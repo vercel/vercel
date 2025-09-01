@@ -102,7 +102,7 @@ export function validateJSZipEntries(zipEntries: Record<string, any>, allowedBas
  */
 export const SUSPICIOUS_PATH_PATTERNS = [
   /\.\.\//,           // Unix-style parent directory
-  /\.\.\\/, 	      // Windows-style parent directory
+  /\.\.\\/,           // Windows-style parent directory
   /\0/,               // Null byte injection
   /^[\/\\]/,          // Absolute path indicators
   /^[a-zA-Z]:[\/\\]/, // Windows-style absolute paths (C:\, D:\, etc.)
