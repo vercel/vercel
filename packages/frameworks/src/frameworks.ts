@@ -1525,7 +1525,7 @@ export const frameworks = [
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
     tagline:
-      'Nuxt is the web comprehensive framework that lets you dream big with Vue.js.',
+      'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
     description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
     website: 'https://nuxt.com',
     sort: 2,
