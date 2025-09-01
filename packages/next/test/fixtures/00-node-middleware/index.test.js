@@ -33,6 +33,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(revalidateRes.status).toBe(200);
     expect(await revalidateRes.json()).toEqual({ revalidated: true });
 
+    await new Promise(resolve => setTimeout(resolve, 2 * 1000));
     await check(async () => {
       const newProps = await propsFromHtml();
       console.log({ props, newProps });
