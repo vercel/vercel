@@ -2293,6 +2293,7 @@ export const build: BuildV2 = async buildOptions => {
     if (hasLambdas) {
       console.timeEnd(allLambdasLabel);
     }
+
     const prerenderRoute = onPrerenderRoute({
       appDir,
       pagesDir,
