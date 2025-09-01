@@ -34,6 +34,11 @@ export function isZipEntryPathSafe(entryPath: string, allowedBasePath: string): 
     return false;
   }
   
+  // Additional check for Windows-style absolute paths that might not be caught by path.isAbsolute on Unix
+  if (/^[a-zA-Z]:[\/\\]/.test(normalizedEntry)) {
+    return false;
+  }
+  
   // Resolve the final destination path
   const destinationPath = path.resolve(normalizedBase, normalizedEntry);
   const resolvedBasePath = path.resolve(normalizedBase);
@@ -100,6 +105,7 @@ export const SUSPICIOUS_PATH_PATTERNS = [
   /\.\.\\/, 	      // Windows-style parent directory
   /\0/,               // Null byte injection
   /^[\/\\]/,          // Absolute path indicators
+  /^[a-zA-Z]:[\/\\]/, // Windows-style absolute paths (C:\, D:\, etc.)
   /[\/\\]\.\.[\/\\]/, // Parent directory in middle of path
 ] as const;
 

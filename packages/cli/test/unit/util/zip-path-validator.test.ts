@@ -37,6 +37,7 @@ describe('zip-path-validator security', () => {
       expect(isZipEntryPathSafe('/etc/passwd', testBaseDir)).toBe(false);
       expect(isZipEntryPathSafe('/tmp/evil.txt', testBaseDir)).toBe(false);
       expect(isZipEntryPathSafe('C:\\Windows\\System32\\evil.exe', testBaseDir)).toBe(false);
+      expect(isZipEntryPathSafe('D:\\Program Files\\evil.exe', testBaseDir)).toBe(false);
     });
 
     it('should block null byte injection', () => {
@@ -109,6 +110,8 @@ describe('zip-path-validator security', () => {
       expect(containsSuspiciousPatterns('..\\file.txt')).toBe(true);
       expect(containsSuspiciousPatterns('/absolute/path')).toBe(true);
       expect(containsSuspiciousPatterns('\\absolute\\path')).toBe(true);
+      expect(containsSuspiciousPatterns('C:\\Windows\\System32')).toBe(true);
+      expect(containsSuspiciousPatterns('D:\\Program Files\\app.exe')).toBe(true);
       expect(containsSuspiciousPatterns('file\0.txt')).toBe(true);
       expect(containsSuspiciousPatterns('folder/../evil.txt')).toBe(true);
       expect(containsSuspiciousPatterns('folder\\..\\evil.txt')).toBe(true);
@@ -124,7 +127,7 @@ describe('zip-path-validator security', () => {
 
   describe('SUSPICIOUS_PATH_PATTERNS', () => {
     it('should have expected pattern count', () => {
-      expect(SUSPICIOUS_PATH_PATTERNS.length).toBeGreaterThan(0);
+      expect(SUSPICIOUS_PATH_PATTERNS.length).toBe(6);
     });
 
     it('should be read-only', () => {
