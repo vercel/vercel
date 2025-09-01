@@ -127,7 +127,7 @@ describe('zip-path-validator security', () => {
 
   describe('SUSPICIOUS_PATH_PATTERNS', () => {
     it('should have expected pattern count', () => {
-      expect(SUSPICIOUS_PATH_PATTERNS.length).toBe(6);
+      expect(SUSPICIOUS_PATH_PATTERNS.length).toBe(7);
     });
 
     it('should be read-only', () => {
@@ -201,6 +201,10 @@ describe('zip-path-validator security', () => {
       // Windows-style attacks  
       expect(isZipEntryPathSafe('..\\windows\\attack', testBaseDir)).toBe(false);
       expect(isZipEntryPathSafe('folder\\..\\windows', testBaseDir)).toBe(false);
+      
+      // Cross-platform attacks (Windows-style traversal on Unix systems)
+      expect(isZipEntryPathSafe('normal\\..\\..\\..\\escape', testBaseDir)).toBe(false);
+      expect(isZipEntryPathSafe('folder\\..\\attack', testBaseDir)).toBe(false);
       
       // Mixed separators
       expect(isZipEntryPathSafe('../folder\\..\\mixed', testBaseDir)).toBe(false);

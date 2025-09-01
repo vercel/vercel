@@ -57,6 +57,12 @@ export function isZipEntryPathSafe(entryPath: string, allowedBasePath: string): 
     return false;
   }
   
+  // Additional security: check for Windows-style path traversal even on Unix systems
+  // This prevents attacks that rely on cross-platform path interpretation differences
+  if (normalizedEntry.includes('\\..\\') || normalizedEntry.includes('\\..') || normalizedEntry.includes('..\\')) {
+    return false;
+  }
+  
   return true;
 }
 
@@ -107,6 +113,7 @@ export const SUSPICIOUS_PATH_PATTERNS = [
   /^[\/\\]/,          // Absolute path indicators
   /^[a-zA-Z]:[\/\\]/, // Windows-style absolute paths (C:\, D:\, etc.)
   /[\/\\]\.\.[\/\\]/, // Parent directory in middle of path
+  /\\\.\.[\\\/]?/,    // Windows-style traversal patterns (covers \.. and \..\)
 ] as const;
 
 /**
