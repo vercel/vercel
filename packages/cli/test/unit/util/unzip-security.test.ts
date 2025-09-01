@@ -140,7 +140,7 @@ describe('unzip path traversal security', () => {
     expect(await fs.pathExists(path.join(testDir, '.gitignore'))).toBe(true);
   });
 
-  it('should skip __MACOSX entries but still validate them', async () => {
+  it('should skip __MACOSX entries without validating them', async () => {
     const entries = [
       { name: '__MACOSX/file.txt', content: 'Mac metadata' },
       { name: '__MACOSX/../../../evil.txt', content: 'Mac traversal attempt' },
