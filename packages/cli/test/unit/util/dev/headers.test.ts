@@ -75,4 +75,64 @@ describe('applyOverriddenHeaders', () => {
     applyOverriddenHeaders(reqHeaders, respHeaders);
     expect(reqHeaders).toStrictEqual({ b: '2' });
   });
+
+  it('protects security-sensitive headers from SSRF attacks', async () => {
+    const reqHeaders = { 
+      'authorization': 'Bearer original-token',
+      'x-forwarded-for': '192.168.1.1',
+      'x-real-ip': '10.0.0.1', 
+      'x-vercel-id': 'original-id',
+      'custom-header': 'original-value'
+    };
+    const respHeaders = new Headers({
+      // Attempt to override security-sensitive headers
+      'x-middleware-override-headers': 'authorization,x-forwarded-for,x-real-ip,x-vercel-id,custom-header',
+      'x-middleware-request-authorization': 'Bearer malicious-token',
+      'x-middleware-request-x-forwarded-for': '127.0.0.1',
+      'x-middleware-request-x-real-ip': '127.0.0.1',
+      'x-middleware-request-x-vercel-id': 'malicious-id',
+      'x-middleware-request-custom-header': 'modified-value',
+    });
+
+    applyOverriddenHeaders(reqHeaders, respHeaders);
+    
+    // Security-sensitive headers should remain unchanged
+    expect(reqHeaders).toMatchObject({
+      'authorization': 'Bearer original-token',
+      'x-forwarded-for': '192.168.1.1',
+      'x-real-ip': '10.0.0.1',
+      'x-vercel-id': 'original-id',
+      'custom-header': 'modified-value', // Only non-protected headers should be modified
+    });
+  });
+
+  it('protects security-sensitive headers from SSRF attacks, case-insensitively', async () => {
+    const reqHeaders = { 
+      'authorization': 'Bearer original-token',
+      'X-Forwarded-For': '192.168.1.1', // Note: mixed case
+      'x-real-ip': '10.0.0.1', 
+      'x-vercel-id': 'original-id',
+      'custom-header': 'original-value'
+    };
+    const respHeaders = new Headers({
+      // Attempt to override security-sensitive headers with different cases
+      'x-middleware-override-headers': 'authorization,X-Forwarded-For,x-real-ip,x-vercel-id,custom-header',
+      'x-middleware-request-authorization': 'Bearer malicious-token',
+      'x-middleware-request-X-Forwarded-For': '127.0.0.1',
+      'x-middleware-request-x-real-ip': '127.0.0.1',
+      'x-middleware-request-x-vercel-id': 'malicious-id',
+      'x-middleware-request-custom-header': 'modified-value',
+    });
+
+    applyOverriddenHeaders(reqHeaders, respHeaders);
+    
+    // Security-sensitive headers should remain unchanged regardless of case
+    expect(reqHeaders).toMatchObject({
+      'authorization': 'Bearer original-token',
+      'X-Forwarded-For': '192.168.1.1',
+      'x-real-ip': '10.0.0.1',
+      'x-vercel-id': 'original-id',
+      'custom-header': 'modified-value', // Only non-protected headers should be modified
+    });
+  });
 });
