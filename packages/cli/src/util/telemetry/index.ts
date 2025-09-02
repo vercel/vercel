@@ -179,10 +179,13 @@ export class TelemetryClient {
     });
   }
 
+  protected loginAttempt?: string;
   protected trackLoginState(
     state: 'started' | 'error' | 'canceled' | 'success'
   ) {
-    this.track({ key: 'login:state', value: state });
+    if (state === 'started') this.loginAttempt = randomUUID();
+    this.track({ key: `login:attempt:${this.loginAttempt}`, value: state });
+    if (state !== 'started') this.loginAttempt = undefined;
   }
 
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {
