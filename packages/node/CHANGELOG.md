@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.19
+
+### Patch Changes
+
+- Always compile `.mts` to ESM ([#13693](https://github.com/vercel/vercel/pull/13693))
+
 ## 5.3.18
 
 ### Patch Changes

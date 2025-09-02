@@ -1,5 +1,14 @@
 # @vercel/hono
 
+## 0.0.20
+
+### Patch Changes
+
+- Always compile `.mts` to ESM ([#13693](https://github.com/vercel/vercel/pull/13693))
+
+- Updated dependencies [[`fea94eea32f9df7c72d9ea95434d84c44f4ef082`](https://github.com/vercel/vercel/commit/fea94eea32f9df7c72d9ea95434d84c44f4ef082)]:
+  - @vercel/node@5.3.19
+
 ## 0.0.19
 
 ### Patch Changes
