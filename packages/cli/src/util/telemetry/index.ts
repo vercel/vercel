@@ -179,6 +179,12 @@ export class TelemetryClient {
     });
   }
 
+  protected trackLoginState(
+    state: 'started' | 'error' | 'canceled' | 'success'
+  ) {
+    this.track({ key: 'login:state', value: state });
+  }
+
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {
     let subcommand: string | undefined;
     if (subcommands) {
