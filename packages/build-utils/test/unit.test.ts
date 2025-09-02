@@ -853,7 +853,7 @@ it('should detect pnpm without workspace', async () => {
   const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
-  expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'pnpm-lock.yaml'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
@@ -862,7 +862,7 @@ it('should detect pnpm with workspaces', async () => {
   const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/c');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
-  expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.lockfilePath).toEqual(
     path.join(fixture, '..', 'pnpm-lock.yaml')
   );
