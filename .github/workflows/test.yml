@@ -4,6 +4,12 @@ on:
   pull_request:
   merge_group:
 
+permissions:
+  pull-requests: write
+  checks: read
+  contents: read
+  deployments: read
+
 env:
   VERCEL_TELEMETRY_DISABLED: '1'
   TURBO_REMOTE_ONLY: 'true'
