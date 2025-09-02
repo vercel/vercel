@@ -75,7 +75,9 @@ export async function login(
       open.default(verification_uri_complete);
       o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
       o.spinner('Waiting for authentication...');
-      rl.close();
+      if (!canceled) {
+        rl.close();
+      }
     }
   );
 
