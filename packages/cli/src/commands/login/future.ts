@@ -83,7 +83,7 @@ export async function login(
 
   // Check if cancelled before starting the authentication process
   if (canceled) {
-    process.off('SIGINT', handleCancel);
+    rl.off('SIGINT', handleCancel);
     return 'canceled';
   }
 
@@ -195,8 +195,8 @@ export async function login(
   error = await pollForToken();
 
   o.stopSpinner();
+  rl.off('SIGINT', handleCancel);
   rl.close();
-  process.off('SIGINT', handleCancel);
 
   if (canceled) {
     return 'canceled';
