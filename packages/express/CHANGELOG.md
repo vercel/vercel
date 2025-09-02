@@ -1,5 +1,12 @@
 # @vercel/express
 
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.18
+
 ## 0.0.10
 
 ### Patch Changes
