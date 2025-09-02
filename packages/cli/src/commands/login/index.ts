@@ -55,6 +55,7 @@ export default async function login(client: Client): Promise<number> {
     const status = await future(client);
     telemetry.trackState(status);
     switch (status) {
+      // Intentionally return 0 on canceled, to avoid printing "ELIFECYCLE Command failed."
       case 'canceled':
       case 'success':
         return 0;
