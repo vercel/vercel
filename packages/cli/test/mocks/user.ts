@@ -6,8 +6,8 @@ export function useUser(additionalAttrs: Partial<User> = {}) {
   const user = {
     id: chance().guid(),
     email: chance().email(),
-    name: chance().name(),
-    username: chance().first().toLowerCase(),
+    name: chance(),
+    username: chance().first({ nationality: 'en' }),
     ...additionalAttrs,
   };
   client.scenario.get('/v2/user', (_req, res) => {
