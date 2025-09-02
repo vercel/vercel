@@ -31,7 +31,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "dependencies": {
     "@vercel/blob": "1.0.2",

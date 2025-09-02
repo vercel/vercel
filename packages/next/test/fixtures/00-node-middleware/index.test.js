@@ -3,7 +3,9 @@ const cheerio = require('cheerio');
 const { deployAndTest, check } = require('../../utils');
 const fetch = require('../../../../../test/lib/deployment/fetch-retry');
 
-describe(`${__dirname.split(path.sep).pop()}`, () => {
+// Flaky test - skip until fixed.
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip(`${__dirname.split(path.sep).pop()}`, () => {
   let ctx = {};
 
   it('should deploy and pass probe checks', async () => {

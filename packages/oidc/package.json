@@ -33,7 +33,7 @@
   },
   "peerDependenciesMeta": {},
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "scripts": {
     "pretest": "pnpm run build:code",
