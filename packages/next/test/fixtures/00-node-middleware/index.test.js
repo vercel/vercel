@@ -89,7 +89,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
         `${ctx.deploymentUrl}/api/revalidate?urlPath=/financial`
       );
       expect(revalidateRes.status).toBe(200);
-      expect(await revalidateRes.json()).toEqual({ revalidated: true });
+      const revalidationResult = await revalidateRes.json()
+      console.log({ revalidation: revalidationResult })
+      expect(revalidationResult).toEqual({ revalidated: true });
     };
 
     await check(async () => {
