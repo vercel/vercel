@@ -1,3 +1,5 @@
+// trigger change
+
 import { aliasCommand } from './alias/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
