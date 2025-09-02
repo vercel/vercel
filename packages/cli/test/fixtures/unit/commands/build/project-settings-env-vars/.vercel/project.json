@@ -2,7 +2,7 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "nodeVersion": "18.x",
+    "nodeVersion": "22.x",
     "buildCommand": "node build.cjs",
     "installCommand": "",
     "outputDirectory": "out",
