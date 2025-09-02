@@ -501,9 +501,12 @@ export function fixConfig(
     config.compilerOptions.esModuleInterop = true;
   }
 
-  // If not specified, the default Node.js module is CommonJS.
+  // nodenext will defer to the package.json#type field
+  // but still respect .mts and .cts files
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'CommonJS';
+    config.compilerOptions.module = 'NodeNext';
+    config.compilerOptions.moduleResolution = 'NodeNext';
+    config.compilerOptions.strict = false;
   }
 
   return config;

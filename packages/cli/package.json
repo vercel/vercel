@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "46.1.1",
+  "version": "47.0.1",
   "preferGlobal": true,
   "license": "Apache-2.0",
   "description": "The command-line interface for Vercel",
@@ -31,24 +31,24 @@
     "dist"
   ],
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "dependencies": {
     "@vercel/blob": "1.0.2",
-    "@vercel/build-utils": "11.0.2",
+    "@vercel/build-utils": "12.0.0",
     "@vercel/detect-agent": "0.2.0",
     "@vercel/fun": "1.1.6",
     "@vercel/go": "3.2.3",
-    "@vercel/express": "0.0.10",
-    "@vercel/hono": "0.0.18",
+    "@vercel/express": "0.0.12",
+    "@vercel/hono": "0.0.20",
     "@vercel/hydrogen": "1.2.4",
-    "@vercel/next": "4.12.3",
-    "@vercel/node": "5.3.17",
+    "@vercel/next": "4.12.4",
+    "@vercel/node": "5.3.19",
     "@vercel/python": "5.0.0",
     "@vercel/redwood": "2.3.6",
     "@vercel/remix-builder": "5.4.12",
     "@vercel/ruby": "2.2.1",
-    "@vercel/static-build": "2.7.20",
+    "@vercel/static-build": "2.7.21",
     "chokidar": "4.0.0",
     "jose": "5.9.6"
   },
@@ -98,7 +98,7 @@
     "@vercel-internals/constants": "workspace:*",
     "@vercel-internals/get-package-json": "workspace:*",
     "@vercel-internals/types": "workspace:*",
-    "@vercel/client": "15.3.15",
+    "@vercel/client": "16.0.0",
     "@vercel/detect-agent": "0.2.0",
     "@vercel/error-utils": "2.0.3",
     "@vercel/frameworks": "3.8.2",

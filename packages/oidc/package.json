@@ -14,7 +14,7 @@
       "require": "./dist/index.js"
     }
   },
-  "version": "2.0.2",
+  "version": "3.0.0",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",
@@ -33,7 +33,7 @@
   },
   "peerDependenciesMeta": {},
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "scripts": {
     "pretest": "pnpm run build:code",
