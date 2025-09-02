@@ -1,5 +1,15 @@
 # vercel
 
+## 47.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`17f3c91aa96ce272d265d809f3b765a12a1f38b3`](https://github.com/vercel/vercel/commit/17f3c91aa96ce272d265d809f3b765a12a1f38b3), [`fea94eea32f9df7c72d9ea95434d84c44f4ef082`](https://github.com/vercel/vercel/commit/fea94eea32f9df7c72d9ea95434d84c44f4ef082)]:
+  - @vercel/next@4.12.4
+  - @vercel/hono@0.0.20
+  - @vercel/node@5.3.19
+  - @vercel/express@0.0.12
+
 ## 47.0.0
 
 ### Major Changes

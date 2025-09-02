@@ -346,7 +346,7 @@ importers:
         specifier: 0.2.0
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.11
+        specifier: 0.0.12
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -355,16 +355,16 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.19
+        specifier: 0.0.20
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.12.3
+        specifier: 4.12.4
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.18
+        specifier: 5.3.19
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
@@ -924,7 +924,7 @@ importers:
   packages/express:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.18
+        specifier: 5.3.19
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1251,7 +1251,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.18
+        specifier: 5.3.19
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
