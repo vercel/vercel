@@ -164,7 +164,6 @@ export class RootTelemetryClient extends TelemetryClient {
       command: 'login',
       value: actual,
     });
-    this.trackLoginState('started');
   }
 
   trackCliCommandLogout(actual: string) {
