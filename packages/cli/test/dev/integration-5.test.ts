@@ -540,31 +540,29 @@ describe('[vercel dev] ESM serverless functions', () => {
     )
   );
 
-  // Skipping because it doesn't run yet on Node 22
-  // eslint-disable-next-line jest/no-disabled-tests
-  test.skip(
+  test(
     '[vercel dev] ESM .js type=commonjs',
     testFixtureStdio(
       'esm-js-nodejs-no-module',
-      async (testPath: any) => {
-        // bad gateway
-        // require() of ESM Module
-        await testPath(500, '/api/data');
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}/api/data`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
     )
   );
 
-  // Skipping because it doesn't run yet on Node 22
-  // eslint-disable-next-line jest/no-disabled-tests
-  test.skip(
+  test(
     '[vercel dev] ESM .ts type=commonjs',
     testFixtureStdio(
       'esm-ts-nodejs-no-module',
-      async (testPath: any) => {
-        // bad gateway
-        // require() of ESM Module
-        await testPath(500, '/api/data');
+      async (_testPath: any, port: any) => {
+        const res = await fetch(`http://localhost:${port}/api/data`);
+        validateResponseHeaders(res);
+        const json = await res.json();
+        expect(json).toHaveProperty('isLeapYear');
       },
       { skipDeploy: true }
     )
