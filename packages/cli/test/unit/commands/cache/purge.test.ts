@@ -82,10 +82,6 @@ describe('cache purge', () => {
   });
 
   it('should error when both --type and --tag used', async () => {
-    client.scenario.post(`/v1/edge-cache/purge-tags`, (req, res) => {
-      // TODO: how to test body?
-      res.end();
-    });
     client.setArgv('cache', 'purge', '--type=data', '--tag=foo', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
