@@ -1059,8 +1059,7 @@ function getRouteResult(
         // to avoid enumerating serverless function names.
         // It must not precede framework dynamic API rewrites (e.g. Next.js),
         // so append it to the error phase instead of filesystem.
-        // errorRoutes.push({
-        rewriteRoutes.push({
+        errorRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
         });
