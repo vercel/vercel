@@ -334,7 +334,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     'lambda-with-php-runtime': {
       'api/test.php': `<?php echo 'Hello from PHP'; ?>`,
       'package.json': JSON.stringify({
-        engines: { node: '18.x' },
+        engines: { node: '22.x' },
       }),
       'vercel.json': JSON.stringify({
         functions: {
