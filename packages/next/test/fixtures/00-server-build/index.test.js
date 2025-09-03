@@ -27,9 +27,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     Object.assign(ctx, info);
   });
 
-  // Flaky test - skip until fixed.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip.each([
+  it.each([
     {
       title: 'should update content for prerendered path correctly',
       pathsToCheck: [
