@@ -18,7 +18,9 @@ import {
 } from '../../util/oauth';
 import o from '../../output-manager';
 
-export async function login(client: Client): Promise<number> {
+export async function login(
+  client: Client
+): Promise<'success' | 'error' | 'canceled'> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(
@@ -30,7 +32,7 @@ export async function login(client: Client): Promise<number> {
 
   if (deviceAuthorizationError) {
     printError(deviceAuthorizationError);
-    return 1;
+    return 'error';
   }
 
   const {
@@ -42,13 +44,20 @@ export async function login(client: Client): Promise<number> {
     interval,
   } = deviceAuthorization;
 
+  let canceled = false;
+
+  const handleCancel = () => {
+    canceled = true;
+    rl.close();
+  };
+
   const rl = readline
     .createInterface({
       input: process.stdin,
       output: process.stdout,
     })
     // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
-    .on('SIGINT', () => process.exit(0));
+    .on('SIGINT', handleCancel);
 
   rl.question(
     `
@@ -62,12 +71,21 @@ export async function login(client: Client): Promise<number> {
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
+      if (canceled) return;
       open.default(verification_uri_complete);
       o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
       o.spinner('Waiting for authentication...');
-      rl.close();
+      if (!canceled) {
+        rl.close();
+      }
     }
   );
+
+  // Check if cancelled before starting the authentication process
+  if (canceled) {
+    rl.off('SIGINT', handleCancel);
+    return 'canceled';
+  }
 
   o.spinner('Waiting for authentication...');
 
@@ -77,8 +95,23 @@ export async function login(client: Client): Promise<number> {
   );
 
   async function pollForToken(): Promise<Error | undefined> {
-    while (Date.now() < expiresAt) {
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    while (Date.now() < expiresAt && !canceled) {
+      // Either wait for the given interval or until canceled.
+      // If canceled, the promise will resolve early with `true`.
+      await new Promise<void>(resolve => {
+        const timeoutId = setTimeout(resolve, intervalMs);
+        const checkCancellation = () => {
+          if (canceled) {
+            clearTimeout(timeoutId);
+            resolve();
+          } else {
+            setTimeout(checkCancellation, 50);
+          }
+        };
+        checkCancellation();
+      });
+
+      if (canceled) break;
 
       // TODO: Handle connection timeouts and add interval backoff
       const [tokenResponseError, tokenResponse] =
@@ -162,10 +195,17 @@ export async function login(client: Client): Promise<number> {
   error = await pollForToken();
 
   o.stopSpinner();
+  rl.off('SIGINT', handleCancel);
   rl.close();
 
-  if (!error) return 0;
+  if (canceled) {
+    return 'canceled';
+  }
+
+  if (!error) {
+    return 'success';
+  }
 
   printError(error);
-  return 1;
+  return 'error';
 }
