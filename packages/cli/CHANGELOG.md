@@ -1,5 +1,11 @@
 # vercel
 
+## 47.0.3
+
+### Patch Changes
+
+- Undo change that set min node version to node 20 since Vercel CLI still needs to work on Node 18 for upgrade paths. ([#13865](https://github.com/vercel/vercel/pull/13865))
+
 ## 47.0.2
 
 ### Patch Changes
