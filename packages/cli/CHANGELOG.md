@@ -1,5 +1,30 @@
 # vercel
 
+## 47.0.4
+
+### Patch Changes
+
+- Reverts a regression in `vercel login --future` introduced in [#13855](https://github.com/vercel/vercel/pull/13855) ([#13872](https://github.com/vercel/vercel/pull/13872))
+
+## 47.0.3
+
+### Patch Changes
+
+- Undo change that set min node version to node 20 since Vercel CLI still needs to work on Node 18 for upgrade paths. ([#13865](https://github.com/vercel/vercel/pull/13865))
+
+## 47.0.2
+
+### Patch Changes
+
+- feat(cli): telemetry on login state ([#13855](https://github.com/vercel/vercel/pull/13855))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/build-utils@12.1.0
+  - @vercel/express@0.0.13
+  - @vercel/hono@0.0.21
+  - @vercel/node@5.3.20
+  - @vercel/static-build@2.7.22
+
 ## 47.0.1
 
 ### Patch Changes
