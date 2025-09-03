@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import login from '../../../../src/commands/login';
+import { login } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
 import _fetch, { Headers, type Response } from 'node-fetch';
