@@ -1,5 +1,14 @@
 # @vercel/express
 
+## 0.0.13
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/node@5.3.20
+
 ## 0.0.12
 
 ### Patch Changes
