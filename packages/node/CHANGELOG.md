@@ -1,5 +1,16 @@
 # @vercel/node
 
+## 5.3.20
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f)]:
+  - @vercel/build-utils@12.1.0
+
 ## 5.3.19
 
 ### Patch Changes
