@@ -1,5 +1,11 @@
 # vercel
 
+## 47.0.4
+
+### Patch Changes
+
+- Reverts a regression in `vercel login --future` introduced in [#13855](https://github.com/vercel/vercel/pull/13855) ([#13872](https://github.com/vercel/vercel/pull/13872))
+
 ## 47.0.3
 
 ### Patch Changes
