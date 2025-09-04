@@ -28,7 +28,7 @@ const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 type TypescriptModule = typeof import('typescript');
 
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint, workPath, config, meta = {} } = opts;
+  const { entrypoint, workPath, config, meta = {}, publicDir } = opts;
   const entrypointPath = join(workPath, entrypoint);
 
   if (config.middleware === true && typeof meta.requestUrl === 'string') {
@@ -150,6 +150,7 @@ export const startDevServer: StartDevServer = async opts => {
     maybeTranspile,
     meta,
     tsConfig,
+    publicDir,
   });
 
   const { pid } = child;

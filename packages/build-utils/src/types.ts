@@ -190,7 +190,12 @@ export interface ShouldServeOptions {
 /**
  * `startDevServer()` is given the same parameters as `build()`.
  */
-export type StartDevServerOptions = BuildOptions;
+export type StartDevServerOptions = BuildOptions & {
+  /**
+   * Directory to serve static files from in dev mode
+   */
+  publicDir?: string;
+};
 
 export interface StartDevServerSuccess {
   /**
