@@ -9,7 +9,6 @@ const fs = require('fs');
  * @returns {Promise<string[]>} Array of affected package names
  */
 async function getAffectedPackages(baseSha) {
-  console.error(`DEBUG: getAffectedPackages called with baseSha: ${baseSha}`);
   if (!baseSha) {
     console.error('No base SHA provided, testing all packages');
     return [];
