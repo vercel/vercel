@@ -160,7 +160,8 @@ async function onDevRequest(
         const { extname } = await import('path');
         const { contentType } = await import('mime-types');
 
-        const ext = extname(req.url || '');
+        const url = new URL(req.url || '/', 'http://localhost');
+        const ext = extname(url.pathname);
         const mimeType = contentType(ext) || 'application/octet-stream';
 
         res.setHeader('Content-Type', mimeType);
