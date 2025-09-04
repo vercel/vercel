@@ -1,6 +1,7 @@
 // @ts-check
 const child_process = require('child_process');
 const path = require('path');
+const { getAffectedPackages } = require('./get-affected-packages');
 
 const runnersMap = new Map([
   [
@@ -91,18 +92,32 @@ async function getChunkedTests() {
   const scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
 
-  const dryRunText = (
-    await turbo([
-      `run`,
-      ...scripts,
-      `--cache-dir=.turbo`,
-      '--output-logs=full',
-      '--log-order=stream',
-      '--',
-      '--', // need two of these due to pnpm arg parsing
-      '--listTests',
-    ])
-  ).toString('utf8');
+  // Get affected packages based on git changes
+  const baseSha = process.env.TURBO_BASE_SHA || process.env.GITHUB_BASE_REF;
+  const affectedPackages = baseSha ? await getAffectedPackages(baseSha) : [];
+
+  console.error(
+    `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`
+  );
+
+  const turboArgs = [
+    `run`,
+    ...scripts,
+    `--cache-dir=.turbo`,
+    '--output-logs=full',
+    '--log-order=stream',
+  ];
+
+  // Add filter for affected packages if we have them
+  if (affectedPackages.length > 0) {
+    // Create a filter that includes affected packages and their dependents
+    const filters = affectedPackages.map(pkg => `--filter=${pkg}...`);
+    turboArgs.push(...filters);
+  }
+
+  turboArgs.push('--', '--', '--listTests'); // need two of these due to pnpm arg parsing
+
+  const dryRunText = (await turbo(turboArgs)).toString('utf8');
 
   /**
    * @typedef {string} TestPath
