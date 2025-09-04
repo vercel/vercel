@@ -37,6 +37,7 @@ export default async function login(client: Client): Promise<number> {
   const telemetry = new LoginTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
+      isDebug: output.isDebugEnabled(),
     },
   });
 
@@ -50,7 +51,17 @@ export default async function login(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--future']) {
     telemetry.trackCliFlagFuture('login');
-    return await future(client);
+    telemetry.trackState('started');
+    const status = await future(client);
+    telemetry.trackState(status);
+    switch (status) {
+      // Intentionally return 0 on canceled, to avoid printing "ELIFECYCLE Command failed."
+      case 'canceled':
+      case 'success':
+        return 0;
+      case 'error':
+        return 1;
+    }
   }
 
   if (parsedArgs.flags['--help']) {
