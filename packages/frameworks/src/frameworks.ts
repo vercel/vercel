@@ -2017,7 +2017,7 @@ export const frameworks = [
   {
     name: 'FastAPI (Experimental)',
     slug: 'fastapi',
-    demo: 'https://ai-sdk-preview-python-streaming.vercel.app/',
+    demo: 'https://vercel-fastapi-template-five.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
