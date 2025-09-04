@@ -139,11 +139,20 @@ async function onDevRequest(
   // Check for static files in public directory first
   const publicDir = process.env.VERCEL_DEV_PUBLIC_DIR;
   if (publicDir && req.url) {
-    const { join } = await import('path');
+    const { normalize, resolve, relative } = await import('path');
     const { existsSync, statSync } = await import('fs');
     const { readFile } = await import('fs/promises');
 
-    const staticPath = join(process.cwd(), publicDir, req.url);
+    const normalizedUrl = normalize(req.url);
+    const publicPath = resolve(process.cwd(), publicDir);
+    const staticPath = resolve(publicPath, normalizedUrl);
+
+    const relativePath = relative(publicPath, staticPath);
+    if (relativePath.startsWith('..') || relativePath.startsWith('/')) {
+      res.statusCode = 404;
+      res.end('Not Found');
+      return;
+    }
 
     if (existsSync(staticPath) && statSync(staticPath).isFile()) {
       try {
