@@ -12,20 +12,19 @@ So if you intend to try to deploy something with the `--prebuilt` flag, for the 
 REPO="/Users/path/to/vercel"  # change this
 APP="/Users/path/to/my/project"  # change this
 
-docker run --rm -it \
-  --platform=linux/amd64 \
-  -v "$REPO":"$REPO" \
+docker run --rm -it --platform=linux/amd64 \
   -v "$APP":"$APP" \
   -v "$HOME/.vercel":/root/.vercel \
   -v pnpm-store:/root/.pnpm-store \
-  -w "$REPO/packages/cli" nikolaik/python-nodejs:python3.12-nodejs20-slim bash -lc "
+  -v "$REPO":/src:ro \
+  -w /work nikolaik/python-nodejs:python3.12-nodejs20-slim bash -lc '
     set -euo pipefail
-    corepack enable
-    corepack prepare pnpm@8 --activate
+    corepack enable && corepack prepare pnpm@8 --activate
     pnpm config set store-dir /root/.pnpm-store
-    cd \"$REPO\" && pnpm install -w --frozen-lockfile
-    cd \"$REPO/packages/cli\" && pnpm run vercel build --cwd \"$APP\"
-  "
+    cp -R /src/. /work
+    cd /work && pnpm install -w --frozen-lockfile
+    cd /work/packages/cli && pnpm run vercel build --cwd "'"$APP"'"
+  '
 ```
 
 **Why?:** pip installs platform wheels; building on macOS yields darwin `.so` that won’t run on Lambda. Linux builds produce manylinux wheels.

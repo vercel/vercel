@@ -18,6 +18,7 @@ import {
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { addToGitIgnore } from '../../cli/src/util/link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -201,7 +202,21 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
+    '**/venv/**',
+    '**.venv/**',
+    '**/__pycache__/**',
   ];
+
+  const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || 'python_packages';
+  const lambdaEnv = {} as Record<string, string>;
+  lambdaEnv.PYTHONPATH = vendorDir;
+
+  // update .gitignore
+  const gitignoreEntry = vendorDir.endsWith('/') ? vendorDir : `${vendorDir}/`;
+  const isGitIgnoreUpdated = await addToGitIgnore(workPath, gitignoreEntry);
+  if (isGitIgnoreUpdated) {
+    console.log(`Added ${gitignoreEntry} to .gitignore`);
+  }
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -231,7 +246,7 @@ export const build: BuildV3 = async ({
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
-    environment: {},
+    environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
 

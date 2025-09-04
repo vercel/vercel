@@ -36,6 +36,12 @@ dependencies = distutils.text_file.TextFile(filename='${requirementsPath}').read
 pkg_resources.require(dependencies)
 `;
 
+function resolvePipTarget() {
+  if (process.env.VERCEL_PYTHON_PIP_TARGET)
+    return process.env.VERCEL_PYTHON_PIP_TARGET;
+  return process.env.__VERCEL_BUILD_RUNNING ? 'python_packages' : '.';
+}
+
 async function areRequirementsInstalled(
   pythonPath: string,
   requirementsPath: string,
@@ -57,7 +63,7 @@ async function areRequirementsInstalled(
 }
 
 async function pipInstall(pipPath: string, workPath: string, args: string[]) {
-  const target = '.';
+  const target = resolvePipTarget();
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
   // Disable installing to the Python user install directory, which is
