@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.21
+
+### Patch Changes
+
+- Add support for public asset folder for Express preset ([#13879](https://github.com/vercel/vercel/pull/13879))
+
 ## 5.3.20
 
 ### Patch Changes
