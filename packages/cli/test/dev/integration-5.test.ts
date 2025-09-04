@@ -447,6 +447,11 @@ describe('[vercel dev] Express', () => {
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('message', 'Hello Express!');
+
+        const res2 = await fetch(`http://localhost:${port}/test.json`);
+        validateResponseHeaders(res2);
+        const json2 = await res2.json();
+        expect(json2).toHaveProperty('message', 'Hello Express!');
       },
       { skipDeploy: true }
     )
