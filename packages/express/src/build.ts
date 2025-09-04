@@ -27,7 +27,7 @@ export const build: BuildV3 = async args => {
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
 
   // Express's rendering engine support using the views directory as the entrypoint.
-  const includeFiles = ['views/**/*'];
+  const includeFiles = ['views/**/*', 'public/**/*', 'static/**/*'];
   const includeFilesFromConfig = args.config.includeFiles;
   if (includeFilesFromConfig) {
     includeFiles.push(...includeFilesFromConfig);
