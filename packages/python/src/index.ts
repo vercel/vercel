@@ -1,7 +1,7 @@
 import fs from 'fs';
 import execa from 'execa';
 import { promisify } from 'util';
-import { join, dirname, basename } from 'path';
+import path, { join, dirname, basename } from 'path';
 import {
   getWriteableDirectory,
   download,
@@ -15,9 +15,11 @@ import {
   type GlobOptions,
   type BuildV3,
   type Files,
+  BuildResultV3,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { addToGitIgnore } from '../../cli/src/util/link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -63,7 +65,7 @@ export const build: BuildV3 = async ({
   entrypoint,
   meta = {},
   config,
-}) => {
+}): Promise<BuildResultV3> => {
   let pythonVersion = getLatestPythonVersion(meta);
 
   workPath = await downloadFilesInWorkPath({
@@ -201,6 +203,8 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
+    '**/venv/**',
+    '**.venv/**',
   ];
 
   const globOptions: GlobOptions = {
@@ -211,7 +215,16 @@ export const build: BuildV3 = async ({
         : predefinedExcludes,
   };
 
-  const files: Files = await glob('**', globOptions);
+  // execa('python', ['path/to/pyft.py', workdir]) -> return
+  /*
+  const files: string[] = []
+  const out = execa('python', ['path/to/pyft.py', workdir])
+  out.stdout.on('data', (data) => {
+    files.push(data);
+  })
+  */
+
+  const files: Files = await glob('**', globOptions); // idea -> call pyft here
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
@@ -227,11 +240,24 @@ export const build: BuildV3 = async ({
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
+  const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || 'python_packages';
+  const lambdaEnv = {} as Record<string, string>;
+  lambdaEnv.PYTHONPATH = vendorDir;
+
+  // update .gitignore
+  const isGitIgnoreUpdated = await addToGitIgnore(
+    path.join(workPath, vendorDir)
+  );
+  if (isGitIgnoreUpdated) {
+    console.log('Updating .gitignore', workPath);
+    console.log(`Added ${vendorDir} to .gitignore`);
+  }
+
   const output = new Lambda({
     files,
     handler: `${handlerPyFilename}.vc_handler`,
     runtime: pythonVersion.runtime,
-    environment: {},
+    environment: lambdaEnv,
     supportsResponseStreaming: true,
   });
 
