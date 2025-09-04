@@ -99,9 +99,8 @@ jobs:
               message += '⚠️ Infrastructure or core utility changes were detected, so we\'re running the full test suite to ensure integration between packages is properly tested.\n\n';
               message += `**Affected packages** (${packageCount}): All packages will be tested\n\n`;
               if (packages) {
-                const packageList = packages.split(',').slice(0, 10).join(', ');
-                const remaining = packageCount > 10 ? ` and ${packageCount - 10} more...` : '';
-                message += `Includes: ${packageList}${remaining}\n\n`;
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
+                message += `Includes:\n${packageList}\n\n`;
               }
               message += '**E2E Tests**: All e2e tests will run';
             } else if (strategy === 'affected-only') {
@@ -109,7 +108,7 @@ jobs:
               message += '✅ Only testing packages that have been modified or depend on modified packages. This saves time while maintaining safety.\n\n';
               message += `**Affected packages** (${packageCount}):\n`;
               if (packages) {
-                const packageList = packages.split(',').map(p => `- ${p.trim()}`).join('\n');
+                const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
                 message += packageList + '\n\n';
               }
               message += '**E2E Tests**: Only affected package e2e tests will run';
