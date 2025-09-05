@@ -40,7 +40,12 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
-import { processTokenResponse, refreshTokenRequest } from './oauth';
+import {
+  inspectTokenRequest,
+  processInspectTokenResponse,
+  processTokenResponse,
+  refreshTokenRequest,
+} from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -75,8 +80,16 @@ export function isOAuthAuth(
   return authConfig.type === 'oauth';
 }
 
-export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
-  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
+/** Optimistically check if the token has expired yet */
+export async function isAccessTokenActive(
+  token: string | undefined
+): Promise<boolean> {
+  if (!token) return false;
+  const response = await inspectTokenRequest(token);
+  const [inspectError, inspectResult] =
+    await processInspectTokenResponse(response);
+  if (inspectError) return false;
+  return inspectResult.active;
 }
 
 export function hasRefreshToken(
@@ -162,9 +175,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const { authConfig } = this;
 
-    // If we have a valid access token, do nothing
-    if (isValidAccessToken(authConfig)) {
-      output.debug('Valid access token, skipping token refresh.');
+    // If we have a non-expired access token, do nothing
+    if (await isAccessTokenActive(authConfig.token)) {
+      output.debug('Active access token, skipping token refresh.');
       return;
     }
 
