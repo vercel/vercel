@@ -700,21 +700,20 @@ async function rolldownCompile(
     },
   };
 
-  // Build with rolldown
+  // @ts-ignore TS doesn't like the tsconfig option, but it's here  https://rolldown.rs/reference/config-options#tsconfig
   await rolldownBuild({
     input: entrypointPath,
     cwd: workPath,
     platform: 'node',
     external: /node_modules/,
     plugins: [absoluteImportPlugin],
-    resolve: {
-      // TODO: traverse up the directory tree to find the tsconfig.json
-      tsconfigFilename: join(workPath, 'tsconfig.json'),
-    },
+    // TODO: this seems to find the tsconfig.json, but not sure if it will traverse up the directory tree
+    // or if we need to pass it in explicitly
+    tsconfig: 'tsconfig.json',
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
       format,
-      preserveModules: true, // This preserves the module structure
+      preserveModules: true,
     },
   });
   const outPath = join(
