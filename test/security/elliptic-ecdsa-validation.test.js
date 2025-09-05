@@ -180,14 +180,14 @@ describe('Elliptic ECDSA Signature Validation Security', () => {
     
     // For test fixtures, just log the findings but don't fail the test
     // since these are old test fixtures and the overrides will handle new installs
+    const testFixtureFiles = vulnerableFiles.filter(f => 
+      f.file.includes('/test/') || f.file.includes('/fixtures/')
+    );
+    const productionFiles = vulnerableFiles.filter(f => 
+      !f.file.includes('/test/') && !f.file.includes('/fixtures/')
+    );
+    
     if (vulnerableFiles.length > 0) {
-      const testFixtureFiles = vulnerableFiles.filter(f => 
-        f.file.includes('/test/') || f.file.includes('/fixtures/')
-      );
-      const productionFiles = vulnerableFiles.filter(f => 
-        !f.file.includes('/test/') && !f.file.includes('/fixtures/')
-      );
-      
       if (productionFiles.length > 0) {
         const fileList = productionFiles.map(f => 
           `  - ${f.file} (${f.lockType}): ${f.version || f.resolvedVersion}`
