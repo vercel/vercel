@@ -208,7 +208,6 @@ export default class Client extends EventEmitter implements Stdio {
     this.updateAuthConfig({
       type: 'oauth',
       token: tokens.access_token,
-      expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
 
     if (tokens.refresh_token) {
