@@ -19,7 +19,6 @@ describe('OAuth Token Refresh', () => {
     client.authConfig = {
       type: 'oauth',
       token: accessToken,
-      expiresAt: 0,
       refreshToken,
     };
 
@@ -54,6 +53,10 @@ describe('OAuth Token Refresh', () => {
         });
       }
 
+      if (url === discovery.introspection_endpoint) {
+        return json({ active: false });
+      }
+
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
@@ -76,7 +79,6 @@ describe('OAuth Token Refresh', () => {
     client.authConfig = {
       type: 'oauth',
       token: randomUUID(),
-      expiresAt: 0,
     };
 
     const name = Chance().name();
@@ -98,7 +100,6 @@ describe('OAuth Token Refresh', () => {
 
     expect(client.stderr).toOutput(name);
     expect(client.authConfig.token).toBeUndefined();
-    expect(client.authConfig.expiresAt).toBeUndefined();
     expect(client.authConfig.refreshToken).toBeUndefined();
   });
 });
