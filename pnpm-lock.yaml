@@ -1635,10 +1635,11 @@ importers:
         version: 2.0.1(@types/node@14.18.33)
 
   packages/python:
-    devDependencies:
+    dependencies:
       '@iarna/toml':
         specifier: 2.2.5
         version: 2.2.5
+    devDependencies:
       '@types/execa':
         specifier: ^0.9.0
         version: 0.9.0
@@ -4447,7 +4448,7 @@ packages:
 
   /@iarna/toml@2.2.5:
     resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
-    dev: true
+    dev: false
 
   /@inquirer/checkbox@2.2.2:
     resolution: {integrity: sha512-EyPKpHIJ4bOw7S+Gbbwdy1V/kR3L5I2lLa/b9L/lOQDhdbk7Q1d0ET2k2kU8DNPu7FgQ8xvdzEUf92tSomrpzQ==}
