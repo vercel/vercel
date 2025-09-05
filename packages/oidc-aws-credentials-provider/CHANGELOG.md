@@ -1,5 +1,23 @@
 # @vercel/oidc
 
+## 3.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+### Patch Changes
+
+- Updated dependencies [[`d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e`](https://github.com/vercel/vercel/commit/d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e)]:
+  - @vercel/oidc@3.0.0
+
+## 2.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`821e4b8e8eded000b3d4e864594730e8741ef522`](https://github.com/vercel/vercel/commit/821e4b8e8eded000b3d4e864594730e8741ef522)]:
+  - @vercel/oidc@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes

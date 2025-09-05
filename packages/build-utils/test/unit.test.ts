@@ -51,9 +51,9 @@ afterEach(() => {
 });
 
 it('should only match supported node versions, otherwise throw an error', async () => {
-  expect(await getSupportedNodeVersion('18.x', false)).toHaveProperty(
+  expect(await getSupportedNodeVersion('22.x', false)).toHaveProperty(
     'major',
-    18
+    22
   );
 
   const autoMessage =
@@ -71,9 +71,9 @@ it('should only match supported node versions, otherwise throw an error', async 
     autoMessage
   );
 
-  expect(await getSupportedNodeVersion('18.x', true)).toHaveProperty(
+  expect(await getSupportedNodeVersion('22.x', true)).toHaveProperty(
     'major',
-    18
+    22
   );
 
   const foundMessage =
@@ -118,12 +118,6 @@ it.skip('should match all semver ranges', async () => {
   );
 });
 
-it('should allow nodejs18.x', async () => {
-  expect(await getSupportedNodeVersion('18.x')).toHaveProperty('major', 18);
-  expect(await getSupportedNodeVersion('18')).toHaveProperty('major', 18);
-  expect(await getSupportedNodeVersion('18.1.0')).toHaveProperty('major', 18);
-});
-
 it('should allow nodejs20.x', async () => {
   expect(await getSupportedNodeVersion('20.x')).toHaveProperty('major', 20);
   expect(await getSupportedNodeVersion('20')).toHaveProperty('major', 20);
@@ -136,15 +130,6 @@ it('should allow nodejs22.x', async () => {
   expect(await getSupportedNodeVersion('22')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('22.1.0')).toHaveProperty('major', 22);
   expect(await getSupportedNodeVersion('>=18')).toHaveProperty('major', 22);
-});
-
-it('should not allow nodejs20.x when not available', async () => {
-  // Simulates AL2 build-container
-  await expect(
-    getSupportedNodeVersion('20.x', true, [14, 16, 18])
-  ).rejects.toThrow(
-    'Found invalid Node.js Version: "20.x". Please set Node.js Version to 18.x in your Project Settings to use Node.js 18.'
-  );
 });
 
 it('should not allow nodejs18.x when not available', async () => {
@@ -275,11 +260,6 @@ it('should not warn when package.json engines matches project setting from confi
 
 it('should get latest node version', async () => {
   expect(getLatestNodeVersion()).toHaveProperty('major', 22);
-});
-
-it('should get latest node version with Node 18.x in build-container', async () => {
-  // Simulates AL2 build-container
-  expect(getLatestNodeVersion([14, 16, 18])).toHaveProperty('major', 18);
 });
 
 it('should get latest node version with Node 22.x in build-container', async () => {
@@ -873,7 +853,7 @@ it('should detect pnpm without workspace', async () => {
   const fixture = path.join(__dirname, 'fixtures', '22-pnpm');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
-  expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.lockfilePath).toEqual(path.join(fixture, 'pnpm-lock.yaml'));
   expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
 });
@@ -882,7 +862,7 @@ it('should detect pnpm with workspaces', async () => {
   const fixture = path.join(__dirname, 'fixtures', '23-pnpm-workspaces/c');
   const result = await scanParentDirs(fixture);
   expect(result.cliType).toEqual('pnpm');
-  expect(result.lockfileVersion).toEqual(5.3);
+  expect(result.lockfileVersion).toEqual(9);
   expect(result.lockfilePath).toEqual(
     path.join(fixture, '..', 'pnpm-lock.yaml')
   );
@@ -929,6 +909,17 @@ it('should handle turborepo project with comments in turbo.json', async () => {
     __dirname,
     'fixtures',
     '43-turborepo-with-comments-in-turbo-json'
+  );
+  const fixture = path.join(base, '/apps/web');
+  const result = await scanParentDirs(fixture, true, base);
+  expect(result.turboSupportsCorepackHome).toEqual(true);
+});
+
+it('should handle turborepo project with turbo.jsonc', async () => {
+  const base = path.join(
+    __dirname,
+    'fixtures',
+    '44-turborepo-with-turbo-jsonc'
   );
   const fixture = path.join(base, '/apps/web');
   const result = await scanParentDirs(fixture, true, base);

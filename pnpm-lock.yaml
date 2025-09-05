@@ -144,10 +144,10 @@ importers:
         specifier: 27.4.1
         version: 27.4.1
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.8.0
+        specifier: 3.8.2
         version: link:../packages/frameworks
 
   internals/constants:
@@ -201,7 +201,7 @@ importers:
         specifier: workspace:*
         version: link:../constants
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../../packages/build-utils
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -340,10 +340,13 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
+      '@vercel/detect-agent':
+        specifier: 0.2.0
+        version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.6
+        specifier: 0.0.14
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -352,31 +355,31 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/hono':
-        specifier: 0.0.14
+        specifier: 0.0.22
         version: link:../hono
       '@vercel/hydrogen':
-        specifier: 1.2.3
+        specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.11.3
+        specifier: 4.12.4
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.13
+        specifier: 5.3.21
         version: link:../node
       '@vercel/python':
         specifier: 5.0.0
         version: link:../python
       '@vercel/redwood':
-        specifier: 2.3.4
+        specifier: 2.3.6
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.4.10
+        specifier: 5.4.12
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.2.1
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.7.18
+        specifier: 2.7.22
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -521,19 +524,16 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 15.3.14
+        specifier: 16.0.1
         version: link:../client
-      '@vercel/detect-agent':
-        specifier: 0.2.0
-        version: link:../detect-agent
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.0
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.14
+        specifier: 5.5.0
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -776,7 +776,7 @@ importers:
   packages/client:
     dependencies:
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
@@ -924,10 +924,10 @@ importers:
   packages/express:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.13
+        specifier: 5.3.21
         version: link:../node
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       ts-morph:
         specifier: 12.0.0
@@ -940,7 +940,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1031,7 +1031,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.0
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1071,7 +1071,7 @@ importers:
         specifier: 7.3.10
         version: 7.3.10
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
@@ -1148,7 +1148,7 @@ importers:
         specifier: 0.25.24
         version: 0.25.24
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       esbuild:
         specifier: 0.14.47
@@ -1215,7 +1215,7 @@ importers:
         specifier: 2.1.0
         version: 2.1.0
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       async-retry:
         specifier: 1.3.3
@@ -1251,10 +1251,10 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.13
+        specifier: 5.3.21
         version: link:../node
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       ts-morph:
         specifier: 12.0.0
@@ -1267,7 +1267,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1288,7 +1288,7 @@ importers:
   packages/hydrogen:
     dependencies:
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       ts-morph:
         specifier: 12.0.0
@@ -1301,7 +1301,7 @@ importers:
         specifier: 14.18.33
         version: 14.18.33
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       execa:
         specifier: 3.2.0
@@ -1318,8 +1318,8 @@ importers:
   packages/next:
     dependencies:
       '@vercel/nft':
-        specifier: 0.29.2
-        version: 0.29.2
+        specifier: 0.30.1
+        version: 0.30.1
     devDependencies:
       '@types/aws-lambda':
         specifier: 8.10.19
@@ -1364,7 +1364,7 @@ importers:
         specifier: 3.2.0
         version: 3.2.0
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1451,16 +1451,16 @@ importers:
         specifier: 16.18.11
         version: 16.18.11
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.29.2
-        version: 0.29.2
+        specifier: 0.30.1
+        version: 0.30.1
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       async-listen:
         specifier: 3.0.0
@@ -1480,6 +1480,9 @@ importers:
       etag:
         specifier: 1.8.1
         version: 1.8.1
+      mime-types:
+        specifier: 2.1.35
+        version: 2.1.35
       node-fetch:
         specifier: 2.6.9
         version: 2.6.9
@@ -1532,6 +1535,9 @@ importers:
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
+      '@types/mime-types':
+        specifier: 2.1.4
+        version: 2.1.4
       '@vercel/functions':
         specifier: workspace:*
         version: link:../functions
@@ -1649,7 +1655,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       cross-env:
         specifier: 7.0.3
@@ -1670,7 +1676,7 @@ importers:
   packages/react-router:
     dependencies:
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       ts-morph:
         specifier: 12.0.0
@@ -1710,10 +1716,10 @@ importers:
   packages/redwood:
     dependencies:
       '@vercel/nft':
-        specifier: 0.29.2
-        version: 0.29.2
+        specifier: 0.30.1
+        version: 0.30.1
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       semver:
         specifier: 6.3.1
@@ -1732,7 +1738,7 @@ importers:
         specifier: 6.0.0
         version: 6.0.0
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1772,10 +1778,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/nft':
-        specifier: 0.29.2
-        version: 0.29.2
+        specifier: 0.30.1
+        version: 0.30.1
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       path-to-regexp:
         specifier: 6.1.0
@@ -1797,7 +1803,7 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       glob:
         specifier: 10.3.16
@@ -1850,7 +1856,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       execa:
         specifier: 2.0.4
@@ -1874,10 +1880,10 @@ importers:
         specifier: 1.0.11
         version: link:../gatsby-plugin-vercel-analytics
       '@vercel/gatsby-plugin-vercel-builder':
-        specifier: 2.0.92
+        specifier: 2.0.95
         version: link:../gatsby-plugin-vercel-builder
       '@vercel/static-config':
-        specifier: 3.1.1
+        specifier: 3.1.2
         version: link:../static-config
       ts-morph:
         specifier: 12.0.0
@@ -1911,16 +1917,16 @@ importers:
         specifier: 7.3.13
         version: 7.3.13
       '@vercel/build-utils':
-        specifier: 11.0.1
+        specifier: 12.1.0
         version: link:../build-utils
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.0
+        specifier: 3.8.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.4.14
+        specifier: 5.5.0
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -7076,6 +7082,10 @@ packages:
     resolution: {integrity: sha512-8LDSKVdJxwfJXZAcHRwFDxozsTCo3UmIpDjN1cOnYMTr0h4ivK9I+IdEMdtjnssFm0y66vbnpd21mAgGZ1oGAQ==}
     dev: true
 
+  /@types/mime-types@2.1.4:
+    resolution: {integrity: sha512-lfU4b34HOri+kAY5UheuFMWPDOI+OPceBSHZKp69gEyTL/mmJ4cnU6Y/rlme3UL3GyOn6Y42hyIEw0/q8sWx5w==}
+    dev: true
+
   /@types/minimatch@3.0.3:
     resolution: {integrity: sha512-tHq6qdbT9U1IRSGf14CL0pUlULksvY9OZ+5eEgl1N7t+OA3tGvNpxJCzuKQlsNgCVwbAs670L1vcVQi8j9HjnA==}
     dev: true
@@ -8111,8 +8121,8 @@ packages:
       - debug
     dev: false
 
-  /@vercel/nft@0.29.2:
-    resolution: {integrity: sha512-A/Si4mrTkQqJ6EXJKv5EYCDQ3NL6nJXxG8VGXePsaiQigsomHYQC9xSpX8qGk7AEZk4b1ssbYIqJ0ISQQ7bfcA==}
+  /@vercel/nft@0.30.1:
+    resolution: {integrity: sha512-2mgJZv4AYBFkD/nJ4QmiX5Ymxi+AisPLPcS/KPXVqniyQNqKXX+wjieAbDXQP3HcogfEbpHoRMs49Cd4pfkk8g==}
     engines: {node: '>=18'}
     hasBin: true
     dependencies:
@@ -14099,7 +14109,6 @@ packages:
   /mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
     engines: {node: '>= 0.6'}
-    dev: true
 
   /mime-types@2.1.18:
     resolution: {integrity: sha512-lc/aahn+t4/SWV/qcmumYjymLsWfN3ELhpmVuUFjgsORruuZPVSwAQryq+HHGvO/SI2KVX26bx+En+zhM8g8hQ==}
@@ -14120,7 +14129,6 @@ packages:
     engines: {node: '>= 0.6'}
     dependencies:
       mime-db: 1.52.0
-    dev: true
 
   /mime@1.6.0:
     resolution: {integrity: sha512-x0Vn8spI+wuJ1O6S7gnbaQg8Pxh4NNHb7KSINmEWKiPE4RKOplvijn+NkmYmmRgP68mc70j2EbeTFRsrswaQeg==}
@@ -14966,6 +14974,7 @@ packages:
 
   /path-match@1.2.4:
     resolution: {integrity: sha512-UWlehEdqu36jmh4h5CWJ7tARp1OEVKGHKm6+dg9qMq5RKUTV5WJrGgaZ3dN2m7WFAXDbjlHzvJvL/IUpy84Ktw==}
+    deprecated: This package is archived and no longer maintained. For support, visit https://github.com/expressjs/express/discussions
     dependencies:
       http-errors: 1.4.0
       path-to-regexp: 1.9.0
@@ -17218,7 +17227,7 @@ packages:
     engines: {node: '>= 0.6'}
     dependencies:
       media-typer: 0.3.0
-      mime-types: 2.1.24
+      mime-types: 2.1.35
     dev: true
 
   /typed-array-buffer@1.0.3:

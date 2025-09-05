@@ -271,6 +271,17 @@ export function register(opts: Options = {}): Register {
       getCompilationSettings: () => config.options,
       getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
       getCustomTransformers: () => transformers,
+      resolveModuleNames: (moduleNames: string[], containingFile: string) => {
+        return moduleNames.map(moduleName => {
+          const result = ts.resolveModuleName(
+            moduleName,
+            containingFile,
+            config.options,
+            ts.sys
+          );
+          return result.resolvedModule;
+        });
+      },
     };
 
     const registry = ts.createDocumentRegistry(
@@ -490,9 +501,12 @@ export function fixConfig(
     config.compilerOptions.esModuleInterop = true;
   }
 
-  // If not specified, the default Node.js module is CommonJS.
+  // nodenext will defer to the package.json#type field
+  // but still respect .mts and .cts files
   if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'CommonJS';
+    config.compilerOptions.module = 'NodeNext';
+    config.compilerOptions.moduleResolution = 'NodeNext';
+    config.compilerOptions.strict = false;
   }
 
   return config;

@@ -1,5 +1,25 @@
 # @vercel/fs-detectors
 
+## 5.5.0
+
+### Minor Changes
+
+- Support turbo.jsonc ([#13792](https://github.com/vercel/vercel/pull/13792))
+
+## 5.4.16
+
+### Patch Changes
+
+- Updated dependencies [[`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed), [`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed)]:
+  - @vercel/frameworks@3.8.2
+
+## 5.4.15
+
+### Patch Changes
+
+- Updated dependencies [[`2876dace493b97f4cae7f3839484ee36ed8ac363`](https://github.com/vercel/vercel/commit/2876dace493b97f4cae7f3839484ee36ed8ac363)]:
+  - @vercel/frameworks@3.8.1
+
 ## 5.4.14
 
 ### Patch Changes

@@ -46,6 +46,7 @@ interface FunctionConfiguration {
   memory?: number;
   maxDuration?: number;
   experimentalTriggers?: TriggerEvent[];
+  supportsCancellation?: boolean;
 }
 
 export async function writeBuildResult(
@@ -478,6 +479,8 @@ async function writeLambda(
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
   const experimentalTriggers =
     functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ?? lambda.supportsCancellation;
 
   const config = {
     ...lambda,
@@ -486,6 +489,7 @@ async function writeLambda(
     memory,
     maxDuration,
     experimentalTriggers,
+    supportsCancellation,
     filePathMap,
     type: undefined,
     files: undefined,

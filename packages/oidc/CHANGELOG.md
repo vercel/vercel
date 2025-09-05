@@ -1,5 +1,17 @@
 # @vercel/oidc
 
+## 3.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+## 2.0.2
+
+### Patch Changes
+
+- fix "Cannot find module" error caused by dynamically importing files without their extensions ([#13815](https://github.com/vercel/vercel/pull/13815))
+
 ## 2.0.1
 
 ### Patch Changes
