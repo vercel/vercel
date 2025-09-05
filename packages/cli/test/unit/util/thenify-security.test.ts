@@ -105,7 +105,6 @@ describe('thenify security vulnerability mitigation', () => {
     expect(thenifyOverrides.length).toBeGreaterThan(0);
     
     // Verify the override pattern correctly captures vulnerable versions
-    // Verify the override pattern correctly captures vulnerable versions
     const vulnerableVersionOverrideKey = 'thenify@<3.3.1';
     const thenifyOverrideExists = Object.keys(allOverrides).includes(vulnerableVersionOverrideKey);
 
