@@ -28,7 +28,7 @@ export function getSafeEntries<T>(obj: Record<string, T>): [string, T][] {
  */
 export function safeAssign<T>(target: Record<string, T>, source: Record<string, T>): void {
   for (const [key, value] of Object.entries(source)) {
-    if (isSafeKey(key) && Object.prototype.hasOwnProperty.call(source, key)) {
+    if (isSafeKey(key)) {
       target[key] = value;
     }
   }
