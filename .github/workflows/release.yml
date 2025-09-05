@@ -94,7 +94,6 @@ jobs:
     permissions:
       contents: write
       id-token: write
-      pull-requests: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
