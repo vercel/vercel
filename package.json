@@ -8,12 +8,14 @@
     "overrides": {
       "tmp@>=0.2.0 <0.2.5": ">=0.2.5",
       "xmlhttprequest-ssl": "4.0.0",
-      "multer": "2.0.0"
+      "multer": "2.0.0",
+      "elliptic": "6.6.1"
     }
   },
   "overrides": {
     "xmlhttprequest-ssl": "4.0.0",
-    "multer": "2.0.0"
+    "multer": "2.0.0",
+    "elliptic": "6.6.1"
   },
   "devDependencies": {
     "@changesets/cli": "2.27.8",

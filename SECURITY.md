@@ -8,3 +8,5 @@
 
 - **tmp Package Protection**: See [SECURITY-tmp.md](./SECURITY-tmp.md) for details on mitigations against symbolic link vulnerabilities in the tmp package.
 - **JSZip Path Traversal Protection**: See [SECURITY-jszip.md](./SECURITY-jszip.md) for details on protections against JSZip loadAsync path traversal vulnerabilities.
+- **XMLHttpRequest SSL Certificate Validation**: See [SECURITY-XMLHTTPREQUEST-SSL.md](./SECURITY-XMLHTTPREQUEST-SSL.md) for details on SSL certificate validation fixes.
+- **Elliptic ECDSA Signature Validation**: See [SECURITY-elliptic.md](./SECURITY-elliptic.md) for details on ECDSA signature validation security measures.
