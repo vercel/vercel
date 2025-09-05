@@ -276,12 +276,13 @@ export const build: BuildV3 = async ({
     console.log(`Added ${gitignoreEntry} to .gitignore`);
   }
 
+  const userExcludes: string[] =
+    config && typeof config.excludeFiles === 'string'
+      ? [config.excludeFiles, `**/${config.excludeFiles}`]
+      : [];
   const globOptions: GlobOptions = {
     cwd: workPath,
-    ignore:
-      config && typeof config.excludeFiles === 'string'
-        ? [...predefinedExcludes, config.excludeFiles]
-        : predefinedExcludes,
+    ignore: [...predefinedExcludes, ...userExcludes],
   };
 
   const files: Files = await glob('**', globOptions);

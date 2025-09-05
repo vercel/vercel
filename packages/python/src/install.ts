@@ -21,6 +21,7 @@ async function isInstalled(
       {
         stdio: 'pipe',
         cwd,
+        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
       }
     );
     return stdout.startsWith(cwd);
