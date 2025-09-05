@@ -60,13 +60,9 @@ describe('thenify security vulnerability mitigation', () => {
       const npmOverrides = packageJson.overrides;
       
       // At least one override system should have thenify protection
-      const hasPnpmThenifyOverride = pnpmOverrides && Object.keys(pnpmOverrides).some(key => 
-        key.includes('thenify') && key.includes('<3.3.1')
-      );
+      const hasPnpmThenifyOverride = pnpmOverrides && pnpmOverrides['thenify@<3.3.1'] === '>=3.3.1';
       
-      const hasNpmThenifyOverride = npmOverrides && Object.keys(npmOverrides).some(key => 
-        key.includes('thenify') && key.includes('<3.3.1')
-      );
+      const hasNpmThenifyOverride = npmOverrides && npmOverrides['thenify@<3.3.1'] === '>=3.3.1';
       
       const hasOverride = hasPnpmThenifyOverride || hasNpmThenifyOverride;
       expect(hasOverride).toBe(true);
