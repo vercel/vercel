@@ -17,6 +17,7 @@ import {
   parse as parsePath,
   extname,
 } from 'path';
+
 import { Project } from 'ts-morph';
 import { nodeFileTrace } from '@vercel/nft';
 import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
@@ -663,6 +664,7 @@ async function rolldownCompile(
 
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(workPath, 'package.json');
+  const external: string[] = [];
   if (existsSync(packageJsonPath)) {
     const { mode } = lstatSync(packageJsonPath);
     const source = readFileSync(packageJsonPath);
@@ -671,46 +673,31 @@ async function rolldownCompile(
     if (pkg.type === 'module') {
       format = 'esm';
     }
+    for (const dependency of Object.keys(pkg.dependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.devDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
+      external.push(dependency);
+    }
     preparedFiles[relPath] = new FileBlob({ data: source, mode });
   }
 
   const extension = format === 'esm' ? 'mjs' : 'js';
 
-  const externalPathPlugin: RolldownPlugin = {
-    name: 'external-path-transformer',
-    // moduleParsed(info) {
-    //   info.importedIds = info.importedIds.map(id => {
-    //     if (id.includes('node_modules')) {
-    //       return relative(workPath, id);
-    //     }
-    //     return id;
-    //   });
-    //   console.log('moduleParsed', info);
-    //   // return info;
-    // },
-    // writeBundle(a) {
-    //   console.log('writeBundle', a);
-    // },
-    // load(id) {
-    //   console.log('load', id);
-    //   return null;
-    // },
-    // augmentChunkHash(a) {
-    //   console.dir(a.imports, { depth: 6 });
-    //   a
-    //   return '';
-    // },
-    // resolveId(source: string, importer: string | undefined) {
-    //   console.log('resolveId', source, importer);
-    //   // Only process node_modules imports
-    //   // if (source.includes('node_modules')) {
-    //   //   // Transform the full path to a relative one from workPath
-    //   //   const relativePath = relative(workPath, source);
-    //   //   console.log(`Transforming external path: ${source} -> ${relativePath}`);
-    //   //   return relativePath;
-    //   // }
-    //   return null; // Let rolldown handle other imports normally
-    // },
+  const absoluteImportPlugin: RolldownPlugin = {
+    name: 'absolute-import-resolver',
+    resolveId(source) {
+      if (external.includes(source)) {
+        return { id: source, external: true };
+      }
+      return null;
+    },
   };
 
   // Build with rolldown
@@ -719,21 +706,38 @@ async function rolldownCompile(
     cwd: workPath,
     platform: 'node',
     external: /node_modules/,
-    makeAbsoluteExternalsRelative: true, // or "ifRelativeSource"
-    plugins: [externalPathPlugin], // Add your custom plugin
+    plugins: [absoluteImportPlugin],
+    resolve: {
+      // TODO: traverse up the directory tree to find the tsconfig.json
+      tsconfigFilename: join(workPath, 'tsconfig.json'),
+    },
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
       format,
-      preserveModules: true,
+      preserveModules: true, // This preserves the module structure
     },
   });
+  const outPath = join(
+    workPath,
+    '.vercel',
+    'output',
+    'functions',
+    'index.func',
+    renameTStoJS(relative(workPath, entrypointPath))
+  );
+  const { fileList } = await nodeFileTrace([outPath], {
+    base: workPath,
+    processCwd: workPath,
+    ts: true,
+    mixedModules: true,
+    ignore: config.excludeFiles,
+  });
 
-  // for (const file of fileList) {
-  //   const fsPath = resolve(workPath, file);
-  //   const { mode } = lstatSync(fsPath);
-  //   const source = readFileSync(fsPath);
-  //   preparedFiles[file] = new FileBlob({ data: source, mode });
-  // }
+  for (const file of fileList) {
+    const fsPath = resolve(workPath, file);
+    const { mode } = lstatSync(fsPath);
+    preparedFiles[file] = new FileFsRef({ fsPath, mode });
+  }
 
   // Process includeFiles if specified
   if (config.includeFiles) {
