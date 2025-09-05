@@ -78,6 +78,7 @@ export default async function login(client: Client): Promise<number> {
     );
   }
 
+  telemetry.trackState('started');
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   output.debug(
@@ -89,6 +90,7 @@ export default async function login(client: Client): Promise<number> {
 
   if (deviceAuthorizationError) {
     printError(deviceAuthorizationError);
+    telemetry.trackState('error');
     return 1;
   }
 
@@ -227,8 +229,12 @@ export default async function login(client: Client): Promise<number> {
     rl.close();
   }
 
-  if (!error) return 0;
+  if (!error) {
+    telemetry.trackState('success');
+    return 0;
+  }
 
+  telemetry.trackState('error');
   printError(error);
   return 1;
 }
