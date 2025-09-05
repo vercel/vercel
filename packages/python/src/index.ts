@@ -256,6 +256,7 @@ export const build: BuildV3 = async ({
 
   const predefinedExcludes = [
     '.git/**',
+    '.gitignore',
     '.vercel/**',
     '.pnpm-store/**',
     '**/node_modules/**',
@@ -276,13 +277,12 @@ export const build: BuildV3 = async ({
     console.log(`Added ${gitignoreEntry} to .gitignore`);
   }
 
-  const userExcludes: string[] =
-    config && typeof config.excludeFiles === 'string'
-      ? [config.excludeFiles, `**/${config.excludeFiles}`]
-      : [];
   const globOptions: GlobOptions = {
     cwd: workPath,
-    ignore: [...predefinedExcludes, ...userExcludes],
+    ignore:
+      config && typeof config.excludeFiles === 'string'
+        ? [...predefinedExcludes, config.excludeFiles]
+        : predefinedExcludes,
   };
 
   const files: Files = await glob('**', globOptions);
