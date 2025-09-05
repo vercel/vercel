@@ -1,6 +1,6 @@
 import { init, captureException, withScope } from '@sentry/node';
 import { assertEnv } from './assert-env';
-import { getSafeEntries } from './safe-object-utils';
+import { getSafeEntries } from '@vercel/error-utils';
 
 const serviceName = 'api-frameworks';
 

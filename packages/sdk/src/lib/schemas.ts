@@ -12,7 +12,7 @@ import {
 } from "zod";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
 import { ERR, OK, Result } from "../types/fp.js";
-import { isSafeKey } from "./safe-object-utils.js";
+import { isSafeKey } from "@vercel/error-utils";
 
 /**
  * Utility function that executes some code which may throw a ZodError. It
