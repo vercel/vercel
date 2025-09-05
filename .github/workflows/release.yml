@@ -9,6 +9,11 @@ on:
       commit:
         description: 'Commit (full) SHA to release the CLI from'
         required: true
+      dryRun:
+        description: 'Whether to run the publish process in dry run mode.'
+        type: boolean
+        required: true
+        default: true
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -119,18 +124,10 @@ jobs:
       - name: Version CLI, publish and comment on PR
         run: |
           cd packages/cli &&
-          PR_NUMBER="$(gh api \
-              -H "Accept: application/vnd.github+json" \
-              "repos/${{ github.repository }}/commits/${{github.event.inputs.commit}}/pulls" \
-              --jq '.[0].number' || true)" &&
           VERSION=$(node -p "require('./package.json').version")-canary.${{ github.event.inputs.commit }} &&
           pnpm version $VERSION --no-git-tag-version &&
-          pnpm publish --access public --tag canary --dry-run --no-git-checks &&
-          gh pr comment $PR_NUMBER --body "🚀 Published canary version:
-          \`\`\`bash
-          pnpm add vercel@$VERSION
-          \`\`\`
-          "
+          pnpm publish --access public --tag canary ${ github.event.inputs.dryRun ? '--dry-run' : '' } --no-git-checks &&
+          echo "🚀 Published canary version, install via: \`pnpm add vercel@$VERSION\`"
 
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
