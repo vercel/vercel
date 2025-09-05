@@ -28,7 +28,6 @@ async function writeRequirements(outPath: string, lines: string[]) {
   await fsp.writeFile(outPath, contents, 'utf8');
 }
 
-// --- Minimal helpers for UV marker handling ---
 function parseMajorMinor(v: string): [number, number] | null {
   const m = v.match(/^(\d+)\.(\d+)/);
   return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : null;
@@ -46,7 +45,6 @@ function markerMatchesPython(marker: string, pyVersion: string): boolean {
   const py = parseMajorMinor(pyVersion);
   if (!py) return true;
 
-  // Support simple expressions joined by "and" / "or".
   const hasOr = /\bor\b/i.test(marker);
   const parts = marker.split(/\s+(?:and|or)\s+/i);
   const evalPart = (part: string) => {
@@ -78,7 +76,6 @@ function markerMatchesPython(marker: string, pyVersion: string): boolean {
   return hasOr ? results.some(Boolean) : results.every(Boolean);
 }
 
-// ---------------- UV ----------------
 async function generateFromUvLock(
   uvLockPath: string,
   pythonVersion?: string
@@ -167,7 +164,7 @@ async function generateFromUvLock(
       continue;
     }
 
-    // Prefer candidates that match markers; tie-breaker on version (higher wins)
+    // Prefer candidates that match markers; tie-breaker on version
     if (cand.matches && !prev.matches) {
       selected.set(name, cand);
       continue;
@@ -181,7 +178,6 @@ async function generateFromUvLock(
       }
       continue;
     }
-    // As a last resort, last one wins
     selected.set(name, cand);
   }
 
@@ -190,7 +186,6 @@ async function generateFromUvLock(
   return lines;
 }
 
-// ---------------- Poetry ----------------
 async function generateFromPoetryLock(
   poetryLockPath: string,
   pythonVersion?: string
@@ -255,7 +250,6 @@ async function generateFromPoetryLock(
   return lines;
 }
 
-// ---------------- PDM ----------------
 async function generateFromPdmLock(
   pdmLockPath: string,
   pythonVersion?: string
@@ -318,7 +312,6 @@ async function generateFromPdmLock(
   return lines;
 }
 
-// ---------------- Pipenv ----------------
 async function generateFromPipenvLock(
   pipfileLockPath: string,
   pythonVersion?: string
@@ -339,7 +332,6 @@ async function generateFromPipenvLock(
     for (const [name, specObj] of Object.entries<any>(deps)) {
       if (!specObj) continue;
 
-      // Editable/path/git/url support
       if (specObj.git) {
         const vcs = 'git';
         const url = String(specObj.git);
@@ -378,7 +370,6 @@ async function generateFromPipenvLock(
   return lines;
 }
 
-// ---------------- PEP 621 pyproject ----------------
 async function generateFromPyproject(
   pyprojectPath: string,
   pythonVersion?: string
@@ -390,14 +381,13 @@ async function generateFromPyproject(
   const deps: any[] = Array.isArray(project.dependencies)
     ? project.dependencies
     : [];
-  // Non-deterministic: warn in debug
   if (!deps.length) {
     debug('No project.dependencies found in pyproject.toml');
   }
   const lines: string[] = [];
   for (const d of deps) {
     const s = String(d);
-    // If dependency has markers, heuristically filter python markers
+    // If dependency has markers, filter python markers
     const m = s.split(';');
     if (m.length === 2) {
       const [base, marker] = [m[0].trim(), m[1].trim()];
@@ -446,7 +436,6 @@ export async function maybeGenerateRequirements({
     } else if (pdmLock) {
       lines = await generateFromPdmLock(pdmLock, pythonVersion);
     } else if (pyproject) {
-      // Fallback: non-deterministic
       lines = await generateFromPyproject(pyproject, pythonVersion);
     }
 
@@ -462,7 +451,6 @@ export async function maybeGenerateRequirements({
   }
 }
 
-// Detect Python constraint across managers to influence runtime selection
 export async function detectPythonConstraint(
   fsFiles: Record<string, any>,
   entryDirectory: string
@@ -489,7 +477,6 @@ export async function detectPythonConstraint(
       'pyproject.toml'
     );
     if (poetryLock) {
-      // poetry.lock may include [metadata] python-versions
       const raw = await fsp.readFile(poetryLock, 'utf8');
       const data: any = toml.parse(raw as unknown as string);
       const metadata = (data as any).metadata || {};
