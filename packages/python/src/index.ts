@@ -1,5 +1,5 @@
-import fs from 'fs';
-import execa from 'execa';
+import * as fs from 'fs';
+import execa = require('execa');
 import { promisify } from 'util';
 import { join, dirname, basename } from 'path';
 import {
@@ -16,18 +16,27 @@ import {
   type BuildV3,
   type Files,
 } from '@vercel/build-utils';
-import { installRequirement, installRequirementsFile } from './install';
+import {
+  installRequirement,
+  installRequirementsFile,
+  resolveVendorDir,
+} from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 import { addToGitIgnore } from '../../cli/src/util/link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-async function pipenvConvert(cmd: string, srcDir: string) {
+async function pipenvConvert(
+  cmd: string,
+  srcDir: string,
+  env?: NodeJS.ProcessEnv
+) {
   debug('Running pipfile2req...');
   try {
     const out = await execa.stdout(cmd, [], {
       cwd: srcDir,
+      env,
     });
     debug('Contents of requirements.txt is: ' + out);
     fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
@@ -105,57 +114,86 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
 
+  const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
+  const hasReqGlobal = !!fsFiles['requirements.txt'];
+
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
     : fsFiles['Pipfile.lock']
       ? workPath
       : null;
+  const pipfileDir = fsFiles[join(entryDirectory, 'Pipfile')]
+    ? join(workPath, entryDirectory)
+    : fsFiles['Pipfile']
+      ? workPath
+      : null;
 
-  if (pipfileLockDir) {
-    debug('Found "Pipfile.lock"');
+  if (!hasReqLocal && !hasReqGlobal && (pipfileLockDir || pipfileDir)) {
+    if (pipfileLockDir) {
+      debug('Found "Pipfile.lock"');
+    } else {
+      debug('Found "Pipfile"');
+    }
 
-    let lock: {
-      _meta?: {
-        requires?: {
-          python_version?: string;
+    if (pipfileLockDir) {
+      let lock: {
+        _meta?: {
+          requires?: {
+            python_version?: string;
+          };
         };
-      };
-    } = {};
-    try {
-      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      lock = JSON.parse(json);
-    } catch (err) {
-      throw new NowBuildError({
-        code: 'INVALID_PIPFILE_LOCK',
-        message: 'Unable to parse Pipfile.lock',
+      } = {};
+      try {
+        const json = await readFile(
+          join(pipfileLockDir, 'Pipfile.lock'),
+          'utf8'
+        );
+        lock = JSON.parse(json);
+      } catch (err) {
+        throw new NowBuildError({
+          code: 'INVALID_PIPFILE_LOCK',
+          message: 'Unable to parse Pipfile.lock',
+        });
+      }
+      pythonVersion = getSupportedPythonVersion({
+        isDev: meta.isDev,
+        pipLockPythonVersion: lock?._meta?.requires?.python_version,
       });
     }
 
-    pythonVersion = getSupportedPythonVersion({
-      isDev: meta.isDev,
-      pipLockPythonVersion: lock?._meta?.requires?.python_version,
-    });
+    if (!hasReqLocal && !hasReqGlobal) {
+      // Convert Pipenv.Lock to requirements.txt.
+      // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
+      // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
+      // it into a separate folder.
+      const tempDir = await getWriteableDirectory();
+      await installRequirement({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        dependency: 'pipfile-requirements',
+        version: '0.3.0',
+        workPath: tempDir,
+        meta,
+        args: ['--no-warn-script-location'],
+      });
 
-    // Convert Pipenv.Lock to requirements.txt.
-    // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
-    // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
-    // it into a separate folder.
-    const tempDir = await getWriteableDirectory();
-    await installRequirement({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      dependency: 'pipfile-requirements',
-      version: '0.3.0',
-      workPath: tempDir,
-      meta,
-      args: ['--no-warn-script-location'],
-    });
-
-    // Python needs to know where to look up all the packages we just installed.
-    // We tell it to use the same location as used with `--target`
-    process.env.PYTHONPATH = tempDir;
-    const convertCmd = join(tempDir, 'bin', 'pipfile2req');
-    await pipenvConvert(convertCmd, pipfileLockDir);
+      // Scope PYTHONPATH to the conversion step only, and point at the vendor dir
+      const tempVendorDir = join(tempDir, resolveVendorDir());
+      const envForConvert = { ...process.env, PYTHONPATH: tempVendorDir };
+      const convertCmd =
+        process.platform === 'win32'
+          ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
+          : join(tempVendorDir, 'bin', 'pipfile2req');
+      await pipenvConvert(
+        convertCmd,
+        pipfileLockDir || pipfileDir!,
+        envForConvert
+      );
+    } else {
+      debug(
+        'Skipping Pipfile.lock conversion because "requirements.txt" exists'
+      );
+    }
   }
 
   fsFiles = await glob('**', workPath);
@@ -187,13 +225,16 @@ export const build: BuildV3 = async ({
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const vendorDir = resolveVendorDir();
+
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const handlerPyContents = originalHandlerPyContents
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
+    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+    .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
 
   const predefinedExcludes = [
     '.git/**',
@@ -203,11 +244,10 @@ export const build: BuildV3 = async ({
     '**/.next/**',
     '**/.nuxt/**',
     '**/venv/**',
-    '**.venv/**',
+    '**/.venv/**',
     '**/__pycache__/**',
   ];
 
-  const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || 'python_packages';
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
 

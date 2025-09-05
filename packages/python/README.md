@@ -6,7 +6,7 @@
 
 If you simply run `pnpm run vercel build --cwd /Path/to/my/project`, native dependencies will be installed with the incorrect binaries, e.g. for FastAPI, which requires Pydantic, it may install `_pydantic_core.cpython-312-darwin.so` instead of `_pydantic_core.cpython-312-x86_64-linux-gnu.so`.
 
-So if you intend to try to deploy something with `vercel deploy --prebuilt` flag, for the deployment to work properly, you may need to run the command inside a docker container, for example:
+So if you intend to try to deploy something with `vercel deploy --prebuilt`, for the deployment to work properly, you may need to run the command inside a docker container, for example:
 
 ```bash
 REPO="/Users/path/to/vercel"  # change this
