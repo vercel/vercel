@@ -42,6 +42,11 @@ interface LegacyAuthConfig extends AuthConfigBase {
 interface OAuthAuthConfig extends AuthConfigBase {
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /**
+   * The absolute time (seconds) when the {@link OAuthAuthConfig.token} expires.
+   * Used to optimistically check if the token is still valid.
+   */
+  expiresAt?: number;
   refreshToken?: string;
   type: 'oauth';
 }
