@@ -2,4 +2,5 @@
 'vercel': patch
 ---
 
-fix(cli): use introspection endpoint during token refresh
+fix(cli): correct access token expiry check during token refresh
+
