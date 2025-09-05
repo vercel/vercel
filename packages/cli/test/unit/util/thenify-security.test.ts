@@ -21,6 +21,8 @@ describe('thenify security vulnerability mitigation', () => {
   
   if (fs.existsSync(packageJsonPath)) {
     packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  } else {
+    throw new Error('package.json not found at ' + packageJsonPath);
   }
   it('should use safe thenify version (>= 3.3.1)', () => {
     // Find thenify in the lock file to verify version
