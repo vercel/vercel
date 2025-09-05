@@ -1,3 +1,5 @@
+> **⚠️ WARNING / ADVERTENCIA:** This repository is not intended for production environments or stable releases. / Este repositorio no está destinado para uso en entornos de producción ni para lanzamientos estables.
+
 <p align="center">
   <a href="https://vercel.com">
     <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
