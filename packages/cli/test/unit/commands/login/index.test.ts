@@ -1,19 +1,40 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
-import { emoji } from '../../../../src/util/emoji';
 import { client } from '../../../mocks/client';
-import { useUser } from '../../../mocks/user';
 import { vi } from 'vitest';
+import _fetch, { Headers, type Response } from 'node-fetch';
+import * as oauth from '../../../../src/util/oauth';
+import { randomUUID } from 'node:crypto';
 
-vi.setConfig({ testTimeout: 10000 });
+const fetch = vi.mocked(_fetch);
+vi.mock('node-fetch', async () => ({
+  ...(await vi.importActual('node-fetch')),
+  default: vi.fn(),
+}));
+
+function mockResponse(data: unknown, ok = true): Response {
+  return {
+    ok,
+    clone: () => ({ text: async () => 'called in debug output' }),
+    json: async () => data,
+  } as unknown as Response;
+}
+
+function simulateTokenPolling(pollCount: number, finalResponse: Response) {
+  for (let i = 0; i < pollCount; i++) {
+    fetch.mockResolvedValueOnce(
+      mockResponse({ error: 'authorization_pending' }, false)
+    );
+  }
+  fetch.mockResolvedValueOnce(finalResponse);
+  return finalResponse.json();
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+});
 
 describe('login', () => {
-  describe.todo('[email or team id]');
-  describe.todo('--github');
-  describe.todo('--oob');
-  describe.todo('--gitlab');
-  describe.todo('--bitbucket');
-
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'login';
@@ -41,171 +62,98 @@ describe('login', () => {
     expect(exitCode, 'exit code for "login"').toEqual(2);
   });
 
-  it('should allow login via email as argument', async () => {
-    const user = useUser();
-    client.setArgv('login', user.email);
-    const exitCodePromise = login(client);
-    await expect(client.stderr).toOutput(
-      `Success! Email authentication complete for ${user.email}`
+  it('successful login', async () => {
+    fetch.mockResolvedValueOnce(
+      mockResponse({
+        issuer: 'https://vercel.com',
+        device_authorization_endpoint: 'https://vercel.com',
+        token_endpoint: 'https://vercel.com',
+        revocation_endpoint: 'https://vercel.com',
+        jwks_uri: 'https://vercel.com',
+        introspection_endpoint: 'https://vercel.com',
+      })
     );
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "login"').toEqual(0);
+    const _as = await oauth.as();
+
+    const authorizationResult = {
+      device_code: randomUUID(),
+      user_code: randomUUID(),
+      verification_uri: 'https://vercel.com/device',
+      verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
+      expires_in: 30,
+      interval: 0.005,
+    };
+
+    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
+
+    const pollCount = 2;
+    const tokenResult = await simulateTokenPolling(
+      pollCount,
+      mockResponse({
+        access_token: randomUUID(),
+        token_type: 'Bearer',
+        expires_in: 1,
+        scope: 'openid offline_access',
+      })
+    );
+
+    client.setArgv('login');
+    delete client.authConfig.token;
+    const teamBefore = client.config.currentTeam;
+    expect(teamBefore).toBeUndefined();
+    const tokenBefore = client.authConfig.token;
+
+    const exitCodePromise = login(client);
+    expect(await exitCodePromise, 'exit code for "login"').toBe(0);
+    await expect(client.stderr).toOutput('Congratulations!');
+
+    expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      _as.device_authorization_endpoint,
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'user-agent': expect.any(String),
+        },
+        body: expect.any(URLSearchParams),
+      })
+    );
+
+    expect(
+      // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
+      new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
+      'Passing the correct user agent so the user can verify'
+    ).toBe(oauth.userAgent);
+
+    expect(
+      fetch.mock.calls[1][1]?.body?.toString(),
+      'Requesting a device code with the correct params'
+    ).toBe(
+      new URLSearchParams({
+        client_id: oauth.VERCEL_CLI_CLIENT_ID,
+        scope: tokenResult.scope,
+      }).toString()
+    );
+
+    expect(
+      fetch.mock.calls[pollCount + 1][1]?.body?.toString(),
+      'Polling with the received device code'
+    ).toBe(
+      new URLSearchParams({
+        client_id: oauth.VERCEL_CLI_CLIENT_ID,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        device_code: authorizationResult.device_code,
+      }).toString()
+    );
+
+    const tokenAfter = client.authConfig.token;
+    expect(tokenAfter, 'Token differs from original').not.toBe(tokenBefore);
+    expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  describe('northstar', () => {
-    it('should set currentTeam to defaultTeamId', async () => {
-      const user = useUser({
-        version: 'northstar',
-        defaultTeamId: 'northstar-defaultTeamId',
-      });
-      client.authConfig.token = undefined;
-      client.setArgv('login', user.email);
-      const exitCode = await login(client);
-      expect(exitCode, 'exit code of "login"').toEqual(0);
-      expect(client.config.currentTeam).toEqual('northstar-defaultTeamId');
-    });
-  });
-
-  describe('interactive', () => {
-    it('should allow login via email', async () => {
-      const user = useUser();
-      client.setArgv('login');
-      const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`? Log in to Vercel`);
-
-      // Move down to "Email" option
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('enter');
-
-      await expect(client.stderr).toOutput('? Enter your email address:');
-
-      client.stdin.write(`${user.email}\n`);
-
-      await expect(client.stderr).toOutput(
-        `Success! Email authentication complete for ${user.email}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "login"').toEqual(0);
-    });
-
-    it('should allow the `--no-color` flag', async () => {
-      const user = useUser();
-      client.setArgv('login', '--no-color');
-      const exitCodePromise = login(client);
-      await expect(client.stderr).toOutput(`? Log in to Vercel`);
-
-      // Move down to "Email" option
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('down');
-      client.events.keypress('enter');
-
-      await expect(client.stderr).toOutput('? Enter your email address:');
-
-      client.stdin.write(`${user.email}\n`);
-
-      await expect(client.stderr).toOutput(
-        `Success! Email authentication complete for ${user.email}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "login"').toEqual(0);
-
-      expect(client.getFullOutput()).not.toContain(emoji('tip'));
-    });
-
-    describe('with NO_COLOR="1" env var', () => {
-      let previousNoColor: string | undefined;
-
-      beforeEach(() => {
-        previousNoColor = process.env.NO_COLOR;
-        process.env.NO_COLOR = '1';
-      });
-
-      afterEach(() => {
-        delete process.env.NO_COLOR;
-        if (previousNoColor) {
-          process.env.NO_COLOR = previousNoColor;
-        }
-      });
-
-      it('should remove emoji the `NO_COLOR` env var with 1', async () => {
-        client.resetOutput();
-
-        const user = useUser();
-        client.setArgv('login');
-        const exitCodePromise = login(client);
-        await expect(client.stderr).toOutput(`? Log in to Vercel`);
-
-        // Move down to "Email" option
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\r'); // Return key
-
-        await expect(client.stderr).toOutput('? Enter your email address:');
-
-        client.stdin.write(`${user.email}\n`);
-
-        await expect(client.stderr).toOutput(
-          `Success! Email authentication complete for ${user.email}`
-        );
-
-        await expect(client.stderr).not.toOutput(emoji('tip'));
-
-        const exitCode = await exitCodePromise;
-        expect(exitCode, 'exit code for "login"').toEqual(0);
-      });
-    });
-
-    describe('with FORCE_COLOR="0" env var', () => {
-      let previousForceColor: string | undefined;
-
-      beforeEach(() => {
-        previousForceColor = process.env.FORCE_COLOR;
-        process.env.FORCE_COLOR = '0';
-      });
-
-      afterEach(() => {
-        delete process.env.FORCE_COLOR;
-        if (previousForceColor) {
-          process.env.FORCE_COLOR = previousForceColor;
-        }
-      });
-
-      it('should remove emoji the `FORCE_COLOR` env var with 0', async () => {
-        client.resetOutput();
-
-        const user = useUser();
-        client.setArgv('login');
-        const exitCodePromise = login(client);
-        await expect(client.stderr).toOutput(`? Log in to Vercel`);
-
-        // Move down to "Email" option
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\x1B[B'); // Down arrow
-        client.stdin.write('\r'); // Return key
-
-        await expect(client.stderr).toOutput('? Enter your email address:');
-
-        client.stdin.write(`${user.email}\n`);
-
-        await expect(client.stderr).toOutput(
-          `Success! Email authentication complete for ${user.email}`
-        );
-
-        await expect(client.stderr).not.toOutput(emoji('tip'));
-        const exitCode = await exitCodePromise;
-        expect(exitCode, 'exit code for "login"').toEqual(0);
-      });
-    });
-  });
+  it.todo('Authorization request error');
+  it.todo('Token request error');
 });
