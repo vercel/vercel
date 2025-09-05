@@ -7,6 +7,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const semver = require('semver');
+const yaml = require('js-yaml');
 
 console.log('🔐 Verifying Elliptic ECDSA Signature Validation Security...\n');
 
@@ -99,51 +101,122 @@ function scanForVulnerableVersions() {
         }
       }
     } catch (error) {
-      // Skip directories we can't read
+      // Skip directories we can't read, but log the error for visibility.
+      console.warn(`   ⚠️  Could not read directory ${dir}: ${error.message}`);
     }
   }
   
   function checkLockFile(lockFile) {
+    if (lockFile.endsWith('package-lock.json')) {
+      checkPackageLockFile(lockFile);
+    } else if (lockFile.endsWith('pnpm-lock.yaml')) {
+      checkPnpmLockFile(lockFile);
+    }
+  }
+  
+  function checkPackageLockFile(lockFile) {
     try {
       const content = fs.readFileSync(lockFile, 'utf8');
+      const lockData = JSON.parse(content);
       
-      // Check for vulnerable versions in package-lock.json
-      if (lockFile.endsWith('package-lock.json')) {
-        // Check resolved entries
-        const resolvedMatches = content.match(/elliptic-(\d+\.\d+\.\d+)\.tgz/g);
-        if (resolvedMatches) {
-          for (const match of resolvedMatches) {
-            const version = match.match(/(\d+\.\d+\.\d+)/)[1];
-            if (version !== secureVersion) {
-              vulnerableFiles.push({ file: lockFile, resolvedVersion: version });
-            }
-          }
-        }
-        
-        // Check version declarations
-        const versionMatches = content.match(/"elliptic":\\s*"([^"]+)"/g);
-        if (versionMatches) {
-          for (const match of versionMatches) {
-            const version = match.match(/"([^"]+)"$/)[1];
-            // Flag old version ranges that don't include secure version
-            if (!version.includes(secureVersion) && !version.startsWith('^6.6') && !version.startsWith('~6.6')) {
-              vulnerableFiles.push({ file: lockFile, version });
+      // Check packages in lockfileVersion 2+ format
+      if (lockData.packages) {
+        for (const [packagePath, packageData] of Object.entries(lockData.packages)) {
+          if (packagePath.includes('node_modules/elliptic')) {
+            const version = packageData.version;
+            if (version && !isVersionSecure(version, secureVersion)) {
+              vulnerableFiles.push({ 
+                file: lockFile, 
+                resolvedVersion: version,
+                lockType: 'npm' 
+              });
             }
           }
         }
       }
       
-      // Check for vulnerable versions in pnpm-lock.yaml
-      if (lockFile.endsWith('pnpm-lock.yaml')) {
-        if (content.includes('elliptic') && !content.includes(`elliptic@${secureVersion}`)) {
-          const versionMatch = content.match(/elliptic@(\d+\.\d+\.\d+)/);
-          if (versionMatch && versionMatch[1] !== secureVersion) {
-            vulnerableFiles.push({ file: lockFile, version: versionMatch[1] });
+      // Check dependencies in older lockfile formats
+      if (lockData.dependencies && lockData.dependencies.elliptic) {
+        const version = lockData.dependencies.elliptic.version;
+        if (version && !isVersionSecure(version, secureVersion)) {
+          vulnerableFiles.push({ 
+            file: lockFile, 
+            version: version,
+            lockType: 'npm' 
+          });
+        }
+      }
+      
+      // Recursively check nested dependencies
+      function checkNestedDeps(deps) {
+        if (!deps) return;
+        for (const [name, depData] of Object.entries(deps)) {
+          if (name === 'elliptic' && depData.version) {
+            if (!isVersionSecure(depData.version, secureVersion)) {
+              vulnerableFiles.push({ 
+                file: lockFile, 
+                version: depData.version,
+                lockType: 'npm' 
+              });
+            }
+          }
+          if (depData.dependencies) {
+            checkNestedDeps(depData.dependencies);
+          }
+        }
+      }
+      
+      if (lockData.dependencies) {
+        checkNestedDeps(lockData.dependencies);
+      }
+      
+    } catch (error) {
+      console.warn(`   ⚠️  Could not parse package-lock.json ${lockFile}: ${error.message}`);
+    }
+  }
+  
+  function checkPnpmLockFile(lockFile) {
+    try {
+      const content = fs.readFileSync(lockFile, 'utf8');
+      const lockData = yaml.load(content);
+      
+      if (lockData && lockData.packages) {
+        for (const [packageSpec, packageData] of Object.entries(lockData.packages)) {
+          if (packageSpec.startsWith('/elliptic@') || packageSpec.includes('/elliptic@')) {
+            // Extract version from package specification
+            const versionMatch = packageSpec.match(/@([^(/]+)/);
+            if (versionMatch) {
+              const version = versionMatch[1];
+              if (!isVersionSecure(version, secureVersion)) {
+                vulnerableFiles.push({ 
+                  file: lockFile, 
+                  version: version,
+                  lockType: 'pnpm' 
+                });
+              }
+            }
           }
         }
       }
     } catch (error) {
-      // Skip files we can't read
+      console.warn(`   ⚠️  Could not parse pnpm-lock.yaml ${lockFile}: ${error.message}`);
+    }
+  }
+  
+  function isVersionSecure(version, minVersion) {
+    try {
+      // Handle version ranges and exact versions
+      if (version.startsWith('^') || version.startsWith('~') || version.startsWith('>=')) {
+        // For ranges, check if the range can satisfy the minimum secure version
+        return semver.satisfies(minVersion, version);
+      } else {
+        // For exact versions, compare directly
+        return semver.gte(version, minVersion);
+      }
+    } catch (error) {
+      // If version parsing fails, assume it's vulnerable for safety
+      console.warn(`   ⚠️  Could not parse version "${version}": ${error.message}`);
+      return false;
     }
   }
   
@@ -178,9 +251,9 @@ async function main() {
   let allChecksPass = true;
   
   // Run all checks
-  allChecksPass &= checkSecurityOverrides();
-  allChecksPass &= checkSecurityDocumentation();
-  allChecksPass &= checkSecurityTests();
+  allChecksPass = allChecksPass && checkSecurityOverrides();
+  allChecksPass = allChecksPass && checkSecurityDocumentation();
+  allChecksPass = allChecksPass && checkSecurityTests();
   
   // Scan for vulnerable versions
   const vulnerableFiles = scanForVulnerableVersions();

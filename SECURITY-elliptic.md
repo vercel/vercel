@@ -8,8 +8,8 @@ This document outlines the security measures implemented to protect against vuln
 
 The `elliptic` library had vulnerabilities in earlier versions where valid ECDSA signatures could be erroneously rejected, potentially causing authentication or cryptographic validation failures. This issue affects versions prior to 6.6.1.
 
-**CVE References:**
-- CVE-2022-23632: Improper signature verification in elliptic
+**Security Issues:**
+- ECDSA signature validation issues in versions prior to 6.6.1
 - Additional security fixes in recent versions
 
 ## Affected Versions
@@ -74,7 +74,7 @@ With this mitigation in place:
 
 - [npm: elliptic package](https://www.npmjs.com/package/elliptic)
 - [GitHub: elliptic repository](https://github.com/indutny/elliptic)
-- CVE-2022-23632 security advisory
+- [elliptic security advisories](https://github.com/indutny/elliptic/security/advisories)
 
 ## Maintenance
 
