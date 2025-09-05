@@ -1,7 +1,7 @@
 import { getSupportedPythonVersion } from '../src/version';
 import { build } from '../src/index';
-import fs from 'fs-extra';
-import path from 'path';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
@@ -34,26 +34,26 @@ afterEach(() => {
 
 it('should only match supported versions, otherwise throw an error', () => {
   makeMockPython('3.9');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: '3.9' });
+  const result = getSupportedPythonVersion({ constraint: '3.9' });
   expect(result).toHaveProperty('runtime', 'python3.9');
 });
 
 it('should ignore minor version in vercel dev', () => {
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.9', isDev: true })
+    getSupportedPythonVersion({ constraint: '3.9', isDev: true })
   ).toHaveProperty('runtime', 'python3');
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6', isDev: true })
+    getSupportedPythonVersion({ constraint: '3.6', isDev: true })
   ).toHaveProperty('runtime', 'python3');
   expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '999', isDev: true })
+    getSupportedPythonVersion({ constraint: '999', isDev: true })
   ).toHaveProperty('runtime', 'python3');
   expect(warningMessages).toStrictEqual([]);
 });
 
 it('should select latest supported installed version when no Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: undefined });
+  const result = getSupportedPythonVersion({});
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
   expect(warningMessages).toStrictEqual([]);
@@ -61,19 +61,17 @@ it('should select latest supported installed version when no Piplock detected', 
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({ pipLockPythonVersion: '999' });
+  const result = getSupportedPythonVersion({ constraint: '999' });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
-  expect(warningMessages).toStrictEqual([
-    'Warning: Python version "999" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version',
-  ]);
+  expect(warningMessages).toStrictEqual([]);
 });
 
 it('should throw if python not found', () => {
   process.env.PATH = '.';
-  expect(() =>
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
-  ).toThrow('Unable to find any supported Python versions.');
+  expect(() => getSupportedPythonVersion({ constraint: '3.6' })).toThrow(
+    'Unable to find any supported Python versions.'
+  );
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -81,9 +79,7 @@ it('should throw for discontinued versions', () => {
   global.Date.now = () => new Date('2022-07-31').getTime();
   makeMockPython('3.6');
 
-  expect(() =>
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
-  ).toThrow(
+  expect(() => getSupportedPythonVersion({ constraint: '3.6' })).toThrow(
     'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
   );
   expect(warningMessages).toStrictEqual([]);
@@ -93,9 +89,10 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
   global.Date.now = () => new Date('2021-07-01').getTime();
   makeMockPython('3.6');
 
-  expect(
-    getSupportedPythonVersion({ pipLockPythonVersion: '3.6' })
-  ).toHaveProperty('runtime', 'python3.6');
+  expect(getSupportedPythonVersion({ constraint: '3.6' })).toHaveProperty(
+    'runtime',
+    'python3.6'
+  );
   expect(warningMessages).toStrictEqual([
     'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
   ]);

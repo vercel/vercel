@@ -1,5 +1,6 @@
 import { NowBuildError } from '@vercel/build-utils';
 import * as which from 'which';
+import { compareMajorMinor } from './utils';
 
 interface PythonVersion {
   version: string;
@@ -76,12 +77,10 @@ export function getLatestPythonVersion({
 
 export function getSupportedPythonVersion({
   isDev,
-  exact,
-  range,
+  constraint,
 }: {
   isDev?: boolean;
-  exact?: string;
-  range?: string;
+  constraint?: string;
 }): PythonVersion {
   if (isDev) {
     return getDevPythonVersion();
@@ -89,18 +88,15 @@ export function getSupportedPythonVersion({
 
   let selection = getLatestPythonVersion({ isDev: false });
 
-  if (typeof exact === 'string') {
-    const found = allOptions.find(o => o.version === exact && isInstalled(o));
-    if (found) selection = found;
-  } else if (typeof range === 'string') {
+  if (typeof constraint === 'string') {
     // Select the highest installed version that satisfies a simple prefix or >= constraint
     // Accept forms like ">=3.10", "^3.11", "~3.10", "3.11.*", "3.11", "==3.11"
-    const r = range.trim();
+    const r = constraint.trim();
     const satisfies = (ver: string) => {
       if (!r) return true;
       if (r.startsWith('>=')) {
         const min = r.slice(2).trim();
-        return ver >= min;
+        return compareMajorMinor(ver, min) >= 0;
       }
       if (r.startsWith('==')) {
         const eq = r.slice(2).trim();

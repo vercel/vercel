@@ -3,6 +3,7 @@ import { promises as fsp } from 'fs';
 import { join } from 'path';
 
 import { debug } from '@vercel/build-utils';
+import { parseMajorMinor, compareMajorMinor } from './utils';
 
 interface GenerateOpts {
   entryDirectory: string;
@@ -26,19 +27,6 @@ async function writeRequirements(outPath: string, lines: string[]) {
   const unique = Array.from(new Set(lines.filter(Boolean)));
   const contents = unique.join('\n') + (unique.length ? '\n' : '');
   await fsp.writeFile(outPath, contents, 'utf8');
-}
-
-function parseMajorMinor(v: string): [number, number] | null {
-  const m = v.match(/^(\d+)\.(\d+)/);
-  return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : null;
-}
-
-function compareMajorMinor(a: string, b: string): number {
-  const pa = parseMajorMinor(a);
-  const pb = parseMajorMinor(b);
-  if (!pa || !pb) return 0;
-  if (pa[0] !== pb[0]) return pa[0] - pb[0];
-  return pa[1] - pb[1];
 }
 
 function markerMatchesPython(marker: string, pyVersion: string): boolean {

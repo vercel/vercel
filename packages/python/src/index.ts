@@ -87,7 +87,7 @@ export const build: BuildV3 = async ({
     if (constraint) {
       pythonVersion = getSupportedPythonVersion({
         isDev: meta.isDev,
-        range: constraint,
+        constraint,
       });
     }
   } catch (err) {
