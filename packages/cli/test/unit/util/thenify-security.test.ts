@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
 import fs from 'fs';
+import semver from 'semver';
 
 /**
  * Security tests for thenify package eval vulnerability.
@@ -14,6 +15,13 @@ import fs from 'fs';
  * Current status: SAFE - using thenify@3.3.1 which fixes the eval vulnerability.
  */
 describe('thenify security vulnerability mitigation', () => {
+  // Read and parse package.json once for reuse across tests
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  let packageJson: any;
+  
+  if (fs.existsSync(packageJsonPath)) {
+    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  }
   it('should use safe thenify version (>= 3.3.1)', () => {
     // Find thenify in the lock file to verify version
     const lockfilePath = path.join(process.cwd(), 'pnpm-lock.yaml');
@@ -40,11 +48,7 @@ describe('thenify security vulnerability mitigation', () => {
   });
 
   it('should have overrides configured to prevent vulnerable thenify versions', () => {
-    const packageJsonPath = path.join(process.cwd(), 'package.json');
-    
-    if (fs.existsSync(packageJsonPath)) {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      
+    if (packageJson) {
       // Check pnpm overrides
       const pnpmOverrides = packageJson.pnpm?.overrides;
       const npmOverrides = packageJson.overrides;
@@ -83,8 +87,9 @@ describe('thenify security vulnerability mitigation', () => {
 
   it('should prevent installation of vulnerable thenify versions through overrides', () => {
     // Verify that the package.json configuration will prevent vulnerable versions
-    const packageJsonPath = path.join(process.cwd(), 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    if (!packageJson) {
+      throw new Error('package.json not found');
+    }
     
     // Test both pnpm and npm override configurations
     const pnpmOverrides = packageJson.pnpm?.overrides || {};
@@ -108,7 +113,6 @@ describe('thenify security vulnerability mitigation', () => {
       const targetVersion = allOverrides[vulnerableVersionOverrideKey];
       expect(targetVersion).toBe('>=3.3.1');
       console.log(`Override configured: ${vulnerableVersionOverrideKey} -> ${targetVersion}`);
-    }
     }
   });
 });
