@@ -1,16 +1,13 @@
 import * as fs from 'fs';
-import execa = require('execa');
 import { promisify } from 'util';
 import { join, dirname, basename } from 'path';
 import {
-  getWriteableDirectory,
   download,
   glob,
   Lambda,
   FileBlob,
   shouldServe,
   debug,
-  NowBuildError,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -21,29 +18,11 @@ import {
   installRequirementsFile,
   resolveVendorDir,
 } from './install';
+import { maybeGenerateRequirements, detectPythonConstraint } from './lockfile';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
-
-async function pipenvConvert(
-  cmd: string,
-  srcDir: string,
-  env?: NodeJS.ProcessEnv
-) {
-  debug('Running pipfile2req...');
-  try {
-    const out = await execa.stdout(cmd, [], {
-      cwd: srcDir,
-      env,
-    });
-    debug('Contents of requirements.txt is: ' + out);
-    fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
-  } catch (err) {
-    console.log('Failed to run "pipfile2req"');
-    throw err;
-  }
-}
 
 export const version = 3;
 
@@ -99,93 +78,21 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  let fsFiles = await glob('**', workPath);
+  const fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
 
-  const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
-  const hasReqGlobal = !!fsFiles['requirements.txt'];
-
-  const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
-    ? join(workPath, entryDirectory)
-    : fsFiles['Pipfile.lock']
-      ? workPath
-      : null;
-  const pipfileDir = fsFiles[join(entryDirectory, 'Pipfile')]
-    ? join(workPath, entryDirectory)
-    : fsFiles['Pipfile']
-      ? workPath
-      : null;
-
-  if (!hasReqLocal && !hasReqGlobal && (pipfileLockDir || pipfileDir)) {
-    if (pipfileLockDir) {
-      debug('Found "Pipfile.lock"');
-    } else {
-      debug('Found "Pipfile"');
-    }
-
-    if (pipfileLockDir) {
-      let lock: {
-        _meta?: {
-          requires?: {
-            python_version?: string;
-          };
-        };
-      } = {};
-      try {
-        const json = await readFile(
-          join(pipfileLockDir, 'Pipfile.lock'),
-          'utf8'
-        );
-        lock = JSON.parse(json);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'INVALID_PIPFILE_LOCK',
-          message: 'Unable to parse Pipfile.lock',
-        });
-      }
+  // Detect Python constraint from lockfiles/pyproject and adjust runtime
+  try {
+    const constraint = await detectPythonConstraint(fsFiles, entryDirectory);
+    if (constraint) {
       pythonVersion = getSupportedPythonVersion({
         isDev: meta.isDev,
-        pipLockPythonVersion: lock?._meta?.requires?.python_version,
+        range: constraint,
       });
     }
-
-    if (!hasReqLocal && !hasReqGlobal) {
-      // Convert Pipenv.Lock to requirements.txt.
-      // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
-      // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
-      // it into a separate folder.
-      const tempDir = await getWriteableDirectory();
-      await installRequirement({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        dependency: 'pipfile-requirements',
-        version: '0.3.0',
-        workPath: tempDir,
-        meta,
-        args: ['--no-warn-script-location'],
-      });
-
-      // Scope PYTHONPATH to the conversion step only, and point at the vendor dir
-      const tempVendorDir = join(tempDir, resolveVendorDir());
-      const envForConvert = { ...process.env, PYTHONPATH: tempVendorDir };
-      const convertCmd =
-        process.platform === 'win32'
-          ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
-          : join(tempVendorDir, 'bin', 'pipfile2req');
-      await pipenvConvert(
-        convertCmd,
-        pipfileLockDir || pipfileDir!,
-        envForConvert
-      );
-    } else {
-      debug(
-        'Skipping Pipfile.lock conversion because "requirements.txt" exists'
-      );
-    }
+  } catch (err) {
+    debug('Failed to detect python constraint');
   }
-
-  fsFiles = await glob('**', workPath);
-  const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
   // Compute cache vendor dir keyed by Python version and entrypoint directory
   const vendorBaseDir = join(
@@ -214,19 +121,33 @@ export const build: BuildV3 = async ({
     meta,
   });
 
-  if (fsFiles[requirementsTxt]) {
-    debug('Found local "requirements.txt"');
-    const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      filePath: requirementsTxtPath,
-      workPath: vendorBaseDir,
-      meta,
+  const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
+  const hasReqGlobal = !!fsFiles['requirements.txt'];
+  let requirementsTxtPath: string | null = null;
+
+  if (hasReqLocal || hasReqGlobal) {
+    if (hasReqLocal) {
+      debug('Found local "requirements.txt"');
+    } else {
+      debug('Found global "requirements.txt"');
+    }
+    requirementsTxtPath = hasReqLocal
+      ? fsFiles[join(entryDirectory, 'requirements.txt')].fsPath
+      : fsFiles['requirements.txt'].fsPath;
+  } else {
+    // Try to generate a pinned requirements file from lockfiles (UV/Pipenv/Poetry/PDM/pyproject)
+    requirementsTxtPath = await maybeGenerateRequirements({
+      entryDirectory,
+      vendorBaseDir,
+      fsFiles,
+      pythonVersion: pythonVersion.version,
     });
-  } else if (fsFiles['requirements.txt']) {
-    debug('Found global "requirements.txt"');
-    const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
+    if (requirementsTxtPath) {
+      debug('Generated requirements.txt from lockfiles/pyproject.toml');
+    }
+  }
+
+  if (requirementsTxtPath) {
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,

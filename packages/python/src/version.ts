@@ -1,5 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
-import which from 'which';
+import * as which from 'which';
 
 interface PythonVersion {
   version: string;
@@ -76,10 +76,12 @@ export function getLatestPythonVersion({
 
 export function getSupportedPythonVersion({
   isDev,
-  pipLockPythonVersion,
+  exact,
+  range,
 }: {
   isDev?: boolean;
-  pipLockPythonVersion: string | undefined;
+  exact?: string;
+  range?: string;
 }): PythonVersion {
   if (isDev) {
     return getDevPythonVersion();
@@ -87,17 +89,41 @@ export function getSupportedPythonVersion({
 
   let selection = getLatestPythonVersion({ isDev: false });
 
-  if (typeof pipLockPythonVersion === 'string') {
-    const found = allOptions.find(
-      o => o.version === pipLockPythonVersion && isInstalled(o)
+  if (typeof exact === 'string') {
+    const found = allOptions.find(o => o.version === exact && isInstalled(o));
+    if (found) selection = found;
+  } else if (typeof range === 'string') {
+    // Select the highest installed version that satisfies a simple prefix or >= constraint
+    // Accept forms like ">=3.10", "^3.11", "~3.10", "3.11.*", "3.11", "==3.11"
+    const r = range.trim();
+    const satisfies = (ver: string) => {
+      if (!r) return true;
+      if (r.startsWith('>=')) {
+        const min = r.slice(2).trim();
+        return ver >= min;
+      }
+      if (r.startsWith('==')) {
+        const eq = r.slice(2).trim();
+        return ver === eq || ver.startsWith(eq + '.');
+      }
+      if (r.startsWith('^') || r.startsWith('~')) {
+        const base = r.slice(1).trim();
+        return ver.startsWith(base + '.') || ver === base;
+      }
+      if (r.endsWith('.*')) {
+        const base = r.slice(0, -2);
+        return ver.startsWith(base + '.') || ver === base;
+      }
+      // Plain "3.11" means that major.minor must match
+      if (/^\d+\.\d+$/.test(r)) {
+        return ver.startsWith(r + '.') || ver === r;
+      }
+      return false;
+    };
+    const candidate = allOptions.find(
+      o => isInstalled(o) && satisfies(o.version)
     );
-    if (found) {
-      selection = found;
-    } else {
-      console.warn(
-        `Warning: Python version "${pipLockPythonVersion}" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version`
-      );
-    }
+    if (candidate) selection = candidate;
   }
 
   if (isDiscontinued(selection)) {
