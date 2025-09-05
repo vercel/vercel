@@ -1,6 +1,12 @@
 import { isErrnoException } from '@vercel/error-utils';
 import { createRequire } from 'module';
-import { readFileSync, lstatSync, readlinkSync, statSync } from 'fs';
+import {
+  readFileSync,
+  lstatSync,
+  readlinkSync,
+  statSync,
+  existsSync,
+} from 'fs';
 import {
   basename,
   dirname,
@@ -8,9 +14,10 @@ import {
   relative,
   resolve,
   sep,
-  parse as parsePath,
   extname,
+  parse as parsePath,
 } from 'path';
+
 import { Project } from 'ts-morph';
 import { nodeFileTrace } from '@vercel/nft';
 import nftResolveDependency from '@vercel/nft/out/resolve-dependency';
@@ -42,6 +49,7 @@ import type {
   BuildResultV3,
 } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
+import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
 
 import { Register, register } from './typescript';
 import {
@@ -493,23 +501,46 @@ export const build = async ({
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
-  debug('Tracing input files...');
-  const traceTime = Date.now();
-  const { preparedFiles, shouldAddSourcemapSupport } = await compile(
-    workPath,
-    baseDir,
-    entrypointPath,
-    config,
-    meta,
-    nodeVersion,
-    isEdgeFunction
-  );
-  debug(`Trace complete [${Date.now() - traceTime}ms]`);
+  let preparedFiles: Files;
+  let shouldAddSourcemapSupport: boolean;
+  let handler = renameTStoJS(relative(baseDir, entrypointPath));
+
+  if (process.env.VERCEL_NODE_BUILD_USE_ROLLDOWN) {
+    console.warn(
+      `Using experimental rolldown to build ${relative(baseDir, entrypointPath)}`
+    );
+    const rolldownResult = await rolldownCompile(
+      workPath,
+      baseDir,
+      entrypointPath,
+      config
+      // meta,
+      // nodeVersion,
+      // isEdgeFunction
+    );
+    preparedFiles = rolldownResult.preparedFiles;
+    shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
+    handler = rolldownResult.handler;
+  } else {
+    debug('Tracing input files...');
+    const traceTime = Date.now();
+    const compileResult = await compile(
+      workPath,
+      baseDir,
+      entrypointPath,
+      config,
+      meta,
+      nodeVersion,
+      isEdgeFunction
+    );
+    preparedFiles = compileResult.preparedFiles;
+    shouldAddSourcemapSupport = compileResult.shouldAddSourcemapSupport;
+    debug(`Trace complete [${Date.now() - traceTime}ms]`);
+  }
 
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  let handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
@@ -614,4 +645,151 @@ function normalizeRequestedRegions(
   }
 
   return regions;
+}
+
+async function rolldownCompile(
+  workPath: string,
+  baseDir: string,
+  entrypointPath: string,
+  config: Config
+  // meta: Meta,
+  // nodeVersion: NodeVersion,
+  // isEdgeFunction: boolean
+): Promise<{
+  preparedFiles: Files;
+  shouldAddSourcemapSupport: boolean;
+  handler: string;
+}> {
+  const preparedFiles: Files = {};
+  const shouldAddSourcemapSupport = false;
+
+  const extension = extname(entrypointPath);
+  const extensionMap: Record<
+    string,
+    { format: 'esm' | 'cjs' | 'auto'; extension: string }
+  > = {
+    '.ts': { format: 'auto', extension: 'js' },
+    '.mts': { format: 'esm', extension: 'mjs' },
+    '.cts': { format: 'cjs', extension: 'cjs' },
+    '.cjs': { format: 'cjs', extension: 'cjs' },
+    '.js': { format: 'auto', extension: 'js' },
+    '.mjs': { format: 'esm', extension: 'mjs' },
+  };
+
+  const extensionInfo = extensionMap[extension];
+  let format = extensionInfo.format;
+
+  // Always include package.json from the entrypoint directory
+  const packageJsonPath = join(workPath, 'package.json');
+  const external: string[] = [];
+  if (existsSync(packageJsonPath)) {
+    const { mode } = lstatSync(packageJsonPath);
+    const source = readFileSync(packageJsonPath);
+    const relPath = relative(baseDir, packageJsonPath);
+    const pkg = JSON.parse(source.toString());
+    if (format === 'auto') {
+      if (pkg.type === 'module') {
+        format = 'esm';
+      } else {
+        format = 'cjs';
+      }
+    }
+    for (const dependency of Object.keys(pkg.dependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.devDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.peerDependencies || {})) {
+      external.push(dependency);
+    }
+    for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
+      external.push(dependency);
+    }
+    preparedFiles[relPath] = new FileBlob({ data: source, mode });
+  }
+
+  const absoluteImportPlugin: RolldownPlugin = {
+    name: 'absolute-import-resolver',
+    resolveId(source) {
+      if (external.includes(source)) {
+        return { id: source, external: true };
+      }
+      return null;
+    },
+  };
+
+  let tsconfigPath: string | null = join(workPath, 'tsconfig.json');
+  if (!existsSync(tsconfigPath)) {
+    tsconfigPath = await walkParentDirs({
+      base: workPath,
+      start: workPath,
+      filename: 'tsconfig.json',
+    });
+  }
+
+  // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
+  await rolldownBuild({
+    input: entrypointPath,
+    cwd: workPath,
+    platform: 'node',
+    external: /node_modules/,
+    plugins: [absoluteImportPlugin],
+    tsconfig: tsconfigPath || undefined,
+    output: {
+      dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
+      entryFileNames: `${parsePath(entrypointPath).name}.${extensionInfo.extension}`,
+      format,
+      preserveModules: true,
+      sourcemap: false,
+    },
+  });
+  const handler = `${parsePath(entrypointPath).name}.${extensionInfo.extension}`;
+  const outPath = join(
+    workPath,
+    '.vercel',
+    'output',
+    'functions',
+    'index.func',
+    handler
+  );
+  const { fileList } = await nodeFileTrace([outPath], {
+    base: workPath,
+    processCwd: workPath,
+    ts: true,
+    mixedModules: true,
+    ignore: config.excludeFiles,
+  });
+
+  for (const file of fileList) {
+    const fsPath = resolve(workPath, file);
+    const { mode } = lstatSync(fsPath);
+    preparedFiles[file] = new FileFsRef({ fsPath, mode });
+  }
+
+  // Process includeFiles if specified
+  if (config.includeFiles) {
+    const includeFiles =
+      typeof config.includeFiles === 'string'
+        ? [config.includeFiles]
+        : config.includeFiles;
+
+    for (const pattern of includeFiles) {
+      const files = await glob(pattern, workPath);
+      await Promise.all(
+        Object.values(files).map(async entry => {
+          const { fsPath } = entry;
+          const relPath = relative(baseDir, fsPath);
+          preparedFiles[relPath] = entry;
+          console.log('Added includeFile to preparedFiles:', relPath);
+        })
+      );
+    }
+  }
+
+  return {
+    preparedFiles,
+    shouldAddSourcemapSupport,
+    handler,
+  };
 }
