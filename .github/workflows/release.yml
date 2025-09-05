@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit (full) SHA to release the CLI from'
+        required: true
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -14,6 +19,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   release:
+    if: github.event_name == 'push'
     name: Release
     runs-on: ubuntu-latest
     permissions:
@@ -76,7 +82,61 @@ jobs:
           script: |
             const script = require('./utils/update-latest-release.js')
             await script({ github, context })
+  manual-cli-release:
+    if: github.event_name == 'workflow_dispatch'
+    name: Manual CLI Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          ref: ${{ github.event.inputs.commit }}
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: install npm@9
+        run: npm i -g npm@9
+
+      - name: install pnpm@8.3.1
+        run: npm i -g pnpm@8.3.1
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Packages
+        run: pnpm build
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Version CLI, publish and comment on PR
+        run: |
+          cd packages/cli &&
+          PR_NUMBER="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${{ github.repository }}/commits/${{github.event.inputs.commit}}/pulls" \
+              --jq '.[0].number' || true)" &&
+          VERSION=$(node -p "require('./package.json').version")-canary.${{ github.event.inputs.commit }} &&
+          pnpm version $VERSION --no-git-tag-version &&
+          pnpm publish --access public --tag canary --dry-run &&
+          gh pr comment $PR_NUMBER --body "🚀 Published canary version:
+          \`\`\`bash
+          pnpm add vercel@$VERSION
+          \`\`\`
+          "
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          NPM_CONFIG_PROVENANCE: 'true'
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
   summary:
     name: Summary (release)
     runs-on: ubuntu-latest
