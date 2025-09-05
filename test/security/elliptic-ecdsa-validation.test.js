@@ -173,9 +173,9 @@ describe('Elliptic ECDSA Signature Validation Security', () => {
       }
     }
     
-    // The test passes as long as we have the security overrides in place
-    // The overrides ensure that even if lock files have old versions, the secure version will be used
-    expect(true).toBe(true);
+    // The test should fail if vulnerable versions are found in production files.
+    // The overrides will handle new installs, but existing lock files should be clean.
+    expect(productionFiles).toHaveLength(0);
   });
 
   test('should have security documentation in place', () => {
