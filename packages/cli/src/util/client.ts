@@ -80,7 +80,7 @@ export function isOAuthAuth(
   return authConfig.type === 'oauth';
 }
 
-/** Optimistically check if the token has expired yet */
+/** Check if the token is still valid, using token introspection. */
 export async function isAccessTokenActive(
   token: string | undefined
 ): Promise<boolean> {
