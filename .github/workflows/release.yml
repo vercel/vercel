@@ -125,7 +125,7 @@ jobs:
               --jq '.[0].number' || true)" &&
           VERSION=$(node -p "require('./package.json').version")-canary.${{ github.event.inputs.commit }} &&
           pnpm version $VERSION --no-git-tag-version &&
-          pnpm publish --access public --tag canary --dry-run &&
+          pnpm publish --access public --tag canary --dry-run --no-git-checks &&
           gh pr comment $PR_NUMBER --body "🚀 Published canary version:
           \`\`\`bash
           pnpm add vercel@$VERSION
