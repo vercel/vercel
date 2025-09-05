@@ -26,20 +26,10 @@ describe('thenify security vulnerability mitigation', () => {
         const version = thenifyMatch[1];
         console.log(`Found thenify version: ${version}`);
         
-        // Parse version to ensure it's >= 3.3.1
-        const versionParts = version.split('.').map(part => parseInt(part.split(/[^0-9]/)[0], 10));
-        const [major, minor, patch] = versionParts;
+        // Use semver for robust version comparison
+        const isVersionSafe = semver.gte(version, '3.3.1');
         
-        // Check if version is >= 3.3.1
-        const isVersionSafe = 
-          major > 3 || 
-          (major === 3 && minor > 3) || 
-          (major === 3 && minor === 3 && patch >= 1);
-        
-        expect(isVersionSafe).toBe(true);
-        expect(version).not.toMatch(/^[0-2]\./); // Not version 0.x, 1.x, or 2.x
-        expect(version).not.toMatch(/^3\.[0-2]\./); // Not version 3.0.x, 3.1.x, or 3.2.x
-        expect(version).not.toMatch(/^3\.3\.0$/); // Not version 3.3.0
+        expect(isVersionSafe, `Thenify version ${version} should be >= 3.3.1`).toBe(true);
       } else {
         // If no thenify found in lockfile, that's also fine (no vulnerability)
         console.log('No thenify dependency found in lockfile - no vulnerability present');
