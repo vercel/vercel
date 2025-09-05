@@ -22,10 +22,28 @@ import {
   resolveVendorDir,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
-import { addToGitIgnore } from '../../cli/src/util/link/add-to-gitignore';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+
+async function updateGitIgnore(cwd: string, entry: string): Promise<boolean> {
+  try {
+    const gitignorePath = join(cwd, '.gitignore');
+    let current = '';
+    try {
+      current = await readFile(gitignorePath, 'utf8');
+    } catch (_) {
+      // file may not exist yet
+    }
+    if (current.includes(entry)) return false;
+    const needsNewline = current.length > 0 && !current.endsWith('\n');
+    const next = (needsNewline ? current + '\n' : current) + entry + '\n';
+    await writeFile(gitignorePath, next);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 async function pipenvConvert(
   cmd: string,
@@ -253,7 +271,7 @@ export const build: BuildV3 = async ({
 
   // update .gitignore
   const gitignoreEntry = vendorDir.endsWith('/') ? vendorDir : `${vendorDir}/`;
-  const isGitIgnoreUpdated = await addToGitIgnore(workPath, gitignoreEntry);
+  const isGitIgnoreUpdated = await updateGitIgnore(workPath, gitignoreEntry);
   if (isGitIgnoreUpdated) {
     console.log(`Added ${gitignoreEntry} to .gitignore`);
   }
