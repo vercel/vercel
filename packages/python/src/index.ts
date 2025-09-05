@@ -26,25 +26,6 @@ import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-async function updateGitIgnore(cwd: string, entry: string): Promise<boolean> {
-  try {
-    const gitignorePath = join(cwd, '.gitignore');
-    let current = '';
-    try {
-      current = await readFile(gitignorePath, 'utf8');
-    } catch (_) {
-      // file may not exist yet
-    }
-    if (current.includes(entry)) return false;
-    const needsNewline = current.length > 0 && !current.endsWith('\n');
-    const next = (needsNewline ? current + '\n' : current) + entry + '\n';
-    await writeFile(gitignorePath, next);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 async function pipenvConvert(
   cmd: string,
   srcDir: string,
@@ -117,17 +98,6 @@ export const build: BuildV3 = async ({
     console.log('Failed to create "setup.cfg" file');
     throw err;
   }
-
-  console.log('Installing required dependencies...');
-
-  await installRequirement({
-    pythonPath: pythonVersion.pythonPath,
-    pipPath: pythonVersion.pipPath,
-    dependency: 'werkzeug',
-    version: '1.0.1',
-    workPath,
-    meta,
-  });
 
   let fsFiles = await glob('**', workPath);
   const entryDirectory = dirname(entrypoint);
@@ -217,6 +187,33 @@ export const build: BuildV3 = async ({
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');
 
+  // Compute cache vendor dir keyed by Python version and entrypoint directory
+  const vendorBaseDir = join(
+    workPath,
+    '.vercel',
+    'cache',
+    'python',
+    `py${pythonVersion.version}`,
+    entryDirectory
+  );
+  try {
+    await fs.promises.mkdir(vendorBaseDir, { recursive: true });
+  } catch (err) {
+    console.log('Failed to create vendor cache directory');
+    throw err;
+  }
+
+  console.log('Installing required dependencies...');
+
+  await installRequirement({
+    pythonPath: pythonVersion.pythonPath,
+    pipPath: pythonVersion.pipPath,
+    dependency: 'werkzeug',
+    version: '1.0.1',
+    workPath: vendorBaseDir,
+    meta,
+  });
+
   if (fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
@@ -224,7 +221,7 @@ export const build: BuildV3 = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: vendorBaseDir,
       meta,
     });
   } else if (fsFiles['requirements.txt']) {
@@ -234,7 +231,7 @@ export const build: BuildV3 = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath,
+      workPath: vendorBaseDir,
       meta,
     });
   }
@@ -270,13 +267,6 @@ export const build: BuildV3 = async ({
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
 
-  // update .gitignore
-  const gitignoreEntry = vendorDir.endsWith('/') ? vendorDir : `${vendorDir}/`;
-  const isGitIgnoreUpdated = await updateGitIgnore(workPath, gitignoreEntry);
-  if (isGitIgnoreUpdated) {
-    console.log(`Added ${gitignoreEntry} to .gitignore`);
-  }
-
   const globOptions: GlobOptions = {
     cwd: workPath,
     ignore:
@@ -286,6 +276,20 @@ export const build: BuildV3 = async ({
   };
 
   const files: Files = await glob('**', globOptions);
+
+  // Mount cached vendor directory into the Lambda output under `_vendor`
+  try {
+    const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
+    if (fs.existsSync(cachedVendorAbs)) {
+      const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
+      for (const [p, f] of Object.entries(vendorFiles)) {
+        files[p] = f;
+      }
+    }
+  } catch (err) {
+    console.log('Failed to include cached vendor directory');
+    throw err;
+  }
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
