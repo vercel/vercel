@@ -112,16 +112,17 @@ describe('thenify security vulnerability mitigation', () => {
     expect(thenifyOverrides.length).toBeGreaterThan(0);
     
     // Verify the override pattern correctly captures vulnerable versions
-    const vulnerableVersionOverride = thenifyOverrides.find(key => 
-      key.includes('<3.3.1') || key.includes('< 3.3.1')
-    );
-    
-    expect(vulnerableVersionOverride).toBeDefined();
-    
-    if (vulnerableVersionOverride) {
-      const targetVersion = allOverrides[vulnerableVersionOverride];
-      expect(targetVersion).toMatch(/>=3\.3\.1|>3\.3\.0/);
-      console.log(`Override configured: ${vulnerableVersionOverride} -> ${targetVersion}`);
+    // Verify the override pattern correctly captures vulnerable versions
+    const vulnerableVersionOverrideKey = 'thenify@<3.3.1';
+    const thenifyOverrideExists = Object.keys(allOverrides).includes(vulnerableVersionOverrideKey);
+
+    expect(thenifyOverrideExists, `Override for "${vulnerableVersionOverrideKey}" should exist`).toBe(true);
+
+    if (thenifyOverrideExists) {
+      const targetVersion = allOverrides[vulnerableVersionOverrideKey];
+      expect(targetVersion).toBe('>=3.3.1');
+      console.log(`Override configured: ${vulnerableVersionOverrideKey} -> ${targetVersion}`);
+    }
     }
   });
 });
