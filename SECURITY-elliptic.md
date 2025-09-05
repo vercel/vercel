@@ -59,7 +59,7 @@ To verify the mitigation is in place:
 grep -r "elliptic" package-lock.json pnpm-lock.yaml | grep -E "(resolved|version)"
 
 # Run security tests
-npm test -- --testPathPattern="elliptic-security"
+npm test -- --testPathPattern="elliptic-ecdsa-validation"
 ```
 
 ## Impact
