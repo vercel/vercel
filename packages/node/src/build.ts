@@ -14,8 +14,8 @@ import {
   relative,
   resolve,
   sep,
-  parse as parsePath,
   extname,
+  parse as parsePath,
 } from 'path';
 
 import { Project } from 'ts-morph';
@@ -506,7 +506,9 @@ export const build = async ({
   let handler = renameTStoJS(relative(baseDir, entrypointPath));
 
   if (process.env.VERCEL_NODE_BUILD_USE_ROLLDOWN) {
-    console.warn(`Using experimental rolldown to build ${entrypoint}`);
+    console.warn(
+      `Using experimental rolldown to build ${relative(baseDir, entrypointPath)}`
+    );
     const rolldownResult = await rolldownCompile(
       workPath,
       baseDir,
@@ -518,7 +520,7 @@ export const build = async ({
     );
     preparedFiles = rolldownResult.preparedFiles;
     shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
-    // handler = rolldownResult.handler;
+    handler = rolldownResult.handler;
   } else {
     debug('Tracing input files...');
     const traceTime = Date.now();
@@ -658,9 +660,24 @@ async function rolldownCompile(
   shouldAddSourcemapSupport: boolean;
   handler: string;
 }> {
-  let format: 'esm' | 'cjs' = 'cjs';
   const preparedFiles: Files = {};
   const shouldAddSourcemapSupport = false;
+
+  const extension = extname(entrypointPath);
+  const extensionMap: Record<
+    string,
+    { format: 'esm' | 'cjs' | 'auto'; extension: string }
+  > = {
+    '.ts': { format: 'auto', extension: 'js' },
+    '.mts': { format: 'esm', extension: 'mjs' },
+    '.cts': { format: 'cjs', extension: 'cjs' },
+    '.cjs': { format: 'cjs', extension: 'cjs' },
+    '.js': { format: 'auto', extension: 'js' },
+    '.mjs': { format: 'esm', extension: 'mjs' },
+  };
+
+  const extensionInfo = extensionMap[extension];
+  let format = extensionInfo.format;
 
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(workPath, 'package.json');
@@ -670,8 +687,12 @@ async function rolldownCompile(
     const source = readFileSync(packageJsonPath);
     const relPath = relative(baseDir, packageJsonPath);
     const pkg = JSON.parse(source.toString());
-    if (pkg.type === 'module') {
-      format = 'esm';
+    if (format === 'auto') {
+      if (pkg.type === 'module') {
+        format = 'esm';
+      } else {
+        format = 'cjs';
+      }
     }
     for (const dependency of Object.keys(pkg.dependencies || {})) {
       external.push(dependency);
@@ -688,8 +709,6 @@ async function rolldownCompile(
     preparedFiles[relPath] = new FileBlob({ data: source, mode });
   }
 
-  const extension = format === 'esm' ? 'mjs' : 'js';
-
   const absoluteImportPlugin: RolldownPlugin = {
     name: 'absolute-import-resolver',
     resolveId(source) {
@@ -700,29 +719,39 @@ async function rolldownCompile(
     },
   };
 
-  // @ts-ignore TS doesn't like the tsconfig option, but it's here  https://rolldown.rs/reference/config-options#tsconfig
+  let tsconfigPath: string | null = join(workPath, 'tsconfig.json');
+  if (!existsSync(tsconfigPath)) {
+    tsconfigPath = await walkParentDirs({
+      base: workPath,
+      start: workPath,
+      filename: 'tsconfig.json',
+    });
+  }
+
+  // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
   await rolldownBuild({
     input: entrypointPath,
     cwd: workPath,
     platform: 'node',
     external: /node_modules/,
     plugins: [absoluteImportPlugin],
-    // TODO: this seems to find the tsconfig.json, but not sure if it will traverse up the directory tree
-    // or if we need to pass it in explicitly
-    tsconfig: 'tsconfig.json',
+    tsconfig: tsconfigPath || undefined,
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
+      entryFileNames: `${parsePath(entrypointPath).name}.${extensionInfo.extension}`,
       format,
       preserveModules: true,
+      sourcemap: false,
     },
   });
+  const handler = `${parsePath(entrypointPath).name}.${extensionInfo.extension}`;
   const outPath = join(
     workPath,
     '.vercel',
     'output',
     'functions',
     'index.func',
-    renameTStoJS(relative(workPath, entrypointPath))
+    handler
   );
   const { fileList } = await nodeFileTrace([outPath], {
     base: workPath,
@@ -761,6 +790,6 @@ async function rolldownCompile(
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
-    handler: `index.${extension}`,
+    handler,
   };
 }
