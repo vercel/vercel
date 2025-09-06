@@ -1,5 +1,6 @@
 import { init, captureException, withScope } from '@sentry/node';
 import { assertEnv } from './assert-env';
+import { getSafeEntries } from '@vercel/error-utils';
 
 const serviceName = 'api-frameworks';
 
@@ -38,8 +39,11 @@ export function errorHandler(error: Error, extras?: { [key: string]: any }) {
       scope.setTag('service', serviceName);
       scope.setTag('function_name', assertEnv('AWS_LAMBDA_FUNCTION_NAME'));
 
-      for (const [k, v] of Object.entries(extras)) {
-        scope.setExtra(k, v);
+      if (extras) {
+        // Use safe iteration to prevent prototype pollution
+        for (const [k, v] of getSafeEntries(extras)) {
+          scope.setExtra(k, v);
+        }
       }
 
       captureException(error);

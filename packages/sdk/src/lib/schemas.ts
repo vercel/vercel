@@ -12,6 +12,7 @@ import {
 } from "zod";
 import { SDKValidationError } from "../models/errors/sdkvalidationerror.js";
 import { ERR, OK, Result } from "../types/fp.js";
+import { isSafeKey } from "@vercel/error-utils";
 
 /**
  * Utility function that executes some code which may throw a ZodError. It
@@ -69,6 +70,11 @@ export function collectExtraKeys<
     const { shape } = obj;
     for (const [key] of Object.entries(val)) {
       if (key in shape) {
+        continue;
+      }
+
+      // Skip dangerous keys to prevent prototype pollution
+      if (!isSafeKey(key)) {
         continue;
       }
 

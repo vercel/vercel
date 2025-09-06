@@ -7,6 +7,9 @@ import {
   normalizeError,
   isSpawnError,
   errorToString,
+  isSafeKey,
+  getSafeEntries,
+  safeAssign,
 } from '../src';
 
 const ARRAY: any[] = [];
@@ -145,4 +148,92 @@ test('isSpawnError', () => {
   });
   expect(isSpawnError(spawnError)).toBe(true);
   expect(isSpawnError(new Error('not spawn error'))).toBe(false);
+});
+
+describe('Security - Prototype Pollution Protection', () => {
+  describe('isSafeKey', () => {
+    test('should return true for safe keys', () => {
+      expect(isSafeKey('userId')).toBe(true);
+      expect(isSafeKey('requestId')).toBe(true);
+      expect(isSafeKey('customData')).toBe(true);
+      expect(isSafeKey('normal_key')).toBe(true);
+    });
+
+    test('should return false for dangerous keys', () => {
+      expect(isSafeKey('__proto__')).toBe(false);
+      expect(isSafeKey('constructor')).toBe(false);
+      expect(isSafeKey('prototype')).toBe(false);
+    });
+  });
+
+  describe('getSafeEntries', () => {
+    test('should return only safe entries', () => {
+      const input = {
+        userId: '123',
+        __proto__: { polluted: true },
+        constructor: { prototype: { polluted: true } },
+        prototype: { polluted: true },
+        safeKey: 'safe value',
+      };
+
+      const result = getSafeEntries(input);
+
+      expect(result).toEqual([
+        ['userId', '123'],
+        ['safeKey', 'safe value'],
+      ]);
+    });
+
+    test('should return empty array for object with only dangerous keys', () => {
+      const input = {
+        __proto__: { polluted: true },
+        constructor: { prototype: { polluted: true } },
+        prototype: { polluted: true },
+      };
+
+      const result = getSafeEntries(input);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('safeAssign', () => {
+    test('should assign only safe properties', () => {
+      const target: Record<string, any> = {};
+      const source = {
+        userId: '123',
+        __proto__: { polluted: true },
+        constructor: { prototype: { polluted: true } },
+        prototype: { polluted: true },
+        safeKey: 'safe value',
+      };
+
+      safeAssign(target, source);
+
+      expect(target).toEqual({
+        userId: '123',
+        safeKey: 'safe value',
+      });
+    });
+
+    test('should not pollute target object', () => {
+      const target: Record<string, any> = {};
+      const source = {
+        __proto__: { polluted: true },
+        constructor: { prototype: { polluted: true } },
+        prototype: { polluted: true },
+      };
+
+      // Store original prototype state
+      const originalPrototype = Object.prototype;
+      const originalConstructor = originalPrototype.constructor;
+
+      safeAssign(target, source);
+
+      // Verify Object.prototype is not polluted
+      expect(Object.prototype).toBe(originalPrototype);
+      expect(Object.prototype.constructor).toBe(originalConstructor);
+      expect((Object.prototype as any).polluted).toBeUndefined();
+      expect(target).toEqual({});
+    });
+  });
 });
