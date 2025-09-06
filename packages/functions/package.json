@@ -4,29 +4,35 @@
   "homepage": "https://vercel.com",
   "files": [
     "**/*.js",
+    "**/*.mjs",
     "**/*.d.ts",
     "**/*.md"
   ],
   "types": "./index.d.ts",
   "exports": {
     ".": {
-      "import": "./index.js",
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
       "require": "./index.js"
     },
     "./headers": {
-      "import": "./headers.js",
+      "types": "./headers.d.ts",
+      "import": "./headers.mjs",
       "require": "./headers.js"
     },
     "./oidc": {
-      "import": "./oidc/index.js",
+      "types": "./oidc/index.d.ts",
+      "import": "./oidc/index.mjs",
       "require": "./oidc/index.js"
     },
     "./db-connections": {
-      "import": "./db-connections/index.js",
+      "types": "./db-connections/index.d.ts",
+      "import": "./db-connections/index.mjs",
       "require": "./db-connections/index.js"
     },
     "./middleware": {
-      "import": "./middleware.js",
+      "types": "./middleware.d.ts",
+      "import": "./middleware.mjs",
       "require": "./middleware.js"
     }
   },
@@ -71,7 +77,7 @@
     "pretest": "pnpm run build:code",
     "test": "vitest",
     "build": "pnpm run build:code && pnpm run build:docs",
-    "build:code": "node ../../utils/build.mjs",
+    "build:code": "node build.mjs",
     "build:docs": "typedoc && prettier --write docs/**/*.md docs/*.md"
   },
   "license": "Apache-2.0",
