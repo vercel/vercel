@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import Sema from 'async-sema';
 import spawn from 'cross-spawn';
+import { parse as shellParse } from 'shell-quote';
 import {
   coerce,
   intersects,
@@ -152,11 +153,18 @@ export function spawnAsync(
 
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
-  if (process.platform === 'win32') {
-    return spawn('cmd.exe', ['/C', command], opts);
+  // If the command string is not empty
+  if (typeof command === 'string' && command.trim().length > 0) {
+    // Parse command string into program and arguments
+    const argv = shellParse(command).filter(Boolean); // remove falsey (e.g. whitespace)
+    if (!Array.isArray(argv) || argv.length === 0 || typeof argv[0] !== 'string') {
+      throw new Error('Invalid command provided to spawnCommand');
+    }
+    const program = argv[0];
+    const args = argv.slice(1).map(arg => (typeof arg === 'object' && 'pattern' in arg ? arg.pattern : arg));
+    return spawn(program, args, opts);
   }
-
-  return spawn('sh', ['-c', command], opts);
+  throw new Error('Command must be a non-empty string');
 }
 
 export async function execCommand(command: string, options: SpawnOptions = {}) {
