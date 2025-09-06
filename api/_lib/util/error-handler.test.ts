@@ -1,4 +1,4 @@
-import { errorHandler } from '../error-handler';
+import { errorHandler } from './error-handler';
 
 // At the top of the file
 const mockSetExtra = jest.fn();
