@@ -2969,3 +2969,7 @@ export const prepareCache: PrepareCache = async ({
   debug('Cache file manifest produced');
   return cache;
 };
+
+const touch = () => {};
+
+touch();
