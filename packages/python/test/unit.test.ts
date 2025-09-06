@@ -61,10 +61,15 @@ it('should select latest supported installed version when no Piplock detected', 
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({ constraint: '999' });
+  const result = getSupportedPythonVersion({
+    constraint: '999',
+    source: 'uv.lock',
+  });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
-  expect(warningMessages).toStrictEqual([]);
+  expect(warningMessages).toStrictEqual([
+    'Python version "999" detected in uv.lock is invalid and will be ignored.',
+  ]);
 });
 
 it('should throw if python not found', () => {
@@ -79,7 +84,9 @@ it('should throw for discontinued versions', () => {
   global.Date.now = () => new Date('2022-07-31').getTime();
   makeMockPython('3.6');
 
-  expect(() => getSupportedPythonVersion({ constraint: '3.6' })).toThrow(
+  expect(() =>
+    getSupportedPythonVersion({ constraint: '3.6', source: 'Pipfile.lock' })
+  ).toThrow(
     'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
   );
   expect(warningMessages).toStrictEqual([]);
@@ -94,7 +101,7 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
     'python3.6'
   );
   expect(warningMessages).toStrictEqual([
-    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
+    'Error: Python version "3.6" has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. http://vercel.link/python-version',
   ]);
 });
 

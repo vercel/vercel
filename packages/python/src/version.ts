@@ -78,15 +78,18 @@ export function getLatestPythonVersion({
 export function getSupportedPythonVersion({
   isDev,
   constraint,
+  source,
 }: {
   isDev?: boolean;
   constraint?: string;
+  source?: string;
 }): PythonVersion {
   if (isDev) {
     return getDevPythonVersion();
   }
 
   let selection = getLatestPythonVersion({ isDev: false });
+  const origin = source ? ` detected in ${source}` : '';
 
   if (typeof constraint === 'string') {
     // Select the highest installed version that satisfies a simple prefix or >= constraint
@@ -119,21 +122,27 @@ export function getSupportedPythonVersion({
     const candidate = allOptions.find(
       o => isInstalled(o) && satisfies(o.version)
     );
-    if (candidate) selection = candidate;
+    if (candidate) {
+      selection = candidate;
+    } else {
+      console.warn(
+        `Python version "${r}"${origin} is invalid and will be ignored.`
+      );
+    }
   }
 
   if (isDiscontinued(selection)) {
     throw new NowBuildError({
       code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
       link: 'http://vercel.link/python-version',
-      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded.`,
+      message: `Python version "${selection.version}"${origin} is discontinued and must be upgraded.`,
     });
   }
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      `Error: Python version "${selection.version}" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
+      `Error: Python version "${selection.version}"${origin} has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
     );
   }
 

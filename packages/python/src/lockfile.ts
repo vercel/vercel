@@ -442,7 +442,7 @@ export async function maybeGenerateRequirements({
 export async function detectPythonConstraint(
   fsFiles: Record<string, any>,
   entryDirectory: string
-): Promise<string | undefined> {
+): Promise<{ constraint: string; source: string } | undefined> {
   try {
     const pipfileLock = fileFromFsFiles(
       fsFiles,
@@ -453,7 +453,8 @@ export async function detectPythonConstraint(
       const raw = await fsp.readFile(pipfileLock, 'utf8');
       const data: any = JSON.parse(raw);
       const v = data?._meta?.requires?.python_version;
-      if (typeof v === 'string' && v.trim()) return v.trim();
+      if (typeof v === 'string' && v.trim())
+        return { constraint: v.trim(), source: 'Pipfile.lock' };
     }
 
     const poetryLock = fileFromFsFiles(fsFiles, entryDirectory, 'poetry.lock');
@@ -470,7 +471,7 @@ export async function detectPythonConstraint(
       const metadata = (data as any).metadata || {};
       const versions = metadata['python-versions'];
       if (typeof versions === 'string' && versions.trim())
-        return versions.trim();
+        return { constraint: versions.trim(), source: 'poetry.lock' };
     }
     if (pdmLock) {
       const raw = await fsp.readFile(pdmLock, 'utf8');
@@ -481,7 +482,7 @@ export async function detectPythonConstraint(
         metadata['python_requires'] ||
         metadata['python'];
       if (typeof requires === 'string' && requires.trim())
-        return requires.trim();
+        return { constraint: requires.trim(), source: 'pdm.lock' };
     }
     if (uvLock) {
       const raw = await fsp.readFile(uvLock, 'utf8');
@@ -492,7 +493,7 @@ export async function detectPythonConstraint(
         metadata['python'] ||
         metadata['python-versions'];
       if (typeof requires === 'string' && requires.trim())
-        return requires.trim();
+        return { constraint: requires.trim(), source: 'uv.lock' };
     }
     if (pyproject) {
       const raw = await fsp.readFile(pyproject, 'utf8');
@@ -500,11 +501,11 @@ export async function detectPythonConstraint(
       const project: any = (data as any).project || {};
       const requires = project['requires-python'];
       if (typeof requires === 'string' && requires.trim())
-        return requires.trim();
+        return { constraint: requires.trim(), source: 'pyproject.toml' };
       const toolPoetry = (data as any).tool?.poetry?.dependencies;
       const poetryPy = toolPoetry?.python;
       if (typeof poetryPy === 'string' && poetryPy.trim())
-        return poetryPy.trim();
+        return { constraint: poetryPy.trim(), source: 'pyproject.toml' };
     }
   } catch (err) {
     debug(`Failed to detect python constraint: ${String(err)}`);

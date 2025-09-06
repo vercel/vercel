@@ -83,11 +83,12 @@ export const build: BuildV3 = async ({
 
   // Detect Python constraint from lockfiles/pyproject and adjust runtime
   try {
-    const constraint = await detectPythonConstraint(fsFiles, entryDirectory);
-    if (constraint) {
+    const detected = await detectPythonConstraint(fsFiles, entryDirectory);
+    if (detected?.constraint) {
       pythonVersion = getSupportedPythonVersion({
         isDev: meta.isDev,
-        constraint,
+        constraint: detected.constraint,
+        source: detected.source,
       });
     }
   } catch (err) {
