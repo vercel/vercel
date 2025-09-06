@@ -15,7 +15,7 @@ jest.mock('@sentry/node', () => ({
   }),
 }));
 
-jest.mock('../assert-env', () => ({
+jest.mock('./assert-env', () => ({
   assertEnv: jest.fn().mockReturnValue('test-value'),
 }));
 
