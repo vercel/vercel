@@ -1,4 +1,4 @@
-import { collectExtraKeys } from '../schemas';
+import { collectExtraKeys } from './schemas';
 import { ZodObject, ZodString, ZodNumber } from 'zod';
 
 describe('collectExtraKeys - Prototype Pollution Protection', () => {
