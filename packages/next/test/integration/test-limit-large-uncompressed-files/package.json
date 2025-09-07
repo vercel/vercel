@@ -5,7 +5,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "canary",
+    "next": "14.2.31",
     "react": "latest",
     "react-dom": "latest"
   },

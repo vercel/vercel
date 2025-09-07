@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "next": "^7.0.2"
+    "next": "14.2.31"
   },
   "ignoreNextjsUpdates": true
 }
