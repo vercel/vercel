@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import * as semver from 'semver';
+import packageJson from '../../../../package.json';
 
 /**
  * Security tests for marked package ReDoS vulnerability.
@@ -131,7 +133,6 @@ Here's a paragraph with a [reference link][ref].
       markedVersion = packageInfo.default?.version ?? packageInfo.version;
       
       // We expect to be using a safe marked version (>= 4.0.10)
-      const semver = require('semver');
       if (semver.satisfies(markedVersion, '>=4.0.10')) {
         // Version is safe
         expect(true).toBe(true);
@@ -147,7 +148,6 @@ Here's a paragraph with a [reference link][ref].
 
   it('should verify package overrides are working', () => {
     // Test that our package.json overrides prevent vulnerable versions
-    const packageJson = require('../../../../package.json');
     
     expect(packageJson.pnpm.overrides).toBeDefined();
     expect(packageJson.pnpm.overrides['marked@<4.0.10']).toBe('>=4.0.10');
