@@ -27,7 +27,6 @@ describe('marked security vulnerability mitigation', () => {
 
   it('should not have ReDoS vulnerability with malicious link definitions', () => {
     if (!marked) {
-      console.log('marked package not available in test context - skipping ReDoS test');
       return;
     }
 
@@ -46,8 +45,6 @@ describe('marked security vulnerability mitigation', () => {
       // Should complete very quickly (under 100ms) in safe versions
       expect(duration).toBeLessThan(100);
       expect(typeof result).toBe('string');
-      
-      console.log(`marked.parse() completed in ${duration}ms - SAFE`);
     } catch (error: any) {
       errorThrown = true;
       // If an error is thrown, it should be a parsing error, not a timeout
@@ -61,7 +58,6 @@ describe('marked security vulnerability mitigation', () => {
 
   it('should handle various ReDoS patterns efficiently', () => {
     if (!marked) {
-      console.log('marked package not available in test context - skipping ReDoS patterns test');
       return;
     }
 
@@ -86,8 +82,6 @@ describe('marked security vulnerability mitigation', () => {
         // Each pattern should be processed quickly
         expect(duration).toBeLessThan(50);
         expect(typeof result).toBe('string');
-        
-        console.log(`Pattern ${index + 1} processed in ${duration}ms - SAFE`);
       } catch (error: any) {
         const duration = Date.now() - startTime;
         // Even errors should occur quickly, not after long processing
@@ -98,7 +92,6 @@ describe('marked security vulnerability mitigation', () => {
 
   it('should process normal markdown efficiently', () => {
     if (!marked) {
-      console.log('marked package not available in test context - skipping normal markdown test');
       return;
     }
 
@@ -126,8 +119,6 @@ Here's a paragraph with a [reference link][ref].
     expect(result).toContain('<h1>');
     expect(result).toContain('<ul>');
     expect(result).toContain('<a href="https://example.com"');
-    
-    console.log(`Normal markdown processed in ${duration}ms`);
   });
 
   it('should document the current marked package versions', () => {
@@ -139,20 +130,17 @@ Here's a paragraph with a [reference link][ref].
       markedVersion = packageInfo.version;
       
       // We expect to be using a safe marked version (>= 4.0.10)
-      const versionParts = markedVersion.split('.').map(Number);
-      const major = versionParts[0];
-      const minor = versionParts[1];
-      const patch = versionParts[2];
-      
-      if (major > 4 || (major === 4 && minor > 0) || (major === 4 && minor === 0 && patch >= 10)) {
-        console.log(`✅ Current marked version: ${markedVersion} - SAFE (>= 4.0.10)`);
+      const semver = require('semver');
+      if (semver.satisfies(markedVersion, '>=4.0.10')) {
+        // Version is safe
+        expect(true).toBe(true);
       } else {
-        console.log(`⚠️  Current marked version: ${markedVersion} - VULNERABLE (< 4.0.10)`);
         // This should not happen in production with our overrides
         expect(false).toBe(true); // Fail the test if vulnerable version is found
       }
     } catch (error) {
-      console.log(`marked package version: ${markedVersion}`);
+      // If marked is not available, that's also acceptable for this test
+      expect(markedVersion).toBe('not found');
     }
   });
 
@@ -165,7 +153,5 @@ Here's a paragraph with a [reference link][ref].
     
     expect(packageJson.overrides).toBeDefined();
     expect(packageJson.overrides['marked@<4.0.10']).toBe('>=4.0.10');
-    
-    console.log('✅ Package overrides are configured to prevent vulnerable marked versions');
   });
 });

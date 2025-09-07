@@ -19,7 +19,7 @@ This document outlines the security measures implemented to protect against a Re
 - **Verification**: Security tests confirm ReDoS vulnerability is mitigated in safe versions
 
 ### 2. Version Overrides
-The root `package.json` includes pnpm overrides to prevent installation of vulnerable versions:
+The root `package.json` includes package overrides for both npm and pnpm to prevent installation of vulnerable versions:
 
 ```json
 {
@@ -27,11 +27,14 @@ The root `package.json` includes pnpm overrides to prevent installation of vulne
     "overrides": {
       "marked@<4.0.10": ">=4.0.10"
     }
+  },
+  "overrides": {
+    "marked@<4.0.10": ">=4.0.10"
   }
 }
 ```
 
-This ensures that if any dependency tries to install a vulnerable version of marked (<4.0.10), it will be upgraded to a safe version (4.0.10+).
+This ensures that if any dependency tries to install a vulnerable version of marked (<4.0.10), it will be upgraded to a safe version (4.0.10+) regardless of whether npm or pnpm is used.
 
 ### 3. Security Tests
 Comprehensive tests in `packages/cli/test/unit/util/marked-security.test.ts` verify that:
