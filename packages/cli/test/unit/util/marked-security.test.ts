@@ -15,10 +15,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 describe('marked security vulnerability mitigation', () => {
   let marked: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Try to load marked from the production path
     try {
-      marked = require('marked');
+      const mod = await import('marked');
+      marked = mod.default;
     } catch (error) {
       // If marked is not available in test context, skip tests
       marked = null;
