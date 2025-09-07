@@ -8,7 +8,7 @@ This document tracks the fixes applied to address open Dependabot security alert
 
 ### Critical Severity
 
-1. **loader-utils** - CVE-2022-3517 - Prototype Pollution
+1. **loader-utils** - CVE-2022-37603 - Prototype Pollution
    - Vulnerable: `< 1.4.1` and `>= 2.0.0, < 2.0.3`
    - Fix: Added package overrides to enforce `>= 1.4.1` and `>= 2.0.3`
 
