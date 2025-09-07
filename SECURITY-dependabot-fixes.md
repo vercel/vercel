@@ -74,7 +74,20 @@ Added comprehensive package overrides in the root `package.json` that apply to b
     }
   },
   "overrides": {
-    // Same overrides for npm compatibility
+    "loader-utils@<1.4.1": ">=1.4.1",
+    "loader-utils@>=2.0.0 <2.0.3": ">=2.0.3",
+    "shell-quote@<=1.7.2": ">=1.7.3",
+    "node-fetch@<2.6.7": ">=2.6.7",
+    "node-fetch@>=3.0.0 <3.1.1": ">=3.1.1",
+    "minimatch@<3.0.5": ">=3.0.5",
+    "passport@<0.6.0": ">=0.6.0",
+    "ansi-regex@>=3.0.0 <3.0.1": ">=3.0.1",
+    "ansi-regex@>=4.0.0 <4.1.1": ">=4.1.1",
+    "ansi-regex@>=5.0.0 <5.0.1": ">=5.0.1",
+    "ansi-regex@>=6.0.0 <6.0.1": ">=6.0.1",
+    "semver-regex@<3.1.4": ">=3.1.4",
+    "semver-regex@>=4.0.0 <4.0.3": ">=4.0.3",
+    "next@>=0.9.9 <14.2.31": ">=14.2.31"
   }
 }
 ```
@@ -113,3 +126,6 @@ The package overrides ensure that even if dependencies attempt to install vulner
 - [CVE-2022-0235 - node-fetch Header Forwarding](https://github.com/advisories/GHSA-r683-j2x4-v87g)
 - [CVE-2022-3517 - minimatch ReDoS](https://github.com/advisories/GHSA-f8q6-p94x-37v3)
 - [CVE-2021-3807 - ansi-regex ReDoS](https://github.com/advisories/GHSA-93q8-gq69-wqmw)
+- [CVE-2022-25896 - passport Session Regeneration](https://github.com/advisories/GHSA-6r2w-22qv-9w3w)
+- [CVE-2021-3795 - semver-regex ReDoS](https://github.com/advisories/GHSA-xjx4-8694-q2fh)
+- [CVE-2021-43307 - semver-regex ReDoS](https://github.com/advisories/GHSA-92xj-mqp7-vmcj)
