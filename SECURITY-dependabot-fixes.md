@@ -36,7 +36,7 @@ This document tracks the fixes applied to address open Dependabot security alert
 
 ### Medium Severity
 
-1. **Next.js** - CVE-2025-57752 - Cache Key Confusion for Image Optimization API Routes
+1. **Next.js** - CVE-2024-34351 - Cache Key Confusion for Image Optimization API Routes
    - Vulnerable: `>= 0.9.9, < 14.2.31`
    - Fix: 
      - Added package override to enforce `>= 14.2.31`
