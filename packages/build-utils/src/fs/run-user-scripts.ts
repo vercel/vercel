@@ -694,6 +694,13 @@ async function runInstallCommand({
   args: string[];
   opts: SpawnOptionsExtended;
 }) {
+  console.log('at runInstallCommand');
+  console.log({
+    packageManager,
+    args,
+    opts,
+  });
+
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
   opts.prettyCommand = prettyCommand;
@@ -702,7 +709,13 @@ async function runInstallCommand({
     commandArguments.push('--production');
   }
 
-  await spawnAsync(packageManager, commandArguments, opts);
+  try {
+    await spawnAsync(packageManager, commandArguments, opts);
+  } catch (error) {
+    console.error('Install command failed:', error);
+    throw error;
+  }
+  console.log('Install command completed successfully');
 }
 
 function initializeSet(set: unknown) {
