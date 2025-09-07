@@ -122,13 +122,13 @@ Here's a paragraph with a [reference link][ref].
     expect(result).toContain('<a href="https://example.com"');
   });
 
-  it('should document the current marked package versions', () => {
+  it('should document the current marked package versions', async () => {
     // This test documents the current package versions for security tracking
     let markedVersion = 'not found';
     
     try {
-      const packageInfo = require('marked/package.json');
-      markedVersion = packageInfo.version;
+      const packageInfo = await import('marked/package.json');
+      markedVersion = packageInfo.default?.version ?? packageInfo.version;
       
       // We expect to be using a safe marked version (>= 4.0.10)
       const semver = require('semver');
