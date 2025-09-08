@@ -1518,16 +1518,16 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Nuxt.js',
+    name: 'Nuxt',
     slug: 'nuxtjs',
     demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nuxt.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
     tagline:
-      'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
-    description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
-    website: 'https://nuxtjs.org',
+      'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
+    description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
+    website: 'https://nuxt.com',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
     supersedes: ['nitro'],
@@ -1542,6 +1542,9 @@ export const frameworks = [
         {
           matchPackage: 'nuxt-edge',
         },
+        {
+          matchPackage: 'nuxt-nightly',
+        },
       ],
     },
     settings: {
@@ -1554,7 +1557,7 @@ export const frameworks = [
         value: 'nuxt build',
       },
       devCommand: {
-        value: 'nuxt',
+        value: 'nuxt dev',
       },
       outputDirectory: {
         value: 'dist',
