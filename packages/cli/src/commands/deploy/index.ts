@@ -711,7 +711,12 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(deployment, deployStamp, noWait);
+  return printDeploymentStatus(
+    deployment,
+    deployStamp,
+    noWait,
+    parsedArguments.flags['--guidance'] ?? false
+  );
 };
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {

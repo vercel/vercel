@@ -5,6 +5,7 @@ import { isDeploying } from '../../util/deploy/is-deploying';
 import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
+import { getCommandName } from '../pkg-name';
 
 /**
  * Prints (to `output`) warnings and errors, if any.
@@ -15,6 +16,8 @@ export async function printDeploymentStatus(
     aliasError,
     indications,
     aliasWarning,
+    url,
+    target,
   }: {
     readyState: Deployment['readyState'];
     alias: string[];
@@ -30,7 +33,8 @@ export async function printDeploymentStatus(
     };
   },
   deployStamp: () => string,
-  noWait: boolean
+  noWait: boolean,
+  guidanceMode: boolean
 ): Promise<number> {
   indications = indications || [];
 
@@ -85,5 +89,28 @@ export async function printDeploymentStatus(
     output.print(message + link);
   }
 
+  if (guidanceMode) {
+    output.print('\n');
+    suggestNextCommands(
+      [
+        getCommandName(`inspect ${url} --logs`),
+        getCommandName(`redeploy ${url}`),
+        target !== 'production' ? getCommandName(`deploy --prod`) : false,
+      ].filter(Boolean) as string[]
+    );
+  }
+
   return 0;
+}
+
+function suggestNextCommands(commands: string[]) {
+  output.print(
+    chalk.dim(
+      [
+        `Common next commands:`,
+        ...commands.map(command => `- ${command}`),
+      ].join('\n')
+    )
+  );
+  output.print('\n');
 }
