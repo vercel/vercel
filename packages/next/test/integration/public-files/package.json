@@ -3,7 +3,7 @@
     "now-build": "node create-public-file.js && next build"
   },
   "dependencies": {
-    "next": "9",
+    "next": "14.2.31",
     "react": "16",
     "react-dom": "16"
   },

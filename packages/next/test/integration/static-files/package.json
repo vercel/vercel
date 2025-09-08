@@ -3,7 +3,7 @@
     "now-build": "next build"
   },
   "dependencies": {
-    "next": "8",
+    "next": "14.2.31",
     "react": "16",
     "react-dom": "16"
   },
