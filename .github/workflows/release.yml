@@ -89,7 +89,7 @@ jobs:
             await script({ github, context })
   manual-cli-release:
     if: github.event_name == 'workflow_dispatch'
-    name: Manual CLI Release
+    name: Manual CLI Release ${{github.event.inputs.dryRun == 'true' && '(--dry-run)' || ''}}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -125,7 +125,7 @@ jobs:
           cd packages/cli &&
           VERSION=$(node -p "require('./package.json').version")-canary.${{ github.event.inputs.commit }} &&
           pnpm version $VERSION --no-git-tag-version &&
-          pnpm publish --access public --tag canary ${ github.event.inputs.dryRun ? '--dry-run' : '' } --no-git-checks &&
+          pnpm publish --access public --tag canary ${{ github.event.inputs.dryRun == 'true' && '--dry-run' || '' }} --no-git-checks &&
           echo "🚀 Published canary version, install via: \`pnpm add vercel@$VERSION\`"
 
         env:
