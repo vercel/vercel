@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: 'Commit (full) SHA to release the CLI from'
+        description: 'Commit SHA to release the CLI from'
         required: true
       dryRun:
         description: 'Whether to run the publish process in dry run mode.'
