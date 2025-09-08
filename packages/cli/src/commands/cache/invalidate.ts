@@ -46,12 +46,12 @@ export default async function invalidate(
   const { project, org } = link;
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
   const yes = Boolean(parsedArgs.flags['--yes']);
-  telemetry.trackCliFlagYes(yes);
-
   const tag = parsedArgs.flags['--tag'];
+  telemetry.trackCliFlagYes(yes);
   telemetry.trackCliOptionTag(tag);
+
   if (!tag) {
-    output.error(`Invalid cache tag "${tag}".}`);
+    output.error(`The --tag option is required`);
     return 1;
   }
 
