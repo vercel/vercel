@@ -25,7 +25,7 @@ export class CacheDangerouslyDeleteTelemetryClient
     if (seconds) {
       this.trackCliOption({
         option: 'revalidation-deadline-seconds',
-        value: seconds,
+        value: seconds?.toString(),
       });
     }
   }
