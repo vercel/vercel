@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: 'Commit SHA to release the CLI from'
+        description: 'Commit (full) SHA to release the CLI from'
         required: true
       dryRun:
         description: 'Whether to run the publish process in dry run mode.'
@@ -123,12 +123,13 @@ jobs:
       - name: Version CLI, publish and comment on PR
         run: |
           cd packages/cli &&
-          VERSION=$(node -p "require('./package.json').version")-canary.${{ github.event.inputs.commit }} &&
+          VERSION=$(node -p "require('./package.json').version")-canary.${COMMIT_SHA:0:8} &&
           pnpm version $VERSION --no-git-tag-version &&
           pnpm publish --access public --tag canary ${{ github.event.inputs.dryRun == 'true' && '--dry-run' || '' }} --no-git-checks &&
           echo "🚀 Published canary version, install via: \`pnpm add vercel@$VERSION\`"
 
         env:
+          COMMIT_SHA: ${{ github.event.inputs.commit }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           NPM_CONFIG_PROVENANCE: 'true'
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
