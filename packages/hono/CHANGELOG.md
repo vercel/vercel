@@ -1,5 +1,37 @@
 # @vercel/hono
 
+## 0.0.22
+
+### Patch Changes
+
+- Updated dependencies [[`db47f7031bacfe0d07e5a657788e1e74c134bf81`](https://github.com/vercel/vercel/commit/db47f7031bacfe0d07e5a657788e1e74c134bf81)]:
+  - @vercel/node@5.3.21
+
+## 0.0.21
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/node@5.3.20
+
+## 0.0.20
+
+### Patch Changes
+
+- Always compile `.mts` to ESM ([#13693](https://github.com/vercel/vercel/pull/13693))
+
+- Updated dependencies [[`fea94eea32f9df7c72d9ea95434d84c44f4ef082`](https://github.com/vercel/vercel/commit/fea94eea32f9df7c72d9ea95434d84c44f4ef082)]:
+  - @vercel/node@5.3.19
+
+## 0.0.19
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.18
+
 ## 0.0.18
 
 ### Patch Changes

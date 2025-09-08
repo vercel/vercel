@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.8.3
+
+### Patch Changes
+
+- Adds FastAPI to the list of auto-detected frameworks ([#13877](https://github.com/vercel/vercel/pull/13877))
+
 ## 3.8.2
 
 ### Patch Changes

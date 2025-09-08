@@ -2018,6 +2018,52 @@ export const frameworks = [
     ],
   },
   {
+    name: 'FastAPI (Experimental)',
+    slug: 'fastapi',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    tagline:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    description:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    website: 'https://fastapi.tiangolo.com',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      every: [
+        {
+          path: 'requirements.txt',
+          matchContent: 'fastapi',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'uvicorn main:app --reload --port $PORT',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/main',
+      },
+    ],
+  },
+  {
     name: 'FastHTML (Experimental)',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
