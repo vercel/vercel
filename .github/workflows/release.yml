@@ -122,6 +122,7 @@ jobs:
 
       - name: Version CLI, publish and comment on PR
         run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc &&
           cd packages/cli &&
           VERSION=$(node -p "require('./package.json').version")-canary.${COMMIT_SHA:0:8} &&
           pnpm version $VERSION --no-git-tag-version &&
