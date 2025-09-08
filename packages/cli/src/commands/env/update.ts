@@ -201,7 +201,7 @@ export default async function update(client: Client, argv: string[]) {
   const type = opts['--sensitive'] ? 'sensitive' : selectedEnv.type;
   const targets = Array.isArray(selectedEnv.target)
     ? selectedEnv.target
-    : [selectedEnv.target];
+    : [selectedEnv.target!];
   const allTargets = [...targets, ...(selectedEnv.customEnvironmentIds || [])];
 
   const updateStamp = stamp();
