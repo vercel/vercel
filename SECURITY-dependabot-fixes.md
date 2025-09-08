@@ -121,7 +121,7 @@ The package overrides ensure that even if dependencies attempt to install vulner
 ## References
 
 - [CVE-2025-57752 - Next.js Cache Key Confusion](https://github.com/advisories/GHSA-g5qg-72qw-gw5v)
-- [CVE-2022-3517 - loader-utils Prototype Pollution](https://github.com/advisories/GHSA-76p3-8jx3-jpfq)
+- [CVE-2022-37603 - loader-utils Prototype Pollution](https://github.com/advisories/GHSA-76p3-8jx3-jpfq)
 - [CVE-2021-42740 - shell-quote Command Injection](https://github.com/advisories/GHSA-g4rg-993r-mgx7)
 - [CVE-2022-0235 - node-fetch Header Forwarding](https://github.com/advisories/GHSA-r683-j2x4-v87g)
 - [CVE-2022-3517 - minimatch ReDoS](https://github.com/advisories/GHSA-f8q6-p94x-37v3)
