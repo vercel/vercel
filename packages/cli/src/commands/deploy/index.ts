@@ -105,6 +105,7 @@ export default async (client: Client): Promise<number> => {
     telemetryClient.trackCliFlagPublic(parsedArguments.flags['--public']);
     telemetryClient.trackCliFlagLogs(parsedArguments.flags['--logs']);
     telemetryClient.trackCliFlagNoLogs(parsedArguments.flags['--no-logs']);
+    telemetryClient.trackCliFlagGuidance(parsedArguments.flags['--guidance']);
     telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
     telemetryClient.trackCliFlagWithCache(
       parsedArguments.flags['--with-cache']
