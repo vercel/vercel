@@ -70,6 +70,7 @@ import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogs } from '../../util/logs';
+import { determineAgent } from '@vercel/detect-agent';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -711,12 +712,9 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  return printDeploymentStatus(
-    deployment,
-    deployStamp,
-    noWait,
-    parsedArguments.flags['--guidance'] ?? false
-  );
+  const guidanceMode =
+    parsedArguments.flags['--guidance'] ?? (await determineAgent()) !== false;
+  return printDeploymentStatus(deployment, deployStamp, noWait, guidanceMode);
 };
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
