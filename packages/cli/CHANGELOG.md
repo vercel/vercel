@@ -1,5 +1,11 @@
 # vercel
 
+## 47.0.7
+
+### Patch Changes
+
+- Fix build errored deployments to always show full build logs ([#13901](https://github.com/vercel/vercel/pull/13901))
+
 ## 47.0.6
 
 ### Patch Changes
