@@ -89,7 +89,7 @@ export default async function dangerouslyDelete(
         .split(',')
         .map(str => str.trim())
         .filter(Boolean),
-      revalidateationDeadlineSeconds: revalidate,
+      revalidationDeadlineSeconds: revalidate,
     }),
   });
 
