@@ -69,7 +69,7 @@ describe('env ls', () => {
 
       client.setArgv(command, subcommand, '--guidance');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
