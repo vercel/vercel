@@ -56,8 +56,7 @@ export default async function logout(client: Client): Promise<number> {
 
   if (obsoleteArguments.length || obsoleteFlags.length) {
     output.print(
-      // TODO: fix link
-      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog')}.\n`
+      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
     );
   }
 
