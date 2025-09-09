@@ -22,7 +22,6 @@ import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
-import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -70,7 +69,6 @@ import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
-import { determineAgent } from '@vercel/detect-agent';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
