@@ -29,4 +29,10 @@ export class EnvLsTelemetryClient
       });
     }
   }
+
+  trackCliFlagGuidance(guidance: boolean | undefined) {
+    if (guidance) {
+      this.trackCliFlag('guidance');
+    }
+  }
 }
