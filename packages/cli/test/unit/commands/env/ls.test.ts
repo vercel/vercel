@@ -73,9 +73,10 @@ describe('env ls', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:guidance',
-          value: `${command}:${subcommand}`,
+          key: 'subcommand:ls',
+          value: 'ls',
         },
+        { key: 'flag:guidance', value: 'TRUE' },
       ]);
     });
   });

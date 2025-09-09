@@ -40,7 +40,7 @@ export default async function ls(client: Client, argv: string[]) {
     printError(err);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
 
   if (args.length > 2) {
     output.error(
@@ -51,10 +51,10 @@ export default async function ls(client: Client, argv: string[]) {
     return 1;
   }
 
-  const [envTarget, envGitBranch, guidance] = args;
+  const [envTarget, envGitBranch] = args;
   telemetryClient.trackCliArgumentEnvironment(envTarget);
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
-  telemetryClient.trackCliFlagGuidance(Boolean(guidance));
+  telemetryClient.trackCliFlagGuidance(flags['--guidance']);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
