@@ -6,6 +6,7 @@ import { isAPIError } from '../errors-ts';
 import type { Dictionary } from '@vercel/client';
 import type { Org } from '@vercel-internals/types';
 import output from '../../output-manager';
+import list, { type ListChoice } from '../input/list';
 
 export interface RepoInfo {
   url: string;
@@ -124,4 +125,23 @@ export function printRemoteUrls(remoteUrls: Dictionary<string>) {
   for (const [name, url] of Object.entries(remoteUrls)) {
     output.print(`  • ${name}: ${chalk.cyan(url)}\n`);
   }
+}
+
+export async function selectRemoteUrl(
+  client: Client,
+  remoteUrls: Dictionary<string>
+): Promise<string> {
+  const choices: ListChoice[] = [];
+  for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
+    choices.push({
+      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
+      value: urlValue,
+      short: urlKey,
+    });
+  }
+
+  return await list(client, {
+    message: 'Which remote do you want to connect?',
+    choices,
+  });
 }

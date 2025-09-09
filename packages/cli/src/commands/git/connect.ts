@@ -4,7 +4,6 @@ import { join } from 'path';
 import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -13,6 +12,7 @@ import {
   formatProvider,
   type RepoInfo,
   parseRepoUrl,
+  selectRemoteUrl,
   printRemoteUrls,
 } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
@@ -419,23 +419,4 @@ async function confirmRepoConnect(
     }
   }
   return shouldReplaceProject;
-}
-
-async function selectRemoteUrl(
-  client: Client,
-  remoteUrls: Dictionary<string>
-): Promise<string> {
-  const choices: ListChoice[] = [];
-  for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
-    choices.push({
-      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
-      value: urlValue,
-      short: urlKey,
-    });
-  }
-
-  return await list(client, {
-    message: 'Which remote do you want to connect?',
-    choices,
-  });
 }

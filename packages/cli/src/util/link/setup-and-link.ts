@@ -20,6 +20,7 @@ import {
   connectGitProvider,
   formatProvider,
   parseRepoUrl,
+  selectRemoteUrl,
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
@@ -267,7 +268,6 @@ export async function connectGitRepository(
   autoConfirm: boolean
 ): Promise<void> {
   try {
-    // get project from .git
     const gitConfig = await parseGitConfig(join(path, '.git/config'));
 
     if (!gitConfig) {
@@ -281,8 +281,6 @@ export async function connectGitRepository(
 
     let remoteUrl: string;
     if (Object.keys(remoteUrls).length > 1) {
-      // Import selectRemoteUrl at runtime to avoid circular dependency
-      const { selectRemoteUrl } = await import('../git/connect-git-provider');
       remoteUrl = await selectRemoteUrl(client, remoteUrls);
       if (remoteUrl === '') {
         // User canceled selection
