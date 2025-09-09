@@ -1,5 +1,82 @@
 # vercel
 
+## 47.0.6
+
+### Patch Changes
+
+- chore(cli): telemetry on login state ([#13886](https://github.com/vercel/vercel/pull/13886))
+
+- fix(cli): correct access token expiry check during token refresh ([#13888](https://github.com/vercel/vercel/pull/13888))
+
+- Updated dependencies [[`d06a3611ba68177287df9cb01343be4d88148a16`](https://github.com/vercel/vercel/commit/d06a3611ba68177287df9cb01343be4d88148a16)]:
+  - @vercel/static-build@2.7.23
+
+## 47.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`db47f7031bacfe0d07e5a657788e1e74c134bf81`](https://github.com/vercel/vercel/commit/db47f7031bacfe0d07e5a657788e1e74c134bf81)]:
+  - @vercel/node@5.3.21
+  - @vercel/express@0.0.14
+  - @vercel/hono@0.0.22
+
+## 47.0.4
+
+### Patch Changes
+
+- Reverts a regression in `vercel login --future` introduced in [#13855](https://github.com/vercel/vercel/pull/13855) ([#13872](https://github.com/vercel/vercel/pull/13872))
+
+## 47.0.3
+
+### Patch Changes
+
+- Undo change that set min node version to node 20 since Vercel CLI still needs to work on Node 18 for upgrade paths. ([#13865](https://github.com/vercel/vercel/pull/13865))
+
+## 47.0.2
+
+### Patch Changes
+
+- feat(cli): telemetry on login state ([#13855](https://github.com/vercel/vercel/pull/13855))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/build-utils@12.1.0
+  - @vercel/express@0.0.13
+  - @vercel/hono@0.0.21
+  - @vercel/node@5.3.20
+  - @vercel/static-build@2.7.22
+
+## 47.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`17f3c91aa96ce272d265d809f3b765a12a1f38b3`](https://github.com/vercel/vercel/commit/17f3c91aa96ce272d265d809f3b765a12a1f38b3), [`fea94eea32f9df7c72d9ea95434d84c44f4ef082`](https://github.com/vercel/vercel/commit/fea94eea32f9df7c72d9ea95434d84c44f4ef082)]:
+  - @vercel/next@4.12.4
+  - @vercel/hono@0.0.20
+  - @vercel/node@5.3.19
+  - @vercel/express@0.0.12
+
+## 47.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+### Patch Changes
+
+- Updated dependencies [[`d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e`](https://github.com/vercel/vercel/commit/d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e)]:
+  - @vercel/build-utils@12.0.0
+  - @vercel/express@0.0.11
+  - @vercel/hono@0.0.19
+  - @vercel/node@5.3.18
+  - @vercel/static-build@2.7.21
+
+## 46.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`11f71c3813b0e43fdc8923c2da3c0438893c18b5`](https://github.com/vercel/vercel/commit/11f71c3813b0e43fdc8923c2da3c0438893c18b5)]:
+  - @vercel/next@4.12.3
+
 ## 46.1.0
 
 ### Minor Changes

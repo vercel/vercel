@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.12.4
+
+### Patch Changes
+
+- Skip adding rewrite headers when the destination has no rewritten pathname or query (and when external origin is not allowed). This prevents generating an empty `rewrite.headers` object that fails schema validation and restores previous behavior for external or no-op rewrites. ([#13844](https://github.com/vercel/vercel/pull/13844))
+
+## 4.12.3
+
+### Patch Changes
+
+- Add emitting supportsCancellation ([#13841](https://github.com/vercel/vercel/pull/13841))
+
 ## 4.12.2
 
 ### Patch Changes

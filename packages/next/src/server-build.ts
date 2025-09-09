@@ -391,9 +391,9 @@ export async function serverBuild({
               )
             : false;
 
-        // If the rewrite was external and the origin is not allowed, we don't
-        // need to add the rewrite headers.
-        if (origin && !isAllowedOrigin) continue;
+        // If the rewrite was external and the origin is not allowed, or
+        // if there is no rewritten pathname or query, skip adding headers.
+        if ((origin && !isAllowedOrigin) || (!pathname && !query)) continue;
 
         (rewrite as RouteWithSrc).headers = {
           ...(rewrite as RouteWithSrc).headers,
@@ -1364,6 +1364,7 @@ export async function serverBuild({
         memory: group.memory,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,
