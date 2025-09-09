@@ -1,8 +1,10 @@
 import { RuntimeCache } from './cache/types';
+import { PurgeApi } from './purge/types';
 
 type Context = {
   waitUntil?: (promise: Promise<unknown>) => void;
   cache?: RuntimeCache;
+  purge?: PurgeApi;
   headers?: Record<string, string>;
 };
 
