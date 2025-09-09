@@ -9,19 +9,21 @@ import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
 describe('cache dangerously-delete', () => {
+  let projectId = 'wat';
   beforeEach(async () => {
     useUser();
     useTeam('team_dummy');
     const cwd = setupTmpDir();
     client.cwd = cwd;
+    projectId = basename(cwd);
     useProject({
       ...defaultProject,
-      id: basename(cwd),
-      name: basename(cwd),
+      id: projectId,
+      name: projectId,
     });
     await outputFile(
       join(cwd, '.vercel', 'project.json'),
-      JSON.stringify({ projectId: basename(cwd), orgId: 'team_dummy' })
+      JSON.stringify({ projectId, orgId: 'team_dummy' })
     );
   });
 
@@ -78,6 +80,29 @@ describe('cache dangerously-delete', () => {
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput(
       'Successfully deleted tag foo,bar,baz'
+    );
+  });
+
+  it('should ask for confirmation if the --yes option is omitted', async () => {
+    client.setArgv('cache', 'dangerously-delete', '--tag=foo');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to dangerously delete all cached content associated with tag foo for project ${projectId}. To continue, run \`vercel cache dangerously-delete --tag foo --yes\`.`
+    );
+  });
+
+  it('should ask for confirmation and if no --yes and pass through the --revalidation-deadline-seconds', async () => {
+    client.setArgv(
+      'cache',
+      'dangerously-delete',
+      '--tag=foo',
+      '--revalidation-deadline-seconds=60'
+    );
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      `You are about to dangerously delete all cached content associated with tag foo for project ${projectId}. To continue, run \`vercel cache dangerously-delete --tag foo --revalidation-deadline-seconds 60 --yes\`.`
     );
   });
 });

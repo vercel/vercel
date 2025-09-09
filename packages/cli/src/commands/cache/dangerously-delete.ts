@@ -58,7 +58,7 @@ export default async function dangerouslyDelete(
   const revalidate = parsedArgs.flags['--revalidation-deadline-seconds'];
   telemetry.trackCliOptionRevalidationDeadlineSeconds(revalidate);
 
-  const msg = `You are about to dangerously delete tag ${tag} for project ${project.name}`;
+  const msg = `You are about to dangerously delete all cached content associated with tag ${tag} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {

@@ -36,7 +36,7 @@ export const purgeSubcommand = {
 export const invalidateSubcommand = {
   name: 'invalidate',
   aliases: [],
-  description: 'Invalidate cache by tags',
+  description: 'Invalidate all cached content by tag',
   arguments: [],
   options: [
     yesOption,
@@ -51,11 +51,11 @@ export const invalidateSubcommand = {
   ],
   examples: [
     {
-      name: 'Invalidate cache by a single tag',
+      name: 'Invalidate all cached content associated with a tag',
       value: `${packageName} cache invalidate --tag foo`,
     },
     {
-      name: 'Invalidate cache by multiple tags',
+      name: 'Invalidate all cached content associated with any one of multiple tags',
       value: `${packageName} cache invalidate --tag foo,bar,baz`,
     },
   ],
@@ -64,7 +64,7 @@ export const invalidateSubcommand = {
 export const dangerouslyDeleteSubcommand = {
   name: 'dangerously-delete',
   aliases: [],
-  description: 'Dangerously delete cache by tags',
+  description: 'Dangerously delete all cached content by tag',
   arguments: [],
   options: [
     yesOption,
@@ -87,11 +87,11 @@ export const dangerouslyDeleteSubcommand = {
   ],
   examples: [
     {
-      name: 'Dangerously delete cache by tag',
+      name: 'Dangerously delete all cached content associated with a tag',
       value: `${packageName} cache dangerously-delete --tag foo`,
     },
     {
-      name: 'Dangerously delete cache by tag with deadline of 1 hour',
+      name: 'Dangerously delete all cached content associated with a tag if not accessed in the next hour',
       value: `${packageName} cache dangerously-delete --tag foo --revalidation-deadline-seconds 3600`,
     },
   ],

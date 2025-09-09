@@ -55,7 +55,7 @@ export default async function invalidate(
     return 1;
   }
 
-  const msg = `You are about to invalidate tag ${tag} for project ${project.name}`;
+  const msg = `You are about to invalidate all cached content associated with tag ${tag} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {

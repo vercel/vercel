@@ -71,4 +71,13 @@ describe('cache invalidate', () => {
       'Successfully invalidated tag foo,bar,baz'
     );
   });
+
+  it('should ask for confirmation if the --yes option is omitted', async () => {
+    client.setArgv('cache', 'invalidate', '--tag=foo');
+    const exitCode = await cache(client);
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput(
+      'You are about to invalidate all cached content associated with tag foo for project 4. To continue, run `vercel cache invalidate --tag foo --yes`.'
+    );
+  });
 });
