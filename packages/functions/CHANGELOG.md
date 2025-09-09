@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.1.0
+
+### Minor Changes
+
+- Introduces Vercel Purge APIs: invalidateByTag, dangerouslyDeleteByTag ([#13867](https://github.com/vercel/vercel/pull/13867))
+
 ## 3.0.0
 
 ### Major Changes
