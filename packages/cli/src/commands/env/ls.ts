@@ -99,7 +99,11 @@ export default async function ls(client: Client, argv: string[]) {
   const guidanceMode =
     parsedArgs.flags['--guidance'] ?? (await determineAgent()) !== false;
   if (guidanceMode) {
-    suggestNextCommands([getCommandName(`env ls`), getCommandName(`env pull`)]);
+    suggestNextCommands([
+      getCommandName(`env add`),
+      getCommandName('env rm'),
+      getCommandName(`env pull`),
+    ]);
   }
 
   return 0;
