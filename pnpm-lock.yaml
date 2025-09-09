@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.8.2
+        specifier: 3.8.4
         version: link:../packages/frameworks
 
   internals/constants:
@@ -379,7 +379,7 @@ importers:
         specifier: 2.2.1
         version: link:../ruby
       '@vercel/static-build':
-        specifier: 2.7.22
+        specifier: 2.7.23
         version: link:../static-build
       chokidar:
         specifier: 4.0.0
@@ -530,10 +530,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.2
+        specifier: 3.8.4
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.0
+        specifier: 5.5.2
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1031,7 +1031,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.2
+        specifier: 3.8.4
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1920,10 +1920,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.2
+        specifier: 3.8.4
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.0
+        specifier: 5.5.2
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1

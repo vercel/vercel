@@ -1518,16 +1518,16 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Nuxt.js',
+    name: 'Nuxt',
     slug: 'nuxtjs',
     demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nuxt.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
     tagline:
-      'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
-    description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
-    website: 'https://nuxtjs.org',
+      'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
+    description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
+    website: 'https://nuxt.com',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
     supersedes: ['nitro'],
@@ -1542,6 +1542,9 @@ export const frameworks = [
         {
           matchPackage: 'nuxt-edge',
         },
+        {
+          matchPackage: 'nuxt-nightly',
+        },
       ],
     },
     settings: {
@@ -1554,7 +1557,7 @@ export const frameworks = [
         value: 'nuxt build',
       },
       devCommand: {
-        value: 'nuxt',
+        value: 'nuxt dev',
       },
       outputDirectory: {
         value: 'dist',
@@ -2011,6 +2014,52 @@ export const frameworks = [
       },
       {
         handle: 'filesystem',
+      },
+    ],
+  },
+  {
+    name: 'FastAPI (Experimental)',
+    slug: 'fastapi',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    tagline:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    description:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    website: 'https://fastapi.tiangolo.com',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      every: [
+        {
+          path: 'requirements.txt',
+          matchContent: 'fastapi',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'uvicorn main:app --reload --port $PORT',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/main',
       },
     ],
   },
