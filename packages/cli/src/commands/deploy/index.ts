@@ -69,7 +69,7 @@ import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
-import { displayBuildLogs } from '../../util/logs';
+import { displayBuildLogsUntilFinalError } from '../../util/logs';
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -668,8 +668,6 @@ export default async (client: Client): Promise<number> => {
     }
 
     if (err instanceof BuildError) {
-      output.error(err.message || 'Build failed');
-      output.print('\n');
       if (withLogs === false) {
         try {
           if (now.url) {
@@ -678,12 +676,11 @@ export default async (client: Client): Promise<number> => {
               contextName,
               now.url
             );
-            const { promise } = displayBuildLogs(
+            await displayBuildLogsUntilFinalError(
               client,
               failedDeployment,
-              false
+              err.message
             );
-            await promise;
           }
         } catch (_) {
           output.log(
