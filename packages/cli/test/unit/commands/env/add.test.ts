@@ -64,9 +64,10 @@ describe('env add', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'flag:guidance',
-          value: `${command}:${subcommand}`,
+          key: `subcommand:add`,
+          value: 'add',
         },
+        { key: 'flag:guidance', value: `TRUE` },
       ]);
     });
   });
