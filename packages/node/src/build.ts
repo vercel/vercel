@@ -711,7 +711,7 @@ async function rolldownCompile(
 
   const absoluteImportPlugin: RolldownPlugin = {
     name: 'absolute-import-resolver',
-    resolveId(source) {
+    resolveId(source: string) {
       if (external.includes(source)) {
         return { id: source, external: true };
       }
@@ -738,7 +738,24 @@ async function rolldownCompile(
     tsconfig: tsconfigPath || undefined,
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
-      entryFileNames: `${parsePath(entrypointPath).name}.${extensionInfo.extension}`,
+      entryFileNames: info => {
+        const facadeModuleId = info.facadeModuleId;
+        if (!facadeModuleId) {
+          throw new Error(`Unable to resolve module for ${info.name}`);
+        }
+        const relPath = relative(workPath, facadeModuleId);
+        const extension = extname(relPath);
+        const extensionMap: Record<string, string> = {
+          '.ts': '.js',
+          '.mts': '.mjs',
+          '.cts': '.cjs',
+          '.cjs': '.cjs',
+          '.js': '.js',
+        };
+        const ext = extensionMap[extension];
+        const nameWithJS = relPath.slice(0, -extension.length) + ext;
+        return nameWithJS;
+      },
       format,
       preserveModules: true,
       sourcemap: false,
