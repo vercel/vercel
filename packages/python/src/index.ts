@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import execa = require('execa');
+import * as execa from 'execa';
 import { promisify } from 'util';
 import { join, dirname, basename } from 'path';
 import {
