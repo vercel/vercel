@@ -73,7 +73,7 @@ export default async function login(client: Client): Promise<number> {
 
   if (obsoleteArguments.length || obsoleteFlags.length) {
     output.print(
-      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow-6W6aBtFyBazKdOEC0V4DAl')}.\n`
+      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
     );
   }
 
