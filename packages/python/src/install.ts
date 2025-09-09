@@ -1,4 +1,4 @@
-import * as execa from 'execa';
+import execa from 'execa';
 import { join } from 'path';
 import { Meta, debug } from '@vercel/build-utils';
 

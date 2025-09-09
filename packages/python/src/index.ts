@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as execa from 'execa';
+import fs from 'fs';
+import execa from 'execa';
 import { promisify } from 'util';
 import { join, dirname, basename } from 'path';
 import {
