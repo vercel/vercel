@@ -56,7 +56,7 @@ describe('env add', () => {
   describe('--guidance', () => {
     it('tracks telemetry', async () => {
       const command = 'env';
-      const subcommand = 'ls';
+      const subcommand = 'add';
 
       client.setArgv(command, subcommand, '--guidance');
       const exitCodePromise = env(client);
