@@ -35,6 +35,30 @@ export function displayBuildLogs(
   return { promise, abortController };
 }
 
+export async function displayBuildLogsUntilFinalError(
+  client: Client,
+  deployment: Deployment,
+  error: string
+) {
+  const abortController = new AbortController();
+  return printEvents(
+    client,
+    deployment.id,
+    {
+      mode: 'logs',
+      onEvent: (event: BuildLog) => {
+        printBuildLog(event, output.print);
+        if (event.level === 'error' && event.text?.includes(error)) {
+          abortController.abort();
+        }
+      },
+      quiet: false,
+      findOpts: { direction: 'forward', follow: true },
+    },
+    abortController
+  );
+}
+
 export interface DisplayRuntimeLogsOptions {
   projectId?: string;
   deploymentId: string;
