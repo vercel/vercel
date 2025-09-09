@@ -14,15 +14,27 @@ vi.mock('../../../../src/util/git/connect-git-provider', () => ({
   checkExistsAndConnect: vi.fn(),
 }));
 
-const { parseGitConfig, pluckRemoteUrls } = await import(
-  '../../../../src/util/create-git-meta'
-);
-const { formatProvider, selectAndParseRemoteUrl, checkExistsAndConnect } =
-  await import('../../../../src/util/git/connect-git-provider');
-
 describe('connectGitRepository()', () => {
-  beforeEach(() => {
+  let parseGitConfig: any;
+  let pluckRemoteUrls: any;
+  let formatProvider: any;
+  let selectAndParseRemoteUrl: any;
+  let checkExistsAndConnect: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Import the mocked modules
+    const gitMeta = await import('../../../../src/util/create-git-meta');
+    const gitProvider = await import(
+      '../../../../src/util/git/connect-git-provider'
+    );
+
+    parseGitConfig = gitMeta.parseGitConfig;
+    pluckRemoteUrls = gitMeta.pluckRemoteUrls;
+    formatProvider = gitProvider.formatProvider;
+    selectAndParseRemoteUrl = gitProvider.selectAndParseRemoteUrl;
+    checkExistsAndConnect = gitProvider.checkExistsAndConnect;
 
     // Setup basic mocks
     vi.mocked(formatProvider).mockReturnValue('GitHub');
@@ -126,7 +138,7 @@ describe('connectGitRepository()', () => {
     const org = { id: 'org-id', slug: 'org-slug', type: 'team' as const };
 
     // Mock no git config found
-    vi.mocked(parseGitConfig).mockResolvedValue(null);
+    vi.mocked(parseGitConfig).mockResolvedValue(undefined);
 
     await connectGitRepository(client, testPath, project, true, org);
 
