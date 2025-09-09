@@ -6,6 +6,7 @@ import linkStyle from '../output/link';
 import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
+import { suggestNextCommands } from '../suggest-next-commands';
 
 /**
  * Prints (to `output`) warnings and errors, if any.
@@ -101,16 +102,4 @@ export async function printDeploymentStatus(
   }
 
   return 0;
-}
-
-function suggestNextCommands(commands: string[]) {
-  output.print(
-    chalk.dim(
-      [
-        `Common next commands:`,
-        ...commands.map(command => `- ${command}`),
-      ].join('\n')
-    )
-  );
-  output.print('\n');
 }
