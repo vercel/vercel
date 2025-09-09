@@ -4,6 +4,7 @@ import { join, basename } from 'path';
 import type {
   ProjectLinkResult,
   ProjectSettings,
+  Org,
 } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -17,10 +18,8 @@ import type Client from '../client';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
-  connectGitProvider,
-  formatProvider,
-  parseRepoUrl,
-  selectRemoteUrl,
+  selectAndParseRemoteUrl,
+  checkExistsAndConnect,
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
@@ -247,7 +246,7 @@ export default async function setupAndLink(
       successEmoji
     );
 
-    await connectGitRepository(client, path, project, autoConfirm);
+    await connectGitRepository(client, path, project, autoConfirm, org);
 
     return { status: 'linked', org, project };
   } catch (err) {
@@ -265,7 +264,8 @@ export async function connectGitRepository(
   client: Client,
   path: string,
   project: { id: string; link?: any },
-  autoConfirm: boolean
+  autoConfirm: boolean,
+  org: Org
 ): Promise<void> {
   try {
     const gitConfig = await parseGitConfig(join(path, '.git/config'));
@@ -279,55 +279,33 @@ export async function connectGitRepository(
       return;
     }
 
-    let remoteUrl: string;
-    if (Object.keys(remoteUrls).length > 1) {
-      remoteUrl = await selectRemoteUrl(client, remoteUrls);
-      if (remoteUrl === '') {
-        // User canceled selection
-        return;
-      }
-    } else {
-      // If only one is found, get it — usually "origin"
-      remoteUrl = Object.values(remoteUrls)[0];
-    }
+    const shouldConnect =
+      autoConfirm ||
+      (await client.input.confirm(
+        `Detected a repository. Connect it to this project?`,
+        true
+      ));
 
-    if (!remoteUrl) {
+    if (!shouldConnect) {
       return;
     }
 
-    const repoInfo = parseRepoUrl(remoteUrl);
+    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
     if (!repoInfo) {
       return;
     }
 
-    const { provider, org: gitOrg, repo } = repoInfo;
-    const repoPath = `${gitOrg}/${repo}`;
-
-    const shouldConnect =
-      autoConfirm ||
-      (await client.input.confirm(
-        `Detected a ${formatProvider(provider)} repository. Connect it to this project?`,
-        true
-      ));
-
-    if (shouldConnect) {
-      output.log(
-        `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(repoPath)}`
-      );
-
-      const result = await connectGitProvider(
-        client,
-        project.id,
-        provider,
-        repoPath
-      );
-
-      if (typeof result !== 'number') {
-        output.log(
-          `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
-        );
-      }
-    }
+    await checkExistsAndConnect({
+      client,
+      confirm: autoConfirm,
+      gitProviderLink: project.link,
+      org,
+      gitOrg: repoInfo.org,
+      project: project as any, // Type assertion since we only need the id
+      provider: repoInfo.provider,
+      repo: repoInfo.repo,
+      repoPath: `${repoInfo.org}/${repoInfo.repo}`,
+    });
   } catch (error) {
     // Silently ignore git connection errors to not disrupt the main flow
     output.debug(`Failed to connect git repository: ${error}`);

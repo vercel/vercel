@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import {
+  parseRepoUrl,
+  selectAndParseRemoteUrl,
+} from '../../../../src/util/git/connect-git-provider';
+import { client } from '../../../mocks/client';
 
 describe('parseRepoUrl()', () => {
   it('should parse GitHub HTTPS URL', () => {
@@ -56,5 +60,88 @@ describe('parseRepoUrl()', () => {
     expect(parseRepoUrl('')).toBeNull();
     expect(parseRepoUrl('not-a-url')).toBeNull();
     expect(parseRepoUrl('https://example.com')).toBeNull();
+  });
+});
+
+// Mock the selectRemoteUrl function for testing selectAndParseRemoteUrl
+vi.mock('../../../../src/util/input/list', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('../../../../src/output-manager', () => ({
+  default: {
+    log: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+describe('selectAndParseRemoteUrl()', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle single remote URL automatically', async () => {
+    const remoteUrls = { origin: 'https://github.com/user/repo.git' };
+
+    const result = await selectAndParseRemoteUrl(client, remoteUrls);
+
+    expect(result).toEqual({
+      url: 'https://github.com/user/repo.git',
+      provider: 'github',
+      org: 'user',
+      repo: 'repo',
+    });
+  });
+
+  it('should show "Found multiple remote URLs" message for multiple remotes', async () => {
+    const { default: list } = await import('../../../../src/util/input/list');
+    const output = await import('../../../../src/output-manager');
+
+    const remoteUrls = {
+      origin: 'https://github.com/user/repo.git',
+      upstream: 'https://github.com/vercel/repo.git',
+    };
+
+    vi.mocked(list).mockResolvedValue('https://github.com/user/repo.git');
+
+    const result = await selectAndParseRemoteUrl(client, remoteUrls);
+
+    expect(output.default.log).toHaveBeenCalledWith(
+      'Found multiple remote URLs.'
+    );
+    expect(result).toEqual({
+      url: 'https://github.com/user/repo.git',
+      provider: 'github',
+      org: 'user',
+      repo: 'repo',
+    });
+  });
+
+  it('should return null when user cancels selection', async () => {
+    const { default: list } = await import('../../../../src/util/input/list');
+    const output = await import('../../../../src/output-manager');
+
+    const remoteUrls = {
+      origin: 'https://github.com/user/repo.git',
+      upstream: 'https://github.com/vercel/repo.git',
+    };
+
+    vi.mocked(list).mockResolvedValue(''); // User canceled
+
+    const result = await selectAndParseRemoteUrl(client, remoteUrls);
+
+    expect(output.default.log).toHaveBeenCalledWith(
+      'Found multiple remote URLs.'
+    );
+    expect(output.default.log).toHaveBeenCalledWith('Canceled');
+    expect(result).toBeNull();
+  });
+
+  it('should return null for invalid URLs', async () => {
+    const remoteUrls = { origin: 'invalid-url' };
+
+    const result = await selectAndParseRemoteUrl(client, remoteUrls);
+
+    expect(result).toBeNull();
   });
 });
