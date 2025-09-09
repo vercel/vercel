@@ -17,8 +17,12 @@ import {
   isOAuthError,
 } from '../../util/oauth';
 import o from '../../output-manager';
+import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
-export async function login(client: Client): Promise<number> {
+export async function login(
+  client: Client,
+  telemetry: LoginTelemetryClient
+): Promise<number> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(
@@ -30,6 +34,7 @@ export async function login(client: Client): Promise<number> {
 
   if (deviceAuthorizationError) {
     printError(deviceAuthorizationError);
+    telemetry.trackState('error');
     return 1;
   }
 
@@ -48,7 +53,10 @@ export async function login(client: Client): Promise<number> {
       output: process.stdout,
     })
     // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
-    .on('SIGINT', () => process.exit(0));
+    .on('SIGINT', () => {
+      telemetry.trackState('canceled');
+      process.exit(0);
+    });
 
   rl.question(
     `
@@ -164,8 +172,12 @@ export async function login(client: Client): Promise<number> {
   o.stopSpinner();
   rl.close();
 
-  if (!error) return 0;
+  if (!error) {
+    telemetry.trackState('success');
+    return 0;
+  }
 
   printError(error);
+  telemetry.trackState('error');
   return 1;
 }
