@@ -816,7 +816,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // top level "error" also contains the same error
@@ -826,7 +826,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // `config.json` contains `version`
@@ -1024,7 +1024,7 @@ describe.skipIf(flakey)('build', () => {
       VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.cjs`,
       VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
       VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
-      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
+      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '22.x',
     });
   });
 

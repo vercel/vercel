@@ -100,6 +100,7 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -1549,6 +1550,7 @@ export const build: BuildV2 = async buildOptions => {
         isAppClientSegmentCacheEnabled,
         isAppClientParamParsingEnabled,
         clientParamParsingOrigins,
+        files,
       });
     }
 
@@ -1993,6 +1995,7 @@ export const build: BuildV2 = async buildOptions => {
             memory?: number;
             maxDuration?: number;
             experimentalTriggers?: TriggerEvent[];
+            supportsCancellation?: boolean;
           } = {};
 
           if (config && config.functions) {
@@ -2310,6 +2313,7 @@ export const build: BuildV2 = async buildOptions => {
       isAppPPREnabled: false,
       isAppClientSegmentCacheEnabled: false,
       isAppClientParamParsingEnabled: false,
+      appPathnameFilesMap: getAppRouterPathnameFilesMap(files),
     });
 
     await Promise.all(

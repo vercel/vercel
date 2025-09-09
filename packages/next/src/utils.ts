@@ -52,6 +52,10 @@ import {
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
+import {
+  getContentTypeFromFile,
+  getSourceFileRefOfStaticMetadata,
+} from './metadata';
 
 type stringMap = { [key: string]: string };
 
@@ -1749,6 +1753,12 @@ async function getSourceFilePathFromPage({
   if (page === '/_not-found/page') {
     return '';
   }
+  // if we got here, and didn't find a source global-error file, then it was the one injected
+  // by Next.js for App Router 500 page. There's no need to warn or return a source file in this case, as it won't have
+  // any configuration applied to it.
+  if (page === '/_global-error/page') {
+    return '';
+  }
 
   // Skip warning for internal pages (_app.js, _error.js, _document.js)
   if (!INTERNAL_PAGES.includes(page)) {
@@ -1809,6 +1819,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1878,6 +1889,7 @@ export async function getPageLambdaGroups({
       memory?: number;
       maxDuration?: number;
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
+      supportsCancellation?: boolean;
     } = {};
 
     if (
@@ -1947,7 +1959,8 @@ export async function getPageLambdaGroups({
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
-              JSON.stringify(opts.experimentalTriggers);
+              JSON.stringify(opts.experimentalTriggers) &&
+            group.supportsCancellation === opts.supportsCancellation;
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -1987,6 +2000,7 @@ export async function getPageLambdaGroups({
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         experimentalTriggers: opts.experimentalTriggers,
+        supportsCancellation: opts.supportsCancellation,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -2310,6 +2324,7 @@ type OnPrerenderRouteArgs = {
   isAppPPREnabled: boolean;
   isAppClientSegmentCacheEnabled: boolean;
   isAppClientParamParsingEnabled: boolean;
+  appPathnameFilesMap: Map<string, FileFsRef>;
 };
 let prerenderGroup = 1;
 
@@ -2349,6 +2364,7 @@ export const onPrerenderRoute =
       isAppPPREnabled,
       isAppClientSegmentCacheEnabled,
       isAppClientParamParsingEnabled,
+      appPathnameFilesMap,
     } = prerenderRouteArgs;
 
     if (isBlocking && isFallback) {
@@ -2916,37 +2932,53 @@ export const onPrerenderRoute =
         }
       }
 
-      prerenders[outputPathPage] = new Prerender({
-        expiration: initialRevalidate,
-        staleExpiration: initialExpire,
-        lambda,
-        allowQuery: htmlAllowQuery,
-        fallback: htmlFallbackFsRef,
-        group: prerenderGroup,
-        bypassToken: prerenderManifest.bypassToken,
-        experimentalBypassFor,
-        initialStatus,
-        initialHeaders,
-        sourcePath,
-        experimentalStreamingLambdaPath,
-        chain,
-        allowHeader,
+      // If this is a static metadata file that should output FileRef instead of Prerender
+      const staticMetadataFile = getSourceFileRefOfStaticMetadata(
+        routeKey,
+        appPathnameFilesMap
+      );
+      if (staticMetadataFile) {
+        const metadataFsRef = new FileFsRef({
+          fsPath: staticMetadataFile.fsPath,
+        });
+        const contentType = getContentTypeFromFile(staticMetadataFile);
+        if (contentType) {
+          metadataFsRef.contentType = contentType;
+        }
+        prerenders[outputPathPage] = metadataFsRef;
+      } else {
+        prerenders[outputPathPage] = new Prerender({
+          expiration: initialRevalidate,
+          staleExpiration: initialExpire,
+          lambda,
+          allowQuery: htmlAllowQuery,
+          fallback: htmlFallbackFsRef,
+          group: prerenderGroup,
+          bypassToken: prerenderManifest.bypassToken,
+          experimentalBypassFor,
+          initialStatus,
+          initialHeaders,
+          sourcePath,
+          experimentalStreamingLambdaPath,
+          chain,
+          allowHeader,
 
-        ...(isNotFound
-          ? {
-              initialStatus: 404,
-            }
-          : {}),
+          ...(isNotFound
+            ? {
+                initialStatus: 404,
+              }
+            : {}),
 
-        ...(rscEnabled
-          ? {
-              initialHeaders: {
-                ...initialHeaders,
-                vary: rscVaryHeader,
-              },
-            }
-          : {}),
-      });
+          ...(rscEnabled
+            ? {
+                initialHeaders: {
+                  ...initialHeaders,
+                  vary: rscVaryHeader,
+                },
+              }
+            : {}),
+        });
+      }
 
       const normalizePathData = (pathData: string) => {
         if (
@@ -3036,11 +3068,23 @@ export const onPrerenderRoute =
             rscContentTypeHeader
           )}`;
 
+          // If the application has client segment cache, client segment
+          // parsing, and ppr enabled, then we can use a blank allowQuery
+          // for the segment prerenders. This is because we know that the
+          // segments do not vary based on the route parameters. It's important
+          // that this mirrors the logic in the segment prerender below so that
+          // they are both part of the same prerender group and are revalidated
+          // together.
+          let rdcRSCAllowQuery = allowQuery;
+          if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
+            rdcRSCAllowQuery = [];
+          }
+
           prerenders[normalizePathData(outputPathData)] = new Prerender({
             expiration: initialRevalidate,
             staleExpiration: initialExpire,
             lambda,
-            allowQuery,
+            allowQuery: rdcRSCAllowQuery,
             fallback: isFallback
               ? null
               : new FileBlob({
@@ -3283,18 +3327,18 @@ export async function getStaticFiles(
   const publicDirectoryFiles: Record<string, FileFsRef> = {};
 
   for (const file of Object.keys(nextStaticFiles)) {
-    staticFiles[path.posix.join(entryDirectory, `_next/static/${file}`)] =
-      nextStaticFiles[file];
+    const outputPath = path.posix.join(entryDirectory, `_next/static/${file}`);
+    staticFiles[outputPath] = nextStaticFiles[file];
   }
 
   for (const file of Object.keys(staticFolderFiles)) {
-    staticDirectoryFiles[path.posix.join(entryDirectory, 'static', file)] =
-      staticFolderFiles[file];
+    const outputPath = path.posix.join(entryDirectory, 'static', file);
+    staticDirectoryFiles[outputPath] = staticFolderFiles[file];
   }
 
   for (const file of Object.keys(publicFolderFiles)) {
-    publicDirectoryFiles[path.posix.join(entryDirectory, file)] =
-      publicFolderFiles[file];
+    const outputPath = path.posix.join(entryDirectory, file);
+    publicDirectoryFiles[outputPath] = publicFolderFiles[file];
   }
 
   console.timeEnd(collectLabel);
