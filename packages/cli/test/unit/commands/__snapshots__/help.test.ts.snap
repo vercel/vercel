@@ -753,6 +753,13 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 nothing 
                                 has     
                                 changed 
+       --guidance               Receive 
+                                command 
+                                suggest…
+                                once    
+                                deploym…
+                                is      
+                                complete
   -l,  --logs                   Print   
                                 the     
                                 build   
@@ -921,6 +928,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
                                 changed                                         
+       --guidance               Receive command suggestions once deployment is  
+                                complete                                        
   -l,  --logs                   Print the build logs                            
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m   
                                 KEY1=value1 -m KEY2=value2\`)                    
@@ -993,6 +1002,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
+       --guidance               Receive command suggestions once deployment is complete                                 
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
@@ -1786,6 +1796,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
   Options:
 
    --force      Force overwrites when a command would normally fail                                                      
+   --guidance   Receive command suggestions once command is complete                                                     
    --sensitive  Add a sensitive Environment Variable                                                                     
 
 
@@ -1992,9 +2003,14 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
 exports[`help command > env help output snapshots > env list help output snapshots > env list help column width 120 1`] = `
 "
-  ▲ vercel env list [environment] [git-branch]
+  ▲ vercel env list [environment] [git-branch] [options]
 
   List all Environment Variables for a Project                                                                          
+
+  Options:
+
+   --guidance  Receive command suggestions once command is complete                                                      
+
 
   Global Options:
 
