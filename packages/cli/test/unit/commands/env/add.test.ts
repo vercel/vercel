@@ -53,25 +53,6 @@ describe('env add', () => {
     });
   });
 
-  describe('--guidance', () => {
-    it('tracks telemetry', async () => {
-      const command = 'env';
-      const subcommand = 'add';
-
-      client.setArgv(command, subcommand, '--guidance');
-      const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: `subcommand:add`,
-          value: 'add',
-        },
-        { key: 'flag:guidance', value: `TRUE` },
-      ]);
-    });
-  });
-
   describe('[name]', () => {
     describe('--sensitive', () => {
       it('tracks flag', async () => {
@@ -148,6 +129,51 @@ describe('env add', () => {
           },
           {
             key: `flag:force`,
+            value: 'TRUE',
+          },
+        ]);
+      });
+    });
+
+    describe('--guidance', () => {
+      it('tracks telemetry', async () => {
+        client.setArgv(
+          'env',
+          'add',
+          'FORCE_FLAG',
+          'preview',
+          'branchName',
+          '--force',
+          '--guidance'
+        );
+        const exitCodePromise = env(client);
+        await expect(client.stderr).toOutput("What's the value of FORCE_FLAG?");
+        client.stdin.write('testvalue\n');
+        await expect(exitCodePromise).resolves.toBe(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: `subcommand:add`,
+            value: 'add',
+          },
+          {
+            key: `argument:name`,
+            value: '[REDACTED]',
+          },
+          {
+            key: `argument:environment`,
+            value: 'preview',
+          },
+          {
+            key: `argument:git-branch`,
+            value: '[REDACTED]',
+          },
+          {
+            key: `flag:force`,
+            value: 'TRUE',
+          },
+          {
+            key: `flag:guidance`,
             value: 'TRUE',
           },
         ]);
