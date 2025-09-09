@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "2.7.22",
+  "version": "2.7.23",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -37,8 +37,8 @@
     "@types/semver": "7.3.13",
     "@vercel/build-utils": "12.1.0",
     "@vercel/error-utils": "2.0.3",
-    "@vercel/frameworks": "3.8.3",
-    "@vercel/fs-detectors": "5.5.1",
+    "@vercel/frameworks": "3.8.4",
+    "@vercel/fs-detectors": "5.5.2",
     "@vercel/routing-utils": "5.1.1",
     "execa": "3.2.0",
     "fs-extra": "10.0.0",
