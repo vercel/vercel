@@ -22,6 +22,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
+import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
 import purchaseDomainIfAvailable from '../../util/domains/purchase-domain-if-available';
 import { emoji, prependEmoji } from '../../util/emoji';
@@ -706,6 +707,8 @@ export default async (client: Client): Promise<number> => {
     printError(err);
     return 1;
   }
+
+  return printDeploymentStatus(deployment, deployStamp, noWait);
 };
 
 function handleCreateDeployError(error: Error, localConfig: VercelConfig) {
