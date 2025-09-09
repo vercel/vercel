@@ -76,7 +76,8 @@ export function isOAuthAuth(
 }
 
 export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
-  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= Date.now();
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= nowInSeconds;
 }
 
 export function hasRefreshToken(
