@@ -31,7 +31,6 @@ import type {
   Stdio,
   ReadableTTY,
   PaginationOptions,
-  OAuthAuthConfig,
 } from '@vercel-internals/types';
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
@@ -69,20 +68,14 @@ export const isJSONObject = (v: any): v is JSONObject => {
   return v && typeof v == 'object' && v.constructor === Object;
 };
 
-export function isOAuthAuth(
-  authConfig: AuthConfig
-): authConfig is OAuthAuthConfig {
-  return authConfig.type === 'oauth';
-}
-
-export function isValidAccessToken(authConfig: OAuthAuthConfig): boolean {
+export function isValidAccessToken(authConfig: AuthConfig): boolean {
   const nowInSeconds = Math.floor(Date.now() / 1000);
   return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= nowInSeconds;
 }
 
 export function hasRefreshToken(
-  authConfig: OAuthAuthConfig
-): authConfig is OAuthAuthConfig & { refreshToken: string } {
+  authConfig: AuthConfig
+): authConfig is AuthConfig & { refreshToken: string } {
   return 'refreshToken' in authConfig;
 }
 
@@ -159,8 +152,6 @@ export default class Client extends EventEmitter implements Stdio {
    * If there is any error during the refresh process, it will not throw an error.
    */
   private async ensureAuthorized(): Promise<void> {
-    if (!isOAuthAuth(this.authConfig)) return;
-
     const { authConfig } = this;
 
     // If we have a valid access token, do nothing
@@ -194,7 +185,6 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     this.updateAuthConfig({
-      type: 'oauth',
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     });
@@ -360,11 +350,6 @@ export default class Client extends EventEmitter implements Stdio {
         );
       }
       throw error;
-    }
-
-    if (this.authConfig.type !== 'oauth') {
-      this.authConfig.token = result.token;
-      writeToAuthConfigFile(this.authConfig);
     }
   });
 

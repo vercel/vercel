@@ -192,7 +192,6 @@ export default async function login(client: Client): Promise<number> {
 
       client.updateAuthConfig({
         token: tokens.access_token,
-        type: 'oauth',
         expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
         refreshToken: tokens.refresh_token,
       });
