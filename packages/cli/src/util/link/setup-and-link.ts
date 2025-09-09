@@ -15,6 +15,12 @@ import {
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
+import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import {
+  connectGitProvider,
+  formatProvider,
+  parseRepoUrl,
+} from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
@@ -240,6 +246,12 @@ export default async function setupAndLink(
       successEmoji
     );
 
+    // Check for git repository and offer to connect it
+    output.log(
+      'CODYTEST: Checking for git repository and offering to connect it'
+    );
+    await checkAndConnectGitRepository(client, path, project, autoConfirm);
+
     return { status: 'linked', org, project };
   } catch (err) {
     if (isAPIError(err) && err.code === 'too_many_projects') {
@@ -249,5 +261,69 @@ export default async function setupAndLink(
     printError(err);
 
     return { status: 'error', exitCode: 1 };
+  }
+}
+
+async function checkAndConnectGitRepository(
+  client: Client,
+  path: string,
+  project: { id: string; link?: any },
+  autoConfirm: boolean
+): Promise<void> {
+  try {
+    // get project from .git
+    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+
+    if (!gitConfig) {
+      return;
+    }
+
+    const remoteUrls = pluckRemoteUrls(gitConfig);
+    if (!remoteUrls || Object.keys(remoteUrls).length !== 1) {
+      // Users with multiple remote urls can use `vercel git connect`
+      return;
+    }
+
+    const remoteUrl = Object.values(remoteUrls)[0];
+    if (!remoteUrl) {
+      return;
+    }
+
+    const repoInfo = parseRepoUrl(remoteUrl);
+    if (!repoInfo) {
+      return;
+    }
+
+    const { provider, org: gitOrg, repo } = repoInfo;
+    const repoPath = `${gitOrg}/${repo}`;
+
+    const shouldConnect =
+      autoConfirm ||
+      (await client.input.confirm(
+        `Detected a ${formatProvider(provider)} repository. Connect it to this project?`,
+        true
+      ));
+
+    if (shouldConnect) {
+      output.log(
+        `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(repoPath)}`
+      );
+
+      const result = await connectGitProvider(
+        client,
+        project.id,
+        provider,
+        repoPath
+      );
+
+      if (typeof result !== 'number') {
+        output.log(
+          `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
+        );
+      }
+    }
+  } catch (error) {
+    // Silently ignore git connection errors to not disrupt the main flow
+    output.debug(`Failed to connect git repository: ${error}`);
   }
 }
