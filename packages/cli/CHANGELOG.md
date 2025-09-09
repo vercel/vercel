@@ -1,5 +1,11 @@
 # vercel
 
+## 47.1.0
+
+### Minor Changes
+
+- Add guidance flag for deploy and env commands ([#13900](https://github.com/vercel/vercel/pull/13900))
+
 ## 47.0.7
 
 ### Patch Changes
