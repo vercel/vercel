@@ -1796,6 +1796,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
   Options:
 
    --force      Force overwrites when a command would normally fail                                                      
+   --guidance   Receive command suggestions once command is complete                                                     
    --sensitive  Add a sensitive Environment Variable                                                                     
 
 
@@ -2002,9 +2003,14 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
 exports[`help command > env help output snapshots > env list help output snapshots > env list help column width 120 1`] = `
 "
-  ▲ vercel env list [environment] [git-branch]
+  ▲ vercel env list [environment] [git-branch] [options]
 
   List all Environment Variables for a Project                                                                          
+
+  Options:
+
+   --guidance  Receive command suggestions once command is complete                                                      
+
 
   Global Options:
 

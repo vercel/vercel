@@ -62,6 +62,24 @@ describe('env ls', () => {
     });
   });
 
+  describe('--guidance', () => {
+    it('tracks telemetry', async () => {
+      const command = 'env';
+      const subcommand = 'ls';
+
+      client.setArgv(command, subcommand, '--guidance');
+      const exitCodePromise = env(client);
+      await expect(exitCodePromise).resolves.toEqual(2);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:guidance',
+          value: `${command}:${subcommand}`,
+        },
+      ]);
+    });
+  });
+
   describe('[environment]', () => {
     it('tracks `environment` argument', async () => {
       client.setArgv('env', 'ls', 'production');

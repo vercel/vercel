@@ -18,7 +18,15 @@ export const listSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'guidance',
+      description: 'Receive command suggestions once command is complete',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+  ],
   examples: [],
 } as const;
 
@@ -48,6 +56,13 @@ export const addSubcommand = {
       ...forceOption,
       description: 'Force overwrites when a command would normally fail',
       shorthand: null,
+    },
+    {
+      name: 'guidance',
+      description: 'Receive command suggestions once command is complete',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
     },
   ],
   examples: [
