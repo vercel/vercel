@@ -246,11 +246,7 @@ export default async function setupAndLink(
       successEmoji
     );
 
-    // Check for git repository and offer to connect it
-    output.log(
-      'CODYTEST: Checking for git repository and offering to connect it'
-    );
-    await checkAndConnectGitRepository(client, path, project, autoConfirm);
+    await connectGitRepository(client, path, project, autoConfirm);
 
     return { status: 'linked', org, project };
   } catch (err) {
@@ -264,7 +260,7 @@ export default async function setupAndLink(
   }
 }
 
-async function checkAndConnectGitRepository(
+export async function connectGitRepository(
   client: Client,
   path: string,
   project: { id: string; link?: any },
@@ -279,12 +275,24 @@ async function checkAndConnectGitRepository(
     }
 
     const remoteUrls = pluckRemoteUrls(gitConfig);
-    if (!remoteUrls || Object.keys(remoteUrls).length !== 1) {
-      // Users with multiple remote urls can use `vercel git connect`
+    if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
       return;
     }
 
-    const remoteUrl = Object.values(remoteUrls)[0];
+    let remoteUrl: string;
+    if (Object.keys(remoteUrls).length > 1) {
+      // Import selectRemoteUrl at runtime to avoid circular dependency
+      const { selectRemoteUrl } = await import('../git/connect-git-provider');
+      remoteUrl = await selectRemoteUrl(client, remoteUrls);
+      if (remoteUrl === '') {
+        // User canceled selection
+        return;
+      }
+    } else {
+      // If only one is found, get it — usually "origin"
+      remoteUrl = Object.values(remoteUrls)[0];
+    }
+
     if (!remoteUrl) {
       return;
     }

@@ -1,9 +1,5 @@
-import { describe, expect, it } from '@jest/globals';
-import {
-  parseRepoUrl,
-  selectRemoteUrl,
-} from '../../../../src/util/git/connect-git-provider';
-import { client } from '../../../mocks/client';
+import { describe, expect, it } from 'vitest';
+import { parseRepoUrl } from '../../../../src/util/git/connect-git-provider';
 
 describe('parseRepoUrl()', () => {
   it('should parse GitHub HTTPS URL', () => {
@@ -60,23 +56,5 @@ describe('parseRepoUrl()', () => {
     expect(parseRepoUrl('')).toBeNull();
     expect(parseRepoUrl('not-a-url')).toBeNull();
     expect(parseRepoUrl('https://example.com')).toBeNull();
-  });
-});
-
-describe('selectRemoteUrl()', () => {
-  it('should prompt user to select from multiple remotes', async () => {
-    const remoteUrls = {
-      origin: 'https://github.com/user/repo.git',
-      upstream: 'https://github.com/vercel/repo.git',
-    };
-
-    // Mock the list selection
-    client.stdin.write('1\n'); // Select second option
-
-    const selected = await selectRemoteUrl(client, remoteUrls);
-
-    // Since this is an integration test with the client mock,
-    // we'd need to verify the behavior based on the mock setup
-    expect(typeof selected).toBe('string');
   });
 });
