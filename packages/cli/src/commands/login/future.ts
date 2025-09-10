@@ -54,7 +54,10 @@ export async function login(
       output: process.stdout,
     })
     // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
-    .on('SIGINT', () => process.exit(0));
+    .on('SIGINT', () => {
+      telemetry.trackState('canceled');
+      process.exit(0);
+    });
 
   rl.question(
     `
