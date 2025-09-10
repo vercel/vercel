@@ -1995,6 +1995,7 @@ export const build: BuildV2 = async buildOptions => {
             memory?: number;
             maxDuration?: number;
             experimentalTriggers?: TriggerEvent[];
+            supportsCancellation?: boolean;
           } = {};
 
           if (config && config.functions) {

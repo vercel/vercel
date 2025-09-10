@@ -1819,6 +1819,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1888,6 +1889,7 @@ export async function getPageLambdaGroups({
       memory?: number;
       maxDuration?: number;
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
+      supportsCancellation?: boolean;
     } = {};
 
     if (
@@ -1957,7 +1959,8 @@ export async function getPageLambdaGroups({
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
-              JSON.stringify(opts.experimentalTriggers);
+              JSON.stringify(opts.experimentalTriggers) &&
+            group.supportsCancellation === opts.supportsCancellation;
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -1997,6 +2000,7 @@ export async function getPageLambdaGroups({
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         experimentalTriggers: opts.experimentalTriggers,
+        supportsCancellation: opts.supportsCancellation,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -3064,11 +3068,23 @@ export const onPrerenderRoute =
             rscContentTypeHeader
           )}`;
 
+          // If the application has client segment cache, client segment
+          // parsing, and ppr enabled, then we can use a blank allowQuery
+          // for the segment prerenders. This is because we know that the
+          // segments do not vary based on the route parameters. It's important
+          // that this mirrors the logic in the segment prerender below so that
+          // they are both part of the same prerender group and are revalidated
+          // together.
+          let rdcRSCAllowQuery = allowQuery;
+          if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
+            rdcRSCAllowQuery = [];
+          }
+
           prerenders[normalizePathData(outputPathData)] = new Prerender({
             expiration: initialRevalidate,
             staleExpiration: initialExpire,
             lambda,
-            allowQuery,
+            allowQuery: rdcRSCAllowQuery,
             fallback: isFallback
               ? null
               : new FileBlob({

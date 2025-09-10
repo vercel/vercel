@@ -1,5 +1,25 @@
 # @vercel/next
 
+## 4.12.4
+
+### Patch Changes
+
+- Skip adding rewrite headers when the destination has no rewritten pathname or query (and when external origin is not allowed). This prevents generating an empty `rewrite.headers` object that fails schema validation and restores previous behavior for external or no-op rewrites. ([#13844](https://github.com/vercel/vercel/pull/13844))
+
+## 4.12.3
+
+### Patch Changes
+
+- Add emitting supportsCancellation ([#13841](https://github.com/vercel/vercel/pull/13841))
+
+## 4.12.2
+
+### Patch Changes
+
+- Optimize segment prerender with blank allowQuery for client parsing ([#13838](https://github.com/vercel/vercel/pull/13838))
+
+  When client segment cache, parsing, and PPR are enabled, use empty allowQuery for segment prerenders since segments don't vary based on route parameters. This ensures both RSC and segment prerenders are in the same group and revalidated together, improving cache efficiency.
+
 ## 4.12.1
 
 ### Patch Changes

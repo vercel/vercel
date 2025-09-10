@@ -1,5 +1,45 @@
 # @vercel/node
 
+## 5.3.21
+
+### Patch Changes
+
+- Add support for public asset folder for Express preset ([#13879](https://github.com/vercel/vercel/pull/13879))
+
+## 5.3.20
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f)]:
+  - @vercel/build-utils@12.1.0
+
+## 5.3.19
+
+### Patch Changes
+
+- Always compile `.mts` to ESM ([#13693](https://github.com/vercel/vercel/pull/13693))
+
+## 5.3.18
+
+### Patch Changes
+
+- Updated dependencies [[`d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e`](https://github.com/vercel/vercel/commit/d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e)]:
+  - @vercel/build-utils@12.0.0
+
+## 5.3.17
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- Add support for http listener when it's not default exported ([#13826](https://github.com/vercel/vercel/pull/13826))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13840](https://github.com/vercel/vercel/pull/13840))
+
 ## 5.3.16
 
 ### Patch Changes

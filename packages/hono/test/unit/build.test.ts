@@ -102,7 +102,7 @@ const fixtures = {
   },
   '10-index-ts-no-tsconfig': {
     handler: ['index.js'],
-    moduleType: 'cjs',
+    moduleType: 'esm',
   },
   '11-index-ts-tsconfig-node': {
     handler: ['index.js'],
@@ -112,8 +112,16 @@ const fixtures = {
     handler: ['index.mjs'],
     moduleType: 'esm',
   },
+  '13-index-mts-no-tsconfig-node-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
   '13-app-js-no-module': {
     handler: ['app.js'],
+    moduleType: 'cjs',
+  },
+  '14-index-cts-no-tsconfig-node-module': {
+    handler: ['index.cjs'],
     moduleType: 'cjs',
   },
 };
