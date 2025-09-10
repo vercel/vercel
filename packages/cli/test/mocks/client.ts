@@ -233,6 +233,7 @@ export class MockClient extends Client {
     this.argv = [];
     this.authConfig = {
       token: 'token_dummy',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
     };
     this.config = {};
     this.localConfig = {};
