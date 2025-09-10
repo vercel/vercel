@@ -127,12 +127,14 @@ export const build: BuildV3 = async ({
     let discovered: string | undefined;
 
     if (config?.framework === 'fastapi') {
-      const existing = fastapiCandidateEntrypoints.filter(c => !!fsFiles[c]);
-      if (existing.length) {
-        const fastapiPreferred = existing.find(c =>
+      const entrypointCandidates = fastapiCandidateEntrypoints.filter(
+        c => !!fsFiles[c]
+      );
+      if (entrypointCandidates.length) {
+        const fastapiEntrypoint = entrypointCandidates.find(c =>
           isFastapiEntrypoint(fsFiles[c] as FileFsRef)
         );
-        discovered = fastapiPreferred || existing[0];
+        discovered = fastapiEntrypoint || entrypointCandidates[0];
       }
     }
 
