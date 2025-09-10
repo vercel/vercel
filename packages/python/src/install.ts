@@ -69,6 +69,7 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   const cmdArgs = [
     'install',
     '--disable-pip-version-check',
+    '--no-compile',
     '--target',
     target,
     ...args,

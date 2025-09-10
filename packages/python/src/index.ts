@@ -201,6 +201,9 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
+    '**/.venv/**',
+    '**/venv/**',
+    '**/__pycache__/**',
   ];
 
   const globOptions: GlobOptions = {
