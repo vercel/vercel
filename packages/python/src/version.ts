@@ -1,5 +1,6 @@
 import { NowBuildError } from '@vercel/build-utils';
-import which from 'which';
+import * as which from 'which';
+import { compareMajorMinor } from './utils';
 
 interface PythonVersion {
   version: string;
@@ -76,26 +77,56 @@ export function getLatestPythonVersion({
 
 export function getSupportedPythonVersion({
   isDev,
-  pipLockPythonVersion,
+  constraint,
+  source,
 }: {
   isDev?: boolean;
-  pipLockPythonVersion: string | undefined;
+  constraint?: string;
+  source?: string;
 }): PythonVersion {
   if (isDev) {
     return getDevPythonVersion();
   }
 
   let selection = getLatestPythonVersion({ isDev: false });
+  const origin = source ? ` detected in ${source}` : '';
 
-  if (typeof pipLockPythonVersion === 'string') {
-    const found = allOptions.find(
-      o => o.version === pipLockPythonVersion && isInstalled(o)
+  if (typeof constraint === 'string') {
+    // Select the highest installed version that satisfies a simple prefix or >= constraint
+    // Accept forms like ">=3.10", "^3.11", "~3.10", "3.11.*", "3.11", "==3.11"
+    const r = constraint.trim();
+    const satisfies = (ver: string) => {
+      if (!r) return true;
+      if (r.startsWith('>=')) {
+        const min = r.slice(2).trim();
+        return compareMajorMinor(ver, min) >= 0;
+      }
+      if (r.startsWith('==')) {
+        const eq = r.slice(2).trim();
+        return ver === eq || ver.startsWith(eq + '.');
+      }
+      if (r.startsWith('^') || r.startsWith('~')) {
+        const base = r.slice(1).trim();
+        return ver.startsWith(base + '.') || ver === base;
+      }
+      if (r.endsWith('.*')) {
+        const base = r.slice(0, -2);
+        return ver.startsWith(base + '.') || ver === base;
+      }
+      // Plain "3.11" means that major.minor must match
+      if (/^\d+\.\d+$/.test(r)) {
+        return ver.startsWith(r + '.') || ver === r;
+      }
+      return false;
+    };
+    const candidate = allOptions.find(
+      o => isInstalled(o) && satisfies(o.version)
     );
-    if (found) {
-      selection = found;
+    if (candidate) {
+      selection = candidate;
     } else {
       console.warn(
-        `Warning: Python version "${pipLockPythonVersion}" detected in Pipfile.lock is invalid and will be ignored. http://vercel.link/python-version`
+        `Python version "${r}"${origin} is invalid and will be ignored.`
       );
     }
   }
@@ -104,14 +135,14 @@ export function getSupportedPythonVersion({
     throw new NowBuildError({
       code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
       link: 'http://vercel.link/python-version',
-      message: `Python version "${selection.version}" detected in Pipfile.lock is discontinued and must be upgraded.`,
+      message: `Python version "${selection.version}"${origin} is discontinued and must be upgraded.`,
     });
   }
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
     console.warn(
-      `Error: Python version "${selection.version}" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
+      `Error: Python version "${selection.version}"${origin} has reached End-of-Life. Deployments created on or after ${d} will fail to build. http://vercel.link/python-version`
     );
   }
 
