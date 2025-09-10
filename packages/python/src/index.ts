@@ -15,6 +15,7 @@ import {
   type GlobOptions,
   type BuildV3,
   type Files,
+  FileFsRef,
 } from '@vercel/build-utils';
 import {
   installRequirement,
@@ -25,6 +26,26 @@ import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+
+const fastapiEntrypointFilenames = ['app', 'index', 'server', 'main'];
+const fastapiEntrypointDirs = ['', 'src', 'app'];
+const fastapiContentRegex =
+  /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
+
+const fastapiCandidateEntrypoints = fastapiEntrypointFilenames.flatMap(
+  filename => fastapiEntrypointDirs.map(dir => `${dir}/${filename}.py`)
+);
+
+function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
+  try {
+    const fsPath = (file as FileFsRef).fsPath;
+    if (!fsPath) return false;
+    const contents = fs.readFileSync(fsPath, 'utf8');
+    return fastapiContentRegex.test(contents);
+  } catch {
+    return false;
+  }
+}
 
 async function pipenvConvert(
   cmd: string,
@@ -100,6 +121,29 @@ export const build: BuildV3 = async ({
   }
 
   let fsFiles = await glob('**', workPath);
+
+  // Zero-config entrypoint discovery
+  if (!fsFiles[entrypoint]) {
+    let discovered: string | undefined;
+
+    if (config?.framework === 'fastapi') {
+      const existing = fastapiCandidateEntrypoints.filter(c => !!fsFiles[c]);
+      if (existing.length) {
+        const fastapiPreferred = existing.find(c =>
+          isFastapiEntrypoint(fsFiles[c] as FileFsRef)
+        );
+        discovered = fastapiPreferred || existing[0];
+      }
+    }
+
+    if (discovered) {
+      debug(
+        `Resolved Python entrypoint to "${discovered}" (configured "${entrypoint}" not found).`
+      );
+      entrypoint = discovered;
+    }
+  }
+
   const entryDirectory = dirname(entrypoint);
 
   const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
