@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.22
+
+### Patch Changes
+
+- Revert change to module resolution which slowed down Typescript builds for functions ([#13897](https://github.com/vercel/vercel/pull/13897))
+
 ## 5.3.21
 
 ### Patch Changes
