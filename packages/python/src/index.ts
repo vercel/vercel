@@ -15,12 +15,42 @@ import {
   type GlobOptions,
   type BuildV3,
   type Files,
+  type FileFsRef,
 } from '@vercel/build-utils';
 import { installRequirement, installRequirementsFile } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+
+// Detect common Python app entrypoints similar to Express' discovery.
+// Order matters; first match wins if multiple are present.
+const PY_VALID_BASENAMES = ['app', 'index', 'server', 'main'];
+const PY_VALID_DIRS = ['', 'src', 'app'];
+const FASTAPI_CONTENT_REGEX =
+  /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
+
+function buildCandidateEntrypoints(): string[] {
+  const candidates: string[] = [];
+  for (const dir of PY_VALID_DIRS) {
+    for (const base of PY_VALID_BASENAMES) {
+      const filename = `${base}.py`;
+      candidates.push(dir ? join(dir, filename) : filename);
+    }
+  }
+  return candidates;
+}
+
+function isFastApiFile(file: FileFsRef | { fsPath?: string }): boolean {
+  try {
+    const fsPath = (file as FileFsRef).fsPath;
+    if (!fsPath) return false;
+    const contents = fs.readFileSync(fsPath, 'utf8');
+    return FASTAPI_CONTENT_REGEX.test(contents);
+  } catch {
+    return false;
+  }
+}
 
 async function pipenvConvert(cmd: string, srcDir: string) {
   debug('Running pipfile2req...');
@@ -66,6 +96,8 @@ export const build: BuildV3 = async ({
 }) => {
   let pythonVersion = getLatestPythonVersion(meta);
 
+  console.log('ENTRYPOINT', entrypoint); // TODO: remove
+
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -102,6 +134,41 @@ export const build: BuildV3 = async ({
   });
 
   let fsFiles = await glob('**', workPath);
+
+  // Zero-config entrypoint discovery (similar to Express) for Python frameworks.
+  // If the configured entrypoint doesn't exist, try common candidates.
+  if (!fsFiles[entrypoint]) {
+    console.log('ENTRYPOINT NOT FOUND', entrypoint); // TODO: remove
+    const candidates = buildCandidateEntrypoints();
+    const existing = candidates.filter(c => !!fsFiles[c]);
+    let discovered: string | undefined;
+
+    if (existing.length) {
+      if (config?.framework === 'fastapi') {
+        const fastapiPreferred = existing.find(c =>
+          isFastApiFile(fsFiles[c] as FileFsRef)
+        );
+        discovered = fastapiPreferred || existing[0];
+      } else {
+        discovered = existing[0];
+      }
+    }
+
+    if (discovered) {
+      console.log('DISCOVERED', discovered); // TODO: remove
+      debug(
+        `Resolved Python entrypoint to "${discovered}" (configured "${entrypoint}" not found).`
+      );
+      entrypoint = discovered;
+    } else if (config?.framework === 'fastapi') {
+      throw new NowBuildError({
+        code: 'MISSING_FASTAPI_ENTRYPOINT',
+        message:
+          'No Python entrypoint found. Expected one of: app.py, index.py, server.py, main.py (optionally under src/ or app/).',
+      });
+    }
+  }
+
   const entryDirectory = dirname(entrypoint);
 
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
