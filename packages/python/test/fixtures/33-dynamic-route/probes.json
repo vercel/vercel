@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/api/123",
+    "mustContain": "Dynamic route handler for ID: 123"
+  },
+  {
+    "path": "/api/test-param",
+    "mustContain": "Dynamic route handler for ID: test-param"
+  },
+  {
+    "path": "/api/hello?name=world",
+    "mustContain": "Dynamic route handler for ID: hello"
+  }
+]
