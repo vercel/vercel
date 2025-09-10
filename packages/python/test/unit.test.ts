@@ -1,7 +1,7 @@
 import { getSupportedPythonVersion } from '../src/version';
 import { build } from '../src/index';
-import * as fs from 'fs-extra';
-import * as path from 'path';
+import fs from 'fs-extra';
+import path from 'path';
 import { tmpdir } from 'os';
 import { FileBlob } from '@vercel/build-utils';
 
