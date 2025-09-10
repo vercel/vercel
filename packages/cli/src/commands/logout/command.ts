@@ -5,15 +5,7 @@ export const logoutCommand = {
   aliases: [],
   description: 'Sign out the currently authenticated user.',
   arguments: [],
-  options: [
-    {
-      name: 'future',
-      description: 'Sign out by calling the Vercel OAuth Revocation Endpoint.',
-      shorthand: null,
-      type: Boolean,
-      deprecated: true,
-    },
-  ],
+  options: [],
   examples: [
     {
       name: 'Sign out the currently authenticated user.',

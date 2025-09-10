@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
@@ -32,30 +31,6 @@ export default async function logout(client: Client): Promise<number> {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
     return 0;
-  }
-
-  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
-    const flagKey = flag.replace('--', '');
-    const option = logoutCommand.options.find(o => o.name === flagKey);
-    if (!option || typeof option === 'number') return;
-    return 'deprecated' in option && option.deprecated;
-  });
-
-  if (obsoleteFlags.length) {
-    const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
-    output.warn(`The following flags are deprecated: ${flags}`);
-  }
-
-  const obsoleteArguments = parsedArgs.args.slice(1);
-  if (obsoleteArguments.length) {
-    const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
-    output.warn(`The following arguments are deprecated: ${args}`);
-  }
-
-  if (obsoleteArguments.length || obsoleteFlags.length) {
-    output.print(
-      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
-    );
   }
 
   return await future(client);
