@@ -1532,6 +1532,9 @@ importers:
       '@types/etag':
         specifier: 1.8.0
         version: 1.8.0
+      '@types/fs-extra':
+        specifier: 11.0.4
+        version: 11.0.4
       '@types/jest':
         specifier: 29.5.0
         version: 29.5.0
@@ -6911,6 +6914,13 @@ packages:
 
   /@types/fs-extra@11.0.2:
     resolution: {integrity: sha512-c0hrgAOVYr21EX8J0jBMXGLMgJqVf/v6yxi0dLaJboW9aQPh16Id+z6w2Tx1hm+piJOLv8xPfVKZCLfjPw/IMQ==}
+    dependencies:
+      '@types/jsonfile': 6.1.4
+      '@types/node': 22.5.0
+    dev: true
+
+  /@types/fs-extra@11.0.4:
+    resolution: {integrity: sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ==}
     dependencies:
       '@types/jsonfile': 6.1.4
       '@types/node': 22.5.0

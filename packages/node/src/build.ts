@@ -58,6 +58,8 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
+import { outputFile } from 'fs-extra';
+import { spawn } from 'child_process';
 
 interface DownloadOptions {
   files: Files;
@@ -770,6 +772,80 @@ async function rolldownCompile(
     'index.func',
     handler
   );
+  await outputFile(
+    join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func',
+      'node_modules',
+      'express',
+      'index.js'
+    ),
+    `'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const mod = require('../../../../../../node_modules/express/lib/express');
+
+const routesFile = path.join(__dirname, '..', '..', 'routes.json');
+const routes = [];
+
+const func2 = (...args) => {
+  const app = mod(...args);
+  const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
+
+  // Override each method to capture routes
+  for (const m of methods) {
+    const original = app[m].bind(app);
+    app[m] = (...args) => {
+      const route = args[0]; // First argument is the route path
+      if (route && typeof route === 'string') {
+        routes.push(route);
+        console.log('Captured route:', route);
+      }
+      return original(...args);
+    };
+  }
+
+  return app;
+}
+
+// Copy all properties from the original module to preserve functionality
+Object.setPrototypeOf(func2, mod);
+Object.assign(func2, mod);
+
+// Write routes to file on SIGTERM
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, writing routes:', routes);
+  fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
+  console.log('Routes written to file:', routesFile);
+  process.exit(0);
+});
+
+module.exports = func2
+  `
+  );
+
+  // Create a child process to capture routes
+  const child = spawn('node', [outPath], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: workPath,
+    env: { ...process.env, NODE_ENV: 'test' },
+  });
+
+  child.stderr.on('data', data => {
+    console.error(`stderr: ${data}`);
+  });
+
+  // Kill after 2 seconds
+  setTimeout(() => {
+    console.log('Sending SIGTERM to child process...');
+    child.kill('SIGTERM');
+  }, 2000);
+
   const { fileList } = await nodeFileTrace([outPath], {
     base: workPath,
     processCwd: workPath,
@@ -803,7 +879,6 @@ async function rolldownCompile(
       );
     }
   }
-
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
