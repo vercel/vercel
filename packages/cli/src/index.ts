@@ -692,7 +692,7 @@ const main = async () => {
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
-          func = require('./commands/login').default;
+          func = (c: Client) => require('./commands/login').default(c, true);
           break;
         case 'logout':
           telemetry.trackCliCommandLogout(userSuppliedSubCommand);
@@ -763,7 +763,7 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client);
+      exitCode = await func(client, true);
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {

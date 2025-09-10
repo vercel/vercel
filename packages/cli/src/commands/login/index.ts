@@ -9,7 +9,11 @@ import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 
-export default async function login(client: Client): Promise<number> {
+export default async function login(
+  client: Client,
+  /** Lets skip obsolete option warnings unless called via `vercel login`. */
+  shouldWarnObsoleteOptions = false
+): Promise<number> {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(loginCommand.options);
@@ -39,28 +43,30 @@ export default async function login(client: Client): Promise<number> {
     return 2;
   }
 
-  const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
-    const flagKey = flag.replace('--', '');
-    const option = loginCommand.options.find(o => o.name === flagKey);
-    if (!option || typeof option === 'number') return;
-    return 'deprecated' in option && option.deprecated;
-  });
+  if (shouldWarnObsoleteOptions) {
+    const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
+      const flagKey = flag.replace('--', '');
+      const option = loginCommand.options.find(o => o.name === flagKey);
+      if (!option || typeof option === 'number') return;
+      return 'deprecated' in option && option.deprecated;
+    });
 
-  if (obsoleteFlags.length) {
-    const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
-    output.warn(`The following flags are deprecated: ${flags}`);
-  }
+    if (obsoleteFlags.length) {
+      const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
+      output.warn(`The following flags are deprecated: ${flags}`);
+    }
 
-  const obsoleteArguments = parsedArgs.args.slice(1);
-  if (obsoleteArguments.length) {
-    const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
-    output.warn(`The following arguments are deprecated: ${args}`);
-  }
+    const obsoleteArguments = parsedArgs.args.slice(1);
+    if (obsoleteArguments.length) {
+      const args = obsoleteArguments.map(a => chalk.bold(a)).join(', ');
+      output.warn(`The following arguments are deprecated: ${args}`);
+    }
 
-  if (obsoleteArguments.length || obsoleteFlags.length) {
-    output.print(
-      `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
-    );
+    if (obsoleteArguments.length || obsoleteFlags.length) {
+      output.print(
+        `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
+      );
+    }
   }
 
   telemetry.trackState('started');
