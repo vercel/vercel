@@ -203,3 +203,140 @@ describe('file exclusions', () => {
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
 });
+
+describe('dynamic route module name sanitization', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-test-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('should sanitize square brackets in module names for dynamic routes', async () => {
+    const testFiles = {
+      'api/[id].py': new FileBlob({
+        data: `
+from http.server import BaseHTTPRequestHandler
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Dynamic route response')
+        `,
+      }),
+    };
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files: testFiles,
+      entrypoint: 'api/[id].py',
+      meta: { isDev: true },
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(result.output).toBeDefined();
+
+    // Check that the handler file was created with sanitized module name
+    const outputFiles = Object.keys(result.output.files || {});
+    const handlerFile = outputFiles.find(f =>
+      f.endsWith('vc__handler__python.py')
+    );
+    expect(handlerFile).toBeDefined();
+
+    if (handlerFile && result.output.files) {
+      const handlerContent = result.output.files[handlerFile].data.toString();
+      // Module name should have brackets replaced with underscores
+      expect(handlerContent).toContain('api._id_');
+      // Should not contain square brackets which would be invalid Python
+      expect(handlerContent).not.toContain('api.[id]');
+    }
+  });
+
+  it('should handle nested dynamic routes with multiple parameters', async () => {
+    const testFiles = {
+      'api/users/[userId]/posts/[postId].py': new FileBlob({
+        data: `
+from http.server import BaseHTTPRequestHandler
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Nested dynamic route response')
+        `,
+      }),
+    };
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files: testFiles,
+      entrypoint: 'api/users/[userId]/posts/[postId].py',
+      meta: { isDev: true },
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(result.output).toBeDefined();
+
+    const outputFiles = Object.keys(result.output.files || {});
+    const handlerFile = outputFiles.find(f =>
+      f.endsWith('vc__handler__python.py')
+    );
+    expect(handlerFile).toBeDefined();
+
+    if (handlerFile && result.output.files) {
+      const handlerContent = result.output.files[handlerFile].data.toString();
+      // Module name should have all brackets replaced with underscores
+      expect(handlerContent).toContain('api.users._userId_.posts._postId_');
+      // Should not contain square brackets
+      expect(handlerContent).not.toContain('[');
+      expect(handlerContent).not.toContain(']');
+    }
+  });
+
+  it('should handle mixed regular and dynamic route segments', async () => {
+    const testFiles = {
+      'api/v1/users/[id]/profile.py': new FileBlob({
+        data: `
+from http.server import BaseHTTPRequestHandler
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Mixed route response')
+        `,
+      }),
+    };
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files: testFiles,
+      entrypoint: 'api/v1/users/[id]/profile.py',
+      meta: { isDev: true },
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(result.output).toBeDefined();
+
+    const outputFiles = Object.keys(result.output.files || {});
+    const handlerFile = outputFiles.find(f =>
+      f.endsWith('vc__handler__python.py')
+    );
+    expect(handlerFile).toBeDefined();
+
+    if (handlerFile && result.output.files) {
+      const handlerContent = result.output.files[handlerFile].data.toString();
+      // Module name should preserve regular segments and sanitize dynamic ones
+      expect(handlerContent).toContain('api.v1.users._id_.profile');
+      expect(handlerContent).not.toContain('[id]');
+    }
+  });
+});

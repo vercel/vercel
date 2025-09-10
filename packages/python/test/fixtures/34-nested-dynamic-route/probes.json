@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/api/users/123/posts/456",
+    "mustContain": "User: 123, Post: 456"
+  },
+  {
+    "path": "/api/users/john-doe/posts/my-first-post",
+    "mustContain": "User: john-doe, Post: my-first-post"
+  }
+]
