@@ -180,8 +180,8 @@ export async function login(
     return 0;
   }
 
-  telemetry.trackState('error');
   printError(error);
+  telemetry.trackState('error');
   return 1;
 }
 
