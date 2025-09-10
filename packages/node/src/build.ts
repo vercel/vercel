@@ -58,7 +58,7 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
-import { outputFile } from 'fs-extra';
+import { outputFile, rm } from 'fs-extra';
 import { spawn } from 'child_process';
 
 interface DownloadOptions {
@@ -764,6 +764,7 @@ async function rolldownCompile(
     },
   });
   const handler = `${parsePath(entrypointPath).name}.${extensionInfo.extension}`;
+
   const outPath = join(
     workPath,
     '.vercel',
@@ -772,6 +773,20 @@ async function rolldownCompile(
     'index.func',
     handler
   );
+
+  const { fileList } = await nodeFileTrace([outPath], {
+    base: workPath,
+    processCwd: workPath,
+    ts: true,
+    mixedModules: true,
+    ignore: config.excludeFiles,
+  });
+
+  for (const file of fileList) {
+    const fsPath = resolve(workPath, file);
+    const { mode } = lstatSync(fsPath);
+    preparedFiles[file] = new FileFsRef({ fsPath, mode });
+  }
   await outputFile(
     join(
       workPath,
@@ -829,36 +844,30 @@ module.exports = func2
   `
   );
 
-  // Create a child process to capture routes
-  const child = spawn('node', [outPath], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    cwd: workPath,
-    env: { ...process.env, NODE_ENV: 'test' },
+  // Capture routes using child process
+  await new Promise(resolve => {
+    const child = spawn('node', [outPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: workPath,
+      env: { ...process.env, NODE_ENV: 'test' },
+    });
+
+    child.stderr.on('data', data => {
+      console.error(`stderr: ${data}`);
+    });
+
+    // Kill after 2 seconds
+    setTimeout(() => {
+      console.log('Sending SIGTERM to child process...');
+      child.kill('SIGTERM');
+    }, 2000);
+
+    // Wait for child to complete
+    child.on('close', code => {
+      console.log(`Child process exited with code: ${code}`);
+      resolve(undefined);
+    });
   });
-
-  child.stderr.on('data', data => {
-    console.error(`stderr: ${data}`);
-  });
-
-  // Kill after 2 seconds
-  setTimeout(() => {
-    console.log('Sending SIGTERM to child process...');
-    child.kill('SIGTERM');
-  }, 2000);
-
-  const { fileList } = await nodeFileTrace([outPath], {
-    base: workPath,
-    processCwd: workPath,
-    ts: true,
-    mixedModules: true,
-    ignore: config.excludeFiles,
-  });
-
-  for (const file of fileList) {
-    const fsPath = resolve(workPath, file);
-    const { mode } = lstatSync(fsPath);
-    preparedFiles[file] = new FileFsRef({ fsPath, mode });
-  }
 
   // Process includeFiles if specified
   if (config.includeFiles) {
@@ -879,6 +888,58 @@ module.exports = func2
       );
     }
   }
+  const routesFile = readFileSync(
+    join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func',
+      'routes.json'
+    ),
+    'utf8'
+  );
+  await rm(
+    join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func',
+      'routes.json'
+    )
+  );
+  await rm(
+    join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func',
+      'node_modules'
+    ),
+    { recursive: true, force: true }
+  );
+
+  const routes = JSON.parse(routesFile);
+
+  // Convert Express routes to Vercel proxy routes
+  const convertExpressRoute = (route: string) => {
+    // Convert Express params (:id) to Vercel params ([id])
+    const dest = route.replace(/:([^/]+)/g, '[$1]');
+
+    // Convert Express params to regex for src
+    const src = route.replace(/:([^/]+)/g, '([^/]+)');
+
+    return {
+      src: `^${src}$`,
+      dest: dest,
+    };
+  };
+
+  const proxyRoutes = routes.map(convertExpressRoute);
+  console.log('proxyRoutes', proxyRoutes);
+
   return {
     preparedFiles,
     shouldAddSourcemapSupport,
