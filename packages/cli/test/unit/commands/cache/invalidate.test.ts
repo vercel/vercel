@@ -9,19 +9,21 @@ import { basename, join } from 'path';
 import { outputFile } from 'fs-extra';
 
 describe('cache invalidate', () => {
+  let projectId = 'wat';
   beforeEach(async () => {
     useUser();
     useTeam('team_dummy');
     const cwd = setupTmpDir();
     client.cwd = cwd;
+    projectId = basename(cwd);
     useProject({
       ...defaultProject,
-      id: basename(cwd),
-      name: basename(cwd),
+      id: projectId,
+      name: projectId,
     });
     await outputFile(
       join(cwd, '.vercel', 'project.json'),
-      JSON.stringify({ projectId: basename(cwd), orgId: 'team_dummy' })
+      JSON.stringify({ projectId, orgId: 'team_dummy' })
     );
   });
 
@@ -34,7 +36,7 @@ describe('cache invalidate', () => {
   it('should error without --tag', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
-        tags: ['foo'],
+        tags: 'foo',
       });
       res.end();
     });
@@ -47,20 +49,22 @@ describe('cache invalidate', () => {
   it('should succeed with --tag', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
-        tags: ['foo'],
+        tags: 'foo',
       });
       res.end();
     });
     client.setArgv('cache', 'invalidate', '--tag=foo', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
-    await expect(client.stderr).toOutput('Successfully invalidated tag foo');
+    await expect(client.stderr).toOutput(
+      'Successfully invalidated all cached content associated with tag foo'
+    );
   });
 
   it('should succeed with multiple tags', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
-        tags: ['foo', 'bar', 'baz'],
+        tags: 'foo,bar,baz',
       });
       res.end();
     });
@@ -68,7 +72,7 @@ describe('cache invalidate', () => {
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput(
-      'Successfully invalidated tag foo,bar,baz'
+      'Successfully invalidated all cached content associated with tags foo,bar,baz'
     );
   });
 
@@ -77,7 +81,7 @@ describe('cache invalidate', () => {
     const exitCode = await cache(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
-      'You are about to invalidate all cached content associated with tag foo for project 4. To continue, run `vercel cache invalidate --tag foo --yes`.'
+      `You are about to invalidate all cached content associated with tag foo for project ${projectId}. To continue, run \`vercel cache invalidate --tag foo --yes\`.`
     );
   });
 });

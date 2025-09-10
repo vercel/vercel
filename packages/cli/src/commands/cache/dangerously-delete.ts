@@ -8,6 +8,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
+import plural from 'pluralize';
 
 export default async function dangerouslyDelete(
   client: Client,
@@ -58,7 +59,8 @@ export default async function dangerouslyDelete(
   const revalidate = parsedArgs.flags['--revalidation-deadline-seconds'];
   telemetry.trackCliOptionRevalidationDeadlineSeconds(revalidate);
 
-  const msg = `You are about to dangerously delete all cached content associated with tag ${tag} for project ${project.name}`;
+  const tagsDesc = plural('tag', tag.split(',').length, false);
+  const msg = `You are about to dangerously delete all cached content associated with ${tagsDesc} ${tag} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {
@@ -85,16 +87,16 @@ export default async function dangerouslyDelete(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      tags: tag
-        .split(',')
-        .map(str => str.trim())
-        .filter(Boolean),
+      tags: tag,
       revalidationDeadlineSeconds: revalidate,
     }),
   });
 
   output.print(
-    prependEmoji(`Successfully deleted tag ${tag}`, emoji('success')) + `\n`
+    prependEmoji(
+      `Successfully deleted all cached content associated with ${tagsDesc} ${tag}`,
+      emoji('success')
+    ) + `\n`
   );
   return 0;
 }

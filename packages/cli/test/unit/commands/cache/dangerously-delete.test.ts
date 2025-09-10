@@ -38,7 +38,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: ['foo'],
+          tags: 'foo',
         });
         res.end();
       }
@@ -54,7 +54,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: ['foo'],
+          tags: 'foo',
         });
         res.end();
       }
@@ -62,7 +62,9 @@ describe('cache dangerously-delete', () => {
     client.setArgv('cache', 'dangerously-delete', '--tag=foo', '--yes');
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
-    await expect(client.stderr).toOutput('Successfully deleted tag foo');
+    await expect(client.stderr).toOutput(
+      'Successfully deleted all cached content associated with tag foo'
+    );
   });
 
   it('should succeed with multiple tags', async () => {
@@ -70,7 +72,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: ['foo', 'bar', 'baz'],
+          tags: 'foo,bar,baz',
         });
         res.end();
       }
@@ -79,7 +81,7 @@ describe('cache dangerously-delete', () => {
     const exitCode = await cache(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput(
-      'Successfully deleted tag foo,bar,baz'
+      'Successfully deleted all cached content associated with tags foo,bar,baz'
     );
   });
 

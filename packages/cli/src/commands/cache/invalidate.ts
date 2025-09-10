@@ -8,6 +8,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheInvalidateTelemetryClient } from '../../util/telemetry/commands/cache/invalidate';
+import plural from 'pluralize';
 
 export default async function invalidate(
   client: Client,
@@ -55,7 +56,8 @@ export default async function invalidate(
     return 1;
   }
 
-  const msg = `You are about to invalidate all cached content associated with tag ${tag} for project ${project.name}`;
+  const tagsDesc = plural('tag', tag.split(',').length, false);
+  const msg = `You are about to invalidate all cached content associated with ${tagsDesc} ${tag} for project ${project.name}`;
   const query = new URLSearchParams({ projectIdOrName: project.id }).toString();
 
   if (!yes) {
@@ -78,15 +80,15 @@ export default async function invalidate(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      tags: tag
-        .split(',')
-        .map(str => str.trim())
-        .filter(Boolean),
+      tags: tag,
     }),
   });
 
   output.print(
-    prependEmoji(`Successfully invalidated tag ${tag}`, emoji('success')) + `\n`
+    prependEmoji(
+      `Successfully invalidated all cached content associated with ${tagsDesc} ${tag}`,
+      emoji('success')
+    ) + `\n`
   );
   return 0;
 }
