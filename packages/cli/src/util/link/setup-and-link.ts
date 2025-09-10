@@ -305,6 +305,7 @@ export async function connectGitRepository(
       provider: repoInfo.provider,
       repo: repoInfo.repo,
       repoPath: `${repoInfo.org}/${repoInfo.repo}`,
+      repoUrl: repoInfo.url,
     });
   } catch (error) {
     // Silently ignore git connection errors to not disrupt the main flow
