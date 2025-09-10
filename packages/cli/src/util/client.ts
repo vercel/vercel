@@ -69,8 +69,14 @@ export const isJSONObject = (v: any): v is JSONObject => {
 };
 
 export function isValidAccessToken(authConfig: AuthConfig): boolean {
+  if (!authConfig.token) return false;
+
+  // When `--token` is passed to a command, `expiresAt` will be missing.
+  // We assume the token is valid in this case and handle errors further down.
+  if (typeof authConfig.expiresAt !== 'number') return true;
+
   const nowInSeconds = Math.floor(Date.now() / 1000);
-  return 'token' in authConfig && (authConfig.expiresAt ?? 0) >= nowInSeconds;
+  return authConfig.expiresAt < nowInSeconds;
 }
 
 export function hasRefreshToken(
