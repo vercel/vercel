@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.2
+
+### Patch Changes
+
+- Vercel build command on python projects installs dependencies into vendor dir instead of project root. ([#13884](https://github.com/vercel/vercel/pull/13884))
+
 ## 5.0.1
 
 ### Patch Changes
