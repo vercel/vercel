@@ -239,6 +239,7 @@ class Handler(BaseHTTPRequestHandler):
       files: testFiles,
       entrypoint: 'api/[id].py',
       meta: { isDev: true },
+      config: {},
       repoRootPath: mockWorkPath,
     });
 
@@ -252,7 +253,9 @@ class Handler(BaseHTTPRequestHandler):
     expect(handlerFile).toBeDefined();
 
     if (handlerFile && result.output.files) {
-      const handlerContent = result.output.files[handlerFile].data.toString();
+      const file = result.output.files[handlerFile];
+      const handlerContent =
+        file.type === 'FileBlob' ? file.data.toString() : '';
       // Module name should have brackets replaced with underscores
       expect(handlerContent).toContain('api._id_');
       // Should not contain square brackets which would be invalid Python
@@ -280,6 +283,7 @@ class Handler(BaseHTTPRequestHandler):
       files: testFiles,
       entrypoint: 'api/users/[userId]/posts/[postId].py',
       meta: { isDev: true },
+      config: {},
       repoRootPath: mockWorkPath,
     });
 
@@ -292,7 +296,9 @@ class Handler(BaseHTTPRequestHandler):
     expect(handlerFile).toBeDefined();
 
     if (handlerFile && result.output.files) {
-      const handlerContent = result.output.files[handlerFile].data.toString();
+      const file = result.output.files[handlerFile];
+      const handlerContent =
+        file.type === 'FileBlob' ? file.data.toString() : '';
       // Module name should have all brackets replaced with underscores
       expect(handlerContent).toContain('api.users._userId_.posts._postId_');
       // Should not contain square brackets
@@ -321,6 +327,7 @@ class Handler(BaseHTTPRequestHandler):
       files: testFiles,
       entrypoint: 'api/v1/users/[id]/profile.py',
       meta: { isDev: true },
+      config: {},
       repoRootPath: mockWorkPath,
     });
 
@@ -333,7 +340,9 @@ class Handler(BaseHTTPRequestHandler):
     expect(handlerFile).toBeDefined();
 
     if (handlerFile && result.output.files) {
-      const handlerContent = result.output.files[handlerFile].data.toString();
+      const file = result.output.files[handlerFile];
+      const handlerContent =
+        file.type === 'FileBlob' ? file.data.toString() : '';
       // Module name should preserve regular segments and sanitize dynamic ones
       expect(handlerContent).toContain('api.v1.users._id_.profile');
       expect(handlerContent).not.toContain('[id]');
