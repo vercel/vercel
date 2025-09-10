@@ -1,4 +1,5 @@
 import execa from 'execa';
+import { join } from 'path';
 import { Meta, debug } from '@vercel/build-utils';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -20,6 +21,7 @@ async function isInstalled(
       {
         stdio: 'pipe',
         cwd,
+        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
       }
     );
     return stdout.startsWith(cwd);
@@ -48,6 +50,7 @@ async function areRequirementsInstalled(
       {
         stdio: 'pipe',
         cwd,
+        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
       }
     );
     return true;
@@ -56,8 +59,13 @@ async function areRequirementsInstalled(
   }
 }
 
+export function resolveVendorDir() {
+  const vendorDir = process.env.VERCEL_PYTHON_VENDOR_DIR || '_vendor';
+  return vendorDir;
+}
+
 async function pipInstall(pipPath: string, workPath: string, args: string[]) {
-  const target = '.';
+  const target = resolveVendorDir();
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
   // Disable installing to the Python user install directory, which is
@@ -70,6 +78,7 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
     'install',
     '--disable-pip-version-check',
     '--no-compile',
+    '--no-cache-dir',
     '--target',
     target,
     ...args,
