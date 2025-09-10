@@ -1,14 +1,38 @@
 import sys
+import os
+import site
+import importlib
 import base64
 import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
-import os
+
+_here = os.path.dirname(__file__)
+_vendor_rel = '__VC_HANDLER_VENDOR_DIR'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
+user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
+__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
 __vc_module = util.module_from_spec(__vc_spec)
 sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
