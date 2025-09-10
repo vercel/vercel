@@ -58,8 +58,9 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
-import { outputFile, rm } from 'fs-extra';
+import { outputFile, rm, mkdirp } from 'fs-extra';
 import { spawn } from 'child_process';
+import { symlink } from 'fs/promises';
 
 interface DownloadOptions {
   files: Files;
@@ -506,6 +507,8 @@ export const build = async ({
   let preparedFiles: Files;
   let shouldAddSourcemapSupport: boolean;
   let handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let routes: BuildResultV3['routes'];
+  let output: BuildResultV3['output'] | undefined;
 
   if (process.env.VERCEL_NODE_BUILD_USE_ROLLDOWN) {
     console.warn(
@@ -523,6 +526,12 @@ export const build = async ({
     preparedFiles = rolldownResult.preparedFiles;
     shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
     handler = rolldownResult.handler;
+    if (rolldownResult.proxyRoutes.length > 0) {
+      routes = [];
+      for (const route of rolldownResult.proxyRoutes) {
+        routes.push(route);
+      }
+    }
   } else {
     debug('Tracing input files...');
     const traceTime = Date.now();
@@ -539,9 +548,6 @@ export const build = async ({
     shouldAddSourcemapSupport = compileResult.shouldAddSourcemapSupport;
     debug(`Trace complete [${Date.now() - traceTime}ms]`);
   }
-
-  let routes: BuildResultV3['routes'];
-  let output: BuildResultV3['output'] | undefined;
 
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
@@ -661,6 +667,7 @@ async function rolldownCompile(
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
   handler: string;
+  proxyRoutes: { src: string; dest: string; methods: string[] }[];
 }> {
   const preparedFiles: Files = {};
   const shouldAddSourcemapSupport = false;
@@ -730,6 +737,7 @@ async function rolldownCompile(
     });
   }
 
+  let outputEntry: string | null = null;
   // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
   await rolldownBuild({
     input: entrypointPath,
@@ -756,6 +764,9 @@ async function rolldownCompile(
         };
         const ext = extensionMap[extension];
         const nameWithJS = relPath.slice(0, -extension.length) + ext;
+        if (info.isEntry) {
+          outputEntry = nameWithJS;
+        }
         return nameWithJS;
       },
       format,
@@ -765,13 +776,17 @@ async function rolldownCompile(
   });
   const handler = `${parsePath(entrypointPath).name}.${extensionInfo.extension}`;
 
+  if (!outputEntry) {
+    throw new Error('Unable to resolve module for entrypoint');
+  }
+
   const outPath = join(
     workPath,
     '.vercel',
     'output',
     'functions',
     'index.func',
-    handler
+    outputEntry
   );
 
   const { fileList } = await nodeFileTrace([outPath], {
@@ -787,17 +802,18 @@ async function rolldownCompile(
     const { mode } = lstatSync(fsPath);
     preparedFiles[file] = new FileFsRef({ fsPath, mode });
   }
+  const expressPath = join(
+    workPath,
+    '.vercel',
+    'output',
+    'functions',
+    'index.func',
+    'node_modules',
+    'express',
+    'index.js'
+  );
   await outputFile(
-    join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func',
-      'node_modules',
-      'express',
-      'index.js'
-    ),
+    expressPath,
     `'use strict';
 
 const fs = require('fs');
@@ -806,7 +822,7 @@ const path = require('path');
 const mod = require('../../../../../../node_modules/express/lib/express');
 
 const routesFile = path.join(__dirname, '..', '..', 'routes.json');
-const routes = [];
+const routes = {};
 
 const func2 = (...args) => {
   const app = mod(...args);
@@ -818,8 +834,10 @@ const func2 = (...args) => {
     app[m] = (...args) => {
       const route = args[0]; // First argument is the route path
       if (route && typeof route === 'string') {
-        routes.push(route);
-        console.log('Captured route:', route);
+        if (!routes[route]) {
+          routes[route] = { methods: [] };
+        }
+        routes[route].methods.push(m.toUpperCase());
       }
       return original(...args);
     };
@@ -832,11 +850,13 @@ const func2 = (...args) => {
 Object.setPrototypeOf(func2, mod);
 Object.assign(func2, mod);
 
+process.on('exit', () => {
+  fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
+});
+
 // Write routes to file on SIGTERM
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, writing routes:', routes);
   fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
-  console.log('Routes written to file:', routesFile);
   process.exit(0);
 });
 
@@ -858,13 +878,13 @@ module.exports = func2
 
     // Kill after 2 seconds
     setTimeout(() => {
-      console.log('Sending SIGTERM to child process...');
+      console.log('SIGTERM');
       child.kill('SIGTERM');
     }, 2000);
 
     // Wait for child to complete
-    child.on('close', code => {
-      console.log(`Child process exited with code: ${code}`);
+    child.on('close', () => {
+      console.log('child closed');
       resolve(undefined);
     });
   });
@@ -921,26 +941,67 @@ module.exports = func2
     { recursive: true, force: true }
   );
 
-  const routes = JSON.parse(routesFile);
-
-  // Convert Express routes to Vercel proxy routes
-  const convertExpressRoute = (route: string) => {
+  const convertExpressRoute = async (
+    route: string,
+    routeData: { methods: string[] }
+  ) => {
     // Convert Express params (:id) to Vercel params ([id])
     const dest = route.replace(/:([^/]+)/g, '[$1]');
 
     // Convert Express params to regex for src
     const src = route.replace(/:([^/]+)/g, '([^/]+)');
 
+    // create symlink to index.func with fs-extra
+    // if the dest path has a parent, create the parent directory
+    const destPath = join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      `${dest}.func`
+    );
+    const destPathParent = join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      dest.split(sep).slice(0, -1).join(sep)
+    );
+    if (dest.split(sep).length > 2) {
+      console.log('making parent', destPathParent);
+      await mkdirp(destPathParent);
+    }
+    if (existsSync(destPath)) {
+      await rm(destPath);
+    }
+
+    // Create relative path symlink
+    const targetPath = join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func'
+    );
+    const relativeTargetPath = relative(dirname(destPath), targetPath);
+
+    await symlink(relativeTargetPath, destPath);
+
     return {
       src: `^${src}$`,
       dest: dest,
+      methods: routeData.methods,
     };
   };
 
-  const proxyRoutes = routes.map(convertExpressRoute);
-  console.log('proxyRoutes', proxyRoutes);
+  const routesData = JSON.parse(routesFile);
+  const routePaths = Object.keys(routesData);
+  const proxyRoutes = await Promise.all(
+    routePaths.map(route => convertExpressRoute(route, routesData[route]))
+  );
 
   return {
+    proxyRoutes,
     preparedFiles,
     shouldAddSourcemapSupport,
     handler,
