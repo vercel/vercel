@@ -76,7 +76,7 @@ export function isValidAccessToken(authConfig: AuthConfig): boolean {
   if (typeof authConfig.expiresAt !== 'number') return true;
 
   const nowInSeconds = Math.floor(Date.now() / 1000);
-  return authConfig.expiresAt < nowInSeconds;
+  return authConfig.expiresAt >= nowInSeconds;
 }
 
 export function hasRefreshToken(
