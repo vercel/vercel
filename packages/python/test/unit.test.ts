@@ -301,9 +301,13 @@ class Handler(BaseHTTPRequestHandler):
         file.type === 'FileBlob' ? file.data.toString() : '';
       // Module name should have all brackets replaced with underscores
       expect(handlerContent).toContain('api.users._userId_.posts._postId_');
-      // Should not contain square brackets
-      expect(handlerContent).not.toContain('[');
-      expect(handlerContent).not.toContain(']');
+      // File path should not contain square brackets in import line
+      expect(handlerContent).toContain(
+        './api/users/_userId_/posts/_postId_.py'
+      );
+      // Should not contain original file path with brackets in import line
+      expect(handlerContent).not.toContain('[userId]');
+      expect(handlerContent).not.toContain('[postId]');
     }
   });
 

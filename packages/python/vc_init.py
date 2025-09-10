@@ -8,7 +8,7 @@ import socket
 import os
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
+__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_SANITIZED_ENTRYPOINT")
 __vc_module = util.module_from_spec(__vc_spec)
 sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
@@ -384,7 +384,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
         })
         server.serve_forever()
 
-    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    print('Missing variable `handler` or `app` in file "__VC_HANDLER_SANITIZED_ENTRYPOINT".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)
 
@@ -677,6 +677,6 @@ elif 'app' in __vc_variables:
             return response
 
 else:
-    print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
+    print('Missing variable `handler` or `app` in file "__VC_HANDLER_SANITIZED_ENTRYPOINT".')
     print('See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python')
     exit(1)

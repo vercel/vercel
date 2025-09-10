@@ -192,10 +192,16 @@ export const build: BuildV3 = async ({
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
+  // Create a sanitized file path for the spec_from_file_location call that doesn't contain brackets
+  const sanitizedEntrypointPath = entrypointWithSuffix.replace(
+    /\[([^\]]+)\]/g,
+    '_$1_'
+  );
   debug('Entrypoint with suffix is', entrypointWithSuffix);
   const handlerPyContents = originalHandlerPyContents
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
-    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix);
+    .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
+    .replace(/__VC_HANDLER_SANITIZED_ENTRYPOINT/g, sanitizedEntrypointPath);
 
   const predefinedExcludes = [
     '.git/**',
@@ -214,7 +220,19 @@ export const build: BuildV3 = async ({
         : predefinedExcludes,
   };
 
-  const files: Files = await glob('**', globOptions);
+  let files: Files = await glob('**', globOptions);
+
+  // Sanitize file paths that contain square brackets for dynamic routes
+  const sanitizedFiles: Files = {};
+  for (const [filePath, fileBlob] of Object.entries(files)) {
+    if (filePath.includes('[') && filePath.includes(']')) {
+      const sanitizedPath = filePath.replace(/\[([^\]]+)\]/g, '_$1_');
+      sanitizedFiles[sanitizedPath] = fileBlob;
+    } else {
+      sanitizedFiles[filePath] = fileBlob;
+    }
+  }
+  files = sanitizedFiles;
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
