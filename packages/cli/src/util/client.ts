@@ -151,8 +151,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   /**
-   * When the auth config is of type `OAuthAuthConfig`,
-   * this method silently tries to refresh the access_token if it is expired.
+   * This method silently tries to refresh the access_token if it is expired.
    *
    * If the refresh_token is also expired, it will not attempt to refresh it.
    * If there is any error during the refresh process, it will not throw an error.
