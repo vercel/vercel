@@ -63,6 +63,7 @@ import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
 import { getCommandName, getTitleName } from './util/pkg-name';
+import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
@@ -75,7 +76,6 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import login from './commands/login';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
