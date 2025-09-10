@@ -185,7 +185,10 @@ export const build: BuildV3 = async ({
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const moduleName = entrypoint
+    .replace(/\//g, '.')
+    .replace(/\.py$/, '')
+    .replace(/\[([^\]]+)\]/g, '_$1_'); // Replace [param] with _param_ for valid Python module names
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
