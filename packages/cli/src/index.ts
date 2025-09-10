@@ -763,7 +763,7 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client, true);
+      exitCode = await func(client);
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
