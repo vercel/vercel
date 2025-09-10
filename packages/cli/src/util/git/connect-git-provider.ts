@@ -167,6 +167,7 @@ export async function selectAndParseRemoteUrl(
 
   const repoInfo = parseRepoUrl(remoteUrl);
   if (!repoInfo) {
+    output.log(`Connecting Git repository: ${chalk.cyan(remoteUrl)}`);
     output.error(
       `Failed to parse Git repo data from the following remote URL: ${link(
         remoteUrl
@@ -188,6 +189,7 @@ export interface GitRepoCheckParams {
   provider: string;
   repo: string;
   repoPath: string;
+  repoUrl: string;
 }
 
 export async function checkExistsAndConnect({
@@ -200,9 +202,10 @@ export async function checkExistsAndConnect({
   repoPath,
   gitOrg,
   repo,
+  repoUrl,
 }: GitRepoCheckParams) {
   output.log(
-    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(repoPath)}`
+    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(repoUrl)}`
   );
 
   if (!gitProviderLink) {

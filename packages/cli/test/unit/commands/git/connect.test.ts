@@ -304,7 +304,7 @@ describe('git connect', () => {
       expect(exitCode).toEqual(1);
 
       await expect(client.stderr).toOutput(
-        `Connecting GitHub repository: bababooey`
+        `Connecting Git repository: bababooey`
       );
       await expect(client.stderr).toOutput(
         `Error: Failed to parse Git repo data from the following remote URL: bababooey\n`
