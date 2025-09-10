@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
@@ -6,10 +7,7 @@ import { logoutCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { LogoutTelemetryClient } from '../../util/telemetry/commands/logout';
-import chalk from 'chalk';
-import { errorToString } from '@vercel/error-utils';
-import { getCommandName } from '../../util/pkg-name';
-import { revocationRequest, processRevocationResponse } from '../../util/oauth';
+import { logout as future } from './future';
 
 export default async function logout(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -60,49 +58,5 @@ export default async function logout(client: Client): Promise<number> {
     );
   }
 
-  const { authConfig } = client;
-
-  if (!authConfig.token) {
-    output.note(
-      `Not currently logged in, so ${getCommandName('logout')} did nothing`
-    );
-    return 0;
-  }
-
-  output.spinner('Logging out…', 200);
-
-  const revocationResponse = await revocationRequest({
-    token: authConfig.token,
-  });
-
-  output.debug(
-    `'Revocation response:', ${await revocationResponse.clone().text()}`
-  );
-
-  const [revocationError] = await processRevocationResponse(revocationResponse);
-  let logoutError = false;
-  if (revocationError) {
-    output.error(revocationError.message);
-    output.debug(revocationError.cause);
-    output.error('Failed during logout');
-    logoutError = true;
-  }
-
-  try {
-    client.updateConfig({ currentTeam: undefined });
-    client.writeToConfigFile();
-
-    client.emptyAuthConfig();
-    client.writeToAuthConfigFile();
-    output.debug('Configuration has been deleted');
-
-    if (!logoutError) {
-      output.success('Logged out!');
-      return 0;
-    }
-  } catch (err: unknown) {
-    output.debug(errorToString(err));
-    output.error('Failed during logout');
-  }
-  return 1;
+  return await future(client);
 }
