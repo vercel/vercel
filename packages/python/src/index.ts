@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename } from 'path';
 import {
@@ -136,7 +136,7 @@ export const build: BuildV3 = async ({
       ? fsFiles[join(entryDirectory, 'requirements.txt')].fsPath
       : fsFiles['requirements.txt'].fsPath;
   } else {
-    // Try to generate a pinned requirements file from lockfiles (UV/Pipenv/Poetry/PDM/pyproject)
+    // Try to generate a pinned requirements file from lockfiles (UV/Pipenv/Poetry/pyproject)
     requirementsTxtPath = await maybeGenerateRequirements({
       entryDirectory,
       vendorBaseDir,
@@ -181,8 +181,8 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
-    '**/venv/**',
     '**/.venv/**',
+    '**/venv/**',
     '**/__pycache__/**',
   ];
 

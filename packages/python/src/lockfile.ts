@@ -238,68 +238,6 @@ async function generateFromPoetryLock(
   return lines;
 }
 
-async function generateFromPdmLock(
-  pdmLockPath: string,
-  pythonVersion?: string
-): Promise<string[]> {
-  debug(`Parsing PDM lockfile at ${pdmLockPath}`);
-  const raw = await fsp.readFile(pdmLockPath, 'utf8');
-  const data: any = toml.parse(raw as unknown as string);
-
-  const packages: any[] = Array.isArray((data as any).package)
-    ? (data as any).package
-    : [];
-
-  const lines: string[] = [];
-
-  for (const pkg of packages) {
-    const name: string = pkg.name;
-    const version: string | undefined = pkg.version;
-    const category: string | undefined = pkg.category;
-    const optional = Boolean(pkg.optional);
-    const marker: string | undefined = pkg.marker;
-
-    if (optional) continue;
-    if (category && category !== 'main' && category !== 'default') continue;
-
-    // PDM sources may be in multiple shapes; include only vcs/url/registry
-    const source: any = pkg.source || {};
-    let spec: string | undefined;
-    if (source && typeof source === 'object') {
-      if (source.vcs && source.url) {
-        const ref =
-          source.revision || source.ref || source.tag || source.commit;
-        let url = `${String(source.vcs)}+${String(source.url)}`;
-        if (ref) url += `@${String(ref)}`;
-        if (source.subdirectory)
-          url += `#subdirectory=${String(source.subdirectory)}`;
-        spec = `${name} @ ${url}`;
-      } else if (source.url) {
-        spec = `${name} @ ${String(source.url)}`;
-      } else if (source.path) {
-        // Skip local path
-      }
-    }
-
-    if (!spec) {
-      if (!version) continue;
-      spec = `${name}==${version}`;
-    }
-
-    if (marker && typeof marker === 'string' && marker.trim()) {
-      if (pythonVersion && !markerMatchesPython(marker, pythonVersion)) {
-        continue;
-      }
-      spec += ` ; ${marker.trim()}`;
-    }
-
-    lines.push(spec);
-  }
-
-  lines.sort((a, b) => a.localeCompare(b));
-  return lines;
-}
-
 async function generateFromPipenvLock(
   pipfileLockPath: string,
   pythonVersion?: string
@@ -406,7 +344,6 @@ export async function maybeGenerateRequirements({
       entryDirectory,
       'Pipfile.lock'
     );
-    const pdmLock = fileFromFsFiles(fsFiles, entryDirectory, 'pdm.lock');
     const pyproject = fileFromFsFiles(
       fsFiles,
       entryDirectory,
@@ -421,8 +358,6 @@ export async function maybeGenerateRequirements({
       lines = await generateFromPipenvLock(pipfileLock, pythonVersion);
     } else if (poetryLock) {
       lines = await generateFromPoetryLock(poetryLock, pythonVersion);
-    } else if (pdmLock) {
-      lines = await generateFromPdmLock(pdmLock, pythonVersion);
     } else if (pyproject) {
       lines = await generateFromPyproject(pyproject, pythonVersion);
     }
@@ -458,32 +393,12 @@ export async function detectPythonConstraint(
     }
 
     const poetryLock = fileFromFsFiles(fsFiles, entryDirectory, 'poetry.lock');
-    const pdmLock = fileFromFsFiles(fsFiles, entryDirectory, 'pdm.lock');
     const uvLock = fileFromFsFiles(fsFiles, entryDirectory, 'uv.lock');
     const pyproject = fileFromFsFiles(
       fsFiles,
       entryDirectory,
       'pyproject.toml'
     );
-    if (poetryLock) {
-      const raw = await fsp.readFile(poetryLock, 'utf8');
-      const data: any = toml.parse(raw as unknown as string);
-      const metadata = (data as any).metadata || {};
-      const versions = metadata['python-versions'];
-      if (typeof versions === 'string' && versions.trim())
-        return { constraint: versions.trim(), source: 'poetry.lock' };
-    }
-    if (pdmLock) {
-      const raw = await fsp.readFile(pdmLock, 'utf8');
-      const data: any = toml.parse(raw as unknown as string);
-      const metadata = (data as any).metadata || {};
-      const requires =
-        metadata['requires-python'] ||
-        metadata['python_requires'] ||
-        metadata['python'];
-      if (typeof requires === 'string' && requires.trim())
-        return { constraint: requires.trim(), source: 'pdm.lock' };
-    }
     if (uvLock) {
       const raw = await fsp.readFile(uvLock, 'utf8');
       const data: any = toml.parse(raw as unknown as string);
@@ -494,6 +409,14 @@ export async function detectPythonConstraint(
         metadata['python-versions'];
       if (typeof requires === 'string' && requires.trim())
         return { constraint: requires.trim(), source: 'uv.lock' };
+    }
+    if (poetryLock) {
+      const raw = await fsp.readFile(poetryLock, 'utf8');
+      const data: any = toml.parse(raw as unknown as string);
+      const metadata = (data as any).metadata || {};
+      const versions = metadata['python-versions'];
+      if (typeof versions === 'string' && versions.trim())
+        return { constraint: versions.trim(), source: 'poetry.lock' };
     }
     if (pyproject) {
       const raw = await fsp.readFile(pyproject, 'utf8');

@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.1
+
+### Patch Changes
+
+- fix(python): Avoid uploading pycache ([#13909](https://github.com/vercel/vercel/pull/13909))
+
 ## 5.0.0
 
 ### Major Changes
