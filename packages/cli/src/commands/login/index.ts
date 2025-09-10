@@ -140,9 +140,6 @@ export default async function login(client: Client): Promise<number> {
 
   async function pollForToken(): Promise<Error | undefined> {
     while (Date.now() < expiresAt) {
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-
-      // TODO: Handle connection timeouts and add interval backoff
       const [tokenResponseError, tokenResponse] =
         await deviceAccessTokenRequest({ device_code });
 
@@ -153,6 +150,7 @@ export default async function login(client: Client): Promise<number> {
           output.debug(
             `Connection timeout. Slowing down, polling every ${intervalMs / 1000}s...`
           );
+          await wait(intervalMs);
           continue;
         }
         return tokenResponseError;
@@ -168,12 +166,14 @@ export default async function login(client: Client): Promise<number> {
         const { code } = tokensError;
         switch (code) {
           case 'authorization_pending':
+            await wait(intervalMs);
             continue;
           case 'slow_down':
             intervalMs += 5 * 1000;
             output.debug(
               `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
             );
+            await wait(intervalMs);
             continue;
           default:
             return tokensError.cause;
@@ -235,4 +235,8 @@ export default async function login(client: Client): Promise<number> {
   telemetry.trackState('error');
   printError(error);
   return 1;
+}
+
+async function wait(intervalMs: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, intervalMs));
 }
