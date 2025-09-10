@@ -271,17 +271,21 @@ export function register(opts: Options = {}): Register {
       getCompilationSettings: () => config.options,
       getDefaultLibFileName: () => ts.getDefaultLibFilePath(config.options),
       getCustomTransformers: () => transformers,
-      resolveModuleNames: (moduleNames: string[], containingFile: string) => {
-        return moduleNames.map(moduleName => {
-          const result = ts.resolveModuleName(
-            moduleName,
-            containingFile,
-            config.options,
-            ts.sys
-          );
-          return result.resolvedModule;
-        });
-      },
+      // This hurts performance, but for Express, type checking will fail to find @types/express without it
+      // so keeping it on for now for Express/Hono projects
+      resolveModuleNames: process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS
+        ? (moduleNames: string[], containingFile: string) => {
+            return moduleNames.map(moduleName => {
+              const result = ts.resolveModuleName(
+                moduleName,
+                containingFile,
+                config.options,
+                ts.sys
+              );
+              return result.resolvedModule;
+            });
+          }
+        : undefined,
     };
 
     const registry = ts.createDocumentRegistry(
