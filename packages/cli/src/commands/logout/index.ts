@@ -43,8 +43,8 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   let exitCode = 0;
-  // Unless the authConfig has expiresAt or refreshToken, fall back to legacy logout
-  if ('expiresAt' in authConfig || 'refreshToken' in authConfig) {
+  // Unless the authConfig has a refreshToken, fall back to legacy logout
+  if ('refreshToken' in authConfig) {
     return await future(client);
   }
 
