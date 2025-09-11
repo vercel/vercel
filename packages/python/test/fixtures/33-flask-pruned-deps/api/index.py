@@ -6,7 +6,7 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 
-@app.route('/hello')
+@app.route('/api')
 def hello():
     a = np.array([1, 2, 3])
     numpy_sum = int(a.sum())
