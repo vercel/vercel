@@ -48,6 +48,8 @@ describe('logout', () => {
     client.setArgv('logout');
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.authConfig.refreshToken = randomUUID();
+    const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
@@ -81,6 +83,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const refreshTokenAfter = client.authConfig.refreshToken;
+    expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
+    expect(refreshTokenAfter).toBeUndefined();
 
     const teamAfter = client.config.currentTeam;
     expect(teamAfter).not.toBe(teamBefore);
@@ -98,6 +103,8 @@ describe('logout', () => {
     client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.authConfig.refreshToken = randomUUID();
+    const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
 
@@ -115,6 +122,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const refreshTokenAfter = client.authConfig.refreshToken;
+    expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
+    expect(refreshTokenAfter).toBeUndefined();
 
     const teamAfter = client.config.currentTeam;
     expect(teamAfter).not.toBe(teamBefore);
