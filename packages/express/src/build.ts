@@ -26,19 +26,8 @@ export const build: BuildV3 = async args => {
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
 
-  // Express's rendering engine support using the views directory as the entrypoint.
-  const includeFiles = ['views/**/*'];
-  const includeFilesFromConfig = args.config.includeFiles;
-  if (includeFilesFromConfig) {
-    includeFiles.push(...includeFilesFromConfig);
-  }
-
   const res = await nodeBuild({
     ...args,
-    config: {
-      ...args.config,
-      includeFiles,
-    },
     // this is package.json, but we'll replace it with the return value of the entrypointCallback
     // after install and build scripts have had a chance to run
     entrypoint: 'package.json',
