@@ -7,6 +7,6 @@
     "allowImportingTsExtensions": false, // default, but be explicit
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": true,
-  },
+    "strict": true
+  }
 }
