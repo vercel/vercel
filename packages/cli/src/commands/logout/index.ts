@@ -42,7 +42,6 @@ export default async function logout(client: Client): Promise<number> {
     return 0;
   }
 
-  let exitCode = 0;
   // Unless the authConfig has a refreshToken, fall back to legacy logout
   if ('refreshToken' in authConfig) {
     return await future(client);
@@ -58,6 +57,7 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   output.spinner('Logging out…', 200);
+  let exitCode = 0;
 
   try {
     await client.fetch('/v3/user/tokens/current', {
