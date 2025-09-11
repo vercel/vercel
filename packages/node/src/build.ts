@@ -60,7 +60,7 @@ import {
 } from './utils';
 import { outputFile, rm, mkdirp } from 'fs-extra';
 import { spawn } from 'child_process';
-import { symlink } from 'fs/promises';
+import { readFile, symlink } from 'fs/promises';
 
 interface DownloadOptions {
   files: Files;
@@ -908,27 +908,16 @@ module.exports = func2
       );
     }
   }
-  const routesFile = readFileSync(
-    join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func',
-      'routes.json'
-    ),
-    'utf8'
+  const routesFilePath = join(
+    workPath,
+    '.vercel',
+    'output',
+    'functions',
+    'index.func',
+    'routes.json'
   );
-  await rm(
-    join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func',
-      'routes.json'
-    )
-  );
+  const routesFile = readFileSync(routesFilePath, 'utf8');
+  await rm(routesFilePath);
   await rm(
     join(
       workPath,

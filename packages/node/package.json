@@ -18,7 +18,8 @@
     "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'"
   },
   "files": [
-    "dist"
+    "dist",
+    "express-list-routes.js"
   ],
   "dependencies": {
     "@edge-runtime/node-utils": "2.3.0",
