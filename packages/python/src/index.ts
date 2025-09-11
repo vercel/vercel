@@ -244,7 +244,6 @@ export const build: BuildV3 = async ({
   const vendorBaseDir = join(
     workPath,
     '.vercel',
-    'cache',
     'python',
     `py${pythonVersion.version}`,
     entryDirectory
