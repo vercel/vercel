@@ -56,9 +56,9 @@ export const build: BuildV3 = async args => {
     const resolved = require_.resolve(`${frameworkName}/package.json`, {
       paths: [args.workPath],
     });
-    const expressVersion: string = require_(resolved).version;
-    if (expressVersion) {
-      version = expressVersion;
+    const honoVersion: string = require_(resolved).version;
+    if (honoVersion) {
+      version = honoVersion;
     }
   } catch (e) {
     // ignore
