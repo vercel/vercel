@@ -63,19 +63,24 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   );
   // if an output directory is specified, look there first for an entrypoint
   if (dir) {
-    const entrypointFromOutputDir = findEntrypoint(
-      await glob(entrypointGlob, join(args.workPath, dir))
-    );
+    const { entrypoint: entrypointFromOutputDir, entrypointsNotMatchingRegex } =
+      findEntrypoint(await glob(entrypointGlob, join(args.workPath, dir)));
     if (entrypointFromOutputDir) {
       return join(dir, entrypointFromOutputDir);
     }
 
+    if (entrypointsNotMatchingRegex.length > 0) {
+      throw new Error(
+        `No entrypoint found which imports express. Possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)} found: ${entrypointsNotMatchingRegex.join(', ')}`
+      );
+    }
     throw new Error(
       `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
     );
   }
   const files = await glob(entrypointGlob, args.workPath);
-  const entrypointFromRoot = findEntrypoint(files);
+  const { entrypoint: entrypointFromRoot, entrypointsNotMatchingRegex } =
+    findEntrypoint(files);
   if (entrypointFromRoot) {
     return entrypointFromRoot;
   }
@@ -92,33 +97,54 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
     }
   }
 
+  if (entrypointsNotMatchingRegex.length > 0) {
+    throw new Error(
+      `No entrypoint found which imports express. Possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)} found: ${entrypointsNotMatchingRegex.join(', ')}`
+    );
+  }
   throw new Error(
     `No entrypoint found. Searched for: \n${entrypointsForMessage}`
   );
 };
 
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`;
+}
+
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
-  const validEntrypoints = validFilenames.flatMap(filename =>
+  const allEntrypoints = validFilenames.flatMap(filename =>
     validExtensions.map(extension => `${filename}.${extension}`)
   );
 
-  const entrypoints = validEntrypoints.filter(entrypoint => {
-    const matches = files[entrypoint] !== undefined;
-    if (matches) {
+  const possibleEntrypointsInFiles = allEntrypoints.filter(entrypoint => {
+    return files[entrypoint] !== undefined;
+  });
+
+  const entrypointsMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
       const file = files[entrypoint];
       return checkMatchesRegex(file);
     }
-    return false;
-  });
+  );
 
-  const entrypoint = entrypoints[0];
-  if (entrypoints.length > 1) {
+  const entrypointsNotMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
+      const file = files[entrypoint];
+      return !checkMatchesRegex(file);
+    }
+  );
+
+  const entrypoint = entrypointsMatchingRegex[0];
+  if (entrypointsMatchingRegex.length > 1) {
     console.warn(
-      `Multiple entrypoints found: ${entrypoints.join(', ')}. Using ${entrypoint}.`
+      `Multiple entrypoints found: ${entrypointsMatchingRegex.join(', ')}. Using ${entrypoint}.`
     );
   }
 
-  return entrypoint;
+  return {
+    entrypoint,
+    entrypointsNotMatchingRegex,
+  };
 };
 
 const checkMatchesRegex = (file: FileFsRef) => {
