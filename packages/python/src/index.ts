@@ -1,7 +1,7 @@
 import fs from 'fs';
 import execa from 'execa';
 import { promisify } from 'util';
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, posix as pathPosix } from 'path';
 import {
   getWriteableDirectory,
   download,
@@ -34,9 +34,7 @@ const fastapiContentRegex =
 
 const fastapiCandidateEntrypoints = fastapiEntrypointFilenames.flatMap(
   filename =>
-    fastapiEntrypointDirs.map(dir =>
-      dir ? `${dir}/${filename}.py` : `${filename}.py`
-    )
+    fastapiEntrypointDirs.map(dir => pathPosix.join(dir, `${filename}.py`))
 );
 
 function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
