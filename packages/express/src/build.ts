@@ -1,9 +1,11 @@
 import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: hono-framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
+import { createRequire } from 'module';
 import { join } from 'path';
 import fs from 'fs';
 
+const frameworkName = 'express';
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
 
 const validFilenames = [
@@ -14,6 +16,8 @@ const validFilenames = [
   'src/index',
   'src/server',
 ];
+
+export const require_ = createRequire(__filename);
 
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
@@ -47,6 +51,23 @@ export const build: BuildV3 = async args => {
       return entrypointCallback(args);
     },
   });
+  let version = undefined;
+  try {
+    const resolved = require_.resolve(`${frameworkName}/package.json`, {
+      paths: [args.workPath],
+    });
+    const expressVersion: string = require_(resolved).version;
+    if (expressVersion) {
+      version = expressVersion;
+    }
+  } catch (e) {
+    // ignore
+  }
+  res.output.framework = {
+    name: frameworkName,
+    version,
+  };
+  console.log(res.output);
   return res;
 };
 
