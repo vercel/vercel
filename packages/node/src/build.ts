@@ -785,6 +785,9 @@ async function rolldownCompile(
   });
   const handler = outputEntry;
 
+  if (!handler) {
+    throw new Error('Unable to resolve module for entrypoint');
+  }
   if (!outputEntry) {
     throw new Error('Unable to resolve module for entrypoint');
   }
@@ -833,12 +836,22 @@ const mod = require('../../../../../../node_modules/express/lib/express');
 const routesFile = path.join(__dirname, '..', '..', 'routes.json');
 const routes = {};
 
+const staticPaths = {}
+const originalStatic = mod.static
+
+mod.static = (...args) => {
+  staticPaths[args[0]] = args[1] || true
+  return originalStatic(...args)
+}
+
 let app = null;
 const func2 = (...args) => {
   app = mod(...args);
 
   return app;
 }
+let views = ''
+let viewEngine = ''
 
 // Copy all properties from the original module to preserve functionality
 Object.setPrototypeOf(func2, mod);
@@ -857,7 +870,10 @@ const extractRoutes = () => {
       routes[route.route.path] = { methods: m };
     }
   }
-  fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
+  console.log(app.settings)
+  views = app.settings.views
+  viewEngine = app.settings['view engine']
+  fs.writeFileSync(routesFile, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
 }
 
 process.on('exit', () => {
@@ -875,6 +891,7 @@ process.on('SIGTERM', () => {
 });
 
 module.exports = func2
+
   `
   );
 
@@ -994,7 +1011,53 @@ module.exports = func2
     };
   };
 
-  const routesData = JSON.parse(routesFile);
+  const data = JSON.parse(routesFile || '{}');
+  if (data.views) {
+    const viewsPath = relative(workPath, data.views);
+    const views = await glob(`${viewsPath}/**/*`, workPath);
+    for (const file of Object.keys(views)) {
+      preparedFiles[file] = new FileBlob({
+        data: readFileSync(file),
+        mode: 0o644,
+      });
+    }
+  }
+  if (data.viewEngine) {
+    const viewEngineDep = require_.resolve(data.viewEngine, {
+      paths: [workPath],
+    });
+    const { fileList } = await nodeFileTrace([viewEngineDep], {
+      base: workPath,
+      processCwd: workPath,
+      ts: true,
+      mixedModules: true,
+      ignore: config.excludeFiles,
+    });
+    for (const file of fileList) {
+      preparedFiles[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
+    }
+  }
+  /**
+   * TODO: for static paths declared without any options
+   * we can put them on the CDN instead of including them
+   * here. But for now, just include them
+   */
+  if (data.staticPaths) {
+    const staticPaths = data.staticPaths;
+
+    for (const path of Object.keys(staticPaths)) {
+      if (path !== 'public') {
+        const files = await glob(`${path}/**/*`, workPath);
+        for (const file of Object.keys(files)) {
+          preparedFiles[file] = new FileBlob({
+            data: readFileSync(file),
+            mode: 0o644,
+          });
+        }
+      }
+    }
+  }
+  const routesData = JSON.parse(routesFile?.routes || '{}');
   const routePaths = Object.keys(routesData);
   const proxyRoutes = await Promise.all(
     routePaths.map(route => convertExpressRoute(route, routesData[route]))
