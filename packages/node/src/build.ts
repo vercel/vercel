@@ -60,7 +60,7 @@ import {
 } from './utils';
 import { outputFile, rm, mkdirp } from 'fs-extra';
 import { spawn } from 'child_process';
-import { readFile, symlink } from 'fs/promises';
+import { symlink } from 'fs/promises';
 
 interface DownloadOptions {
   files: Files;
@@ -518,19 +518,28 @@ export const build = async ({
       workPath,
       baseDir,
       entrypointPath,
-      config
-      // meta,
+      config,
+      meta
       // nodeVersion,
       // isEdgeFunction
     );
     preparedFiles = rolldownResult.preparedFiles;
     shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
     handler = rolldownResult.handler;
+
     if (rolldownResult.proxyRoutes.length > 0) {
-      routes = [];
+      routes = [
+        {
+          handle: 'filesystem',
+        },
+      ];
       for (const route of rolldownResult.proxyRoutes) {
         routes.push(route);
       }
+      routes.push({
+        src: '/(.*)',
+        dest: '/',
+      });
     }
   } else {
     debug('Tracing input files...');
@@ -659,8 +668,8 @@ async function rolldownCompile(
   workPath: string,
   baseDir: string,
   entrypointPath: string,
-  config: Config
-  // meta: Meta,
+  config: Config,
+  meta: Meta
   // nodeVersion: NodeVersion,
   // isEdgeFunction: boolean
 ): Promise<{
@@ -774,7 +783,7 @@ async function rolldownCompile(
       sourcemap: false,
     },
   });
-  const handler = `${parsePath(entrypointPath).name}.${extensionInfo.extension}`;
+  const handler = outputEntry;
 
   if (!outputEntry) {
     throw new Error('Unable to resolve module for entrypoint');
@@ -824,24 +833,9 @@ const mod = require('../../../../../../node_modules/express/lib/express');
 const routesFile = path.join(__dirname, '..', '..', 'routes.json');
 const routes = {};
 
+let app = null;
 const func2 = (...args) => {
-  const app = mod(...args);
-  const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
-
-  // Override each method to capture routes
-  for (const m of methods) {
-    const original = app[m].bind(app);
-    app[m] = (...args) => {
-      const route = args[0]; // First argument is the route path
-      if (route && typeof route === 'string') {
-        if (!routes[route]) {
-          routes[route] = { methods: [] };
-        }
-        routes[route].methods.push(m.toUpperCase());
-      }
-      return original(...args);
-    };
-  }
+  app = mod(...args);
 
   return app;
 }
@@ -850,13 +844,33 @@ const func2 = (...args) => {
 Object.setPrototypeOf(func2, mod);
 Object.assign(func2, mod);
 
-process.on('exit', () => {
+const extractRoutes = () => {
+  const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
+  for (const route of app.router.stack) {
+    if(route.route) {
+      const m = [];
+      for (const method of methods) {
+        if(route.route.methods[method]) {
+          m.push(method.toUpperCase());
+        }
+      }
+      routes[route.route.path] = { methods: m };
+    }
+  }
   fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
+}
+
+process.on('exit', () => {
+  extractRoutes()
 });
 
+process.on('SIGINT', () => {
+  extractRoutes()
+  process.exit(0);
+});
 // Write routes to file on SIGTERM
 process.on('SIGTERM', () => {
-  fs.writeFileSync(routesFile, JSON.stringify(routes, null, 2));
+  extractRoutes()
   process.exit(0);
 });
 
@@ -869,7 +883,7 @@ module.exports = func2
     const child = spawn('node', [outPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: workPath,
-      env: { ...process.env, NODE_ENV: 'test' },
+      env: { ...process.env, ...(meta.env || {}), ...(meta.buildEnv || {}) },
     });
 
     child.stderr.on('data', data => {
@@ -878,13 +892,11 @@ module.exports = func2
 
     // Kill after 2 seconds
     setTimeout(() => {
-      console.log('SIGTERM');
       child.kill('SIGTERM');
-    }, 2000);
+    }, 1000);
 
     // Wait for child to complete
     child.on('close', () => {
-      console.log('child closed');
       resolve(undefined);
     });
   });
@@ -957,7 +969,6 @@ module.exports = func2
       dest.split(sep).slice(0, -1).join(sep)
     );
     if (dest.split(sep).length > 2) {
-      console.log('making parent', destPathParent);
       await mkdirp(destPathParent);
     }
     if (existsSync(destPath)) {
