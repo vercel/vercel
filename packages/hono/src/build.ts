@@ -67,7 +67,6 @@ export const build: BuildV3 = async args => {
     name: frameworkName,
     version,
   };
-  console.log(res.output);
   return res;
 };
 

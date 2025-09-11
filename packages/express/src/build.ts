@@ -1,5 +1,5 @@
 import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
-// @ts-expect-error - FIXME: hono-framework build is not exported
+// @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
 import { createRequire } from 'module';
 import { join } from 'path';
@@ -67,7 +67,6 @@ export const build: BuildV3 = async args => {
     name: frameworkName,
     version,
   };
-  console.log(res.output);
   return res;
 };
 
