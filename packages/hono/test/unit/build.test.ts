@@ -126,10 +126,7 @@ const fixtures = {
   },
 };
 
-const failingFixtures = [
-  '01-server-ts-no-module-no-tsconfig',
-  '15-entrypoint-with-no-import',
-];
+const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
 
 describe('build', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
