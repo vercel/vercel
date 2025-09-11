@@ -71,7 +71,7 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
 
     if (entrypointsNotMatchingRegex.length > 0) {
       throw new Error(
-        `No entrypoint found which imports express. Possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)} found: ${entrypointsNotMatchingRegex.join(', ')}`
+        `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
       );
     }
     throw new Error(
@@ -99,11 +99,11 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
 
   if (entrypointsNotMatchingRegex.length > 0) {
     throw new Error(
-      `No entrypoint found which imports express. Possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)} found: ${entrypointsNotMatchingRegex.join(', ')}`
+      `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
     );
   }
   throw new Error(
-    `No entrypoint found. Searched for: \n${entrypointsForMessage}`
+    `No entrypoint found. Searched for:\n${entrypointsForMessage}`
   );
 };
 
