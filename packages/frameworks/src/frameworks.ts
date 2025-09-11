@@ -2030,9 +2030,17 @@ export const frameworks = [
     website: 'https://fastapi.tiangolo.com',
     useRuntime: { src: 'main.py', use: '@vercel/python' },
     detectors: {
-      every: [
+      some: [
         {
           path: 'requirements.txt',
+          matchContent: 'fastapi',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: 'fastapi',
+        },
+        {
+          path: 'Pipfile',
           matchContent: 'fastapi',
         },
       ],
