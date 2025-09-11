@@ -31,6 +31,7 @@
     "execa": "^1.0.0",
     "fs-extra": "11.1.1",
     "jest-junit": "16.0.0",
-    "which": "3.0.0"
+    "which": "3.0.0",
+    "async-sema": "3.0.1"
   }
 }

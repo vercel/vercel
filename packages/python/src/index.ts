@@ -23,6 +23,7 @@ import {
   resolveVendorDir,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { pruneVendorTests } from './pruning';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -334,6 +335,12 @@ export const build: BuildV3 = async ({
   try {
     const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
     if (fs.existsSync(cachedVendorAbs)) {
+      try {
+        await pruneVendorTests(cachedVendorAbs, meta);
+      } catch (err) {
+        console.log('Failed to prune vendor tests');
+        throw err;
+      }
       const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
       for (const [p, f] of Object.entries(vendorFiles)) {
         files[p] = f;
