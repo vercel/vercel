@@ -33,7 +33,10 @@ const fastapiContentRegex =
   /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
 
 const fastapiCandidateEntrypoints = fastapiEntrypointFilenames.flatMap(
-  filename => fastapiEntrypointDirs.map(dir => `${dir}/${filename}.py`)
+  filename =>
+    fastapiEntrypointDirs.map(dir =>
+      dir ? `${dir}/${filename}.py` : `${filename}.py`
+    )
 );
 
 function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
@@ -143,6 +146,12 @@ export const build: BuildV3 = async ({
         `Resolved Python entrypoint to "${discovered}" (configured "${entrypoint}" not found).`
       );
       entrypoint = discovered;
+    } else if (config?.framework === 'fastapi') {
+      const searchedList = fastapiCandidateEntrypoints.join(', ');
+      throw new NowBuildError({
+        code: 'FASTAPI_ENTRYPOINT_NOT_FOUND',
+        message: `No FastAPI entrypoint found. Searched for: ${searchedList}`,
+      });
     }
   }
 
