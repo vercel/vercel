@@ -46,9 +46,10 @@ describe('logout', () => {
     fetch.mockResolvedValueOnce(mockResponse({}));
 
     client.setArgv('logout');
-    client.authConfig.type = 'oauth';
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.authConfig.refreshToken = randomUUID();
+    const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
     const exitCode = await logout(client);
@@ -82,6 +83,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const refreshTokenAfter = client.authConfig.refreshToken;
+    expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
+    expect(refreshTokenAfter).toBeUndefined();
 
     const teamAfter = client.config.currentTeam;
     expect(teamAfter).not.toBe(teamBefore);
@@ -98,8 +102,9 @@ describe('logout', () => {
 
     client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();
-    client.authConfig.type = 'oauth';
     const tokenBefore = client.authConfig.token;
+    client.authConfig.refreshToken = randomUUID();
+    const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
     const teamBefore = client.config.currentTeam;
 
@@ -117,6 +122,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const refreshTokenAfter = client.authConfig.refreshToken;
+    expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
+    expect(refreshTokenAfter).toBeUndefined();
 
     const teamAfter = client.config.currentTeam;
     expect(teamAfter).not.toBe(teamBefore);
@@ -126,7 +134,6 @@ describe('logout', () => {
   it('if no token, do nothing', async () => {
     client.setArgv('logout');
     delete client.authConfig.token;
-    client.authConfig.type = 'oauth';
     expect(client.authConfig.token).toBeUndefined();
 
     const exitCode = await logout(client);

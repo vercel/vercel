@@ -2,9 +2,8 @@ import http from 'http';
 import open from 'open';
 import { URL } from 'url';
 import { listen } from 'async-listen';
-import isDocker from 'is-docker';
 import type Client from '../client';
-import prompt, { readInput } from './prompt';
+import prompt from './prompt';
 import verify from './verify';
 import highlight from '../output/highlight';
 import link from '../output/link';
@@ -16,14 +15,9 @@ export default async function doOauthLogin(
   client: Client,
   url: URL,
   provider: string,
-  outOfBand = isHeadless(),
   ssoUserId?: string
 ): Promise<LoginResult> {
   url.searchParams.set('mode', 'login');
-
-  const getVerificationToken = outOfBand
-    ? getVerificationTokenOutOfBand
-    : getVerificationTokenInBand;
 
   let result = await getVerificationToken(client, url, provider);
 
@@ -49,15 +43,10 @@ export default async function doOauthLogin(
 }
 
 /**
- * Get the verification token "in-band" by spawning a localhost
- * HTTP server that gets redirected to as the OAuth callback URL.
- *
- * This method is preferred since it doesn't require additional
- * user interaction, however it only works when the web browser
- * is on the same machine as the localhost HTTP server (so doesn't
- * work over SSH, for example).
+ * Get the verification token by spawning a localhost HTTP server
+ * that gets redirected to as the OAuth callback URL.
  */
-async function getVerificationTokenInBand(
+async function getVerificationToken(
   client: Client,
   url: URL,
   provider: string
@@ -138,7 +127,7 @@ async function getVerificationTokenInBand(
       output.log(
         'Please log in to your Vercel account to complete SAML connection.'
       );
-      return prompt(client, undefined, false, ssoUserIdParam);
+      return prompt(client, undefined, ssoUserIdParam);
     }
 
     const verificationToken = query.get('token');
@@ -153,51 +142,4 @@ async function getVerificationTokenInBand(
   } finally {
     server.close();
   }
-}
-
-/**
- * Get the verification token "out-of-band" by presenting the login URL
- * to the user and directing them to visit the URL in their web browser.
- *
- * A prompt is rendered asking for the verification token that is
- * provided to them in the callback URL after the login is successful.
- */
-async function getVerificationTokenOutOfBand(client: Client, url: URL) {
-  url.searchParams.set(
-    'next',
-    `https://vercel.com/notifications/cli-login-oob`
-  );
-  output.log(`Please visit the following URL in your web browser:`);
-  output.log(link(url.href));
-  output.print('\n');
-  output.log(
-    `After login is complete, enter the verification code printed in your browser.`
-  );
-  const verificationToken = await readInput(client, 'Verification code:');
-  output.print(eraseLines(6));
-
-  // If the pasted token begins with "saml_", then the `ssoUserId` was returned.
-  // Prompt the user to log in to a Vercel account now, which will complete the
-  // connection to the SAML Profile.
-  if (verificationToken.startsWith('saml_')) {
-    output.log(
-      'Please log in to your Vercel account to complete SAML connection.'
-    );
-    return prompt(client, undefined, true, verificationToken.substring(5));
-  }
-
-  return { verificationToken };
-}
-
-/**
- * Attempts to detect whether CLI is running inside a "headless"
- * environment, such as inside a Docker container or in an SSH
- * session.
- */
-function isHeadless() {
-  return isDocker() || isSSH();
-}
-
-function isSSH() {
-  return Boolean(process.env.SSH_CLIENT || process.env.SSH_TTY);
 }

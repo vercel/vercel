@@ -3420,17 +3420,7 @@ exports[`help command > login help output snapshots > login help column width 40
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team 
-  id.                                   
-
-  Options:
-
-   --future  Sign in using OAuth Device  
-             Authorization               
-   --github  Log in with GitHub          
-   --oob     Log in with "out of band"   
-             authentication              
-
+  Sign in to your Vercel account.       
 
   Global Options:
 
@@ -3472,21 +3462,9 @@ exports[`help command > login help output snapshots > login help column width 40
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;
@@ -3495,14 +3473,7 @@ exports[`help command > login help output snapshots > login help column width 80
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team id.                                     
-
-  Options:
-
-   --future  Sign in using OAuth Device Authorization                            
-   --github  Log in with GitHub                                                  
-   --oob     Log in with "out of band" authentication                            
-
+  Sign in to your Vercel account.                                               
 
   Global Options:
 
@@ -3520,21 +3491,9 @@ exports[`help command > login help output snapshots > login help column width 80
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;
@@ -3543,14 +3502,7 @@ exports[`help command > login help output snapshots > login help column width 12
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team id.                                                                             
-
-  Options:
-
-   --future  Sign in using OAuth Device Authorization                                                                    
-   --github  Log in with GitHub                                                                                          
-   --oob     Log in with "out of band" authentication                                                                    
-
+  Sign in to your Vercel account.                                                                                       
 
   Global Options:
 
@@ -3567,21 +3519,9 @@ exports[`help command > login help output snapshots > login help column width 12
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;
