@@ -732,7 +732,14 @@ async function rolldownCompile(
     tsconfig: tsconfigPath || undefined,
     output: {
       dir: join(workPath, '.vercel', 'output', 'functions', 'index.func'),
+      // FIXME: This is a bit messy, not sure what facadeModuleId even is and the only reason for renaming here
+      // is to preserve the proper extension for mjs/cjs scenario.
+      // There doesn't seem to be another way to do only specify the entrypoint extension.
       entryFileNames: info => {
+        // need to find a better way to renaming. This special case because the facadeModuleId is rolldown:runtime
+        if (info.name === 'rolldown_runtime') {
+          return 'rolldown_runtime.js';
+        }
         const facadeModuleId = info.facadeModuleId;
         if (!facadeModuleId) {
           throw new Error(`Unable to resolve module for ${info.name}`);

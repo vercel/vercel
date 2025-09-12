@@ -16,6 +16,7 @@ import { rm, symlink } from 'fs/promises';
 import { mkdirp } from 'fs-extra';
 import { nodeFileTrace } from '@vercel/nft';
 import { createRequire } from 'module';
+import { parse, pathToRegexp, Token } from 'path-to-regexp';
 
 const require_ = createRequire(__filename);
 
@@ -180,66 +181,57 @@ module.exports = func2
     'routes.json'
   );
   const routesFile = readFileSync(routesFilePath, 'utf8');
-  // await rm(routesFilePath);
-  // await rm(
-  //   join(
-  //     workPath,
-  //     '.vercel',
-  //     'output',
-  //     'functions',
-  //     'index.func',
-  //     'node_modules'
-  //   ),
-  //   { recursive: true, force: true }
-  // );
+  await rm(routesFilePath);
+  await rm(
+    join(
+      workPath,
+      '.vercel',
+      'output',
+      'functions',
+      'index.func',
+      'node_modules'
+    ),
+    { recursive: true, force: true }
+  );
 
-  const convertExpressRoute = async (
+  const convertExpressRoute = (
     route: string,
     routeData: { methods: string[] }
   ) => {
+    const { regexp } = pathToRegexp(route);
+    const { tokens } = parse(route);
+
+    const processTokens = (tokens: Token[]): string => {
+      return tokens
+        .map(t => {
+          if (t.type === 'text') {
+            return t.value;
+          }
+          if (t.type === 'param') {
+            return `[${t.name}]`;
+          }
+          if (t.type === 'wildcard') {
+            return `[...${t.name}]`;
+          }
+          if (t.type === 'group') {
+            return processTokens(t.tokens);
+          }
+          return '';
+        })
+        .join('');
+    };
+
     // Convert Express params (:id) to Vercel params ([id])
-    const dest = route.replace(/:([^/]+)/g, '[$1]');
+    const dest = processTokens(tokens);
+    if (dest === '/') {
+      return;
+    }
 
     // Convert Express params to regex for src
-    const src = route.replace(/:([^/]+)/g, '([^/]+)');
-
-    // create symlink to index.func with fs-extra
-    // if the dest path has a parent, create the parent directory
-    const destPath = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      `${dest}.func`
-    );
-    const destPathParent = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      dest.split(sep).slice(0, -1).join(sep)
-    );
-    if (dest.split(sep).length > 2) {
-      await mkdirp(destPathParent);
-    }
-    if (existsSync(destPath)) {
-      await rm(destPath);
-    }
-
-    // Create relative path symlink
-    const targetPath = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func'
-    );
-    const relativeTargetPath = relative(dirname(destPath), targetPath);
-
-    await symlink(relativeTargetPath, destPath);
+    const src = regexp.toString();
 
     return {
-      src: `^${src}$`,
+      src,
       dest: dest,
       methods: routeData.methods,
     };
@@ -293,9 +285,9 @@ module.exports = func2
   }
   const routesData = data.routes;
   const routePaths = Object.keys(routesData);
-  const proxyRoutes = await Promise.all(
-    routePaths.map(route => convertExpressRoute(route, routesData[route]))
-  );
+  const proxyRoutes = routePaths
+    .map(route => convertExpressRoute(route, routesData[route]))
+    .filter(Boolean) as { src: string; dest: string; methods: string[] }[];
   if (proxyRoutes.length > 0) {
     res.routes = [
       {
@@ -304,6 +296,40 @@ module.exports = func2
     ];
     for (const route of proxyRoutes) {
       res.routes.push(route);
+      // create symlink to index.func with fs-extra
+      // if the dest path has a parent, create the parent directory
+      const destPath = join(
+        workPath,
+        '.vercel',
+        'output',
+        'functions',
+        `${route.dest}.func`
+      );
+      const destPathParent = join(
+        workPath,
+        '.vercel',
+        'output',
+        'functions',
+        route.dest.split(sep).slice(0, -1).join(sep)
+      );
+      if (route.dest.split(sep).length > 2) {
+        await mkdirp(destPathParent);
+      }
+      if (existsSync(destPath)) {
+        await rm(destPath);
+      }
+
+      // Create relative path symlink
+      const targetPath = join(
+        workPath,
+        '.vercel',
+        'output',
+        'functions',
+        'index.func'
+      );
+      const relativeTargetPath = relative(dirname(destPath), targetPath);
+
+      await symlink(relativeTargetPath, destPath);
     }
     res.routes.push({
       src: '/(.*)',
