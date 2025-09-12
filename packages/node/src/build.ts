@@ -669,7 +669,7 @@ async function rolldownCompile(
     '.mjs': { format: 'esm', extension: 'mjs' },
   };
 
-  const extensionInfo = extensionMap[extension];
+  const extensionInfo = extensionMap[extension] || extensionMap['.js'];
   let format = extensionInfo.format;
 
   // Always include package.json from the entrypoint directory
@@ -749,6 +749,7 @@ async function rolldownCompile(
         const extensionMap: Record<string, string> = {
           '.ts': '.js',
           '.mts': '.mjs',
+          '.mjs': '.mjs',
           '.cts': '.cjs',
           '.cjs': '.cjs',
           '.js': '.js',

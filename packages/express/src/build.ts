@@ -27,6 +27,15 @@ export const build: BuildV3 = async args => {
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
 
+  if (process.env.VERCEL_NODE_BUILD_USE_ROLLDOWN) {
+    const includeFiles = ['views/**/*'];
+    const includeFilesFromConfig = args.config.includeFiles;
+    if (includeFilesFromConfig) {
+      includeFiles.push(...includeFilesFromConfig);
+    }
+    args.config.includeFiles = includeFiles;
+  }
+
   const res = await nodeBuild({
     ...args,
     // this is package.json, but we'll replace it with the return value of the entrypointCallback
@@ -37,7 +46,9 @@ export const build: BuildV3 = async args => {
       return entrypointCallback(args);
     },
   });
-  await introspectApp(args, res);
+  if (process.env.VERCEL_NODE_BUILD_USE_ROLLDOWN) {
+    await introspectApp(args, res);
+  }
   return res;
 };
 
