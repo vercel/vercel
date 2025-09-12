@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/api/hello",
+      "method": "GET",
+      "mustContain": "Hello, World!"
+    }
+  ]
+}

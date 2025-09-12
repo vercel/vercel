@@ -1,9 +1,0 @@
-{
-  "probes": [
-    {
-      "path": "/api",
-      "method": "GET",
-      "mustContain": "{\"numpy_sum\":6,\"pandas_rows\":3,\"networkx_nodes\":2}"
-    }
-  ]
-}
