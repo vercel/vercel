@@ -81,6 +81,11 @@
     {
       "path": "/_next/data/testing-build-id/after-file-rewrite.json",
       "status": 200,
+      "mustContain": "page\":\"about\""
+    },
+    {
+      "path": "/_next/data/testing-build-id/after-file-rewrite.json",
+      "status": 200,
       "headers": {
         "x-nextjs-data": "1"
       },
@@ -104,7 +109,7 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "Location": "/from-middleware/"
+        "Location": "/from-next-config/"
       }
     },
     {
