@@ -198,6 +198,68 @@ export const pullSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description:
+    'Update the value of an existing Environment Variable (see examples below)',
+  arguments: [
+    {
+      name: 'name',
+      required: true,
+    },
+    {
+      name: 'environment',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'sensitive',
+      description: 'Update to a sensitive Environment Variable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when updating an Environment Variable',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update a variable in all Environments',
+      value: [
+        `${packageName} env update <name>`,
+        `${packageName} env update API_TOKEN`,
+      ],
+    },
+    {
+      name: 'Update a variable in a specific Environment',
+      value: [
+        `${packageName} env update <name> ${targetPlaceholder}`,
+        `${packageName} env update DB_PASS production`,
+      ],
+    },
+    {
+      name: 'Update a variable for a specific Environment and Git Branch',
+      value: [
+        `${packageName} env update <name> ${targetPlaceholder} <gitbranch>`,
+        `${packageName} env update NPM_RC preview feat1`,
+      ],
+    },
+    {
+      name: 'Update a variable from stdin',
+      value: [
+        `cat <file> | ${packageName} env update <name> ${targetPlaceholder}`,
+        `cat ~/.npmrc | ${packageName} env update NPM_RC preview`,
+        `${packageName} env update API_URL production < url.txt`,
+      ],
+    },
+  ],
+} as const;
+
 export const envCommand = {
   name: 'env',
   aliases: [],
@@ -208,6 +270,7 @@ export const envCommand = {
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
+    updateSubcommand,
   ],
   options: [],
   examples: [],
