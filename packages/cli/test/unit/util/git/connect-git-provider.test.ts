@@ -72,6 +72,7 @@ vi.mock('../../../../src/output-manager', () => ({
   default: {
     log: vi.fn(),
     error: vi.fn(),
+    initialize: vi.fn(),
   },
 }));
 
