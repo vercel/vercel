@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "path": "/api/hello",
+      "path": "/hello",
       "method": "GET",
       "mustContain": "Hello, World!"
     }
