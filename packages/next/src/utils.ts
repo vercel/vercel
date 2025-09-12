@@ -1919,10 +1919,10 @@ export async function getPageLambdaGroups({
     }
 
     const isGeneratedSteps =
-      routeName.includes('api/.well-known/generated/steps') ||
+      routeName.includes('.well-known/workflow/v1/step') ||
       routeName.includes('api/generated/steps');
     const isGeneratedWorkflows =
-      routeName.includes('api/.well-known/generated/workflows') ||
+      routeName.includes('.well-known/workflow/v1/flow') ||
       routeName.includes('api/generated/workflows');
 
     if (isGeneratedSteps || isGeneratedWorkflows) {
