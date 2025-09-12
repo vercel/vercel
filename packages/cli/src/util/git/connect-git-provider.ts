@@ -87,6 +87,24 @@ export function formatProvider(type: string): string {
   }
 }
 
+export function buildRepoUrl(
+  provider: string,
+  org: string,
+  repo: string
+): string | null {
+  switch (provider) {
+    case 'github':
+      return `https://github.com/${org}/${repo}`;
+    case 'gitlab':
+      return `https://gitlab.com/${org}/${repo}`;
+    case 'bitbucket':
+      return `https://bitbucket.org/${org}/${repo}`;
+    default:
+      // For unknown providers, return null to indicate we should use repo path
+      return null;
+  }
+}
+
 function getURL(input: string) {
   let url: URL | null = null;
 
@@ -189,7 +207,6 @@ export interface GitRepoCheckParams {
   provider: string;
   repo: string;
   repoPath: string;
-  repoUrl: string;
 }
 
 export async function checkExistsAndConnect({
@@ -202,10 +219,9 @@ export async function checkExistsAndConnect({
   repoPath,
   gitOrg,
   repo,
-  repoUrl,
 }: GitRepoCheckParams) {
   output.log(
-    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(repoUrl)}`
+    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(buildRepoUrl(provider, gitOrg, repo) || repoPath)}`
   );
 
   if (!gitProviderLink) {

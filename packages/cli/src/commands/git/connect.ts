@@ -155,7 +155,6 @@ export default async function connect(client: Client, argv: string[]) {
     provider: repoInfo.provider,
     repo: repoInfo.repo,
     repoPath: `${repoInfo.org}/${repoInfo.repo}`,
-    repoUrl: repoInfo.url,
   });
 
   if (typeof result === 'number') {
@@ -190,7 +189,6 @@ async function connectArg({
     provider: parsedRepoArg.provider,
     repo: parsedRepoArg.repo,
     repoPath: `${parsedRepoArg.org}/${parsedRepoArg.repo}`,
-    repoUrl: repoUrl,
   });
   if (typeof result === 'number') {
     return result;
@@ -228,7 +226,6 @@ async function connectArgWithLocalGit({
         provider: repoInfo.provider,
         repo: repoInfo.repo,
         repoPath: `${repoInfo.org}/${repoInfo.repo}`,
-        repoUrl: repoInfo.url,
       });
       if (typeof result === 'number') {
         return result;
