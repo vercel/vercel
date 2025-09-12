@@ -47,6 +47,7 @@ export async function login(
     interval,
   } = deviceAuthorization;
 
+  let rlClosed = false;
   const rl = readline
     .createInterface({
       input: process.stdin,
@@ -74,6 +75,7 @@ export async function login(
       o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
       o.spinner('Waiting for authentication...');
       rl.close();
+      rlClosed = true;
     }
   );
 
@@ -86,9 +88,6 @@ export async function login(
 
   async function pollForToken(): Promise<Error | undefined> {
     while (Date.now() < expiresAt) {
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-
-      // TODO: Handle connection timeouts and add interval backoff
       const [tokenResponseError, tokenResponse] =
         await deviceAccessTokenRequest({ device_code });
 
@@ -99,6 +98,7 @@ export async function login(
           o.debug(
             `Connection timeout. Slowing down, polling every ${intervalMs / 1000}s...`
           );
+          await wait(intervalMs);
           continue;
         }
         return tokenResponseError;
@@ -114,12 +114,14 @@ export async function login(
         const { code } = tokensError;
         switch (code) {
           case 'authorization_pending':
+            await wait(intervalMs);
             continue;
           case 'slow_down':
             intervalMs += 5 * 1000;
             o.debug(
               `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
             );
+            await wait(intervalMs);
             continue;
           default:
             return tokensError.cause;
@@ -138,7 +140,6 @@ export async function login(
 
       client.updateAuthConfig({
         token: tokens.access_token,
-        type: 'oauth',
         expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
         refreshToken: tokens.refresh_token,
       });
@@ -170,7 +171,9 @@ export async function login(
   error = await pollForToken();
 
   o.stopSpinner();
-  rl.close();
+  if (!rlClosed) {
+    rl.close();
+  }
 
   if (!error) {
     telemetry.trackState('success');
@@ -180,4 +183,8 @@ export async function login(
   printError(error);
   telemetry.trackState('error');
   return 1;
+}
+
+async function wait(intervalMs: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, intervalMs));
 }
