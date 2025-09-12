@@ -113,7 +113,7 @@
         "redirect": "manual"
       },
       "responseHeaders": {
-        "Location": "/from-middleware/"
+        "Location": "/from-next-config/"
       }
     },
     {

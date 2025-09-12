@@ -1,9 +1,11 @@
 import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
-// @ts-expect-error - FIXME: hono-framework build is not exported
+// @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
+import { createRequire } from 'module';
 import { join } from 'path';
 import fs from 'fs';
 
+const frameworkName = 'hono';
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']hono["']\s*(?:\))?/g;
 
 const validFilenames = [
@@ -15,6 +17,8 @@ const validFilenames = [
   'src/server',
 ];
 
+export const require_ = createRequire(__filename);
+
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
@@ -25,8 +29,20 @@ export const build: BuildV3 = async args => {
   // Introducing new behavior for the node builder where Typescript errors always
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
-  return nodeBuild({
+
+  // Express's rendering engine support using the views directory as the entrypoint.
+  const includeFiles = ['views/**/*'];
+  const includeFilesFromConfig = args.config.includeFiles;
+  if (includeFilesFromConfig) {
+    includeFiles.push(...includeFilesFromConfig);
+  }
+
+  const res = await nodeBuild({
     ...args,
+    config: {
+      ...args.config,
+      includeFiles,
+    },
     // this is package.json, but we'll replace it with the return value of the entrypointCallback
     // after install and build scripts have had a chance to run
     entrypoint: 'package.json',
@@ -35,10 +51,28 @@ export const build: BuildV3 = async args => {
       return entrypointCallback(args);
     },
   });
+  let version = undefined;
+  try {
+    const resolved = require_.resolve(`${frameworkName}/package.json`, {
+      paths: [args.workPath],
+    });
+    const honoVersion: string = require_(resolved).version;
+    if (honoVersion) {
+      version = honoVersion;
+    }
+  } catch (e) {
+    // ignore
+  }
+  res.output.framework = {
+    name: frameworkName,
+    version,
+  };
+  return res;
 };
 
 export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
+  // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
   const entrypointGlob = `{${validFilenames
     .map(entrypoint => `${entrypoint}`)
     .join(',')}}.{${validExtensions.join(',')}}`;
@@ -49,19 +83,24 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   );
   // if an output directory is specified, look there first for an entrypoint
   if (dir) {
-    const entrypointFromOutputDir = findEntrypoint(
-      await glob(entrypointGlob, join(args.workPath, dir))
-    );
+    const { entrypoint: entrypointFromOutputDir, entrypointsNotMatchingRegex } =
+      findEntrypoint(await glob(entrypointGlob, join(args.workPath, dir)));
     if (entrypointFromOutputDir) {
       return join(dir, entrypointFromOutputDir);
     }
 
+    if (entrypointsNotMatchingRegex.length > 0) {
+      throw new Error(
+        `No entrypoint found which imports hono. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+      );
+    }
     throw new Error(
       `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
     );
   }
   const files = await glob(entrypointGlob, args.workPath);
-  const entrypointFromRoot = findEntrypoint(files);
+  const { entrypoint: entrypointFromRoot, entrypointsNotMatchingRegex } =
+    findEntrypoint(files);
   if (entrypointFromRoot) {
     return entrypointFromRoot;
   }
@@ -78,33 +117,54 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
     }
   }
 
+  if (entrypointsNotMatchingRegex.length > 0) {
+    throw new Error(
+      `No entrypoint found which imports hono. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+    );
+  }
   throw new Error(
-    `No entrypoint found. Searched for: \n${entrypointsForMessage}`
+    `No entrypoint found. Searched for:\n${entrypointsForMessage}`
   );
 };
 
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`;
+}
+
 export const findEntrypoint = (files: Record<string, FileFsRef>) => {
-  const validEntrypoints = validFilenames.flatMap(filename =>
+  const allEntrypoints = validFilenames.flatMap(filename =>
     validExtensions.map(extension => `${filename}.${extension}`)
   );
 
-  const entrypoints = validEntrypoints.filter(entrypoint => {
-    const matches = files[entrypoint] !== undefined;
-    if (matches) {
+  const possibleEntrypointsInFiles = allEntrypoints.filter(entrypoint => {
+    return files[entrypoint] !== undefined;
+  });
+
+  const entrypointsMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
       const file = files[entrypoint];
       return checkMatchesRegex(file);
     }
-    return false;
-  });
+  );
 
-  const entrypoint = entrypoints[0];
-  if (entrypoints.length > 1) {
+  const entrypointsNotMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
+      const file = files[entrypoint];
+      return !checkMatchesRegex(file);
+    }
+  );
+
+  const entrypoint = entrypointsMatchingRegex[0];
+  if (entrypointsMatchingRegex.length > 1) {
     console.warn(
-      `Multiple entrypoints found: ${entrypoints.join(', ')}. Using ${entrypoint}.`
+      `Multiple entrypoints found: ${entrypointsMatchingRegex.join(', ')}. Using ${entrypoint}.`
     );
   }
 
-  return entrypoint;
+  return {
+    entrypoint,
+    entrypointsNotMatchingRegex,
+  };
 };
 
 const checkMatchesRegex = (file: FileFsRef) => {
