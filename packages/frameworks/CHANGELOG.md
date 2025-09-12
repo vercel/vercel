@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.8.5
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
 ## 3.8.4
 
 ### Patch Changes

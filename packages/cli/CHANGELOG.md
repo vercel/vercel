@@ -1,5 +1,41 @@
 # vercel
 
+## 47.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/python@5.0.3
+
+## 47.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`4f294cd5a5c73b33b41250f47216966a5158cf16`](https://github.com/vercel/vercel/commit/4f294cd5a5c73b33b41250f47216966a5158cf16)]:
+  - @vercel/python@5.0.2
+
+## 47.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`e0c7af044a7039b641317eeee21cdc7fa1dc1b0b`](https://github.com/vercel/vercel/commit/e0c7af044a7039b641317eeee21cdc7fa1dc1b0b)]:
+  - @vercel/python@5.0.1
+
+## 47.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`d39fd1e138b96509af6b8ebf9cc634f44d1ed38f`](https://github.com/vercel/vercel/commit/d39fd1e138b96509af6b8ebf9cc634f44d1ed38f)]:
+  - @vercel/node@5.3.22
+  - @vercel/express@0.0.15
+  - @vercel/hono@0.0.23
+
+## 47.1.0
+
+### Minor Changes
+
+- Add guidance flag for deploy and env commands ([#13900](https://github.com/vercel/vercel/pull/13900))
+
 ## 47.0.7
 
 ### Patch Changes

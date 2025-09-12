@@ -1,5 +1,23 @@
 # @vercel/python
 
+## 5.0.3
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 5.0.2
+
+### Patch Changes
+
+- Vercel build command on python projects installs dependencies into vendor dir instead of project root. ([#13884](https://github.com/vercel/vercel/pull/13884))
+
+## 5.0.1
+
+### Patch Changes
+
+- fix(python): Avoid uploading pycache ([#13909](https://github.com/vercel/vercel/pull/13909))
+
 ## 5.0.0
 
 ### Major Changes
