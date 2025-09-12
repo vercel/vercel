@@ -1986,6 +1986,33 @@ export async function serverBuild({
 
       ...privateOutputs.routes,
 
+      ...(isNextDataServerResolving
+        ? [
+            // ensure x-nextjs-data header is always present
+            // if we are doing middleware next data resolving
+            {
+              src: path.posix.join('/', entryDirectory, '/_next/data/(.*)'),
+              missing: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'append',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                  args: `1`,
+                },
+              ],
+              continue: true,
+            },
+          ]
+        : []),
+
       // normalize _next/data URL before processing redirects
       ...normalizeNextDataRoute(true),
 
