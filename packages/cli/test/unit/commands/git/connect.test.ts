@@ -167,7 +167,7 @@ describe('git connect', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        `Connecting GitHub repository: https://github.com/user/repo.git`
+        `Connecting GitHub repository: https://github.com/user/repo`
       );
 
       const exitCode = await gitPromise;
@@ -502,7 +502,7 @@ describe('git connect', () => {
       client.stdin.write('\r');
 
       await expect(client.stderr).toOutput(
-        'Connecting GitHub repository: https://github.com/user/repo.git'
+        'Connecting GitHub repository: https://github.com/user/repo'
       );
       await expect(client.stderr).toOutput(
         'Connected GitHub repository user/repo!'

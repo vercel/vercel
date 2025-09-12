@@ -142,7 +142,9 @@ export default async function connect(client: Client, argv: string[]) {
 
   const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
   if (!repoInfo) {
-    return repoInfo === null ? 0 : 1;
+    // If multiple remotes, user could have canceled (return 0)
+    // If single remote, must be a parse error (return 1)
+    return Object.keys(remoteUrls).length > 1 ? 0 : 1;
   }
 
   const result = await checkExistsAndConnect({

@@ -220,8 +220,9 @@ export async function checkExistsAndConnect({
   gitOrg,
   repo,
 }: GitRepoCheckParams) {
+  const displayUrl = buildRepoUrl(provider, gitOrg, repo) || repoPath;
   output.log(
-    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(buildRepoUrl(provider, gitOrg, repo) || repoPath)}`
+    `Connecting ${formatProvider(provider)} repository: ${chalk.cyan(displayUrl)}`
   );
 
   if (!gitProviderLink) {
