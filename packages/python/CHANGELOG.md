@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.4
+
+### Patch Changes
+
+- [python]: move python packages vendor dir out of /cache ([#13921](https://github.com/vercel/vercel/pull/13921))
+
 ## 5.0.3
 
 ### Patch Changes
