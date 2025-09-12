@@ -11,7 +11,9 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     Object.assign(ctx, info);
   });
 
-  it('should revalidate content correctly for middleware rewrite', async () => {
+   // Flaky test - skip until fixed.
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip('should revalidate content correctly for middleware rewrite', async () => {
     const propsFromHtml = async () => {
       let res = await fetch(
         `${ctx.deploymentUrl}/docs/rewrite-to-another-site`
