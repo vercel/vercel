@@ -3,6 +3,7 @@ import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
 import { build as nodeBuild } from '@vercel/node';
 import { join } from 'path';
 import fs from 'fs';
+import { introspectApp } from './introspection';
 
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
 
@@ -36,6 +37,7 @@ export const build: BuildV3 = async args => {
       return entrypointCallback(args);
     },
   });
+  await introspectApp(args, res);
   return res;
 };
 

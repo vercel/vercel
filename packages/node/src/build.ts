@@ -58,9 +58,6 @@ import {
   getRegExpFromMatchers,
   isEdgeRuntime,
 } from './utils';
-import { outputFile, rm, mkdirp } from 'fs-extra';
-import { spawn } from 'child_process';
-import { symlink } from 'fs/promises';
 
 interface DownloadOptions {
   files: Files;
@@ -518,29 +515,11 @@ export const build = async ({
       workPath,
       baseDir,
       entrypointPath,
-      config,
-      meta
-      // nodeVersion,
-      // isEdgeFunction
+      config
     );
     preparedFiles = rolldownResult.preparedFiles;
     shouldAddSourcemapSupport = rolldownResult.shouldAddSourcemapSupport;
     handler = rolldownResult.handler;
-
-    if (rolldownResult.proxyRoutes.length > 0) {
-      routes = [
-        {
-          handle: 'filesystem',
-        },
-      ];
-      for (const route of rolldownResult.proxyRoutes) {
-        routes.push(route);
-      }
-      routes.push({
-        src: '/(.*)',
-        dest: '/',
-      });
-    }
   } else {
     debug('Tracing input files...');
     const traceTime = Date.now();
@@ -668,15 +647,11 @@ async function rolldownCompile(
   workPath: string,
   baseDir: string,
   entrypointPath: string,
-  config: Config,
-  meta: Meta
-  // nodeVersion: NodeVersion,
-  // isEdgeFunction: boolean
+  config: Config
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
   handler: string;
-  proxyRoutes: { src: string; dest: string; methods: string[] }[];
 }> {
   const preparedFiles: Files = {};
   const shouldAddSourcemapSupport = false;
@@ -814,257 +789,8 @@ async function rolldownCompile(
     const { mode } = lstatSync(fsPath);
     preparedFiles[file] = new FileFsRef({ fsPath, mode });
   }
-  const expressPath = join(
-    workPath,
-    '.vercel',
-    'output',
-    'functions',
-    'index.func',
-    'node_modules',
-    'express',
-    'index.js'
-  );
-  await outputFile(
-    expressPath,
-    `'use strict';
-
-const fs = require('fs');
-const path = require('path');
-
-const mod = require('../../../../../../node_modules/express/lib/express');
-
-const routesFile = path.join(__dirname, '..', '..', 'routes.json');
-const routes = {};
-
-const staticPaths = {}
-const originalStatic = mod.static
-
-mod.static = (...args) => {
-  staticPaths[args[0]] = args[1] || true
-  return originalStatic(...args)
-}
-
-let app = null;
-const func2 = (...args) => {
-  app = mod(...args);
-
-  return app;
-}
-let views = ''
-let viewEngine = ''
-
-// Copy all properties from the original module to preserve functionality
-Object.setPrototypeOf(func2, mod);
-Object.assign(func2, mod);
-
-const extractRoutes = () => {
-  const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
-  for (const route of app.router.stack) {
-    if(route.route) {
-      const m = [];
-      for (const method of methods) {
-        if(route.route.methods[method]) {
-          m.push(method.toUpperCase());
-        }
-      }
-      routes[route.route.path] = { methods: m };
-    }
-  }
-  console.log(app.settings)
-  views = app.settings.views
-  viewEngine = app.settings['view engine']
-  fs.writeFileSync(routesFile, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
-}
-
-process.on('exit', () => {
-  extractRoutes()
-});
-
-process.on('SIGINT', () => {
-  extractRoutes()
-  process.exit(0);
-});
-// Write routes to file on SIGTERM
-process.on('SIGTERM', () => {
-  extractRoutes()
-  process.exit(0);
-});
-
-module.exports = func2
-
-  `
-  );
-
-  // Capture routes using child process
-  await new Promise(resolve => {
-    const child = spawn('node', [outPath], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: workPath,
-      env: { ...process.env, ...(meta.env || {}), ...(meta.buildEnv || {}) },
-    });
-
-    child.stderr.on('data', data => {
-      console.error(`stderr: ${data}`);
-    });
-
-    // Kill after 2 seconds
-    setTimeout(() => {
-      child.kill('SIGTERM');
-    }, 1000);
-
-    // Wait for child to complete
-    child.on('close', () => {
-      resolve(undefined);
-    });
-  });
-
-  // Process includeFiles if specified
-  if (config.includeFiles) {
-    const includeFiles =
-      typeof config.includeFiles === 'string'
-        ? [config.includeFiles]
-        : config.includeFiles;
-
-    for (const pattern of includeFiles) {
-      const files = await glob(pattern, workPath);
-      await Promise.all(
-        Object.values(files).map(async entry => {
-          const { fsPath } = entry;
-          const relPath = relative(baseDir, fsPath);
-          preparedFiles[relPath] = entry;
-          console.log('Added includeFile to preparedFiles:', relPath);
-        })
-      );
-    }
-  }
-  const routesFilePath = join(
-    workPath,
-    '.vercel',
-    'output',
-    'functions',
-    'index.func',
-    'routes.json'
-  );
-  const routesFile = readFileSync(routesFilePath, 'utf8');
-  await rm(routesFilePath);
-  await rm(
-    join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func',
-      'node_modules'
-    ),
-    { recursive: true, force: true }
-  );
-
-  const convertExpressRoute = async (
-    route: string,
-    routeData: { methods: string[] }
-  ) => {
-    // Convert Express params (:id) to Vercel params ([id])
-    const dest = route.replace(/:([^/]+)/g, '[$1]');
-
-    // Convert Express params to regex for src
-    const src = route.replace(/:([^/]+)/g, '([^/]+)');
-
-    // create symlink to index.func with fs-extra
-    // if the dest path has a parent, create the parent directory
-    const destPath = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      `${dest}.func`
-    );
-    const destPathParent = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      dest.split(sep).slice(0, -1).join(sep)
-    );
-    if (dest.split(sep).length > 2) {
-      await mkdirp(destPathParent);
-    }
-    if (existsSync(destPath)) {
-      await rm(destPath);
-    }
-
-    // Create relative path symlink
-    const targetPath = join(
-      workPath,
-      '.vercel',
-      'output',
-      'functions',
-      'index.func'
-    );
-    const relativeTargetPath = relative(dirname(destPath), targetPath);
-
-    await symlink(relativeTargetPath, destPath);
-
-    return {
-      src: `^${src}$`,
-      dest: dest,
-      methods: routeData.methods,
-    };
-  };
-
-  const data = JSON.parse(routesFile || '{}');
-  if (data.views) {
-    const viewsPath = relative(workPath, data.views);
-    const views = await glob(`${viewsPath}/**/*`, workPath);
-    for (const file of Object.keys(views)) {
-      preparedFiles[file] = new FileBlob({
-        data: readFileSync(file),
-        mode: 0o644,
-      });
-    }
-  }
-  if (data.viewEngine) {
-    const viewEngineDep = require_.resolve(data.viewEngine, {
-      paths: [workPath],
-    });
-    const { fileList } = await nodeFileTrace([viewEngineDep], {
-      base: workPath,
-      processCwd: workPath,
-      ts: true,
-      mixedModules: true,
-      ignore: config.excludeFiles,
-    });
-    for (const file of fileList) {
-      preparedFiles[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
-    }
-  }
-  /**
-   * TODO: for static paths declared without any options
-   * we can put them on the CDN instead of including them
-   * here. But for now, just include them
-   */
-  if (data.staticPaths) {
-    const staticPaths = data.staticPaths;
-
-    for (const path of Object.keys(staticPaths)) {
-      if (path !== 'public') {
-        const files = await glob(`${path}/**/*`, workPath);
-        for (const file of Object.keys(files)) {
-          preparedFiles[file] = new FileBlob({
-            data: readFileSync(file),
-            mode: 0o644,
-          });
-        }
-      }
-    }
-  }
-  const routesData = JSON.parse(routesFile?.routes || '{}');
-  const routePaths = Object.keys(routesData);
-  const proxyRoutes = await Promise.all(
-    routePaths.map(route => convertExpressRoute(route, routesData[route]))
-  );
 
   return {
-    proxyRoutes,
     preparedFiles,
     shouldAddSourcemapSupport,
     handler,
