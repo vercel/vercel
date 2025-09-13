@@ -1,0 +1,6 @@
+fastapi
+pydantic
+numpy
+pandas
+networkx
+sympy
