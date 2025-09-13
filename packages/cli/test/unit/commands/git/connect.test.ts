@@ -76,9 +76,7 @@ describe('git connect', () => {
         );
 
         const exitCode = await gitPromise;
-        await expect(client.stderr).toOutput(
-          'Connected GitHub repository user2/repo2!'
-        );
+        await expect(client.stderr).toOutput('Connected');
 
         expect(exitCode).toEqual(0);
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -102,9 +100,7 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput(
           `Connecting GitHub repository: https://github.com/user/repo`
         );
-        await expect(client.stderr).toOutput(
-          `> Connected GitHub repository user/repo!\n`
-        );
+        await expect(client.stderr).toOutput(`> Connected\n`);
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
@@ -129,9 +125,7 @@ describe('git connect', () => {
         await expect(client.stderr).toOutput(
           `Connecting GitHub repository: https://github.com/user/repo`
         );
-        await expect(client.stderr).toOutput(
-          `> Connected GitHub repository user/repo!\n`
-        );
+        await expect(client.stderr).toOutput(`> Connected\n`);
 
         const exitCode = await gitPromise;
         expect(exitCode).toEqual(0);
@@ -171,9 +165,7 @@ describe('git connect', () => {
       );
 
       const exitCode = await gitPromise;
-      await expect(client.stderr).toOutput(
-        'Connected GitHub repository user/repo!'
-      );
+      await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
 
@@ -226,9 +218,7 @@ describe('git connect', () => {
       );
 
       const exitCode = await gitPromise;
-      await expect(client.stderr).toOutput(
-        'Connected GitHub repository user2/repo2!'
-      );
+      await expect(client.stderr).toOutput('Connected');
 
       expect(exitCode).toEqual(0);
 
@@ -332,9 +322,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user/repo`
       );
-      await expect(client.stderr).toOutput(
-        `> Connected GitHub repository user/repo!\n`
-      );
+      await expect(client.stderr).toOutput(`> Connected\n`);
 
       const exitCode = await gitPromise;
       expect(exitCode).toEqual(0);
@@ -385,9 +373,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user2/repo2`
       );
-      await expect(client.stderr).toOutput(
-        `> Connected GitHub repository user2/repo2!\n`
-      );
+      await expect(client.stderr).toOutput(`> Connected\n`);
 
       const exitCode = await gitPromise;
       expect(exitCode).toEqual(0);
@@ -504,9 +490,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         'Connecting GitHub repository: https://github.com/user/repo'
       );
-      await expect(client.stderr).toOutput(
-        'Connected GitHub repository user/repo!'
-      );
+      await expect(client.stderr).toOutput('Connected');
 
       const exitCode = await gitPromise;
       expect(exitCode).toEqual(0);
@@ -547,9 +531,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user2/repo2`
       );
-      await expect(client.stderr).toOutput(
-        `Connected GitHub repository user2/repo2!`
-      );
+      await expect(client.stderr).toOutput(`Connected`);
 
       const newProjectData: Project = await client.fetch(
         `/v8/projects/no-remote-url`
@@ -596,9 +578,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user2/repo2`
       );
-      await expect(client.stderr).toOutput(
-        `Connected GitHub repository user2/repo2!`
-      );
+      await expect(client.stderr).toOutput(`Connected`);
 
       const newProjectData: Project = await client.fetch(
         `/v8/projects/new-connection`
@@ -646,9 +626,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user3/repo3`
       );
-      await expect(client.stderr).toOutput(
-        `Connected GitHub repository user3/repo3!`
-      );
+      await expect(client.stderr).toOutput(`Connected`);
 
       const newProjectData: Project = await client.fetch(
         `/v8/projects/multiple-remotes`
@@ -688,9 +666,7 @@ describe('git connect', () => {
       await expect(client.stderr).toOutput(
         `Connecting GitHub repository: https://github.com/user/repo`
       );
-      await expect(client.stderr).toOutput(
-        `Connected GitHub repository user/repo!`
-      );
+      await expect(client.stderr).toOutput(`Connected`);
 
       const newProjectData: Project = await client.fetch(
         `/v8/projects/new-connection`

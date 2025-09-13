@@ -274,9 +274,7 @@ export async function checkExistsAndConnect({
     }
   }
 
-  output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
-  );
+  output.log('Connected');
 }
 
 async function confirmRepoConnect(
