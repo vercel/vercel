@@ -592,14 +592,15 @@ export async function getDynamicRoutes({
             routes.push({
               src: route.src.replace(
                 new RegExp(escapeStringRegexp('(?:/)?$')),
+                // Now than the upstream issues has been resolved, we can safely
+                // add the suffix back, this resolves a bug related to segment
+                // rewrites not capturing the correct suffix values when
+                // enabled.
                 shouldSkipSuffixes
-                  ? '\\.rsc(?:/)?$'
+                  ? '(?<rscSuffix>\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
                   : '(?<rscSuffix>\\.rsc|\\.prefetch\\.rsc|\\.segments/.+\\.segment\\.rsc)(?:/)?$'
               ),
-              dest: route.dest?.replace(
-                /($|\?)/,
-                shouldSkipSuffixes ? '.rsc$1' : '$rscSuffix$1'
-              ),
+              dest: route.dest?.replace(/($|\?)/, '$rscSuffix$1'),
               check: true,
               override: true,
             });
