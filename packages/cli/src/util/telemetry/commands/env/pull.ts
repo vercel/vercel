@@ -44,4 +44,17 @@ export class EnvPullTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagMemory() {
+    this.trackCliFlag('memory');
+  }
+
+  trackCliArgumentCommand(value: string | undefined) {
+    if (value) {
+      this.trackCliArgument({
+        arg: 'command',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

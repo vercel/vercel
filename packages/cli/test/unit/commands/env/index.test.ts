@@ -24,13 +24,16 @@ describe('env', () => {
     });
   });
 
-  it('errors when invoked without subcommand', async () => {
+  it('Show subprocess help when invoked without subcommand', async () => {
     client.setArgv('env');
     const exitCodePromise = env(client);
-    await expect(exitCodePromise).resolves.toBe(2);
+    await expect(exitCodePromise).resolves.toBe(1);
+    expect(client.stderr).toOutput(
+      'Invalid number of arguments. Usage: `vercel env <process>`'
+    );
   });
 
-  describe('unrecognized subcommand', () => {
+  describe('subprocess', () => {
     beforeEach(() => {
       useUser();
       useTeams('team_dummy');
@@ -59,12 +62,12 @@ describe('env', () => {
       client.cwd = cwd;
     });
 
-    it('shows help', async () => {
-      const args: string[] = ['not-a-command'];
+    it('inherits variables', async () => {
+      const args = ['not-a-command'];
 
       client.setArgv('env', ...args);
       const exitCode = await env(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 });

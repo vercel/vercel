@@ -1870,9 +1870,7 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                                       …
                                       a
                                       …
-  pull    [filename]                  …
-                                      …
-                                      …
+  pull    [filename] [process]        …
                                       …
                                       …
                                       …
@@ -1883,6 +1881,9 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                                       …
                                       a
                                       …
+                                      …
+                                      …
+                                      a
                                       …
   remove  name [environment]          …
                                       …
@@ -1946,9 +1947,9 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
                                       examples below)                     
   list    [environment] [git-branch]  List all Environment Variables for a
                                       Project                             
-  pull    [filename]                  Pull all Development Environment    
-                                      Variables from the cloud and write  
-                                      to a file [.env.local]              
+  pull    [filename] [process]        Load all Development Environment    
+                                      Variables from the cloud to a file  
+                                      [.env.local] or a process           
   remove  name [environment]          Remove an Environment Variable (see 
                                       examples below)                     
 
@@ -1980,8 +1981,8 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
   add     name [environment]          Add an Environment Variable (see examples below)                            
   list    [environment] [git-branch]  List all Environment Variables for a Project                                
-  pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
-                                      file [.env.local]                                                           
+  pull    [filename] [process]        Load all Development Environment Variables from the cloud to a file         
+                                      [.env.local] or a process                                                   
   remove  name [environment]          Remove an Environment Variable (see examples below)                         
 
 
@@ -2030,15 +2031,17 @@ exports[`help command > env help output snapshots > env list help output snapsho
 
 exports[`help command > env help output snapshots > env pull help output snapshots > env pull help column width 120 1`] = `
 "
-  ▲ vercel env pull [filename] [options]
+  ▲ vercel env pull [filename] [process] [options]
 
-  Pull all Development Environment Variables from the cloud and write to a file [.env.local]                            
+  Load all Development Environment Variables from the cloud to a file [.env.local] or a process                         
 
   Options:
 
        --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
-  -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
+       --memory                Load Environment Variables into memory instead of a file. When this command exits, the        
+                               variables are lost.                                                                           
+  -y,  --yes                   Skip the confirmation prompt when updating an existing environment variable file              
 
 
   Global Options:
@@ -2060,6 +2063,11 @@ exports[`help command > env help output snapshots > env pull help output snapsho
 
     $ vercel env pull <file>
     $ vercel env pull .env.development.local
+
+  - Run a process with the pulled Environment Variables without writing to a file
+
+    $ vercel env <process>
+    $ vercel env next dev
 
 "
 `;

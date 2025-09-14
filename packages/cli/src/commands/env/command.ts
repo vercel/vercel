@@ -156,10 +156,14 @@ export const pullSubcommand = {
   name: 'pull',
   aliases: [],
   description:
-    'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
+    'Load all Development Environment Variables from the cloud to a file [.env.local] or a process',
   arguments: [
     {
       name: 'filename',
+      required: false,
+    },
+    {
+      name: 'command',
       required: false,
     },
   ],
@@ -184,7 +188,15 @@ export const pullSubcommand = {
     {
       ...yesOption,
       description:
-        'Skip the confirmation prompt when removing an environment variable',
+        'Skip the confirmation prompt when updating an existing environment variable file',
+    },
+    {
+      name: 'memory',
+      shorthand: null,
+      description:
+        'Load Environment Variables into memory instead of a file. When this command exits, the variables are lost.',
+      type: Boolean,
+      deprecated: false,
     },
   ],
   examples: [
@@ -194,6 +206,24 @@ export const pullSubcommand = {
         `${packageName} env pull <file>`,
         `${packageName} env pull .env.development.local`,
       ],
+    },
+    {
+      name: 'Run a process with the pulled Environment Variables without writing to a file',
+      value: [`${packageName} env <command>`, `${packageName} env next dev`],
+    },
+  ],
+} as const;
+
+export const commandSubcommand = {
+  name: '<command>',
+  aliases: [],
+  description: 'The subcommand to run with the pulled Environment Variables',
+  arguments: [],
+  options: [],
+  examples: [
+    {
+      name: 'Run a process with the pulled Environment Variables without writing to a file',
+      value: [`${packageName} env <command>`, `${packageName} env next dev`],
     },
   ],
 } as const;
@@ -208,6 +238,7 @@ export const envCommand = {
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
+    commandSubcommand,
   ],
   options: [],
   examples: [],
