@@ -225,9 +225,11 @@ export function getPathFromRoute(
   routes: RouteManifest
 ): ResolvedRoutePaths {
   let route = input;
+  console.log(route);
   if (
     route.id === 'root' ||
-    ((!route.path || route.path === '/') && route.index)
+    (!route.path && route.index) ||
+    route.path === '/'
   ) {
     route = { ...route, path: 'index' };
   }
