@@ -2343,8 +2343,28 @@ export const onPrerenderRoute =
       isOmitted,
       locale,
     }: {
+      /**
+       * A route is a blocking fallback route if its value in the prerender
+       * manifest is `null`. This means that unless the page has been
+       * prerendered (no dynamic params), we can't serve a fallback page for the
+       * route as it depends on the dynamic params values.
+       */
       isBlocking?: boolean;
+
+      /**
+       * A route is a fallback route if its value in the prerender manifest is
+       * a string (meaning there is a fallback value/page). This occurs when
+       * the page is rendered with dynamic params but it's rendered in such a
+       * way that it's value can be reused for all variants of the dynamic
+       * params.
+       */
       isFallback?: boolean;
+
+      /**
+       * A route is omitted if its value in the prerender manifest is `false`.
+       * This can only be set when the `dynamicParams` is set to `false` for
+       * the dynamic route.
+       */
       isOmitted?: boolean;
       locale?: string;
     }
@@ -2535,6 +2555,7 @@ export const onPrerenderRoute =
     if (
       renderingMode === RenderingMode.PARTIALLY_STATIC &&
       appDir &&
+      // TODO(NAR-402): Investigate omitted routes
       !isBlocking
     ) {
       postponedState = getHTMLPostponedState({ appDir, routeFileNoExt });
@@ -2917,6 +2938,7 @@ export const onPrerenderRoute =
       let htmlAllowQuery = allowQuery;
       if (
         renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        // TODO(NAR-402): Investigate omitted routes
         (isFallback || isBlocking)
       ) {
         const { fallbackRootParams, fallback } = isFallback
@@ -3081,7 +3103,7 @@ export const onPrerenderRoute =
           // they are both part of the same prerender group and are revalidated
           // together.
           let rdcRSCAllowQuery = allowQuery;
-          if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
+          if (isAppClientParamParsingEnabled) {
             rdcRSCAllowQuery = [];
           }
 
@@ -3090,12 +3112,15 @@ export const onPrerenderRoute =
             staleExpiration: initialExpire,
             lambda,
             allowQuery: rdcRSCAllowQuery,
-            fallback: isFallback
-              ? null
-              : new FileBlob({
-                  data: postponedState,
-                  contentType,
-                }),
+            fallback:
+              // Use the fallback value for the RSC route if the route doesn't
+              // vary based on the route parameters.
+              rdcRSCAllowQuery && rdcRSCAllowQuery.length === 0
+                ? new FileBlob({
+                    data: postponedState,
+                    contentType,
+                  })
+                : null,
             group: prerenderGroup,
             bypassToken: prerenderManifest.bypassToken,
             experimentalBypassFor,
@@ -3153,6 +3178,7 @@ export const onPrerenderRoute =
             // for the segment prerenders. This is because we know that the
             // segments do not vary based on the route parameters.
             let segmentAllowQuery = allowQuery;
+            // TODO(NAR-402): Investigate omitted routes
             if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
               segmentAllowQuery = [];
             }
