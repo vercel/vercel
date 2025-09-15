@@ -4,6 +4,7 @@ export class LoginTelemetryClient extends TelemetryClient {
   /**
    * Tracks the state of the login process.
    * - `started` when the user initiates the login process.
+   * - `browser-opened` when the user opens the browser for authentication by hitting Enter.
    * - `canceled` when the user cancels the login process.
    * - `error` when the user encounters an error during the login process.
    * - `success` when the user successfully logs in.
