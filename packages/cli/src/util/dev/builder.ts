@@ -418,6 +418,18 @@ export async function getBuildMatches(
       // of Vercel deployments.
       src = src.substring(1);
     }
+    // FIXME: hono-cleanup - we need to specify a src that we know exists
+    // so the rest of the script doesn't choke on it. But the framework preset
+    // needs to `index.js` so the BOA entry is index.func. BuildResultV2 allows
+    // us to return a different value from what the preset provides, but we need
+    // to use BuildResultV3 so that we can run the dev server with the startDevServer
+    // function exported from Hono.
+    if (
+      buildConfig.config?.framework === 'hono' ||
+      buildConfig.config?.framework === 'express'
+    ) {
+      src = 'package.json';
+    }
 
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
@@ -489,7 +501,7 @@ export async function shutdownBuilder(match: BuildMatch): Promise<void> {
   if (match.buildProcess) {
     const { pid } = match.buildProcess;
     output.debug(`Killing builder sub-process with PID ${pid}`);
-    const killPromise = treeKill(pid)
+    const killPromise = treeKill(pid!)
       .then(() => {
         output.debug(`Killed builder with PID ${pid}`);
       })

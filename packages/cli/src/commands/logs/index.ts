@@ -1,4 +1,3 @@
-import type { Deployment } from '@vercel-internals/types';
 import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
 import format from 'date-fns/format';
@@ -27,6 +26,8 @@ const deprecatedFlags = [
   '--until',
   '--output',
 ];
+
+const DATE_TIME_FORMAT = 'MMM dd HH:mm:ss.SS';
 
 export default async function logs(client: Client) {
   let parsedArguments;
@@ -136,7 +137,11 @@ export default async function logs(client: Client) {
     return 1;
   }
 
-  printDisclaimer(deployment);
+  output.print(
+    `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
+      deployment.id
+    )}) starting from ${chalk.bold(format(Date.now(), DATE_TIME_FORMAT))}\n\n`
+  );
   const abortController = new AbortController();
   return await displayRuntimeLogs(
     client,
@@ -146,19 +151,5 @@ export default async function logs(client: Client) {
       parse: !asJson,
     },
     abortController
-  );
-}
-
-const dateTimeFormat = 'MMM dd HH:mm:ss.SS';
-
-function printDisclaimer(deployment: Deployment) {
-  // Could be temporary until users get used to this change
-  output.warn(
-    `This command now displays runtime logs. To access your build logs, run \`vercel inspect --logs ${deployment.url}\``
-  );
-  output.print(
-    `Displaying runtime logs for deployment ${deployment.url} (${chalk.dim(
-      deployment.id
-    )}) starting from ${chalk.bold(format(Date.now(), dateTimeFormat))}\n\n`
   );
 }

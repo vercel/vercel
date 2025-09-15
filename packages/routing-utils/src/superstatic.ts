@@ -302,6 +302,22 @@ const normalizeHasKeys = (hasItems: HasField = []) => {
   return hasItems;
 };
 
+function getStringValueForRegex(
+  value: HasField[number]['value'] | undefined
+): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value && typeof value === 'object' && value !== null) {
+    if ('re' in value && typeof value.re === 'string') {
+      return value.re;
+    }
+  }
+
+  return null;
+}
+
 export function collectHasSegments(has?: HasField) {
   const hasSegments = new Set<string>();
 
@@ -310,8 +326,9 @@ export function collectHasSegments(has?: HasField) {
       hasSegments.add(hasItem.key);
     }
 
-    if (hasItem.value) {
-      for (const match of hasItem.value.matchAll(namedGroupsRegex)) {
+    const stringValue = getStringValueForRegex(hasItem.value);
+    if (stringValue) {
+      for (const match of stringValue.matchAll(namedGroupsRegex)) {
         if (match[1]) {
           hasSegments.add(match[1]);
         }

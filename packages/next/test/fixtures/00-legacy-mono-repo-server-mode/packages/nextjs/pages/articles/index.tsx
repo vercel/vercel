@@ -1,13 +1,13 @@
-import { NextPage } from "next";
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { NextPage } from 'next';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { getAllArticles } from "../../server";
+import { getAllArticles } from '../../server';
 
 const LocalOffers: NextPage = () => {
   const [articles, setArticles] = useState<any>([]);
   useEffect(() => {
-    getAllArticles().then((res) => {
+    getAllArticles().then(res => {
       setArticles(res);
     });
   }, []);
@@ -16,11 +16,9 @@ const LocalOffers: NextPage = () => {
   }
   return (
     <ul>
-      {articles.map((o) => (
+      {articles.map(o => (
         <li>
-          <Link href={`/articles/${o.slug}`} passHref>
-            <a>{o.name}</a>
-          </Link>
+          <Link href={`/articles/${o.slug}`}>{o.name}</Link>
         </li>
       ))}
     </ul>

@@ -68,4 +68,8 @@ describe('parseGoModVersion', function () {
     const version = parseGoModVersion('toolchain go1.22.1');
     expect(version).toBeUndefined();
   });
+  it('uses 0 patch version if provided', () => {
+    const version = parseGoModVersion('go 1.24.0');
+    expect(version?.go).toEqual('1.24.0');
+  });
 });

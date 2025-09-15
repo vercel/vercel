@@ -29,7 +29,7 @@ const conf = __NEXT_CONFIG__;
 (globalThis as any).AsyncLocalStorage =
   require('async_hooks').AsyncLocalStorage;
 
-const middlewareHandler = require('__NEXT_MIDDLEWARE_PATH__').default;
+const middlewareModule = require('__NEXT_MIDDLEWARE_PATH__');
 
 // Returns a wrapped handler that runs with "@next/request-context"
 // and will crash the lambda if an error isn't caught.
@@ -39,6 +39,10 @@ const serve = async (request: Request): Promise<Response> => {
     return await withNextRequestContext(
       { waitUntil: context.waitUntil },
       async () => {
+        // we need to await as it could use top-level await
+        let middlewareHandler = await middlewareModule;
+        middlewareHandler = middlewareHandler.default || middlewareHandler;
+
         const result = await middlewareHandler({
           request: {
             url: request.url,

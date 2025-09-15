@@ -1,0 +1,130 @@
+{
+  "version": 2,
+  "uploadNowJson": true,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index"
+    },
+    {
+      "path": "/foo",
+      "status": 200,
+      "mustContain": "foo"
+    },
+    {
+      "path": "/favicon.ico",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/x-icon"
+      }
+    },
+    {
+      "path": "/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/twitter-image.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    },
+    {
+      "path": "/foo/icon-mxheo5.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    },
+    {
+      "path": "/opengraph-image.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/plain;charset=UTF-8"
+      }
+    },
+    {
+      "path": "/manifest.json",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/manifest+json"
+      },
+      "mustContain": "My Next.js Application"
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/xml"
+      },
+      "mustContain": "urlset"
+    },
+    {
+      "path": "/dynamic/test/sitemap.xml",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "application/xml"
+      },
+      "mustContain": "urlset"
+    },
+    {
+      "path": "/dynamic/test/opengraph-image2.png",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/png"
+      }
+    },
+    {
+      "path": "/dynamic-catch/single/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/dynamic-catch/a/b/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/dynamic-catch-all/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/dynamic-catch-all/single/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "/dynamic-catch-all/a/b/icon.svg",
+      "status": 200,
+      "responseHeaders": {
+        "content-type": "image/svg+xml"
+      }
+    }
+  ]
+}

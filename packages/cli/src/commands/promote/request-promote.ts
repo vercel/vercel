@@ -70,11 +70,20 @@ export default async function requestPromote({
     );
     return 0;
   }
-  await client.fetch(`/v10/projects/${project.id}/promote/${deployment.id}`, {
-    body: {}, // required
-    json: false,
-    method: 'POST',
-  });
+  const res = await client.fetch(
+    `/v10/projects/${project.id}/promote/${deployment.id}`,
+    {
+      body: {}, // required
+      json: false,
+      method: 'POST',
+    }
+  );
+  if (res.status === 202) {
+    output.log(
+      'Promotion has been queued and will begin when the active rolling release completes successfully.'
+    );
+    return 0;
+  }
 
   if (timeout !== undefined && ms(timeout) === 0) {
     output.log(

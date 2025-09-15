@@ -1,4 +1,4 @@
-import { posix as posixPath } from 'path';
+import { basename, posix as posixPath } from 'path';
 
 export interface DetectorFilesystemStat {
   name: string;
@@ -104,8 +104,11 @@ export abstract class DetectorFilesystem {
     }
 
     if (options?.potentialFiles) {
+      const filesInReaddirDir = options.potentialFiles.filter(
+        path => basename(path) === path
+      );
       // calculate the set of paths that truly do not exist
-      const filesThatDoNotExist = options.potentialFiles.filter(
+      const filesThatDoNotExist = filesInReaddirDir.filter(
         path => !directoryFiles.has(path)
       );
       for (const filePath of filesThatDoNotExist) {

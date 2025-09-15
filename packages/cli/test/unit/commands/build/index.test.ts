@@ -22,6 +22,7 @@ const flakey =
 describe.skipIf(flakey)('build', () => {
   beforeEach(() => {
     delete process.env.__VERCEL_BUILD_RUNNING;
+    delete process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION;
   });
 
   describe('--help', () => {
@@ -815,7 +816,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // top level "error" also contains the same error
@@ -825,7 +826,7 @@ describe.skipIf(flakey)('build', () => {
       stack: expect.stringContaining('Please upgrade your Runtime'),
       hideStackTrace: true,
       code: 'NODEJS_DISCONTINUED_VERSION',
-      link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+      link: 'https://vercel.link/function-runtimes',
     });
 
     // `config.json` contains `version`
@@ -869,6 +870,63 @@ describe.skipIf(flakey)('build', () => {
     const env = await fs.readJSON(join(output, 'static', 'env.json'));
     expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
   });
+
+  describe.each([
+    {
+      fixtureName: 'with-valid-vercel-otel',
+      dependency: '@vercel/otel',
+      version: '1.11.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-vercel-otel',
+      dependency: '@vercel/otel',
+      version: '1.10.0',
+      expected: false,
+    },
+    {
+      fixtureName: 'with-valid-opentelemetry-sdk',
+      dependency: '@opentelemetry/sdk-trace-node',
+      version: '1.19.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-opentelemetry-sdk',
+      dependency: '@opentelemetry/sdk-trace-node',
+      version: '1.18.0',
+      expected: false,
+    },
+    {
+      fixtureName: 'with-valid-opentelemetry-api',
+      dependency: '@opentelemetry/api',
+      version: '1.7.0',
+      expected: true,
+    },
+    {
+      fixtureName: 'with-invalid-opentelemetry-api',
+      dependency: '@opentelemetry/api',
+      version: '1.6.0',
+      expected: false,
+    },
+  ])(
+    'with instrumentation $dependency',
+    ({ fixtureName, dependency, version, expected }) => {
+      it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
+        const cwd = fixture(fixtureName);
+        const output = join(cwd, '.vercel/output');
+        client.cwd = cwd;
+        const exitCode = await build(client);
+        expect(exitCode).toEqual(0);
+
+        const env = await fs.readJSON(join(output, 'static', 'env.json'));
+        expect(
+          Object.keys(env).includes(
+            'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
+          )
+        ).toEqual(expected);
+      });
+    }
+  );
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
@@ -966,7 +1024,7 @@ describe.skipIf(flakey)('build', () => {
       VERCEL_PROJECT_SETTINGS_BUILD_COMMAND: `node build.cjs`,
       VERCEL_PROJECT_SETTINGS_INSTALL_COMMAND: '',
       VERCEL_PROJECT_SETTINGS_OUTPUT_DIRECTORY: 'out',
-      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '18.x',
+      VERCEL_PROJECT_SETTINGS_NODE_VERSION: '22.x',
     });
   });
 

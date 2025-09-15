@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "node env.js"
+  },
+  "dependencies": {
+    "@vercel/otel": "1.11.0"
+  }
+}

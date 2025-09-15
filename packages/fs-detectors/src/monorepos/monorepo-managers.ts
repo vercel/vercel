@@ -28,6 +28,9 @@ export const monorepoManagers: Array<
           path: 'turbo.json',
         },
         {
+          path: 'turbo.jsonc',
+        },
+        {
           path: 'package.json',
           matchContent: '"turbo":\\s*{[^}]*.+[^}]*}',
         },

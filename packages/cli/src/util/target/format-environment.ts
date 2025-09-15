@@ -1,6 +1,10 @@
 import chalk from 'chalk';
-import type { CustomEnvironment } from '@vercel-internals/types';
 import output from '../../output-manager';
+import type {
+  CustomEnvironment,
+  CustomEnvironmentType,
+} from '@vercel-internals/types';
+import { STANDARD_ENVIRONMENTS } from './standard-environments';
 import title from 'title';
 
 export function formatEnvironment(
@@ -9,10 +13,14 @@ export function formatEnvironment(
   environment: Pick<CustomEnvironment, 'slug' | 'id'>
 ) {
   const projectUrl = `https://vercel.com/${orgSlug}/${projectSlug}`;
-  const boldName = chalk.bold(title(environment.slug));
+  const boldName = chalk.bold(
+    STANDARD_ENVIRONMENTS.includes(environment.slug as CustomEnvironmentType)
+      ? title(environment.slug)
+      : environment.slug
+  );
   return output.link(
     boldName,
-    `${projectUrl}/settings/environments/${environment.id}`,
+    `${projectUrl}/settings/environments/${environment.slug}`,
     { fallback: () => boldName, color: false }
   );
 }

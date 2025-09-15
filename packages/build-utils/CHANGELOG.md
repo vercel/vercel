@@ -1,5 +1,111 @@
 # @vercel/build-utils
 
+## 12.1.0
+
+### Minor Changes
+
+- Support turbo.jsonc ([#13792](https://github.com/vercel/vercel/pull/13792))
+
+## 12.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
+## 11.0.2
+
+### Patch Changes
+
+- Add support for the supportsCancellation function flag ([#13807](https://github.com/vercel/vercel/pull/13807))
+
+## 11.0.1
+
+### Patch Changes
+
+- Fix 404 status for /api routes when using Hono with the vercel dev server ([#13706](https://github.com/vercel/vercel/pull/13706))
+
+## 11.0.0
+
+### Major Changes
+
+- Add support for vlt as a package manager ([#13591](https://github.com/vercel/vercel/pull/13591))
+
+## 10.6.7
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 10.6.6
+
+### Patch Changes
+
+- Deprecate Node.js 18.x with warning ([#13549](https://github.com/vercel/vercel/pull/13549))
+
+## 10.6.5
+
+### Patch Changes
+
+- rename experimental maxAttempts to maxDeliveries ([#13534](https://github.com/vercel/vercel/pull/13534))
+
+## 10.6.4
+
+### Patch Changes
+
+- simplify experimental triggers ([#13527](https://github.com/vercel/vercel/pull/13527))
+
+## 10.6.3
+
+### Patch Changes
+
+- make POST method required ([#13518](https://github.com/vercel/vercel/pull/13518))
+
+- Update more handling for experimentalTriggers ([#13517](https://github.com/vercel/vercel/pull/13517))
+
+## 10.6.2
+
+### Patch Changes
+
+- Add CloudEventTrigger support for Lambda functions ([#13503](https://github.com/vercel/vercel/pull/13503))
+
+## 10.6.1
+
+### Patch Changes
+
+- next package uses @vercel/routing-utils HasField rather than redefining & stricter validation. ([#13409](https://github.com/vercel/vercel/pull/13409))
+
+- Make architecture a defined property on Lambda classes to apply when creating ([#13398](https://github.com/vercel/vercel/pull/13398))
+
+- [env-vars] expose VERCEL_PROJECT_ID as NEXT_PUBLIC_VERCEL_PROJECT_ID ([#13431](https://github.com/vercel/vercel/pull/13431))
+
+## 10.6.0
+
+### Minor Changes
+
+- provide a more verbose error when package.json is not valid ([#13346](https://github.com/vercel/vercel/pull/13346))
+
+- Allow configuring functions `architecture` via the `vercel.json` configuration ([#13344](https://github.com/vercel/vercel/pull/13344))
+
+## 10.5.1
+
+### Patch Changes
+
+- Display warning when yarn dynamic require error may happen ([#13143](https://github.com/vercel/vercel/pull/13143))
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
+## 10.5.0
+
+### Minor Changes
+
+- Disable yarn global cache before installs so build cache caches deps ([#13144](https://github.com/vercel/vercel/pull/13144))
+
+## 10.4.0
+
+### Minor Changes
+
+- Expose pnpm6 within the detected package manager path for future versions of the build container ([#13132](https://github.com/vercel/vercel/pull/13132))
+
 ## 10.3.2
 
 ### Patch Changes

@@ -1,0 +1,5 @@
+{
+  "name": "@vercel/mcp-adapter",
+  "version": "0.3.1",
+  "description": "Vercel MCP Adapter for Next.js and other frameworks"
+}

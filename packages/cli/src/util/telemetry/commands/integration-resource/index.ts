@@ -6,6 +6,13 @@ export class IntegrationResourceTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof integrationResourceCommand>
 {
+  trackCliSubcommandCreateThreshold(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'create-threshold',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',

@@ -267,7 +267,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
           res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
             headers: {
-              "RSC": "1",
+              "rsc": "1",
               "Next-Router-Prefetch": "1",
             }
           });
@@ -298,7 +298,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
           res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
             headers: {
-              "RSC": "1",
+              "rsc": "1",
               "Next-Router-Prefetch": "1",
             }
           });

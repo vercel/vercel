@@ -362,7 +362,7 @@ export const build: BuildV2 = async ({
 
       let patchedConfig: string;
       // Figure out if the `remix.config` file is using ESM syntax
-      if (isESM(renamedRemixConfigPath)) {
+      if (await isESM(renamedRemixConfigPath)) {
         patchedConfig = `import config from './${basename(
           renamedRemixConfigPath
         )}';

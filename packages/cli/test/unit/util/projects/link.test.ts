@@ -100,6 +100,35 @@ describe('getLinkedProject', () => {
     );
   });
 
+  it('should fail to return a link when team request fails with a custom 403 code', async () => {
+    const cwd = fixture('vercel-pull-next');
+
+    useUser();
+    useTeams('team_dummy', { failWithCustom403Code: true });
+    useProject({
+      ...defaultProject,
+      id: 'vercel-pull-next',
+      name: 'vercel-pull-next',
+    });
+
+    let link: UnPromisify<ReturnType<typeof getLinkedProject>> | undefined;
+    let error: Error | undefined;
+    try {
+      link = await getLinkedProject(client, cwd);
+    } catch (err) {
+      error = err as Error;
+    }
+
+    expect(link).toBeUndefined();
+
+    if (!error) {
+      throw new Error(`Expected an error to be thrown.`);
+    }
+    expect(error.message).toBe(
+      'You are not authorized to read this team. (403)'
+    );
+  });
+
   it('should return link with `project.json`', async () => {
     const cwd = fixture('vercel-pull-next');
 

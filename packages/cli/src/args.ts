@@ -14,6 +14,7 @@ export const help = () => `
         '(default)'
       )}
       build                            Build the project locally into './vercel/output'
+      cache                [cmd]       Manages cache for your current Project
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
       git                              Manage Git provider repository for your current Project
@@ -40,10 +41,12 @@ export const help = () => `
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
       logs                 [url]       Displays the logs for a deployment
+      microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
       rm | remove          [id]        Removes a deployment
       teams                            Manages your teams
       whoami                           Shows the username of the currently logged in user
+      blob                 [cmd]       Manages your Blob stores and files
 
   ${chalk.dim('Global Options:')}
 

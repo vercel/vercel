@@ -1,5 +1,104 @@
 # @vercel/frameworks
 
+## 3.8.5
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 3.8.4
+
+### Patch Changes
+
+- This updates `Nuxt.js` -> `Nuxt`, detects Nuxt if the nightly version is installed, and updates the development command to nuxt dev. ([#13606](https://github.com/vercel/vercel/pull/13606))
+
+## 3.8.3
+
+### Patch Changes
+
+- Adds FastAPI to the list of auto-detected frameworks ([#13877](https://github.com/vercel/vercel/pull/13877))
+
+## 3.8.2
+
+### Patch Changes
+
+- Add .cts support to express and hono builders ([#13828](https://github.com/vercel/vercel/pull/13828))
+
+- - Expand framework detection to src/app and src/server files. ([#13828](https://github.com/vercel/vercel/pull/13828))
+  - Improve handling when multiple entrypoints are detected.
+
+## 3.8.1
+
+### Patch Changes
+
+- Add support for app.js as a server entrypoint ([#13798](https://github.com/vercel/vercel/pull/13798))
+
+## 3.8.0
+
+### Minor Changes
+
+- Add xmcp zero-config Framework Preset ([#13770](https://github.com/vercel/vercel/pull/13770))
+
+## 3.7.7
+
+### Patch Changes
+
+- Add Express to frameworks detection ([#13754](https://github.com/vercel/vercel/pull/13754))
+
+## 3.7.6
+
+### Patch Changes
+
+- Fix issue where .mjs files weren't transpiled properly for Hono ([#13658](https://github.com/vercel/vercel/pull/13658))
+
+## 3.7.5
+
+### Patch Changes
+
+- Support `server.ts` for hono entrypoint ([#13638](https://github.com/vercel/vercel/pull/13638))
+
+## 3.7.4
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+## 3.7.3
+
+### Patch Changes
+
+- No longer inject 404 route for react router ([#13571](https://github.com/vercel/vercel/pull/13571))
+
+## 3.7.2
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 3.7.1
+
+### Patch Changes
+
+- [frameworks] use correct output dir for nitro ([#13541](https://github.com/vercel/vercel/pull/13541))
+
+## 3.7.0
+
+### Minor Changes
+
+- Add Nitro to framework list ([#13472](https://github.com/vercel/vercel/pull/13472))
+
+## 3.6.4
+
+### Patch Changes
+
+- [frameworks] updated Docusaurus to match out framework naming standards ([#13333](https://github.com/vercel/vercel/pull/13333))
+
+## 3.6.3
+
+### Patch Changes
+
+- Rename SvelteKit (v1) ([#13255](https://github.com/vercel/vercel/pull/13255))
+
 ## 3.6.2
 
 ### Patch Changes

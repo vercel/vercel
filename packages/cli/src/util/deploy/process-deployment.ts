@@ -1,4 +1,9 @@
-import type { Deployment, Org } from '@vercel-internals/types';
+import type {
+  Deployment,
+  Org,
+  Project,
+  ProjectRollingRelease,
+} from '@vercel-internals/types';
 import {
   type ArchiveFormat,
   type DeploymentOptions,
@@ -15,6 +20,8 @@ import { displayBuildLogs } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
+import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
+import type { ProjectNotFound } from '../errors-ts';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -99,6 +106,7 @@ export default async function processDeployment({
     skipAutoDetectionConfirmation,
     archive,
     agent,
+    projectName,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -116,6 +124,9 @@ export default async function processDeployment({
     abortController?.abort();
     output.stopSpinner();
   }
+
+  let rollingRelease: ProjectRollingRelease | undefined;
+  let project: Project | ProjectNotFound | undefined;
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -227,6 +238,17 @@ export default async function processDeployment({
 
       if (event.type === 'canceled') {
         stopSpinner();
+        return event.payload;
+      }
+
+      if (project === undefined) {
+        project = await getProjectByNameOrId(client, projectName);
+        rollingRelease = (project as Project)?.rollingRelease;
+      }
+
+      if (event.type === 'ready' && rollingRelease) {
+        output.spinner('Releasing', 0);
+        output.stopSpinner();
         return event.payload;
       }
 

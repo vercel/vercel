@@ -311,7 +311,7 @@ export async function testFixture(
 
   dev.on('exit', code => {
     devTimer = setTimeout(async () => {
-      const pids = Object.keys(await ps(dev.pid)).join(', ');
+      const pids = Object.keys(await ps(dev.pid!)).join(', ');
 
       // eslint-disable-next-line no-console
       console.error(
@@ -347,7 +347,7 @@ export async function testFixture(
     // kill the entire process tree for the child as some tests will spawn
     // child processes that either become defunct or assigned a new parent
     // process
-    await nukeProcessTree(dev.pid);
+    await nukeProcessTree(dev.pid!);
 
     await exitResolver;
     return {
@@ -492,14 +492,14 @@ export function testFixtureStdio(
         }
 
         if (stderr.includes(`Requested port ${port} is already in use`)) {
-          await nukeProcessTree(dev.pid);
+          await nukeProcessTree(dev.pid!);
           throw new Error(
             `Failed for "${directory}" with port ${port} with stderr "${stderr}".`
           );
         }
 
         if (stderr.includes('Command failed')) {
-          await nukeProcessTree(dev.pid);
+          await nukeProcessTree(dev.pid!);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
       });

@@ -1,12 +1,17 @@
 import { expect, describe, test, beforeEach, afterEach } from 'vitest';
-import { unstable_checkRateLimit as checkRateLimitSrc } from '../../src';
-import { unstable_checkRateLimit as checkRateLimitDist } from '../../dist';
+import { checkRateLimit as checkRateLimitSrc } from '../../src';
+import { checkRateLimit as checkRateLimitDist } from '../../dist';
+import { unstable_checkRateLimit as checkRateLimitDistUnstable } from '../../dist';
 
 const origFetch = fetch;
 const HOST = 'ratelimit-api-demo.vercel.app';
 
 describe('checkRateLimit src', testWithCheckRateLimit(checkRateLimitSrc));
 describe('checkRateLimit dist', testWithCheckRateLimit(checkRateLimitDist));
+describe(
+  'checkRateLimit dist legacy unstable',
+  testWithCheckRateLimit(checkRateLimitDistUnstable)
+);
 
 function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
   return () => {

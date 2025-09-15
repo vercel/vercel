@@ -7,7 +7,8 @@ export async function provisionStoreResource(
   productId: string,
   billingPlanId: string,
   name: string,
-  metadata: Metadata
+  metadata: Metadata,
+  authorizationId: string
 ) {
   return await client.fetch<{ store: { id: string } }>(
     '/v1/storage/stores/integration',
@@ -20,6 +21,7 @@ export async function provisionStoreResource(
         integrationProductIdOrSlug: productId,
         metadata,
         name,
+        authorizationId,
       },
     }
   );

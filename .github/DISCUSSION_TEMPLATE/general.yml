@@ -4,7 +4,7 @@ body:
       value: |
         # Please go to Vercel Community
         > [!IMPORTANT]  
-        > **New Discussions in this repo are no longer actively monitored and will be automatically closed. Please go to the new [Vercel Community](https://vercel.community).**
+        > **New Discussions in this repo are no longer actively monitored and will be automatically closed. Please go to the new [Vercel Community](https://community.vercel.com).**
   - type: textarea
     attributes:
       label: Description

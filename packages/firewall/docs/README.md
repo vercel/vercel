@@ -2,15 +2,25 @@
 
 ## Table of contents
 
-### Functions
+### References
 
 - [unstable_checkRateLimit](README.md#unstable_checkratelimit)
 
-## Functions
+### Functions
+
+- [checkRateLimit](README.md#checkratelimit)
+
+## References
 
 ### unstable_checkRateLimit
 
-▸ **unstable_checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
+Renames and re-exports [checkRateLimit](README.md#checkratelimit)
+
+## Functions
+
+### checkRateLimit
+
+▸ **checkRateLimit**(`rateLimitId`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<{ `error?`: `"not-found"` \| `"blocked"` ; `rateLimited`: `boolean` }\>
 
 Experimental: Check rate-limits defined through the Vercel Firewall.
 

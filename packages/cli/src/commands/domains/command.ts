@@ -9,7 +9,7 @@ import {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'Show all Domains in a list',
+  description: 'Show all domains in a list',
   default: true,
   arguments: [],
   options: [limitOption, nextOption],

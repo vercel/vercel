@@ -34,6 +34,7 @@ export interface VercelClientOptions {
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
   agent?: Agent;
+  projectName?: string;
 }
 
 /** @deprecated Use VercelClientOptions instead. */

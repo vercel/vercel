@@ -35,7 +35,11 @@ describe('@vercel/functions', () => {
 });
 
 describe('@vercel/functions/oidc', () => {
-  const EXPECTED_METHODS = ['awsCredentialsProvider', 'getVercelOidcToken'];
+  const EXPECTED_METHODS = [
+    'awsCredentialsProvider',
+    'getVercelOidcToken',
+    'getVercelOidcTokenSync',
+  ];
 
   test('load as CommonJS', async () => {
     const code =

@@ -90,7 +90,7 @@ export default async function list(
 
   const teamTable = table(
     [
-      ['id', 'email / name'].map(str => gray(str)),
+      ['id', 'Team name'].map(str => gray(str)),
       ...teamList.map(team => [team.value, team.name]),
     ],
     { hsep: 5 }

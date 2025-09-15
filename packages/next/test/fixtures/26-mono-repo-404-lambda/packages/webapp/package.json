@@ -2,7 +2,7 @@
   "name": "26-packages-webapp",
   "version": "0.0.1",
   "dependencies": {
-    "next": "15.2.0-canary.33",
+    "next": "canary",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
   },

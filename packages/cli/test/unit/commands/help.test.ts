@@ -537,6 +537,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project inspect help output snapshots', () => {
+      it('project inspect help column width 120', () => {
+        expect(
+          help(project.inspectSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('project list help output snapshots', () => {
       it('project list help column width 120', () => {
         expect(

@@ -1,6 +1,8 @@
 import type {
   Configuration,
+  InstallationBalancesAndThresholds,
   Integration,
+  MarketplaceBillingAuthorizationState,
   MetadataSchema,
 } from '../../src/util/integration/types';
 import type { Resource } from '../../src/util/integration-resource/types';
@@ -228,6 +230,21 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-prepayment': {
+    id: 'acme-prepayment',
+    name: 'Acme Prepayment',
+    slug: 'acme-prepayment',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'ai',
+        shortDescription: 'The Acme product',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-unsupported': {
     id: 'acme',
     name: 'Acme Integration',
@@ -314,6 +331,20 @@ const configurations: Record<string, Configuration[]> = {
       projects: [],
     },
   ],
+  'acme-prepayment': [
+    {
+      id: 'acme-1',
+      integrationId: 'acme-prepayment',
+      ownerId: 'team_dummy',
+      slug: 'acme-prepayment',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: ['acme-project'],
+    },
+  ],
   'acme-no-results': [],
 };
 
@@ -387,6 +418,211 @@ const integrationPlans: Record<string, unknown> = {
       },
     ],
   },
+  'acme-prepayment': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'prepayment',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description:
+          'Dedicated CPU • 1 GB RAM • 100K MAU • 8 GB database space • 250 GB bandwidth • 100 GB file storage',
+        paymentMethodRequired: true,
+        details: [
+          {
+            label: 'New Project - Micro Compute',
+            value: '$10/m',
+          },
+          {
+            label: 'Pro Plan',
+            value: '$25/m',
+          },
+          {
+            label: 'Compute Credits',
+            value: '-$10/m',
+          },
+        ],
+        highlightedDetails: [],
+      },
+      {
+        id: 'team',
+        type: 'prepayment',
+        name: 'Team Plan',
+        scope: 'installation',
+        description:
+          'SOC2 • SSO for Supabase Dashboard • Priority email support & SLAs • 28-day log retention',
+        paymentMethodRequired: true,
+        details: [
+          {
+            label: 'New Project - Micro Compute',
+            value: '$10/m',
+          },
+          {
+            label: 'Team Plan',
+            value: '$599/m',
+          },
+          {
+            label: 'Compute Credits',
+            value: '-$10/m',
+          },
+        ],
+        highlightedDetails: [],
+      },
+      {
+        id: 'free',
+        type: 'subscription',
+        name: 'Free Plan',
+        scope: 'installation',
+        description:
+          'Unlimited API requests • Shared CPU • 500 MB RAM • 50K MAU • 500 MB database space • 5 GB bandwidth • 1 GB file storage',
+        paymentMethodRequired: false,
+        details: [],
+        highlightedDetails: [
+          {
+            label:
+              'Unavailable - The following members have reached their 2 project Free Plan limit: luka.hartwig@vercel.com. All active projects in Free Plan organizations count towards this limit.',
+          },
+        ],
+        disabled: true,
+      },
+    ],
+  },
+};
+
+const configurationPrepaymentInformation: Record<
+  string,
+  InstallationBalancesAndThresholds
+> = {
+  'acme-prepayment': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-no-balance': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-no-threshold': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [],
+  },
+  'acme-multiple-balances-and-thresholds': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        resourceId: 'store_1',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+      {
+        resourceId: 'store_2',
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$12.00',
+        nameLabel: '$',
+        currencyValueInCents: 1200,
+      },
+    ],
+    thresholds: [
+      {
+        resourceId: 'store_1',
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+      {
+        resourceId: 'store_2',
+        minimumAmountInCents: 500,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 2000,
+        maximumAmountPerPeriodInCents: 50000,
+      },
+    ],
+  },
+  'acme-prepayment-installation-level': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [
+      {
+        minimumAmountInCents: 1000,
+        billingPlanId: 'pro',
+        metadata: '{}',
+        purchaseAmountInCents: 1000,
+        maximumAmountPerPeriodInCents: 5000,
+      },
+    ],
+  },
+  'acme-prepayment-installation-level-no-threshold': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [
+      {
+        timestamp: '2024-01-01T00:00:00Z',
+        credit: '$15.00',
+        nameLabel: '$',
+        currencyValueInCents: 1500,
+      },
+    ],
+    thresholds: [],
+  },
+  'acme-empty': {
+    installationId: 'acme-prepayment-installation',
+    ownerId: 'team_dummy',
+    balances: [],
+    thresholds: [],
+  },
 };
 
 const resources: { stores: Resource[] } = {
@@ -397,13 +633,18 @@ const resources: { stores: Resource[] } = {
       name: 'foobar',
       status: 'available',
       product: {},
+      externalResourceId: 'ext_store_not_marketplace',
     },
     {
       id: 'store_1',
       type: 'integration',
       name: 'store-acme-connected-project',
       status: null,
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-1',
+      },
       projectsMetadata: [
         {
           id: 'spc_1',
@@ -412,6 +653,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_1',
     },
     {
       id: 'store_2',
@@ -427,6 +669,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_2',
     },
     {
       id: 'store_3',
@@ -448,6 +691,7 @@ const resources: { stores: Resource[] } = {
           environments: ['production', 'preview', 'development'],
         },
       ],
+      externalResourceId: 'ext_store_3',
     },
     {
       id: 'store_4',
@@ -456,8 +700,102 @@ const resources: { stores: Resource[] } = {
       status: 'available',
       product: { name: 'Acme', slug: 'acme' },
       projectsMetadata: [],
+      externalResourceId: 'ext_store_4',
+    },
+    {
+      id: 'rs_prepayment',
+      type: 'integration',
+      name: 'store-acme-prepayment',
+      status: 'available',
+      product: {
+        name: 'Acme Prepayment',
+        slug: 'acme-prepayment',
+        integrationConfigurationId: 'acme-prepayment',
+      },
+      projectsMetadata: [],
+      externalResourceId: 'store_1',
+      billingPlan: {
+        id: 'bp1',
+        type: 'prepayment',
+        name: 'Acme Prepayment Plan',
+        scope: 'resource',
+        description: 'Acme Prepayment Plan',
+        paymentMethodRequired: true,
+        details: [],
+        minimumAmount: '5',
+        maximumAmount: '10000',
+      },
+    },
+    {
+      id: 'rs_prepayment_installation',
+      type: 'integration',
+      name: 'store-acme-prepayment-installation',
+      status: 'available',
+      product: {
+        name: 'Acme Prepayment',
+        slug: 'acme-prepayment',
+        integrationConfigurationId: 'acme-prepayment',
+      },
+      projectsMetadata: [],
+      externalResourceId: 'store_1',
+      billingPlan: {
+        id: 'bp1',
+        type: 'prepayment',
+        name: 'Acme Prepayment Plan',
+        scope: 'installation',
+        description: 'Acme Prepayment Plan',
+        paymentMethodRequired: true,
+        details: [],
+        minimumAmount: '5',
+        maximumAmount: '10000',
+      },
+    },
+    {
+      id: 'rs_prepayment_min_max_50',
+      type: 'integration',
+      name: 'store-acme-prepayment_min_max_50',
+      status: 'available',
+      product: {
+        name: 'Acme Prepayment',
+        slug: 'acme-prepayment',
+        integrationConfigurationId: 'acme-prepayment',
+      },
+      projectsMetadata: [],
+      externalResourceId: 'store_1',
+      billingPlan: {
+        id: 'bp1',
+        type: 'prepayment',
+        name: 'Acme Prepayment Plan',
+        scope: 'resource',
+        description: 'Acme Prepayment Plan',
+        paymentMethodRequired: true,
+        details: [],
+        minimumAmount: '50',
+        maximumAmount: '50',
+      },
     },
   ],
+};
+
+const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
+  'success-case': {
+    id: 'success-case',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'succeeded',
+    amountCent: 100,
+    createdAt: 1,
+    updatedAt: 1,
+  },
+  'failure-case': {
+    id: 'failure-case',
+    ownerId: 'team_dummy',
+    integrationId: 'acme',
+    status: 'failed',
+    amountCent: 100,
+    createdAt: 1,
+    updatedAt: 1,
+  },
 };
 
 export function useResources(returnError?: number) {
@@ -495,6 +833,55 @@ export function useConfiguration() {
 
     res.json(foundConfigs);
   });
+}
+
+export function usePrepayment(responseKey: string) {
+  client.scenario.get(
+    '/v1/integrations/installations/:installationId/billing/balance',
+    (req, res) => {
+      if (responseKey === 'error') {
+        res.status(500);
+        res.end();
+        return;
+      }
+
+      const prepaymentInfo = configurationPrepaymentInformation[responseKey];
+
+      if (!prepaymentInfo) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(prepaymentInfo);
+    }
+  );
+}
+
+export function usePreauthorization(opts?: {
+  id?: MarketplaceBillingAuthorizationState['id'];
+  initialStatus?: MarketplaceBillingAuthorizationState['status'];
+}) {
+  client.scenario.post('/v1/integrations/billing/authorization', (req, res) => {
+    const authorization = authorizations[opts?.id ?? 'success-case'];
+    res.json({
+      authorization: {
+        ...authorization,
+        status: opts?.initialStatus ?? authorization.status,
+      },
+    });
+    res.end();
+  });
+
+  client.scenario.get(
+    '/v1/integrations/billing/authorization/:authorizationId',
+    (req, res) => {
+      const { authorizationId } = req.params;
+      const authorization = authorizations[authorizationId ?? 'success-case'];
+      res.json(authorization);
+      res.end();
+    }
+  );
 }
 
 export function useIntegration({

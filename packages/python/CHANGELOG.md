@@ -1,5 +1,69 @@
 # @vercel/python
 
+## 5.0.4
+
+### Patch Changes
+
+- [python]: move python packages vendor dir out of /cache ([#13921](https://github.com/vercel/vercel/pull/13921))
+
+## 5.0.3
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 5.0.2
+
+### Patch Changes
+
+- Vercel build command on python projects installs dependencies into vendor dir instead of project root. ([#13884](https://github.com/vercel/vercel/pull/13884))
+
+## 5.0.1
+
+### Patch Changes
+
+- fix(python): Avoid uploading pycache ([#13909](https://github.com/vercel/vercel/pull/13909))
+
+## 5.0.0
+
+### Major Changes
+
+- By default, the Python builder excludes certain directories from the zip output. ([#13609](https://github.com/vercel/vercel/pull/13609))
+  In vercel.json it's also possible to specify a custom `excludeFiles` rule.
+  Previously `excludeFiles` would replace the default exclusions entirely. Now the
+  default exclusions will always apply. The default exclusions consist of:
+
+  - .git
+  - .vercel
+  - .pnpm-store
+  - node_modules (also excluded when nested)
+  - .next
+  - .nuxt
+
+## 4.8.0
+
+### Minor Changes
+
+- Improve Fluid support ([#13589](https://github.com/vercel/vercel/pull/13589))
+
+## 4.7.4
+
+### Patch Changes
+
+- Ignore .pnpm_store in Python lambdas ([#13568](https://github.com/vercel/vercel/pull/13568))
+
+## 4.7.3
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+## 4.7.2
+
+### Patch Changes
+
+- Fix bug in WSGI streaming ([#13213](https://github.com/vercel/vercel/pull/13213))
+
 ## 4.7.1
 
 ### Patch Changes

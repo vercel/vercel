@@ -40,7 +40,7 @@ Omit.clientConfig
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.731.1/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:135
+node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.806.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:135
 
 ---
 
@@ -56,7 +56,7 @@ Omit.clientPlugins
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.731.1/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:139
+node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.806.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:139
 
 ---
 
@@ -202,7 +202,7 @@ Omit.roleAssumerWithWebIdentity
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.731.1/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:130
+node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.806.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:130
 
 ---
 
@@ -218,4 +218,4 @@ Omit.roleSessionName
 
 #### Defined in
 
-node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.731.1/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:123
+node*modules/.pnpm/@aws-sdk+credential-provider-web-identity@3.609.0*@aws-sdk+client-sts@3.806.0/node_modules/@aws-sdk/credential-provider-web-identity/dist-types/fromWebToken.d.ts:123

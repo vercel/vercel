@@ -6,6 +6,13 @@ export class ProjectTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof projectCommand>
 {
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

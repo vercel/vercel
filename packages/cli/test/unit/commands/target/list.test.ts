@@ -141,8 +141,7 @@ describe('target ls', () => {
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
       'Target Name',
-      'Target Slug',
-      'Target ID',
+      'Branch Tracking',
       'Type',
       'Updated',
     ]);
@@ -150,8 +149,7 @@ describe('target ls', () => {
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
       'Production',
-      'production',
-      'production',
+      'main',
       'Production',
       '-',
     ]);
@@ -159,37 +157,33 @@ describe('target ls', () => {
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
       'Preview',
-      'preview',
-      'preview',
+      'All unassigned git branches',
       'Preview',
       '-',
     ]);
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Her',
-      'her',
-      'env_8DTiPYD33Rcvu2hQwYAdw0rwLquY',
-      'Preview',
-      String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
+      'Development',
+      'Accessible via CLI',
+      'Development',
+      '-',
     ]);
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Ano',
       'ano',
-      'env_ph1tjPP20xp8VAuiFsYt4rhRYGys',
+      'ano*',
       'Preview',
       String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
     ]);
 
     line = await lines.next();
     expect(parseSpacedTableRow(line.value!)).toEqual([
-      'Development',
-      'development',
-      'development',
-      'Development',
-      '-',
+      'her',
+      '*her',
+      'Preview',
+      String(ms(Date.now() - project.customEnvironments![0].updatedAt)),
     ]);
   });
 });

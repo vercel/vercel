@@ -26,9 +26,23 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandBlob(actual: string) {
+    this.trackCliCommand({
+      command: 'blob',
+      value: actual,
+    });
+  }
+
   trackCliCommandBuild(actual: string) {
     this.trackCliCommand({
       command: 'build',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCache(actual: string) {
+    this.trackCliCommand({
+      command: 'cache',
       value: actual,
     });
   }
@@ -78,6 +92,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandGit(actual: string) {
     this.trackCliCommand({
       command: 'git',
+      value: actual,
+    });
+  }
+
+  trackCliCommandGuidance(actual: string) {
+    this.trackCliCommand({
+      command: 'guidance',
       value: actual,
     });
   }
@@ -159,6 +180,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandMicrofrontends(actual: string) {
+    this.trackCliCommand({
+      command: 'microfrontends',
+      value: actual,
+    });
+  }
+
   trackCliCommandProject(actual: string) {
     this.trackCliCommand({
       command: 'project',
@@ -183,6 +211,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRollback(actual: string) {
     this.trackCliCommand({
       command: 'rollback',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRollingRelease(actual: string) {
+    this.trackCliCommand({
+      command: 'rolling-release',
       value: actual,
     });
   }
@@ -231,6 +266,10 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackCPUs() {
     super.trackCPUs();
+  }
+
+  trackAgenticUse(agent: string | false) {
+    super.trackAgenticUse(agent);
   }
 
   trackArch() {

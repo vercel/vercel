@@ -82,6 +82,7 @@ export const yesOption = {
   shorthand: 'y',
   type: Boolean,
   deprecated: false,
+  description: 'Accept default value for all prompts',
 } as const;
 
 export const nextOption = {

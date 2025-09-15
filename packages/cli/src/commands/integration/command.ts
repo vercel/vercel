@@ -95,6 +95,29 @@ export const listSubcommand = {
   ],
 } as const;
 
+export const balanceSubcommand = {
+  name: 'balance',
+  aliases: [],
+  description:
+    'Shows the balances and thresholds of specified marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Show the balance(s) & threshold(s) of a marketplace integration',
+      value: [
+        `${packageName} integration balance <integration-name>`,
+        `${packageName} integration balance acme`,
+      ],
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: [],

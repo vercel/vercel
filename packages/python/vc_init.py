@@ -1,14 +1,38 @@
 import sys
+import os
+import site
+import importlib
 import base64
 import json
 import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
-import os
+
+_here = os.path.dirname(__file__)
+_vendor_rel = '__VC_HANDLER_VENDOR_DIR'
+_vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+if os.path.isdir(_vendor):
+    # Process .pth files like a real site-packages dir
+    site.addsitedir(_vendor)
+
+    # Move _vendor to the front (after script dir if present)
+    try:
+        while _vendor in sys.path:
+            sys.path.remove(_vendor)
+    except ValueError:
+        pass
+
+    # Put vendored deps ahead of site-packages but after the script dir
+    idx = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+    sys.path.insert(idx, _vendor)
+
+    importlib.invalidate_caches()
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", "./__VC_HANDLER_ENTRYPOINT")
+user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
+__vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
 __vc_module = util.module_from_spec(__vc_spec)
 sys.modules["__VC_HANDLER_MODULE_NAME"] = __vc_module
 __vc_spec.loader.exec_module(__vc_module)
@@ -171,6 +195,11 @@ if 'VERCEL_IPC_PATH' in os.environ:
             if not self.parse_request():
                 return
 
+            if self.path == '/_vercel/ping':
+                self.send_response(200)
+                self.end_headers()
+                return
+
             invocationId = self.headers.get('x-vercel-internal-invocation-id')
             requestId = int(self.headers.get('x-vercel-internal-request-id'))
             del self.headers['x-vercel-internal-invocation-id']
@@ -274,28 +303,24 @@ if 'VERCEL_IPC_PATH' in os.environ:
                             env[key] = wsgi_encoding_dance(value)
                     for k, v in self.headers.items():
                         env['HTTP_' + k.replace('-', '_').upper()] = v
-                    # Response body
-                    body = BytesIO()
 
                     def start_response(status, headers, exc_info=None):
                         self.send_response(int(status.split(' ')[0]))
                         for name, value in headers:
                             self.send_header(name, value)
                         self.end_headers()
-                        return body.write
+                        return self.wfile.write
 
                     # Call the application
                     response = app(env, start_response)
                     try:
                         for data in response:
                             if data:
-                                body.write(data)
+                                self.wfile.write(data)
+                                self.wfile.flush()
                     finally:
                         if hasattr(response, 'close'):
                             response.close()
-                    body = body.getvalue()
-                    self.wfile.write(body)
-                    self.wfile.flush()
         else:
             from urllib.parse import urlparse
             from io import BytesIO

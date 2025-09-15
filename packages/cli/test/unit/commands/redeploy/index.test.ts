@@ -306,6 +306,10 @@ function initRedeployTest({
       return;
     }
   );
+  client.scenario.get(`/v9/projects/:projectNameOrId`, (_req, res) => {
+    res.json(project);
+    return;
+  });
 
   return {
     project,

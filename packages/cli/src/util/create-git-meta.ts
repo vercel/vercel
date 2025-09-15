@@ -57,6 +57,7 @@ export async function createGitMeta(
   return {
     remoteUrl: remoteUrl || undefined,
     commitAuthorName: commit.author.name,
+    commitAuthorEmail: commit.author.email,
     commitMessage: commit.subject,
     commitRef: commit.branch,
     commitSha: commit.hash,

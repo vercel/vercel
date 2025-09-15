@@ -1,9 +1,10 @@
 import fetch, { type Response } from 'node-fetch';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 import ua from './ua';
+import { hostname } from 'os';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
+export const userAgent = `${hostname()} @ ${ua}`;
 
 interface AuthorizationServerMetadata {
   issuer: URL;
@@ -11,6 +12,7 @@ interface AuthorizationServerMetadata {
   token_endpoint: URL;
   revocation_endpoint: URL;
   jwks_uri: URL;
+  introspection_endpoint: URL;
 }
 
 let _as: AuthorizationServerMetadata;
@@ -37,7 +39,7 @@ export async function as(): Promise<AuthorizationServerMetadata> {
  */
 async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
   return await fetch(new URL('.well-known/openid-configuration', issuer), {
-    headers: { 'Content-Type': 'application/json', 'user-agent': ua },
+    headers: { 'Content-Type': 'application/json', 'user-agent': userAgent },
   });
 }
 
@@ -62,7 +64,8 @@ async function processDiscoveryEndpointResponse(
     !canParseURL(json.device_authorization_endpoint) ||
     !canParseURL(json.token_endpoint) ||
     !canParseURL(json.revocation_endpoint) ||
-    !canParseURL(json.jwks_uri)
+    !canParseURL(json.jwks_uri) ||
+    !canParseURL(json.introspection_endpoint)
   ) {
     return [new TypeError('Invalid discovery response')];
   }
@@ -83,6 +86,7 @@ async function processDiscoveryEndpointResponse(
       token_endpoint: new URL(json.token_endpoint),
       revocation_endpoint: new URL(json.revocation_endpoint),
       jwks_uri: new URL(json.jwks_uri),
+      introspection_endpoint: new URL(json.introspection_endpoint),
     },
   ];
 }
@@ -97,11 +101,11 @@ export async function deviceAuthorizationRequest(): Promise<Response> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({
       client_id: VERCEL_CLI_CLIENT_ID,
-      scope: 'openid',
+      scope: 'openid offline_access',
     }),
   });
 }
@@ -204,7 +208,7 @@ export async function deviceAccessTokenRequest(options: {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'user-agent': ua,
+          'user-agent': userAgent,
         },
         body: new URLSearchParams({
           client_id: VERCEL_CLI_CLIENT_ID,
@@ -227,31 +231,27 @@ export async function deviceAccessTokenRequest(options: {
   }
 }
 
+interface TokenSet {
+  /** The access token issued by the authorization server. */
+  access_token: string & { _: 'at' }; // HACK: To brand the access_token type
+  /** The type of the token issued */
+  token_type: 'Bearer';
+  /** The lifetime in seconds of the access token. */
+  expires_in: number;
+  /** The refresh token, which can be used to obtain new access tokens. */
+  refresh_token?: string;
+  /** The scope of the access token. */
+  scope?: string;
+}
+
 /**
- * Process the Device Access Token request Response
+ * Process the Token request Response
  *
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
  */
-export async function processDeviceAccessTokenResponse(
+export async function processTokenResponse(
   response: Response
-): Promise<
-  | [OAuthError | TypeError]
-  | [
-      null,
-      {
-        /** The access token issued by the authorization server. */
-        access_token: string;
-        /** The type of the token issued */
-        token_type: 'Bearer';
-        /** The lifetime in seconds of the access token. */
-        expires_in: number;
-        /** The refresh token, which can be used to obtain new access tokens. */
-        refresh_token?: string;
-        /** The scope of the access token. */
-        scope?: string;
-      },
-    ]
-> {
+): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
   const json = await response.json();
 
   if (!response.ok) {
@@ -289,7 +289,7 @@ export async function revocationRequest(options: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'user-agent': ua,
+      'user-agent': userAgent,
     },
     body: new URLSearchParams({ ...options, client_id: VERCEL_CLI_CLIENT_ID }),
   });
@@ -309,6 +309,28 @@ export async function processRevocationResponse(
   return [new OAuthError('Revocation request failed', json)];
 }
 
+/**
+ * Perform Refresh Token Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc6749#section-6
+ */
+export async function refreshTokenRequest(options: {
+  refresh_token: string;
+}): Promise<Response> {
+  return await fetch((await as()).token_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': userAgent,
+    },
+    body: new URLSearchParams({
+      client_id: VERCEL_CLI_CLIENT_ID,
+      grant_type: 'refresh_token',
+      ...options,
+    }),
+  });
+}
+
 type OAuthErrorCode =
   | 'invalid_request'
   | 'invalid_client'
@@ -316,7 +338,8 @@ type OAuthErrorCode =
   | 'unauthorized_client'
   | 'unsupported_grant_type'
   | 'invalid_scope'
-  // Device Athorization Response Errors
+  | 'server_error'
+  // Device Authorization Response Errors
   | 'authorization_pending'
   | 'slow_down'
   | 'access_denied'
@@ -330,15 +353,17 @@ interface OAuthErrorResponse {
   error_uri?: string;
 }
 
-function processOAuthErrorResponse(json: unknown): OAuthErrorResponse {
+function processOAuthErrorResponse(
+  json: unknown
+): OAuthErrorResponse | TypeError {
   if (typeof json !== 'object' || json === null)
-    throw new TypeError('Expected response to be an object');
+    return new TypeError('Expected response to be an object');
   if (!('error' in json) || typeof json.error !== 'string')
-    throw new TypeError('Expected `error` to be a string');
+    return new TypeError('Expected `error` to be a string');
   if ('error_description' in json && typeof json.error_description !== 'string')
-    throw new TypeError('Expected `error_description` to be a string');
+    return new TypeError('Expected `error_description` to be a string');
   if ('error_uri' in json && typeof json.error_uri !== 'string')
-    throw new TypeError('Expected `error_uri` to be a string');
+    return new TypeError('Expected `error_uri` to be a string');
 
   return json as OAuthErrorResponse;
 }
@@ -348,6 +373,13 @@ export class OAuthError extends Error {
   cause: Error;
   constructor(message: string, response: unknown) {
     const error = processOAuthErrorResponse(response);
+    if (error instanceof TypeError) {
+      const message = `Unexpected server response: ${JSON.stringify(response)}`;
+      super(message);
+      this.cause = new Error(message, { cause: error });
+      this.code = 'server_error';
+      return;
+    }
     let cause = error.error;
     if (error.error_description) cause += `: ${error.error_description}`;
     if (error.error_uri) cause += ` (${error.error_uri})`;
@@ -370,11 +402,50 @@ function canParseURL(url: string) {
   }
 }
 
-export async function verifyJWT(token: string) {
-  const JWKS = createRemoteJWKSet((await as()).jwks_uri);
-  const { payload } = await jwtVerify<{ team_id?: string }>(token, JWKS, {
-    issuer: 'https://vercel.com',
-    audience: ['https://api.vercel.com', 'https://vercel.com/api'],
+/**
+ * Perform Token Introspection Request.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.1
+ */
+export async function inspectTokenRequest(token: string): Promise<Response> {
+  return fetch((await as()).introspection_endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'user-agent': userAgent,
+    },
+    body: new URLSearchParams({ token }),
   });
-  return payload;
+}
+
+/**
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2 */
+interface AccessToken {
+  /** Whether or not the presented token is active. */
+  active: boolean;
+  client_id?: string;
+  session_id?: string;
+}
+
+/**
+ * Process Token Introspection Response.
+ *
+ * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.2
+ */
+export async function processInspectTokenResponse(
+  response: Response
+): Promise<[IntrospectionError] | [null, AccessToken]> {
+  try {
+    const token = await response.json();
+    if (!token || typeof token !== 'object' || !('active' in token)) {
+      throw new IntrospectionError('Invalid token introspection response');
+    }
+    return [null, token];
+  } catch (cause) {
+    return [new IntrospectionError('Could not introspect token.', { cause })];
+  }
+}
+
+class IntrospectionError extends Error {
+  name = 'IntrospectionError';
 }

@@ -1,5 +1,27 @@
 # @vercel/firewall
 
+## 1.0.1
+
+### Patch Changes
+
+- Fix headers being awaited for nextjs 15+ ([#13688](https://github.com/vercel/vercel/pull/13688))
+
+## 1.0.0
+
+### Major Changes
+
+- Mark checkRateLimit as stable ([#13382](https://github.com/vercel/vercel/pull/13382))
+
+### Patch Changes
+
+- Updated description ([#13384](https://github.com/vercel/vercel/pull/13384))
+
+## 0.1.7
+
+### Patch Changes
+
+- fix(readme): updated link to documentation about the SDK ([#13210](https://github.com/vercel/vercel/pull/13210))
+
 ## 0.1.6
 
 ### Patch Changes

@@ -2,7 +2,6 @@ name: Lint
 
 on:
   pull_request:
-  merge_group:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
@@ -37,7 +36,7 @@ jobs:
     name: Lint
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    if: (github.event_name == 'pull_request' || github.event_name == 'merge_group') && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
