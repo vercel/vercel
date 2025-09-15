@@ -1,6 +1,8 @@
 import { TelemetryClient } from '../..';
+import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
 import type { TelemetryMethods } from '../../types';
 import type { pullSubcommand } from '../../../../commands/env/command';
+import type { CustomEnvironmentType } from '@vercel-internals/types';
 
 export class EnvPullTelemetryClient
   extends TelemetryClient
@@ -17,10 +19,11 @@ export class EnvPullTelemetryClient
 
   trackCliOptionEnvironment(environment: string | undefined) {
     if (environment) {
-      const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliOption({
         option: 'environment',
-        value: standardEnvironments.includes(environment)
+        value: STANDARD_ENVIRONMENTS.includes(
+          environment as CustomEnvironmentType
+        )
           ? environment
           : this.redactedValue,
       });

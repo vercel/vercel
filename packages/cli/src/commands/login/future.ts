@@ -1,28 +1,28 @@
 import readline from 'node:readline';
 import chalk from 'chalk';
 import * as open from 'open';
+import { eraseLines } from 'ansi-escapes';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
-import {
-  writeToAuthConfigFile,
-  writeToConfigFile,
-} from '../../util/config/files';
 import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
-import { emoji, prependEmoji } from '../../util/emoji';
+import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
 import {
   deviceAuthorizationRequest,
   processDeviceAuthorizationResponse,
   deviceAccessTokenRequest,
-  processDeviceAccessTokenResponse,
+  processTokenResponse,
   isOAuthError,
-  verifyJWT,
 } from '../../util/oauth';
 import o from '../../output-manager';
+import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
-export async function login(client: Client): Promise<number> {
+export async function login(
+  client: Client,
+  telemetry: LoginTelemetryClient
+): Promise<number> {
   const deviceAuthorizationResponse = await deviceAuthorizationRequest();
 
   o.debug(
@@ -34,6 +34,7 @@ export async function login(client: Client): Promise<number> {
 
   if (deviceAuthorizationError) {
     printError(deviceAuthorizationError);
+    telemetry.trackState('error');
     return 1;
   }
 
@@ -46,24 +47,35 @@ export async function login(client: Client): Promise<number> {
     interval,
   } = deviceAuthorization;
 
+  let rlClosed = false;
   const rl = readline
     .createInterface({
       input: process.stdin,
       output: process.stdout,
     })
     // HACK: https://github.com/SBoudrias/Inquirer.js/issues/293#issuecomment-172282009, https://github.com/SBoudrias/Inquirer.js/pull/569
-    .on('SIGINT', () => process.exit(0));
+    .on('SIGINT', () => {
+      telemetry.trackState('canceled');
+      process.exit(0);
+    });
 
   rl.question(
     `
-  ▲ Sign in to the Vercel CLI
-
-  Visit ${chalk.bold(o.link(verification_uri, verification_uri_complete, { color: false }))} to enter ${chalk.bold(user_code)}
+  Visit ${chalk.bold(
+    o.link(
+      verification_uri.replace('https://', ''),
+      verification_uri_complete,
+      { color: false, fallback: () => verification_uri_complete }
+    )
+  )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
       open.default(verification_uri_complete);
+      o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
+      o.spinner('Waiting for authentication...');
       rl.close();
+      rlClosed = true;
     }
   );
 
@@ -76,9 +88,6 @@ export async function login(client: Client): Promise<number> {
 
   async function pollForToken(): Promise<Error | undefined> {
     while (Date.now() < expiresAt) {
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-
-      // TODO: Handle connection timeouts and add interval backoff
       const [tokenResponseError, tokenResponse] =
         await deviceAccessTokenRequest({ device_code });
 
@@ -89,6 +98,7 @@ export async function login(client: Client): Promise<number> {
           o.debug(
             `Connection timeout. Slowing down, polling every ${intervalMs / 1000}s...`
           );
+          await wait(intervalMs);
           continue;
         }
         return tokenResponseError;
@@ -98,62 +108,61 @@ export async function login(client: Client): Promise<number> {
         `'Device Access Token response:', ${await tokenResponse.clone().text()}`
       );
 
-      const [tokenError, token] =
-        await processDeviceAccessTokenResponse(tokenResponse);
+      const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
-      if (isOAuthError(tokenError)) {
-        const { code } = tokenError;
+      if (isOAuthError(tokensError)) {
+        const { code } = tokensError;
         switch (code) {
           case 'authorization_pending':
+            await wait(intervalMs);
             continue;
           case 'slow_down':
             intervalMs += 5 * 1000;
             o.debug(
               `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
             );
+            await wait(intervalMs);
             continue;
           default:
-            return tokenError.cause;
+            return tokensError.cause;
         }
       }
 
-      if (tokenError) return tokenError;
+      if (tokensError) return tokensError;
+
+      // If we get here, we throw away any possible token errors like polling, or timeouts
+      error = undefined;
+
+      o.print(eraseLines(2));
 
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
 
-      // Save the user's authentication token to the configuration file.
-      client.authConfig.token = token.access_token;
-      error = undefined;
+      client.updateAuthConfig({
+        token: tokens.access_token,
+        expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
+        refreshToken: tokens.refresh_token,
+      });
 
-      const { team_id } = await verifyJWT(token.access_token);
-      o.debug('access_token verified');
-
-      if (team_id) {
-        o.debug('Current team updated');
-        client.config.currentTeam = team_id;
-      } else {
-        o.debug('Current team deleted');
-        delete client.config.currentTeam;
-      }
+      client.updateConfig({ currentTeam: undefined });
 
       // If we have a brand new login, update `currentTeam`
       if (isInitialLogin) {
-        await updateCurrentTeamAfterLogin(client, client.config.currentTeam);
+        await updateCurrentTeamAfterLogin(client);
       }
 
-      writeToAuthConfigFile(client.authConfig);
-      writeToConfigFile(client.config);
+      client.writeToAuthConfigFile();
+      client.writeToConfigFile();
 
       o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
       o.print(`
-  ${chalk.cyan('Congratulations!')} You are now signed in. In order to deploy something, run ${getCommandName()}.
+  ${chalk.cyan('Congratulations!')} You are now signed in.
 
-  ${prependEmoji(
-    `Connect your Git Repositories to deploy every branch push automatically (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).`,
-    emoji('tip')
-  )}\n`);
+  To deploy something, run ${getCommandName()}.
+
+  ${emoji('tip')} To deploy every commit automatically,
+  connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
       return;
     }
@@ -162,10 +171,20 @@ export async function login(client: Client): Promise<number> {
   error = await pollForToken();
 
   o.stopSpinner();
-  rl.close();
+  if (!rlClosed) {
+    rl.close();
+  }
 
-  if (!error) return 0;
+  if (!error) {
+    telemetry.trackState('success');
+    return 0;
+  }
 
   printError(error);
+  telemetry.trackState('error');
   return 1;
+}
+
+async function wait(intervalMs: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, intervalMs));
 }

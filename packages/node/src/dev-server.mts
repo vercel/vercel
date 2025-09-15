@@ -8,7 +8,7 @@ if (!entrypoint) {
 import { join } from 'path';
 import type { Headers } from 'undici';
 import type { VercelProxyResponse } from './types.js';
-import { Config } from '@vercel/build-utils';
+import { Config, getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import {
@@ -40,15 +40,23 @@ async function createEventHandler(
   const runtime = staticConfig?.runtime;
   validateConfiguredRuntime(runtime, entrypoint);
 
-  // `middleware.js`/`middleware.ts` file is always run as
-  // an Edge Function, otherwise needs to be opted-in via
-  // `export const config = { runtime: 'edge' }`
-  if (config.middleware === true || isEdgeRuntime(runtime)) {
+  const { maxDuration } = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+
+  const isMiddleware = config.middleware === true;
+
+  // middleware is edge by default, otherwise respect the runtime
+  const useEdgeRuntime = (isMiddleware && !runtime) || isEdgeRuntime(runtime);
+
+  if (useEdgeRuntime) {
     return createEdgeEventHandler(
       entrypointPath,
       entrypoint,
-      config.middleware || false,
-      config.zeroConfig
+      isMiddleware,
+      config.zeroConfig,
+      maxDuration
     );
   }
 
@@ -56,6 +64,7 @@ async function createEventHandler(
 
   const isStreaming =
     staticConfig?.supportsResponseStreaming ||
+    isMiddleware ||
     (await hasWebHandlers(async () => parseCjs(content).exports)) ||
     (await hasWebHandlers(async () =>
       init.then(() => parseEsm(content)[1].map(specifier => specifier.n))
@@ -63,7 +72,9 @@ async function createEventHandler(
 
   return createServerlessEventHandler(entrypointPath, {
     mode: isStreaming ? 'streaming' : 'buffer',
-    shouldAddHelpers: options.shouldAddHelpers,
+    shouldAddHelpers: isMiddleware ? false : options.shouldAddHelpers,
+    maxDuration,
+    isMiddleware,
   });
 }
 
@@ -123,6 +134,36 @@ async function onDevRequest(
     // this matches the serverless function bridge launcher's behavior when
     // an error is thrown in the function
     process.exit(1);
+  }
+
+  // Check for static files in public directory first
+  const publicDir = process.env.VERCEL_DEV_PUBLIC_DIR;
+  if (publicDir && req.url) {
+    const { join } = await import('path');
+    const { existsSync, statSync } = await import('fs');
+    const { readFile } = await import('fs/promises');
+
+    const staticPath = join(process.cwd(), publicDir, req.url);
+
+    if (existsSync(staticPath) && statSync(staticPath).isFile()) {
+      try {
+        const content = await readFile(staticPath);
+        const { extname } = await import('path');
+        const { contentType } = await import('mime-types');
+
+        const url = new URL(req.url || '/', 'http://localhost');
+        const ext = extname(url.pathname);
+        const mimeType = contentType(ext) || 'application/octet-stream';
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Length', content.length);
+        res.statusCode = 200;
+        res.end(content);
+        return;
+      } catch (error) {
+        // If there's an error reading the static file, fall through to the main handler
+      }
+    }
   }
 
   if (!handleEvent) {

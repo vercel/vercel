@@ -6,52 +6,58 @@
     "test/lib/**",
     "utils/build.mjs"
   ],
-  "pipeline": {
+  "envMode": "loose",
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputMode": "new-only",
+      "outputLogs": "new-only",
       "outputs": ["dist/**"]
     },
     "vitest-unit": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-run": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-e2e": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "vitest-e2e-node-20": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-unit": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-dev": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-cli": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-e2e": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test-next-local": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
     "test": {
       "dependsOn": ["build"],
-      "outputMode": "new-only"
+      "outputLogs": "new-only"
     },
-    "type-check": {}
+    "type-check": {
+      "dependsOn": ["source", "^build"]
+    },
+    "source": {
+      "dependsOn": ["^source"]
+    }
   }
 }

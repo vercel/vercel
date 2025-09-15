@@ -81,16 +81,15 @@ export function pathToRegexp(
 // When exiting this process, wait for Vercel Function server to finish
 // all its work, especially waitUntil promises before exiting this process.
 //
-// Here we use a short timeout (10 seconds) to let the user know that
+// Here we use a short timeout (30 seconds) to let the user know that
 // it has a long-running waitUntil promise.
-const WAIT_UNTIL_TIMEOUT = 10;
-export const WAIT_UNTIL_TIMEOUT_MS = 10 * 1000;
+export const WAIT_UNTIL_TIMEOUT = 30;
 
-export const waitUntilWarning = (entrypointPath: string) =>
+export const waitUntilWarning = (entrypointPath: string, maxDuration: number) =>
   `
 The function \`${entrypointPath
     .split('/')
-    .pop()}\` is still running after ${WAIT_UNTIL_TIMEOUT}s.
+    .pop()}\` is still running after ${maxDuration}s.
 (hint: do you have a long-running waitUntil() promise?)
 `.trim();
 
@@ -177,19 +176,13 @@ export function isEdgeRuntime(runtime?: string): runtime is EdgeRuntimes {
   );
 }
 
-const ALLOWED_RUNTIMES: string[] = Object.values(EdgeRuntimes);
+const ALLOWED_RUNTIMES: string[] = [...Object.values(EdgeRuntimes), 'nodejs'];
 
 export function validateConfiguredRuntime(
   runtime: string | undefined,
   entrypoint: string
 ) {
   if (runtime) {
-    if (runtime === 'nodejs') {
-      throw new Error(
-        `${entrypoint}: \`config.runtime: "nodejs"\` semantics will evolve soon. Please remove the \`runtime\` key to keep the existing behavior.`
-      );
-    }
-
     if (!ALLOWED_RUNTIMES.includes(runtime)) {
       throw new Error(
         `${entrypoint}: unsupported "runtime" value in \`config\`: ${JSON.stringify(

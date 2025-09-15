@@ -110,11 +110,27 @@ export class TelemetryClient {
     });
   }
 
+  protected trackOidcTokenRefresh(count: number) {
+    this.track({
+      key: 'oidc-token-refresh',
+      value: `${count}`,
+    });
+  }
+
   protected trackCPUs() {
     this.track({
       key: 'cpu_count',
       value: String(os.cpus().length),
     });
+  }
+
+  protected trackAgenticUse(agent: string | false) {
+    if (agent) {
+      this.track({
+        key: 'agent',
+        value: agent,
+      });
+    }
   }
 
   protected trackPlatform() {
@@ -161,6 +177,17 @@ export class TelemetryClient {
       key: 'extension',
       value: this.redactedValue,
     });
+  }
+
+  protected loginAttempt?: string;
+  protected trackLoginState(
+    state: 'started' | 'error' | 'canceled' | 'success'
+  ) {
+    if (state === 'started') this.loginAttempt = randomUUID();
+    if (this.loginAttempt) {
+      this.track({ key: `login:attempt:${this.loginAttempt}`, value: state });
+    }
+    if (state !== 'started') this.loginAttempt = undefined;
   }
 
   trackCliFlagHelp(command: string, subcommands?: string | string[]) {

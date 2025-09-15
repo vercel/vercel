@@ -1002,7 +1002,7 @@ export default class DevServer {
     }
 
     if (devProcess) {
-      ops.push(treeKill(devProcess.pid));
+      ops.push(treeKill(devProcess.pid!));
     }
 
     ops.push(close(this.server));
@@ -2221,10 +2221,10 @@ export default class DevServer {
     return this.caseSensitive;
   }
 
-  async runDevCommand() {
+  async runDevCommand(forceRestart: boolean = false) {
     const { devCommand, cwd } = this;
 
-    if (devCommand === this.currentDevCommand) {
+    if (devCommand === this.currentDevCommand && !forceRestart) {
       // `devCommand` has not changed, so don't restart frontend dev process
       return;
     }
@@ -2236,7 +2236,7 @@ export default class DevServer {
     }
 
     if (this.devProcess) {
-      await treeKill(this.devProcess.pid);
+      await treeKill(this.devProcess.pid!);
     }
 
     output.log(`Running Dev Command ${chalk.cyan.bold(`“${devCommand}”`)}`);
@@ -2410,7 +2410,8 @@ async function findBuildMatch(
         requestPath,
         devServer,
         vercelConfig,
-        isFilesystem
+        isFilesystem,
+        !!bestIndexMatch
       )
     ) {
       if (!isIndex(match.src)) {
@@ -2436,7 +2437,8 @@ async function shouldServe(
   requestPath: string,
   devServer: DevServer,
   vercelConfig: VercelConfig,
-  isFilesystem = false
+  isFilesystem = false,
+  hasMatched = false
 ): Promise<boolean> {
   const {
     src,
@@ -2483,6 +2485,7 @@ async function shouldServe(
       config: config || {},
       requestPath,
       workPath: devServer.cwd,
+      hasMatched,
     });
     if (shouldServe) {
       return true;

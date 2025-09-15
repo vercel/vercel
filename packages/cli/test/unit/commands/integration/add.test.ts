@@ -3,7 +3,10 @@ import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { useIntegration } from '../../../mocks/integration';
+import {
+  useIntegration,
+  usePreauthorization,
+} from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -169,6 +172,7 @@ describe('integration', () => {
       describe('with installation', () => {
         beforeEach(() => {
           useIntegration({ withInstallation: true, ownerId: team.id });
+          usePreauthorization();
         });
 
         it('should handle provisioning resource in project context', async () => {
@@ -184,6 +188,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+
           await expect(client.stderr).toOutput(
             'What is the name of the resource?'
           );
@@ -234,6 +239,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+
           await expect(client.stderr).toOutput(
             'What is the name of the resource?'
           );
@@ -272,6 +278,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             `Installing Acme Product by Acme Integration under ${team.slug}`
           );
+
           await expect(client.stderr).toOutput(
             'What is the name of the resource?'
           );
@@ -292,6 +299,9 @@ describe('integration', () => {
 ? Confirm selection? (Y/n)`
           );
           client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput('Validation complete.');
           await expect(client.stderr).toOutput(
             'Acme Product successfully provisioned'
           );
@@ -350,6 +360,219 @@ describe('integration', () => {
           client.stdin.write('n\n');
           await expect(exitCodePromise).resolves.toEqual(0);
           expect(openMock).not.toHaveBeenCalled();
+        });
+
+        it('should require the vercel dashboard for non-subscription billing plan selected in UI wizard', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme-prepayment');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Prepayment under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Do you want to link this resource to the current project? (Y/n)'
+          );
+          client.stdin.write('n\n');
+          await expect(client.stderr).toOutput(
+            'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
+          );
+          client.stdin.write('Y\n');
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&integrationId=acme-prepayment&productId=acme-product&cmd=add'
+          );
+        });
+      });
+
+      describe('with preauthorization steps', () => {
+        beforeEach(() => {
+          useIntegration({ withInstallation: true, ownerId: team.id });
+        });
+        it('should handle provisioning resource with a slow authorization', async () => {
+          usePreauthorization({ initialStatus: 'pending' });
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: test-resource
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput('Validation complete.');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+        });
+
+        it('should require opening the dashboard to complete preauthorization on when action is required', async () => {
+          usePreauthorization({ initialStatus: 'requires_action' });
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: test-resource
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput(
+            'Payment validation requires manual action. Please complete the steps in your browser...'
+          );
+          await expect(client.stderr).toOutput('Validation complete.');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=success-case&cmd=authorize'
+          );
+        });
+
+        it('should exit the process when automatic preauthorization fails', async () => {
+          usePreauthorization({ id: 'failure-case' });
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: test-resource
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput(
+            'Error: Payment validation failed. Please change your payment method via the web UI and try again.'
+          );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(openMock).not.toHaveBeenCalled();
+        });
+
+        it('should exit the process when required action preauthorization fails', async () => {
+          usePreauthorization({
+            id: 'failure-case',
+            initialStatus: 'requires_action',
+          });
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+
+          await expect(client.stderr).toOutput(
+            'What is the name of the resource?'
+          );
+          client.stdin.write('test-resource\n');
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            `Selected product:
+- Name: test-resource
+- Primary Region: us-west-1
+- Plan: Pro Plan
+? Confirm selection? (Y/n)`
+          );
+          client.stdin.write('y\n');
+
+          await expect(client.stderr).toOutput('Validating payment...');
+          await expect(client.stderr).toOutput(
+            'Payment validation requires manual action. Please complete the steps in your browser...'
+          );
+          await expect(client.stderr).toOutput(
+            'Error: Payment validation failed. Please change your payment method via the web UI and try again.'
+          );
+
+          const exitCode = await exitCodePromise;
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/cli?teamId=team_dummy&authorizationId=failure-case&cmd=authorize'
+          );
         });
       });
 

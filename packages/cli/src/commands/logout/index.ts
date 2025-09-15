@@ -36,15 +36,18 @@ export default async function logout(client: Client): Promise<number> {
     return 1;
   }
 
-  if (parsedArgs.flags['--future']) {
-    return await future(client);
-  }
-
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
     output.print(help(logoutCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
+
+  // Unless the authConfig has a refreshToken, fall back to legacy logout
+  if ('refreshToken' in authConfig) {
+    return await future(client);
+  }
+
+  output.debug('Falling back to legacy logout');
 
   if (!authConfig.token) {
     output.note(
@@ -73,12 +76,6 @@ export default async function logout(client: Client): Promise<number> {
   }
 
   delete config.currentTeam;
-
-  // The new user might have completely different teams, so
-  // we should wipe the order.
-  if (config.desktop) {
-    delete config.desktop.teamOrder;
-  }
 
   delete authConfig.token;
 

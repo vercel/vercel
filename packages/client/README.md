@@ -1,6 +1,6 @@
 # @vercel/client
 
-[Join the Vercel Community](https://vercel.community/)
+[Join the Vercel Community](https://community.vercel.com/)
 
 The official Node.js client for deploying to [Vercel](https://vercel.com).
 

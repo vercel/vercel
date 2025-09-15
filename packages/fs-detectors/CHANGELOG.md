@@ -1,5 +1,173 @@
 # @vercel/fs-detectors
 
+## 5.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/frameworks@3.8.5
+
+## 5.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`1d04886f34e8fa705f22333422ea0c0c315c4006`](https://github.com/vercel/vercel/commit/1d04886f34e8fa705f22333422ea0c0c315c4006)]:
+  - @vercel/frameworks@3.8.4
+
+## 5.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`e01478ab10bf1fcf0bcbc904b16bfb82689b0bd3`](https://github.com/vercel/vercel/commit/e01478ab10bf1fcf0bcbc904b16bfb82689b0bd3)]:
+  - @vercel/frameworks@3.8.3
+
+## 5.5.0
+
+### Minor Changes
+
+- Support turbo.jsonc ([#13792](https://github.com/vercel/vercel/pull/13792))
+
+## 5.4.16
+
+### Patch Changes
+
+- Updated dependencies [[`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed), [`2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed`](https://github.com/vercel/vercel/commit/2f9a6e68f845ff06c60c7cdab15bb4f4321ac8ed)]:
+  - @vercel/frameworks@3.8.2
+
+## 5.4.15
+
+### Patch Changes
+
+- Updated dependencies [[`2876dace493b97f4cae7f3839484ee36ed8ac363`](https://github.com/vercel/vercel/commit/2876dace493b97f4cae7f3839484ee36ed8ac363)]:
+  - @vercel/frameworks@3.8.1
+
+## 5.4.14
+
+### Patch Changes
+
+- Updated dependencies [[`724127d24f469b495e64e50ee152b7cc66f50153`](https://github.com/vercel/vercel/commit/724127d24f469b495e64e50ee152b7cc66f50153)]:
+  - @vercel/frameworks@3.8.0
+
+## 5.4.13
+
+### Patch Changes
+
+- Updated dependencies [[`277c78cd16d7c8c9e5a9da92953af1b94a4c94bc`](https://github.com/vercel/vercel/commit/277c78cd16d7c8c9e5a9da92953af1b94a4c94bc)]:
+  - @vercel/frameworks@3.7.7
+
+## 5.4.12
+
+### Patch Changes
+
+- Updated dependencies [[`b1993ee3af72d12859bbc621744b687fbc968a1b`](https://github.com/vercel/vercel/commit/b1993ee3af72d12859bbc621744b687fbc968a1b)]:
+  - @vercel/frameworks@3.7.6
+
+## 5.4.11
+
+### Patch Changes
+
+- Fix incorrect caching for DetectorFilesystem.readdir ([#13645](https://github.com/vercel/vercel/pull/13645))
+
+- Updated dependencies [[`99ec6718b0ddffac67a8a66608c718fce99bf542`](https://github.com/vercel/vercel/commit/99ec6718b0ddffac67a8a66608c718fce99bf542)]:
+  - @vercel/frameworks@3.7.5
+
+## 5.4.10
+
+### Patch Changes
+
+- Adds framework detection and an associated builder for Hono. ([#13594](https://github.com/vercel/vercel/pull/13594))
+
+- Updated dependencies [[`4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9`](https://github.com/vercel/vercel/commit/4e1731ead55caeb5e51b45b4dab3a6c9bb1d63e9)]:
+  - @vercel/frameworks@3.7.4
+
+## 5.4.9
+
+### Patch Changes
+
+- Updated dependencies [[`6f0caeefca35582b2824e7ded34e25ea3b6f65ff`](https://github.com/vercel/vercel/commit/6f0caeefca35582b2824e7ded34e25ea3b6f65ff)]:
+  - @vercel/frameworks@3.7.3
+
+## 5.4.8
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/routing-utils@5.1.1
+  - @vercel/frameworks@3.7.2
+
+## 5.4.7
+
+### Patch Changes
+
+- Updated dependencies [[`e714304f8fcd5059490a9d4c37cdd546c498d9dd`](https://github.com/vercel/vercel/commit/e714304f8fcd5059490a9d4c37cdd546c498d9dd)]:
+  - @vercel/frameworks@3.7.1
+
+## 5.4.6
+
+### Patch Changes
+
+- Updated dependencies [[`53cbed6a060885094384b27108ac162193326aae`](https://github.com/vercel/vercel/commit/53cbed6a060885094384b27108ac162193326aae)]:
+  - @vercel/routing-utils@5.1.0
+
+## 5.4.5
+
+### Patch Changes
+
+- Updated dependencies [[`8f791807ae04479e538c11ccd709b39ed210e477`](https://github.com/vercel/vercel/commit/8f791807ae04479e538c11ccd709b39ed210e477), [`419e2344e6d0883ddbec6cdd3adf2c2935a4951c`](https://github.com/vercel/vercel/commit/419e2344e6d0883ddbec6cdd3adf2c2935a4951c)]:
+  - @vercel/routing-utils@5.0.8
+  - @vercel/frameworks@3.7.0
+
+## 5.4.4
+
+### Patch Changes
+
+- Updated dependencies [[`b5fed7cca786d93b7c88af275ce1dca5e5b59098`](https://github.com/vercel/vercel/commit/b5fed7cca786d93b7c88af275ce1dca5e5b59098)]:
+  - @vercel/routing-utils@5.0.7
+
+## 5.4.3
+
+### Patch Changes
+
+- Updated dependencies [[`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423)]:
+  - @vercel/routing-utils@5.0.6
+
+## 5.4.2
+
+### Patch Changes
+
+- Detect turbo.jsonc for Turborepo ([#13388](https://github.com/vercel/vercel/pull/13388))
+
+- Updated dependencies [[`9e783f33df5181f93ff259b5f3c19e8cacf68afc`](https://github.com/vercel/vercel/commit/9e783f33df5181f93ff259b5f3c19e8cacf68afc)]:
+  - @vercel/routing-utils@5.0.5
+
+## 5.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`7883bb696c7160a064b1bc58765cd30dac4bd969`](https://github.com/vercel/vercel/commit/7883bb696c7160a064b1bc58765cd30dac4bd969)]:
+  - @vercel/frameworks@3.6.4
+
+## 5.4.0
+
+### Minor Changes
+
+- Adds instrumentation detection to the `build` command ([#13271](https://github.com/vercel/vercel/pull/13271))
+
+## 5.3.11
+
+### Patch Changes
+
+- Updated dependencies [[`0c75d7240e2704d9ebd11173d56bf0a304207d3b`](https://github.com/vercel/vercel/commit/0c75d7240e2704d9ebd11173d56bf0a304207d3b)]:
+  - @vercel/frameworks@3.6.3
+
+## 5.3.10
+
+### Patch Changes
+
+- [build-utils] increase max memory limit ([#13162](https://github.com/vercel/vercel/pull/13162))
+
 ## 5.3.9
 
 ### Patch Changes

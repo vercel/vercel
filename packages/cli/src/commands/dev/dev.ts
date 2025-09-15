@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 
@@ -12,6 +13,9 @@ import param from '../../util/output/param';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
+import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
+import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 
 type Options = {
   '--listen': string;
@@ -21,7 +25,8 @@ type Options = {
 export default async function dev(
   client: Client,
   opts: Partial<Options>,
-  args: string[]
+  args: string[],
+  telemetry: DevTelemetryClient
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -84,8 +89,39 @@ export default async function dev(
     repoRoot,
   });
 
+  const controller = new AbortController();
+  const timeout = setTimeout(async () => {
+    if (link.status !== 'linked') return;
+
+    try {
+      let refreshCount = 0;
+      for await (const token of refreshOidcToken(
+        controller.signal,
+        client,
+        link.project.id,
+        envValues,
+        'vercel-cli:dev'
+      )) {
+        output.debug(`Refreshing ${chalk.green(VERCEL_OIDC_TOKEN)}`);
+        envValues[VERCEL_OIDC_TOKEN] = token;
+        await devServer.runDevCommand(true);
+        telemetry.trackOidcTokenRefresh(++refreshCount);
+      }
+    } catch (error) {
+      // Throw any error aside from an abort error.
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        throw error;
+      }
+      output.debug('OIDC token refresh was aborted');
+    }
+  });
+
   // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => devServer.stop());
+  process.on('SIGTERM', () => {
+    clearTimeout(timeout);
+    controller.abort();
+    devServer.stop();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
@@ -98,5 +134,10 @@ export default async function dev(
     }
   }
 
-  await devServer.start(...listen);
+  try {
+    await devServer.start(...listen);
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+  }
 }

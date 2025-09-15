@@ -1,5 +1,133 @@
 # @vercel/gatsby-plugin-vercel-builder
 
+## 2.0.95
+
+### Patch Changes
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f)]:
+  - @vercel/build-utils@12.1.0
+
+## 2.0.94
+
+### Patch Changes
+
+- Updated dependencies [[`d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e`](https://github.com/vercel/vercel/commit/d1ca3ed3ac1b9830403dc9dc3520e963ef8bec8e)]:
+  - @vercel/build-utils@12.0.0
+
+## 2.0.93
+
+### Patch Changes
+
+- Updated dependencies [[`28a41c6fddc7a3bc92fa54279063428b329e3104`](https://github.com/vercel/vercel/commit/28a41c6fddc7a3bc92fa54279063428b329e3104)]:
+  - @vercel/build-utils@11.0.2
+
+## 2.0.92
+
+### Patch Changes
+
+- Updated dependencies [[`8a020e07c2116833bbe39ee43f62efad9f7de0de`](https://github.com/vercel/vercel/commit/8a020e07c2116833bbe39ee43f62efad9f7de0de)]:
+  - @vercel/build-utils@11.0.1
+
+## 2.0.91
+
+### Patch Changes
+
+- Updated dependencies [[`b79db72d870a8d2e98e36a7413c656ae80fed01f`](https://github.com/vercel/vercel/commit/b79db72d870a8d2e98e36a7413c656ae80fed01f)]:
+  - @vercel/build-utils@11.0.0
+
+## 2.0.90
+
+### Patch Changes
+
+- Reverting support for `preferredRegion` ([#13566](https://github.com/vercel/vercel/pull/13566))
+
+- Updated dependencies [[`bae121f5ba238a7e98ac6159bc4cf36e23c33142`](https://github.com/vercel/vercel/commit/bae121f5ba238a7e98ac6159bc4cf36e23c33142)]:
+  - @vercel/build-utils@10.6.7
+
+## 2.0.89
+
+### Patch Changes
+
+- Updated dependencies [[`f37cd4e2eb35764a658f617643e2ab228191e7e2`](https://github.com/vercel/vercel/commit/f37cd4e2eb35764a658f617643e2ab228191e7e2)]:
+  - @vercel/build-utils@10.6.6
+
+## 2.0.88
+
+### Patch Changes
+
+- Updated dependencies [[`ed2d1c1ea934e803c5e656b1663034176aef2f27`](https://github.com/vercel/vercel/commit/ed2d1c1ea934e803c5e656b1663034176aef2f27)]:
+  - @vercel/build-utils@10.6.5
+
+## 2.0.87
+
+### Patch Changes
+
+- Updated dependencies [[`dc424e1b09230e35f4953e2c4d1ccdab18f57d8c`](https://github.com/vercel/vercel/commit/dc424e1b09230e35f4953e2c4d1ccdab18f57d8c)]:
+  - @vercel/build-utils@10.6.4
+
+## 2.0.86
+
+### Patch Changes
+
+- Updated dependencies [[`612f2af54c05ed758243122fe9ef2743c8ebd4c8`](https://github.com/vercel/vercel/commit/612f2af54c05ed758243122fe9ef2743c8ebd4c8), [`abf657ed5d52caa8965dcd3147174e940cca72b1`](https://github.com/vercel/vercel/commit/abf657ed5d52caa8965dcd3147174e940cca72b1)]:
+  - @vercel/build-utils@10.6.3
+
+## 2.0.85
+
+### Patch Changes
+
+- Updated dependencies [[`7103cde0b7e0468773d1c596e223105233260e40`](https://github.com/vercel/vercel/commit/7103cde0b7e0468773d1c596e223105233260e40)]:
+  - @vercel/build-utils@10.6.2
+
+## 2.0.84
+
+### Patch Changes
+
+- do not redefine Route type in gatsby plugin (use @vercel/routing-utils) ([#13409](https://github.com/vercel/vercel/pull/13409))
+
+- Updated dependencies [[`826539f0236c5532c473e2490da6ea797d363423`](https://github.com/vercel/vercel/commit/826539f0236c5532c473e2490da6ea797d363423), [`3c6cc512cf74439053b3614f95fcdf211c2d8a6d`](https://github.com/vercel/vercel/commit/3c6cc512cf74439053b3614f95fcdf211c2d8a6d), [`ff37e3c80d945d98696c05071b3b3c95fe78212f`](https://github.com/vercel/vercel/commit/ff37e3c80d945d98696c05071b3b3c95fe78212f)]:
+  - @vercel/build-utils@10.6.1
+
+## 2.0.83
+
+### Patch Changes
+
+- Revert "[gatsby-plugin-vercel-builder] Use Route type from @vercel/routing-utils" ([#13402](https://github.com/vercel/vercel/pull/13402))
+
+## 2.0.82
+
+### Patch Changes
+
+- Updated dependencies [[`36cd6a44bf4daf429babb430c7f1e3f7130d30ee`](https://github.com/vercel/vercel/commit/36cd6a44bf4daf429babb430c7f1e3f7130d30ee), [`0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f`](https://github.com/vercel/vercel/commit/0d86d9c3fa61ae91f0ed4ffe4c0c97655411468f)]:
+  - @vercel/build-utils@10.6.0
+
+## 2.0.81
+
+### Patch Changes
+
+- Make backwards compatible with pnpm 10 ([#13268](https://github.com/vercel/vercel/pull/13268))
+
+## 2.0.80
+
+### Patch Changes
+
+- Updated dependencies [[`9c5bcad83a8e8b75bd7371649d1287890f33bb47`](https://github.com/vercel/vercel/commit/9c5bcad83a8e8b75bd7371649d1287890f33bb47), [`6ada3b30626582e9bad11a450a6b79bb387d6d49`](https://github.com/vercel/vercel/commit/6ada3b30626582e9bad11a450a6b79bb387d6d49)]:
+  - @vercel/build-utils@10.5.1
+
+## 2.0.79
+
+### Patch Changes
+
+- Updated dependencies [[`ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7`](https://github.com/vercel/vercel/commit/ac8efbbd20e6d006dfd050c452cf3ef28f7bb9a7)]:
+  - @vercel/build-utils@10.5.0
+
+## 2.0.78
+
+### Patch Changes
+
+- Updated dependencies [[`47e5335cadc62398600c456c09120582adb25c88`](https://github.com/vercel/vercel/commit/47e5335cadc62398600c456c09120582adb25c88)]:
+  - @vercel/build-utils@10.4.0
+
 ## 2.0.77
 
 ### Patch Changes

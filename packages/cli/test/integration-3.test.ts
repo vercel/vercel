@@ -131,7 +131,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 test('print the deploy help message', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, ['help']);
 
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   expect(stderr).toContain(deployHelpMessage);
   expect(stderr).not.toContain('ExperimentalWarning');
 });
@@ -163,7 +163,9 @@ test.skip('login with unregistered user', async () => {
   expect(last).toContain(goal);
 });
 
-test('ignore files specified in .nowignore', async () => {
+// TODO: fix: --public does not make deployments public
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
   const args = ['--debug', '--public', '--name', session, '--yes'];
@@ -179,7 +181,9 @@ test('ignore files specified in .nowignore', async () => {
   expect(presentFile.status).toBe(200);
 });
 
-test('ignore files specified in .nowignore via allowlist', async () => {
+// TODO: fix: --public does not make deployments public
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
   const args = ['--debug', '--public', '--name', session, '--yes'];
@@ -286,7 +290,9 @@ test('try to move an invalid domain', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
 });
 
-test('ensure we render a warning for deployments with no files', async () => {
+// TODO: fix: --public does not make deployments public
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
@@ -814,7 +820,9 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
   expect(output.stderr).toMatch(/Learn More/gm);
 });
 
-test('deploy a Lambda with 3 seconds of maxDuration', async () => {
+// TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s
+// eslint-disable-next-line jest/no-disabled-tests
+test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);
 

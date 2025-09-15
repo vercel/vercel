@@ -1,6 +1,8 @@
 import { TelemetryClient } from '../..';
+import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
 import type { TelemetryMethods } from '../../types';
 import type { listSubcommand } from '../../../../commands/env/command';
+import type { CustomEnvironmentType } from '@vercel-internals/types';
 
 export class EnvLsTelemetryClient
   extends TelemetryClient
@@ -8,10 +10,11 @@ export class EnvLsTelemetryClient
 {
   trackCliArgumentEnvironment(environment: string | undefined) {
     if (environment) {
-      const standardEnvironments = ['production', 'preview', 'development'];
       this.trackCliArgument({
         arg: 'environment',
-        value: standardEnvironments.includes(environment)
+        value: STANDARD_ENVIRONMENTS.includes(
+          environment as CustomEnvironmentType
+        )
           ? environment
           : this.redactedValue,
       });
@@ -24,6 +27,12 @@ export class EnvLsTelemetryClient
         arg: 'git-branch',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagGuidance(guidance: boolean | undefined) {
+    if (guidance) {
+      this.trackCliFlag('guidance');
     }
   }
 }

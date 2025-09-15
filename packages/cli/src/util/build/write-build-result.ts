@@ -27,6 +27,7 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
 import { merge } from './merge';
@@ -41,8 +42,11 @@ export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
  * An entry in the "functions" object in `vercel.json`.
  */
 interface FunctionConfiguration {
+  architecture?: string;
   memory?: number;
   maxDuration?: number;
+  experimentalTriggers?: TriggerEvent[];
+  supportsCancellation?: boolean;
 }
 
 export async function writeBuildResult(
@@ -469,14 +473,23 @@ async function writeLambda(
     throw new Error('Malformed `Lambda` - no "files" present');
   }
 
+  const architecture =
+    functionConfiguration?.architecture ?? lambda.architecture;
   const memory = functionConfiguration?.memory ?? lambda.memory;
   const maxDuration = functionConfiguration?.maxDuration ?? lambda.maxDuration;
+  const experimentalTriggers =
+    functionConfiguration?.experimentalTriggers ?? lambda.experimentalTriggers;
+  const supportsCancellation =
+    functionConfiguration?.supportsCancellation ?? lambda.supportsCancellation;
 
   const config = {
     ...lambda,
     handler: normalizePath(lambda.handler),
+    architecture,
     memory,
     maxDuration,
+    experimentalTriggers,
+    supportsCancellation,
     filePathMap,
     type: undefined,
     files: undefined,

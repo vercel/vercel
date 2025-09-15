@@ -252,6 +252,7 @@ export const frameworks = [
     sort: 7,
     supersedes: ['hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
+    ignoreRuntimes: ['@vercel/node'],
     detectors: {
       some: [
         {
@@ -415,7 +416,7 @@ export const frameworks = [
     cachePattern: '.cache/**',
   },
   {
-    name: 'Docusaurus (v2)',
+    name: 'Docusaurus (v2+)',
     slug: 'docusaurus-2',
     demo: 'https://docusaurus-2-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/docusaurus.svg',
@@ -1128,7 +1129,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
-    name: 'SvelteKit (v1)',
+    name: 'SvelteKit',
     slug: 'sveltekit-1',
     demo: 'https://sveltekit-1-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/svelte.svg',
@@ -1517,18 +1518,19 @@ export const frameworks = [
     ],
   },
   {
-    name: 'Nuxt.js',
+    name: 'Nuxt',
     slug: 'nuxtjs',
     demo: 'https://nuxtjs-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/nuxt.svg',
     screenshot:
       'https://assets.vercel.com/image/upload/v1647366075/front/import/nuxtjs.png',
     tagline:
-      'Nuxt.js is the web comprehensive framework that lets you dream big with Vue.js.',
-    description: 'A Nuxt.js app, bootstrapped with create-nuxt-app.',
-    website: 'https://nuxtjs.org',
+      'Nuxt is the open source framework that makes full-stack development with Vue.js intuitive.',
+    description: 'A Nuxt app, bootstrapped with create-nuxt-app.',
+    website: 'https://nuxt.com',
     sort: 2,
     envPrefix: 'NUXT_ENV_',
+    supersedes: ['nitro'],
     detectors: {
       some: [
         {
@@ -1539,6 +1541,9 @@ export const frameworks = [
         },
         {
           matchPackage: 'nuxt-edge',
+        },
+        {
+          matchPackage: 'nuxt-nightly',
         },
       ],
     },
@@ -1552,7 +1557,7 @@ export const frameworks = [
         value: 'nuxt build',
       },
       devCommand: {
-        value: 'nuxt',
+        value: 'nuxt dev',
       },
       outputDirectory: {
         value: 'dist',
@@ -2013,6 +2018,60 @@ export const frameworks = [
     ],
   },
   {
+    name: 'FastAPI (Experimental)',
+    slug: 'fastapi',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
+    tagline:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    description:
+      'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
+    website: 'https://fastapi.tiangolo.com',
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: 'fastapi',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: 'fastapi',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: 'fastapi',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'uvicorn main:app --reload --port $PORT',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => '',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/main',
+      },
+    ],
+  },
+  {
     name: 'FastHTML (Experimental)',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
@@ -2210,6 +2269,528 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'storybook-static',
+  },
+  {
+    name: 'Nitro',
+    slug: 'nitro',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nitro.svg',
+    demo: 'https://nitro-template.vercel.app',
+    tagline: 'Nitro is a next generation server toolkit.',
+    description:
+      'Nitro lets you create web servers that run on multiple platforms.',
+    website: 'https://nitro.build/',
+    detectors: {
+      every: [{ matchPackage: 'nitropack' }],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `nitro build`',
+        value: 'nitro build',
+      },
+      devCommand: {
+        value: 'nitro dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'nitropack',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Hono',
+    slug: 'hono',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/hono.svg',
+    demo: 'https://hono.vercel.dev',
+    tagline: 'Web framework built on Web Standards',
+    description:
+      'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
+    website: 'https://hono.dev',
+    useRuntime: { src: 'index.js', use: '@vercel/hono' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: 'hono' }],
+      some: [
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']hono["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'hono',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Express',
+    slug: 'express',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
+    tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
+    description: 'Fast, unopinionated, minimalist web framework for Node.js',
+    website: 'https://expressjs.com',
+    useRuntime: { src: 'index.js', use: '@vercel/express' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: 'express' }],
+      some: [
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']express["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'express',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'xmcp',
+    slug: 'xmcp',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/xmcp.svg',
+    demo: 'https://xmcp-template.vercel.app/',
+    tagline: 'The MCP framework for building AI-powered tools',
+    description:
+      'A framework for building Model Context Protocol servers with zero configuration.',
+    website: 'https://xmcp.dev',
+    detectors: {
+      some: [
+        {
+          path: 'xmcp.config.ts',
+        },
+        {
+          path: 'xmcp.config.js',
+        },
+        {
+          matchPackage: 'xmcp',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: '`npm run build` or `xmcp build`',
+        value: 'xmcp build --vercel',
+      },
+      devCommand: {
+        value: 'xmcp dev',
+        placeholder: 'xmcp dev',
+      },
+      outputDirectory: {
+        value: 'dist',
+      },
+    },
+    dependency: 'xmcp',
+    getOutputDirName: async () => 'dist',
   },
   {
     name: 'Other',

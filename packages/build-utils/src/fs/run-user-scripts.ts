@@ -34,7 +34,7 @@ const NO_OVERRIDE = {
   path: undefined,
 };
 
-export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun';
+export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
 export interface ScanParentDirsResult {
   /**
@@ -350,10 +350,17 @@ export async function scanParentDirs(
     start: destPath,
     filename: 'package.json',
   });
-  const packageJson: PackageJson | undefined =
-    readPackageJson && pkgJsonPath
-      ? JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'))
-      : undefined;
+
+  let packageJson: PackageJson | undefined;
+  if (readPackageJson && pkgJsonPath) {
+    try {
+      packageJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'));
+    } catch (err) {
+      throw new Error(
+        `Could not read ${pkgJsonPath}: ${(err as Error).message}.`
+      );
+    }
+  }
   const {
     paths: [
       yarnLockPath,
@@ -361,6 +368,7 @@ export async function scanParentDirs(
       pnpmLockPath,
       bunLockTextPath,
       bunLockBinPath,
+      vltLockPath,
     ],
     packageJsonPackageManager,
   } = await walkParentDirsMulti({
@@ -372,6 +380,7 @@ export async function scanParentDirs(
       'pnpm-lock.yaml',
       'bun.lock',
       'bun.lockb',
+      'vlt-lock.json',
     ],
   });
   let lockfilePath: string | undefined;
@@ -379,16 +388,18 @@ export async function scanParentDirs(
   let cliType: CliType;
 
   const bunLockPath = bunLockTextPath ?? bunLockBinPath;
-  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock] = await Promise.all([
-    npmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
-      : null,
-    pnpmLockPath
-      ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
-      : null,
-    bunLockPath ? fs.readFile(bunLockPath) : null,
-    yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
-  ]);
+  const [packageLockJson, pnpmLockYaml, bunLock, yarnLock, vltLock] =
+    await Promise.all([
+      npmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(npmLockPath)
+        : null,
+      pnpmLockPath
+        ? readConfigFile<{ lockfileVersion: number }>(pnpmLockPath)
+        : null,
+      bunLockPath ? fs.readFile(bunLockPath) : null,
+      yarnLockPath ? fs.readFile(yarnLockPath, 'utf8') : null,
+      vltLockPath ? readConfigFile(vltLockPath) : null,
+    ]);
 
   const rootProjectInfo = readPackageJson
     ? await readProjectRootInfo({
@@ -405,7 +416,7 @@ export async function scanParentDirs(
       )
     : undefined;
 
-  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun
+  // Priority order is bun with yarn lock > yarn > pnpm > npm > bun > vlt (lowest priority)
   if (bunLock && yarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
@@ -426,6 +437,9 @@ export async function scanParentDirs(
     cliType = 'bun';
     lockfilePath = bunLockPath;
     lockfileVersion = bunLockTextPath ? 1 : 0;
+  } else if (vltLock) {
+    cliType = 'vlt';
+    lockfilePath = vltLockPath;
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
@@ -465,15 +479,31 @@ async function checkTurboSupportsCorepack(
   if (turboVersionSpecifierSupportsCorepack(turboVersionRange)) {
     return true;
   }
+
+  // Check for both turbo.json and turbo.jsonc
   const turboJsonPath = path.join(rootDir, 'turbo.json');
-  const turboJsonExists = await fs.pathExists(turboJsonPath);
+  const turboJsoncPath = path.join(rootDir, 'turbo.jsonc');
+  const [turboJsonExists, turboJsoncExists] = await Promise.all([
+    fs.pathExists(turboJsonPath),
+    fs.pathExists(turboJsoncPath),
+  ]);
 
   let turboJson: null | unknown = null;
+  let turboConfigPath: string | null = null;
+
   if (turboJsonExists) {
+    turboConfigPath = turboJsonPath;
+  } else if (turboJsoncExists) {
+    turboConfigPath = turboJsoncPath;
+  }
+
+  if (turboConfigPath) {
     try {
-      turboJson = json5.parse(await fs.readFile(turboJsonPath, 'utf8'));
+      turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
     } catch (err) {
-      console.warn(`WARNING: Failed to parse turbo.json`);
+      console.warn(
+        `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
+      );
     }
   }
 
@@ -647,6 +677,11 @@ function getInstallCommandForPackageManager(
         prettyCommand: 'yarn install',
         commandArguments: ['install', ...args],
       };
+    case 'vlt':
+      return {
+        prettyCommand: 'vlt install',
+        commandArguments: ['install', ...args],
+      };
   }
 }
 
@@ -751,6 +786,18 @@ export async function runNpmInstall(
       meta.runNpmInstallSet = runNpmInstallSet;
     }
 
+    // if yarn 3 or 4, disable global cache so build cache can cache deps
+    if (cliType === 'yarn') {
+      const yarnVersion = detectYarnVersion(lockfileVersion);
+      if (['yarn@3.x', 'yarn@4.x'].includes(yarnVersion)) {
+        await spawnAsync(
+          'yarn',
+          ['config', 'set', 'enableGlobalCache', 'false'],
+          { cwd: destPath }
+        );
+      }
+    }
+
     const installTime = Date.now();
     console.log('Installing dependencies...');
     debug(`Installing to ${destPath}`);
@@ -768,6 +815,17 @@ export async function runNpmInstall(
       turboSupportsCorepackHome,
       projectCreatedAt,
     });
+
+    const maySeeDynamicRequireYarnBug =
+      process.env?.ENABLE_EXPERIMENTAL_COREPACK &&
+      packageJson?.packageManager?.startsWith('yarn') &&
+      packageJson?.type === 'module';
+
+    if (maySeeDynamicRequireYarnBug) {
+      console.warn(
+        `Warning: This project may see "Error: Dynamic require of "util" is not supported". To avoid this error, remove \`"type": "module"\` from your package.json file, or use \`yarnPath\` instead of Corepack. Learn more: https://vercel.com/docs/errors/error-list#yarn-dynamic-require-of-util-is-not-supported`
+      );
+    }
 
     await runInstallCommand({
       packageManager: cliType,
@@ -952,6 +1010,7 @@ function validLockfileForPackageManager(
     case 'npm':
     case 'bun':
     case 'yarn':
+    case 'vlt':
       return true;
     case 'pnpm':
       switch (packageManagerMajorVersion) {
@@ -1201,8 +1260,7 @@ export function detectPackageManager(
           };
         case 'pnpm 6':
           return {
-            // undefined because pnpm@6 is the current default in the build container
-            path: undefined,
+            path: '/pnpm6/node_modules/.bin',
             detectedLockfile: 'pnpm-lock.yaml',
             detectedPackageManager: 'pnpm@6.x',
             pnpmVersionRange: '6.x',
@@ -1223,6 +1281,12 @@ export function detectPackageManager(
         path: undefined,
         detectedLockfile: 'yarn.lock',
         detectedPackageManager: detectYarnVersion(lockfileVersion),
+      };
+    case 'vlt':
+      return {
+        path: undefined,
+        detectedLockfile: 'vlt-lock.json',
+        detectedPackageManager: 'vlt@0.x',
       };
   }
 }
@@ -1384,6 +1448,8 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `pnpm run ${scriptName}`;
   } else if (cliType === 'bun') {
     opts.prettyCommand = `bun run ${scriptName}`;
+  } else if (cliType === 'vlt') {
+    opts.prettyCommand = `vlt run ${scriptName}`;
   } else {
     opts.prettyCommand = `yarn run ${scriptName}`;
   }

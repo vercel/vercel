@@ -35,7 +35,7 @@
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
     "ts-jest": "29.1.5",
-    "turbo": "1.13.3",
+    "turbo": "2.5.0",
     "typescript": "4.9.5",
     "vite": "5.1.8",
     "vitest": "2.0.3"
@@ -152,5 +152,8 @@
         }
       }
     ]
+  },
+  "pnpm": {
+    "neverBuiltDependencies": []
   }
 }

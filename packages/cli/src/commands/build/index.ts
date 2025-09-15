@@ -35,6 +35,7 @@ import {
   detectBuilders,
   detectFrameworkRecord,
   detectFrameworkVersion,
+  detectInstrumentation,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -274,6 +275,12 @@ export default async function main(client: Client): Promise<number> {
     argv: scrubArgv(process.argv),
   };
 
+  if (!process.env.VERCEL_BUILD_IMAGE) {
+    output.warn(
+      'Build not running on Vercel. System environment variables will not be available.'
+    );
+  }
+
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
@@ -312,13 +319,15 @@ export default async function main(client: Client): Promise<number> {
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
 
-    await rootSpan
-      .child('vc.doBuild')
-      .trace(span =>
-        doBuild(client, project, buildsJson, cwd, outputDir, span)
-      );
-
-    await rootSpan.stop();
+    try {
+      await rootSpan
+        .child('vc.doBuild')
+        .trace(span =>
+          doBuild(client, project, buildsJson, cwd, outputDir, span)
+        );
+    } finally {
+      await rootSpan.stop();
+    }
 
     return 0;
   } catch (err: any) {
@@ -372,17 +381,25 @@ async function doBuild(
 
   const workPath = join(cwd, project.settings.rootDirectory || '.');
 
-  const [pkg, vercelConfig, nowConfig] = await Promise.all([
+  const [pkg, vercelConfig, nowConfig, hasInstrumentation] = await Promise.all([
     readJSONFile<PackageJson>(join(workPath, 'package.json')),
     readJSONFile<VercelConfig>(
       localConfigPath || join(workPath, 'vercel.json')
     ),
     readJSONFile<VercelConfig>(join(workPath, 'now.json')),
+    detectInstrumentation(new LocalFileSystemDetector(workPath)),
   ]);
 
   if (pkg instanceof CantParseJSONFile) throw pkg;
   if (vercelConfig instanceof CantParseJSONFile) throw vercelConfig;
   if (nowConfig instanceof CantParseJSONFile) throw nowConfig;
+
+  if (hasInstrumentation) {
+    output.debug(
+      'OpenTelemetry instrumentation detected. Automatic fetch instrumentation will be disabled.'
+    );
+    process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION = '1';
+  }
 
   if (vercelConfig) {
     vercelConfig[fileNameSymbol] = 'vercel.json';
@@ -648,7 +665,7 @@ async function doBuild(
           throw new NowBuildError({
             code: 'NODEJS_DISCONTINUED_VERSION',
             message: `The Runtime "${build.use}" is using "${lambdaRuntime}", which is discontinued. Please upgrade your Runtime to a more recent version or consult the author for more details.`,
-            link: 'https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#lambdaruntime',
+            link: 'https://vercel.link/function-runtimes',
           });
         }
       }
@@ -657,22 +674,36 @@ async function doBuild(
       // all builds have completed
       buildResults.set(build, buildResult);
 
+      let buildOutputLength = 0;
+      if ('output' in buildResult) {
+        buildOutputLength = Array.isArray(buildResult.output)
+          ? buildResult.output.length
+          : 1;
+      }
+
       // Start flushing the file outputs to the filesystem asynchronously
       ops.push(
-        writeBuildResult(
-          repoRootPath,
-          outputDir,
-          buildResult,
-          build,
-          builder,
-          builderPkg,
-          localConfig
-        ).then(
-          override => {
-            if (override) overrides.push(override);
-          },
-          err => err
-        )
+        builderSpan
+          .child('vc.builder.writeBuildResult', {
+            buildOutputLength: String(buildOutputLength),
+          })
+          .trace<Record<string, PathOverride> | undefined | void>(() =>
+            writeBuildResult(
+              repoRootPath,
+              outputDir,
+              buildResult,
+              build,
+              builder,
+              builderPkg,
+              localConfig
+            )
+          )
+          .then(
+            (override: Record<string, PathOverride> | undefined | void) => {
+              if (override) overrides.push(override);
+            },
+            (err: Error) => err
+          )
       );
     } catch (err: any) {
       const buildJsonBuild = buildsJsonBuilds.get(build);

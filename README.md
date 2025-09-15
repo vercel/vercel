@@ -19,7 +19,7 @@
 
 ## Vercel
 
-Vercel’s Frontend Cloud provides the developer experience and infrastructure to build, scale, and secure a faster, more personalized Web.
+Vercel’s AI Cloud is a unified platform for building modern applications, giving teams the tools to be flexible, move fast, and stay secure while focusing on their products instead of infrastructure.
 
 ## Deploy
 
@@ -35,7 +35,7 @@ This project uses [pnpm](https://pnpm.io/) to install dependencies and run scrip
 
 You can use the `vercel` script to run local changes as if you were invoking Vercel CLI. For example, `vercel deploy --cwd=/path/to/project` could be run with local changes with `pnpm vercel deploy --cwd=/path/to/project`.
 
-When contributing to this repository, please first discuss the change you wish to make via [Vercel Community](https://vercel.community/tags/c/community/4/cli) with the owners of this repository before submitting a Pull Request.
+When contributing to this repository, please first discuss the change you wish to make via [Vercel Community](https://community.vercel.com/tags/c/community/4/cli) with the owners of this repository before submitting a Pull Request.
 
 Please read our [Code of Conduct](./.github/CODE_OF_CONDUCT.md) and follow it in all your interactions with the project.
 
@@ -119,7 +119,7 @@ The logs of this deployment will contain the actual error which may help you to 
 
 While running the full integration suite locally is not recommended, it's sometimes useful to isolate a failing test by running it on your machine. To do so, you'll need to ensure you have the appropriate credentials sourced in your shell:
 
-1. Create an access token. Follow the insructions here https://vercel.com/docs/rest-api#creating-an-access-token. Ensure the token scope is for your personal
+1. Create an access token. Follow the instructions here https://vercel.com/docs/rest-api#creating-an-access-token. Ensure the token scope is for your personal
    account.
 2. Grab the team ID from the Vercel dashboard at `https://vercel.com/<MY-TEAM>/~/settings`.
 3. Source these into your shell rc file: `echo 'export VERCEL_TOKEN=<MY-TOKEN> VERCEL_TEAM_ID=<MY-TEAM-ID>' >> ~/.zshrc`
@@ -137,7 +137,8 @@ Run the test:
 pnpm test test/fixtures/00-server-build/index.test.js
 ```
 
-> **NOTE:** If you receive a `401` status code while fetching the deployment, you need to disable [Deployment Protection](https://vercel.com/docs/security/deployment-protection) on the project.
+> [!NOTE]
+> If you receive a `401` status code while fetching the deployment, you need to disable [Deployment Protection](https://vercel.com/docs/security/deployment-protection) on the project.
 
 #### @vercel/nft
 

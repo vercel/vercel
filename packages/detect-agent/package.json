@@ -1,0 +1,31 @@
+{
+  "name": "@vercel/detect-agent",
+  "version": "0.2.0",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://vercel.com/docs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/detect-agent"
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "^5.1.6",
+    "vitest": "^2.0.1",
+    "mock-fs": "5.5.0",
+    "@types/mock-fs": "4.13.4"
+  }
+}

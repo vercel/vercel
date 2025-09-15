@@ -83,6 +83,7 @@ export interface Integration {
 
 export interface IntegrationInstallation {
   id: string;
+  integrationId: string;
   installationType: InstallationType;
   ownerId: string;
 }
@@ -95,6 +96,9 @@ export interface BillingPlan {
   cost?: string;
   description: string;
   paymentMethodRequired: boolean;
+  preauthorizationAmount?: number;
+  minimumAmount?: string;
+  maximumAmount?: string;
   details: {
     label: string;
     value?: string;
@@ -104,4 +108,44 @@ export interface BillingPlan {
     value?: string;
   }[];
   disabled?: boolean;
+}
+
+export interface InstallationBalancesAndThresholds {
+  ownerId: string;
+  installationId: string;
+  balances: CreditWithAmount[];
+  thresholds: PrepaymentCreditThreshold[];
+}
+
+export interface CreditWithAmount {
+  resourceId?: string;
+  timestamp: string;
+  credit?: string;
+  nameLabel?: string;
+  currencyValueInCents: number;
+}
+
+export interface PrepaymentCreditThreshold {
+  resourceId?: string;
+  minimumAmountInCents: number;
+  billingPlanId: string;
+  metadata?: string;
+  purchaseAmountInCents: number;
+  maximumAmountPerPeriodInCents?: number;
+}
+
+export interface MarketplaceBillingAuthorizationState {
+  id: string;
+  ownerId: string;
+  integrationId: string;
+  integrationConfigurationId?: string;
+  billingPlanId?: string;
+  amountCent: number;
+  status: 'pending' | 'requires_action' | 'succeeded' | 'failed';
+  reason?: string;
+  paymentIntent?: {
+    clientSecret?: string | null;
+  };
+  createdAt: number;
+  updatedAt: number;
 }

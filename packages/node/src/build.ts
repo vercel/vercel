@@ -9,6 +9,7 @@ import {
   resolve,
   sep,
   parse as parsePath,
+  extname,
 } from 'path';
 import { Project } from 'ts-morph';
 import { nodeFileTrace } from '@vercel/nft';
@@ -27,6 +28,9 @@ import {
   debug,
   isSymbolicLink,
   walkParentDirs,
+  execCommand,
+  getEnvForPackageManager,
+  scanParentDirs,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -37,7 +41,7 @@ import type {
   NodeVersion,
   BuildResultV3,
 } from '@vercel/build-utils';
-import { getConfig } from '@vercel/static-config';
+import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 import {
@@ -53,6 +57,7 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
+  considerBuildCommand: boolean;
 }
 
 const require_ = createRequire(__filename);
@@ -66,6 +71,7 @@ async function downloadInstallAndBundle({
   workPath,
   config,
   meta,
+  considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -76,14 +82,45 @@ async function downloadInstallAndBundle({
     meta
   );
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  await runNpmInstall(
-    entrypointFsDirname,
-    [],
-    spawnOpts,
-    meta,
+
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointFsDirname, true);
+
+  spawnOpts.env = getEnvForPackageManager({
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
-    config.projectSettings?.createdAt
-  );
+    env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
+  });
+
+  const installCommand = config.projectSettings?.installCommand;
+  if (typeof installCommand === 'string' && considerBuildCommand) {
+    if (installCommand.trim()) {
+      console.log(`Running "install" command: \`${installCommand}\`...`);
+      await execCommand(installCommand, {
+        ...spawnOpts,
+        cwd: entrypointFsDirname,
+      });
+    } else {
+      console.log(`Skipping "install" command...`);
+    }
+  } else {
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
+  }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
   return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
 }
@@ -94,6 +131,12 @@ function renameTStoJS(path: string) {
   }
   if (path.endsWith('.tsx')) {
     return path.slice(0, -4) + '.js';
+  }
+  if (path.endsWith('.mts')) {
+    return path.slice(0, -4) + '.mjs';
+  }
+  if (path.endsWith('.cts')) {
+    return path.slice(0, -4) + '.cjs';
   }
   return path;
 }
@@ -220,7 +263,9 @@ async function compile(
 
           if (
             (fsPath.endsWith('.ts') && !fsPath.endsWith('.d.ts')) ||
-            fsPath.endsWith('.tsx')
+            fsPath.endsWith('.tsx') ||
+            fsPath.endsWith('.mts') ||
+            fsPath.endsWith('.cts')
           ) {
             source = compileTypeScript(fsPath, source.toString());
           }
@@ -290,6 +335,7 @@ async function compile(
     file =>
       !file.endsWith('.ts') &&
       !file.endsWith('.tsx') &&
+      !file.endsWith('.mts') &&
       !file.endsWith('.mjs') &&
       !file.match(libPathRegEx)
   );
@@ -360,39 +406,81 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
-export const build: BuildV3 = async ({
+export const build = async ({
   files,
   entrypoint,
+  shim,
+  useWebApi,
   workPath,
   repoRootPath,
   config = {},
   meta = {},
-}) => {
+  considerBuildCommand = false,
+  entrypointCallback,
+}: Parameters<BuildV3>[0] & {
+  shim?: (handler: string) => string;
+  useWebApi?: boolean;
+  considerBuildCommand?: boolean;
+  /**
+   * This is called once any user build scripts have run so that the entrypoint can be detected
+   * from files that may have been created by the build script.
+   */
+  entrypointCallback?: () => Promise<string>;
+}): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
-  const { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts } =
-    await downloadInstallAndBundle({
-      files,
-      entrypoint,
-      workPath,
-      config,
-      meta,
-    });
-
-  await runPackageJsonScript(
+  const {
+    entrypointPath: _entrypointPath,
     entrypointFsDirname,
-    // Don't consider "build" script since its intended for frontend code
-    ['vercel-build', 'now-build'],
+    nodeVersion,
     spawnOpts,
-    config.projectSettings?.createdAt
-  );
+  } = await downloadInstallAndBundle({
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+    considerBuildCommand,
+  });
+
+  let entrypointPath = _entrypointPath;
+
+  const projectBuildCommand = config.projectSettings?.buildCommand;
+
+  // For traditional api-folder builds, the `build` script or project build command isn't used.
+  // but we're reusing the node builder for hono and express, where they should be treated as the
+  // primary builder
+  if (projectBuildCommand && considerBuildCommand) {
+    await execCommand(projectBuildCommand, {
+      ...spawnOpts,
+
+      // Yarn v2 PnP mode may be activated, so force
+      // "node-modules" linker style
+      env: {
+        YARN_NODE_LINKER: 'node-modules',
+        ...spawnOpts.env,
+      },
+
+      cwd: workPath,
+    });
+  } else {
+    const possibleScripts = considerBuildCommand
+      ? ['vercel-build', 'now-build', 'build']
+      : ['vercel-build', 'now-build'];
+
+    await runPackageJsonScript(
+      entrypointFsDirname,
+      possibleScripts,
+      spawnOpts,
+      config.projectSettings?.createdAt
+    );
+  }
+  if (entrypointCallback) {
+    entrypointPath = join(entrypointFsDirname, await entrypointCallback());
+  }
 
   const isMiddleware = config.middleware === true;
-
-  // Will output an `EdgeFunction` for when `config.middleware = true`
-  // (i.e. for root-level "middleware" file) or if source code contains:
-  // `export const config = { runtime: 'edge' }`
   let isEdgeFunction = isMiddleware;
 
   const project = new Project();
@@ -421,18 +509,11 @@ export const build: BuildV3 = async ({
   let routes: BuildResultV3['routes'];
   let output: BuildResultV3['output'] | undefined;
 
-  const handler = renameTStoJS(relative(baseDir, entrypointPath));
+  let handler = renameTStoJS(relative(baseDir, entrypointPath));
   const outputPath = entrypointToOutputPath(entrypoint, config.zeroConfig);
 
   // Add a `route` for Middleware
   if (isMiddleware) {
-    if (!isEdgeFunction) {
-      // Root-level middleware file can not have `export const config = { runtime: 'nodejs' }`
-      throw new Error(
-        `Middleware file can not be a Node.js Serverless Function`
-      );
-    }
-
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
     const src = getRegExpFromMatchers(staticConfig?.matcher);
 
@@ -454,6 +535,30 @@ export const build: BuildV3 = async ({
         override: true,
       },
     ];
+  }
+
+  if (shim) {
+    const handlerFilename = basename(handler);
+    const handlerDir = dirname(handler);
+    const extension = extname(handlerFilename);
+    const extMap: Record<string, string> = {
+      '.ts': '.js',
+      '.mts': '.mjs',
+      '.mjs': '.mjs',
+      '.cjs': '.cjs',
+      '.js': '.js',
+    };
+    const ext = extMap[extension];
+    if (!ext) {
+      throw new Error(`Unsupported extension for ${entrypoint}`);
+    }
+    const filename = `shim${ext}`;
+    const shimHandler =
+      handlerDir === '.' ? filename : join(handlerDir, filename);
+    preparedFiles[shimHandler] = new FileBlob({
+      data: shim(handlerFilename),
+    });
+    handler = shimHandler;
   }
 
   if (isEdgeFunction) {
@@ -478,14 +583,35 @@ export const build: BuildV3 = async ({
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      shouldAddHelpers,
+      useWebApi: isMiddleware ? true : useWebApi,
+      shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
       supportsResponseStreaming,
       maxDuration: staticConfig?.maxDuration,
+      regions: normalizeRequestedRegions(
+        staticConfig?.preferredRegion ?? staticConfig?.regions
+      ),
     });
   }
 
   return { routes, output };
 };
+
+function normalizeRequestedRegions(
+  regions: BaseFunctionConfig['regions'] | BaseFunctionConfig['preferredRegion']
+): NodejsLambda['regions'] {
+  if (regions === 'all') {
+    return ['all'];
+  } else if (regions === 'auto' || regions === 'default') {
+    return undefined;
+  }
+
+  if (typeof regions === 'string') {
+    return [regions];
+  }
+
+  return regions;
+}

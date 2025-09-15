@@ -1,9 +1,9 @@
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import {
-  WAIT_UNTIL_TIMEOUT_MS,
-  waitUntilWarning,
+  WAIT_UNTIL_TIMEOUT,
   serializeBody,
+  waitUntilWarning,
 } from '../utils.js';
 import { type Dispatcher, Headers, request as undiciRequest } from 'undici';
 import { listen } from 'async-listen';
@@ -16,6 +16,7 @@ import type { VercelProxyResponse } from '../types.js';
 import type { VercelRequest, VercelResponse } from './helpers.js';
 import type { Readable } from 'stream';
 import { Awaiter } from '../awaiter.js';
+import http, { Server } from 'http';
 
 // @ts-expect-error
 const toHeaders = buildToHeaders({ Headers });
@@ -23,6 +24,8 @@ const toHeaders = buildToHeaders({ Headers });
 type ServerlessServerOptions = {
   shouldAddHelpers: boolean;
   mode: 'streaming' | 'buffer';
+  maxDuration?: number;
+  isMiddleware?: boolean;
 };
 
 type ServerlessFunctionSignature = (
@@ -42,9 +45,14 @@ export const HTTP_METHODS = [
 ];
 
 async function createServerlessServer(
-  userCode: ServerlessFunctionSignature
+  userCode: ServerlessFunctionSignature | Server
 ): Promise<{ url: URL; onExit: () => Promise<void> }> {
-  const server = createServer(userCode);
+  let server: Server;
+  if (typeof userCode === 'function') {
+    server = createServer(userCode);
+  } else {
+    server = userCode;
+  }
   return {
     url: await listen(server, { host: '127.0.0.1', port: 0 }),
     onExit: promisify(server.close.bind(server)),
@@ -59,7 +67,32 @@ async function compileUserCode(
   const id = isAbsolute(entrypointPath)
     ? pathToFileURL(entrypointPath).href
     : entrypointPath;
+
+  let server: Server | null = null;
+
+  /**
+   * Override the listen method while we import the module,
+   * so we can capture the server instance it invokes (if it does)
+   *
+   * This will cause the `.listen()` to be stubbed once and then restored, so
+   * the arguments supplied will be ignored. Eg.
+   *
+   * app.listen(3000, () => {
+   *   console.log('Server is running on port 3000')
+   * })
+   *
+   * The port 3000 and console.log statement will not be executed.
+   */
+  const originalListen = http.Server.prototype.listen;
+  http.Server.prototype.listen = function (this: Server) {
+    server = this as Server;
+    // Restore original listen method
+    http.Server.prototype.listen = originalListen;
+    return this;
+  };
   let listener = await import(id);
+  // Restore original listen method
+  http.Server.prototype.listen = originalListen;
 
   /**
    * In some cases we might have nested default props due to TS => JS
@@ -68,10 +101,41 @@ async function compileUserCode(
     if (listener.default) listener = listener.default;
   }
 
-  if (HTTP_METHODS.some(method => typeof listener[method] === 'function')) {
+  const shouldUseWebHandlers =
+    options.isMiddleware ||
+    HTTP_METHODS.some(method => typeof listener[method] === 'function') ||
+    typeof listener.fetch === 'function';
+
+  if (shouldUseWebHandlers) {
     const { createWebExportsHandler } = await import('./helpers-web.js');
     const getWebExportsHandler = createWebExportsHandler(awaiter);
-    return getWebExportsHandler(listener, HTTP_METHODS);
+
+    let handler = listener;
+    if (options.isMiddleware) {
+      handler = HTTP_METHODS.reduce(
+        (acc, method) => {
+          acc[method] = listener;
+          return acc;
+        },
+        {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
+      );
+    }
+    if (typeof listener.fetch === 'function') {
+      handler = HTTP_METHODS.reduce(
+        (acc, method) => {
+          acc[method] = listener.fetch;
+          return acc;
+        },
+        {} as Record<(typeof HTTP_METHODS)[number], ServerlessFunctionSignature>
+      );
+    }
+    return getWebExportsHandler(handler, HTTP_METHODS);
+  }
+
+  // If we have a server instance, server.listen() was called from the module, we can use
+  // we can proxy requests to it instead of initializing our own server
+  if (server) {
+    return server;
   }
 
   return async (req: IncomingMessage, res: ServerResponse) => {
@@ -86,7 +150,8 @@ async function compileUserCode(
 
 export async function createServerlessEventHandler(
   entrypointPath: string,
-  options: ServerlessServerOptions
+  options: ServerlessServerOptions,
+  maxDuration = WAIT_UNTIL_TIMEOUT
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: () => Promise<void>;
@@ -140,10 +205,9 @@ export async function createServerlessEventHandler(
   const onExit = () =>
     new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.warn(waitUntilWarning(entrypointPath));
+        console.warn(waitUntilWarning(entrypointPath, maxDuration));
         resolve();
-      }, WAIT_UNTIL_TIMEOUT_MS);
-
+      }, maxDuration * 1000);
       Promise.all([awaiter.awaiting(), server.onExit()])
         .then(() => resolve())
         .catch(reject)

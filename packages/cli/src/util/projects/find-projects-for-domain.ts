@@ -14,7 +14,7 @@ export async function findProjectsForDomain(
     )) {
       for (const project of chunk.projects) {
         if (
-          project.targets?.production?.alias?.some(alias =>
+          project.targets?.production?.alias?.some?.(alias =>
             alias.endsWith(domainName)
           )
         ) {

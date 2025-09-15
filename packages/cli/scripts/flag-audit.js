@@ -18,6 +18,7 @@ import { pullCommand } from '../src/commands/pull/command';
 import { redeployCommand } from '../src/commands/redeploy/command';
 import { removeCommand } from '../src/commands/remove/command';
 import { rollbackCommand } from '../src/commands/rollback/command';
+import { rollingReleaseCommand } from '../src/commands/rolling-release/command';
 import { teamsCommand, listSubcommand } from '../src/commands/teams/command';
 import { whoamiCommand } from '../src/commands/whoami/command';
 import { devCommand } from '../src/commands/dev/command';
@@ -50,6 +51,7 @@ const commands = {
   redeploy: redeployCommand.options,
   remove: removeCommand.options,
   rollback: rollbackCommand.options,
+  'rolling-release': rollingReleaseCommand.options,
   target: targetCommand.options,
   teams: teamsCommand.options,
   'teams (list)': listSubcommand.options,

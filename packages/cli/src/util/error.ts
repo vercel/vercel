@@ -58,7 +58,7 @@ export async function responseError(
     const retryAfter = res.headers.get('Retry-After');
 
     if (retryAfter) {
-      err.retryAfter = parseInt(retryAfter, 10);
+      err.retryAfter = Number.parseInt(retryAfter, 10);
     }
   }
 
