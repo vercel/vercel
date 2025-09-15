@@ -1,5 +1,13 @@
 # @vercel/express
 
+## 0.0.16
+
+### Patch Changes
+
+- Add framework slug and version for Express and Hono builders to build output ([#13918](https://github.com/vercel/vercel/pull/13918))
+
+- Improve error message when entrypoints do not have necessary import ([#13919](https://github.com/vercel/vercel/pull/13919))
+
 ## 0.0.15
 
 ### Patch Changes
