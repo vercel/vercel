@@ -1,19 +1,17 @@
 import type { Dictionary } from '@vercel/client';
 import chalk from 'chalk';
 import { join } from 'path';
-import type { Org, Project, ProjectLinkData } from '@vercel-internals/types';
+import type { Org, Project } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseGitConfig, pluckRemoteUrls } from '../../util/create-git-meta';
-import list, { type ListChoice } from '../../util/input/list';
 import link from '../../util/output/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
-  connectGitProvider,
-  disconnectGitProvider,
-  formatProvider,
   type RepoInfo,
   parseRepoUrl,
+  selectAndParseRemoteUrl,
   printRemoteUrls,
+  checkExistsAndConnect,
 } from '../../util/git/connect-git-provider';
 import output from '../../output-manager';
 import { GitConnectTelemetryClient } from '../../util/telemetry/commands/git/connect';
@@ -22,18 +20,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
-
-interface GitRepoCheckParams {
-  client: Client;
-  confirm: boolean;
-  gitProviderLink?: ProjectLinkData;
-  org: Org;
-  gitOrg: string;
-  project: Project;
-  provider: string;
-  repo: string;
-  repoPath: string;
-}
 
 interface ConnectArgParams {
   client: Client;
@@ -154,54 +140,28 @@ export default async function connect(client: Client, argv: string[]) {
     return 1;
   }
 
-  let remoteUrl: string;
-
-  if (Object.keys(remoteUrls).length > 1) {
-    output.log('Found multiple remote URLs.');
-    remoteUrl = await selectRemoteUrl(client, remoteUrls);
-  } else {
-    // If only one is found, get it — usually "origin"
-    remoteUrl = Object.values(remoteUrls)[0];
-  }
-
-  if (remoteUrl === '') {
-    output.log('Canceled');
-    return 0;
-  }
-
-  output.log(`Connecting Git remote: ${link(remoteUrl)}`);
-
-  const repoInfo = parseRepoUrl(remoteUrl);
+  const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
   if (!repoInfo) {
-    output.error(
-      `Failed to parse Git repo data from the following remote URL: ${link(
-        remoteUrl
-      )}`
-    );
-    return 1;
+    // If multiple remotes, user could have canceled (return 0)
+    // If single remote, must be a parse error (return 1)
+    return Object.keys(remoteUrls).length > 1 ? 0 : 1;
   }
-  const { provider, org: gitOrg, repo } = repoInfo;
-  const repoPath = `${gitOrg}/${repo}`;
 
-  const checkAndConnect = await checkExistsAndConnect({
+  const result = await checkExistsAndConnect({
     client,
     confirm,
-    org,
-    project,
     gitProviderLink,
-    provider,
-    repoPath,
-    gitOrg,
-    repo,
+    org,
+    gitOrg: repoInfo.org,
+    project,
+    provider: repoInfo.provider,
+    repo: repoInfo.repo,
+    repoPath: `${repoInfo.org}/${repoInfo.repo}`,
   });
 
-  if (typeof checkAndConnect === 'number') {
-    return checkAndConnect;
+  if (typeof result === 'number') {
+    return result;
   }
-
-  output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
-  );
 
   return 0;
 }
@@ -214,7 +174,6 @@ async function connectArg({
   repoInfo,
 }: ConnectArgParams) {
   const { url: repoUrl } = repoInfo;
-  output.log(`Connecting Git remote: ${link(repoUrl)}`);
   const parsedRepoArg = parseRepoUrl(repoUrl);
   if (!parsedRepoArg) {
     output.error(
@@ -222,25 +181,20 @@ async function connectArg({
     );
     return 1;
   }
-  const { provider, org: gitOrg, repo } = parsedRepoArg;
-  const repoPath = `${gitOrg}/${repo}`;
-  const connect = await checkExistsAndConnect({
+  const result = await checkExistsAndConnect({
     client,
     confirm,
-    org,
-    project,
     gitProviderLink: project.link,
-    provider,
-    repoPath,
-    gitOrg,
-    repo,
+    org,
+    gitOrg: parsedRepoArg.org,
+    project,
+    provider: parsedRepoArg.provider,
+    repo: parsedRepoArg.repo,
+    repoPath: `${parsedRepoArg.org}/${parsedRepoArg.repo}`,
   });
-  if (typeof connect === 'number') {
-    return connect;
+  if (typeof result === 'number') {
+    return result;
   }
-  output.log(
-    `Connected ${formatProvider(provider)} repository ${chalk.cyan(repoPath)}!`
-  );
   return 0;
 }
 
@@ -264,28 +218,20 @@ async function connectArgWithLocalGit({
       return 1;
     }
     if (shouldConnect) {
-      const { provider, org: gitOrg, repo, url: repoUrl } = repoInfo;
-      const repoPath = `${gitOrg}/${repo}`;
-      output.log(`Connecting Git remote: ${link(repoUrl)}`);
-      const connect = await checkExistsAndConnect({
+      const result = await checkExistsAndConnect({
         client,
         confirm,
-        org,
-        project,
         gitProviderLink: project.link,
-        provider,
-        repoPath,
-        gitOrg,
-        repo,
+        org,
+        gitOrg: repoInfo.org,
+        project,
+        provider: repoInfo.provider,
+        repo: repoInfo.repo,
+        repoPath: `${repoInfo.org}/${repoInfo.repo}`,
       });
-      if (typeof connect === 'number') {
-        return connect;
+      if (typeof result === 'number') {
+        return result;
       }
-      output.log(
-        `Connected ${formatProvider(provider)} repository ${chalk.cyan(
-          repoPath
-        )}!`
-      );
     }
     return 0;
   }
@@ -335,107 +281,4 @@ async function promptConnectArg({
     }
   }
   return shouldConnect;
-}
-
-async function checkExistsAndConnect({
-  client,
-  confirm,
-  org,
-  project,
-  gitProviderLink,
-  provider,
-  repoPath,
-  gitOrg,
-  repo,
-}: GitRepoCheckParams) {
-  if (!gitProviderLink) {
-    const connect = await connectGitProvider(
-      client,
-      project.id,
-      provider,
-      repoPath
-    );
-    if (typeof connect === 'number') {
-      return connect;
-    }
-  } else {
-    const connectedProvider = gitProviderLink.type;
-    const connectedOrg = gitProviderLink.org;
-    const connectedRepo = gitProviderLink.repo;
-    const connectedRepoPath = `${connectedOrg}/${connectedRepo}`;
-
-    const isSameRepo =
-      connectedProvider === provider &&
-      connectedOrg === gitOrg &&
-      connectedRepo === repo;
-    if (isSameRepo) {
-      output.log(
-        `${chalk.cyan(connectedRepoPath)} is already connected to your project.`
-      );
-      return 1;
-    }
-
-    const shouldReplaceRepo = await confirmRepoConnect(
-      client,
-      confirm,
-      connectedProvider,
-      connectedRepoPath
-    );
-    if (!shouldReplaceRepo) {
-      return 0;
-    }
-
-    await disconnectGitProvider(client, org, project.id);
-    const connect = await connectGitProvider(
-      client,
-      project.id,
-      provider,
-      repoPath
-    );
-    if (typeof connect === 'number') {
-      return connect;
-    }
-  }
-}
-
-async function confirmRepoConnect(
-  client: Client,
-  yes: boolean,
-  connectedProvider: string,
-  connectedRepoPath: string
-) {
-  let shouldReplaceProject = yes;
-  if (!shouldReplaceProject) {
-    shouldReplaceProject = await client.input.confirm(
-      `Looks like you already have a ${formatProvider(
-        connectedProvider
-      )} repository connected: ${chalk.cyan(
-        connectedRepoPath
-      )}. Do you want to replace it?`,
-      true
-    );
-    if (!shouldReplaceProject) {
-      output.log('Canceled. Repo not connected.');
-    }
-  }
-  return shouldReplaceProject;
-}
-
-async function selectRemoteUrl(
-  client: Client,
-  remoteUrls: Dictionary<string>
-): Promise<string> {
-  const choices: ListChoice[] = [];
-  for (const [urlKey, urlValue] of Object.entries(remoteUrls)) {
-    choices.push({
-      name: `${urlValue} ${chalk.gray(`(${urlKey})`)}`,
-      value: urlValue,
-      short: urlKey,
-    });
-  }
-
-  return await list(client, {
-    message: 'Which remote do you want to connect?',
-    choices,
-  });
 }
