@@ -1,5 +1,12 @@
 # @vercel/fs-detectors
 
+## 5.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/frameworks@3.8.5
+
 ## 5.5.2
 
 ### Patch Changes

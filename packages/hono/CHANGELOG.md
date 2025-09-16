@@ -1,5 +1,19 @@
 # @vercel/hono
 
+## 0.0.25
+
+### Patch Changes
+
+- Fix issue where hono build output metadata sent "name" instead of "slug" ([#13935](https://github.com/vercel/vercel/pull/13935))
+
+## 0.0.24
+
+### Patch Changes
+
+- Add framework slug and version for Express and Hono builders to build output ([#13918](https://github.com/vercel/vercel/pull/13918))
+
+- Improve error message when entrypoints do not have necessary import ([#13919](https://github.com/vercel/vercel/pull/13919))
+
 ## 0.0.23
 
 ### Patch Changes

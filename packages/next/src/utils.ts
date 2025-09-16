@@ -1918,8 +1918,12 @@ export async function getPageLambdaGroups({
       opts = { ...vercelConfigOpts, ...opts };
     }
 
-    const isGeneratedSteps = routeName.includes('api/generated/steps');
-    const isGeneratedWorkflows = routeName.includes('api/generated/workflows');
+    const isGeneratedSteps =
+      routeName.includes('.well-known/workflow/v1/step') ||
+      routeName.includes('api/generated/steps');
+    const isGeneratedWorkflows =
+      routeName.includes('.well-known/workflow/v1/flow') ||
+      routeName.includes('api/generated/workflows');
 
     if (isGeneratedSteps || isGeneratedWorkflows) {
       const sourceFile = await getSourceFilePathFromPage({

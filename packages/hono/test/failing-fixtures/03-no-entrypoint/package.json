@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "dependencies": {
+    "hono": "4.8.12"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3"
+  }
+}

@@ -1,5 +1,83 @@
 # vercel
 
+## 48.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`d0fd9e7b4ad98a490921945641da5b5d8d6a69b7`](https://github.com/vercel/vercel/commit/d0fd9e7b4ad98a490921945641da5b5d8d6a69b7)]:
+  - @vercel/hono@0.0.25
+
+## 48.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`0186beb2f677e2527042ab0d9ba293aedf54d734`](https://github.com/vercel/vercel/commit/0186beb2f677e2527042ab0d9ba293aedf54d734), [`742c2501986f03b79ce954f85d0a35e62ef32b62`](https://github.com/vercel/vercel/commit/742c2501986f03b79ce954f85d0a35e62ef32b62), [`7d66bd96c96cfcfe6d8b996a968701b974e32fa8`](https://github.com/vercel/vercel/commit/7d66bd96c96cfcfe6d8b996a968701b974e32fa8), [`1afa175f4e36c4f16d9db7d278816d9938932f34`](https://github.com/vercel/vercel/commit/1afa175f4e36c4f16d9db7d278816d9938932f34)]:
+  - @vercel/next@4.12.5
+  - @vercel/express@0.0.16
+  - @vercel/hono@0.0.24
+
+## 48.0.0
+
+### Major Changes
+
+- The `vercel login` command has been overhauled, see below for how to use the new flow. ([#13802](https://github.com/vercel/vercel/pull/13802))
+
+  ## Breaking changes
+
+  The following are now obsolete:
+
+  - Passing the `email` argument or `--github`, `--gitlab`, `--bitbucket` flags. Run the command without any options:
+
+  ```diff
+  - $ vercel login your@email.com
+  - $ vercel login --github
+  - $ vercel login --gitlab
+  - $ vercel login --bitbucket
+  + $ vercel login
+  ```
+
+  Choose your preferred authentication method in the browser instead.
+
+  - Passing the `teamId`/`teamSlug` argument. Run the command without any options:
+
+  ```diff
+  - $ vercel login team
+  + $ vercel login
+  ```
+
+  After signing in with any of the non-SAML methods, you will be prompted to authorize individual teams.
+
+  - `--oob`: Visit [vercel.com/device](https://vercel.com/device) on any browser-capable device and enter the code shown in the terminal. This flag is now obsolete.
+
+  > [!TIP]
+  > Hit <kbd>Enter</kbd> to open the link automatically, if you are signing in from a browser-capable device.
+
+  > [!IMPORTANT]
+  > Read the instructions carefully to match your location, IP, and request time when approving the device, as you will be granting access to your Vercel account.
+
+  ## Resources
+
+  - [`vercel login` Documentation](https://vercel.com/docs/cli/login)
+  - `vercel login --help`
+
+  **Good to know:** The new login experience is built on top of the [OAuth 2.0 Device Flow](https://datatracker.ietf.org/doc/html/rfc8628) specification.
+
+### Minor Changes
+
+- [cli] add new commands `vercel cache invalidate --tag` and `vercel cache dangerously-delete --tag` ([#13898](https://github.com/vercel/vercel/pull/13898))
+
+### Patch Changes
+
+- Updated dependencies [[`d7c8d4a1d5ef2298a50726e66f6afe354c389ea6`](https://github.com/vercel/vercel/commit/d7c8d4a1d5ef2298a50726e66f6afe354c389ea6)]:
+  - @vercel/python@5.0.4
+
+## 47.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/python@5.0.3
+
 ## 47.1.3
 
 ### Patch Changes
