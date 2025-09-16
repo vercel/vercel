@@ -15,7 +15,7 @@ const NON_ZIP_SAFE_EXTENSIONS = new Set([
   '.o',
   '.exe',
   '.bin',
-  // Certificates/keys
+  // Certificates/keys: often require real file paths (e.g. certifi)
   '.pem',
   '.crt',
   '.cer',
@@ -23,17 +23,6 @@ const NON_ZIP_SAFE_EXTENSIONS = new Set([
   '.key',
   // i18n compiled catalogs commonly used by Django
   '.mo',
-  // Font/image assets frequently needed as real files by frameworks
-  '.ttf',
-  '.otf',
-  '.woff',
-  '.woff2',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.svg',
-  '.ico',
   // Packaged data often opened from filesystem
   '.pkl',
   '.pickle',
@@ -119,6 +108,24 @@ async function hasZipUnsafePatternsInFile(
       /os\.walk\(\s*os\.path\.dirname\(__file__\)\s*\)/,
       // Using glob patterns to find files relative to the current module's directory
       /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__file__\)/,
+      // Using __spec__.origin combined with filesystem operations
+      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__spec__\.origin\)/,
+      /os\.listdir\(\s*os\.path\.dirname\(__spec__\.origin\)\s*\)/,
+      /os\.walk\(\s*os\.path\.dirname\(__spec__\.origin\)\s*\)/,
+      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__spec__\.origin\)/,
+      /Path\(\s*__spec__\.origin\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
+      // Using __loader__.path or __loader__.get_filename(...) combined with filesystem operations
+      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)/,
+      /os\.listdir\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)\s*\)/,
+      /os\.walk\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)\s*\)/,
+      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)/,
+      /Path\(\s*__loader__\.(?:path|get_filename\([^)]*\))\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
+      // Using pkgutil.get_loader(...).get_filename() combined with filesystem operations
+      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)/,
+      /os\.listdir\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)\s*\)/,
+      /os\.walk\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)\s*\)/,
+      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)/,
+      /Path\(\s*pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
       // Opening files using pathlib relative to the current module's parent directory
       /Path\(\s*__file__\s*\)\.parent[^\n]*\.open\s*\(/,
       // Iterating directory contents using pathlib relative to the current module's parent directory
@@ -138,12 +145,12 @@ async function hasZipUnsafePatternsInFile(
       /(?:^|\W)resource_filename\s*\(/,
       // Note: resource_stream/resource_string/resource_listdir are zip-safe and not flagged
       // importlib.resources.(path|as_file) are designed to be zip-safe as they extract to temp files
-      // Accessing module origin via loader/spec
-      /pkgutil\.get_loader\([^)]*\)\.get_filename\s*\(/,
-      /__spec__\.origin/,
-      /__loader__\.(?:get_filename|path)\s*\(?/,
-      // Using __path__ (package search path) often combined with FS ops
-      /__path__\s*\[/,
+      // Using __path__ index combined with filesystem operations
+      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)/,
+      /os\.listdir\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)\s*\)/,
+      /os\.walk\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)\s*\)/,
+      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)/,
+      /Path\(\s*__path__\[[^\]]+\]\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
     ];
     for (const re of patterns) {
       if (re.test(src)) return true;
@@ -395,13 +402,25 @@ export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
 
   await writeZip(candidates, zipTempPath);
 
-  // After zip successfully written, remove originals for candidates
+  // Atomically move temp zip into final path first. If this fails, keep originals.
+  try {
+    await fs.promises.rename(zipTempPath, zipPath);
+  } catch (err) {
+    debug(
+      'Failed to finalize vendor pure-Python zip; keeping originals in place'
+    );
+    try {
+      await fs.promises.unlink(zipTempPath);
+    } catch (unlinkErr) {
+      debug('Failed to remove temp vendor zip after failed rename');
+    }
+    return;
+  }
+
   for (const relativeEntryPath of candidates) {
     const abs = join(vendorDirAbsolutePath, relativeEntryPath);
     await fs.promises.rm(abs, { recursive: true, force: true });
   }
 
-  // Atomically move temp zip into final path
-  await fs.promises.rename(zipTempPath, zipPath);
   debug(`Created ${VENDOR_PY_ZIP}`);
 }

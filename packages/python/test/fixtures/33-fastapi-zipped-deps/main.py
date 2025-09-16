@@ -1,8 +1,26 @@
 from fastapi import FastAPI
 import importlib
 from typing import Any, Dict
+from importlib import resources as ilr
+from pathlib import Path
+from starlette.staticfiles import StaticFiles
+import tempfile
+import os
 
 app = FastAPI()
+
+# Serve a static file extracted from a zipped dependency using importlib.resources
+try:
+    import fastapi as _dep_pkg_for_static
+    _static_dir = os.path.join(tempfile.gettempdir(), "fastapi_static")
+    os.makedirs(_static_dir, exist_ok=True)
+    _content = ilr.files(_dep_pkg_for_static.__name__).joinpath("__init__.py").read_text()
+    with open(os.path.join(_static_dir, "fastapi_init.py"), "w", encoding="utf-8") as f:
+        f.write(_content)
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+except Exception:
+    # If this fails, the resource_access sample below will surface an error
+    pass
 
 
 def check_module(module_name: str) -> Dict[str, Any]:
@@ -94,6 +112,57 @@ def run_smoke_samples() -> Dict[str, Any]:
         contains_import_error = True
         results["requests_sample"] = {"ok": False, "error": str(exc)}
 
+    # numpy sample
+    try:
+        import numpy as np
+        np.array([1, 2, 3])
+        np.sum([1, 2, 3])
+        np.mean([1, 2, 3])
+        np.std([1, 2, 3])
+        np.var([1, 2, 3])
+        np.median([1, 2, 3])
+        np.min([1, 2, 3])
+        np.max([1, 2, 3])
+        np.random.rand(10)
+        np.random.randn(10)
+        np.random.randint(10)
+        np.random.randint(10, size=(3, 4))
+        np.random.randint(10, size=(3, 4), dtype=np.uint8)
+        np.random.randint(10, size=(3, 4), dtype=np.uint8)
+        results["numpy_sample"] = {"ok": True}
+    except Exception as exc:
+        contains_import_error = True
+        results["numpy_sample"] = {"ok": False, "error": str(exc)}
+
+    # importlib.resources vs naive path access for a zipped dependency (fastapi)
+    try:
+        import fastapi as dep_pkg
+
+        res_info: Dict[str, Any] = {}
+        try:
+            data = ilr.files(dep_pkg.__name__).joinpath("__init__.py").read_text()
+            res_info["importlib_resources_ok"] = isinstance(data, str) and len(data) > 0
+        except Exception as exc:
+            res_info["importlib_resources_ok"] = False
+            res_info["importlib_resources_error"] = f"{exc.__class__.__name__}: {exc}"
+
+        try:
+            p = Path(dep_pkg.__file__).parent / "__init__.py"
+            _ = p.read_text(encoding="utf-8")
+            res_info["naive_path_open_ok"] = True
+        except Exception as exc:
+            # Expected to fail when dependency is zipped
+            res_info["naive_path_open_ok"] = False
+            res_info["naive_path_open_error"] = f"{exc.__class__.__name__}: {exc}"
+
+        results["resource_access"] = res_info
+    except Exception as exc:
+        results["resource_access"] = {
+            "importlib_resources_ok": False,
+            "naive_path_open_ok": False,
+            "setup_error": f"{exc.__class__.__name__}: {exc}",
+        }
+
     return results, contains_import_error
 
 
@@ -123,6 +192,7 @@ def read_root():
         "exa-py": "exa_py",
         "redis": "redis",
         "uvicorn": "uvicorn",
+        "numpy": "numpy",
     }
 
     imports = {k: check_module(v) for k, v in modules.items()}
@@ -130,6 +200,8 @@ def read_root():
     samples, contains_samples_import_error = run_smoke_samples()
 
     message = "No import errors" if not contains_check_module_import_error and not contains_samples_import_error else "Import errors found"
+    if samples.get("resource_access", {}).get("importlib_resources_ok"):
+        message += " (Resources OK)"
     return {
         "message": message,
         "imports": imports,

@@ -4,7 +4,13 @@
       "path": "/",
       "method": "GET",
       "status": 200,
-      "mustContain": "No import errors"
+      "mustContain": "No import errors (Resources OK)"
+    },
+    {
+      "path": "/static/fastapi_init.py",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "__version__"
     }
   ]
 }
