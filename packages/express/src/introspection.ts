@@ -142,7 +142,7 @@ module.exports = func2
       console.error(`stderr: ${data}`);
     });
 
-    // Kill after 2 seconds
+    // Kill after 1 second
     setTimeout(() => {
       child.kill('SIGTERM');
     }, 1000);
