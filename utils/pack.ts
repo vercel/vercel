@@ -33,7 +33,7 @@ async function main() {
         const name = dependency.split('#')[0];
         // pnpm 8 fails to install dependencies with @ in the URL
         const escapedName = name.replace('@', '%40');
-        const tarballUrl = `https://${process.env.VERCEL_URL}/tarballs/${escapedName}.tgz`;
+        const tarballUrl = `https://1phiokm1pyaeustp.public.blob.vercel-storage.com/vercel-cli/2025-09-16-override-to-2026-02-03/${escapedName}.tgz`;
         if (packageObj.dependencies && name in packageObj.dependencies) {
           packageObj.dependencies[name] = tarballUrl;
         }
