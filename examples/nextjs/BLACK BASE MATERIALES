@@ -1,0 +1,491 @@
+# 1. Crear carpeta y entrar en ella
+mkdir blackbase-materiales
+cd blackbase-materiales
+
+# 2. Crear proyecto Next.js con TypeScript (puedes omitir --typescript si prefieres JavaScript)
+npx create-next-app@latest . --typescript
+
+# 3. Instalar Tailwind CSS y dependencias
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+// 4. Configura tailwind.config.js (reemplaza contenido con esto)
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+/* 5. Reemplaza contenido de styles/globals.css con: */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+// 6. Reemplaza contenido de pages/index.tsx con este código completo:
+
+import React, { useState, useEffect } from 'react';
+
+const departments = [
+  'Limpieza',
+  'Recepción',
+  'Coach',
+  'Fuel Bar',
+  'Mantenimiento',
+  'Marketing',
+  'Otros'
+];
+
+interface MaterialRequest {
+  id: string;
+  department: string;
+  date: string;
+  materials: string;
+  quantity: number;
+  priority: string;
+  status: string;
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  unit: string;
+  lastUpdated: string;
+  averageConsumption: number;
+  daysRemaining: number;
+}
+
+const materialCategories = [
+  'Productos de Limpieza',
+  'Papelería y Oficina',
+  'Equipamiento Deportivo',
+  'Suplementos y Bebidas',
+  'Herramientas y Repuestos',
+  'Material Promocional',
+  'Otros Suministros'
+];
+
+export default function Home() {
+  const [activeTab, setActiveTab] = useState<'solicitudes' | 'inventario' | 'dashboard'>('solicitudes');
+  const [requests, setRequests] = useState<MaterialRequest[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+
+  const [requestForm, setRequestForm] = useState({
+    department: '',
+    date: new Date().toISOString().split('T')[0],
+    materials: '',
+    quantity: 1,
+    priority: 'media'
+  });
+
+  const [inventoryForm, setInventoryForm] = useState({
+    name: '',
+    category: '',
+    currentStock: 0,
+    minStock: 0,
+    unit: '',
+    averageConsumption: 0
+  });
+
+  useEffect(() => {
+    const savedRequests = localStorage.getItem('blackbase-requests');
+    const savedInventory = localStorage.getItem('blackbase-inventory');
+
+    if (savedRequests) setRequests(JSON.parse(savedRequests));
+    if (savedInventory) setInventory(JSON.parse(savedInventory));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('blackbase-requests', JSON.stringify(requests));
+  }, [requests]);
+
+  useEffect(() => {
+    localStorage.setItem('blackbase-inventory', JSON.stringify(inventory));
+  }, [inventory]);
+
+  const handleRequestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestForm.department || !requestForm.materials) {
+      alert('Por favor completa todos los campos de la solicitud.');
+      return;
+    }
+    const newRequest: MaterialRequest = {
+      id: Date.now().toString(),
+      department: requestForm.department,
+      date: requestForm.date,
+      materials: requestForm.materials,
+      quantity: requestForm.quantity,
+      priority: requestForm.priority,
+      status: 'pendiente'
+    };
+    setRequests([...requests, newRequest]);
+    setRequestForm({
+      department: '',
+      date: new Date().toISOString().split('T')[0],
+      materials: '',
+      quantity: 1,
+      priority: 'media'
+    });
+  };
+
+  const handleInventorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inventoryForm.name || !inventoryForm.category || !inventoryForm.unit) {
+      alert('Por favor completa todos los campos del inventario.');
+      return;
+    }
+    const daysRemaining = inventoryForm.averageConsumption > 0
+      ? Math.floor(inventoryForm.currentStock / inventoryForm.averageConsumption)
+      : 0;
+
+    const newItem: InventoryItem = {
+      id: Date.now().toString(),
+      name: inventoryForm.name,
+      category: inventoryForm.category,
+      currentStock: inventoryForm.currentStock,
+      minStock: inventoryForm.minStock,
+      unit: inventoryForm.unit,
+      lastUpdated: new Date().toISOString(),
+      averageConsumption: inventoryForm.averageConsumption,
+      daysRemaining: daysRemaining
+    };
+    setInventory([...inventory, newItem]);
+    setInventoryForm({
+      name: '',
+      category: '',
+      currentStock: 0,
+      minStock: 0,
+      unit: '',
+      averageConsumption: 0
+    });
+  };
+
+  const updateRequestStatus = (id: string, newStatus: string) => {
+    setRequests(requests.map(req => req.id === id ? { ...req, status: newStatus } : req));
+  };
+
+  const deleteInventoryItem = (id: string) => {
+    if (confirm('¿Seguro que quieres eliminar este material del inventario?')) {
+      setInventory(inventory.filter(item => item.id !== id));
+    }
+  };
+
+  const getLowStockItems = () => inventory.filter(item => item.currentStock <= item.minStock);
+  const getCriticalItems = () => inventory.filter(item => item.daysRemaining <= 3);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-black text-white p-6 shadow-md">
+        <h1 className="text-4xl font-bold text-center">BLACK BASE</h1>
+        <p className="text-center mt-1">Sistema de Gestión de Materiales</p>
+      </header>
+
+      <nav className="bg-white shadow-sm sticky top-0 z-10">
+        <ul className="flex justify-center space-x-4 p-4">
+          {['solicitudes', 'inventario', 'dashboard'].map(tab => (
+            <li key={tab}>
+              <button
+                className={`px-4 py-2 rounded-md font-semibold ${
+                  activeTab === tab ? 'bg-black text-white' : 'text-black hover:bg-gray-200'
+                }`}
+                onClick={() => setActiveTab(tab as any)}
+              >
+                {tab === 'solicitudes' ? 'Solicitudes' : tab === 'inventario' ? 'Inventario' : 'Dashboard'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <main className="container mx-auto p-6">
+        {activeTab === 'solicitudes' && (
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Nueva Solicitud de Materiales</h2>
+            <form onSubmit={handleRequestSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 bg-white p-6 rounded shadow">
+              <div>
+                <label className="block font-semibold mb-1">Departamento</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={requestForm.department}
+                  onChange={e => setRequestForm({ ...requestForm, department: e.target.value })}
+                  required
+                >
+                  <option value="">Selecciona departamento</option>
+                  {departments.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Fecha</label>
+                <input
+                  type="date"
+                  className="w-full border rounded p-2"
+                  value={requestForm.date}
+                  onChange={e => setRequestForm({ ...requestForm, date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block font-semibold mb-1">Materiales Solicitados</label>
+                <textarea
+                  className="w-full border rounded p-2"
+                  rows={3}
+                  placeholder="Describe los materiales que necesitas..."
+                  value={requestForm.materials}
+                  onChange={e => setRequestForm({ ...requestForm, materials: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Cantidad</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-full border rounded p-2"
+                  value={requestForm.quantity}
+                  onChange={e => setRequestForm({ ...requestForm, quantity: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Prioridad</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={requestForm.priority}
+                  onChange={e => setRequestForm({ ...requestForm, priority: e.target.value })}
+                >
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <button
+                  type="submit"
+                  className="w-full bg-black text-white py-2 rounded font-semibold hover:bg-gray-800 transition"
+                >
+                  Enviar Solicitud
+                </button>
+              </div>
+            </form>
+
+            <h3 className="text-xl font-bold mb-3">Solicitudes Realizadas</h3>
+            {requests.length === 0 ? (
+              <p className="text-center text-gray-500">No hay solicitudes registradas.</p>
+            ) : (
+              <div className="space-y-4">
+                {requests.map(req => (
+                  <div key={req.id} className="bg-white p-4 rounded shadow border">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold">{req.department}</h4>
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        req.priority === 'urgente' ? 'bg-red-600 text-white' :
+                        req.priority === 'alta' ? 'bg-orange-500 text-white' :
+                        req.priority === 'media' ? 'bg-yellow-400 text-black' :
+                        'bg-green-500 text-white'
+                      }`}>
+                        {req.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    <p><strong>Fecha:</strong> {new Date(req.date).toLocaleDateString()}</p>
+                    <p><strong>Materiales:</strong> {req.materials}</p>
+                    <p><strong>Cantidad:</strong> {req.quantity}</p>
+                    <p><strong>Estado:</strong> {req.status}</p>
+                    <div className="mt-2 flex gap-2">
+                      {req.status !== 'aprobado' && (
+                        <button
+                          onClick={() => updateRequestStatus(req.id, 'aprobado')}
+                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                        >
+                          Aprobar
+                        </button>
+                      )}
+                      {req.status !== 'completado' && (
+                        <button
+                          onClick={() => updateRequestStatus(req.id, 'completado')}
+                          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                        >
+                          Completar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'inventario' && (
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Agregar Material al Inventario</h2>
+            <form onSubmit={handleInventorySubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 bg-white p-6 rounded shadow">
+              <div>
+                <label className="block font-semibold mb-1">Nombre del Material</label>
+                <input
+                  type="text"
+                  className="w-full border rounded p-2"
+                  value={inventoryForm.name}
+                  onChange={e => setInventoryForm({ ...inventoryForm, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Categoría</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={inventoryForm.category}
+                  onChange={e => setInventoryForm({ ...inventoryForm, category: e.target.value })}
+                  required
+                >
+                  <option value="">Selecciona categoría</option>
+                  {materialCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Stock Actual</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full border rounded p-2"
+                  value={inventoryForm.currentStock}
+                  onChange={e => setInventoryForm({ ...inventoryForm, currentStock: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Stock Mínimo</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full border rounded p-2"
+                  value={inventoryForm.minStock}
+                  onChange={e => setInventoryForm({ ...inventoryForm, minStock: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Unidad de Medida</label>
+                <input
+                  type="text"
+                  className="w-full border rounded p-2"
+                  placeholder="Ej: Litros, Unidades, Kg"
+                  value={inventoryForm.unit}
+                  onChange={e => setInventoryForm({ ...inventoryForm, unit: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Consumo Promedio Diario</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  className="w-full border rounded p-2"
+                  value={inventoryForm.averageConsumption}
+                  onChange={e => setInventoryForm({ ...inventoryForm, averageConsumption: Number(e.target.value) })}
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <button
+                  type="submit"
+                  className="w-full bg-black text-white py-2 rounded font-semibold hover:bg-gray-800 transition"
+                >
+                  Agregar al Inventario
+                </button>
+              </div>
+            </form>
+
+            <h3 className="text-xl font-bold mb-3">Inventario Actual</h3>
+            {inventory.length === 0 ? (
+              <p className="text-center text-gray-500">No hay materiales en inventario.</p>
+            ) : (
+              <div className="space-y-4">
+                {inventory.map(item => (
+                  <div key={item.id} className="bg-white p-4 rounded shadow border">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold">{item.name}</h4>
+                      <button
+                        onClick={() => deleteInventoryItem(item.id)}
+                        className="text-red-600 hover:text-red-800 font-semibold"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    <p><strong>Categoría:</strong> {item.category}</p>
+                    <p><strong>Stock Actual:</strong> {item.currentStock} {item.unit}</p>
+                    <p><strong>Stock Mínimo:</strong> {item.minStock} {item.unit}</p>
+                    <p><strong>Consumo Diario:</strong> {item.averageConsumption} {item.unit}</p>
+                    <p><strong>Días Restantes:</strong> {item.daysRemaining} días</p>
+                    {item.currentStock <= item.minStock && (
+                      <p className="text-red-600 font-semibold">⚠️ Stock bajo - Reponer pronto</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'dashboard' && (
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Dashboard de Control</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white p-6 rounded shadow border">
+                <h3 className="font-semibold mb-3">Materiales con Stock Bajo</h3>
+                {getLowStockItems().length === 0 ? (
+                  <p className="text-gray-500">Todos los materiales tienen stock suficiente.</p>
+                ) : (
+                  <ul className="list-disc list-inside">
+                    {getLowStockItems().map(item => (
+                      <li key={item.id}>
+                        {item.name} - {item.currentStock} {item.unit}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="bg-white p-6 rounded shadow border">
+                <h3 className="font-semibold mb-3">Materiales Críticos (≤ 3 días restantes)</h3>
+                {getCriticalItems().length === 0 ? (
+                  <p className="text-gray-500">No hay materiales en estado crítico.</p>
+                ) : (
+                  <ul className="list-disc list-inside">
+                    {getCriticalItems().map(item => (
+                      <li key={item.id}>
+                        {item.name} - {item.daysRemaining} días restantes
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded shadow border text-center">
+                <h3 className="font-semibold mb-2">Total Solicitudes</h3>
+                <p className="text-3xl font-bold">{requests.length}</p>
+              </div>
+              <div className="bg-white p-6 rounded shadow
