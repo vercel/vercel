@@ -19,7 +19,12 @@ describe('validateConfig', () => {
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
       functions: {
-        'api/user.go': { memory: 128, maxDuration: 5, fluid: true },
+        'api/user.go': {
+          memory: 128,
+          maxDuration: 5,
+          supportsCancellation: true,
+          fluid: true,
+        },
       },
     };
     const error = validateConfig(config);
