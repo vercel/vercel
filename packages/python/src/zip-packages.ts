@@ -78,146 +78,71 @@ async function treeHasZipUnsafeFiles(absPath: string): Promise<boolean> {
   }
 }
 
+// remove triple quotes, single/double quoted strings, and # comments
+const stripCommentsAndStrings = (src: string) => {
+  let s = src.replace(/('{3}[\s\S]*?'{3}|"{3}[\s\S]*?"{3})/g, ''); // """...""" / '''...'''
+  s = s.replace(/(^|[^\\])('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")/g, '$1'); // '...' or "..."
+  s = s.replace(/^[ \t]*#.*$/gm, ''); // line comments
+  return s;
+};
+
 // Heuristic: detect code patterns that require a real filesystem directory next to the module.
 // These patterns are typically not zip-safe because zipimport does not provide a real directory.
+// Intentionally conservative and simple for now: reject if any file appears to rely on real
+// filesystem locations, package scanning, or resource APIs that typically expect directories next to the module.
+// Only packages with no potentially risky patterns get zipped.
 async function hasZipUnsafePatternsInFile(
   fileAbsPath: string
 ): Promise<boolean> {
   try {
-    const src = await fs.promises.readFile(fileAbsPath, 'utf8');
-    // Quick escapes
+    let src = await fs.promises.readFile(fileAbsPath, 'utf8');
+    src = stripCommentsAndStrings(src);
+
+    const hasLocationToken =
+      src.includes('__file__') ||
+      src.includes('__spec__.origin') ||
+      src.includes('__path__');
+
+    // e.g. open(...), os.path.join(...), glob.glob(...), Path(...).open/..., inspect.getfile(...), inspect.getsourcefile(...)
+    const hasPathConsumer =
+      /\bopen\s*\(|\bos\.path\.|\bglob\s*\(|(?:^|[^.\w])Path\s*\(|\binspect\.(?:getfile|getsourcefile)\s*\(/.test(
+        src
+      );
+
+    // Direct uses of __file__ as a path
+    const fileTokenDirectPathUse =
+      /\bPath\s*\(\s*__file__\s*\)/.test(src) ||
+      /\bos\.path\.(?:dirname|abspath|realpath|join)\s*\([^)]*__file__/.test(
+        src
+      ) ||
+      /\bopen\s*\([^)]*__file__/.test(src);
+
+    // Unconditionally risky APIs (no gating by import token)
+    const riskyByName =
+      /\b(iter_modules|walk_packages)\s*\(/.test(src) || // pkgutil scanning
+      /\bresource_(?:filename|stream|isdir|listdir)\s*\(/.test(src) || // pkg_resources data-as-files
+      /\b(?:CDLL|WinDLL|PyDLL|OleDLL)\s*\(|\bcdll\.LoadLibrary\s*\(/.test(
+        src
+      ) || // ctypes needs real files
+      /\bimportlib\.util\.find_spec\s*\(/.test(src) || // compute real file/dir
+      /\bimportlib\.machinery\.PathFinder\.find_spec\s*\(/.test(src) ||
+      /\b(get_loader|get_importer)\s*\([^)]*__name__[^)]*\)\.get_filename\s*\(/.test(
+        src
+      ) ||
+      /\bpkg_resources\.get_distribution\s*\(/.test(src); // needs dist-info visible
+
     if (
-      src.indexOf('__file__') === -1 &&
-      src.indexOf('__path__') === -1 &&
-      src.indexOf('__spec__.origin') === -1 &&
-      src.indexOf('__loader__') === -1 &&
-      src.indexOf('pkgutil.walk_packages') === -1 &&
-      src.indexOf('pkgutil.iter_modules') === -1 &&
-      src.indexOf('inspect.getfile') === -1 &&
-      src.indexOf('inspect.getsourcefile') === -1 &&
-      src.indexOf('pkg_resources') === -1
+      (hasLocationToken && hasPathConsumer) ||
+      fileTokenDirectPathUse ||
+      riskyByName
     ) {
-      return false;
-    }
-    const patterns: RegExp[] = [
-      // Opening files relative to the current module's directory
-      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__file__\)/,
-      // Listing directory contents of the current module's directory
-      /os\.listdir\(\s*os\.path\.dirname\(__file__\)\s*\)/,
-      // Walking the filesystem starting from the current module's directory
-      /os\.walk\(\s*os\.path\.dirname\(__file__\)\s*\)/,
-      // Using glob patterns to find files relative to the current module's directory
-      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__file__\)/,
-      // Using __spec__.origin combined with filesystem operations
-      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__spec__\.origin\)/,
-      /os\.listdir\(\s*os\.path\.dirname\(__spec__\.origin\)\s*\)/,
-      /os\.walk\(\s*os\.path\.dirname\(__spec__\.origin\)\s*\)/,
-      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__spec__\.origin\)/,
-      /Path\(\s*__spec__\.origin\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
-      // Using __loader__.path or __loader__.get_filename(...) combined with filesystem operations
-      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)/,
-      /os\.listdir\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)\s*\)/,
-      /os\.walk\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)\s*\)/,
-      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__loader__\.(?:path|get_filename\([^)]*\))\)/,
-      /Path\(\s*__loader__\.(?:path|get_filename\([^)]*\))\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
-      // Using pkgutil.get_loader(...).get_filename() combined with filesystem operations
-      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)/,
-      /os\.listdir\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)\s*\)/,
-      /os\.walk\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)\s*\)/,
-      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\)/,
-      /Path\(\s*pkgutil\.get_loader\([^)]*\)\.get_filename\(\)\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
-      // Opening files using pathlib relative to the current module's parent directory
-      /Path\(\s*__file__\s*\)\.parent[^\n]*\.open\s*\(/,
-      // Iterating directory contents using pathlib relative to the current module's parent directory
-      /Path\(\s*__file__\s*\)\.parent[^\n]*\.iterdir\s*\(/,
-      // Using glob patterns with pathlib relative to the current module's parent directory
-      /Path\(\s*__file__\s*\)\.parent[^\n]*\.glob\s*\(/,
-      // Using inspect module to get file paths, which requires real filesystem access
-      /inspect\.(getfile|getsourcefile)\s*\(/,
-      // Directory scanning for submodules via pkgutil on a filesystem path
-      /pkgutil\.(walk_packages|iter_modules)\([^)]*os\.path\.dirname\(__file__\)/,
-      // Directory scanning for submodules via pkgutil on a package path
-      /pkgutil\.(walk_packages|iter_modules)\([^)]*__path__[^)]*\)/,
-      // pkg_resources API that requires real file paths
-      /pkg_resources\.resource_filename\s*\(/,
-      // Unqualified import-and-call of resource_filename
-      /from\s+pkg_resources\s+import\s+resource_filename(?:\s+as\s+\w+)?/,
-      /(?:^|\W)resource_filename\s*\(/,
-      // Note: resource_stream/resource_string/resource_listdir are zip-safe and not flagged
-      // importlib.resources.(path|as_file) are designed to be zip-safe as they extract to temp files
-      // Using __path__ index combined with filesystem operations
-      /open\s*\(\s*os\.path\.join\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)/,
-      /os\.listdir\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)\s*\)/,
-      /os\.walk\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)\s*\)/,
-      /glob\.glob\(\s*os\.path\.join\(\s*os\.path\.dirname\(__path__\[[^\]]+\]\)/,
-      /Path\(\s*__path__\[[^\]]+\]\s*\)\.parent[^\n]*\.(?:open|iterdir|glob)\s*\(/,
-    ];
-    for (const re of patterns) {
-      if (re.test(src)) return true;
-    }
-    // Generic: if __file__ is used and file operations exist nearby, treat as unsafe
-    if (src.indexOf('__file__') !== -1) {
-      const genericOps = [
-        'open(',
-        'os.listdir(',
-        'os.walk(',
-        'glob.glob(',
-        '.iterdir(',
-        '.read_text(',
-        '.read_bytes(',
-        'os.path.exists(',
-        'os.path.isdir(',
-        'os.path.isfile(',
-        '.exists(',
-        '.is_dir(',
-        '.is_file(',
-        '.resolve(',
-        '.joinpath(',
-      ];
-      for (const op of genericOps) {
-        if (src.indexOf(op) !== -1) return true;
-      }
-    }
-    // If __path__ appears with filesystem-like operations, treat as unsafe
-    if (src.indexOf('__path__') !== -1) {
-      const pathOps = [
-        'os.listdir(',
-        'os.walk(',
-        'glob.glob(',
-        '.iterdir(',
-        '.exists(',
-        '.is_dir(',
-        '.is_file(',
-      ];
-      for (const op of pathOps) {
-        if (src.indexOf(op) !== -1) return true;
-      }
-    }
-    // gettext lookups typically require real filesystem directories for locales
-    if (
-      (src.indexOf('gettext.find(') !== -1 ||
-        src.indexOf('gettext.translation(') !== -1) &&
-      (src.indexOf('__file__') !== -1 || src.indexOf('__path__') !== -1)
-    ) {
+      debug(`zip-unsafe (usage): ${fileAbsPath}`);
       return true;
     }
-    // importlib.resources.files(...) often misused: if converted to a string path or used with open()
-    if (src.indexOf('importlib.resources.files(') !== -1) {
-      const riskyConsumers = ['.as_posix(', 'os.fspath(', 'str(', 'open('];
-      for (const c of riskyConsumers) {
-        if (src.indexOf(c) !== -1) return true;
-      }
-    }
-    // Path(__file__).parents[n] suggests deriving real directories; treat as unsafe
-    if (
-      src.indexOf('Path(__file__)') !== -1 &&
-      src.indexOf('.parents[') !== -1
-    ) {
-      return true;
-    }
+
     return false;
   } catch {
-    return false;
+    return true;
   }
 }
 
