@@ -1,5 +1,11 @@
 # @vercel/firewall
 
+## 1.1.0
+
+### Minor Changes
+
+- Automatically handle vercel auth and support magic header injection for all frameworks ([#13943](https://github.com/vercel/vercel/pull/13943))
+
 ## 1.0.1
 
 ### Patch Changes
