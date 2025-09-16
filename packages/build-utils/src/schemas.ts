@@ -72,6 +72,9 @@ export const functionsSchema = {
         supportsCancellation: {
           type: 'boolean',
         },
+        fluid: {
+          type: 'boolean',
+        },
       },
     },
   },

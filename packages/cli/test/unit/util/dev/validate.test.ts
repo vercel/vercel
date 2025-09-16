@@ -18,7 +18,9 @@ describe('validateConfig', () => {
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, fluid: true },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -673,6 +675,33 @@ describe('validateConfig', () => {
     });
     expect(error?.message).toMatch(
       "Invalid vercel.json - `functions['api/test.js'].supportsCancellation` should be boolean."
+    );
+    expect(error?.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should allow fluid boolean', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          fluid: true,
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid fluid type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          fluid: 'true' as any,
+        },
+      },
+    });
+    expect(error?.message).toMatch(
+      "Invalid vercel.json - `functions['api/test.js'].fluid` should be boolean."
     );
     expect(error?.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'

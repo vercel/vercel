@@ -394,6 +394,7 @@ export interface BuilderFunctions {
     excludeFiles?: string;
     experimentalTriggers?: TriggerEvent[];
     supportsCancellation?: boolean;
+    fluid?: boolean;
   };
 }
 
