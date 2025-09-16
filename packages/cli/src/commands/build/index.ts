@@ -171,6 +171,9 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
+    telemetryClient.trackCliFlagStandalone(
+      (parsedArgs.flags as any)['--standalone']
+    );
   } catch (error) {
     printError(error);
     return 1;
@@ -190,6 +193,7 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
+  const standalone = Boolean((parsedArgs.flags as any)['--standalone']);
 
   try {
     await validateNpmrc(cwd);
@@ -323,7 +327,7 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span)
+          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
     } finally {
       await rootSpan.stop();
@@ -375,7 +379,8 @@ async function doBuild(
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string,
-  span: Span
+  span: Span,
+  standalone: boolean = false
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -695,7 +700,8 @@ async function doBuild(
               build,
               builder,
               builderPkg,
-              localConfig
+              localConfig,
+              standalone
             )
           )
           .then(
