@@ -634,8 +634,6 @@ export async function filesWithoutFsRefs(
   for (const [path, file] of Object.entries(files)) {
     if (file.type === 'FileFsRef') {
       if (standalone) {
-        // Convert FileFsRef to FileBlob by reading the file content
-        // First check if it's actually a file, not a directory
         const stat = await fs.stat(file.fsPath);
         if (stat.isFile()) {
           const fileContent = await fs.readFile(file.fsPath);
@@ -645,11 +643,6 @@ export async function filesWithoutFsRefs(
             mode: file.mode,
             contentType: file.contentType,
           });
-          // Don't add to filePathMap since the file is now inlined
-        } else {
-          // If it's a directory, keep it as FileFsRef
-          // Don't add to filePathMap since directories can't be inlined
-          // and we don't want to reference external directories in standalone mode
         }
       } else {
         if (!filePathMap) filePathMap = {};
