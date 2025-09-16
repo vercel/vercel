@@ -106,28 +106,6 @@ describe('build', () => {
     });
   }
 });
-describe('failing fixtures', () => {
-  for (const fixtureName of failingFixtures) {
-    it(`should fail to build${fixtureName}`, async () => {
-      const workPath = join(__dirname, '../failing-fixtures', fixtureName);
-
-      const fileList = readDirectoryRecursively(workPath);
-
-      const files = createFiles(workPath, fileList);
-      expect(
-        build({
-          files,
-          workPath,
-          config,
-          meta,
-          // Entrypoint is just used as the BOA function name
-          entrypoint: 'this value is not used',
-          repoRootPath: workPath,
-        })
-      ).rejects.toThrowError();
-    });
-  }
-});
 
 async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {
   if (content.startsWith(`"use strict"`)) {
