@@ -1,0 +1,676 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '/components/ui/card';
+import { Button } from '/components/ui/button';
+import { Input } from '/components/ui/input';
+import { Label } from '/components/ui/label';
+import { Textarea } from '/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '/components/ui/select';
+
+interface MaterialRequest {
+  id: string;
+  department: string;
+  date: string;
+  materials: string;
+  quantity: number;
+  priority: string;
+  status: string;
+}
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  unit: string;
+  lastUpdated: string;
+  averageConsumption: number;
+  daysRemaining: number;
+}
+
+const departments = [
+  'Limpieza',
+  'Recepción',
+  'Coach',
+  'Fuel Bar',
+  'Mantenimiento',
+  'Marketing',
+  'Otros'
+];
+
+const materialCategories = [
+  'Productos de Limpieza',
+  'Papelería y Oficina',
+  'Equipamiento Deportivo',
+  'Suplementos y Bebidas',
+  'Herramientas y Repuestos',
+  'Material Promocional',
+  'Otros Suministros'
+];
+
+export default function BlackBaseMaterialSystem() {
+  const [activeTab, setActiveTab] = useState('solicitudes');
+  const [requests, setRequests] = useState<MaterialRequest[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  
+  // Form states
+  const [requestForm, setRequestForm] = useState({
+    department: '',
+    date: new Date().toISOString().split('T')[0],
+    materials: '',
+    quantity: 1,
+    priority: 'media'
+  });
+
+  const [inventoryForm, setInventoryForm] = useState({
+    name: '',
+    category: '',
+    currentStock: 0,
+    minStock: 0,
+    unit: '',
+    averageConsumption: 0
+  });
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedRequests = localStorage.getItem('blackbase-requests');
+    const savedInventory = localStorage.getItem('blackbase-inventory');
+    
+    if (savedRequests) {
+      setRequests(JSON.parse(savedRequests));
+    }
+    
+    if (savedInventory) {
+      setInventory(JSON.parse(savedInventory));
+    } else {
+      // Initialize with some sample inventory items
+      const sampleInventory: InventoryItem[] = [
+        {
+          id: '1',
+          name: 'Detergente Industrial',
+          category: 'Productos de Limpieza',
+          currentStock: 15,
+          minStock: 5,
+          unit: 'Litros',
+          lastUpdated: new Date().toISOString(),
+          averageConsumption: 2,
+          daysRemaining: 7
+        },
+        {
+          id: '2',
+          name: 'Papel Higiénico',
+          category: 'Papelería y Oficina',
+          currentStock: 8,
+          minStock: 10,
+          unit: 'Paquetes',
+          lastUpdated: new Date().toISOString(),
+          averageConsumption: 1.5,
+          daysRemaining: 5
+        },
+        {
+          id: '3',
+          name: 'Proteína Whey',
+          category: 'Suplementos y Bebidas',
+          currentStock: 25,
+          minStock: 8,
+          unit: 'Unidades',
+          lastUpdated: new Date().toISOString(),
+          averageConsumption: 3,
+          daysRemaining: 8
+        }
+      ];
+      setInventory(sampleInventory);
+    }
+  }, []);
+
+  // Save to localStorage whenever data changes
+  useEffect(() => {
+    localStorage.setItem('blackbase-requests', JSON.stringify(requests));
+  }, [requests]);
+
+  useEffect(() => {
+    localStorage.setItem('blackbase-inventory', JSON.stringify(inventory));
+  }, [inventory]);
+
+  const handleRequestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newRequest: MaterialRequest = {
+      id: Date.now().toString(),
+      department: requestForm.department,
+      date: requestForm.date,
+      materials: requestForm.materials,
+      quantity: requestForm.quantity,
+      priority: requestForm.priority,
+      status: 'pendiente'
+    };
+    
+    setRequests([...requests, newRequest]);
+    setRequestForm({
+      department: '',
+      date: new Date().toISOString().split('T')[0],
+      materials: '',
+      quantity: 1,
+      priority: 'media'
+    });
+  };
+
+  const handleInventorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const daysRemaining = inventoryForm.averageConsumption > 0 
+      ? Math.floor(inventoryForm.currentStock / inventoryForm.averageConsumption)
+      : 0;
+      
+    const newItem: InventoryItem = {
+      id: Date.now().toString(),
+      name: inventoryForm.name,
+      category: inventoryForm.category,
+      currentStock: inventoryForm.currentStock,
+      minStock: inventoryForm.minStock,
+      unit: inventoryForm.unit,
+      lastUpdated: new Date().toISOString(),
+      averageConsumption: inventoryForm.averageConsumption,
+      daysRemaining: daysRemaining
+    };
+    
+    setInventory([...inventory, newItem]);
+    setInventoryForm({
+      name: '',
+      category: '',
+      currentStock: 0,
+      minStock: 0,
+      unit: '',
+      averageConsumption: 0
+    });
+  };
+
+  const updateRequestStatus = (id: string, newStatus: string) => {
+    setRequests(requests.map(req => 
+      req.id === id ? { ...req, status: newStatus } : req
+    ));
+  };
+
+  const deleteInventoryItem = (id: string) => {
+    setInventory(inventory.filter(item => item.id !== id));
+  };
+
+  const getLowStockItems = () => {
+    return inventory.filter(item => item.currentStock <= item.minStock);
+  };
+
+  const getCriticalItems = () => {
+    return inventory.filter(item => item.daysRemaining <= 3);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-primary text-primary-foreground p-6 shadow-lg">
+        <div className="container mx-auto">
+          <h1 className="text-4xl font-bold text-center mb-2">BLACK BASE</h1>
+          <p className="text-center text-lg opacity-90">Sistema de Gestión de Materiales</p>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-secondary p-4 shadow-sm">
+        <div className="container mx-auto">
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button
+              variant={activeTab === 'solicitudes' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('solicitudes')}
+              className="text-sm"
+            >
+              Solicitudes de Materiales
+            </Button>
+            <Button
+              variant={activeTab === 'inventario' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('inventario')}
+              className="text-sm"
+            >
+              Gestión de Inventario
+            </Button>
+            <Button
+              variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('dashboard')}
+              className="text-sm"
+            >
+              Dashboard de Control
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="container mx-auto p-6">
+        {/* Solicitudes Tab */}
+        {activeTab === 'solicitudes' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Nueva Solicitud de Materiales</CardTitle>
+                <CardDescription>
+                  Solicita materiales por departamento y fecha
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleRequestSubmit} className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="department">Departamento</Label>
+                    <Select
+                      value={requestForm.department}
+                      onValueChange={(value) => setRequestForm({...requestForm, department: value})}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map(dept => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Fecha</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={requestForm.date}
+                      onChange={(e) => setRequestForm({...requestForm, date: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="materials">Materiales Solicitados</Label>
+                    <Textarea
+                      id="materials"
+                      placeholder="Describe los materiales que necesitas..."
+                      value={requestForm.materials}
+                      onChange={(e) => setRequestForm({...requestForm, materials: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Cantidad/Unidades</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      value={requestForm.quantity}
+                      onChange={(e) => setRequestForm({...requestForm, quantity: parseInt(e.target.value)})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Prioridad</Label>
+                    <Select
+                      value={requestForm.priority}
+                      onValueChange={(value) => setRequestForm({...requestForm, priority: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baja">Baja</SelectItem>
+                        <SelectItem value="media">Media</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="urgente">Urgente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Button type="submit" className="w-full">
+                      Enviar Solicitud
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Lista de Solicitudes */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Solicitudes Realizadas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {requests.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      No hay solicitudes registradas
+                    </p>
+                  ) : (
+                    requests.map(request => (
+                      <div key={request.id} className="border rounded-lg p-4 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-lg">{request.department}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Fecha: {new Date(request.date).toLocaleDateString('es-ES')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant={request.status === 'aprobado' ? 'default' : 'outline'}
+                              onClick={() => updateRequestStatus(request.id, 'aprobado')}
+                            >
+                              Aprobar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={request.status === 'completado' ? 'default' : 'outline'}
+                              onClick={() => updateRequestStatus(request.id, 'completado')}
+                            >
+                              Completar
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-sm"><strong>Materiales:</strong> {request.materials}</p>
+                        <p className="text-sm"><strong>Cantidad:</strong> {request.quantity}</p>
+                        <div className="flex justify-between items-center">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            request.priority === 'urgente' ? 'bg-destructive text-destructive-foreground' :
+                            request.priority === 'alta' ? 'bg-orange-500 text-white' :
+                            request.priority === 'media' ? 'bg-yellow-500 text-black' :
+                            'bg-green-500 text-white'
+                          }`}>
+                            {request.priority.toUpperCase()}
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            request.status === 'completado' ? 'bg-green-100 text-green-800' :
+                            request.status === 'aprobado' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {request.status.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Inventario Tab */}
+        {activeTab === 'inventario' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Agregar Material al Inventario</CardTitle>
+                <CardDescription>
+                  Registra nuevos materiales en bodega y stock
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleInventorySubmit} className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nombre del Material</Label>
+                    <Input
+                      id="name"
+                      value={inventoryForm.name}
+                      onChange={(e) => setInventoryForm({...inventoryForm, name: e.target.value})}
+                      placeholder="Ej: Detergente industrial"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Categoría</Label>
+                    <Select
+                      value={inventoryForm.category}
+                      onValueChange={(value) => setInventoryForm({...inventoryForm, category: value})}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materialCategories.map(category => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currentStock">Stock Actual</Label>
+                    <Input
+                      id="currentStock"
+                      type="number"
+                      min="0"
+                      value={inventoryForm.currentStock}
+                      onChange={(e) => setInventoryForm({...inventoryForm, currentStock: parseInt(e.target.value)})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="minStock">Stock Mínimo</Label>
+                    <Input
+                      id="minStock"
+                      type="number"
+                      min="0"
+                      value={inventoryForm.minStock}
+                      onChange={(e) => setInventoryForm({...inventoryForm, minStock: parseInt(e.target.value)})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unidad de Medida</Label>
+                    <Input
+                      id="unit"
+                      value={inventoryForm.unit}
+                      onChange={(e) => setInventoryForm({...inventoryForm, unit: e.target.value})}
+                      placeholder="Ej: Litros, Unidades, Kg"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="averageConsumption">Consumo Promedio Diario</Label>
+                    <Input
+                      id="averageConsumption"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={inventoryForm.averageConsumption}
+                      onChange={(e) => setInventoryForm({...inventoryForm, averageConsumption: parseFloat(e.target.value)})}
+                      required
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Button type="submit" className="w-full">
+                      Agregar al Inventario
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Lista de Inventario */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventario Actual</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {inventory.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      No hay materiales en inventario
+                    </p>
+                  ) : (
+                    inventory.map(item => (
+                      <div key={item.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-lg">{item.name}</h3>
+                            <p className="text-sm text-muted-foreground">{item.category}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteInventoryItem(item.id)}
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Stock Actual</p>
+                            <p className="font-semibold">{item.currentStock} {item.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Stock Mínimo</p>
+                            <p className="font-semibold">{item.minStock} {item.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Consumo Diario</p>
+                            <p className="font-semibold">{item.averageConsumption} {item.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Días Restantes</p>
+                            <p className={`font-semibold ${item.daysRemaining <= 3 ? 'text-destructive' : item.daysRemaining <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {item.daysRemaining} días
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {item.currentStock <= item.minStock && (
+                          <div className="bg-destructive/10 text-destructive p-2 rounded text-sm">
+                            ⚠️ Stock bajo - Necesita reposición urgente
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Alertas */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-destructive">
+                <CardHeader>
+                  <CardTitle className="text-destructive">Materiales con Stock Bajo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getLowStockItems().length === 0 ? (
+                    <p className="text-muted-foreground">Todos los materiales tienen stock suficiente</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getLowStockItems().map(item => (
+                        <div key={item.id} className="flex justify-between items-center p-2 bg-destructive/10 rounded">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-sm text-destructive">
+                            {item.currentStock} {item.unit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-yellow-500">
+                <CardHeader>
+                  <CardTitle className="text-yellow-600">Materiales Críticos (≤3 días)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getCriticalItems().length === 0 ? (
+                    <p className="text-muted-foreground">No hay materiales en estado crítico</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getCriticalItems().map(item => (
+                        <div key={item.id} className="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-sm text-yellow-600">
+                            {item.daysRemaining} días restantes
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Resumen por Departamento */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Solicitudes por Departamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  {departments.map(dept => {
+                    const deptRequests = requests.filter(req => req.department === dept);
+                    const pendingCount = deptRequests.filter(req => req.status === 'pendiente').length;
+                    
+                    return (
+                      <div key={dept} className="p-4 border rounded-lg text-center">
+                        <h3 className="font-semibold text-lg">{dept}</h3>
+                        <p className="text-2xl font-bold text-primary">{deptRequests.length}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {pendingCount} pendientes
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Estadísticas Generales */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className="text-2xl font-bold text-primary">{requests.length}</div>
+                  <p className="text-sm text-muted-foreground">Total Solicitudes</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {requests.filter(req => req.status === 'completado').length}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Completadas</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {requests.filter(req => req.status === 'pendiente').length}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Pendientes</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className="text-2xl font-bold text-primary">{inventory.length}</div>
+                  <p className="text-sm text-muted-foreground">Materiales en Stock</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
