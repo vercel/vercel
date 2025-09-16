@@ -25,3 +25,4 @@ resend
 exa-py
 
 redis
+setuptools>=68
