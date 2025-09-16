@@ -1,5 +1,11 @@
 # @vercel/hono
 
+## 0.0.25
+
+### Patch Changes
+
+- Fix issue where hono build output metadata sent "name" instead of "slug" ([#13935](https://github.com/vercel/vercel/pull/13935))
+
 ## 0.0.24
 
 ### Patch Changes
