@@ -165,13 +165,13 @@ async function hashString(input: string): Promise<string> {
   return hashHex;
 }
 
-export const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 
 type Context = {
   headers?: Record<string, string>;
 };
 
-export function getContext(): Context {
+function getContext(): Context {
   const fromSymbol: typeof globalThis & {
     [SYMBOL_FOR_REQ_CONTEXT]?: { get?: () => Context };
   } = globalThis;

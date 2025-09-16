@@ -6,30 +6,15 @@
 
 - [unstable_checkRateLimit](README.md#unstable_checkratelimit)
 
-### Variables
-
-- [SYMBOL_FOR_REQ_CONTEXT](README.md#symbol_for_req_context)
-
 ### Functions
 
 - [checkRateLimit](README.md#checkratelimit)
-- [getContext](README.md#getcontext)
 
 ## References
 
 ### unstable_checkRateLimit
 
 Renames and re-exports [checkRateLimit](README.md#checkratelimit)
-
-## Variables
-
-### SYMBOL_FOR_REQ_CONTEXT
-
-• `Const` **SYMBOL_FOR_REQ_CONTEXT**: typeof [`SYMBOL_FOR_REQ_CONTEXT`](README.md#symbol_for_req_context)
-
-#### Defined in
-
-[rate-limit.ts:168](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L168)
 
 ## Functions
 
@@ -80,17 +65,3 @@ A promise that resolves to an object with a `rateLimited` property that is `true
 #### Defined in
 
 [rate-limit.ts:29](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L29)
-
----
-
-### getContext
-
-▸ **getContext**(): `Context`
-
-#### Returns
-
-`Context`
-
-#### Defined in
-
-[rate-limit.ts:174](https://github.com/vercel/vercel/blob/main/packages/firewall/src/rate-limit.ts#L174)
