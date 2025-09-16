@@ -213,6 +213,13 @@ def read_root():
         extra_tokens.append("metadata-version-ok:fail")
 
     try:
+        import pkg_resources  # type: ignore
+        v2 = pkg_resources.get_distribution("fastapi").version
+        extra_tokens.append("pkg-resources-version-ok:ok" if isinstance(v2, str) and len(v2) > 0 else "pkg-resources-version-ok:fail")
+    except Exception:
+        extra_tokens.append("pkg-resources-version-ok:fail")
+
+    try:
         from importlib import resources as _ilr  # type: ignore
         with _ilr.as_file(_ilr.files("fastapi").joinpath("__init__.py")) as p:
             with open(p, "r", encoding="utf-8") as f:
