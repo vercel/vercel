@@ -1530,11 +1530,11 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  describe('--standalone flag', () => {
-    it('should track telemetry for --standalone flag', async () => {
+  describe('--experimentalStandalone flag', () => {
+    it('should track telemetry for --experimentalStandalone flag', async () => {
       const command = 'build';
 
-      client.setArgv(command, '--standalone', '--help');
+      client.setArgv(command, '--experimentalStandalone', '--help');
       const exitCodePromise = build(client);
       await expect(exitCodePromise).resolves.toEqual(2);
 
@@ -1550,11 +1550,11 @@ describe.skipIf(flakey)('build', () => {
       ]);
     });
 
-    it('should convert FileFsRef to FileBlob when --standalone is used', async () => {
+    it('should convert FileFsRef to FileBlob when --experimentalStandalone is used', async () => {
       const cwd = fixture('node');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      client.setArgv('build', '--standalone');
+      client.setArgv('build', '--experimentalStandalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1590,11 +1590,11 @@ describe.skipIf(flakey)('build', () => {
       }
     });
 
-    it('should work with static builds and --standalone flag', async () => {
+    it('should work with static builds and --experimentalStandalone flag', async () => {
       const cwd = fixture('static');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      client.setArgv('build', '--standalone');
+      client.setArgv('build', '--experimentalStandalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 

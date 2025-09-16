@@ -172,7 +172,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(
-      (parsedArgs.flags as any)['--standalone']
+      (parsedArgs.flags as any)['--experimentalStandalone']
     );
   } catch (error) {
     printError(error);
@@ -193,7 +193,9 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
-  const standalone = Boolean((parsedArgs.flags as any)['--standalone']);
+  const standalone = Boolean(
+    (parsedArgs.flags as any)['--experimentalStandalone']
+  );
 
   try {
     await validateNpmrc(cwd);
