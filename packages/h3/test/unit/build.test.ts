@@ -70,8 +70,6 @@ const fixtures = {
   },
 };
 
-const failingFixtures = [];
-
 describe('build', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
     it(`should build ${fixtureName}`, async () => {
