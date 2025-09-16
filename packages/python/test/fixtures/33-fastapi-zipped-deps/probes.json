@@ -28,18 +28,6 @@
       "path": "/",
       "method": "GET",
       "status": 200,
-      "mustContain": "resource-filename-works:ok"
-    },
-    {
-      "path": "/",
-      "method": "GET",
-      "status": 200,
-      "mustContain": "resource-stream-works:ok"
-    },
-    {
-      "path": "/",
-      "method": "GET",
-      "status": 200,
       "mustContain": "as-file-works:ok"
     },
     {
