@@ -57,6 +57,10 @@ export interface LambdaOptionsBase {
    * When true, the Lambda runtime can be terminated mid-execution if the request is cancelled.
    */
   supportsCancellation?: boolean;
+  /**
+   * Whether this Lambda should use fluid compute.
+   */
+  fluid?: boolean;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -143,6 +147,10 @@ export class Lambda {
    * When true, the Lambda runtime can be terminated mid-execution if the request is cancelled.
    */
   supportsCancellation?: boolean;
+  /**
+   * Whether this Lambda should use fluid compute.
+   */
+  fluid?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
@@ -162,6 +170,7 @@ export class Lambda {
       framework,
       experimentalTriggers,
       supportsCancellation,
+      fluid,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -323,6 +332,10 @@ export class Lambda {
       );
     }
 
+    if (fluid !== undefined) {
+      assert(typeof fluid === 'boolean', '"fluid" is not a boolean');
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -346,6 +359,7 @@ export class Lambda {
         : undefined;
     this.experimentalTriggers = experimentalTriggers;
     this.supportsCancellation = supportsCancellation;
+    this.fluid = fluid;
   }
 
   async createZip(): Promise<Buffer> {
@@ -437,6 +451,7 @@ export async function getLambdaOptionsFromFunction({
     | 'maxDuration'
     | 'experimentalTriggers'
     | 'supportsCancellation'
+    | 'fluid'
   >
 > {
   if (config?.functions) {
@@ -448,6 +463,7 @@ export async function getLambdaOptionsFromFunction({
           maxDuration: fn.maxDuration,
           experimentalTriggers: fn.experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
+          fluid: fn.fluid,
         };
       }
     }

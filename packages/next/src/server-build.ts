@@ -1365,6 +1365,7 @@ export async function serverBuild({
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
         supportsCancellation: group.supportsCancellation,
+        fluid: group.fluid,
         isStreaming: group.isStreaming,
         nextVersion,
         experimentalAllowBundling,

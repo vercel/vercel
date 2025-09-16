@@ -1820,6 +1820,7 @@ export type LambdaGroup = {
   memory?: number;
   maxDuration?: number;
   supportsCancellation?: boolean;
+  fluid?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1890,6 +1891,7 @@ export async function getPageLambdaGroups({
       maxDuration?: number;
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
+      fluid?: boolean;
     } = {};
 
     if (
@@ -1964,7 +1966,8 @@ export async function getPageLambdaGroups({
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
               JSON.stringify(opts.experimentalTriggers) &&
-            group.supportsCancellation === opts.supportsCancellation;
+            group.supportsCancellation === opts.supportsCancellation &&
+            group.fluid === opts.fluid;
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -2005,6 +2008,7 @@ export async function getPageLambdaGroups({
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         experimentalTriggers: opts.experimentalTriggers,
         supportsCancellation: opts.supportsCancellation,
+        fluid: opts.fluid,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;

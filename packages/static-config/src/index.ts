@@ -23,6 +23,9 @@ export const BaseFunctionConfigSchema = {
     supportsCancellation: {
       type: 'boolean',
     },
+    fluid: {
+      type: 'boolean',
+    },
     regions: {
       oneOf: [
         {
