@@ -32,10 +32,10 @@ import { getLinkedProject } from '../../util/projects/link';
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
 function readHeadSync(path: string, length: number) {
-  const buffer = new Uint8Array(length);
+  const buffer = Buffer.alloc(length);
   const fd = openSync(path, 'r');
   try {
-    readSync(fd, buffer, 0, buffer.length, null);
+    readSync(fd, buffer as NodeJS.ArrayBufferView, 0, buffer.length, null);
   } finally {
     closeSync(fd);
   }
