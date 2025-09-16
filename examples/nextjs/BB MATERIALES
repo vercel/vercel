@@ -1,0 +1,647 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "/components/ui/card";
+import { Button } from "/components/ui/button";
+import { Input } from "/components/ui/input";
+import { Label } from "/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "/components/ui/select";
+import { Textarea } from "/components/ui/textarea";
+
+interface Material {
+  id: string;
+  nombre: string;
+  categoria: string;
+  stockActual: number;
+  stockMinimo: number;
+  unidad: string;
+  diasDuracion: number;
+  ultimaCompra: string;
+  costo: number;
+}
+
+interface SolicitudMaterial {
+  id: string;
+  area: string;
+  material: string;
+  cantidad: number;
+  unidad: string;
+  descripcion: string;
+  fecha: string;
+  estado: 'pendiente' | 'aprobada' | 'rechazada';
+}
+
+const areas = [
+  { id: 'limpieza', nombre: 'Limpieza', color: 'bg-blue-500' },
+  { id: 'recepcion', nombre: 'Recepción', color: 'bg-green-500' },
+  { id: 'coach', nombre: 'Coach', color: 'bg-purple-500' },
+  { id: 'fuel-bar', nombre: 'Fuel Bar', color: 'bg-orange-500' },
+  { id: 'mantenimiento', nombre: 'Mantenimiento', color: 'bg-red-500' },
+  { id: 'marketing', nombre: 'Marketing', color: 'bg-pink-500' },
+  { id: 'otros', nombre: 'Otros', color: 'bg-gray-500' }
+];
+
+export default function BlackBaseMateriales() {
+  const [vistaActual, setVistaActual] = useState('dashboard');
+  const [materiales, setMateriales] = useState<Material[]>([
+    {
+      id: '1',
+      nombre: 'Papel Higiénico',
+      categoria: 'limpieza',
+      stockActual: 45,
+      stockMinimo: 20,
+      unidad: 'rollos',
+      diasDuracion: 15,
+      ultimaCompra: '2024-01-15',
+      costo: 2.50
+    },
+    {
+      id: '2',
+      nombre: 'Desinfectante',
+      categoria: 'limpieza',
+      stockActual: 8,
+      stockMinimo: 5,
+      unidad: 'litros',
+      diasDuracion: 30,
+      ultimaCompra: '2024-01-10',
+      costo: 15.00
+    },
+    {
+      id: '3',
+      nombre: 'Café Premium',
+      categoria: 'fuel-bar',
+      stockActual: 3,
+      stockMinimo: 5,
+      unidad: 'kg',
+      diasDuracion: 7,
+      ultimaCompra: '2024-01-20',
+      costo: 25.00
+    },
+    {
+      id: '4',
+      nombre: 'Papel Bond A4',
+      categoria: 'recepcion',
+      stockActual: 150,
+      stockMinimo: 50,
+      unidad: 'hojas',
+      diasDuracion: 45,
+      ultimaCompra: '2024-01-05',
+      costo: 0.05
+    }
+  ]);
+
+  const [solicitudes, setSolicitudes] = useState<SolicitudMaterial[]>([
+    {
+      id: '1',
+      area: 'limpieza',
+      material: 'Cloro',
+      cantidad: 5,
+      unidad: 'litros',
+      descripcion: 'Para limpieza profunda de baños',
+      fecha: '2024-01-25',
+      estado: 'pendiente'
+    },
+    {
+      id: '2',
+      area: 'fuel-bar',
+      material: 'Vasos desechables',
+      cantidad: 200,
+      unidad: 'unidades',
+      descripcion: 'Para servicio de bebidas',
+      fecha: '2024-01-24',
+      estado: 'aprobada'
+    }
+  ]);
+
+  const [nuevaSolicitud, setNuevaSolicitud] = useState({
+    area: '',
+    material: '',
+    cantidad: '',
+    unidad: '',
+    descripcion: ''
+  });
+
+  const [nuevoMaterial, setNuevoMaterial] = useState({
+    nombre: '',
+    categoria: '',
+    stockActual: '',
+    stockMinimo: '',
+    unidad: '',
+    diasDuracion: '',
+    costo: ''
+  });
+
+  const materialesCriticos = materiales.filter(m => m.stockActual <= m.stockMinimo);
+  const materialesProximosVencer = materiales.filter(m => {
+    const diasRestantes = m.diasDuracion - Math.floor((new Date().getTime() - new Date(m.ultimaCompra).getTime()) / (1000 * 60 * 60 * 24));
+    return diasRestantes <= 7 && diasRestantes > 0;
+  });
+
+  const handleSolicitud = (e: React.FormEvent) => {
+    e.preventDefault();
+    const solicitud: SolicitudMaterial = {
+      id: Date.now().toString(),
+      area: nuevaSolicitud.area,
+      material: nuevaSolicitud.material,
+      cantidad: parseInt(nuevaSolicitud.cantidad),
+      unidad: nuevaSolicitud.unidad,
+      descripcion: nuevaSolicitud.descripcion,
+      fecha: new Date().toISOString().split('T')[0],
+      estado: 'pendiente'
+    };
+    setSolicitudes([...solicitudes, solicitud]);
+    setNuevaSolicitud({ area: '', material: '', cantidad: '', unidad: '', descripcion: '' });
+  };
+
+  const handleAgregarMaterial = (e: React.FormEvent) => {
+    e.preventDefault();
+    const material: Material = {
+      id: Date.now().toString(),
+      nombre: nuevoMaterial.nombre,
+      categoria: nuevoMaterial.categoria,
+      stockActual: parseInt(nuevoMaterial.stockActual),
+      stockMinimo: parseInt(nuevoMaterial.stockMinimo),
+      unidad: nuevoMaterial.unidad,
+      diasDuracion: parseInt(nuevoMaterial.diasDuracion),
+      ultimaCompra: new Date().toISOString().split('T')[0],
+      costo: parseFloat(nuevoMaterial.costo)
+    };
+    setMateriales([...materiales, material]);
+    setNuevoMaterial({ nombre: '', categoria: '', stockActual: '', stockMinimo: '', unidad: '', diasDuracion: '', costo: '' });
+  };
+
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-primary text-primary-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Total Materiales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{materiales.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-destructive text-destructive-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Stock Crítico</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{materialesCriticos.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-secondary text-secondary-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Solicitudes Pendientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{solicitudes.filter(s => s.estado === 'pendiente').length}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-accent text-accent-foreground">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Próximos a Vencer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{materialesProximosVencer.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-destructive">⚠️ Materiales en Stock Crítico</CardTitle>
+            <CardDescription>Materiales que necesitan reposición urgente</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {materialesCriticos.length === 0 ? (
+                <p className="text-muted-foreground">No hay materiales en stock crítico</p>
+              ) : (
+                materialesCriticos.map(material => (
+                  <div key={material.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <div>
+                      <p className="font-medium">{material.nombre}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {areas.find(a => a.id === material.categoria)?.nombre}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-destructive font-bold">{material.stockActual} {material.unidad}</p>
+                      <p className="text-xs text-muted-foreground">Mín: {material.stockMinimo}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>📋 Últimas Solicitudes</CardTitle>
+            <CardDescription>Solicitudes recientes de materiales</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {solicitudes.slice(-5).map(solicitud => (
+                <div key={solicitud.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <div>
+                    <p className="font-medium">{solicitud.material}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {areas.find(a => a.id === solicitud.area)?.nombre} - {solicitud.fecha}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">{solicitud.cantidad} {solicitud.unidad}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      solicitud.estado === 'aprobada' ? 'bg-green-100 text-green-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {solicitud.estado.charAt(0).toUpperCase() + solicitud.estado.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+        {areas.map(area => (
+          <Card key={area.id} className="cursor-pointer hover:bg-accent transition-colors">
+            <CardContent className="p-4 text-center">
+              <div className={`w-12 h-12 ${area.color} rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold text-xl`}>
+                {area.nombre.charAt(0)}
+              </div>
+              <p className="font-medium text-sm">{area.nombre}</p>
+              <p className="text-xs text-muted-foreground">
+                {materiales.filter(m => m.categoria === area.id).length} materiales
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderSolicitudes = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Nueva Solicitud de Material</CardTitle>
+          <CardDescription>Solicita materiales para tu área de trabajo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSolicitud} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="area">Área</Label>
+                <Select value={nuevaSolicitud.area} onValueChange={(value) => setNuevaSolicitud({...nuevaSolicitud, area: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un área" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map(area => (
+                      <SelectItem key={area.id} value={area.id}>{area.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="material">Material</Label>
+                <Input
+                  id="material"
+                  placeholder="Nombre del material"
+                  value={nuevaSolicitud.material}
+                  onChange={(e) => setNuevaSolicitud({...nuevaSolicitud, material: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="cantidad">Cantidad</Label>
+                <Input
+                  id="cantidad"
+                  type="number"
+                  placeholder="Cantidad necesaria"
+                  value={nuevaSolicitud.cantidad}
+                  onChange={(e) => setNuevaSolicitud({...nuevaSolicitud, cantidad: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="unidad">Unidad</Label>
+                <Input
+                  id="unidad"
+                  placeholder="ej: litros, unidades, kg"
+                  value={nuevaSolicitud.unidad}
+                  onChange={(e) => setNuevaSolicitud({...nuevaSolicitud, unidad: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="descripcion">Descripción</Label>
+              <Textarea
+                id="descripcion"
+                placeholder="Describe para qué necesitas este material"
+                value={nuevaSolicitud.descripcion}
+                onChange={(e) => setNuevaSolicitud({...nuevaSolicitud, descripcion: e.target.value})}
+                rows={3}
+              />
+            </div>
+
+            <Button type="submit" className="w-full">
+              Enviar Solicitud
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Solicitudes</CardTitle>
+          <CardDescription>Todas las solicitudes realizadas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {solicitudes.map(solicitud => (
+              <div key={solicitud.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium">{solicitud.material}</h4>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                        solicitud.estado === 'aprobada' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {solicitud.estado.charAt(0).toUpperCase() + solicitud.estado.slice(1)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {areas.find(a => a.id === solicitud.area)?.nombre} • {solicitud.cantidad} {solicitud.unidad}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{solicitud.descripcion}</p>
+                  </div>
+                  <div className="text-right text-sm text-muted-foreground">
+                    {solicitud.fecha}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderInventario = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Agregar Nuevo Material</CardTitle>
+          <CardDescription>Registra nuevos materiales en el inventario</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAgregarMaterial} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="nombre">Nombre del Material</Label>
+                <Input
+                  id="nombre"
+                  placeholder="Nombre del material"
+                  value={nuevoMaterial.nombre}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, nombre: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="categoria">Categoría</Label>
+                <Select value={nuevoMaterial.categoria} onValueChange={(value) => setNuevoMaterial({...nuevoMaterial, categoria: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map(area => (
+                      <SelectItem key={area.id} value={area.id}>{area.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="stockActual">Stock Actual</Label>
+                <Input
+                  id="stockActual"
+                  type="number"
+                  placeholder="Cantidad en stock"
+                  value={nuevoMaterial.stockActual}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, stockActual: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="stockMinimo">Stock Mínimo</Label>
+                <Input
+                  id="stockMinimo"
+                  type="number"
+                  placeholder="Stock mínimo requerido"
+                  value={nuevoMaterial.stockMinimo}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, stockMinimo: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="unidad">Unidad</Label>
+                <Input
+                  id="unidad"
+                  placeholder="ej: litros, unidades, kg"
+                  value={nuevoMaterial.unidad}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, unidad: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="diasDuracion">Días de Duración</Label>
+                <Input
+                  id="diasDuracion"
+                  type="number"
+                  placeholder="Cuántos días dura el material"
+                  value={nuevoMaterial.diasDuracion}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, diasDuracion: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="costo">Costo por Unidad</Label>
+                <Input
+                  id="costo"
+                  type="number"
+                  step="0.01"
+                  placeholder="Precio por unidad"
+                  value={nuevoMaterial.costo}
+                  onChange={(e) => setNuevoMaterial({...nuevoMaterial, costo: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full">
+              Agregar Material
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Inventario Actual</CardTitle>
+          <CardDescription>Todos los materiales registrados en bodega</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Material</th>
+                  <th className="text-left p-2">Categoría</th>
+                  <th className="text-left p-2">Stock Actual</th>
+                  <th className="text-left p-2">Stock Mín.</th>
+                  <th className="text-left p-2">Estado</th>
+                  <th className="text-left p-2">Días Restantes</th>
+                  <th className="text-left p-2">Costo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materiales.map(material => {
+                  const diasRestantes = material.diasDuracion - Math.floor((new Date().getTime() - new Date(material.ultimaCompra).getTime()) / (1000 * 60 * 60 * 24));
+                  const estadoCritico = material.stockActual <= material.stockMinimo;
+                  const proximoVencer = diasRestantes <= 7 && diasRestantes > 0;
+                  
+                  return (
+                    <tr key={material.id} className="border-b hover:bg-muted/50">
+                      <td className="p-2 font-medium">{material.nombre}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded-full text-xs text-white ${areas.find(a => a.id === material.categoria)?.color}`}>
+                          {areas.find(a => a.id === material.categoria)?.nombre}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <span className={estadoCritico ? 'text-destructive font-bold' : ''}>
+                          {material.stockActual} {material.unidad}
+                        </span>
+                      </td>
+                      <td className="p-2">{material.stockMinimo} {material.unidad}</td>
+                      <td className="p-2">
+                        {estadoCritico ? (
+                          <span className="text-destructive font-bold">⚠️ Crítico</span>
+                        ) : proximoVencer ? (
+                          <span className="text-yellow-600 font-bold">⏰ Próximo a vencer</span>
+                        ) : (
+                          <span className="text-green-600">✅ Normal</span>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <span className={diasRestantes <= 7 ? 'text-yellow-600 font-bold' : ''}>
+                          {Math.max(0, diasRestantes)} días
+                        </span>
+                      </td>
+                      <td className="p-2">${material.costo.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="bg-primary text-primary-foreground shadow-lg">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">BLACK BASE</h1>
+              <p className="text-primary-foreground/80">Sistema de Gestión de Materiales</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-primary-foreground/80">
+                {new Date().toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <nav className="bg-card border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex space-x-1">
+            {[
+              { id: 'dashboard', nombre: '📊 Dashboard', descripcion: 'Vista general' },
+              { id: 'solicitudes', nombre: '📋 Solicitudes', descripcion: 'Pedir materiales' },
+              { id: 'inventario', nombre: '📦 Inventario', descripcion: 'Gestionar stock' }
+            ].map(tab => (
+              <Button
+                key={tab.id}
+                variant={vistaActual === tab.id ? 'default' : 'ghost'}
+                onClick={() => setVistaActual(tab.id)}
+                className="flex flex-col items-center p-4 h-auto"
+              >
+                <span className="text-lg mb-1">{tab.nombre}</span>
+                <span className="text-xs text-muted-foreground">{tab.descripcion}</span>
+              </Button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">
+            {vistaActual === 'dashboard' && 'Dashboard - Materiales'}
+            {vistaActual === 'solicitudes' && 'Solicitudes de Materiales'}
+            {vistaActual === 'inventario' && 'Gestión de Inventario'}
+          </h2>
+          <p className="text-muted-foreground">
+            {vistaActual === 'dashboard' && 'Resumen general del estado de materiales y stock'}
+            {vistaActual === 'solicitudes' && 'Solicita y gestiona pedidos de materiales por área'}
+            {vistaActual === 'inventario' && 'Administra el stock y control de materiales en bodega'}
+          </p>
+        </div>
+
+        {vistaActual === 'dashboard' && renderDashboard()}
+        {vistaActual === 'solicitudes' && renderSolicitudes()}
+        {vistaActual === 'inventario' && renderInventario()}
+      </main>
+
+      <footer className="bg-muted mt-12">
+        <div className="container mx-auto px-4 py-6 text-center">
+          <p className="text-muted-foreground">
+            © 2024 Black Base - Sistema de Gestión de Materiales
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
