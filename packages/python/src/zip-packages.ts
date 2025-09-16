@@ -28,22 +28,65 @@ const NON_ZIP_SAFE_EXTENSIONS = new Set([
 ]);
 
 // Add a file or directory tree to `zip`, preserving paths relative to `rootDir`.
-async function zipAddTree(zip: ZipFile, rootDir: string, relativePath: string) {
+// Returns true if all files under `relativePath` were queued successfully; otherwise false.
+async function zipAddTree(
+  zip: ZipFile,
+  rootDir: string,
+  relativePath: string
+): Promise<boolean> {
   const absolutePath = join(rootDir, relativePath);
-  const stat = await fs.promises.lstat(absolutePath);
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.lstat(absolutePath);
+  } catch (err: any) {
+    debug(
+      `Failed to stat during zipping: ${relativePath} (${err?.message || 'unknown error'})`
+    );
+    return false;
+  }
+
+  if (
+    typeof (stat as any).isSymbolicLink === 'function' &&
+    stat.isSymbolicLink()
+  ) {
+    debug(`Skipping symlink during zipping: ${relativePath}`);
+    return false;
+  }
+
   if (stat.isDirectory()) {
-    const children = await fs.promises.readdir(absolutePath, {
-      withFileTypes: true,
-    });
+    let children: fs.Dirent[];
+    try {
+      children = await fs.promises.readdir(absolutePath, {
+        withFileTypes: true,
+      });
+    } catch (err: any) {
+      debug(
+        `Failed to read directory during zipping: ${relativePath} (${err?.message || 'unknown error'})`
+      );
+      return false;
+    }
     for (const child of children) {
       if (child.name === '__pycache__') continue;
-      await zipAddTree(zip, rootDir, join(relativePath, child.name));
+      const ok = await zipAddTree(zip, rootDir, join(relativePath, child.name));
+      if (!ok) return false;
     }
-    return;
+    return true;
   }
+
   if (stat.isFile()) {
-    zip.addFile(absolutePath, relativePath, { compress: true });
+    try {
+      zip.addFile(absolutePath, relativePath, { compress: true });
+    } catch (err: any) {
+      debug(
+        `Failed to queue file for zipping: ${relativePath} (${err?.message || 'unknown error'})`
+      );
+      return false;
+    }
+    return true;
   }
+
+  debug(`Skipping non-file non-directory during zipping: ${relativePath}`);
+  return false;
 }
 
 // Returns true if the given file or directory tree contains any zip-unsafe files
@@ -318,8 +361,15 @@ export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
     const zip = new ZipFile();
     const out = fs.createWriteStream(destPath);
     const done = new Promise<void>((resolve, reject) => {
-      out.on('close', resolve);
-      out.on('error', reject);
+      let settled = false;
+      const settleOnce = (fn: (arg?: any) => void) => (arg?: any) => {
+        if (settled) return;
+        settled = true;
+        fn(arg);
+      };
+      out.on('close', settleOnce(resolve));
+      out.on('error', settleOnce(reject));
+      zip.outputStream.on('error', settleOnce(reject));
     });
     zip.outputStream.pipe(out);
     for (const relativeEntryPath of entries) {
@@ -329,7 +379,21 @@ export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
     await done;
   };
 
-  await writeZip(candidates, zipTempPath);
+  try {
+    await writeZip(candidates, zipTempPath);
+  } catch (err: any) {
+    debug(
+      `Failed to create vendor pure-Python zip: ${err?.message || 'unknown error'}`
+    );
+    try {
+      await fs.promises.unlink(zipTempPath);
+    } catch (unlinkErr: any) {
+      if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+        debug('Failed to remove temp vendor zip after write failure');
+      }
+    }
+    return;
+  }
 
   // Atomically move temp zip into final path first. If this fails, keep originals.
   try {
