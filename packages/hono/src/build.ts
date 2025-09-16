@@ -64,7 +64,7 @@ export const build: BuildV3 = async args => {
     // ignore
   }
   res.output.framework = {
-    name: frameworkName,
+    slug: frameworkName,
     version,
   };
   return res;
