@@ -1,0 +1,10 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "No import errors"
+    }
+  ]
+}

@@ -22,6 +22,7 @@ import {
   installRequirementsFile,
   resolveVendorDir,
 } from './install';
+import { zipPurePythonPackages } from './zip-packages';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
@@ -332,6 +333,10 @@ export const build: BuildV3 = async ({
   // Mount cached vendor directory into the Lambda output under `_vendor`
   try {
     const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
+    // Create zipped vendor dir of pure-Python packages to minimize vendor size
+    if (fs.existsSync(cachedVendorAbs)) {
+      await zipPurePythonPackages(cachedVendorAbs);
+    }
     if (fs.existsSync(cachedVendorAbs)) {
       const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
       for (const [p, f] of Object.entries(vendorFiles)) {

@@ -1651,6 +1651,9 @@ importers:
       '@types/which':
         specifier: 3.0.0
         version: 3.0.0
+      '@types/yazl':
+        specifier: 2.4.2
+        version: 2.4.2
       '@vercel/build-utils':
         specifier: 12.1.0
         version: link:../build-utils
@@ -1669,6 +1672,9 @@ importers:
       which:
         specifier: 3.0.0
         version: 3.0.0
+      yazl:
+        specifier: 2.5.1
+        version: 2.5.1
 
   packages/react-router:
     dependencies:
