@@ -21,8 +21,6 @@ const NON_ZIP_SAFE_EXTENSIONS = new Set([
   '.cer',
   '.der',
   '.key',
-  // i18n compiled catalogs commonly used by Django
-  '.mo',
   // Packaged data often opened from filesystem
   '.pkl',
   '.pickle',
@@ -78,14 +76,6 @@ async function treeHasZipUnsafeFiles(absPath: string): Promise<boolean> {
   }
 }
 
-// remove triple quotes, single/double quoted strings, and # comments
-const stripCommentsAndStrings = (src: string) => {
-  let s = src.replace(/('{3}[\s\S]*?'{3}|"{3}[\s\S]*?"{3})/g, ''); // """...""" / '''...'''
-  s = s.replace(/(^|[^\\])('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")/g, '$1'); // '...' or "..."
-  s = s.replace(/^[ \t]*#.*$/gm, ''); // line comments
-  return s;
-};
-
 // Heuristic: detect code patterns that require a real filesystem directory next to the module.
 // These patterns are typically not zip-safe because zipimport does not provide a real directory.
 // Intentionally conservative and simple for now: reject if any file appears to rely on real
@@ -95,19 +85,30 @@ async function hasZipUnsafePatternsInFile(
   fileAbsPath: string
 ): Promise<boolean> {
   try {
-    let src = await fs.promises.readFile(fileAbsPath, 'utf8');
-    src = stripCommentsAndStrings(src);
+    const src = await fs.promises.readFile(fileAbsPath, 'utf8');
 
     const hasLocationToken =
       src.includes('__file__') ||
+      src.includes('__path__') ||
       src.includes('__spec__.origin') ||
-      src.includes('__path__');
+      src.includes('__spec__.submodule_search_locations');
 
     // e.g. open(...), os.path.join(...), glob.glob(...), Path(...).open/..., inspect.getfile(...), inspect.getsourcefile(...)
+    const m = /\bimport\s+os\s+as\s+([A-Za-z_]\w*)/.exec(src); // os alias
+    const osMod = m?.[1] ?? 'os';
+    const osPathRe = new RegExp(`\\b${osMod}\\.path\\.`); // os.path.*
     const hasPathConsumer =
-      /\bopen\s*\(|\bos\.path\.|\bglob\s*\(|(?:^|[^.\w])Path\s*\(|\binspect\.(?:getfile|getsourcefile)\s*\(/.test(
+      /\bopen\s*\(/.test(src) ||
+      osPathRe.test(src) ||
+      /\bglob\s*\(/.test(src) ||
+      /(?:^|[^.\w])(?:Path|PurePath|PurePosixPath|PureWindowsPath)\s*\(/.test(
         src
-      );
+      ) ||
+      /\binspect\.(?:getfile|getsourcefile)\s*\(/.test(src) ||
+      /\b(?:listdir|scandir|walk|stat|readlink)\s*\(/.test(src) ||
+      /\bshutil\.(?:copy|copy2|copyfile|copytree)\s*\(/.test(src) ||
+      /\bpathlib\.\w+\.iterdir\s*\(/.test(src) ||
+      /\bsubprocess\.(?:run|Popen|call|check_output)\s*\(/.test(src);
 
     // Direct uses of __file__ as a path
     const fileTokenDirectPathUse =
@@ -119,6 +120,8 @@ async function hasZipUnsafePatternsInFile(
 
     // Unconditionally risky APIs (no gating by import token)
     const riskyByName =
+      /\b__path__\s*\(/.test(src) ||
+      /\b__spec__\.submodule_search_locations\s*\(/.test(src) ||
       /\b(iter_modules|walk_packages)\s*\(/.test(src) || // pkgutil scanning
       /\bresource_(?:filename|stream|isdir|listdir)\s*\(/.test(src) || // pkg_resources data-as-files
       /\b(?:CDLL|WinDLL|PyDLL|OleDLL)\s*\(|\bcdll\.LoadLibrary\s*\(/.test(
@@ -129,7 +132,8 @@ async function hasZipUnsafePatternsInFile(
       /\b(get_loader|get_importer)\s*\([^)]*__name__[^)]*\)\.get_filename\s*\(/.test(
         src
       ) ||
-      /\bpkg_resources\.get_distribution\s*\(/.test(src); // needs dist-info visible
+      /\bpkg_resources\.get_distribution\s*\(/.test(src) || // needs dist-info visible
+      /\binspect\.(?:getfile|getsourcefile|getabsfile)\s*\(/.test(src); // inspect needs real files
 
     if (
       (hasLocationToken && hasPathConsumer) ||
