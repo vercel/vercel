@@ -1,5 +1,12 @@
 # vercel
 
+## 48.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`d0fd9e7b4ad98a490921945641da5b5d8d6a69b7`](https://github.com/vercel/vercel/commit/d0fd9e7b4ad98a490921945641da5b5d8d6a69b7)]:
+  - @vercel/hono@0.0.25
+
 ## 48.0.1
 
 ### Patch Changes
