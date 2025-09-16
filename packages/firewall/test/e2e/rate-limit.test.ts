@@ -127,5 +127,51 @@ function testWithCheckRateLimit(checkRateLimit: typeof checkRateLimitDist) {
 
       await testWithCheck(check);
     });
+
+    test('Should forward _vercel_jwt cookie when present', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers({
+          cookie: '_vercel_jwt=test-jwt-token; other=value',
+        }),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBe('_vercel_jwt=test-jwt-token');
+    });
+
+    test('Should not add cookie header when _vercel_jwt is not present', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers({
+          cookie: 'other=value; session=abc123',
+        }),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBeNull();
+    });
+
+    test('Should handle empty cookie header', async () => {
+      const { rateLimited } = await checkRateLimit('test-rule1', {
+        firewallHostForDevelopment: HOST,
+        rateLimitKey: '123' + rand,
+        headers: new Headers(),
+      });
+
+      expect(rateLimited).toBe(false);
+      expect(fetchCalls).toHaveLength(1);
+
+      const headers = new Headers(fetchCalls[0].init?.headers);
+      expect(headers.get('cookie')).toBeNull();
+    });
   };
 }
