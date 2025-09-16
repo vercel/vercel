@@ -27,6 +27,7 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
+  FileBlob,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
@@ -637,7 +638,6 @@ export async function filesWithoutFsRefs(
         const stat = await fs.stat(file.fsPath);
         if (stat.isFile()) {
           const fileContent = await fs.readFile(file.fsPath);
-          const { FileBlob } = await import('@vercel/build-utils');
           out[path] = new FileBlob({
             data: fileContent,
             mode: file.mode,
