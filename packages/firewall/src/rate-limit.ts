@@ -185,8 +185,16 @@ function parseCookies(requestHeaders: Headers): Record<string, string> {
   }
   return cookies.split(';').reduce(
     (acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
+      const trimmedCookie = cookie.trim();
+      const equalIndex = trimmedCookie.indexOf('=');
+      if (equalIndex === -1) {
+        // Cookie without value
+        acc[trimmedCookie] = '';
+      } else {
+        const key = trimmedCookie.slice(0, equalIndex);
+        const value = trimmedCookie.slice(equalIndex + 1);
+        acc[key] = value;
+      }
       return acc;
     },
     {} as Record<string, string>
