@@ -11,7 +11,7 @@ def index(request):
 
     # Django admin template exists (from Django package)
     try:
-        _ = get_template('admin/base.html')
+        get_template('admin/base.html')
         admin_tpl = 'ok'
     except Exception:
         admin_tpl = 'fail'
