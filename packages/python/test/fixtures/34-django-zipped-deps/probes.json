@@ -4,9 +4,7 @@
       "path": "/",
       "method": "GET",
       "status": 200,
-      "mustContain": "template-ok:ok;admin-template-ok:ok;admin-static-ok:ok;i18n-ok:ok"
+      "mustContain": "template-ok:ok;admin-template-ok:ok;admin-static-ok:ok;i18n-ok:ok;i18n-translated-ok:ok"
     }
   ]
 }
-
-

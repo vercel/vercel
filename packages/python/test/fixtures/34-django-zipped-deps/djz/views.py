@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.template.loader import render_to_string, get_template
 from django.contrib.staticfiles import finders
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, override
 
 
 def index(request):
@@ -24,8 +24,16 @@ def index(request):
     trans = _('yes')
     i18n_ok = 'ok' if isinstance(trans, str) and len(trans) > 0 else 'fail'
 
+    # Actual translation check: switch to Spanish and ensure text changes
+    try:
+        with override('es'):
+            trans_es = _('Yes')
+        i18n_translated = 'ok' if trans_es != 'Yes' else 'fail'
+    except Exception:
+        i18n_translated = 'fail'
+
     return HttpResponse(
-        f'template-ok:{tpl_ok};admin-template-ok:{admin_tpl};admin-static-ok:{admin_static};i18n-ok:{i18n_ok}'
+        f'template-ok:{tpl_ok};admin-template-ok:{admin_tpl};admin-static-ok:{admin_static};i18n-ok:{i18n_ok};i18n-translated-ok:{i18n_translated}'
     )
 
 
