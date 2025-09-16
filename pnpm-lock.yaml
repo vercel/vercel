@@ -1259,9 +1259,6 @@ importers:
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
-      ts-morph:
-        specifier: 12.0.0
-        version: 12.0.0
     devDependencies:
       '@types/jest':
         specifier: 27.5.1
