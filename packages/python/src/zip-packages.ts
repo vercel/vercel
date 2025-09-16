@@ -120,8 +120,8 @@ async function hasZipUnsafePatternsInFile(
 
     // Unconditionally risky APIs (no gating by import token)
     const riskyByName =
-      /\b__path__\s*\(/.test(src) ||
-      /\b__spec__\.submodule_search_locations\s*\(/.test(src) ||
+      /\b__path__\b/.test(src) ||
+      /\b__spec__\.submodule_search_locations\b/.test(src) ||
       /\b(iter_modules|walk_packages)\s*\(/.test(src) || // pkgutil scanning
       /\bresource_(?:filename|stream|isdir|listdir)\s*\(/.test(src) || // pkg_resources data-as-files
       /\b(?:CDLL|WinDLL|PyDLL|OleDLL)\s*\(|\bcdll\.LoadLibrary\s*\(/.test(
