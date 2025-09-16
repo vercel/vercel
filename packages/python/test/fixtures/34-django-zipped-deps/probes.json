@@ -5,6 +5,36 @@
       "method": "GET",
       "status": 200,
       "mustContain": "template-ok:ok;admin-template-ok:ok;admin-static-ok:ok;i18n-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "metadata-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "pkg-resources-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "resource-filename-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "as-file-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "vendor-zip-in-sys-path:ok"
     }
   ]
 }

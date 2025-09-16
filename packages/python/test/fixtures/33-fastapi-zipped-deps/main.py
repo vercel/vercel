@@ -202,6 +202,82 @@ def read_root():
     message = "No import errors" if not contains_check_module_import_error and not contains_samples_import_error else "Import errors found"
     if samples.get("resource_access", {}).get("importlib_resources_ok"):
         message += " (Resources OK)"
+
+    # Additional end-to-end checks targeting zipimport-sensitive behaviors
+    extra_tokens = []
+    try:
+        from importlib import metadata as im  # type: ignore
+        v = im.version("fastapi")
+        extra_tokens.append("metadata-version-ok:ok" if isinstance(v, str) and len(v) > 0 else "metadata-version-ok:fail")
+    except Exception:
+        extra_tokens.append("metadata-version-ok:fail")
+
+    try:
+        import pkg_resources  # type: ignore
+        v2 = pkg_resources.get_distribution("fastapi").version
+        extra_tokens.append("pkg-resources-version-ok:ok" if isinstance(v2, str) and len(v2) > 0 else "pkg-resources-version-ok:fail")
+    except Exception:
+        extra_tokens.append("pkg-resources-version-ok:fail")
+
+    try:
+        import pkg_resources  # type: ignore
+        import os as _os
+        p = pkg_resources.resource_filename("fastapi", "__init__.py")
+        ok = isinstance(p, str) and _os.path.isfile(p)
+        if ok:
+            with open(p, "rb") as f:
+                _ = f.read(1)
+        extra_tokens.append("resource-filename-works:ok" if ok else "resource-filename-works:fail")
+    except Exception:
+        extra_tokens.append("resource-filename-works:fail")
+
+    try:
+        import pkg_resources  # type: ignore
+        data = pkg_resources.resource_stream("fastapi", "__init__.py").read(16)
+        ok = isinstance(data, (bytes, bytearray)) and len(data) > 0
+        extra_tokens.append("resource-stream-works:ok" if ok else "resource-stream-works:fail")
+    except Exception:
+        extra_tokens.append("resource-stream-works:fail")
+
+    try:
+        from importlib import resources as _ilr  # type: ignore
+        with _ilr.as_file(_ilr.files("fastapi").joinpath("__init__.py")) as p:
+            with open(p, "r", encoding="utf-8") as f:
+                s = f.read()
+        ok = isinstance(s, str) and len(s) > 0
+        extra_tokens.append("as-file-works:ok" if ok else "as-file-works:fail")
+    except Exception:
+        extra_tokens.append("as-file-works:fail")
+
+    try:
+        from importlib import resources as _ilr  # type: ignore
+        entries = list(_ilr.files("fastapi").iterdir())
+        ok = len(entries) > 0
+        extra_tokens.append("resources-listing-ok:ok" if ok else "resources-listing-ok:fail")
+    except Exception:
+        extra_tokens.append("resources-listing-ok:fail")
+
+    try:
+        import certifi  # type: ignore
+        import os as _os
+        cp = certifi.where()
+        ok = isinstance(cp, str) and _os.path.isfile(cp)
+        if ok:
+            with open(cp, "rb") as f:
+                _ = f.read(1)
+        extra_tokens.append("certifi-file-ok:ok" if ok else "certifi-file-ok:fail")
+    except Exception:
+        extra_tokens.append("certifi-file-ok:fail")
+
+    try:
+        import sys as _sys
+        ok = any(str(x).endswith("_vendor-py.zip") for x in _sys.path)
+        extra_tokens.append("vendor-zip-in-sys-path:ok" if ok else "vendor-zip-in-sys-path:fail")
+    except Exception:
+        extra_tokens.append("vendor-zip-in-sys-path:fail")
+
+    if extra_tokens:
+        message += ";" + ";".join(extra_tokens)
     return {
         "message": message,
         "imports": imports,

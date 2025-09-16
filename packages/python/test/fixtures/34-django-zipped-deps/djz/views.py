@@ -24,8 +24,56 @@ def index(request):
     trans = _('yes')
     i18n_ok = 'ok' if isinstance(trans, str) and len(trans) > 0 else 'fail'
 
-    return HttpResponse(
-        f'template-ok:{tpl_ok};admin-template-ok:{admin_tpl};admin-static-ok:{admin_static};i18n-ok:{i18n_ok}'
-    )
+    base = f'template-ok:{tpl_ok};admin-template-ok:{admin_tpl};admin-static-ok:{admin_static};i18n-ok:{i18n_ok}'
+
+    tokens = []
+
+    try:
+        from importlib import metadata as im  # type: ignore
+        v = im.version('Django')
+        tokens.append('metadata-version-ok:ok' if isinstance(v, str) and len(v) > 0 else 'metadata-version-ok:fail')
+    except Exception:
+        tokens.append('metadata-version-ok:fail')
+
+    try:
+        import pkg_resources  # type: ignore
+        v2 = pkg_resources.get_distribution('Django').version
+        tokens.append('pkg-resources-version-ok:ok' if isinstance(v2, str) and len(v2) > 0 else 'pkg-resources-version-ok:fail')
+    except Exception:
+        tokens.append('pkg-resources-version-ok:fail')
+
+    try:
+        import pkg_resources  # type: ignore
+        import os as _os
+        p = pkg_resources.resource_filename('django', '__init__.py')
+        ok = isinstance(p, str) and _os.path.isfile(p)
+        if ok:
+            with open(p, 'rb') as f:
+                _ = f.read(1)
+        tokens.append('resource-filename-works:ok' if ok else 'resource-filename-works:fail')
+    except Exception:
+        tokens.append('resource-filename-works:fail')
+
+    try:
+        from importlib import resources as _ilr  # type: ignore
+        with _ilr.as_file(_ilr.files('django').joinpath('__init__.py')) as p:
+            with open(p, 'r', encoding='utf-8') as f:
+                s = f.read()
+        ok = isinstance(s, str) and len(s) > 0
+        tokens.append('as-file-works:ok' if ok else 'as-file-works:fail')
+    except Exception:
+        tokens.append('as-file-works:fail')
+
+    try:
+        import sys as _sys
+        ok = any(str(x).endswith('_vendor-py.zip') for x in _sys.path)
+        tokens.append('vendor-zip-in-sys-path:ok' if ok else 'vendor-zip-in-sys-path:fail')
+    except Exception:
+        tokens.append('vendor-zip-in-sys-path:fail')
+
+    if tokens:
+        base = base + ';' + ';'.join(tokens)
+
+    return HttpResponse(base)
 
 

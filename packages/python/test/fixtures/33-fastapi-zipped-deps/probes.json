@@ -11,6 +11,48 @@
       "method": "GET",
       "status": 200,
       "mustContain": "__version__"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "metadata-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "pkg-resources-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "resource-filename-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "resource-stream-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "as-file-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "resources-listing-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "certifi-file-ok:ok"
     }
   ]
 }
