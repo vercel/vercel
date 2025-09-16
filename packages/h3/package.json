@@ -24,8 +24,7 @@
   ],
   "dependencies": {
     "@vercel/static-config": "3.1.2",
-    "@vercel/node": "5.3.22",
-    "ts-morph": "12.0.0"
+    "@vercel/node": "5.3.22"
   },
   "devDependencies": {
     "@types/jest": "27.5.1",
