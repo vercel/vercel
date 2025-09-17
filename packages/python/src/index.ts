@@ -13,13 +13,14 @@ import {
   type BuildV3,
   type Files,
   FileFsRef,
+  NowBuildError,
 } from '@vercel/build-utils';
 import {
   installRequirement,
   installRequirementsFile,
   resolveVendorDir,
 } from './install';
-import { maybeGenerateRequirements, detectPythonConstraint } from './lockfile';
+import { maybeGenerateRequirementsTxt, detectPythonConstraint } from './deps';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
@@ -189,7 +190,7 @@ export const build: BuildV3 = async ({
       : fsFiles['requirements.txt'].fsPath;
   } else {
     // Try to generate a pinned requirements file from lockfiles (UV/Pipenv/Poetry/pyproject)
-    requirementsTxtPath = await maybeGenerateRequirements({
+    requirementsTxtPath = await maybeGenerateRequirementsTxt({
       entryDirectory,
       vendorBaseDir,
       fsFiles,

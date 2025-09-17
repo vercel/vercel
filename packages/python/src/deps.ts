@@ -3,7 +3,10 @@ import { promises as fsp } from 'fs';
 import { join } from 'path';
 
 import { debug } from '@vercel/build-utils';
-import { parseMajorMinor, compareMajorMinor } from './utils';
+import {
+  compareVersionStrings,
+  doesPythonVersionSatisfyMarker,
+} from './version';
 
 interface GenerateOpts {
   entryDirectory: string;
@@ -29,42 +32,8 @@ async function writeRequirements(outPath: string, lines: string[]) {
   await fsp.writeFile(outPath, contents, 'utf8');
 }
 
-function markerMatchesPython(marker: string, pyVersion: string): boolean {
-  const py = parseMajorMinor(pyVersion);
-  if (!py) return true;
-
-  const hasOr = /\bor\b/i.test(marker);
-  const parts = marker.split(/\s+(?:and|or)\s+/i);
-  const evalPart = (part: string) => {
-    const m = part.match(
-      /python(?:_full)?_version\s*([><=!]=|[><=])\s*['"]?(\d+(?:\.\d+)*)['"]?/i
-    );
-    if (!m) return true; // Unrecognized -> don't filter out
-    const op = m[1];
-    const val = m[2];
-    const cmp = compareMajorMinor(pyVersion, val);
-    switch (op) {
-      case '>':
-        return cmp > 0;
-      case '>=':
-        return cmp >= 0;
-      case '<':
-        return cmp < 0;
-      case '<=':
-        return cmp <= 0;
-      case '==':
-        return cmp === 0;
-      case '!=':
-        return cmp !== 0;
-      default:
-        return true;
-    }
-  };
-  const results = parts.map(evalPart);
-  return hasOr ? results.some(Boolean) : results.every(Boolean);
-}
-
-async function generateFromUvLock(
+// Generate lines for generated requirements.txt from UV lockfile
+async function generateRequirementsLinesFromUvLock(
   uvLockPath: string,
   pythonVersion?: string
 ): Promise<string[]> {
@@ -88,6 +57,21 @@ async function generateFromUvLock(
       continue;
 
     const name: string = pkg.name;
+    // Resolve extras if present in lock entry (array form). Some formats may
+    // expose extras under `extras` or `features`. Only honor array forms.
+    const extrasList: string[] = [];
+    if (Array.isArray((pkg as any).extras)) {
+      for (const ex of (pkg as any).extras) {
+        if (typeof ex === 'string' && ex.trim()) extrasList.push(ex.trim());
+      }
+    } else if (Array.isArray((pkg as any).features)) {
+      for (const ex of (pkg as any).features) {
+        if (typeof ex === 'string' && ex.trim()) extrasList.push(ex.trim());
+      }
+    }
+    const baseName = extrasList.length
+      ? `${name}[${extrasList.join(',')}]`
+      : name;
     const version: string | undefined = pkg.version;
     const category: string | undefined = pkg.category;
     const optional = Boolean(pkg.optional);
@@ -108,15 +92,15 @@ async function generateFromUvLock(
         if (ref) url += `@${String(ref)}`;
         if (source.subdirectory)
           url += `#subdirectory=${String(source.subdirectory)}`;
-        spec = `${name} @ ${url}`;
+        spec = `${baseName} @ ${url}`;
       } else if (stype === 'url' && source.url) {
-        spec = `${name} @ ${String(source.url)}`;
+        spec = `${baseName} @ ${String(source.url)}`;
       } else if (stype === 'directory' || stype === 'file') {
         // Skip local path sources
         continue;
       }
     } else if (isRegistry && version) {
-      spec = `${name}==${version}`;
+      spec = `${baseName}==${version}`;
     } else if (
       source &&
       typeof source === 'object' &&
@@ -136,8 +120,13 @@ async function generateFromUvLock(
     let applies = true;
     if (pythonVersion && resolutionMarkers.length > 0) {
       applies = resolutionMarkers.some(m =>
-        markerMatchesPython(m, pythonVersion)
+        doesPythonVersionSatisfyMarker(m, pythonVersion)
       );
+    }
+    // If resolution markers exist and do not apply to the active Python,
+    // do not include this package in generated requirements.
+    if (pythonVersion && resolutionMarkers.length > 0 && !applies) {
+      continue;
     }
 
     // Preserve original (non-resolution) marker text in requirement line
@@ -145,23 +134,15 @@ async function generateFromUvLock(
       spec += ` ; ${pkg.marker.trim()}`;
     }
 
-    const cand: Candidate = { spec, version, matches: applies };
+    const cand: Candidate = { spec, version, matches: true };
     const prev = selected.get(name);
     if (!prev) {
       selected.set(name, cand);
       continue;
     }
-
-    // Prefer candidates that match markers; tie-breaker on version
-    if (cand.matches && !prev.matches) {
-      selected.set(name, cand);
-      continue;
-    }
-    if (!cand.matches && prev.matches) {
-      continue;
-    }
+    // Tie-breaker on version if duplicates present
     if (cand.version && prev.version) {
-      if (compareMajorMinor(cand.version, prev.version) > 0) {
+      if (compareVersionStrings(cand.version, prev.version) > 0) {
         selected.set(name, cand);
       }
       continue;
@@ -174,7 +155,8 @@ async function generateFromUvLock(
   return lines;
 }
 
-async function generateFromPoetryLock(
+// Generate lines for generated requirements.txt from Poetry lockfile
+async function generateRequirementsLinesFromPoetryLock(
   poetryLockPath: string,
   pythonVersion?: string
 ): Promise<string[]> {
@@ -190,6 +172,14 @@ async function generateFromPoetryLock(
 
   for (const pkg of packages) {
     const name: string = pkg.name;
+    let baseName = name;
+    if (Array.isArray((pkg as any).extras)) {
+      const extras: string[] = [];
+      for (const ex of (pkg as any).extras) {
+        if (typeof ex === 'string' && ex.trim()) extras.push(ex.trim());
+      }
+      if (extras.length) baseName = `${name}[${extras.join(',')}]`;
+    }
     const version: string | undefined = pkg.version;
     const category: string | undefined = pkg.category;
     const optional = Boolean(pkg.optional);
@@ -209,20 +199,23 @@ async function generateFromPoetryLock(
         if (ref) url += `@${String(ref)}`;
         if (source.subdirectory)
           url += `#subdirectory=${String(source.subdirectory)}`;
-        spec = `${name} @ ${url}`;
+        spec = `${baseName} @ ${url}`;
       } else if (stype === 'url' && source.url) {
-        spec = `${name} @ ${String(source.url)}`;
+        spec = `${baseName} @ ${String(source.url)}`;
       } else if (stype === 'directory' || stype === 'file') {
         // Skip local paths
         continue;
       }
     } else if (version) {
-      spec = `${name}==${version}`;
+      spec = `${baseName}==${version}`;
     }
     if (!spec) continue;
 
     if (marker && typeof marker === 'string' && marker.trim()) {
-      if (pythonVersion && !markerMatchesPython(marker, pythonVersion)) {
+      if (
+        pythonVersion &&
+        !doesPythonVersionSatisfyMarker(marker, pythonVersion)
+      ) {
         continue;
       }
       spec += ` ; ${marker.trim()}`;
@@ -238,7 +231,8 @@ async function generateFromPoetryLock(
   return lines;
 }
 
-async function generateFromPipenvLock(
+// Generate lines for generated requirements.txt from Pipfile.lock
+async function generateRequirementsLinesFromPipenvLock(
   pipfileLockPath: string,
   pythonVersion?: string
 ): Promise<string[]> {
@@ -286,7 +280,8 @@ async function generateFromPipenvLock(
       let line = `${base}${version}`; // version already includes the operator, e.g. ==1.2.3
       if (typeof specObj.markers === 'string' && specObj.markers.trim()) {
         const m = specObj.markers.trim();
-        if (pythonVersion && !markerMatchesPython(m, pythonVersion)) continue;
+        if (pythonVersion && !doesPythonVersionSatisfyMarker(m, pythonVersion))
+          continue;
         line += ` ; ${m}`;
       }
       lines.push(line);
@@ -296,7 +291,8 @@ async function generateFromPipenvLock(
   return lines;
 }
 
-async function generateFromPyproject(
+// Generate lines for generated requirements.txt from pyproject.toml
+async function generateRequirementsLinesFromPyproject(
   pyprojectPath: string,
   pythonVersion?: string
 ): Promise<string[]> {
@@ -317,7 +313,10 @@ async function generateFromPyproject(
     const m = s.split(';');
     if (m.length === 2) {
       const [base, marker] = [m[0].trim(), m[1].trim()];
-      if (pythonVersion && !markerMatchesPython(marker, pythonVersion))
+      if (
+        pythonVersion &&
+        !doesPythonVersionSatisfyMarker(marker, pythonVersion)
+      )
         continue;
       lines.push(`${base} ; ${marker}`);
     } else {
@@ -328,7 +327,9 @@ async function generateFromPyproject(
   return lines;
 }
 
-export async function maybeGenerateRequirements({
+// If lockfiles/pyproject.toml exist, generate a requirements.generated.txt file in the vendor directory
+// Returns the path to the generated requirements.txt file if it was generated, otherwise null
+export async function maybeGenerateRequirementsTxt({
   entryDirectory,
   vendorBaseDir,
   fsFiles,
@@ -353,13 +354,22 @@ export async function maybeGenerateRequirements({
     let lines: string[] | null = null;
 
     if (uvLock) {
-      lines = await generateFromUvLock(uvLock, pythonVersion);
+      lines = await generateRequirementsLinesFromUvLock(uvLock, pythonVersion);
     } else if (pipfileLock) {
-      lines = await generateFromPipenvLock(pipfileLock, pythonVersion);
+      lines = await generateRequirementsLinesFromPipenvLock(
+        pipfileLock,
+        pythonVersion
+      );
     } else if (poetryLock) {
-      lines = await generateFromPoetryLock(poetryLock, pythonVersion);
+      lines = await generateRequirementsLinesFromPoetryLock(
+        poetryLock,
+        pythonVersion
+      );
     } else if (pyproject) {
-      lines = await generateFromPyproject(pyproject, pythonVersion);
+      lines = await generateRequirementsLinesFromPyproject(
+        pyproject,
+        pythonVersion
+      );
     }
 
     if (lines && lines.length) {
@@ -374,6 +384,9 @@ export async function maybeGenerateRequirements({
   }
 }
 
+// Detect the Python constraint from lockfiles/pyproject.toml
+// Returns the constraint and source if it was detected, otherwise undefined
+// Constraint is a PEP 508-style version marker, e.g. ">=3.10,<4.0"
 export async function detectPythonConstraint(
   fsFiles: Record<string, any>,
   entryDirectory: string

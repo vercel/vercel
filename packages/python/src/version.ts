@@ -1,6 +1,5 @@
 import { NowBuildError } from '@vercel/build-utils';
 import * as which from 'which';
-import { compareMajorMinor } from './utils';
 
 interface PythonVersion {
   version: string;
@@ -75,6 +74,7 @@ export function getLatestPythonVersion({
   return selection;
 }
 
+// Get the Python version that satisfies the constraint
 export function getSupportedPythonVersion({
   isDev,
   constraint,
@@ -92,32 +92,66 @@ export function getSupportedPythonVersion({
   const origin = source ? ` detected in ${source}` : '';
 
   if (typeof constraint === 'string') {
-    // Select the highest installed version that satisfies a simple prefix or >= constraint
-    // Accept forms like ">=3.10", "^3.11", "~3.10", "3.11.*", "3.11", "==3.11"
+    // Accept range forms like ">=3.10,<4.0", and also "^3.11", "~3.10", "3.11.*", "3.11", "==3.11", "!=3.9".
     const r = constraint.trim();
     const satisfies = (ver: string) => {
       if (!r) return true;
-      if (r.startsWith('>=')) {
-        const min = r.slice(2).trim();
-        return compareMajorMinor(ver, min) >= 0;
-      }
-      if (r.startsWith('==')) {
-        const eq = r.slice(2).trim();
-        return ver === eq || ver.startsWith(eq + '.');
-      }
-      if (r.startsWith('^') || r.startsWith('~')) {
-        const base = r.slice(1).trim();
-        return ver.startsWith(base + '.') || ver === base;
-      }
-      if (r.endsWith('.*')) {
-        const base = r.slice(0, -2);
-        return ver.startsWith(base + '.') || ver === base;
-      }
-      // Plain "3.11" means that major.minor must match
-      if (/^\d+\.\d+$/.test(r)) {
-        return ver.startsWith(r + '.') || ver === r;
-      }
-      return false;
+      const parts = r
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const checkPart = (p: string) => {
+        if (!p) return true;
+        const m = p.match(/^(>=|<=|==|!=|>|<|\^|~)\s*(.+)$/);
+        let op: string;
+        let rhs: string;
+        if (m) {
+          op = m[1];
+          rhs = m[2].trim();
+        } else {
+          // No explicit operator: treat as major.minor prefix match
+          op = 'plain';
+          rhs = p.trim();
+        }
+
+        const rhsIsPrefix = rhs.endsWith('.*');
+        const rhsBase = rhsIsPrefix ? rhs.slice(0, -2) : rhs;
+
+        switch (op) {
+          case '>=':
+            return compareVersionStrings(ver, rhsBase) >= 0;
+          case '<=':
+            return compareVersionStrings(ver, rhsBase) <= 0;
+          case '>':
+            return compareVersionStrings(ver, rhsBase) > 0;
+          case '<':
+            return compareVersionStrings(ver, rhsBase) < 0;
+          case '==':
+            return rhsIsPrefix
+              ? ver === rhsBase || ver.startsWith(rhsBase + '.')
+              : ver === rhsBase || ver.startsWith(rhsBase + '.');
+          case '!=':
+            return rhsIsPrefix
+              ? !(ver === rhsBase || ver.startsWith(rhsBase + '.'))
+              : !(ver === rhsBase || ver.startsWith(rhsBase + '.'));
+          case '^':
+          case '~':
+            return ver === rhsBase || ver.startsWith(rhsBase + '.');
+          case 'plain':
+            if (/^\d+\.\d+$/.test(rhsBase)) {
+              return ver === rhsBase || ver.startsWith(rhsBase + '.');
+            }
+            if (rhsIsPrefix) {
+              return ver === rhsBase || ver.startsWith(rhsBase + '.');
+            }
+            return false;
+          default:
+            return false;
+        }
+      };
+
+      return parts.every(checkPart);
     };
     const candidate = allOptions.find(
       o => isInstalled(o) && satisfies(o.version)
@@ -159,4 +193,87 @@ function isInstalled({ pipPath, pythonPath }: PythonVersion): boolean {
     Boolean(which.sync(pipPath, { nothrow: true })) &&
     Boolean(which.sync(pythonPath, { nothrow: true }))
   );
+}
+
+// Returns true if a PEP 508-style version marker is satisfied by a Python version.
+// Supports:
+// - Identifiers: `python_version`, `python_full_version`
+// - Operators: >, >=, <, <=, ==, !=
+// - Compares only major.minor components (patch is ignored)
+// Example Markers:
+// - `python_version >= '3.10'`
+// - `python_version >= '3.10' and python_version < '3.12'`
+// Note: Only evaluates the first two comparisons, e.g. following marker will ignore the third comparison:
+// e.g. `python_version >= '3.10' and python_version < '3.12' or python_version == '3.13'`
+export function doesPythonVersionSatisfyMarker(
+  versionMarker: string,
+  pythonVersion: string
+): boolean {
+  const py = parseMajorMinor(pythonVersion);
+  if (!py) return true;
+
+  // Find up to the first two comparisons of python_version/_full_version
+  const compRe =
+    /\bpython(?:_full)?_version\b\s*([><=!]=|[><=])\s*['"]?(\d+(?:\.\d+)*)['"]?/gi;
+  type Comp = { op: string; val: string; start: number; end: number };
+  const comps: Comp[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = compRe.exec(versionMarker)) && comps.length < 2) {
+    comps.push({ op: m[1], val: m[2], start: m.index, end: compRe.lastIndex });
+  }
+
+  if (comps.length === 0) return true;
+
+  const evalComp = ({ op, val }: Comp): boolean => {
+    const cmp = compareVersionStrings(pythonVersion, val);
+    switch (op) {
+      case '>':
+        return cmp > 0;
+      case '>=':
+        return cmp >= 0;
+      case '<':
+        return cmp < 0;
+      case '<=':
+        return cmp <= 0;
+      case '==':
+        return cmp === 0;
+      case '!=':
+        return cmp !== 0;
+      default:
+        return true; // fail open
+    }
+  };
+
+  if (comps.length === 1) return evalComp(comps[0]);
+
+  const [a, b] = comps;
+  const boolRe = /\b(and|or)\b/gi;
+  let conj: 'and' | 'or' | null = null;
+  let bm: RegExpExecArray | null;
+  while ((bm = boolRe.exec(versionMarker))) {
+    const idx = bm.index;
+    if (idx >= a.end && idx < b.start) {
+      conj = (bm[1] || '').toLowerCase() as 'and' | 'or';
+      break;
+    }
+    if (idx >= b.start) break; // past second comparison
+  }
+  const left = evalComp(a);
+  const right = evalComp(b);
+  return conj === 'or' ? left || right : left && right;
+}
+
+// Parse "3.10" -> [3, 10]
+export function parseMajorMinor(v: string): [number, number] | null {
+  const m = v.match(/^(\d+)\.(\d+)/);
+  return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : null;
+}
+
+// Comparator for version strings: "3.9" and "3.11" -> -2
+export function compareVersionStrings(va: string, vb: string): number {
+  const pa = parseMajorMinor(va);
+  const pb = parseMajorMinor(vb);
+  if (!pa || !pb) return 0;
+  if (pa[0] !== pb[0]) return pa[0] - pb[0];
+  return pa[1] - pb[1];
 }
