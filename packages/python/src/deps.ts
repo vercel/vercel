@@ -39,7 +39,7 @@ async function generateRequirementsLinesFromUvLock(
 ): Promise<string[]> {
   debug(`Parsing UV lockfile at ${uvLockPath}`);
   const raw = await fsp.readFile(uvLockPath, 'utf8');
-  const data: any = toml.parse(raw as unknown as string);
+  const data: any = toml.parse(raw);
   const packages: any[] = Array.isArray(data.package) ? data.package : [];
 
   type Candidate = { spec: string; version?: string; matches: boolean };
@@ -162,7 +162,7 @@ async function generateRequirementsLinesFromPoetryLock(
 ): Promise<string[]> {
   debug(`Parsing Poetry lockfile at ${poetryLockPath}`);
   const raw = await fsp.readFile(poetryLockPath, 'utf8');
-  const data: any = toml.parse(raw as unknown as string);
+  const data: any = toml.parse(raw);
 
   const packages: any[] = Array.isArray((data as any).package)
     ? (data as any).package
@@ -298,7 +298,7 @@ async function generateRequirementsLinesFromPyproject(
 ): Promise<string[]> {
   debug(`Parsing pyproject at ${pyprojectPath}`);
   const raw = await fsp.readFile(pyprojectPath, 'utf8');
-  const data: any = toml.parse(raw as unknown as string);
+  const data: any = toml.parse(raw);
   const project: any = (data as any).project || {};
   const deps: any[] = Array.isArray(project.dependencies)
     ? project.dependencies
@@ -414,7 +414,7 @@ export async function detectPythonConstraint(
     );
     if (uvLock) {
       const raw = await fsp.readFile(uvLock, 'utf8');
-      const data: any = toml.parse(raw as unknown as string);
+      const data: any = toml.parse(raw);
       const metadata = (data as any).metadata || {};
       const requires =
         metadata['requires-python'] ||
@@ -425,7 +425,7 @@ export async function detectPythonConstraint(
     }
     if (poetryLock) {
       const raw = await fsp.readFile(poetryLock, 'utf8');
-      const data: any = toml.parse(raw as unknown as string);
+      const data: any = toml.parse(raw);
       const metadata = (data as any).metadata || {};
       const versions = metadata['python-versions'];
       if (typeof versions === 'string' && versions.trim())
@@ -433,7 +433,7 @@ export async function detectPythonConstraint(
     }
     if (pyproject) {
       const raw = await fsp.readFile(pyproject, 'utf8');
-      const data: any = toml.parse(raw as unknown as string);
+      const data: any = toml.parse(raw);
       const project: any = (data as any).project || {};
       const requires = project['requires-python'];
       if (typeof requires === 'string' && requires.trim())
