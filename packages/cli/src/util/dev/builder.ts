@@ -426,7 +426,8 @@ export async function getBuildMatches(
     // function exported from Hono.
     if (
       buildConfig.config?.framework === 'hono' ||
-      buildConfig.config?.framework === 'express'
+      buildConfig.config?.framework === 'express' ||
+      buildConfig.config?.framework === 'h3'
     ) {
       src = 'package.json';
     }

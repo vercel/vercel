@@ -219,6 +219,7 @@ describe('frameworks', () => {
     'dojo',
     'hono', // FIXME: hono-framework once builder lands in builder container because integration tests will fail if there's an example with no tests
     'express', // FIXME: express-framework once builder lands in builder container because integration tests will fail if there's an example with no tests
+    'h3', // FIXME: h3-framework once builder lands in builder container because integration tests will fail if there's an example with no tests
     'saber',
     'gridsome',
     'sanity-v3',
