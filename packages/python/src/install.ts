@@ -1,6 +1,9 @@
 import execa from 'execa';
+import fs from 'fs';
+import os from 'os';
 import { join } from 'path';
-import { Meta, debug } from '@vercel/build-utils';
+import which from 'which';
+import { Meta, debug, getWriteableDirectory } from '@vercel/build-utils';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -74,6 +77,31 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   // distutils.errors.DistutilsOptionError: can't combine user with
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
+  // Prefer using `uv` if available; install it if missing.
+  const uvBin = await getUvBinary();
+  if (uvBin) {
+    const uvArgs = [
+      'pip',
+      'install',
+      '--no-compile',
+      '--no-cache-dir',
+      '--target',
+      target,
+      ...args,
+    ];
+    const prettyUv = `${uvBin} ${uvArgs.join(' ')}`;
+    console.log(`Running "${prettyUv}"...`);
+    try {
+      await execa(uvBin, uvArgs, {
+        cwd: workPath,
+      });
+      return;
+    } catch (err) {
+      console.log(`Failed to run "${prettyUv}", falling back to pip`);
+      // fall through to pip
+    }
+  }
+
   const cmdArgs = [
     'install',
     '--disable-pip-version-check',
@@ -84,7 +112,7 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
     ...args,
   ];
   const pretty = `${pipPath} ${cmdArgs.join(' ')}`;
-  debug(`Running "${pretty}"...`);
+  console.log(`Running "${pretty}"...`);
   try {
     await execa(pipPath, cmdArgs, {
       cwd: workPath,
@@ -92,6 +120,100 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   } catch (err) {
     console.log(`Failed to run "${pretty}"`);
     throw err;
+  }
+}
+
+async function getUvBinary(): Promise<string | null> {
+  // If on PATH already, use it
+  try {
+    const found = which.sync('uv', { nothrow: true });
+    if (found) {
+      return found;
+    }
+  } catch (err) {
+    debug('uv binary not found on PATH via which.sync');
+  }
+  try {
+    await execa('uv', ['--version']);
+    return 'uv';
+  } catch (err) {
+    debug('uv command not runnable');
+  }
+
+  // Attempt to install into a temporary directory
+  try {
+    const tmpRoot = await getWriteableDirectory();
+    const tmpBin = join(tmpRoot, 'uv-bin');
+    try {
+      await fs.promises.mkdir(tmpBin, { recursive: true });
+    } catch (err) {
+      debug('Failed to create tmp uv bin directory');
+    }
+
+    if (process.platform === 'win32') {
+      // Windows PowerShell installer
+      try {
+        console.log('Installing uv...');
+        await execa('powershell', [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-Command',
+          'iwr https://astral.sh/uv/install.ps1 -useb | iex',
+        ]);
+      } catch (err) {
+        debug('uv PowerShell install failed');
+      }
+      const candidates = [
+        join(
+          process.env.USERPROFILE || os.homedir(),
+          '.local',
+          'bin',
+          'uv.exe'
+        ),
+        join(
+          process.env.USERPROFILE || os.homedir(),
+          '.cargo',
+          'bin',
+          'uv.exe'
+        ),
+        join(tmpBin, 'uv.exe'),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      }
+      return null;
+    } else {
+      // POSIX installer with preferred custom path; fallback to default path
+      console.log('Installing uv...');
+      const installWithPath = `curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --path "${tmpBin}"`;
+      try {
+        await execa('sh', ['-c', installWithPath], { cwd: tmpBin });
+      } catch (err) {
+        debug('uv POSIX install with custom path failed');
+      }
+
+      const posixCandidates = [
+        join(tmpBin, 'uv'),
+        join(tmpBin, 'bin', 'uv'),
+        join(os.homedir(), '.local', 'bin', 'uv'),
+        '/usr/local/bin/uv',
+        '/opt/homebrew/bin/uv',
+      ];
+      for (const p of posixCandidates) {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      }
+      debug('uv binary not found in any candidate paths');
+
+      return null;
+    }
+  } catch (err) {
+    debug('uv installation attempt failed');
+    return null;
   }
 }
 
