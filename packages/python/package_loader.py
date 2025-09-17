@@ -134,17 +134,7 @@ class PackageLazyLoader(importlib.abc.MetaPathFinder):
 _finder: Optional[PackageLazyLoader] = None
 
 
-def _default_vendor_root() -> Path:
-    # Allow override via env var
-    env_dir = os.environ.get("LAZY_VENDOR_DIR")
-    if env_dir:
-        return Path(env_dir)
-    # Default to project-local `_vendor/python` relative to this file
-    here = Path(__file__).resolve().parent
-    return here / "_vendor" / "python"
-
-
-def enable(vendor_root: Optional[Path | str]) -> None:
+def enable(vendor_root: Path | str) -> None:
     global _finder
     if _finder is not None:
         return
