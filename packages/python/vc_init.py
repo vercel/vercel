@@ -8,10 +8,14 @@ import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
+import package_loader
+
 
 _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+package_loader.enable(vendor_root=_vendor)
 
 if os.path.isdir(_vendor):
     # Process .pth files like a real site-packages dir

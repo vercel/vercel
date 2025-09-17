@@ -119,101 +119,6 @@ async function treeHasZipUnsafeFiles(absPath: string): Promise<boolean> {
   }
 }
 
-// Heuristic: detect code patterns that require a real filesystem directory next to the module.
-// These patterns are typically not zip-safe because zipimport does not provide a real directory.
-// Intentionally conservative and simple for now: reject if any file appears to rely on real
-// filesystem locations, package scanning, or resource APIs that typically expect directories next to the module.
-// Only packages with no potentially risky patterns get zipped.
-async function hasZipUnsafePatternsInFile(
-  fileAbsPath: string
-): Promise<boolean> {
-  try {
-    const src = await fs.promises.readFile(fileAbsPath, 'utf8');
-
-    const hasLocationToken =
-      src.includes('__file__') ||
-      src.includes('__path__') ||
-      src.includes('__spec__.origin') ||
-      src.includes('__spec__.submodule_search_locations');
-
-    // e.g. open(...), os.path.join(...), glob.glob(...), Path(...).open/..., inspect.getfile(...), inspect.getsourcefile(...)
-    const m = /\bimport\s+os\s+as\s+([A-Za-z_]\w*)/.exec(src); // os alias
-    const osMod = m?.[1] ?? 'os';
-    const osPathRe = new RegExp(`\\b${osMod}\\.path\\.`); // os.path.*
-    const hasPathConsumer =
-      /\bopen\s*\(/.test(src) ||
-      osPathRe.test(src) ||
-      /\bglob\s*\(/.test(src) ||
-      /(?:^|[^.\w])(?:Path|PurePath|PurePosixPath|PureWindowsPath)\s*\(/.test(
-        src
-      ) ||
-      /\binspect\.(?:getfile|getsourcefile)\s*\(/.test(src) ||
-      /\b(?:listdir|scandir|walk|stat|readlink)\s*\(/.test(src) ||
-      /\bshutil\.(?:copy|copy2|copyfile|copytree)\s*\(/.test(src) ||
-      /\bpathlib\.\w+\.iterdir\s*\(/.test(src) ||
-      /\bsubprocess\.(?:run|Popen|call|check_output)\s*\(/.test(src);
-
-    // Direct uses of __file__ as a path
-    const fileTokenDirectPathUse =
-      /\bPath\s*\(\s*__file__\s*\)/.test(src) ||
-      /\bos\.path\.(?:dirname|abspath|realpath|join)\s*\([^)]*__file__/.test(
-        src
-      ) ||
-      /\bopen\s*\([^)]*__file__/.test(src);
-
-    // Unconditionally risky APIs (no gating by import token)
-    const riskyByName =
-      /\b__path__\b/.test(src) ||
-      /\b__spec__\.submodule_search_locations\b/.test(src) ||
-      /\b(iter_modules|walk_packages)\s*\(/.test(src) || // pkgutil scanning
-      /\bresource_(?:filename|stream|isdir|listdir)\s*\(/.test(src) || // pkg_resources data-as-files
-      /\b(?:CDLL|WinDLL|PyDLL|OleDLL)\s*\(|\bcdll\.LoadLibrary\s*\(/.test(
-        src
-      ) || // ctypes needs real files
-      /\bimportlib\.util\.find_spec\s*\(/.test(src) || // compute real file/dir
-      /\bimportlib\.machinery\.PathFinder\.find_spec\s*\(/.test(src) ||
-      /\b(get_loader|get_importer)\s*\([^)]*__name__[^)]*\)\.get_filename\s*\(/.test(
-        src
-      ) ||
-      /\bpkg_resources\.get_distribution\s*\(/.test(src) || // needs dist-info visible
-      /\binspect\.(?:getfile|getsourcefile|getabsfile)\s*\(/.test(src); // inspect needs real files
-
-    if (
-      (hasLocationToken && hasPathConsumer) ||
-      fileTokenDirectPathUse ||
-      riskyByName
-    ) {
-      debug(`zip-unsafe (usage): ${fileAbsPath}`);
-      return true;
-    }
-
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-async function hasZipUnsafePatternsInTree(
-  dirAbsPath: string
-): Promise<boolean> {
-  const entries = await fs.promises.readdir(dirAbsPath, {
-    withFileTypes: true,
-  });
-  for (const entry of entries) {
-    if (entry.name === '__pycache__') continue;
-    const abs = join(dirAbsPath, entry.name);
-    if (entry.isDirectory()) {
-      if (await hasZipUnsafePatternsInTree(abs)) return true;
-    } else if (entry.isFile()) {
-      const ext = extname(entry.name).toLowerCase();
-      if (ALLOWED_SOURCE_EXTENSIONS.has(ext)) {
-        if (await hasZipUnsafePatternsInFile(abs)) return true;
-      }
-    }
-  }
-  return false;
-}
-
 // Returns true if any directory in the tree contains Python source files but lacks a
 // top-level __init__.py file, which can be problematic to import from within a zip.
 async function hasNamespaceSubpackagesInTree(
@@ -268,16 +173,12 @@ async function dirHasPythonSourceInTree(dirAbsPath: string): Promise<boolean> {
 async function isZipSafePackageDir(absPath: string): Promise<boolean> {
   return !(
     (await treeHasZipUnsafeFiles(absPath)) ||
-    (await hasZipUnsafePatternsInTree(absPath)) ||
     (await hasNamespaceSubpackagesInTree(absPath))
   );
 }
 
 async function isZipSafeModuleFile(absFilePath: string): Promise<boolean> {
-  return (
-    ALLOWED_SOURCE_EXTENSIONS.has(extname(absFilePath).toLowerCase()) &&
-    !(await hasZipUnsafePatternsInFile(absFilePath))
-  );
+  return ALLOWED_SOURCE_EXTENSIONS.has(extname(absFilePath).toLowerCase());
 }
 
 async function collectPurePythonTopLevelCandidates(
