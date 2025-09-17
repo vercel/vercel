@@ -3,7 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import { join } from 'path';
 import which from 'which';
-import { Meta, debug, getWriteableDirectory } from '@vercel/build-utils';
+import { Meta, debug } from '@vercel/build-utils';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -67,7 +67,27 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
-async function pipInstall(pipPath: string, workPath: string, args: string[]) {
+async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
+  const code =
+    `import sys, sysconfig; print(sysconfig.get_path('scripts', scheme=('nt_user' if sys.platform == 'win32' else 'posix_user')))`.replace(
+      /\n/g,
+      ' '
+    );
+  try {
+    const { stdout } = await execa(pythonPath, ['-c', code]);
+    return stdout.trim();
+  } catch (err) {
+    debug('Failed to resolve Python user scripts directory');
+    return null;
+  }
+}
+
+async function pipInstall(
+  pipPath: string,
+  pythonPath: string,
+  workPath: string,
+  args: string[]
+) {
   const target = resolveVendorDir();
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
@@ -77,9 +97,10 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   // distutils.errors.DistutilsOptionError: can't combine user with
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
-  // Prefer using `uv` if available; install it if missing.
-  const uvBin = await getUvBinary();
+  // Prefer using `uv` if available; install it via pip if missing.
+  const uvBin = await getUvBinary(pipPath, pythonPath);
   if (uvBin) {
+    console.log(`Using uv at "${uvBin}"`);
     const uvArgs = [
       'pip',
       'install',
@@ -90,7 +111,7 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
       ...args,
     ];
     const prettyUv = `${uvBin} ${uvArgs.join(' ')}`;
-    console.log(`Running "${prettyUv}"...`);
+    debug(`Running "${prettyUv}"...`);
     try {
       await execa(uvBin, uvArgs, {
         cwd: workPath,
@@ -100,6 +121,10 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
       // fall through to pip
     }
+  }
+
+  if (!uvBin) {
+    console.log('uv not available; using pip');
   }
 
   const cmdArgs = [
@@ -112,7 +137,7 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
     ...args,
   ];
   const pretty = `${pipPath} ${cmdArgs.join(' ')}`;
-  console.log(`Running "${pretty}"...`);
+  debug(`Running "${pretty}"...`);
   try {
     await execa(pipPath, cmdArgs, {
       cwd: workPath,
@@ -123,7 +148,10 @@ async function pipInstall(pipPath: string, workPath: string, args: string[]) {
   }
 }
 
-async function getUvBinary(): Promise<string | null> {
+async function getUvBinary(
+  pipPath: string,
+  pythonPath: string
+): Promise<string | null> {
   // If on PATH already, use it
   try {
     const found = which.sync('uv', { nothrow: true });
@@ -137,84 +165,51 @@ async function getUvBinary(): Promise<string | null> {
     await execa('uv', ['--version']);
     return 'uv';
   } catch (err) {
-    debug('uv command not runnable');
+    // no-op, we'll attempt pip install
   }
 
-  // Attempt to install into a temporary directory
+  // Pip install uv
   try {
-    const tmpRoot = await getWriteableDirectory();
-    const tmpBin = join(tmpRoot, 'uv-bin');
-    try {
-      await fs.promises.mkdir(tmpBin, { recursive: true });
-    } catch (err) {
-      debug('Failed to create tmp uv bin directory');
-    }
-
-    if (process.platform === 'win32') {
-      // Windows PowerShell installer
-      try {
-        console.log('Installing uv...');
-        await execa('powershell', [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-Command',
-          'iwr https://astral.sh/uv/install.ps1 -useb | iex',
-        ]);
-      } catch (err) {
-        debug('uv PowerShell install failed');
-      }
-      const candidates = [
-        join(
-          process.env.USERPROFILE || os.homedir(),
-          '.local',
-          'bin',
-          'uv.exe'
-        ),
-        join(
-          process.env.USERPROFILE || os.homedir(),
-          '.cargo',
-          'bin',
-          'uv.exe'
-        ),
-        join(tmpBin, 'uv.exe'),
-      ];
-      for (const p of candidates) {
-        if (fs.existsSync(p)) {
-          return p;
-        }
-      }
-      return null;
-    } else {
-      // POSIX installer with preferred custom path; fallback to default path
-      console.log('Installing uv...');
-      const installWithPath = `curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --path "${tmpBin}"`;
-      try {
-        await execa('sh', ['-c', installWithPath], { cwd: tmpBin });
-      } catch (err) {
-        debug('uv POSIX install with custom path failed');
-      }
-
-      const posixCandidates = [
-        join(tmpBin, 'uv'),
-        join(tmpBin, 'bin', 'uv'),
-        join(os.homedir(), '.local', 'bin', 'uv'),
-        '/usr/local/bin/uv',
-        '/opt/homebrew/bin/uv',
-      ];
-      for (const p of posixCandidates) {
-        if (fs.existsSync(p)) {
-          return p;
-        }
-      }
-      debug('uv binary not found in any candidate paths');
-
-      return null;
-    }
+    console.log('Installing uv...');
+    await execa(
+      pipPath,
+      [
+        'install',
+        '--disable-pip-version-check',
+        '--no-cache-dir',
+        '--user',
+        'uv',
+      ],
+      { env: { ...process.env, PIP_USER: '1' } }
+    );
   } catch (err) {
-    debug('uv installation attempt failed');
+    debug('pip install uv failed');
     return null;
   }
+
+  // Resolve uv location from Python's user scripts directory
+  try {
+    const scriptsDir = await getUserScriptsDir(pythonPath);
+    const uvName = process.platform === 'win32' ? 'uv.exe' : 'uv';
+    const candidates: string[] = [];
+    if (scriptsDir) {
+      candidates.push(join(scriptsDir, uvName));
+    }
+    // Common fallbacks
+    if (process.platform !== 'win32') {
+      candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
+      candidates.push('/usr/local/bin/uv');
+      candidates.push('/opt/homebrew/bin/uv');
+    }
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+  } catch (err) {
+    debug('Failed to locate uv after pip install');
+  }
+  return null;
 }
 
 interface InstallRequirementArg {
@@ -247,7 +242,7 @@ export async function installRequirement({
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, workPath, [exact, ...args]);
+  await pipInstall(pipPath, pythonPath, workPath, [exact, ...args]);
 }
 
 interface InstallRequirementsFileArg {
@@ -279,5 +274,10 @@ export async function installRequirementsFile({
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(pipPath, workPath, ['--upgrade', '-r', filePath, ...args]);
+  await pipInstall(pipPath, pythonPath, workPath, [
+    '--upgrade',
+    '-r',
+    filePath,
+    ...args,
+  ]);
 }
