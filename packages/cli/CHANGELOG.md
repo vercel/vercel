@@ -1,5 +1,17 @@
 # vercel
 
+## 48.0.3
+
+### Patch Changes
+
+- fix(cli): handle triggering re-auth with legacy token + flags ([#13955](https://github.com/vercel/vercel/pull/13955))
+
+  If the CLI was using a legacy token (ie, was signed in on a version previous to 48.0.0) and did not have a SAML authorization for a team resource, commands with flags unknown to vc login failed to initiate the SAML re-authentication flow as we were parsing all arguments. This change ensures that the user is prompted to log in again in such cases.
+
+- Updated dependencies [[`426aca07b47590a0f1b7631e92c8776d5f8d661d`](https://github.com/vercel/vercel/commit/426aca07b47590a0f1b7631e92c8776d5f8d661d)]:
+  - @vercel/hono@0.1.0
+  - @vercel/h3@0.1.0
+
 ## 48.0.2
 
 ### Patch Changes
