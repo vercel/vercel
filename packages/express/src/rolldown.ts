@@ -132,7 +132,9 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
   const nftResult = await nodeFileTrace([join(outputDir, handler)], {
-    base: outputDir,
+    // This didn't work as I expected it to, didn't find node_modules
+    // base: outputDir,
+    // processCwd: outputDir,
     ignore: args.config.excludeFiles,
   });
   for (const file of nftResult.fileList) {
