@@ -401,7 +401,7 @@ const main = async () => {
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
       try {
-        const result = await login(client);
+        const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
         if (result !== 0) return result;
       } catch (error) {

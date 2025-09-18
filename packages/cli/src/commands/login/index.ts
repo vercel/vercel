@@ -11,11 +11,13 @@ import { login as future } from './future';
 
 export default async function login(
   client: Client,
-  /**
-   * In addition to `vercel login`, this command is also called inline in some cases, to trigger
-   * re-authentication flows. In those cases, we don't want to parse the args.
-   */
-  shouldParseArgs = false
+  options: {
+    /**
+     * In addition to `vercel login`, this command is also called inline in some cases, to trigger
+     * re-authentication flows. In those cases, we don't want to parse the args.
+     */
+    shouldParseArgs: boolean;
+  }
 ): Promise<number> {
   let parsedArgs = null;
 
@@ -29,7 +31,7 @@ export default async function login(
 
   // Parse CLI args
   try {
-    if (shouldParseArgs) {
+    if (options.shouldParseArgs) {
       parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
     }
   } catch (error) {
@@ -48,7 +50,7 @@ export default async function login(
     return 2;
   }
 
-  if (shouldParseArgs && parsedArgs) {
+  if (options.shouldParseArgs && parsedArgs) {
     const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
       const flagKey = flag.replace('--', '');
       const option = loginCommand.options.find(o => o.name === flagKey);
