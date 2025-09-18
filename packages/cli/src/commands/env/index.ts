@@ -8,12 +8,14 @@ import add from './add';
 import ls from './ls';
 import pull from './pull';
 import rm from './rm';
+import update from './update';
 import {
   envCommand,
   addSubcommand,
   listSubcommand,
   pullSubcommand,
   removeSubcommand,
+  updateSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -25,6 +27,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   rm: getCommandAliases(removeSubcommand),
   pull: getCommandAliases(pullSubcommand),
+  update: getCommandAliases(updateSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -98,6 +101,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
       return pull(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('env', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(envCommand, { columns: client.stderr.columns }));
