@@ -157,13 +157,6 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   if (found) {
     return found;
   }
-  // If uv is installed via pip, use it
-  try {
-    await execa('uv', ['--version']);
-    return 'uv';
-  } catch (err) {
-    // no-op, we'll attempt pip install
-  }
 
   // Resolve uv location from Python's user scripts directory
   try {
