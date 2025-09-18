@@ -30,7 +30,7 @@
       "require": "./middleware.js"
     }
   },
-  "version": "2.2.13",
+  "version": "3.1.0",
   "repository": {
     "directory": "packages/functions",
     "type": "git",
@@ -65,7 +65,7 @@
     }
   },
   "engines": {
-    "node": ">= 18"
+    "node": ">= 20"
   },
   "scripts": {
     "pretest": "pnpm run build:code",

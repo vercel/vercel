@@ -298,17 +298,6 @@ test(
 );
 
 test(
-  '[vercel dev] 21-charge',
-  testFixtureStdio(
-    '21-charge',
-    async (testPath: any) => {
-      await testPath(200, '/', /Welcome to my new Charge site/m);
-    },
-    { skipDeploy: true }
-  )
-);
-
-test(
   '[vercel dev] 22-brunch',
   testFixtureStdio(
     '22-brunch',

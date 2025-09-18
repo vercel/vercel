@@ -102,7 +102,7 @@ const fixtures = {
   },
   '10-index-ts-no-tsconfig': {
     handler: ['index.js'],
-    moduleType: 'cjs',
+    moduleType: 'esm',
   },
   '11-index-ts-tsconfig-node': {
     handler: ['index.js'],
@@ -112,8 +112,16 @@ const fixtures = {
     handler: ['index.mjs'],
     moduleType: 'esm',
   },
+  '13-index-mts-no-tsconfig-node-no-module': {
+    handler: ['index.mjs'],
+    moduleType: 'esm',
+  },
   '13-app-js-no-module': {
     handler: ['app.js'],
+    moduleType: 'cjs',
+  },
+  '14-index-cts-no-tsconfig-node-module': {
+    handler: ['index.cjs'],
     moduleType: 'cjs',
   },
 };
@@ -175,6 +183,58 @@ describe('failing fixtures', () => {
       ).rejects.toThrowError();
     });
   }
+});
+
+describe('error messages', () => {
+  it('should error when no entrypoints exist', () => {
+    const workPath = join(
+      __dirname,
+      '../failing-fixtures',
+      '02-entrypoint-with-no-import'
+    );
+
+    const fileList = readDirectoryRecursively(workPath);
+
+    const files = createFiles(workPath, fileList);
+    expect(
+      build({
+        files,
+        workPath,
+        config,
+        meta,
+        // Entrypoint is just used as the BOA function name
+        entrypoint: 'this value is not used',
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrowError(
+      'No entrypoint found which imports hono. Found possible entrypoint: index.ts'
+    );
+  });
+
+  it('should error when no entrypoint imports framework package', () => {
+    const workPath = join(__dirname, '../failing-fixtures', '03-no-entrypoint');
+
+    const fileList = readDirectoryRecursively(workPath);
+
+    const files = createFiles(workPath, fileList);
+    expect(
+      build({
+        files,
+        workPath,
+        config,
+        meta,
+        // Entrypoint is just used as the BOA function name
+        entrypoint: 'this value is not used',
+        repoRootPath: workPath,
+      })
+    ).rejects.toThrowError(`No entrypoint found. Searched for:
+- app.{js,cjs,mjs,ts,cts,mts}
+- index.{js,cjs,mjs,ts,cts,mts}
+- server.{js,cjs,mjs,ts,cts,mts}
+- src/app.{js,cjs,mjs,ts,cts,mts}
+- src/index.{js,cjs,mjs,ts,cts,mts}
+- src/server.{js,cjs,mjs,ts,cts,mts}`);
+  });
 });
 
 async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {

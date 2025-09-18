@@ -1,5 +1,17 @@
 # @vercel/build-utils
 
+## 12.1.0
+
+### Minor Changes
+
+- Support turbo.jsonc ([#13792](https://github.com/vercel/vercel/pull/13792))
+
+## 12.0.0
+
+### Major Changes
+
+- Drop Node.js 18, bump minimum to Node.js 20 ([#13856](https://github.com/vercel/vercel/pull/13856))
+
 ## 11.0.2
 
 ### Patch Changes

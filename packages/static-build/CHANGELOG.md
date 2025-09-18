@@ -1,5 +1,25 @@
 # @vercel/static-build
 
+## 2.7.23
+
+### Patch Changes
+
+- Improve no output directory error message ([#13899](https://github.com/vercel/vercel/pull/13899))
+
+## 2.7.22
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.95
+
+## 2.7.21
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.94
+
 ## 2.7.20
 
 ### Patch Changes

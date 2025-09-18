@@ -1,5 +1,50 @@
 # @vercel/express
 
+## 0.0.16
+
+### Patch Changes
+
+- Add framework slug and version for Express and Hono builders to build output ([#13918](https://github.com/vercel/vercel/pull/13918))
+
+- Improve error message when entrypoints do not have necessary import ([#13919](https://github.com/vercel/vercel/pull/13919))
+
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`d39fd1e138b96509af6b8ebf9cc634f44d1ed38f`](https://github.com/vercel/vercel/commit/d39fd1e138b96509af6b8ebf9cc634f44d1ed38f)]:
+  - @vercel/node@5.3.22
+
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`db47f7031bacfe0d07e5a657788e1e74c134bf81`](https://github.com/vercel/vercel/commit/db47f7031bacfe0d07e5a657788e1e74c134bf81)]:
+  - @vercel/node@5.3.21
+
+## 0.0.13
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/node@5.3.20
+
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`fea94eea32f9df7c72d9ea95434d84c44f4ef082`](https://github.com/vercel/vercel/commit/fea94eea32f9df7c72d9ea95434d84c44f4ef082)]:
+  - @vercel/node@5.3.19
+
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.18
+
 ## 0.0.10
 
 ### Patch Changes

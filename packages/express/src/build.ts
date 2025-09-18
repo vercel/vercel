@@ -1,81 +1,198 @@
-import { Files, FileFsRef, type BuildV3 } from '@vercel/build-utils';
-// @ts-expect-error - FIXME: hono-framework build is not exported
+import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
+// @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
-import { sep } from 'path';
+import { createRequire } from 'module';
+import { join } from 'path';
 import fs from 'fs';
 
+const frameworkName = 'express';
 const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
 
-export const build: BuildV3 = async args => {
-  const entrypoint = findEntrypoint(args.files);
+const validFilenames = [
+  'app',
+  'index',
+  'server',
+  'src/app',
+  'src/index',
+  'src/server',
+];
 
+export const require_ = createRequire(__filename);
+
+const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
+
+const entrypointsForMessage = validFilenames
+  .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
+  .join('\n');
+
+export const build: BuildV3 = async args => {
   // Introducing new behavior for the node builder where Typescript errors always
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
-  return nodeBuild({
+
+  // Express's rendering engine support using the views directory as the entrypoint.
+  const includeFiles = ['views/**/*'];
+  const includeFilesFromConfig = args.config.includeFiles;
+  if (includeFilesFromConfig) {
+    includeFiles.push(...includeFilesFromConfig);
+  }
+
+  const res = await nodeBuild({
     ...args,
-    entrypoint,
+    config: {
+      ...args.config,
+      includeFiles,
+    },
+    // this is package.json, but we'll replace it with the return value of the entrypointCallback
+    // after install and build scripts have had a chance to run
+    entrypoint: 'package.json',
     considerBuildCommand: true,
-    entrypointCallback: (preparedFiles: Files | Record<string, FileFsRef>) => {
-      return findEntrypoint(preparedFiles);
+    entrypointCallback: async () => {
+      return entrypointCallback(args);
     },
   });
+  let version = undefined;
+  try {
+    const resolved = require_.resolve(`${frameworkName}/package.json`, {
+      paths: [args.workPath],
+    });
+    const expressVersion: string = require_(resolved).version;
+    if (expressVersion) {
+      version = expressVersion;
+    }
+  } catch (e) {
+    // ignore
+  }
+  res.output.framework = {
+    slug: frameworkName,
+    version,
+  };
+  return res;
 };
 
-export const findEntrypoint = (files: Files | Record<string, FileFsRef>) => {
-  const validFilenames = [
-    ['app'],
-    ['index'],
-    ['server'],
-    ['src', 'app'],
-    ['src', 'index'],
-    ['src', 'server'],
-  ];
+export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
+  const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
+  // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
+  const entrypointGlob = `{${validFilenames
+    .map(entrypoint => `${entrypoint}`)
+    .join(',')}}.{${validExtensions.join(',')}}`;
 
-  const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
-
-  const validEntrypoints = validFilenames.flatMap(filename =>
-    validExtensions.map(extension => `${filename.join(sep)}.${extension}`)
+  const dir = args.config.projectSettings?.outputDirectory?.replace(
+    /^\/+|\/+$/g,
+    ''
   );
+  // if an output directory is specified, look there first for an entrypoint
+  if (dir) {
+    const { entrypoint: entrypointFromOutputDir, entrypointsNotMatchingRegex } =
+      findEntrypoint(await glob(entrypointGlob, join(args.workPath, dir)));
+    if (entrypointFromOutputDir) {
+      return join(dir, entrypointFromOutputDir);
+    }
 
-  const entrypoints = validEntrypoints.filter(entrypoint => {
-    const matches = files[entrypoint] !== undefined;
-    if (matches) {
-      const file = files[entrypoint];
-      if (file.type === 'FileBlob') {
-        const content = file.data.toString();
-        const matchesContent = content.match(REGEX);
-        return matchesContent !== null;
-      }
-      if (file.type === 'FileFsRef') {
-        const content = fs.readFileSync(file.fsPath, 'utf-8');
-        const matchesContent = content.match(REGEX);
-        return matchesContent !== null;
-      }
-      if (file.type === 'FileRef') {
-        // we don't expect any of these since the Files is actuall FilesFsRef
-        // https://github.com/vercel/vercel/blob/2fb1eaf0bab62039881e1fb0fbcb64a674c47e6e/packages/cli/src/commands/build/index.ts#L510
-        // but return true here to be safe.
-        return true;
+    if (entrypointsNotMatchingRegex.length > 0) {
+      throw new Error(
+        `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+      );
+    }
+    throw new Error(
+      `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
+    );
+  }
+  const files = await glob(entrypointGlob, args.workPath);
+  const { entrypoint: entrypointFromRoot, entrypointsNotMatchingRegex } =
+    findEntrypoint(files);
+  if (entrypointFromRoot) {
+    return entrypointFromRoot;
+  }
+
+  if (mainPackageEntrypoint) {
+    const entrypointFromPackageJson = await glob(
+      mainPackageEntrypoint,
+      args.workPath
+    );
+    if (entrypointFromPackageJson[mainPackageEntrypoint]) {
+      if (checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])) {
+        return mainPackageEntrypoint;
       }
     }
-    return false;
+  }
+
+  if (entrypointsNotMatchingRegex.length > 0) {
+    throw new Error(
+      `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+    );
+  }
+  throw new Error(
+    `No entrypoint found. Searched for:\n${entrypointsForMessage}`
+  );
+};
+
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`;
+}
+
+export const findEntrypoint = (files: Record<string, FileFsRef>) => {
+  const allEntrypoints = validFilenames.flatMap(filename =>
+    validExtensions.map(extension => `${filename}.${extension}`)
+  );
+
+  const possibleEntrypointsInFiles = allEntrypoints.filter(entrypoint => {
+    return files[entrypoint] !== undefined;
   });
 
-  const entrypoint = entrypoints[0];
-  if (entrypoints.length > 1) {
+  const entrypointsMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
+      const file = files[entrypoint];
+      return checkMatchesRegex(file);
+    }
+  );
+
+  const entrypointsNotMatchingRegex = possibleEntrypointsInFiles.filter(
+    entrypoint => {
+      const file = files[entrypoint];
+      return !checkMatchesRegex(file);
+    }
+  );
+
+  const entrypoint = entrypointsMatchingRegex[0];
+  if (entrypointsMatchingRegex.length > 1) {
     console.warn(
-      `Multiple entrypoints found: ${entrypoints.join(', ')}. Using ${entrypoint}.`
+      `Multiple entrypoints found: ${entrypointsMatchingRegex.join(', ')}. Using ${entrypoint}.`
     );
   }
 
-  if (!entrypoint) {
-    const entrypointsForMessage = validFilenames
-      .map(filename => `- ${filename.join(sep)}.{${validExtensions.join(',')}}`)
-      .join('\n');
-    throw new Error(
-      `No valid entrypoint found. Valid entrypoints are:\n${entrypointsForMessage}`
-    );
+  return {
+    entrypoint,
+    entrypointsNotMatchingRegex,
+  };
+};
+
+const checkMatchesRegex = (file: FileFsRef) => {
+  const content = fs.readFileSync(file.fsPath, 'utf-8');
+  const matchesContent = content.match(REGEX);
+  return matchesContent !== null;
+};
+
+const findMainPackageEntrypoint = (
+  files: Files | Record<string, FileFsRef>
+) => {
+  const packageJson = files['package.json'];
+  if (packageJson) {
+    if (packageJson.type === 'FileFsRef') {
+      const packageJsonContent = fs.readFileSync(packageJson.fsPath, 'utf-8');
+      let packageJsonJson: object;
+      try {
+        packageJsonJson = JSON.parse(packageJsonContent);
+      } catch (_e) {
+        packageJsonJson = {};
+      }
+      if (
+        'main' in packageJsonJson &&
+        typeof packageJsonJson.main === 'string'
+      ) {
+        return packageJsonJson.main;
+      }
+    }
   }
-  return entrypoint;
+  return null;
 };

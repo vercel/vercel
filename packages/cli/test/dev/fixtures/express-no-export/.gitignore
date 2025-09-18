@@ -28,3 +28,5 @@ lerna-debug.log*
 .DS_Store
 .vercel/*
 !.vercel/project.json
+
+!public

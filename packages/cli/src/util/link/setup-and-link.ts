@@ -4,6 +4,7 @@ import { join, basename } from 'path';
 import type {
   ProjectLinkResult,
   ProjectSettings,
+  Org,
 } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -15,6 +16,11 @@ import {
 import createProject from '../projects/create-project';
 import type Client from '../client';
 import { printError } from '../error';
+import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import {
+  selectAndParseRemoteUrl,
+  checkExistsAndConnect,
+} from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../config/global-path';
@@ -240,6 +246,8 @@ export default async function setupAndLink(
       successEmoji
     );
 
+    await connectGitRepository(client, path, project, autoConfirm, org);
+
     return { status: 'linked', org, project };
   } catch (err) {
     if (isAPIError(err) && err.code === 'too_many_projects') {
@@ -249,5 +257,57 @@ export default async function setupAndLink(
     printError(err);
 
     return { status: 'error', exitCode: 1 };
+  }
+}
+
+export async function connectGitRepository(
+  client: Client,
+  path: string,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  try {
+    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+
+    if (!gitConfig) {
+      return;
+    }
+
+    const remoteUrls = pluckRemoteUrls(gitConfig);
+    if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
+      return;
+    }
+
+    const shouldConnect =
+      autoConfirm ||
+      (await client.input.confirm(
+        `Detected a repository. Connect it to this project?`,
+        true
+      ));
+
+    if (!shouldConnect) {
+      return;
+    }
+
+    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
+    if (!repoInfo) {
+      return;
+    }
+
+    await checkExistsAndConnect({
+      client,
+      confirm: autoConfirm,
+      gitProviderLink: project.link,
+      org,
+      gitOrg: repoInfo.org,
+      project: project as any, // Type assertion since we only need the id
+      provider: repoInfo.provider,
+      repo: repoInfo.repo,
+      repoPath: `${repoInfo.org}/${repoInfo.repo}`,
+    });
+  } catch (error) {
+    // Silently ignore git connection errors to not disrupt the main flow
+    output.debug(`Failed to connect git repository: ${error}`);
   }
 }

@@ -1819,6 +1819,7 @@ export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1888,6 +1889,7 @@ export async function getPageLambdaGroups({
       memory?: number;
       maxDuration?: number;
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
+      supportsCancellation?: boolean;
     } = {};
 
     if (
@@ -1916,8 +1918,12 @@ export async function getPageLambdaGroups({
       opts = { ...vercelConfigOpts, ...opts };
     }
 
-    const isGeneratedSteps = routeName.includes('api/generated/steps');
-    const isGeneratedWorkflows = routeName.includes('api/generated/workflows');
+    const isGeneratedSteps =
+      routeName.includes('.well-known/workflow/v1/step') ||
+      routeName.includes('api/generated/steps');
+    const isGeneratedWorkflows =
+      routeName.includes('.well-known/workflow/v1/flow') ||
+      routeName.includes('api/generated/workflows');
 
     if (isGeneratedSteps || isGeneratedWorkflows) {
       const sourceFile = await getSourceFilePathFromPage({
@@ -1957,7 +1963,8 @@ export async function getPageLambdaGroups({
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
-              JSON.stringify(opts.experimentalTriggers);
+              JSON.stringify(opts.experimentalTriggers) &&
+            group.supportsCancellation === opts.supportsCancellation;
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -1997,6 +2004,7 @@ export async function getPageLambdaGroups({
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         experimentalTriggers: opts.experimentalTriggers,
+        supportsCancellation: opts.supportsCancellation,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
