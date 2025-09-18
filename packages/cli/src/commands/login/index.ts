@@ -11,8 +11,13 @@ import { login as future } from './future';
 
 export default async function login(
   client: Client,
-  /** Lets skip obsolete option warnings unless called via `vercel login`. */
-  shouldWarnObsoleteOptions = false
+  options: {
+    /**
+     * In addition to `vercel login`, this command is also called inline in some cases, to trigger
+     * re-authentication flows. In those cases, we don't want to parse the args.
+     */
+    shouldParseArgs: boolean;
+  }
 ): Promise<number> {
   let parsedArgs = null;
 
@@ -26,24 +31,26 @@ export default async function login(
 
   // Parse CLI args
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    if (options.shouldParseArgs) {
+      parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    }
   } catch (error) {
     printError(error);
     return 1;
   }
 
-  if (parsedArgs.flags['--help']) {
+  if (parsedArgs?.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 0;
   }
 
-  if (parsedArgs.flags['--token']) {
+  if (parsedArgs?.flags['--token']) {
     output.error('`--token` may not be used with the "login" command');
     return 2;
   }
 
-  if (shouldWarnObsoleteOptions) {
+  if (options.shouldParseArgs && parsedArgs) {
     const obsoleteFlags = Object.keys(parsedArgs.flags).filter(flag => {
       const flagKey = flag.replace('--', '');
       const option = loginCommand.options.find(o => o.name === flagKey);

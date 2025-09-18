@@ -19,7 +19,7 @@ export default async function prompt(
     return await doSamlLogin(client, slug, ssoUserId);
   }
 
-  return await login(client);
+  return await login(client, { shouldParseArgs: false });
 }
 
 async function readInput(client: Client, message: string): Promise<string> {
