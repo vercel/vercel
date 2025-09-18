@@ -1660,6 +1660,9 @@ importers:
       '@vercel/build-utils':
         specifier: 12.1.0
         version: link:../build-utils
+      async-sema:
+        specifier: 3.0.1
+        version: 3.0.1
       cross-env:
         specifier: 7.0.3
         version: 7.0.3

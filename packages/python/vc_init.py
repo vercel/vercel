@@ -34,17 +34,9 @@ if os.path.isdir(_vendor):
 
     importlib.invalidate_caches()
 
-    # Add zipped pure-Python vendor dir, if present
-    _vendor_py_zip = os.path.join(_vendor, '_vendor-py.zip')
-    if os.path.isfile(_vendor_py_zip):
-        try:
-            while _vendor_py_zip in sys.path:
-                sys.path.remove(_vendor_py_zip)
-        except ValueError:
-            pass
-        _idx_zip = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
-        sys.path.insert(_idx_zip, _vendor_py_zip)
-        importlib.invalidate_caches()
+    # Do not add `_vendor-py.zip` to sys.path. The package_loader will lazily
+    # extract pure-Python packages to a temp directory and import from there,
+    # ensuring sidecar files (e.g., .pyi) can be accessed via real file paths.
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute

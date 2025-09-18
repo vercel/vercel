@@ -5,6 +5,7 @@ import { debug } from '@vercel/build-utils';
 
 export const VENDOR_PY_ZIP = '_vendor-py.zip';
 export const VENDOR_PY_DIR = '_vendor-py';
+export const VENDOR_NATIVE_ZIP = '_vendor-native.zip';
 const ALLOWED_SOURCE_EXTENSIONS = new Set(['.py', '.pyi']);
 const NON_ZIP_SAFE_EXTENSIONS = new Set([
   '.so',
@@ -89,69 +90,6 @@ async function zipAddTree(
   return false;
 }
 
-// Returns true if the given file or directory tree contains any zip-unsafe files
-// (binaries, cert/key files, etc.).
-// Symlinks are treated as zip-unsafe
-async function treeHasZipUnsafeFiles(absPath: string): Promise<boolean> {
-  try {
-    const stat = await fs.promises.lstat(absPath);
-    if (stat.isSymbolicLink()) return true;
-    if (stat.isFile()) {
-      return NON_ZIP_SAFE_EXTENSIONS.has(extname(absPath).toLowerCase());
-    }
-    if (!stat.isDirectory()) return true;
-
-    const entries = await fs.promises.readdir(absPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name === '__pycache__') continue;
-      if (entry.isDirectory()) {
-        if (await treeHasZipUnsafeFiles(join(absPath, entry.name))) return true;
-      } else if (entry.isFile()) {
-        if (NON_ZIP_SAFE_EXTENSIONS.has(extname(entry.name).toLowerCase()))
-          return true;
-      } else {
-        return true;
-      }
-    }
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-// Returns true if any directory in the tree contains Python source files but lacks a
-// top-level __init__.py file, which can be problematic to import from within a zip.
-async function hasNamespaceSubpackagesInTree(
-  dirAbsPath: string,
-  depth = 0
-): Promise<boolean> {
-  const entries = await fs.promises.readdir(dirAbsPath, {
-    withFileTypes: true,
-  });
-  let hasPy = false;
-  let hasInit = false;
-
-  for (const entry of entries) {
-    if (entry.name === '__pycache__') continue;
-    if (entry.isFile()) {
-      const ext = extname(entry.name).toLowerCase();
-      if (entry.name === '__init__.py') hasInit = true;
-      if (ext === '.py' || ext === '.pyi') hasPy = true;
-    }
-  }
-  // Allow missing __init__.py at the root (namespace package), but require it for subdirectories
-  if (depth > 0 && hasPy && !hasInit) return true;
-
-  for (const entry of entries) {
-    if (entry.name === '__pycache__') continue;
-    if (entry.isDirectory()) {
-      const abs = join(dirAbsPath, entry.name);
-      if (await hasNamespaceSubpackagesInTree(abs, depth + 1)) return true;
-    }
-  }
-  return false;
-}
-
 // Returns true if the directory tree contains at least one Python source file
 async function dirHasPythonSourceInTree(dirAbsPath: string): Promise<boolean> {
   const entries = await fs.promises.readdir(dirAbsPath, {
@@ -170,15 +108,22 @@ async function dirHasPythonSourceInTree(dirAbsPath: string): Promise<boolean> {
   return false;
 }
 
-async function isZipSafePackageDir(absPath: string): Promise<boolean> {
-  return !(
-    (await treeHasZipUnsafeFiles(absPath)) ||
-    (await hasNamespaceSubpackagesInTree(absPath))
-  );
-}
-
-async function isZipSafeModuleFile(absFilePath: string): Promise<boolean> {
-  return ALLOWED_SOURCE_EXTENSIONS.has(extname(absFilePath).toLowerCase());
+// Returns true if the directory tree contains at least one compiled/binary file
+async function dirHasBinaryInTree(dirAbsPath: string): Promise<boolean> {
+  const entries = await fs.promises.readdir(dirAbsPath, {
+    withFileTypes: true,
+  });
+  for (const entry of entries) {
+    if (entry.name === '__pycache__') continue;
+    const abs = join(dirAbsPath, entry.name);
+    if (entry.isFile()) {
+      const ext = extname(entry.name).toLowerCase();
+      if (NON_ZIP_SAFE_EXTENSIONS.has(ext)) return true;
+    } else if (entry.isDirectory()) {
+      if (await dirHasBinaryInTree(abs)) return true;
+    }
+  }
+  return false;
 }
 
 async function collectPurePythonTopLevelCandidates(
@@ -200,6 +145,7 @@ async function collectPurePythonTopLevelCandidates(
     if (
       name === VENDOR_PY_ZIP ||
       name === VENDOR_PY_DIR ||
+      name === VENDOR_NATIVE_ZIP ||
       name === '__pycache__' ||
       name.endsWith('.dist-info') ||
       name.endsWith('.data') ||
@@ -211,19 +157,15 @@ async function collectPurePythonTopLevelCandidates(
     const relEntryPath = name;
     const absEntryPath = join(vendorAbs, relEntryPath);
     if (entry.isDirectory()) {
-      // Allow namespace packages at the root, but ensure the tree actually contains Python source
-      if (!(await dirHasPythonSourceInTree(absEntryPath))) {
-        continue;
-      }
-      if (await isZipSafePackageDir(absEntryPath)) {
+      // Include package directories that contain Python source, but exclude those with binary artifacts
+      const hasPy = await dirHasPythonSourceInTree(absEntryPath);
+      const hasBin = await dirHasBinaryInTree(absEntryPath);
+      if (hasPy && !hasBin) {
         candidates.push(relEntryPath);
       }
     } else if (entry.isFile()) {
       const ext = extname(name).toLowerCase();
-      if (
-        ALLOWED_SOURCE_EXTENSIONS.has(ext) &&
-        (await isZipSafeModuleFile(absEntryPath))
-      ) {
+      if (ALLOWED_SOURCE_EXTENSIONS.has(ext)) {
         candidates.push(relEntryPath);
       }
     }
@@ -232,13 +174,68 @@ async function collectPurePythonTopLevelCandidates(
   return candidates;
 }
 
+async function collectNativeTopLevelCandidates(
+  vendorAbs: string
+): Promise<string[]> {
+  let entries: fs.Dirent[] = [];
+  try {
+    entries = await fs.promises.readdir(vendorAbs, { withFileTypes: true });
+  } catch (err) {
+    debug('Failed to read vendor directory for zipping (native)');
+    return [];
+  }
+
+  const candidatesSet = new Set<string>();
+  for (const entry of entries) {
+    const name = entry.name;
+    if (
+      name === VENDOR_PY_ZIP ||
+      name === VENDOR_PY_DIR ||
+      name === VENDOR_NATIVE_ZIP ||
+      name === '__pycache__'
+    ) {
+      continue;
+    }
+    const relEntryPath = name;
+    const absEntryPath = join(vendorAbs, relEntryPath);
+    if (entry.isDirectory()) {
+      // Include any directory that contains binary artifacts
+      try {
+        if (await dirHasBinaryInTree(absEntryPath)) {
+          candidatesSet.add(relEntryPath);
+        }
+      } catch (err: any) {
+        debug(
+          `Failed to scan directory for native binaries during zipping: ${relEntryPath} (${err?.message || 'unknown error'})`
+        );
+      }
+      // Include metadata and native-support directories
+      if (
+        name.endsWith('.dist-info') ||
+        name.endsWith('.data') ||
+        name.endsWith('.libs')
+      ) {
+        candidatesSet.add(relEntryPath);
+      }
+    } else if (entry.isFile()) {
+      const ext = extname(name).toLowerCase();
+      if (NON_ZIP_SAFE_EXTENSIONS.has(ext) || name.endsWith('.pth')) {
+        candidatesSet.add(relEntryPath);
+      }
+    }
+  }
+
+  // Also include any top-level "<pkg>.libs" directories that might have been missed (already handled above)
+  return Array.from(candidatesSet);
+}
+
 export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
   const candidates = await collectPurePythonTopLevelCandidates(
     vendorDirAbsolutePath
   );
 
   if (candidates.length === 0) {
-    debug('No pure-Python packages found to zip');
+    debug('No vendor packages found to zip');
     return;
   }
 
@@ -255,7 +252,7 @@ export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
     if (err && err.code !== 'ENOENT') throw err;
   }
 
-  debug(`Creating vendor pure-Python zip with ${candidates.length} entries...`);
+  debug(`Creating vendor package zip with ${candidates.length} entries...`);
 
   // First pass: zip all candidates to temp file
   const writeZip = async (entries: string[], destPath: string) => {
@@ -317,4 +314,89 @@ export async function zipPurePythonPackages(vendorDirAbsolutePath: string) {
   }
 
   debug(`Created ${VENDOR_PY_ZIP}`);
+}
+
+export async function zipNativePackages(vendorDirAbsolutePath: string) {
+  const candidates = await collectNativeTopLevelCandidates(
+    vendorDirAbsolutePath
+  );
+
+  if (candidates.length === 0) {
+    debug('No native vendor packages found to zip');
+    return;
+  }
+
+  const zipPath = join(vendorDirAbsolutePath, VENDOR_NATIVE_ZIP);
+  const zipTempPath = `${zipPath}.tmp`;
+  try {
+    await fs.promises.unlink(zipTempPath);
+  } catch (err: any) {
+    if (err && err.code !== 'ENOENT') throw err;
+  }
+  try {
+    await fs.promises.unlink(zipPath);
+  } catch (err: any) {
+    if (err && err.code !== 'ENOENT') throw err;
+  }
+
+  debug(
+    `Creating native vendor package zip with ${candidates.length} entries...`
+  );
+
+  const writeZip = async (entries: string[], destPath: string) => {
+    const zip = new ZipFile();
+    const out = fs.createWriteStream(destPath);
+    const done = new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const settleOnce = (fn: (arg?: any) => void) => (arg?: any) => {
+        if (settled) return;
+        settled = true;
+        fn(arg);
+      };
+      out.on('close', settleOnce(resolve));
+      out.on('error', settleOnce(reject));
+      zip.outputStream.on('error', settleOnce(reject));
+    });
+    zip.outputStream.pipe(out);
+    for (const relativeEntryPath of entries) {
+      await zipAddTree(zip, vendorDirAbsolutePath, relativeEntryPath);
+    }
+    zip.end();
+    await done;
+  };
+
+  try {
+    await writeZip(candidates, zipTempPath);
+  } catch (err: any) {
+    debug(
+      `Failed to create vendor native zip: ${err?.message || 'unknown error'}`
+    );
+    try {
+      await fs.promises.unlink(zipTempPath);
+    } catch (unlinkErr: any) {
+      if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+        debug('Failed to remove temp vendor native zip after write failure');
+      }
+    }
+    return;
+  }
+
+  try {
+    await fs.promises.rename(zipTempPath, zipPath);
+  } catch (err) {
+    debug('Failed to finalize vendor native zip; keeping originals in place');
+    try {
+      await fs.promises.unlink(zipTempPath);
+    } catch (unlinkErr) {
+      debug('Failed to remove temp vendor native zip after failed rename');
+    }
+    return;
+  }
+
+  for (const relativeEntryPath of candidates) {
+    const abs = join(vendorDirAbsolutePath, relativeEntryPath);
+    await fs.promises.rm(abs, { recursive: true, force: true });
+  }
+
+  debug(`Created ${VENDOR_NATIVE_ZIP}`);
 }

@@ -9,7 +9,61 @@ from pathlib import Path
 import shutil
 import site
 import tempfile
-from typing import Optional, Set
+from typing import Optional, Set, List
+import ctypes
+
+
+def ensure_ld_library_path(lib_dirs):
+    try:
+        import sys as _sys
+        import os as _os
+    except Exception:
+        return
+    if not _sys.platform.startswith("linux"):
+        return
+    if not lib_dirs:
+        return
+    existing = _os.environ.get("LD_LIBRARY_PATH", "")
+    parts = [p for p in existing.split(":") if p]
+    changed = False
+    for d in lib_dirs:
+        if d and d not in parts:
+            parts.insert(0, d)
+            changed = True
+    if changed:
+        _os.environ["LD_LIBRARY_PATH"] = ":".join(parts)
+
+
+def preload_shared_libraries(lib_dirs):
+    try:
+        _is_linux = sys.platform.startswith("linux")
+    except Exception:
+        _is_linux = False
+    if not _is_linux:
+        return
+    original_flags = None
+    try:
+        original_flags = sys.getdlopenflags()
+        sys.setdlopenflags(original_flags | getattr(ctypes, "RTLD_GLOBAL", 0))
+    except Exception:
+        original_flags = None
+    for d in lib_dirs or []:
+        try:
+            p = Path(d)
+            if not p.is_dir():
+                continue
+            for so in sorted(p.glob("*.so*")):
+                try:
+                    ctypes.CDLL(str(so), mode=getattr(ctypes, "RTLD_GLOBAL", None))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    if original_flags is not None:
+        try:
+            sys.setdlopenflags(original_flags)
+        except Exception:
+            pass
 
 
 class PackageLazyLoader(importlib.abc.MetaPathFinder):
@@ -31,6 +85,7 @@ class PackageLazyLoader(importlib.abc.MetaPathFinder):
         self._top_level_packages: Set[str] = set()
         self._top_level_modules: Set[str] = set()
         self._extracted: Set[str] = set()
+        self._lib_dirs_added: Set[str] = set()
 
     def _ensure_index(self) -> None:
         if self._indexed:
@@ -102,7 +157,102 @@ class PackageLazyLoader(importlib.abc.MetaPathFinder):
                         shutil.copyfileobj(src, dst)
                 # else: not present in zip; nothing to extract
 
+                # Additionally extract native dependency directories commonly used by manylinux wheels,
+                # such as "<pkg>.libs/" at the site-packages root, or "<pkg>/.libs/" inside the package.
+                # This is required for packages like numpy, scipy, pyarrow, pandas, etc.
+                # Be permissive for variants like "sklearn-cp39.libs/" but do NOT extract arbitrary dot-directories.
+                names = zf.namelist()
+                lib_prefixes = set()
+                # In-package pattern
+                lib_prefixes.add(f"{top}/.libs/")
+                # Root-level patterns like "<top>.libs/" or "<top>-something.libs/"
+                for entry in names:
+                    # Only consider top-level directories of the form "name/"
+                    if not entry.endswith("/"):
+                        continue
+                    if entry.count("/") != 1:
+                        continue
+                    base = entry[:-1]
+                    if base.endswith(".libs"):
+                        lib_prefixes.add(entry)
+
+                # Track absolute lib directories we extract to add into LD_LIBRARY_PATH
+                extracted_lib_dirs = []
+                for lib_prefix in lib_prefixes:
+                    if any(n.startswith(lib_prefix) for n in names):
+                        for member in names:
+                            if not member.startswith(lib_prefix):
+                                continue
+                            if member.endswith("/"):
+                                (self.extract_root / member).mkdir(parents=True, exist_ok=True)
+                                continue
+                            # Do not skip binary files; copy as-is
+                            target_path = self.extract_root / member
+                            target_path.parent.mkdir(parents=True, exist_ok=True)
+                            with zf.open(member) as src, open(target_path, "wb") as dst:
+                                shutil.copyfileobj(src, dst)
+                        # Record the extracted lib directory absolute path
+                        extracted_lib_dirs.append(str(self.extract_root / lib_prefix))
+
             self._extracted.add(top)
+
+            # Ensure the dynamic linker can find vendored shared libs (Linux)
+            ensure_ld_library_path(extracted_lib_dirs)
+            # And proactively preload them so C-extensions can resolve symbols
+            preload_shared_libraries(extracted_lib_dirs)
+
+    def _pre_extract_lib_dirs(self) -> None:
+        # Extract all top-level "*.libs/" and any "*/.libs/" directories in advance
+        # so that dependent native libraries are present before any extension loads.
+        if not self.vendor_zip_path.exists():
+            return
+        self.extract_root.mkdir(parents=True, exist_ok=True)
+        try:
+            with zipfile.ZipFile(self.vendor_zip_path, "r") as zf:
+                names = zf.namelist()
+                prefixes = set()
+                for entry in names:
+                    if not entry.endswith("/"):
+                        continue
+                    # Top-level *.libs/
+                    if entry.count("/") == 1 and entry[:-1].endswith(".libs"):
+                        prefixes.add(entry)
+                    # Any in-package .libs/ directory
+                    if "/.libs/" in entry:
+                        # Normalize to the path up to and including ".libs/"
+                        idx = entry.find("/.libs/")
+                        prefixes.add(entry[: idx + len("/.libs/")])
+
+                extracted_dirs = []
+                for prefix in prefixes:
+                    for member in names:
+                        if not member.startswith(prefix):
+                            continue
+                        if member.endswith("/"):
+                            (self.extract_root / member).mkdir(parents=True, exist_ok=True)
+                            continue
+                        target_path = self.extract_root / member
+                        target_path.parent.mkdir(parents=True, exist_ok=True)
+                        with zf.open(member) as src, open(target_path, "wb") as dst:
+                            shutil.copyfileobj(src, dst)
+                    extracted_dirs.append(str(self.extract_root / prefix))
+        except Exception:
+            return
+        # Add to LD_LIBRARY_PATH for early availability
+        ensure_ld_library_path(extracted_dirs)
+        # Also proactively dlopen the shared libraries so the dynamic linker can
+        # resolve DT_NEEDED deps for extension modules imported later.
+        preload_shared_libraries(extracted_dirs)
+
+    def _ensure_ld_library_path(self, lib_dirs):
+        # Backward-compatible wrapper
+        ensure_ld_library_path([d for d in lib_dirs if d not in self._lib_dirs_added])
+        for d in lib_dirs:
+            self._lib_dirs_added.add(d)
+
+    def _preload_shared_libraries(self, lib_dirs):
+        # Backward-compatible wrapper
+        preload_shared_libraries(lib_dirs)
 
     def find_spec(self, fullname: str, path: Optional[object], target: Optional[object] = None):  # type: ignore[override]
         # Only react on top-level package/module
@@ -141,6 +291,7 @@ def enable(vendor_root: Path | str) -> None:
 
     vendor_root = Path(vendor_root) if isinstance(vendor_root, str) else vendor_root
     vendor_zip = vendor_root / "_vendor-py.zip"
+    native_zip = vendor_root / "_vendor-native.zip"
 
     # Ensure vendor_root is available on sys.path for metadata (dist-info) and any native-extension packages
     vendor_root_str = str(vendor_root)
@@ -153,11 +304,53 @@ def enable(vendor_root: Path | str) -> None:
         sys.path.insert(idx, vendor_root_str)
         site.addsitedir(vendor_root_str)
 
+    # Pre-extract native zip if present so native extensions and their libs are available early
+    if native_zip.exists():
+        extract_root = Path(tempfile.gettempdir()) / "vendor-lazy-loader" / "python"
+        extract_root.mkdir(parents=True, exist_ok=True)
+        extracted_lib_dirs: List[str] = []
+        try:
+            with zipfile.ZipFile(native_zip, "r") as zf:
+                names = zf.namelist()
+                lib_dir_prefixes = set()
+                for name in names:
+                    if name.endswith("/"):
+                        # Track any *.libs/ directories for linker config
+                        if name.count("/") == 1 and name[:-1].endswith(".libs"):
+                            lib_dir_prefixes.add(name)
+                        if "/.libs/" in name:
+                            idx = name.find("/.libs/")
+                            lib_dir_prefixes.add(name[: idx + len("/.libs/")])
+                        (extract_root / name).mkdir(parents=True, exist_ok=True)
+                        continue
+                    # Skip caches and compiled pyc
+                    if "/__pycache__/" in name or name.endswith((".pyc", ".pyo")):
+                        continue
+                    target_path = extract_root / name
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    with zf.open(name) as src, open(target_path, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                for prefix in lib_dir_prefixes:
+                    extracted_lib_dirs.append(str(extract_root / prefix))
+        except Exception:
+            # Best-effort; if extraction fails, continue without native zip
+            pass
+        # Make sure these lib directories are available to the dynamic linker
+        ensure_ld_library_path(extracted_lib_dirs)
+        preload_shared_libraries(extracted_lib_dirs)
+        # Ensure extracted path is importable
+        temp_path = str(extract_root)
+        if temp_path not in sys.path:
+            sys.path.insert(0, temp_path)
+            sys.path_importer_cache.pop(temp_path, None)
+
     if not vendor_zip.exists():
-        # Nothing to lazily load; fall back to normal imports.
+        # No pure-Python zip; nothing to lazily load.
         return
 
     _finder = PackageLazyLoader(vendor_zip)
+    # Pre-extract all *.libs directories so the dynamic linker can resolve DT_NEEDED before imports
+    _finder._pre_extract_lib_dirs()
     sys.meta_path.insert(0, _finder)
 
 
