@@ -1,5 +1,6 @@
-import { FileBlob, walkParentDirs } from '@vercel/build-utils';
+import { FileBlob, FileFsRef, walkParentDirs } from '@vercel/build-utils';
 import { BuildV2, Files } from '@vercel/build-utils/dist/types';
+import { nodeFileTrace } from '@vercel/nft';
 import { existsSync, lstatSync, readFileSync } from 'fs';
 import { extname, join, relative } from 'path';
 import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
@@ -7,7 +8,7 @@ import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
 export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   const baseDir = args.repoRootPath || args.workPath;
   const entrypointPath = join(args.workPath, args.entrypoint);
-  const preparedFiles: Files = {};
+  const files: Files = {};
   const shouldAddSourcemapSupport = false;
 
   const extension = extname(args.entrypoint);
@@ -53,7 +54,7 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     for (const dependency of Object.keys(pkg.optionalDependencies || {})) {
       external.push(dependency);
     }
-    preparedFiles[relPath] = new FileBlob({ data: source, mode });
+    files[relPath] = new FileBlob({ data: source, mode });
   }
 
   const absoluteImportPlugin: RolldownPlugin = {
@@ -75,13 +76,13 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     });
   }
 
-  const outputDir = join(
-    baseDir,
+  const relativeOutputDir = join(
     '.vercel',
     'output',
     'functions',
     'index.func'
   );
+  const outputDir = join(baseDir, relativeOutputDir);
   let handler: string | null = null;
   // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
   await rolldownBuild({
@@ -130,8 +131,18 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   if (typeof handler !== 'string') {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
+  const nftResult = await nodeFileTrace([join(outputDir, handler)], {
+    base: outputDir,
+    ignore: args.config.excludeFiles,
+  });
+  for (const file of nftResult.fileList) {
+    if (file.startsWith(relativeOutputDir)) {
+      continue;
+    }
+    files[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
+  }
   return {
-    files: preparedFiles,
+    files,
     shouldAddSourcemapSupport,
     handler,
     outputDir,

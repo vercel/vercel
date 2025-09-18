@@ -16,7 +16,7 @@ export const build: BuildV2 = async args => {
   const { routes } = await introspectApp(args, rolldownResult);
 
   const lambda = new Lambda({
-    runtime: 'nodejs',
+    runtime: downloadResult.nodeVersion.runtime,
     ...rolldownResult,
   });
 

@@ -201,7 +201,8 @@ const convertExpressRoute = (
   };
 
   // Convert Express params (:id) to Vercel params ([id])
-  const dest = processTokens(tokens);
+  // const dest = processTokens(tokens);
+  const dest = route;
   if (dest === '/') {
     return;
   }
