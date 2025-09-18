@@ -721,6 +721,30 @@ function checkUnusedFunctions(
       }
     }
   }
+  if (
+    frontendBuilder &&
+    (isOfficialRuntime('express', frontendBuilder.use) ||
+      isOfficialRuntime('hono', frontendBuilder.use))
+  ) {
+    // Copied from builder entrypoint detection
+    const validFilenames = [
+      'app',
+      'index',
+      'server',
+      'src/app',
+      'src/index',
+      'src/server',
+    ];
+    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
+    const validEntrypoints = validFilenames.flatMap(filename =>
+      validExtensions.map(extension => `${filename}.${extension}`)
+    );
+    for (const fnKey of unusedFunctions.values()) {
+      if (validEntrypoints.includes(fnKey)) {
+        unusedFunctions.delete(fnKey);
+      }
+    }
+  }
 
   if (unusedFunctions.size) {
     const [fnKey] = Array.from(unusedFunctions);
