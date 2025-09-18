@@ -97,10 +97,17 @@ async function pipInstall(
   // distutils.errors.DistutilsOptionError: can't combine user with
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
-  // Prefer using `uv` if available; install it via pip if missing.
-  const uvBin = await getUvBinary(pipPath, pythonPath);
+
+  let uvBin: string | null = null;
+
+  try {
+    uvBin = await getUvBinaryOrInstall(pipPath, pythonPath);
+  } catch (err) {
+    console.log('Failed to install uv, falling back to pip');
+    // fall through to pip
+  }
+
   if (uvBin) {
-    console.log(`Using uv at "${uvBin}"`);
     const uvArgs = [
       'pip',
       'install',
@@ -113,7 +120,7 @@ async function pipInstall(
     const prettyUv = `${uvBin} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
     try {
-      await execa(uvBin, uvArgs, {
+      await execa(uvBin!, uvArgs, {
         cwd: workPath,
       });
       return;
@@ -121,10 +128,6 @@ async function pipInstall(
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
       // fall through to pip
     }
-  }
-
-  if (!uvBin) {
-    console.log('uv not available; using pip');
   }
 
   const cmdArgs = [
@@ -148,43 +151,18 @@ async function pipInstall(
   }
 }
 
-async function getUvBinary(
-  pipPath: string,
-  pythonPath: string
-): Promise<string | null> {
+async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   // If on PATH already, use it
-  try {
-    const found = which.sync('uv', { nothrow: true });
-    if (found) {
-      return found;
-    }
-  } catch (err) {
-    debug('uv binary not found on PATH via which.sync');
+  const found = which.sync('uv', { nothrow: true });
+  if (found) {
+    return found;
   }
+  // If uv is installed via pip, use it
   try {
     await execa('uv', ['--version']);
     return 'uv';
   } catch (err) {
     // no-op, we'll attempt pip install
-  }
-
-  // Pip install uv
-  try {
-    console.log('Installing uv...');
-    await execa(
-      pipPath,
-      [
-        'install',
-        '--disable-pip-version-check',
-        '--no-cache-dir',
-        '--user',
-        'uv',
-      ],
-      { env: { ...process.env, PIP_USER: '1' } }
-    );
-  } catch (err) {
-    debug('pip install uv failed');
-    return null;
   }
 
   // Resolve uv location from Python's user scripts directory
@@ -210,6 +188,43 @@ async function getUvBinary(
     debug('Failed to locate uv after pip install');
   }
   return null;
+}
+
+async function getUvBinaryOrInstall(
+  pipPath: string,
+  pythonPath: string
+): Promise<string> {
+  const uvBin = await maybeFindUvBin(pythonPath);
+  if (uvBin) {
+    console.log(`Using uv at "${uvBin}"`);
+    return uvBin;
+  }
+
+  // Pip install uv
+  try {
+    console.log('Installing uv...');
+    await execa(
+      pipPath,
+      [
+        'install',
+        '--disable-pip-version-check',
+        '--no-cache-dir',
+        '--user',
+        'uv',
+      ],
+      { env: { ...process.env, PIP_USER: '1' } }
+    );
+  } catch (err) {
+    throw new Error('Failed to install uv via pip');
+  }
+
+  const resolvedUvBin = await maybeFindUvBin(pythonPath);
+  if (!resolvedUvBin) {
+    throw new Error('Unable to resolve uv binary after pip install');
+  }
+
+  console.log(`Installed uv at "${resolvedUvBin}"`);
+  return resolvedUvBin;
 }
 
 interface InstallRequirementArg {
