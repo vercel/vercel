@@ -27,7 +27,6 @@ import {
   type BuildResultBuildOutput,
   getLambdaOptionsFromFunction,
   normalizePath,
-  FileBlob,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import pipe from 'promisepipe';
@@ -633,23 +632,11 @@ export async function filesWithoutFsRefs(
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   for (const [path, file] of Object.entries(files)) {
-    if (file.type === 'FileFsRef') {
-      if (standalone) {
-        const stat = await fs.stat(file.fsPath);
-        if (stat.isFile()) {
-          const fileContent = await fs.readFile(file.fsPath);
-          out[path] = new FileBlob({
-            data: fileContent,
-            mode: file.mode,
-            contentType: file.contentType,
-          });
-        }
-      } else {
-        if (!filePathMap) filePathMap = {};
-        filePathMap[normalizePath(path)] = normalizePath(
-          relative(repoRootPath, file.fsPath)
-        );
-      }
+    if (file.type === 'FileFsRef' && !standalone) {
+      if (!filePathMap) filePathMap = {};
+      filePathMap[normalizePath(path)] = normalizePath(
+        relative(repoRootPath, file.fsPath)
+      );
     } else {
       out[path] = file;
     }
