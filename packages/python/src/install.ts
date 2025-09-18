@@ -5,6 +5,9 @@ import { join } from 'path';
 import which from 'which';
 import { Meta, debug } from '@vercel/build-utils';
 
+const isWin = process.platform === 'win32';
+const uvExec = isWin ? 'uv.exe' : 'uv';
+
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
 dep = '${dependency}'.replace('-', '_')
@@ -67,6 +70,18 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
+async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
+  const code = `import sysconfig; print(sysconfig.get_path('scripts'))`;
+  try {
+    const { stdout } = await execa(pythonPath, ['-c', code]);
+    const out = stdout.trim();
+    return out || null;
+  } catch (err) {
+    debug('Failed to resolve Python global scripts directory');
+    return null;
+  }
+}
+
 async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
   const code =
     `import sys, sysconfig; print(sysconfig.get_path('scripts', scheme=('nt_user' if sys.platform == 'win32' else 'posix_user')))`.replace(
@@ -75,7 +90,8 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
     );
   try {
     const { stdout } = await execa(pythonPath, ['-c', code]);
-    return stdout.trim();
+    const out = stdout.trim();
+    return out || null;
   } catch (err) {
     debug('Failed to resolve Python user scripts directory');
     return null;
@@ -101,7 +117,7 @@ async function pipInstall(
   let uvBin: string | null = null;
 
   try {
-    uvBin = await getUvBinaryOrInstall(pipPath, pythonPath);
+    uvBin = await getUvBinaryOrInstall(pythonPath);
   } catch (err) {
     console.log('Failed to install uv, falling back to pip');
     // fall through to pip
@@ -153,40 +169,52 @@ async function pipInstall(
 
 async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   // If on PATH already, use it
-  const found = which.sync('uv', { nothrow: true });
-  if (found) {
-    return found;
+  const found = which.sync(uvExec, { nothrow: true });
+  if (found) return found;
+
+  // Interprerer's global/venv scripts dir
+  try {
+    const globalScriptsDir = await getGlobalScriptsDir(pythonPath);
+    if (globalScriptsDir) {
+      const uvPath = join(globalScriptsDir, uvExec);
+      if (fs.existsSync(uvPath)) return uvPath;
+    }
+  } catch (err) {
+    debug('Failed to resolve Python global scripts directory');
   }
 
-  // Resolve uv location from Python's user scripts directory
+  // Interpreter's user scripts dir
   try {
-    const scriptsDir = await getUserScriptsDir(pythonPath);
-    const uvName = process.platform === 'win32' ? 'uv.exe' : 'uv';
-    const candidates: string[] = [];
-    if (scriptsDir) {
-      candidates.push(join(scriptsDir, uvName));
+    const userScriptsDir = await getUserScriptsDir(pythonPath);
+    if (userScriptsDir) {
+      const uvPath = join(userScriptsDir, uvExec);
+      if (fs.existsSync(uvPath)) return uvPath;
     }
-    // Common fallbacks
-    if (process.platform !== 'win32') {
+  } catch (err) {
+    debug('Failed to resolve Python user scripts directory');
+  }
+
+  // Common fallbacks
+  try {
+    const candidates: string[] = [];
+    if (!isWin) {
       candidates.push(join(os.homedir(), '.local', 'bin', 'uv'));
       candidates.push('/usr/local/bin/uv');
       candidates.push('/opt/homebrew/bin/uv');
+    } else {
+      candidates.push('C:\\Users\\Public\\uv\\uv.exe'); // minimal Windows fallback
     }
     for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        return p;
-      }
+      if (fs.existsSync(p)) return p;
     }
-  } catch (err) {
-    debug('Failed to locate uv after pip install');
+  } catch {
+    // ignore
   }
+
   return null;
 }
 
-async function getUvBinaryOrInstall(
-  pipPath: string,
-  pythonPath: string
-): Promise<string> {
+async function getUvBinaryOrInstall(pythonPath: string): Promise<string> {
   const uvBin = await maybeFindUvBin(pythonPath);
   if (uvBin) {
     console.log(`Using uv at "${uvBin}"`);
@@ -194,21 +222,29 @@ async function getUvBinaryOrInstall(
   }
 
   // Pip install uv
+  // Note we're using pip directly instead of pipPath because we want to make sure
+  // it is installed in the same environment as the Python interpreter
   try {
     console.log('Installing uv...');
     await execa(
-      pipPath,
+      pythonPath,
       [
+        '-m',
+        'pip',
         'install',
         '--disable-pip-version-check',
         '--no-cache-dir',
         '--user',
-        'uv',
+        'uv==0.8.18',
       ],
       { env: { ...process.env, PIP_USER: '1' } }
     );
   } catch (err) {
-    throw new Error('Failed to install uv via pip');
+    throw new Error(
+      `Failed to install uv via pip: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
   }
 
   const resolvedUvBin = await maybeFindUvBin(pythonPath);
