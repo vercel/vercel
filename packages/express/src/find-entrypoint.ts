@@ -1,4 +1,10 @@
-import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
+import {
+  Files,
+  FileFsRef,
+  type BuildV3,
+  glob,
+  BuildV2,
+} from '@vercel/build-utils';
 // @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
 import { createRequire } from 'module';
@@ -70,7 +76,7 @@ export const build: BuildV3 = async args => {
   return res;
 };
 
-export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
+export const entrypointCallback = async (args: Parameters<BuildV2>[0]) => {
   const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
   // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
   const entrypointGlob = `{${validFilenames

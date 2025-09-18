@@ -134,5 +134,6 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     files: preparedFiles,
     shouldAddSourcemapSupport,
     handler,
+    outputDir,
   };
 };
