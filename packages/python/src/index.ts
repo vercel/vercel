@@ -1,9 +1,7 @@
 import fs from 'fs';
-import execa from 'execa';
 import { promisify } from 'util';
 import { join, dirname, basename, posix as pathPosix } from 'path';
 import {
-  getWriteableDirectory,
   download,
   glob,
   Lambda,
@@ -22,7 +20,9 @@ import {
   installRequirementsFile,
   resolveVendorDir,
   exportRequirementsFromUv,
+  exportRequirementsFromPipfile,
 } from './install';
+import { readConfigFile } from '@vercel/build-utils';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
@@ -46,25 +46,6 @@ function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
     return fastapiContentRegex.test(contents);
   } catch {
     return false;
-  }
-}
-
-async function pipenvConvert(
-  cmd: string,
-  srcDir: string,
-  env?: NodeJS.ProcessEnv
-) {
-  debug('Running pipfile2req...');
-  try {
-    const out = await execa.stdout(cmd, [], {
-      cwd: srcDir,
-      env,
-    });
-    debug('Contents of requirements.txt is: ' + out);
-    fs.writeFileSync(join(srcDir, 'requirements.txt'), out);
-  } catch (err) {
-    console.log('Failed to run "pipfile2req"');
-    throw err;
   }
 }
 
@@ -181,78 +162,45 @@ export const build: BuildV3 = async ({
       ? workPath
       : null;
 
-  if (
-    !hasReqLocal &&
-    !hasReqGlobal &&
-    !uvLockDir &&
-    !pyprojectDir &&
-    (pipfileLockDir || pipfileDir)
-  ) {
-    if (pipfileLockDir) {
-      debug('Found "Pipfile.lock"');
-    } else {
-      debug('Found "Pipfile"');
+  // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  if (pyprojectDir) {
+    let requiresPython: string | undefined;
+    try {
+      const pyproject = await readConfigFile<{
+        project?: { ['requires-python']?: string };
+      }>(join(pyprojectDir, 'pyproject.toml'));
+      requiresPython = pyproject?.project?.['requires-python'];
+    } catch {
+      debug('Failed to parse pyproject.toml');
     }
-
-    if (pipfileLockDir) {
-      let lock: {
-        _meta?: {
-          requires?: {
-            python_version?: string;
-          };
-        };
-      } = {};
-      try {
-        const json = await readFile(
-          join(pipfileLockDir, 'Pipfile.lock'),
-          'utf8'
-        );
-        lock = JSON.parse(json);
-      } catch (err) {
-        throw new NowBuildError({
-          code: 'INVALID_PIPFILE_LOCK',
-          message: 'Unable to parse Pipfile.lock',
-        });
-      }
-      pythonVersion = getSupportedPythonVersion({
+    if (requiresPython && /\b\d+\.\d+\b/.test(requiresPython.trim())) {
+      const exact = requiresPython.trim().match(/\b\d+\.\d+\b/)![0];
+      const selected = getSupportedPythonVersion({
         isDev: meta.isDev,
-        pipLockPythonVersion: lock?._meta?.requires?.python_version,
+        declaredPythonVersion: { version: exact, source: 'pyproject.toml' },
+      });
+      pythonVersion = selected;
+    }
+  } else if (pipfileLockDir) {
+    let lock: {
+      _meta?: { requires?: { python_version?: string } };
+    } = {};
+    try {
+      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
+      lock = JSON.parse(json);
+    } catch (err) {
+      throw new NowBuildError({
+        code: 'INVALID_PIPFILE_LOCK',
+        message: 'Unable to parse Pipfile.lock',
       });
     }
-
-    if (!hasReqLocal && !hasReqGlobal) {
-      // Convert Pipenv.Lock to requirements.txt.
-      // We use a different`workPath` here because we want `pipfile-requirements` and it's dependencies
-      // to not be part of the lambda environment. By using pip's `--target` directive we can isolate
-      // it into a separate folder.
-      const tempDir = await getWriteableDirectory();
-      await installRequirement({
-        pythonPath: pythonVersion.pythonPath,
-        pipPath: pythonVersion.pipPath,
-        dependency: 'pipfile-requirements',
-        version: '0.3.0',
-        workPath: tempDir,
-        meta,
-        args: ['--no-warn-script-location'],
-      });
-
-      // Scope PYTHONPATH to the conversion step only, and point at the vendor dir
-      const tempVendorDir = join(tempDir, resolveVendorDir());
-      const envForConvert = { ...process.env, PYTHONPATH: tempVendorDir };
-      const convertCmd =
-        process.platform === 'win32'
-          ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
-          : join(tempVendorDir, 'bin', 'pipfile2req');
-      await pipenvConvert(
-        convertCmd,
-        pipfileLockDir || pipfileDir!,
-        envForConvert
-      );
-    } else {
-      debug(
-        'Skipping Pipfile.lock conversion because "requirements.txt" exists'
-      );
-    }
+    const pyFromLock = lock?._meta?.requires?.python_version;
+    pythonVersion = getSupportedPythonVersion({
+      isDev: meta.isDev,
+      declaredPythonVersion: pyFromLock
+        ? { version: pyFromLock, source: 'Pipfile.lock' }
+        : undefined,
+    });
   }
 
   fsFiles = await glob('**', workPath);
@@ -286,24 +234,33 @@ export const build: BuildV3 = async ({
 
   let installedFromProjectFiles = false;
 
-  // Prefer uv.lock, then pyproject.toml, then requirements.txt
+  // Prefer uv.lock, then pyproject.toml, then Pipfile/Pipfile.lock, then requirements.txt
   if (uvLockDir) {
     debug('Found "uv.lock"');
-    const exportedReq = await exportRequirementsFromUv(
-      pythonVersion.pythonPath,
-      uvLockDir,
-      { locked: true }
-    );
-    await installRequirementsFile({
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      filePath: exportedReq,
-      workPath: vendorBaseDir,
-      meta,
-    });
-    installedFromProjectFiles = true;
+    if (pyprojectDir) {
+      const exportedReq = await exportRequirementsFromUv(
+        pythonVersion.pythonPath,
+        pyprojectDir,
+        { locked: true }
+      );
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        filePath: exportedReq,
+        workPath: vendorBaseDir,
+        meta,
+      });
+      installedFromProjectFiles = true;
+    } else {
+      debug('Skipping uv export because "pyproject.toml" was not found');
+    }
   } else if (pyprojectDir) {
     debug('Found "pyproject.toml"');
+    if (hasReqLocal || hasReqGlobal) {
+      console.log(
+        'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
+      );
+    }
     const exportedReq = await exportRequirementsFromUv(
       pythonVersion.pythonPath,
       pyprojectDir,
@@ -317,6 +274,26 @@ export const build: BuildV3 = async ({
       meta,
     });
     installedFromProjectFiles = true;
+  } else if (pipfileLockDir || pipfileDir) {
+    debug(`Found ${pipfileLockDir ? '"Pipfile.lock"' : '"Pipfile"'}`);
+    if (hasReqLocal || hasReqGlobal) {
+      debug('Skipping Pipfile export because "requirements.txt" exists');
+    } else {
+      const exportedReq = await exportRequirementsFromPipfile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        projectDir: pipfileLockDir || pipfileDir!,
+        meta,
+      });
+      await installRequirementsFile({
+        pythonPath: pythonVersion.pythonPath,
+        pipPath: pythonVersion.pipPath,
+        filePath: exportedReq,
+        workPath: vendorBaseDir,
+        meta,
+      });
+      installedFromProjectFiles = true;
+    }
   }
 
   if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {

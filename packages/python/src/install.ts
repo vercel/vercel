@@ -357,3 +357,55 @@ export async function exportRequirementsFromUv(
   debug(`Exported requirements to ${outPath}`);
   return outPath;
 }
+
+export async function exportRequirementsFromPipfile({
+  pythonPath,
+  pipPath,
+  projectDir,
+  meta,
+}: {
+  pythonPath: string;
+  pipPath: string;
+  projectDir: string;
+  meta: Meta;
+}): Promise<string> {
+  // Install pipfile-requirements into a temp vendor dir, then run pipfile2req
+  const tempDir = await fs.promises.mkdtemp(
+    join(os.tmpdir(), 'vercel-pipenv-')
+  );
+  await installRequirement({
+    pythonPath,
+    pipPath,
+    dependency: 'pipfile-requirements',
+    version: '0.3.0',
+    workPath: tempDir,
+    meta,
+    args: ['--no-warn-script-location'],
+  });
+
+  const tempVendorDir = join(tempDir, resolveVendorDir());
+  const convertCmd = isWin
+    ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
+    : join(tempVendorDir, 'bin', 'pipfile2req');
+
+  debug(`Running "${convertCmd}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(convertCmd, [], {
+      cwd: projectDir,
+      env: { ...process.env, PYTHONPATH: tempVendorDir },
+    });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${convertCmd}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+
+  const outPath = join(tempDir, 'requirements.pipenv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported pipfile requirements to ${outPath}`);
+  return outPath;
+}
