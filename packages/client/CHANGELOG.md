@@ -1,5 +1,11 @@
 # @vercel/client
 
+## 17.0.0
+
+### Major Changes
+
+- Set prebuilt in the client options when sending requests to api-deployments ([#13950](https://github.com/vercel/vercel/pull/13950))
+
 ## 16.0.1
 
 ### Patch Changes
