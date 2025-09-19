@@ -24,7 +24,6 @@ import {
 } from './install';
 import { zipPurePythonPackages, zipNativePackages } from './zip-packages';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
-import { stripVendorBinaries } from './strip-binaries';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -341,8 +340,6 @@ export const build: BuildV3 = async ({
     const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
     // Create zipped vendor dirs to minimize vendor size
     if (fs.existsSync(cachedVendorAbs)) {
-      // await pruneVendorTests(cachedVendorAbs, meta);
-      await stripVendorBinaries(cachedVendorAbs, meta);
       await zipPurePythonPackages(cachedVendorAbs);
       await zipNativePackages(cachedVendorAbs);
     }
