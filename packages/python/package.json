@@ -20,6 +20,9 @@
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@iarna/toml": "2.2.5"
+  },
   "devDependencies": {
     "@types/execa": "^0.9.0",
     "@types/fs-extra": "11.0.2",
