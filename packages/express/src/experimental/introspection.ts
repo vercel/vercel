@@ -87,29 +87,32 @@ const invokeFunction = async (
   options: Awaited<ReturnType<typeof rolldown>>
 ) => {
   await new Promise(resolve => {
-    const child = spawn('node', [join(options.outputDir, options.handler)], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: options.outputDir,
-      env: {
-        ...process.env,
-        ...(args.meta?.env || {}),
-        ...(args.meta?.buildEnv || {}),
-      },
-    });
+    try {
+      const child = spawn('node', [join(options.outputDir, options.handler)], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: options.outputDir,
+        env: {
+          ...process.env,
+          ...(args.meta?.env || {}),
+          ...(args.meta?.buildEnv || {}),
+        },
+      });
 
-    child.stderr.on('data', data => {
-      console.error(`stderr: ${data}`);
-    });
+      // Kill after 1 second
+      setTimeout(() => {
+        child.kill('SIGTERM');
+      }, 1000);
 
-    // Kill after 1 second
-    setTimeout(() => {
-      child.kill('SIGTERM');
-    }, 1000);
-
-    // Wait for child to complete
-    child.on('close', () => {
+      // Wait for child to complete
+      child.on('close', () => {
+        resolve(undefined);
+      });
+    } catch (error) {
+      console.log(
+        `Unable to extract routes from express, route level observability will not be available`
+      );
       resolve(undefined);
-    });
+    }
   });
 };
 
@@ -145,6 +148,9 @@ module.exports = expressWrapper;
 
 const extractRoutes = () => {
   const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
+  if (!app || !app._router) {
+    return;
+  }
   for (const route of app._router.stack) {
     if(route.route) {
       const m = [];
