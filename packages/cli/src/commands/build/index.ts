@@ -171,9 +171,9 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
-    telemetryClient.trackCliFlagStandalone(
-      (parsedArgs.flags as any)['--experimentalStandalone']
-    );
+    // telemetryClient.trackCliFlagStandalone(
+    //   (parsedArgs.flags as any)['--experimentalStandalone']
+    // );
   } catch (error) {
     printError(error);
     return 1;
@@ -193,9 +193,11 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
-  const standalone = Boolean(
-    (parsedArgs.flags as any)['--experimentalStandalone']
-  );
+  // FIXME: standalone:replace env var with flag
+  // const standalone = Boolean(
+  //   (parsedArgs.flags as any)['--experimentalStandalone']
+  // );
+  const standalone = process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
 
   try {
     await validateNpmrc(cwd);
