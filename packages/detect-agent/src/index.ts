@@ -50,7 +50,7 @@ export async function determineAgent(): Promise<AgentResult> {
     if (name) {
       return {
         isAgent: true,
-        agent: { name: process.env.AI_AGENT.trim() as KnownAgentNames },
+        agent: { name: name as KnownAgentNames },
       };
     }
   }
