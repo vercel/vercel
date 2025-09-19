@@ -1,6 +1,12 @@
 {
   "probes": [
     {
+      "logMustContain": "uv at \""
+    },
+    {
+      "logMustNotContain": "falling back to pip"
+    },
+    {
       "path": "/api/werkzeug_version.py",
       "mustContain": "2.0.1",
       "responseHeaders": {
