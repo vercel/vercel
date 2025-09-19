@@ -96,8 +96,8 @@ export default async function ls(client: Client, argv: string[]) {
     client.stdout.write(`${getTable(link, envs, customEnvs)}\n`);
   }
 
-  const guidanceMode =
-    parsedArgs.flags['--guidance'] ?? (await determineAgent()) !== false;
+  const { isAgent } = await determineAgent();
+  const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
   if (guidanceMode) {
     suggestNextCommands([
       getCommandName(`env add`),

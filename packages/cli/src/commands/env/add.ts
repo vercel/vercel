@@ -205,8 +205,8 @@ export default async function add(client: Client, argv: string[]) {
     )}\n`
   );
 
-  const guidanceMode =
-    parsedArgs.flags['--guidance'] ?? (await determineAgent()) !== false;
+  const { isAgent } = await determineAgent();
+  const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
 
   if (guidanceMode) {
     suggestNextCommands([getCommandName(`env ls`), getCommandName(`env pull`)]);

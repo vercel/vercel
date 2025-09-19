@@ -343,7 +343,7 @@ importers:
         specifier: 12.1.0
         version: link:../build-utils
       '@vercel/detect-agent':
-        specifier: 0.2.0
+        specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
         specifier: 0.0.17
