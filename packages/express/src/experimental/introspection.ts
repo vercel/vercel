@@ -112,12 +112,17 @@ const invokeFunction = async (
         },
       });
 
-      // Kill after 1 second
       setTimeout(() => {
         child.kill('SIGTERM');
-      }, 1000);
+      }, 3000);
 
-      // Wait for child to complete
+      child.on('error', () => {
+        console.log(
+          `Unable to extract routes from express, route level observability will not be available`
+        );
+        resolve(undefined);
+      });
+
       child.on('close', () => {
         resolve(undefined);
       });
