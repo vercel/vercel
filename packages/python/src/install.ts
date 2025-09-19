@@ -77,7 +77,7 @@ async function getGlobalScriptsDir(pythonPath: string): Promise<string | null> {
     const out = stdout.trim();
     return out || null;
   } catch (err) {
-    debug('Failed to resolve Python global scripts directory');
+    debug('Failed to resolve Python global scripts directory', err);
     return null;
   }
 }
