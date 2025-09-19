@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.8.5
+        specifier: 3.9.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -355,10 +355,10 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/h3':
-        specifier: 0.0.1
+        specifier: 0.1.0
         version: link:../h3
       '@vercel/hono':
-        specifier: 0.0.25
+        specifier: 0.1.0
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
@@ -533,10 +533,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.5
+        specifier: 3.9.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.3
+        specifier: 5.5.4
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1034,7 +1034,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.5
+        specifier: 3.9.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1957,10 +1957,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.8.5
+        specifier: 3.9.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.3
+        specifier: 5.5.4
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
