@@ -2752,7 +2752,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
-    name: 'h3',
+    name: 'H3',
     slug: 'h3',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/h3.svg',
     tagline: 'Universal, Tiny, and Fast Servers',
