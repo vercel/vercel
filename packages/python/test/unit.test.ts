@@ -124,14 +124,19 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
 
 function makeMockPython(version: string) {
   fs.mkdirSync(tmpPythonDir, { recursive: true });
+  const isWin = process.platform === 'win32';
+  const script = isWin ? '' : '#!/usr/bin/env sh\n# mock binary\nexit 0\n';
   for (const name of ['python', 'pip']) {
     const bin = path.join(
       tmpPythonDir,
-      `${name}${version}${process.platform === 'win32' ? '.exe' : ''}`
+      `${name}${version}${isWin ? '.exe' : ''}`
     );
-    fs.writeFileSync(bin, '');
+    fs.writeFileSync(bin, script);
     fs.chmodSync(bin, 0o755);
   }
+  const uvBin = path.join(tmpPythonDir, `uv${isWin ? '.exe' : ''}`);
+  fs.writeFileSync(uvBin, script);
+  fs.chmodSync(uvBin, 0o755);
   process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
 }
 
