@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.9.1
+
+### Patch Changes
+
+- [python] framework demo + removed experimental ([#13959](https://github.com/vercel/vercel/pull/13959))
+
 ## 3.9.0
 
 ### Minor Changes
