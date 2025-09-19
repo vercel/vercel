@@ -1,5 +1,16 @@
 # vercel
 
+## 48.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339), [`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0), [`6142e863d187c54af7f774f72412f33ca93ed967`](https://github.com/vercel/vercel/commit/6142e863d187c54af7f774f72412f33ca93ed967)]:
+  - @vercel/h3@0.1.2
+  - @vercel/node@5.3.24
+  - @vercel/detect-agent@1.0.0
+  - @vercel/express@0.0.18
+  - @vercel/hono@0.1.2
+
 ## 48.1.0
 
 ### Minor Changes
