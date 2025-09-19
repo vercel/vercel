@@ -30,6 +30,18 @@ if os.path.isdir(_vendor):
 
     importlib.invalidate_caches()
 
+    # Add zipped pure-Python vendor dir, if present
+    _vendor_py_zip = os.path.join(_vendor, '_vendor-py.zip')
+    if os.path.isfile(_vendor_py_zip):
+        try:
+            while _vendor_py_zip in sys.path:
+                sys.path.remove(_vendor_py_zip)
+        except ValueError:
+            pass
+        _idx_zip = 1 if (sys.path and sys.path[0] in ('', _here)) else 0
+        sys.path.insert(_idx_zip, _vendor_py_zip)
+        importlib.invalidate_caches()
+
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
 __vc_spec = util.spec_from_file_location("__VC_HANDLER_MODULE_NAME", user_mod_path)
