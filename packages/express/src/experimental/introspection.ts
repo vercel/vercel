@@ -91,9 +91,21 @@ const processIntrospection = async (
     staticPaths: z.array(z.string()).optional(),
     viewEngine: z.string().optional(),
   });
-  const introspectionPath = join(options.outputDir, 'introspection.json');
-  const introspection = readFileSync(introspectionPath, 'utf8');
-  return schema.parse(JSON.parse(introspection));
+  try {
+    const introspectionPath = join(options.outputDir, 'introspection.json');
+    const introspection = readFileSync(introspectionPath, 'utf8');
+    return schema.parse(JSON.parse(introspection));
+  } catch (error) {
+    console.log(
+      `Unable to extract routes from express, route level observability will not be available`
+    );
+    return {
+      routes: [],
+      views: undefined,
+      staticPaths: undefined,
+      viewEngine: undefined,
+    };
+  }
 };
 
 const invokeFunction = async (
