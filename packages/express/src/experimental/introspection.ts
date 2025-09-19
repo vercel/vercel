@@ -22,7 +22,11 @@ export const introspectApp = async (
   );
 
   await invokeFunction(args, options);
-  const { routes, views, staticPaths } = await processIntrospection(options);
+  const {
+    routes: routesFromIntrospection,
+    views,
+    staticPaths,
+  } = await processIntrospection(options);
   await cleanup(options);
 
   if (views) {
@@ -40,6 +44,16 @@ export const introspectApp = async (
       }
     }
   }
+  const routes = [
+    {
+      handle: 'filesystem',
+    },
+    ...routesFromIntrospection,
+    {
+      src: '/(.*)',
+      dest: '/',
+    },
+  ];
 
   return { routes };
 };

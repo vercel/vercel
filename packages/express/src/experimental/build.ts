@@ -24,7 +24,12 @@ export const build: BuildV2 = async args => {
 
   const output: Record<string, Lambda> = { index: lambda };
   for (const route of routes) {
-    output[route.dest] = lambda;
+    if (route.dest) {
+      if (route.dest === '/') {
+        continue;
+      }
+      output[route.dest] = lambda;
+    }
   }
 
   return {
