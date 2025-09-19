@@ -90,20 +90,16 @@ export function getSupportedPythonVersion({
 
   let selection = getLatestPythonVersion({ isDev: false });
 
-  if (
-    declaredPythonVersion &&
-    typeof declaredPythonVersion.version === 'string'
-  ) {
-    const requested = allOptions.find(
-      o => o.version === declaredPythonVersion.version
-    );
+  if (declaredPythonVersion) {
+    const { version, source } = declaredPythonVersion;
+    const requested = allOptions.find(o => o.version === version);
     if (requested) {
       // If a discontinued version is explicitly requested, error even if not installed
       if (isDiscontinued(requested)) {
         throw new NowBuildError({
           code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
           link: 'http://vercel.link/python-version',
-          message: `Python version "${requested.version}" detected in ${declaredPythonVersion.source} is discontinued and must be upgraded.`,
+          message: `Python version "${requested.version}" detected in ${source} is discontinued and must be upgraded.`,
         });
       }
       // Otherwise, prefer the requested version if installed; fall back to latest installed
@@ -111,12 +107,12 @@ export function getSupportedPythonVersion({
         selection = requested;
       } else {
         console.warn(
-          `Warning: Python version "${declaredPythonVersion.version}" detected in ${declaredPythonVersion.source} is not installed and will be ignored. http://vercel.link/python-version`
+          `Warning: Python version "${version}" detected in ${source} is not installed and will be ignored. http://vercel.link/python-version`
         );
       }
     } else {
       console.warn(
-        `Warning: Python version "${declaredPythonVersion.version}" detected in ${declaredPythonVersion.source} is invalid and will be ignored. http://vercel.link/python-version`
+        `Warning: Python version "${version}" detected in ${source} is invalid and will be ignored. http://vercel.link/python-version`
       );
     }
   }
