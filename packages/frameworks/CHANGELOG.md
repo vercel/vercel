@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.9.1
+
+### Patch Changes
+
+- [python] framework demo + removed experimental ([#13959](https://github.com/vercel/vercel/pull/13959))
+
+## 3.9.0
+
+### Minor Changes
+
+- Add h3 zero config support ([#13942](https://github.com/vercel/vercel/pull/13942))
+
 ## 3.8.5
 
 ### Patch Changes

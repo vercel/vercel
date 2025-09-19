@@ -1,5 +1,35 @@
 # vercel
 
+## 48.1.0
+
+### Minor Changes
+
+- Add `env update` command to update an environment variable. ([#13894](https://github.com/vercel/vercel/pull/13894))
+
+  Previously it was required to remove and re-add the environment variable to update it.
+
+### Patch Changes
+
+- Updated dependencies [[`07d80bc46919ed8d0ad9dc5938848d39224d7db2`](https://github.com/vercel/vercel/commit/07d80bc46919ed8d0ad9dc5938848d39224d7db2), [`7e4b04b4f110142b5fd09ba4567b79ac3aa432c5`](https://github.com/vercel/vercel/commit/7e4b04b4f110142b5fd09ba4567b79ac3aa432c5), [`20849c717da6d26d3487c414bee1560d0dd78909`](https://github.com/vercel/vercel/commit/20849c717da6d26d3487c414bee1560d0dd78909), [`aaddc91799f5b26a626dd1a7c0e070f334d09be5`](https://github.com/vercel/vercel/commit/aaddc91799f5b26a626dd1a7c0e070f334d09be5)]:
+  - @vercel/python@5.0.5
+  - @vercel/next@4.12.6
+  - @vercel/node@5.3.23
+  - @vercel/express@0.0.17
+  - @vercel/h3@0.1.1
+  - @vercel/hono@0.1.1
+
+## 48.0.3
+
+### Patch Changes
+
+- fix(cli): handle triggering re-auth with legacy token + flags ([#13955](https://github.com/vercel/vercel/pull/13955))
+
+  If the CLI was using a legacy token (ie, was signed in on a version previous to 48.0.0) and did not have a SAML authorization for a team resource, commands with flags unknown to vc login failed to initiate the SAML re-authentication flow as we were parsing all arguments. This change ensures that the user is prompted to log in again in such cases.
+
+- Updated dependencies [[`426aca07b47590a0f1b7631e92c8776d5f8d661d`](https://github.com/vercel/vercel/commit/426aca07b47590a0f1b7631e92c8776d5f8d661d)]:
+  - @vercel/hono@0.1.0
+  - @vercel/h3@0.1.0
+
 ## 48.0.2
 
 ### Patch Changes

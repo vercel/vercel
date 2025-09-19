@@ -272,4 +272,24 @@ describe('detectFrameworkRecord', () => {
     const framework = await detectFrameworkRecord({ fs, frameworkList });
     expect(framework?.slug).toBe('hono');
   });
+
+  it('Detects h3', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          h3: 'latest',
+        },
+        devDependencies: {
+          eslint: '^8.6.0',
+          prettier: '^3.0.2',
+          typescript: '^5.1.6',
+        },
+      }),
+      'index.ts':
+        'import { H3 } from "h3";\nconst app = new H3();\n app.get("/", () => "Hello World!");\nexport default app;',
+    });
+
+    const framework = await detectFrameworkRecord({ fs, frameworkList });
+    expect(framework?.slug).toBe('h3');
+  });
 });
