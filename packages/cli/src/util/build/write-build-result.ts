@@ -425,7 +425,7 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const { files, filePathMap } = await filesWithoutFsRefs(
+  const { files, filePathMap } = filesWithoutFsRefs(
     edgeFunction.files,
     repoRootPath,
     standalone
@@ -624,7 +624,7 @@ export async function* findDirs(
  * and returns them in a JSON serializable map of repo root
  * relative paths to Lambda destination paths.
  */
-export async function filesWithoutFsRefs(
+export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
   standalone: boolean = false
