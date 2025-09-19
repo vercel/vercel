@@ -22,5 +22,9 @@ export function generateQueryString(
     options.set('skipAutoDetectionConfirmation', '1');
   }
 
+  if (clientOptions.prebuilt) {
+    options.set('prebuilt', '1');
+  }
+
   return Array.from(options.entries()).length ? `?${options.toString()}` : '';
 }

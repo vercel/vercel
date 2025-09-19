@@ -11,7 +11,7 @@ describe('login', () => {
       const command = 'login';
 
       client.setArgv(command, '--help');
-      const exitCodePromise = login(client);
+      const exitCodePromise = login(client, { shouldParseArgs: true });
       await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -25,7 +25,7 @@ describe('login', () => {
 
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
-    const exitCodePromise = login(client);
+    const exitCodePromise = login(client, { shouldParseArgs: true });
     await expect(client.stderr).toOutput(
       'Error: `--token` may not be used with the "login" command\n'
     );
