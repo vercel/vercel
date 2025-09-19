@@ -1,9 +1,13 @@
 {
-  "probes": [{
-    "path": "/api",
-    "mustContain": "asgi:RANDOMNESS_PLACEHOLDER",
-    "responseHeaders": {
-      "content-type": "text/plain; charset=utf-8"
+  "probes": [
+    { "logMustContain": "uv at \"" },
+    { "logMustNotContain": "falling back to pip" },
+    {
+      "path": "/api",
+      "mustContain": "asgi:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain; charset=utf-8"
+      }
     }
-  }]
+  ]
 }
