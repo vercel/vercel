@@ -617,7 +617,18 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          () => builder.build(buildOptions)
+          () => {
+            if (
+              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
+              'name' in builder &&
+              builder.name === 'express' &&
+              'experimentalBuild' in builder &&
+              typeof builder.experimentalBuild === 'function'
+            ) {
+              return builder.experimentalBuild(buildOptions);
+            }
+            return builder.build(buildOptions);
+          }
         );
 
         // If the build result has no routes and the framework has default routes,
