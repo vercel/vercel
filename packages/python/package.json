@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python",
-  "version": "5.0.4",
+  "version": "5.0.5",
   "main": "./dist/index.js",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",

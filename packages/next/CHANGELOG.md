@@ -1,5 +1,13 @@
 # @vercel/next
 
+## 4.12.6
+
+### Patch Changes
+
+- Add diagnostics for .next/trace-turbopack and .next/trace-build ([#13961](https://github.com/vercel/vercel/pull/13961))
+
+- Fix segment route suffix capture in dynamic routes to ensure .segments/.+\.segment\.rsc routes are properly rewritten ([#13927](https://github.com/vercel/vercel/pull/13927))
+
 ## 4.12.5
 
 ### Patch Changes

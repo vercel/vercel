@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.23
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
 ## 5.3.22
 
 ### Patch Changes
