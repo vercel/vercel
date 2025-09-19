@@ -1,5 +1,7 @@
-import { H3, serve } from "h3";
+import { H3 } from "h3";
 
-const app = new H3().get("/", () => "⚡️ Tadaa!");
+const app = new H3();
 
-serve(app);
+app.get("/", () => "Hello World!");
+
+export default app

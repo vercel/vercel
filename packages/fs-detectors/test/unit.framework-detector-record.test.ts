@@ -286,7 +286,7 @@ describe('detectFrameworkRecord', () => {
         },
       }),
       'index.ts':
-        'import { H3, serve } from "h3"\nconst app = new H3().get("/", () => "⚡️ Tadaa!")\nserve(app)',
+        'import { H3 } from "h3";\nconst app = new H3();\n app.get("/", () => "Hello World!");\nexport default app;',
     });
 
     const framework = await detectFrameworkRecord({ fs, frameworkList });

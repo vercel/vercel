@@ -435,3 +435,56 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     fs.removeSync(workPath);
   });
 });
+
+describe('uv install path', () => {
+  it('uses uv to install requirement (no fallback to pip)', async () => {
+    jest.resetModules();
+
+    let installRequirement: any;
+    let mockExeca: any;
+
+    jest.isolateModules(() => {
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
+      jest.doMock('execa', () => {
+        const fn: any = jest.fn(async () => ({ stdout: '' }));
+        fn.stdout = jest.fn(async () => '');
+        mockExeca = fn;
+        return { __esModule: true, default: fn };
+      });
+
+      // Import after mocks are set
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../src/install');
+      installRequirement = mod.installRequirement;
+    });
+
+    const workPath = path.join(tmpdir(), `python-uv-test-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    try {
+      await installRequirement({
+        pythonPath: '/usr/bin/python3',
+        pipPath: '/usr/bin/pip3',
+        dependency: 'foo',
+        version: '1.2.3',
+        workPath,
+        meta: { isDev: false },
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockExeca).toHaveBeenCalled();
+    const [cmd, args, opts] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args.slice(0, 2)).toEqual(['pip', 'install']);
+    expect(args).toContain('--target');
+    expect(args).toContain('_vendor');
+    expect(args).toContain('foo==1.2.3');
+    expect(opts).toHaveProperty('cwd', workPath);
+  });
+});

@@ -2018,8 +2018,9 @@ export const frameworks = [
     ],
   },
   {
-    name: 'FastAPI (Experimental)',
+    name: 'FastAPI',
     slug: 'fastapi',
+    demo: 'https://vercel-fastapi-gamma-smoky.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
@@ -2072,7 +2073,7 @@ export const frameworks = [
     ],
   },
   {
-    name: 'FastHTML (Experimental)',
+    name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
@@ -2751,7 +2752,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
-    name: 'h3',
+    name: 'H3',
     slug: 'h3',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/h3.svg',
     tagline: 'Universal, Tiny, and Fast Servers',
