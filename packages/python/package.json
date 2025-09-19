@@ -6,7 +6,8 @@
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "files": [
     "dist",
-    "vc_init.py"
+    "vc_init.py",
+    "package_loader.py"
   ],
   "repository": {
     "type": "git",
@@ -31,6 +32,9 @@
     "execa": "^1.0.0",
     "fs-extra": "11.1.1",
     "jest-junit": "16.0.0",
-    "which": "3.0.0"
+    "which": "3.0.0",
+    "async-sema": "3.0.1",
+    "yazl": "2.5.1",
+    "@types/yazl": "2.4.2"
   }
 }

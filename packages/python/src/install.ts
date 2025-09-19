@@ -1,6 +1,8 @@
 import execa from 'execa';
-import { join } from 'path';
+import fs from 'fs';
+import { join, delimiter } from 'path';
 import { Meta, debug } from '@vercel/build-utils';
+import { VENDOR_PY_ZIP, VENDOR_NATIVE_ZIP } from './zip-packages';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -21,7 +23,16 @@ async function isInstalled(
       {
         stdio: 'pipe',
         cwd,
-        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
+        env: (() => {
+          const vendor = join(cwd, resolveVendorDir());
+          const zip = join(vendor, VENDOR_PY_ZIP);
+          const nativeZip = join(vendor, VENDOR_NATIVE_ZIP);
+          const pyPathParts = [vendor];
+          if (fs.existsSync(zip)) pyPathParts.push(zip);
+          if (fs.existsSync(nativeZip)) pyPathParts.push(nativeZip);
+          const pyPath = pyPathParts.join(delimiter);
+          return { ...process.env, PYTHONPATH: pyPath };
+        })(),
       }
     );
     return stdout.startsWith(cwd);
@@ -50,7 +61,16 @@ async function areRequirementsInstalled(
       {
         stdio: 'pipe',
         cwd,
-        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
+        env: (() => {
+          const vendor = join(cwd, resolveVendorDir());
+          const zip = join(vendor, VENDOR_PY_ZIP);
+          const nativeZip = join(vendor, VENDOR_NATIVE_ZIP);
+          const pyPathParts = [vendor];
+          if (fs.existsSync(zip)) pyPathParts.push(zip);
+          if (fs.existsSync(nativeZip)) pyPathParts.push(nativeZip);
+          const pyPath = pyPathParts.join(delimiter);
+          return { ...process.env, PYTHONPATH: pyPath };
+        })(),
       }
     );
     return true;

@@ -1,0 +1,46 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "No import errors (Resources OK)"
+    },
+    {
+      "path": "/static/fastapi_init.py",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "__version__"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "metadata-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "pkg-resources-version-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "as-file-works:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "resources-listing-ok:ok"
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "certifi-file-ok:ok"
+    }
+  ]
+}

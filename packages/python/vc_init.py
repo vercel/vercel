@@ -8,10 +8,14 @@ import inspect
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
+import package_loader
+
 
 _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
 _vendor = os.path.normpath(os.path.join(_here, _vendor_rel))
+
+package_loader.enable(vendor_root=_vendor)
 
 if os.path.isdir(_vendor):
     # Process .pth files like a real site-packages dir
@@ -29,6 +33,10 @@ if os.path.isdir(_vendor):
     sys.path.insert(idx, _vendor)
 
     importlib.invalidate_caches()
+
+    # Do not add `_vendor-py.zip` to sys.path. The package_loader will lazily
+    # extract pure-Python packages to a temp directory and import from there,
+    # ensuring sidecar files (e.g., .pyi) can be accessed via real file paths.
 
 # Import relative path https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 user_mod_path = os.path.join(_here, "__VC_HANDLER_ENTRYPOINT")  # absolute
