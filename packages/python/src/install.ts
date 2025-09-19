@@ -93,7 +93,7 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
     const out = stdout.trim();
     return out || null;
   } catch (err) {
-    debug('Failed to resolve Python user scripts directory');
+    debug('Failed to resolve Python user scripts directory', err);
     return null;
   }
 }
@@ -120,7 +120,6 @@ async function pipInstall(
     uvBin = await getUvBinaryOrInstall(pythonPath);
   } catch (err) {
     console.log('Failed to install uv, falling back to pip');
-    // fall through to pip
   }
 
   if (uvBin) {
@@ -180,7 +179,10 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug('Failed to resolve Python global scripts directory');
+    debug(
+      "Failed to resolve uv from interpreter's global scripts directory",
+      err
+    );
   }
 
   // Interpreter's user scripts dir
@@ -191,7 +193,10 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug('Failed to resolve Python user scripts directory');
+    debug(
+      "Failed to resolve uv from interpreter's user scripts directory",
+      err
+    );
   }
 
   // Common fallbacks
@@ -207,8 +212,8 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
     for (const p of candidates) {
       if (fs.existsSync(p)) return p;
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    debug('Failed to resolve uv fallback paths', err);
   }
 
   return null;
