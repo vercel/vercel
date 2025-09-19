@@ -28,5 +28,6 @@ export const startDevServer: StartDevServer = async opts => {
   return nodeStartDevServer({
     ...opts,
     entrypoint,
+    publicDir: 'public',
   });
 };
