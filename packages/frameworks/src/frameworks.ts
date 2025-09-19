@@ -2033,16 +2033,64 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'requirements.txt',
-          matchContent: 'fastapi',
+          path: 'app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
         {
-          path: 'pyproject.toml',
-          matchContent: 'fastapi',
+          path: 'index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
         {
-          path: 'Pipfile',
-          matchContent: 'fastapi',
+          path: 'server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
       ],
     },
