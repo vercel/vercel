@@ -7,7 +7,7 @@ import { rm } from 'fs/promises';
 import { createRequire } from 'module';
 import { pathToRegexp } from 'path-to-regexp';
 import { rolldown } from './rolldown';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 const require_ = createRequire(__filename);
 
