@@ -21,6 +21,7 @@ import {
   installRequirement,
   installRequirementsFile,
   resolveVendorDir,
+  exportRequirementsFromUv,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
@@ -158,6 +159,17 @@ export const build: BuildV3 = async ({
   const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
   const hasReqGlobal = !!fsFiles['requirements.txt'];
 
+  const uvLockDir = fsFiles[join(entryDirectory, 'uv.lock')]
+    ? join(workPath, entryDirectory)
+    : fsFiles['uv.lock']
+      ? workPath
+      : null;
+  const pyprojectDir = fsFiles[join(entryDirectory, 'pyproject.toml')]
+    ? join(workPath, entryDirectory)
+    : fsFiles['pyproject.toml']
+      ? workPath
+      : null;
+
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
     : fsFiles['Pipfile.lock']
@@ -169,7 +181,13 @@ export const build: BuildV3 = async ({
       ? workPath
       : null;
 
-  if (!hasReqLocal && !hasReqGlobal && (pipfileLockDir || pipfileDir)) {
+  if (
+    !hasReqLocal &&
+    !hasReqGlobal &&
+    !uvLockDir &&
+    !pyprojectDir &&
+    (pipfileLockDir || pipfileDir)
+  ) {
     if (pipfileLockDir) {
       debug('Found "Pipfile.lock"');
     } else {
@@ -266,7 +284,42 @@ export const build: BuildV3 = async ({
     meta,
   });
 
-  if (fsFiles[requirementsTxt]) {
+  let installedFromProjectFiles = false;
+
+  // Prefer uv.lock, then pyproject.toml, then requirements.txt
+  if (uvLockDir) {
+    debug('Found "uv.lock"');
+    const exportedReq = await exportRequirementsFromUv(
+      pythonVersion.pythonPath,
+      uvLockDir,
+      { locked: true }
+    );
+    await installRequirementsFile({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      filePath: exportedReq,
+      workPath: vendorBaseDir,
+      meta,
+    });
+    installedFromProjectFiles = true;
+  } else if (pyprojectDir) {
+    debug('Found "pyproject.toml"');
+    const exportedReq = await exportRequirementsFromUv(
+      pythonVersion.pythonPath,
+      pyprojectDir,
+      { locked: false }
+    );
+    await installRequirementsFile({
+      pythonPath: pythonVersion.pythonPath,
+      pipPath: pythonVersion.pipPath,
+      filePath: exportedReq,
+      workPath: vendorBaseDir,
+      meta,
+    });
+    installedFromProjectFiles = true;
+  }
+
+  if (!installedFromProjectFiles && fsFiles[requirementsTxt]) {
     debug('Found local "requirements.txt"');
     const requirementsTxtPath = fsFiles[requirementsTxt].fsPath;
     await installRequirementsFile({
@@ -276,7 +329,7 @@ export const build: BuildV3 = async ({
       workPath: vendorBaseDir,
       meta,
     });
-  } else if (fsFiles['requirements.txt']) {
+  } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
     const requirementsTxtPath = fsFiles['requirements.txt'].fsPath;
     await installRequirementsFile({

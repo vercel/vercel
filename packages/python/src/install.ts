@@ -325,3 +325,35 @@ export async function installRequirementsFile({
     ...args,
   ]);
 }
+
+export async function exportRequirementsFromUv(
+  pythonPath: string,
+  projectDir: string,
+  options: { locked?: boolean } = {}
+): Promise<string> {
+  const { locked = false } = options;
+  const uvBin = await getUvBinaryOrInstall(pythonPath);
+  const args: string[] = ['export'];
+  // Prefer using the lockfile strictly if present
+  if (locked) {
+    // "--frozen" ensures the lock is respected and not updated during export
+    args.push('--frozen');
+  }
+  debug(`Running "${uvBin} ${args.join(' ')}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(uvBin, args, { cwd: projectDir });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${uvBin} ${args.join(' ')}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
+  const outPath = join(tmpDir, 'requirements.uv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported requirements to ${outPath}`);
+  return outPath;
+}
