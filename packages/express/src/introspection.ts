@@ -49,7 +49,7 @@ const cleanup = async (options: Awaited<ReturnType<typeof rolldown>>) => {
     recursive: true,
     force: true,
   });
-  await rm(join(options.outputDir, 'introspection.json'));
+  await rm(join(options.outputDir, 'introspection.json'), { force: true });
 };
 
 const processIntrospection = async (
