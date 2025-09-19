@@ -483,7 +483,7 @@ async function writeLambda(
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
     // `files` is defined
-    const f = await filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
   } else if (lambda.zipBuffer) {
@@ -628,7 +628,7 @@ export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
   standalone: boolean = false
-): Promise<{ files: Files; filePathMap?: Record<string, string> }> {
+): { files: Files; filePathMap?: Record<string, string> } {
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   for (const [path, file] of Object.entries(files)) {
