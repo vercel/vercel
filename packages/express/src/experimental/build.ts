@@ -1,3 +1,4 @@
+export const version = 2;
 import { BuildV2, Lambda } from '@vercel/build-utils';
 import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
 import { rolldown } from './rolldown';
@@ -5,6 +6,7 @@ import { entrypointCallback } from './find-entrypoint';
 import { introspectApp } from './introspection';
 
 export const build: BuildV2 = async args => {
+  console.log(`Using experimental express build`);
   const downloadResult = await downloadInstallAndBundle(args);
 
   await maybeExecBuildCommand(args, downloadResult);
