@@ -1,6 +1,8 @@
 import execa from 'execa';
-import { join } from 'path';
+import fs from 'fs';
+import { join, delimiter } from 'path';
 import { Meta, debug } from '@vercel/build-utils';
+import { VENDOR_PY_ZIP } from './zip-packages';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -21,7 +23,14 @@ async function isInstalled(
       {
         stdio: 'pipe',
         cwd,
-        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
+        env: (() => {
+          const vendor = join(cwd, resolveVendorDir());
+          const zip = join(vendor, VENDOR_PY_ZIP);
+          const pyPath = fs.existsSync(zip)
+            ? `${vendor}${delimiter}${zip}`
+            : vendor;
+          return { ...process.env, PYTHONPATH: pyPath };
+        })(),
       }
     );
     return stdout.startsWith(cwd);
@@ -50,7 +59,14 @@ async function areRequirementsInstalled(
       {
         stdio: 'pipe',
         cwd,
-        env: { ...process.env, PYTHONPATH: join(cwd, resolveVendorDir()) },
+        env: (() => {
+          const vendor = join(cwd, resolveVendorDir());
+          const zip = join(vendor, VENDOR_PY_ZIP);
+          const pyPath = fs.existsSync(zip)
+            ? `${vendor}${delimiter}${zip}`
+            : vendor;
+          return { ...process.env, PYTHONPATH: pyPath };
+        })(),
       }
     );
     return true;

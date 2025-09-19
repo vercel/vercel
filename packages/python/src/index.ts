@@ -22,6 +22,7 @@ import {
   installRequirementsFile,
   resolveVendorDir,
 } from './install';
+import { zipPurePythonPackages } from './zip-packages';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
 
 const readFile = promisify(fs.readFile);
@@ -290,6 +291,10 @@ export const build: BuildV3 = async ({
 
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
+  const originalPackageLoaderPyContents = await readFile(
+    join(__dirname, '..', 'package_loader.py'),
+    'utf8'
+  );
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
   const vendorDir = resolveVendorDir();
@@ -302,6 +307,7 @@ export const build: BuildV3 = async ({
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
     .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
     .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
+  const packageLoaderPyContents = originalPackageLoaderPyContents;
 
   const predefinedExcludes = [
     '.git/**',
@@ -332,6 +338,10 @@ export const build: BuildV3 = async ({
   // Mount cached vendor directory into the Lambda output under `_vendor`
   try {
     const cachedVendorAbs = join(vendorBaseDir, resolveVendorDir());
+    // Create zipped vendor dir of pure-Python packages to minimize vendor size
+    if (fs.existsSync(cachedVendorAbs)) {
+      await zipPurePythonPackages(cachedVendorAbs);
+    }
     if (fs.existsSync(cachedVendorAbs)) {
       const vendorFiles = await glob('**', cachedVendorAbs, resolveVendorDir());
       for (const [p, f] of Object.entries(vendorFiles)) {
@@ -346,8 +356,12 @@ export const build: BuildV3 = async ({
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
+  const packageLoaderPyFilename = 'package_loader';
 
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
+  files[`${packageLoaderPyFilename}.py`] = new FileBlob({
+    data: packageLoaderPyContents,
+  });
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails
