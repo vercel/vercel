@@ -168,7 +168,7 @@ async function pipInstall(
 
 async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   // If on PATH already, use it
-  const found = which.sync(uvExec, { nothrow: true });
+  const found = which.sync('uv', { nothrow: true });
   if (found) return found;
 
   // Interprerer's global/venv scripts dir
@@ -201,7 +201,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       candidates.push('/usr/local/bin/uv');
       candidates.push('/opt/homebrew/bin/uv');
     } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe'); // minimal Windows fallback
+      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
     }
     for (const p of candidates) {
       if (fs.existsSync(p)) return p;
