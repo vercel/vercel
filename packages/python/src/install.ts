@@ -141,7 +141,7 @@ async function pipInstall(
       return;
     } catch (err) {
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
-      // fall through to pip
+      debug(`error: ${err}`);
     }
   }
 
@@ -162,13 +162,14 @@ async function pipInstall(
     });
   } catch (err) {
     console.log(`Failed to run "${pretty}"`);
+    debug(`error: ${err}`);
     throw err;
   }
 }
 
 async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   // If on PATH already, use it
-  const found = which.sync(uvExec, { nothrow: true });
+  const found = which.sync('uv', { nothrow: true });
   if (found) return found;
 
   // Interprerer's global/venv scripts dir
@@ -179,10 +180,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug(
-      "Failed to resolve uv from interpreter's global scripts directory",
-      err
-    );
+    debug('Failed to resolve Python global scripts directory', err);
   }
 
   // Interpreter's user scripts dir
@@ -193,10 +191,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       if (fs.existsSync(uvPath)) return uvPath;
     }
   } catch (err) {
-    debug(
-      "Failed to resolve uv from interpreter's user scripts directory",
-      err
-    );
+    debug('Failed to resolve Python user scripts directory', err);
   }
 
   // Common fallbacks
@@ -207,7 +202,7 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
       candidates.push('/usr/local/bin/uv');
       candidates.push('/opt/homebrew/bin/uv');
     } else {
-      candidates.push('C:\\Users\\Public\\uv\\uv.exe'); // minimal Windows fallback
+      candidates.push('C:\\Users\\Public\\uv\\uv.exe');
     }
     for (const p of candidates) {
       if (fs.existsSync(p)) return p;
@@ -329,4 +324,88 @@ export async function installRequirementsFile({
     filePath,
     ...args,
   ]);
+}
+
+export async function exportRequirementsFromUv(
+  pythonPath: string,
+  projectDir: string,
+  options: { locked?: boolean } = {}
+): Promise<string> {
+  const { locked = false } = options;
+  const uvBin = await getUvBinaryOrInstall(pythonPath);
+  const args: string[] = ['export'];
+  // Prefer using the lockfile strictly if present
+  if (locked) {
+    // "--frozen" ensures the lock is respected and not updated during export
+    args.push('--frozen');
+  }
+  debug(`Running "${uvBin} ${args.join(' ')}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(uvBin, args, { cwd: projectDir });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${uvBin} ${args.join(' ')}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+  const tmpDir = await fs.promises.mkdtemp(join(os.tmpdir(), 'vercel-uv-'));
+  const outPath = join(tmpDir, 'requirements.uv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported requirements to ${outPath}`);
+  return outPath;
+}
+
+export async function exportRequirementsFromPipfile({
+  pythonPath,
+  pipPath,
+  projectDir,
+  meta,
+}: {
+  pythonPath: string;
+  pipPath: string;
+  projectDir: string;
+  meta: Meta;
+}): Promise<string> {
+  // Install pipfile-requirements into a temp vendor dir, then run pipfile2req
+  const tempDir = await fs.promises.mkdtemp(
+    join(os.tmpdir(), 'vercel-pipenv-')
+  );
+  await installRequirement({
+    pythonPath,
+    pipPath,
+    dependency: 'pipfile-requirements',
+    version: '0.3.0',
+    workPath: tempDir,
+    meta,
+    args: ['--no-warn-script-location'],
+  });
+
+  const tempVendorDir = join(tempDir, resolveVendorDir());
+  const convertCmd = isWin
+    ? join(tempVendorDir, 'Scripts', 'pipfile2req.exe')
+    : join(tempVendorDir, 'bin', 'pipfile2req');
+
+  debug(`Running "${convertCmd}" in ${projectDir}...`);
+  let stdout: string;
+  try {
+    const { stdout: out } = await execa(convertCmd, [], {
+      cwd: projectDir,
+      env: { ...process.env, PYTHONPATH: tempVendorDir },
+    });
+    stdout = out;
+  } catch (err) {
+    throw new Error(
+      `Failed to run "${convertCmd}": ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+
+  const outPath = join(tempDir, 'requirements.pipenv.txt');
+  await fs.promises.writeFile(outPath, stdout);
+  debug(`Exported pipfile requirements to ${outPath}`);
+  return outPath;
 }
