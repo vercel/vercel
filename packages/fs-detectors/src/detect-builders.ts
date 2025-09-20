@@ -1095,9 +1095,9 @@ function getRouteResult(
       if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
         // This route is only necessary to hide the directory listing
         // to avoid enumerating serverless function names.
-        // But it causes issues in `vc dev` for frameworks that handle
-        // their own functions such as redwood, so we ignore.
-        rewriteRoutes.push({
+        // It must not precede framework dynamic API rewrites (e.g. Next.js),
+        // so append it to the error phase instead of filesystem.
+        errorRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
         });
