@@ -141,7 +141,7 @@ async function pipInstall(
       return;
     } catch (err) {
       console.log(`Failed to run "${prettyUv}", falling back to pip`);
-      // fall through to pip
+      debug(`error: ${err}`);
     }
   }
 
@@ -162,6 +162,7 @@ async function pipInstall(
     });
   } catch (err) {
     console.log(`Failed to run "${pretty}"`);
+    debug(`error: ${err}`);
     throw err;
   }
 }
