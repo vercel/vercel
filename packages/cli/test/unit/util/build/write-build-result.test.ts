@@ -13,7 +13,10 @@ describe('filesWithoutFsRefs()', () => {
       ...(await glob('**', repoRootPath)),
       'blob-file.txt': new FileBlob({ data: 'blob file' }),
     };
-    const { files, filePathMap = {} } = filesWithoutFsRefs(input, repoRootPath);
+    const { files, filePathMap = {} } = await filesWithoutFsRefs(
+      input,
+      repoRootPath
+    );
 
     // Only the "blob-file.txt" file should be in the `files` object
     expect(Object.keys(files)).toHaveLength(1);

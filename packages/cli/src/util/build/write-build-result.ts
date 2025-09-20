@@ -56,7 +56,8 @@ export async function writeBuildResult(
   build: Builder,
   builder: BuilderV2 | BuilderV3,
   builderPkg: PackageJson,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
   const { version } = builder;
   if (typeof version !== 'number' || version === 2) {
@@ -65,7 +66,8 @@ export async function writeBuildResult(
       outputDir,
       buildResult as BuildResultV2,
       build,
-      vercelConfig
+      vercelConfig,
+      standalone
     );
   } else if (version === 3) {
     return writeBuildResultV3(
@@ -73,7 +75,8 @@ export async function writeBuildResult(
       outputDir,
       buildResult as BuildResultV3,
       build,
-      vercelConfig
+      vercelConfig,
+      standalone
     );
   }
   throw new Error(
@@ -119,7 +122,8 @@ async function writeBuildResultV2(
   outputDir: string,
   buildResult: BuildResultV2,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
   if ('buildOutputPath' in buildResult) {
     await mergeBuilderOutput(outputDir, buildResult);
@@ -150,7 +154,8 @@ async function writeBuildResultV2(
         output,
         normalizedPath,
         undefined,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
     } else if (isPrerender(output)) {
       if (!output.lambda) {
@@ -165,7 +170,8 @@ async function writeBuildResultV2(
         output.lambda,
         normalizedPath,
         undefined,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
 
       // Write the fallback file alongside the Lambda directory
@@ -225,7 +231,8 @@ async function writeBuildResultV2(
         outputDir,
         output,
         normalizedPath,
-        existingFunctions
+        existingFunctions,
+        standalone
       );
     } else {
       throw new Error(
@@ -247,7 +254,8 @@ async function writeBuildResultV3(
   outputDir: string,
   buildResult: BuildResultV3,
   build: Builder,
-  vercelConfig: VercelConfig | null
+  vercelConfig: VercelConfig | null,
+  standalone: boolean = false
 ) {
   const { output } = buildResult;
   const src = build.src;
@@ -272,10 +280,19 @@ async function writeBuildResultV3(
       outputDir,
       output,
       path,
-      functionConfiguration
+      functionConfiguration,
+      undefined,
+      standalone
     );
   } else if (isEdgeFunction(output)) {
-    await writeEdgeFunction(repoRootPath, outputDir, output, path);
+    await writeEdgeFunction(
+      repoRootPath,
+      outputDir,
+      output,
+      path,
+      undefined,
+      standalone
+    );
   } else {
     throw new Error(
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
@@ -387,7 +404,8 @@ async function writeEdgeFunction(
   outputDir: string,
   edgeFunction: EdgeFunction,
   path: string,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>
+  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -409,7 +427,8 @@ async function writeEdgeFunction(
   const ops: Promise<any>[] = [];
   const { files, filePathMap } = filesWithoutFsRefs(
     edgeFunction.files,
-    repoRootPath
+    repoRootPath,
+    standalone
   );
   ops.push(download(files, dest));
 
@@ -445,7 +464,8 @@ async function writeLambda(
   lambda: Lambda,
   path: string,
   functionConfiguration?: FunctionConfiguration,
-  existingFunctions?: Map<Lambda | EdgeFunction, string>
+  existingFunctions?: Map<Lambda | EdgeFunction, string>,
+  standalone: boolean = false
 ) {
   const dest = join(outputDir, 'functions', `${path}.func`);
 
@@ -463,7 +483,7 @@ async function writeLambda(
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
     // `files` is defined
-    const f = filesWithoutFsRefs(lambda.files, repoRootPath);
+    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
   } else if (lambda.zipBuffer) {
@@ -606,12 +626,13 @@ export async function* findDirs(
  */
 export function filesWithoutFsRefs(
   files: Files,
-  repoRootPath: string
+  repoRootPath: string,
+  standalone: boolean = false
 ): { files: Files; filePathMap?: Record<string, string> } {
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   for (const [path, file] of Object.entries(files)) {
-    if (file.type === 'FileFsRef') {
+    if (file.type === 'FileFsRef' && !standalone) {
       if (!filePathMap) filePathMap = {};
       filePathMap[normalizePath(path)] = normalizePath(
         relative(repoRootPath, file.fsPath)
