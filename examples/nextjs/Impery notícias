@@ -1,0 +1,65 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+export default function NewsSite() {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchNews() {
+      try {
+        const res = await fetch(
+          `https://newsapi.org/v2/top-headlines?country=br&apiKey=SEU_API_KEY`
+        );
+        const data = await res.json();
+        setNews(data.articles || []);
+      } catch (err) {
+        console.error("Erro ao buscar notícias:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchNews();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-3xl font-bold mb-6 text-center">📰 Notícias do Dia</h1>
+      {loading ? (
+        <p className="text-center">Carregando notícias...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {news.map((article, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Card className="rounded-2xl shadow-md hover:shadow-xl transition">
+                {article.urlToImage && (
+                  <img
+                    src={article.urlToImage}
+                    alt="Notícia"
+                    className="rounded-t-2xl w-full h-48 object-cover"
+                  />
+                )}
+                <CardContent>
+                  <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
+                  <p className="text-gray-600 mb-3">
+                    {article.description || "Sem descrição disponível."}
+                  </p>
+                  <a href={article.url} target="_blank" rel="noopener noreferrer">
+                    <Button className="w-full">Ler mais</Button>
+                  </a>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
