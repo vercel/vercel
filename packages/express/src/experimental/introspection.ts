@@ -96,6 +96,7 @@ const processIntrospection = async (
     const introspection = readFileSync(introspectionPath, 'utf8');
     return schema.parse(JSON.parse(introspection));
   } catch (error) {
+    console.log(error);
     console.log(
       `Unable to extract routes from express, route level observability will not be available`
     );
@@ -132,7 +133,8 @@ const invokeFunction = async (
         child.kill('SIGTERM');
       }, 3000);
 
-      child.on('error', () => {
+      child.on('error', error => {
+        console.log('error', error);
         console.log(
           `Unable to extract routes from express, route level observability will not be available`
         );
@@ -143,6 +145,7 @@ const invokeFunction = async (
         resolve(undefined);
       });
     } catch (error) {
+      console.log('error', error);
       console.log(
         `Unable to extract routes from express, route level observability will not be available`
       );
