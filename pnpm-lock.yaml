@@ -929,9 +929,6 @@ importers:
 
   packages/express:
     dependencies:
-      '@types/fs-extra':
-        specifier: '11'
-        version: 11.0.1
       '@vercel/nft':
         specifier: 0.30.1
         version: 0.30.1
@@ -941,6 +938,9 @@ importers:
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
       path-to-regexp:
         specifier: 8.3.0
         version: 8.3.0
@@ -954,6 +954,9 @@ importers:
         specifier: 3.22.4
         version: 3.22.4
     devDependencies:
+      '@types/fs-extra':
+        specifier: '11'
+        version: 11.0.1
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -966,9 +969,6 @@ importers:
       execa:
         specifier: 3.2.0
         version: 3.2.0
-      fs-extra:
-        specifier: 11.1.0
-        version: 11.1.0
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -6860,6 +6860,7 @@ packages:
     dependencies:
       '@types/jsonfile': 6.1.4
       '@types/node': 22.5.0
+    dev: true
 
   /@types/fs-extra@11.0.2:
     resolution: {integrity: sha512-c0hrgAOVYr21EX8J0jBMXGLMgJqVf/v6yxi0dLaJboW9aQPh16Id+z6w2Tx1hm+piJOLv8xPfVKZCLfjPw/IMQ==}
@@ -7018,6 +7019,7 @@ packages:
     resolution: {integrity: sha512-D5qGUYwjvnNNextdU59/+fI+spnwtTFmyQP0h+PfIOSkNfpU6AOICUOkm4i0OnSk+NyjdPJrxCDro0sJsWlRpQ==}
     dependencies:
       '@types/node': 22.5.0
+    dev: true
 
   /@types/keyv@3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
