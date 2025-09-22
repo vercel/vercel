@@ -131,7 +131,15 @@ const invokeFunction = async (
 
       setTimeout(() => {
         child.kill('SIGTERM');
-      }, 3000);
+      }, 5000);
+
+      child.stdout.on('data', data => {
+        console.log('stdout:', data.toString());
+      });
+
+      child.stderr.on('data', data => {
+        console.log('stderr:', data.toString());
+      });
 
       child.on('error', error => {
         console.log('error', error);
@@ -141,7 +149,8 @@ const invokeFunction = async (
         resolve(undefined);
       });
 
-      child.on('close', () => {
+      child.on('close', code => {
+        console.log('child process closed with code:', code);
         resolve(undefined);
       });
     } catch (error) {
@@ -159,6 +168,7 @@ const expressShimSource = (args: { outputDir: string }) => {
   const introspectionPath = getIntrospectionPath(args);
   return `
 const fs = require('fs');
+const path = require('path');
 const originalExpress = require('${pathToExpress}');
 
 let app = null
@@ -211,7 +221,16 @@ const extractRoutes = () => {
 
   views = app.settings.views
   viewEngine = app.settings['view engine']
+
+  // Ensure directory exists
+  const dir = path.dirname(${JSON.stringify(introspectionPath)});
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  console.log('Writing introspection to:', ${JSON.stringify(introspectionPath)});
   fs.writeFileSync(${JSON.stringify(introspectionPath)}, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
+  console.log('Introspection written successfully');
 }
 
 process.on('exit', () => {
