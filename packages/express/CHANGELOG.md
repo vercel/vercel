@@ -1,5 +1,12 @@
 # @vercel/express
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0)]:
+  - @vercel/node@5.3.24
+
 ## 0.0.17
 
 ### Patch Changes

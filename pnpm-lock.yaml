@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../packages/frameworks
 
   internals/constants:
@@ -346,7 +346,7 @@ importers:
         specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.17
+        specifier: 0.0.18
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -355,10 +355,10 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/h3':
-        specifier: 0.1.1
+        specifier: 0.1.2
         version: link:../h3
       '@vercel/hono':
-        specifier: 0.1.1
+        specifier: 0.1.2
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
@@ -367,7 +367,7 @@ importers:
         specifier: 4.12.6
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.23
+        specifier: 5.3.24
         version: link:../node
       '@vercel/python':
         specifier: 5.0.5
@@ -533,10 +533,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.5
+        specifier: 5.5.6
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -933,8 +933,8 @@ importers:
         specifier: 0.30.1
         version: 0.30.1
       '@vercel/node':
-        specifier: 5.3.22
-        version: 5.3.22
+        specifier: 5.3.24
+        version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
@@ -1049,7 +1049,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1269,7 +1269,7 @@ importers:
   packages/h3:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.23
+        specifier: 5.3.24
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1303,7 +1303,7 @@ importers:
   packages/hono:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.23
+        specifier: 5.3.24
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1972,10 +1972,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.1
+        specifier: 3.9.2
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.5
+        specifier: 5.5.6
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -8006,14 +8006,6 @@ packages:
       undici: 5.28.4
     dev: false
 
-  /@vercel/build-utils@12.1.0:
-    resolution: {integrity: sha512-yqpAh2KHm9iWUXo/aRWiLIxi8dMAwFtse2iZsg2QNEMs9W20va6L8PMFvdAa5MX9pgRwc38gbjD3V7drxSwq4g==}
-    dev: false
-
-  /@vercel/error-utils@2.0.3:
-    resolution: {integrity: sha512-CqC01WZxbLUxoiVdh9B/poPbNpY9U+tO1N9oWHwTl5YAZxcqXmmWJ8KNMFItJCUUWdY3J3xv8LvAuQv2KZ5YdQ==}
-    dev: false
-
   /@vercel/fun@1.1.6:
     resolution: {integrity: sha512-xDiM+bD0fSZyzcjsAua3D+guXclvHOSTzr03UcZEQwYzIjwWjLduT7bl2gAaeNIe7fASAIZd0P00clcj0On4rQ==}
     engines: {node: '>= 18'}
@@ -8103,47 +8095,6 @@ packages:
       - encoding
       - rollup
       - supports-color
-    dev: false
-
-  /@vercel/node@5.3.22:
-    resolution: {integrity: sha512-z3v0IlS5fqIEwPKpH9Epyam5DE+wadyKCk+MOaDZYVsriDp3ffJWT0neofHnNfOmnkZztMS194gwbV73v4QTBA==}
-    dependencies:
-      '@edge-runtime/node-utils': 2.3.0
-      '@edge-runtime/primitives': 4.1.0
-      '@edge-runtime/vm': 3.2.0
-      '@types/node': 16.18.11
-      '@vercel/build-utils': 12.1.0
-      '@vercel/error-utils': 2.0.3
-      '@vercel/nft': 0.30.1
-      '@vercel/static-config': 3.1.2
-      async-listen: 3.0.0
-      cjs-module-lexer: 1.2.3
-      edge-runtime: 2.5.9
-      es-module-lexer: 1.4.1
-      esbuild: 0.14.47
-      etag: 1.8.1
-      mime-types: 2.1.35
-      node-fetch: 2.6.9
-      path-to-regexp: 6.1.0
-      path-to-regexp-updated: /path-to-regexp@6.3.0
-      ts-morph: 12.0.0
-      ts-node: 10.9.1(@swc/core@1.2.218)(@types/node@18.0.0)(typescript@4.9.5)
-      typescript: 4.9.5
-      undici: 5.28.4
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - encoding
-      - rollup
-      - supports-color
-    dev: false
-
-  /@vercel/static-config@3.1.2:
-    resolution: {integrity: sha512-2d+TXr6K30w86a+WbMbGm2W91O0UzO5VeemZYBBUJbCjk/5FLLGIi8aV6RS2+WmaRvtcqNTn2pUA7nCOK3bGcQ==}
-    dependencies:
-      ajv: 8.6.3
-      json-schema-to-ts: 1.6.4
-      ts-morph: 12.0.0
     dev: false
 
   /@vercel/style-guide@4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4):
