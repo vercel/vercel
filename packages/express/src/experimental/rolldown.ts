@@ -116,7 +116,7 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
           '.cjs': '.cjs',
           '.js': '.js',
         };
-        const ext = extensionMap[extension];
+        const ext = extensionMap[extension] || '.js';
         const nameWithJS = relPath.slice(0, -extension.length) + ext;
         if (info.isEntry) {
           handler = nameWithJS;
