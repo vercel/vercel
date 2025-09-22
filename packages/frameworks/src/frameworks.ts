@@ -2068,7 +2068,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/main',
+        dest: '/',
       },
     ],
   },
