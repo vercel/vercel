@@ -265,8 +265,8 @@ describe('successful builds', () => {
         entrypoint: 'package.json',
         repoRootPath: workPath,
       });
-      console.dir(result, { depth: null });
       for (const route of fixtureConfig.routes || []) {
+        console.dir(route, { depth: null });
         if ('routes' in result && result.routes) {
           expect(result.routes.find(r => r.dest === route.dest)).toBeDefined();
         }
