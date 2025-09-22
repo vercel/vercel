@@ -63,7 +63,7 @@ const cleanup = async (options: Awaited<ReturnType<typeof rolldown>>) => {
     recursive: true,
     force: true,
   });
-  await rm(join(options.outputDir, 'introspection.json'), { force: true });
+  await rm(getIntrospectionPath(options), { force: true });
 };
 
 const processIntrospection = async (
@@ -108,6 +108,10 @@ const processIntrospection = async (
   }
 };
 
+const getIntrospectionPath = (options: { outputDir: string }) => {
+  return join(options.outputDir, 'introspection.json');
+};
+
 const invokeFunction = async (
   args: Parameters<BuildV2>[0],
   options: Awaited<ReturnType<typeof rolldown>>
@@ -149,6 +153,7 @@ const invokeFunction = async (
 
 const expressShimSource = (args: { outputDir: string }) => {
   const pathToExpress = require_.resolve('express');
+  const introspectionPath = getIntrospectionPath(args);
   return `
 const fs = require('fs');
 const originalExpress = require('${pathToExpress}');
@@ -196,7 +201,7 @@ const extractRoutes = () => {
 
   views = app.settings.views
   viewEngine = app.settings['view engine']
-  fs.writeFileSync('${args.outputDir}/introspection.json', JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
+  fs.writeFileSync('${introspectionPath}', JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
 }
 
 process.on('exit', () => {
