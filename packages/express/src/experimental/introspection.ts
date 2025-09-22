@@ -182,7 +182,14 @@ expressWrapper.prototype = originalExpress.prototype;
 
 module.exports = expressWrapper;
 
+let routesExtracted = false;
+
 const extractRoutes = () => {
+  if (routesExtracted) {
+    return;
+  }
+  routesExtracted = true;
+  
   const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
   if (!app || !app._router) {
     return;
