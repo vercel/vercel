@@ -169,7 +169,7 @@ const expressShimSource = (args: { outputDir: string }) => {
   return `
 const fs = require('fs');
 const path = require('path');
-const originalExpress = require('${pathToExpress}');
+const originalExpress = require(${JSON.stringify(pathToExpress)});
 
 let app = null
 let staticPaths = [];
