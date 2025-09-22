@@ -951,8 +951,8 @@ importers:
         specifier: 12.0.0
         version: 12.0.0
       zod:
-        specifier: 4.1.9
-        version: 4.1.9
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
       '@types/jest':
         specifier: 27.5.1
@@ -18380,6 +18380,6 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /zod@4.1.9:
-    resolution: {integrity: sha512-HI32jTq0AUAC125z30E8bQNz0RQ+9Uc+4J7V97gLYjZVKRjeydPgGt6dvQzFrav7MYOUGFqqOGiHpA/fdbd0cQ==}
+  /zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
     dev: false
