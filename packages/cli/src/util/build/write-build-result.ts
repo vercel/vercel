@@ -641,35 +641,28 @@ export async function* findDirs(
 export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
-  sharedDest: string,
-  standalone: boolean = false
+  sharedDest?: string,
+  standalone?: boolean
 ): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
   const shared: Files = {};
-  if (standalone) {
-    for (const [path, file] of Object.entries(files)) {
-      if (file.type === 'FileFsRef') {
-        if (!filePathMap) filePathMap = {};
+  for (const [path, file] of Object.entries(files)) {
+    if (file.type === 'FileFsRef') {
+      if (!filePathMap) filePathMap = {};
+      if (standalone && sharedDest) {
         shared[path] = file;
         filePathMap[normalizePath(join(sharedDest, path))] = normalizePath(
           relative(repoRootPath, join(sharedDest, file.fsPath))
         );
       } else {
-        out[path] = file;
+        filePathMap[normalizePath(path)] = normalizePath(
+          relative(repoRootPath, file.fsPath)
+        );
       }
-    }
-    return { files: out, filePathMap, shared };
-  }
-  for (const [path, file] of Object.entries(files)) {
-    if (file.type === 'FileFsRef') {
-      if (!filePathMap) filePathMap = {};
-      filePathMap[normalizePath(path)] = normalizePath(
-        relative(repoRootPath, file.fsPath)
-      );
     } else {
       out[path] = file;
     }
   }
-  return { files: out, filePathMap };
+  return { files: out, filePathMap, shared };
 }
