@@ -1,7 +1,7 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
 import { build as experimentalBuild } from '../../src/experimental/build';
-import { join } from 'path';
+import { join, sep } from 'path';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 
@@ -229,7 +229,7 @@ describe('successful builds', () => {
       });
 
       if ('handler' in result.output) {
-        expect(result.output.handler).toBe(fixtureConfig.handler.join('/'));
+        expect(result.output.handler).toBe(fixtureConfig.handler.join(sep));
         const file = result.output.files?.[result.output.handler];
         if (file && 'data' in file) {
           const content = file.data.toString();
