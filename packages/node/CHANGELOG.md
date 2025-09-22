@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.3.24
+
+### Patch Changes
+
+- Add support for public asset folder for Hono preset ([#13958](https://github.com/vercel/vercel/pull/13958))
+
 ## 5.3.23
 
 ### Patch Changes
