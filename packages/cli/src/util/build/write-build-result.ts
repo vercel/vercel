@@ -652,8 +652,11 @@ export function filesWithoutFsRefs(
       if (!filePathMap) filePathMap = {};
       if (standalone && sharedDest) {
         shared[path] = file;
-        filePathMap[normalizePath(join(sharedDest, path))] = normalizePath(
-          relative(repoRootPath, join(sharedDest, file.fsPath))
+        filePathMap[normalizePath(path)] = normalizePath(
+          join(
+            relative(repoRootPath, sharedDest),
+            relative(repoRootPath, file.fsPath)
+          )
         );
       } else {
         filePathMap[normalizePath(path)] = normalizePath(
