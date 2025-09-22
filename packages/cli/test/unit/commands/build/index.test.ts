@@ -1530,31 +1530,12 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  describe('--experimentalStandalone flag', () => {
-    it('should track telemetry for --experimentalStandalone flag', async () => {
-      const command = 'build';
-
-      client.setArgv(command, '--experimentalStandalone', '--help');
-      const exitCodePromise = build(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:standalone',
-          value: 'TRUE',
-        },
-        {
-          key: 'flag:help',
-          value: command,
-        },
-      ]);
-    });
-
-    it('should convert FileFsRef to FileBlob when --experimentalStandalone is used', async () => {
+  describe('VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', () => {
+    it('should convert FileFsRef to FileBlob when VERCEL_EXPERIMENTAL_STANDALONE_BUILD is used', async () => {
       const cwd = fixture('node');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      client.setArgv('build', '--experimentalStandalone');
+      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1590,11 +1571,11 @@ describe.skipIf(flakey)('build', () => {
       }
     });
 
-    it('should work with static builds and --experimentalStandalone flag', async () => {
+    it('should work with static builds and VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', async () => {
       const cwd = fixture('static');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      client.setArgv('build', '--experimentalStandalone');
+      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
