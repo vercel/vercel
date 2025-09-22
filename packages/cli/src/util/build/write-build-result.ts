@@ -425,12 +425,17 @@ async function writeEdgeFunction(
 
   await fs.mkdirp(dest);
   const ops: Promise<any>[] = [];
-  const { files, filePathMap } = filesWithoutFsRefs(
+  const sharedDest = join(outputDir, 'shared');
+  const { files, filePathMap, shared } = filesWithoutFsRefs(
     edgeFunction.files,
     repoRootPath,
+    sharedDest,
     standalone
   );
   ops.push(download(files, dest));
+  if (shared) {
+    ops.push(download(shared, sharedDest));
+  }
 
   const config = {
     runtime: 'edge',
@@ -482,10 +487,19 @@ async function writeLambda(
   const ops: Promise<any>[] = [];
   let filePathMap: Record<string, string> | undefined;
   if (lambda.files) {
+    const sharedDest = join(outputDir, 'shared');
     // `files` is defined
-    const f = filesWithoutFsRefs(lambda.files, repoRootPath, standalone);
+    const f = filesWithoutFsRefs(
+      lambda.files,
+      repoRootPath,
+      sharedDest,
+      standalone
+    );
     filePathMap = f.filePathMap;
     ops.push(download(f.files, dest));
+    if (f.shared) {
+      ops.push(download(f.shared, sharedDest));
+    }
   } else if (lambda.zipBuffer) {
     // Builders that use the deprecated `createLambda()` might only have `zipBuffer`
     ops.push(unzip(lambda.zipBuffer, dest));
@@ -627,12 +641,28 @@ export async function* findDirs(
 export function filesWithoutFsRefs(
   files: Files,
   repoRootPath: string,
+  sharedDest: string,
   standalone: boolean = false
-): { files: Files; filePathMap?: Record<string, string> } {
+): { files: Files; filePathMap?: Record<string, string>; shared?: Files } {
   let filePathMap: Record<string, string> | undefined;
   const out: Files = {};
+  const shared: Files = {};
+  if (standalone) {
+    for (const [path, file] of Object.entries(files)) {
+      if (file.type === 'FileFsRef') {
+        if (!filePathMap) filePathMap = {};
+        shared[path] = file;
+        filePathMap[normalizePath(join(sharedDest, path))] = normalizePath(
+          relative(repoRootPath, join(sharedDest, file.fsPath))
+        );
+      } else {
+        out[path] = file;
+      }
+    }
+    return { files: out, filePathMap, shared };
+  }
   for (const [path, file] of Object.entries(files)) {
-    if (file.type === 'FileFsRef' && !standalone) {
+    if (file.type === 'FileFsRef') {
       if (!filePathMap) filePathMap = {};
       filePathMap[normalizePath(path)] = normalizePath(
         relative(repoRootPath, file.fsPath)
