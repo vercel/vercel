@@ -208,7 +208,7 @@ const extractRoutes = () => {
 
   views = app.settings.views
   viewEngine = app.settings['view engine']
-  fs.writeFileSync('${introspectionPath}', JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
+  fs.writeFileSync(${JSON.stringify(introspectionPath)}, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
 }
 
 process.on('exit', () => {

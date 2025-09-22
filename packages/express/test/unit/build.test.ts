@@ -287,7 +287,6 @@ describe('successful builds', () => {
             result.output.index.handler
           );
           const handlerContent = fs.readFileSync(entrypoint, 'utf8');
-          console.log({ handlerContent });
           const moduleTypeDetected = await detectModuleType(handlerContent);
           expect(moduleTypeDetected).toBe(fixtureConfig.moduleType);
         }
