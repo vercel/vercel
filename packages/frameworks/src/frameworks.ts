@@ -2029,7 +2029,7 @@ export const frameworks = [
     description:
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
-    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
     detectors: {
       some: [
         {
