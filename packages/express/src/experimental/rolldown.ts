@@ -34,7 +34,12 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     const { mode } = lstatSync(packageJsonPath);
     const source = readFileSync(packageJsonPath);
     const relPath = relative(baseDir, packageJsonPath);
-    const pkg = JSON.parse(source.toString());
+    let pkg;
+    try {
+      pkg = JSON.parse(source.toString());
+    } catch (_e) {
+      pkg = {};
+    }
     if (format === 'auto') {
       if (pkg.type === 'module') {
         format = 'esm';
