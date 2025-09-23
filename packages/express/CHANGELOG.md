@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.20
+
+### Patch Changes
+
+- Fix issue finding express dep ([#13978](https://github.com/vercel/vercel/pull/13978))
+
 ## 0.0.19
 
 ### Patch Changes
