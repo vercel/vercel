@@ -346,7 +346,7 @@ importers:
         specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.18
+        specifier: 0.0.19
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6

@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.19
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
 ## 0.0.18
 
 ### Patch Changes
