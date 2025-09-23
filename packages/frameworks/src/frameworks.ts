@@ -2055,7 +2055,8 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        value: 'uvicorn index:app --reload --port $PORT',
+        placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
         value: 'N/A',

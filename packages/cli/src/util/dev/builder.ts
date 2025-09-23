@@ -432,6 +432,24 @@ export async function getBuildMatches(
       src = 'package.json';
     }
 
+    if (buildConfig.config?.framework === 'fastapi') {
+      // Mirror @vercel/python's entrypoint candidates
+      const candidateDirs = ['', 'src', 'app'];
+      const candidateNames = ['app', 'index', 'server', 'main'];
+      const candidates: string[] = [];
+      for (const dir of candidateDirs) {
+        for (const name of candidateNames) {
+          candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
+        }
+      }
+      if (!fileList.includes(src)) {
+        const existing = candidates.filter(p => fileList.includes(p));
+        if (existing.length > 0) {
+          src = existing[0];
+        }
+      }
+    }
+
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);

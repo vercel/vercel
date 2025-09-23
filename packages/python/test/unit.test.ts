@@ -390,3 +390,284 @@ describe('uv install path', () => {
     expect(opts).toHaveProperty('cwd', workPath);
   });
 });
+
+describe('startDevServer', () => {
+  it('returns null when framework is not fastapi', async () => {
+    const { startDevServer } = await import('../src/index');
+    const res = await startDevServer({
+      entrypoint: 'app.py',
+      workPath: tmpdir(),
+      meta: {},
+      config: {},
+    } as any);
+    expect(res).toBeNull();
+  });
+
+  it('starts uvicorn and detects the bound port', async () => {
+    jest.resetModules();
+
+    // Mocks must be applied before importing the module under test
+    let spawnMock: jest.Mock<any, any> = jest.fn();
+    jest.doMock('child_process', () => {
+      const { EventEmitter } = require('events');
+      spawnMock = jest.fn(() => {
+        const child = new EventEmitter();
+        (child as any).pid = 43210;
+        (child as any).stdout = new EventEmitter();
+        (child as any).stderr = new EventEmitter();
+        // Emit a readiness log line on next tick
+        process.nextTick(() => {
+          (child as any).stdout.emit(
+            'data',
+            Buffer.from('Uvicorn running on http://127.0.0.1:56789\n')
+          );
+        });
+        return child;
+      });
+      return { __esModule: true, spawn: spawnMock };
+    });
+
+    jest.doMock('../src/utils', () => ({
+      __esModule: true,
+      detectAsgiServer: jest.fn(async () => 'uvicorn'),
+      isInVirtualEnv: jest.fn(() => ''),
+      useVirtualEnv: jest.fn(() => ({
+        pythonCmd: '/mock/python',
+        venvRoot: '/mock/venv',
+      })) as any,
+    }));
+
+    jest.doMock('../src/version', () => ({
+      __esModule: true,
+      getLatestPythonVersion: jest.fn(() => ({
+        pythonPath: '/usr/bin/python3',
+        pipPath: '/usr/bin/pip3',
+        version: '3.10',
+        runtime: 'python3.10',
+      })) as any,
+    }));
+
+    const { startDevServer } = await import('../src/index');
+
+    const workPath = path.join(tmpdir(), `python-devserver-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    try {
+      // Create a valid FastAPI entrypoint file that the detector can find
+      fs.writeFileSync(
+        path.join(workPath, 'app.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      const res = await startDevServer({
+        entrypoint: 'main.py',
+        workPath,
+        meta: { env: { FOO: 'bar' } },
+        config: { framework: 'fastapi' },
+      } as any);
+
+      expect(res).not.toBeNull();
+      expect(res?.port).toBe(56789);
+      expect(res?.pid).toBe(43210);
+
+      // Validate spawn args
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+      const [pythonCmd, argv, opts] = spawnMock.mock.calls[0];
+      expect(pythonCmd).toBe('/mock/python');
+      expect(argv).toEqual(
+        expect.arrayContaining(['-m', 'uvicorn', 'app:app', '--reload'])
+      );
+      expect(argv).toEqual(expect.arrayContaining(['--host', '127.0.0.1']));
+      expect(argv).toEqual(expect.arrayContaining(['--port', '0']));
+      expect(argv).toContain('--use-colors');
+      expect(opts).toBeDefined();
+      expect(opts.env).toBeDefined();
+      expect(opts).toHaveProperty('cwd', workPath);
+      expect(opts.stdio).toEqual(['inherit', 'pipe', 'pipe']);
+      expect(opts.env.TERM).toBe('xterm-256color');
+      expect(opts.env.FORCE_COLOR).toBe('1');
+      expect(opts.env.PY_COLORS).toBe('1');
+      expect(opts.env.CLICOLOR_FORCE).toBe('1');
+      expect(opts.env.FOO).toBe('bar');
+
+      // Ensure we can shut it down without throwing
+      if (res?.shutdown) {
+        jest.useFakeTimers();
+        const p = res.shutdown();
+        jest.advanceTimersByTime(1600);
+        await p;
+        jest.useRealTimers();
+      }
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+  });
+
+  it('starts hypercorn and detects the bound port', async () => {
+    jest.resetModules();
+
+    let spawnMock: jest.Mock<any, any> = jest.fn();
+    jest.doMock('child_process', () => {
+      const { EventEmitter } = require('events');
+      spawnMock = jest.fn(() => {
+        const child = new EventEmitter();
+        (child as any).pid = 54321;
+        (child as any).stdout = new EventEmitter();
+        (child as any).stderr = new EventEmitter();
+        process.nextTick(() => {
+          (child as any).stdout.emit(
+            'data',
+            Buffer.from('Hypercorn running on http://127.0.0.1:45678\n')
+          );
+        });
+        return child;
+      });
+      return { __esModule: true, spawn: spawnMock };
+    });
+
+    jest.doMock('../src/utils', () => ({
+      __esModule: true,
+      detectAsgiServer: jest.fn(async () => 'hypercorn'),
+      isInVirtualEnv: jest.fn(() => ''),
+      useVirtualEnv: jest.fn(() => ({
+        pythonCmd: '/mock/python',
+        venvRoot: '/mock/venv',
+      })) as any,
+    }));
+
+    jest.doMock('../src/version', () => ({
+      __esModule: true,
+      getLatestPythonVersion: jest.fn(() => ({
+        pythonPath: '/usr/bin/python3',
+        pipPath: '/usr/bin/pip3',
+        version: '3.10',
+        runtime: 'python3.10',
+      })) as any,
+    }));
+
+    const { startDevServer } = await import('../src/index');
+
+    const workPath = path.join(tmpdir(), `python-devserver-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'app.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    try {
+      const res = await startDevServer({
+        entrypoint: 'main.py',
+        workPath,
+        meta: {},
+        config: { framework: 'fastapi' },
+      } as any);
+
+      expect(res).not.toBeNull();
+      expect(res?.port).toBe(45678);
+      expect(res?.pid).toBe(54321);
+
+      const [pythonCmd, argv, opts] = spawnMock.mock.calls[0];
+      expect(pythonCmd).toBe('/mock/python');
+      expect(argv).toEqual(
+        expect.arrayContaining(['-m', 'hypercorn', 'app:app', '--reload'])
+      );
+      expect(argv).toEqual(expect.arrayContaining(['-b', '127.0.0.1:0']));
+      expect(opts).toHaveProperty('cwd', workPath);
+
+      if (res?.shutdown) {
+        jest.useFakeTimers();
+        const p = res.shutdown();
+        jest.advanceTimersByTime(1600);
+        await p;
+        jest.useRealTimers();
+      }
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+  });
+
+  (process.platform === 'win32' ? it.skip : it)(
+    'shutdown sends SIGTERM then SIGKILL on POSIX',
+    async () => {
+      jest.resetModules();
+
+      let spawnMock: jest.Mock<any, any> = jest.fn();
+      jest.doMock('child_process', () => {
+        const { EventEmitter } = require('events');
+        spawnMock = jest.fn(() => {
+          const child = new EventEmitter();
+          (child as any).pid = 24680;
+          (child as any).stdout = new EventEmitter();
+          (child as any).stderr = new EventEmitter();
+          process.nextTick(() => {
+            (child as any).stdout.emit(
+              'data',
+              Buffer.from('Uvicorn running on http://127.0.0.1:34567\n')
+            );
+          });
+          return child;
+        });
+        return { __esModule: true, spawn: spawnMock };
+      });
+
+      jest.doMock('../src/utils', () => ({
+        __esModule: true,
+        detectAsgiServer: jest.fn(async () => 'uvicorn'),
+        isInVirtualEnv: jest.fn(() => ''),
+        useVirtualEnv: jest.fn(() => ({
+          pythonCmd: '/mock/python',
+          venvRoot: '/mock/venv',
+        })) as any,
+      }));
+
+      jest.doMock('../src/version', () => ({
+        __esModule: true,
+        getLatestPythonVersion: jest.fn(() => ({
+          pythonPath: '/usr/bin/python3',
+          pipPath: '/usr/bin/pip3',
+          version: '3.10',
+          runtime: 'python3.10',
+        })) as any,
+      }));
+
+      const { startDevServer } = await import('../src/index');
+
+      const workPath = path.join(tmpdir(), `python-devserver-${Date.now()}`);
+      fs.mkdirSync(workPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(workPath, 'app.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      const res = await startDevServer({
+        entrypoint: 'main.py',
+        workPath,
+        meta: {},
+        config: { framework: 'fastapi' },
+      } as any);
+
+      expect(res).not.toBeNull();
+
+      jest.useFakeTimers();
+      const killSpy = jest
+        .spyOn(process, 'kill')
+        .mockImplementation(() => true as unknown as never);
+
+      const shutdownPromise = res?.shutdown
+        ? res.shutdown()
+        : Promise.resolve();
+      // SIGTERM is sent immediately
+      expect(killSpy).toHaveBeenCalledWith(24680, 'SIGTERM');
+
+      // Advance timers to trigger the SIGKILL fallback
+      jest.advanceTimersByTime(1600);
+      await shutdownPromise;
+
+      expect(killSpy).toHaveBeenCalledWith(24680, 'SIGKILL');
+
+      killSpy.mockRestore();
+      jest.useRealTimers();
+
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+  );
+});
