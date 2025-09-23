@@ -8,13 +8,13 @@ import {
   glob,
   Lambda,
   FileBlob,
-  shouldServe,
   debug,
   NowBuildError,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
   type Files,
+  type ShouldServe,
 } from '@vercel/build-utils';
 import {
   installRequirement,
@@ -339,7 +339,9 @@ export const build: BuildV3 = async ({
   return { output };
 };
 
-export { shouldServe, startDevServer };
+export { startDevServer };
+
+export const shouldServe: ShouldServe = () => true;
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

@@ -22,7 +22,7 @@ export const detectAsgiServer = async (workPath: string, pythonPath: string) =>
         const { venvRoot } = useVirtualEnv(workPath, {}, pythonPath);
         const baseErrorMessage =
           'No ASGI server found. Please install either "uvicorn" or "hypercorn" (e.g. "pip install uvicorn").';
-        const errorMessage = venvRoot
+        const errorMessage = !venvRoot
           ? `${baseErrorMessage} If you are using a virtual environment, please activate it and try again.`
           : baseErrorMessage;
         reject(new Error(errorMessage));
