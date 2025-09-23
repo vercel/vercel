@@ -59,7 +59,15 @@ export async function writeBuildResult(
   vercelConfig: VercelConfig | null,
   standalone: boolean = false
 ) {
-  const { version } = builder;
+  let version = builder.version;
+  if (
+    'experimentalVersion' in builder &&
+    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
+    'name' in builder &&
+    builder.name === 'express'
+  ) {
+    version = builder.experimentalVersion as 2 | 3;
+  }
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       repoRootPath,
