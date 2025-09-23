@@ -1,5 +1,5 @@
 import { BuildV2, glob } from '@vercel/build-utils';
-import { join } from 'path';
+import { isAbsolute, join, normalize, resolve, sep } from 'path';
 import { outputFile } from 'fs-extra';
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
@@ -30,18 +30,30 @@ export const introspectApp = async (
   await cleanup(options);
 
   if (views) {
-    const viewFiles = await glob(join(views, '**/*'), args.workPath);
-    for (const [p, f] of Object.entries(viewFiles)) {
-      options.files[p] = f;
+    try {
+      const validatedViews = validatePath(views, args.workPath);
+      const viewFiles = await glob(join(validatedViews, '**/*'), args.workPath);
+      for (const [p, f] of Object.entries(viewFiles)) {
+        options.files[p] = f;
+      }
+    } catch (error) {
+      console.log(`Skipping invalid views path: ${views}`);
     }
   }
 
   if (staticPaths) {
-    for (const staticPath of staticPaths) {
-      const staticFiles = await glob(join(staticPath, '**/*'), args.workPath);
-      for (const [p, f] of Object.entries(staticFiles)) {
-        options.files[p] = f;
+    try {
+      const validatedStaticPaths = staticPaths.map(path =>
+        validatePath(path, args.workPath)
+      );
+      for (const staticPath of validatedStaticPaths) {
+        const staticFiles = await glob(join(staticPath, '**/*'), args.workPath);
+        for (const [p, f] of Object.entries(staticFiles)) {
+          options.files[p] = f;
+        }
       }
+    } catch (error) {
+      console.log(`Skipping invalid static paths: ${staticPaths}`);
     }
   }
   const routes = [
@@ -96,7 +108,6 @@ const processIntrospection = async (
     const introspection = readFileSync(introspectionPath, 'utf8');
     return schema.parse(JSON.parse(introspection));
   } catch (error) {
-    console.log(error);
     console.log(
       `Unable to extract routes from express, route level observability will not be available`
     );
@@ -133,28 +144,17 @@ const invokeFunction = async (
         child.kill('SIGTERM');
       }, 5000);
 
-      child.stdout.on('data', data => {
-        console.log('stdout:', data.toString());
-      });
-
-      child.stderr.on('data', data => {
-        console.log('stderr:', data.toString());
-      });
-
-      child.on('error', error => {
-        console.log('error', error);
+      child.on('error', () => {
         console.log(
           `Unable to extract routes from express, route level observability will not be available`
         );
         resolve(undefined);
       });
 
-      child.on('close', code => {
-        console.log('child process closed with code:', code);
+      child.on('close', () => {
         resolve(undefined);
       });
     } catch (error) {
-      console.log('error', error);
       console.log(
         `Unable to extract routes from express, route level observability will not be available`
       );
@@ -228,9 +228,7 @@ const extractRoutes = () => {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  console.log('Writing introspection to:', ${JSON.stringify(introspectionPath)});
   fs.writeFileSync(${JSON.stringify(introspectionPath)}, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
-  console.log('Introspection written successfully');
 }
 
 process.on('exit', () => {
@@ -267,4 +265,39 @@ const convertExpressRoute = (
     dest: dest,
     methods: routeData.methods,
   };
+};
+
+const validatePath = (inputPath: string, workPath: string): string => {
+  // Reject null bytes
+  if (inputPath.indexOf('\0') !== -1) {
+    throw new Error(`Path contains null bytes: ${inputPath}`);
+  }
+
+  // Normalize the path to resolve any . and .. components
+  const normalizedPath = normalize(inputPath);
+
+  // Check for directory traversal attempts after normalization
+  if (normalizedPath.includes('..')) {
+    throw new Error(
+      `Path contains directory traversal sequences: ${inputPath}`
+    );
+  }
+
+  // Reject absolute paths (they should be relative to workPath)
+  if (isAbsolute(normalizedPath)) {
+    throw new Error(`Absolute paths are not allowed: ${inputPath}`);
+  }
+
+  // Resolve the final path and ensure it stays within workPath
+  const resolvedPath = resolve(workPath, normalizedPath);
+  const resolvedWorkPath = resolve(workPath);
+
+  if (
+    !resolvedPath.startsWith(resolvedWorkPath + sep) &&
+    resolvedPath !== resolvedWorkPath
+  ) {
+    throw new Error(`Path escapes the intended directory: ${inputPath}`);
+  }
+
+  return normalizedPath;
 };

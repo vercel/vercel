@@ -266,7 +266,6 @@ describe('successful builds', () => {
         repoRootPath: workPath,
       });
       for (const route of fixtureConfig.routes || []) {
-        console.dir(route, { depth: null });
         if ('routes' in result && result.routes) {
           expect(result.routes.find(r => r.dest === route.dest)).toBeDefined();
         }
