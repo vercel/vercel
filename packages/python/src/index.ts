@@ -10,6 +10,7 @@ import {
   FileBlob,
   debug,
   NowBuildError,
+  shouldServe,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -21,7 +22,6 @@ import {
   resolveVendorDir,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
-import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
 import { startDevServer as startPythonDevServer } from './start-dev-server';
 
 const readFile = promisify(fs.readFile);
@@ -339,11 +339,7 @@ export const build: BuildV3 = async ({
   return { output };
 };
 
+export { shouldServe, startPythonDevServer as startDevServer };
+
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
-
-export const startDevServer: StartDevServer = startPythonDevServer;
-
-export const shouldServe: ShouldServe = () => {
-  return true;
-};
