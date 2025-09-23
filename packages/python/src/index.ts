@@ -8,9 +8,9 @@ import {
   glob,
   Lambda,
   FileBlob,
+  shouldServe,
   debug,
   NowBuildError,
-  shouldServe,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -22,7 +22,7 @@ import {
   resolveVendorDir,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
-import { startDevServer as startPythonDevServer } from './start-dev-server';
+import { startDevServer } from './start-dev-server';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -339,7 +339,7 @@ export const build: BuildV3 = async ({
   return { output };
 };
 
-export { shouldServe, startPythonDevServer as startDevServer };
+export { shouldServe, startDevServer };
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
