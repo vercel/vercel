@@ -1,5 +1,11 @@
 # vercel
 
+## 48.1.2
+
+### Patch Changes
+
+- Fix relative path for experimental standalone mode ([#13973](https://github.com/vercel/vercel/pull/13973))
+
 ## 48.1.1
 
 ### Patch Changes
