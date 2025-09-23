@@ -1,5 +1,24 @@
 # @vercel/express
 
+## 0.0.20
+
+### Patch Changes
+
+- Fix issue finding express dep ([#13978](https://github.com/vercel/vercel/pull/13978))
+
+## 0.0.19
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0)]:
+  - @vercel/node@5.3.24
+
 ## 0.0.17
 
 ### Patch Changes

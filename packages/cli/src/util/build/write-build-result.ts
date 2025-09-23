@@ -59,7 +59,15 @@ export async function writeBuildResult(
   vercelConfig: VercelConfig | null,
   standalone: boolean = false
 ) {
-  const { version } = builder;
+  let version = builder.version;
+  if (
+    'experimentalVersion' in builder &&
+    process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
+    'name' in builder &&
+    builder.name === 'express'
+  ) {
+    version = builder.experimentalVersion as 2 | 3;
+  }
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2(
       repoRootPath,
@@ -652,8 +660,8 @@ export function filesWithoutFsRefs(
       if (!filePathMap) filePathMap = {};
       if (standalone && sharedDest) {
         shared[path] = file;
-        filePathMap[normalizePath(join(sharedDest, path))] = normalizePath(
-          relative(repoRootPath, join(sharedDest, file.fsPath))
+        filePathMap[normalizePath(path)] = normalizePath(
+          relative(repoRootPath, join(sharedDest, path))
         );
       } else {
         filePathMap[normalizePath(path)] = normalizePath(
