@@ -65,7 +65,6 @@ export const startDevServer: StartDevServer = async opts => {
       }
 
       detectAsgiServer(workPath, pythonCmd)
-        .catch(reject)
         .then(serverKind => {
           if (resolved) return; // in case preflight was rejected
           const argv =
@@ -167,7 +166,8 @@ export const startDevServer: StartDevServer = async opts => {
                 )
               );
           });
-        });
+        })
+        .catch(reject);
     }
   );
 
