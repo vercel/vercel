@@ -1,4 +1,6 @@
 import { spawn } from 'child_process';
+import { createServer } from 'net';
+import type { AddressInfo } from 'net';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import {
@@ -39,6 +41,33 @@ function silenceNodeWarnings() {
       process.emitWarning = original;
     }
   };
+}
+
+// Acquire an available TCP port on a specific host, then release it
+async function getAvailablePort(host: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    const onError = (err: Error) => {
+      try {
+        srv.close();
+      } catch (e: any) {
+        debug(`Error closing server: ${e}`);
+      }
+      reject(err);
+    };
+    srv.once('error', onError);
+    srv.listen(0, host, () => {
+      const addr = srv.address() as AddressInfo | null;
+      srv.close(err => {
+        if (err) return onError(err);
+        if (addr && typeof addr.port === 'number') {
+          resolve(addr.port);
+        } else {
+          reject(new Error('Failed to get available port'));
+        }
+      });
+    });
+  });
 }
 
 // Regex to strip ANSI escape sequences for matching while preserving colored output
@@ -101,8 +130,10 @@ export const startDevServer: StartDevServer = async opts => {
         }
 
         detectAsgiServer(workPath, pythonCmd)
-          .then(serverKind => {
+          .then(async serverKind => {
             if (resolved) return; // in case preflight was rejected
+            const host = '127.0.0.1';
+            const fixedPort = await getAvailablePort(host);
             const argv =
               serverKind === 'uvicorn'
                 ? [
@@ -111,9 +142,9 @@ export const startDevServer: StartDevServer = async opts => {
                     `${modulePath}:app`,
                     '--reload',
                     '--host',
-                    '127.0.0.1',
+                    host,
                     '--port',
-                    '0',
+                    String(fixedPort),
                     '--use-colors',
                   ]
                 : [
@@ -122,7 +153,7 @@ export const startDevServer: StartDevServer = async opts => {
                     `${modulePath}:app`,
                     '--reload',
                     '-b',
-                    '127.0.0.1:0',
+                    `${host}:${fixedPort}`,
                   ];
             debug(
               `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
@@ -181,13 +212,13 @@ export const startDevServer: StartDevServer = async opts => {
                 }
               }
               if (portMatch && child.pid) {
-                const port = Number(portMatch[1]);
                 if (!resolved) {
                   resolved = true;
                   // Use removeListener for broad Node compatibility (and mocked emitters)
                   child.stdout?.removeListener('data', onDetect);
                   child.stderr?.removeListener('data', onDetect);
-                  resolve({ port, pid: child.pid });
+                  // Always resolve with the fixedPort we selected to ensure stability across reloads
+                  resolve({ port: fixedPort, pid: child.pid });
                 }
               }
             };
