@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/api/version",
+      "mustContain": "\"fastapi_version\":\"0.116.2\""
+    }
+  ]
+}
