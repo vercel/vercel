@@ -63,7 +63,7 @@ import { APIError } from './util/errors-ts';
 import { SENTRY_DSN } from './util/constants';
 import getUpdateCommand from './util/get-update-command';
 import { getCommandName, getTitleName } from './util/pkg-name';
-import doLoginPrompt from './util/login/prompt';
+import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { ProxyAgent } from 'proxy-agent';
@@ -72,7 +72,6 @@ import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
 import { RootTelemetryClient } from './util/telemetry/root';
 import { help } from './args';
-import { updateCurrentTeamAfterLogin } from './util/login/update-current-team-after-login';
 import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
@@ -280,8 +279,8 @@ const main = async () => {
     },
   });
 
-  const agent = await determineAgent();
-  telemetry.trackAgenticUse(agent);
+  const { agent } = await determineAgent();
+  telemetry.trackAgenticUse(agent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -402,21 +401,9 @@ const main = async () => {
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
       try {
-        const result = await doLoginPrompt(client);
-
+        const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
-        if (typeof result === 'number') {
-          return result;
-        }
-
-        // When `result` is a string it's the user's authentication token.
-        // It needs to be saved to the configuration file.
-        client.authConfig.token = result.token;
-
-        await updateCurrentTeamAfterLogin(client, result.teamId);
-
-        configFiles.writeToAuthConfigFile(client.authConfig);
-        configFiles.writeToConfigFile(client.config);
+        if (result !== 0) return result;
       } catch (error) {
         printError(error);
         return 1;
@@ -705,7 +692,8 @@ const main = async () => {
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
-          func = require('./commands/login').default;
+          func = (c: Client) =>
+            require('./commands/login').default(c, { shouldParseArgs: true });
           break;
         case 'logout':
           telemetry.trackCliCommandLogout(userSuppliedSubCommand);

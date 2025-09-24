@@ -1,5 +1,41 @@
 # @vercel/frameworks
 
+## 3.9.2
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+## 3.9.1
+
+### Patch Changes
+
+- [python] framework demo + removed experimental ([#13959](https://github.com/vercel/vercel/pull/13959))
+
+## 3.9.0
+
+### Minor Changes
+
+- Add h3 zero config support ([#13942](https://github.com/vercel/vercel/pull/13942))
+
+## 3.8.5
+
+### Patch Changes
+
+- [python] FastAPI entrypoint discovery ([#13914](https://github.com/vercel/vercel/pull/13914))
+
+## 3.8.4
+
+### Patch Changes
+
+- This updates `Nuxt.js` -> `Nuxt`, detects Nuxt if the nightly version is installed, and updates the development command to nuxt dev. ([#13606](https://github.com/vercel/vercel/pull/13606))
+
+## 3.8.3
+
+### Patch Changes
+
+- Adds FastAPI to the list of auto-detected frameworks ([#13877](https://github.com/vercel/vercel/pull/13877))
+
 ## 3.8.2
 
 ### Patch Changes

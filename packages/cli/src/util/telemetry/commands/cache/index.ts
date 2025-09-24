@@ -12,4 +12,18 @@ export class CacheTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandInvalidate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'invalidate',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDangerouslyDelete(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'dangerously-delete',
+      value: actual,
+    });
+  }
 }

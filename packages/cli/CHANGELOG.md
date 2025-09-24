@@ -1,5 +1,228 @@
 # vercel
 
+## 48.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`ec3a2a8a334976d94d3cc79e1b134e11f75cd78f`](https://github.com/vercel/vercel/commit/ec3a2a8a334976d94d3cc79e1b134e11f75cd78f)]:
+  - @vercel/express@0.0.20
+
+## 48.1.3
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
+- Updated dependencies [[`353eca54fe2a892ca04fa66a1665d89d7a722a7a`](https://github.com/vercel/vercel/commit/353eca54fe2a892ca04fa66a1665d89d7a722a7a)]:
+  - @vercel/express@0.0.19
+
+## 48.1.2
+
+### Patch Changes
+
+- Fix relative path for experimental standalone mode ([#13973](https://github.com/vercel/vercel/pull/13973))
+
+## 48.1.1
+
+### Patch Changes
+
+- Add support for VERCEL_EXPERIMENTAL_STANDALONE_BUILD build env ([#13948](https://github.com/vercel/vercel/pull/13948))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339), [`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0), [`6142e863d187c54af7f774f72412f33ca93ed967`](https://github.com/vercel/vercel/commit/6142e863d187c54af7f774f72412f33ca93ed967)]:
+  - @vercel/h3@0.1.2
+  - @vercel/node@5.3.24
+  - @vercel/detect-agent@1.0.0
+  - @vercel/express@0.0.18
+  - @vercel/hono@0.1.2
+
+## 48.1.0
+
+### Minor Changes
+
+- Add `env update` command to update an environment variable. ([#13894](https://github.com/vercel/vercel/pull/13894))
+
+  Previously it was required to remove and re-add the environment variable to update it.
+
+### Patch Changes
+
+- Updated dependencies [[`07d80bc46919ed8d0ad9dc5938848d39224d7db2`](https://github.com/vercel/vercel/commit/07d80bc46919ed8d0ad9dc5938848d39224d7db2), [`7e4b04b4f110142b5fd09ba4567b79ac3aa432c5`](https://github.com/vercel/vercel/commit/7e4b04b4f110142b5fd09ba4567b79ac3aa432c5), [`20849c717da6d26d3487c414bee1560d0dd78909`](https://github.com/vercel/vercel/commit/20849c717da6d26d3487c414bee1560d0dd78909), [`aaddc91799f5b26a626dd1a7c0e070f334d09be5`](https://github.com/vercel/vercel/commit/aaddc91799f5b26a626dd1a7c0e070f334d09be5)]:
+  - @vercel/python@5.0.5
+  - @vercel/next@4.12.6
+  - @vercel/node@5.3.23
+  - @vercel/express@0.0.17
+  - @vercel/h3@0.1.1
+  - @vercel/hono@0.1.1
+
+## 48.0.3
+
+### Patch Changes
+
+- fix(cli): handle triggering re-auth with legacy token + flags ([#13955](https://github.com/vercel/vercel/pull/13955))
+
+  If the CLI was using a legacy token (ie, was signed in on a version previous to 48.0.0) and did not have a SAML authorization for a team resource, commands with flags unknown to vc login failed to initiate the SAML re-authentication flow as we were parsing all arguments. This change ensures that the user is prompted to log in again in such cases.
+
+- Updated dependencies [[`426aca07b47590a0f1b7631e92c8776d5f8d661d`](https://github.com/vercel/vercel/commit/426aca07b47590a0f1b7631e92c8776d5f8d661d)]:
+  - @vercel/hono@0.1.0
+  - @vercel/h3@0.1.0
+
+## 48.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`d0fd9e7b4ad98a490921945641da5b5d8d6a69b7`](https://github.com/vercel/vercel/commit/d0fd9e7b4ad98a490921945641da5b5d8d6a69b7)]:
+  - @vercel/hono@0.0.25
+
+## 48.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`0186beb2f677e2527042ab0d9ba293aedf54d734`](https://github.com/vercel/vercel/commit/0186beb2f677e2527042ab0d9ba293aedf54d734), [`742c2501986f03b79ce954f85d0a35e62ef32b62`](https://github.com/vercel/vercel/commit/742c2501986f03b79ce954f85d0a35e62ef32b62), [`7d66bd96c96cfcfe6d8b996a968701b974e32fa8`](https://github.com/vercel/vercel/commit/7d66bd96c96cfcfe6d8b996a968701b974e32fa8), [`1afa175f4e36c4f16d9db7d278816d9938932f34`](https://github.com/vercel/vercel/commit/1afa175f4e36c4f16d9db7d278816d9938932f34)]:
+  - @vercel/next@4.12.5
+  - @vercel/express@0.0.16
+  - @vercel/hono@0.0.24
+
+## 48.0.0
+
+### Major Changes
+
+- The `vercel login` command has been overhauled, see below for how to use the new flow. ([#13802](https://github.com/vercel/vercel/pull/13802))
+
+  ## Breaking changes
+
+  The following are now obsolete:
+
+  - Passing the `email` argument or `--github`, `--gitlab`, `--bitbucket` flags. Run the command without any options:
+
+  ```diff
+  - $ vercel login your@email.com
+  - $ vercel login --github
+  - $ vercel login --gitlab
+  - $ vercel login --bitbucket
+  + $ vercel login
+  ```
+
+  Choose your preferred authentication method in the browser instead.
+
+  - Passing the `teamId`/`teamSlug` argument. Run the command without any options:
+
+  ```diff
+  - $ vercel login team
+  + $ vercel login
+  ```
+
+  After signing in with any of the non-SAML methods, you will be prompted to authorize individual teams.
+
+  - `--oob`: Visit [vercel.com/device](https://vercel.com/device) on any browser-capable device and enter the code shown in the terminal. This flag is now obsolete.
+
+  > [!TIP]
+  > Hit <kbd>Enter</kbd> to open the link automatically, if you are signing in from a browser-capable device.
+
+  > [!IMPORTANT]
+  > Read the instructions carefully to match your location, IP, and request time when approving the device, as you will be granting access to your Vercel account.
+
+  ## Resources
+
+  - [`vercel login` Documentation](https://vercel.com/docs/cli/login)
+  - `vercel login --help`
+
+  **Good to know:** The new login experience is built on top of the [OAuth 2.0 Device Flow](https://datatracker.ietf.org/doc/html/rfc8628) specification.
+
+### Minor Changes
+
+- [cli] add new commands `vercel cache invalidate --tag` and `vercel cache dangerously-delete --tag` ([#13898](https://github.com/vercel/vercel/pull/13898))
+
+### Patch Changes
+
+- Updated dependencies [[`d7c8d4a1d5ef2298a50726e66f6afe354c389ea6`](https://github.com/vercel/vercel/commit/d7c8d4a1d5ef2298a50726e66f6afe354c389ea6)]:
+  - @vercel/python@5.0.4
+
+## 47.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/python@5.0.3
+
+## 47.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`4f294cd5a5c73b33b41250f47216966a5158cf16`](https://github.com/vercel/vercel/commit/4f294cd5a5c73b33b41250f47216966a5158cf16)]:
+  - @vercel/python@5.0.2
+
+## 47.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`e0c7af044a7039b641317eeee21cdc7fa1dc1b0b`](https://github.com/vercel/vercel/commit/e0c7af044a7039b641317eeee21cdc7fa1dc1b0b)]:
+  - @vercel/python@5.0.1
+
+## 47.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`d39fd1e138b96509af6b8ebf9cc634f44d1ed38f`](https://github.com/vercel/vercel/commit/d39fd1e138b96509af6b8ebf9cc634f44d1ed38f)]:
+  - @vercel/node@5.3.22
+  - @vercel/express@0.0.15
+  - @vercel/hono@0.0.23
+
+## 47.1.0
+
+### Minor Changes
+
+- Add guidance flag for deploy and env commands ([#13900](https://github.com/vercel/vercel/pull/13900))
+
+## 47.0.7
+
+### Patch Changes
+
+- Fix build errored deployments to always show full build logs ([#13901](https://github.com/vercel/vercel/pull/13901))
+
+## 47.0.6
+
+### Patch Changes
+
+- chore(cli): telemetry on login state ([#13886](https://github.com/vercel/vercel/pull/13886))
+
+- fix(cli): correct access token expiry check during token refresh ([#13888](https://github.com/vercel/vercel/pull/13888))
+
+- Updated dependencies [[`d06a3611ba68177287df9cb01343be4d88148a16`](https://github.com/vercel/vercel/commit/d06a3611ba68177287df9cb01343be4d88148a16)]:
+  - @vercel/static-build@2.7.23
+
+## 47.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`db47f7031bacfe0d07e5a657788e1e74c134bf81`](https://github.com/vercel/vercel/commit/db47f7031bacfe0d07e5a657788e1e74c134bf81)]:
+  - @vercel/node@5.3.21
+  - @vercel/express@0.0.14
+  - @vercel/hono@0.0.22
+
+## 47.0.4
+
+### Patch Changes
+
+- Reverts a regression in `vercel login --future` introduced in [#13855](https://github.com/vercel/vercel/pull/13855) ([#13872](https://github.com/vercel/vercel/pull/13872))
+
+## 47.0.3
+
+### Patch Changes
+
+- Undo change that set min node version to node 20 since Vercel CLI still needs to work on Node 18 for upgrade paths. ([#13865](https://github.com/vercel/vercel/pull/13865))
+
+## 47.0.2
+
+### Patch Changes
+
+- feat(cli): telemetry on login state ([#13855](https://github.com/vercel/vercel/pull/13855))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61), [`c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61`](https://github.com/vercel/vercel/commit/c93f5e6c8563cef8e1f6b6caa6afbe2a43a8af61)]:
+  - @vercel/build-utils@12.1.0
+  - @vercel/express@0.0.13
+  - @vercel/hono@0.0.21
+  - @vercel/node@5.3.20
+  - @vercel/static-build@2.7.22
+
 ## 47.0.1
 
 ### Patch Changes

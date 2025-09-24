@@ -1,5 +1,40 @@
 # @vercel/node
 
+## 5.3.24
+
+### Patch Changes
+
+- Add support for public asset folder for Hono preset ([#13958](https://github.com/vercel/vercel/pull/13958))
+
+## 5.3.23
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
+## 5.3.22
+
+### Patch Changes
+
+- Revert change to module resolution which slowed down Typescript builds for functions ([#13897](https://github.com/vercel/vercel/pull/13897))
+
+## 5.3.21
+
+### Patch Changes
+
+- Add support for public asset folder for Express preset ([#13879](https://github.com/vercel/vercel/pull/13879))
+
+## 5.3.20
+
+### Patch Changes
+
+- Support package.json#main field as the entrypoint ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Fix issue where install scripts from project settings didn't pick up the appropriate pnpm version ([#13846](https://github.com/vercel/vercel/pull/13846))
+
+- Updated dependencies [[`fa9310f879f9e4c72c64bbf542e1e242914f800f`](https://github.com/vercel/vercel/commit/fa9310f879f9e4c72c64bbf542e1e242914f800f)]:
+  - @vercel/build-utils@12.1.0
+
 ## 5.3.19
 
 ### Patch Changes

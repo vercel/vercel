@@ -33,12 +33,12 @@ export async function checkRateLimit(
     firewallHostForDevelopment?: string;
     /** The key to use for rate-limiting. If not defined, defaults to the user's IP address. */
     rateLimitKey?: string;
-    /** The headers for the current request. Optional if `request` is provided or if using Next.js app router.  */
+    /** The headers for the current request. Optional.  */
     headers?:
       | Headers
       | Record<string, string>
       | Record<string, string | string[]>;
-    /** The current request object. Optional if `headers` is provided or if using Next.js app router */
+    /** The current request object. Optional. */
     request?: Request;
   }
 ): Promise<{
@@ -61,16 +61,13 @@ export async function checkRateLimit(
   if (requestHeaders && !(requestHeaders instanceof Headers)) {
     requestHeaders = new Headers(requestHeaders);
   }
-  const isUsingNextJs = !!process.env.NEXT_RUNTIME;
-  if (!requestHeaders && isUsingNextJs) {
-    const { headers } = await import('next/headers');
-    try {
-      // await for next.js >15
-      requestHeaders = await headers();
-    } catch {
-      // Ignore
+  if (!requestHeaders) {
+    const context = getContext();
+    if (context.headers) {
+      requestHeaders = new Headers(context.headers);
     }
   }
+
   if (!requestHeaders) {
     throw new Error('`headers` or `request` options are required');
   }
@@ -111,6 +108,12 @@ export async function checkRateLimit(
     'x-vercel-protection-bypass':
       process.env.VERCEL_AUTOMATION_BYPASS_SECRET || '',
   });
+  const cookies = parseCookies(requestHeaders);
+  // Forward the auth cookie if it exists.
+  if (cookies._vercel_jwt) {
+    rateLimitHeaders.append('cookie', `_vercel_jwt=${cookies._vercel_jwt}`);
+  }
+
   for (const [key, value] of requestHeaders.entries()) {
     rateLimitHeaders.append(`x-rr-${key}`, value);
   }
@@ -160,4 +163,40 @@ async function hashString(input: string): Promise<string> {
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('');
   return hashHex;
+}
+
+const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
+
+type Context = {
+  headers?: Record<string, string>;
+};
+
+function getContext(): Context {
+  const fromSymbol: typeof globalThis & {
+    [SYMBOL_FOR_REQ_CONTEXT]?: { get?: () => Context };
+  } = globalThis;
+  return fromSymbol[SYMBOL_FOR_REQ_CONTEXT]?.get?.() ?? {};
+}
+
+function parseCookies(requestHeaders: Headers): Record<string, string> {
+  const cookies = requestHeaders.get('cookie');
+  if (!cookies) {
+    return {};
+  }
+  return cookies.split(';').reduce(
+    (acc, cookie) => {
+      const trimmedCookie = cookie.trim();
+      const equalIndex = trimmedCookie.indexOf('=');
+      if (equalIndex === -1) {
+        // Cookie without value
+        acc[trimmedCookie] = '';
+      } else {
+        const key = trimmedCookie.slice(0, equalIndex);
+        const value = trimmedCookie.slice(equalIndex + 1);
+        acc[key] = value;
+      }
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 }

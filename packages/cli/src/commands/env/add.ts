@@ -21,6 +21,8 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
+import { determineAgent } from '@vercel/detect-agent';
+import { suggestNextCommands } from '../../util/suggest-next-commands';
 
 export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
@@ -48,6 +50,7 @@ export default async function add(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagForce(opts['--force']);
+  telemetryClient.trackCliFlagGuidance(opts['--guidance']);
 
   if (args.length > 3) {
     output.error(
@@ -201,6 +204,13 @@ export default async function add(client: Client, argv: string[]) {
       emoji('success')
     )}\n`
   );
+
+  const { isAgent } = await determineAgent();
+  const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
+
+  if (guidanceMode) {
+    suggestNextCommands([getCommandName(`env ls`), getCommandName(`env pull`)]);
+  }
 
   return 0;
 }

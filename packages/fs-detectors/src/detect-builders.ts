@@ -346,6 +346,20 @@ export async function detectBuilders(
   }
 
   if (frontendBuilder) {
+    // Add @vercel/static build for public files when using @vercel/express or @vercel/hono
+    if (
+      frontendBuilder?.use === '@vercel/express' ||
+      frontendBuilder?.use === '@vercel/hono'
+    ) {
+      builders.push({
+        src: 'public/**/*',
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+          outputDirectory: 'public',
+        },
+      });
+    }
     builders.push(frontendBuilder);
 
     if (
@@ -707,6 +721,30 @@ function checkUnusedFunctions(
           action: 'Learn More',
           link: 'https://vercel.link/unmatched-function-pattern',
         };
+      }
+    }
+  }
+  if (
+    frontendBuilder &&
+    (isOfficialRuntime('express', frontendBuilder.use) ||
+      isOfficialRuntime('hono', frontendBuilder.use))
+  ) {
+    // Copied from builder entrypoint detection
+    const validFilenames = [
+      'app',
+      'index',
+      'server',
+      'src/app',
+      'src/index',
+      'src/server',
+    ];
+    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
+    const validEntrypoints = validFilenames.flatMap(filename =>
+      validExtensions.map(extension => `${filename}.${extension}`)
+    );
+    for (const fnKey of unusedFunctions.values()) {
+      if (validEntrypoints.includes(fnKey)) {
+        unusedFunctions.delete(fnKey);
       }
     }
   }

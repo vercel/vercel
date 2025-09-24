@@ -422,14 +422,10 @@ export const build = async ({
   useWebApi?: boolean;
   considerBuildCommand?: boolean;
   /**
-   * It's possible to specify a build script that may result in a different entrypoint.
-   * For example `tsc -p tsconfig.builds.json` which puts things in a `dist` directory.
-   *
-   * If the project settings output directory is specified, we will look there for a valid
-   * entrypoint for the node app. To find it, then entrypointCallback allows the builders calling
-   * this function to provide the entrypoint detection logic
+   * This is called once any user build scripts have run so that the entrypoint can be detected
+   * from files that may have been created by the build script.
    */
-  entrypointCallback?: (preparedFiles: Files) => string | undefined;
+  entrypointCallback?: () => Promise<string>;
 }): Promise<BuildResultV3> => {
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
@@ -480,6 +476,24 @@ export const build = async ({
       config.projectSettings?.createdAt
     );
   }
+  if (entrypointCallback) {
+    const entrypoint = await entrypointCallback();
+    entrypointPath = join(entrypointFsDirname, entrypoint);
+    const functionConfig = config.functions?.[entrypoint];
+    if (functionConfig) {
+      const normalizeArray = (value: any) =>
+        Array.isArray(value) ? value : value ? [value] : [];
+
+      config.includeFiles = [
+        ...normalizeArray(config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      config.excludeFiles = [
+        ...normalizeArray(config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+  }
 
   const isMiddleware = config.middleware === true;
   let isEdgeFunction = isMiddleware;
@@ -492,31 +506,6 @@ export const build = async ({
 
   if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
-  }
-
-  /**
-   * Even if the project handles the build process, we still want to run the output
-   * through our compiler so it can be processed by NFT. The code below allows us
-   * to set the entrypoint to the output directory if it's specified.
-   */
-  if (config.projectSettings?.outputDirectory) {
-    const outputDirFiles = await glob(
-      '**/*',
-      join(workPath, config.projectSettings.outputDirectory)
-    );
-    const outputDirEntrypoint = entrypointCallback?.(outputDirFiles);
-    if (outputDirEntrypoint) {
-      const outputDirEntrypointPath = join(
-        workPath,
-        config.projectSettings.outputDirectory,
-        outputDirEntrypoint
-      );
-      entrypointPath = outputDirEntrypointPath;
-    } else {
-      console.warn(
-        `No entrypoint found in output directory ${config.projectSettings.outputDirectory}. Using the original entrypoint of ${entrypoint}.`
-      );
-    }
   }
 
   debug('Tracing input files...');

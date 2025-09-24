@@ -1,5 +1,6 @@
 import { FileFsRef, Files } from '@vercel/build-utils/dist';
 import { build } from '../../src/build';
+import { build as experimentalBuild } from '../../src/experimental/build';
 import { join, sep } from 'path';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
@@ -71,11 +72,26 @@ const fixtures: Record<
     projectSettings?: {
       outputDirectory?: string;
     };
+    routes?: { dest: string }[];
   }
 > = {
   '01-index-js-no-module': {
     handler: ['index.js'],
     moduleType: 'cjs',
+    routes: [
+      {
+        dest: '/',
+      },
+      {
+        dest: '/user/:id',
+      },
+      {
+        dest: '/user/:id/posts',
+      },
+      {
+        dest: '/blog/*slugs',
+      },
+    ],
   },
   '02-src-index-js-no-module': {
     handler: ['src', 'index.js'],
@@ -154,13 +170,43 @@ const fixtures: Record<
     handler: ['index.cjs'],
     moduleType: 'cjs',
   },
+  '20-main-field': {
+    handler: ['main.js'],
+    moduleType: 'esm',
+  },
+  '21-main-field-with-build-step': {
+    handler: ['dist', 'main.js'],
+    moduleType: 'esm',
+  },
 };
 
-const failingFixtures = ['01-server-ts-no-module-no-tsconfig'];
+const failingFixtures: Record<
+  string,
+  {
+    projectSettings?: {
+      outputDirectory?: string;
+    };
+  }
+> = {
+  '01-server-ts-no-module-no-tsconfig': {},
+  '02-missing-entrypoint': {},
+  '03-missing-entrypoint-with-build-and-main': {},
+  '04-missing-entrypoint-with-build-and-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+  '05-missing-entrypoint-with-main': {},
+  '06-missing-entrypoint-with-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+};
 
-describe('build', () => {
+describe('successful builds', () => {
   for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
-    it(`should build ${fixtureName}`, async () => {
+    it(`builds ${fixtureName}`, async () => {
       const workPath = join(__dirname, '../fixtures', fixtureName);
 
       const fileList = readDirectoryRecursively(workPath);
@@ -178,7 +224,7 @@ describe('build', () => {
         },
         meta,
         // Entrypoint is just used as the BOA function name
-        entrypoint: 'this value is not used',
+        entrypoint: 'package.json',
         repoRootPath: workPath,
       });
 
@@ -197,35 +243,110 @@ describe('build', () => {
       }
     }, 10000);
   }
-});
-describe('failing fixtures', () => {
-  for (const fixtureName of failingFixtures) {
-    it(`should fail to build${fixtureName}`, async () => {
-      const workPath = join(__dirname, '../failing-fixtures', fixtureName);
+  for (const [fixtureName, fixtureConfig] of Object.entries(fixtures)) {
+    it(`experimental builds ${fixtureName}`, async () => {
+      const workPath = join(__dirname, '../fixtures', fixtureName);
 
       const fileList = readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
+      const result = await experimentalBuild({
+        files,
+        workPath,
+        config: {
+          ...config,
+          projectSettings: {
+            ...config.projectSettings,
+            ...fixtureConfig.projectSettings,
+          },
+        },
+        meta,
+        // Entrypoint is just used as the BOA function name
+        entrypoint: 'package.json',
+        repoRootPath: workPath,
+      });
+      for (const route of fixtureConfig.routes || []) {
+        if ('routes' in result && result.routes) {
+          expect(result.routes.find(r => r.dest === route.dest)).toBeDefined();
+        }
+        if ('output' in result && result.output) {
+          const dest = route.dest === '/' ? 'index' : route.dest;
+          expect(result.output[dest]).toBeDefined();
+        }
+      }
 
-      expect(
-        build({
-          files,
-          workPath,
-          config,
-          meta,
-          // Entrypoint is just used as the BOA function name
-          entrypoint: 'this value is not used',
-          repoRootPath: workPath,
-        })
-      ).rejects.toThrowError();
-    });
+      if ('output' in result && result.output) {
+        // console.log(result.output.index);
+        if ('handler' in result.output.index) {
+          const entrypoint = join(
+            workPath,
+            '.vercel',
+            'output',
+            'functions',
+            'index.func',
+            result.output.index.handler
+          );
+          const handlerContent = fs.readFileSync(entrypoint, 'utf8');
+          const moduleTypeDetected = await detectModuleType(handlerContent);
+          expect(moduleTypeDetected).toBe(fixtureConfig.moduleType);
+        }
+      } else {
+        throw new Error('entrypoint is not defined');
+      }
+    }, 10000);
   }
+  describe('failing fixtures', () => {
+    for (const [fixtureName, fixtureConfig] of Object.entries(
+      failingFixtures
+    )) {
+      it(`should fail to build${fixtureName}`, async () => {
+        const workPath = join(__dirname, '../failing-fixtures', fixtureName);
+
+        const fileList = readDirectoryRecursively(workPath);
+
+        const files = createFiles(workPath, fileList);
+
+        expect(
+          build({
+            files,
+            workPath,
+            config: {
+              ...config,
+              projectSettings: {
+                ...config.projectSettings,
+                ...fixtureConfig.projectSettings,
+              },
+            },
+            meta,
+            // Entrypoint is just used as the BOA function name
+            entrypoint: 'this value is not used',
+            repoRootPath: workPath,
+          })
+        ).rejects.toThrowError();
+      });
+    }
+  });
 });
 
-async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {
-  if (content.startsWith(`"use strict"`)) {
+function detectModuleType(code) {
+  // Quick heuristics:
+  const hasImportExport =
+    /\bimport\s+[\w*\s{},]+from\s+['"][^'"]+['"]/.test(code) ||
+    /\bimport\s*['"][^'"]+['"]/.test(code) || // side-effect imports
+    /\bexport\s+(default|const|function|class|\{)/.test(code);
+
+  if (hasImportExport) {
+    return 'esm';
+  }
+
+  const hasCjs =
+    /\brequire\s*\(/.test(code) ||
+    /\bmodule\.exports\b/.test(code) ||
+    /\bexports\./.test(code);
+
+  if (hasCjs) {
     return 'cjs';
   }
 
-  return 'esm';
+  return 'unknown';
 }

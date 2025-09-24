@@ -203,3 +203,190 @@ describe('file exclusions', () => {
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
 });
+
+describe('fastapi entrypoint discovery', () => {
+  it('should throw a clear error when no FastAPI entrypoint is found', async () => {
+    const mockWorkPath = path.join(
+      tmpdir(),
+      `python-fastapi-test-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'invalid_entrypoint.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'main.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow('No FastAPI entrypoint found');
+
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+});
+
+describe('fastapi entrypoint discovery - positive cases', () => {
+  it('discovers root-level app.py containing FastAPI', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-pass-root-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('os.path.join(_here, "app.py")')).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('discovers src/index.py containing FastAPI', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-pass-src-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'src'), { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'src/index.py': new FileBlob({
+        data: 'import fastapi\n\napp = fastapi.FastAPI()',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('os.path.join(_here, "src/index.py")')).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('prefers candidate with FastAPI content when multiple candidates exist', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-pass-pref-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app.py': new FileBlob({ data: 'print("no framework here")\n' }),
+      'index.py': new FileBlob({
+        data: 'import fastapi\nfrom fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('os.path.join(_here, "index.py")')).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+});
+
+describe('uv install path', () => {
+  it('uses uv to install requirement (no fallback to pip)', async () => {
+    jest.resetModules();
+
+    let installRequirement: any;
+    let mockExeca: any;
+
+    jest.isolateModules(() => {
+      jest.doMock('which', () => ({
+        __esModule: true,
+        default: { sync: jest.fn(() => '/mock/uv') },
+      }));
+
+      jest.doMock('execa', () => {
+        const fn: any = jest.fn(async () => ({ stdout: '' }));
+        fn.stdout = jest.fn(async () => '');
+        mockExeca = fn;
+        return { __esModule: true, default: fn };
+      });
+
+      // Import after mocks are set
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('../src/install');
+      installRequirement = mod.installRequirement;
+    });
+
+    const workPath = path.join(tmpdir(), `python-uv-test-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    try {
+      await installRequirement({
+        pythonPath: '/usr/bin/python3',
+        pipPath: '/usr/bin/pip3',
+        dependency: 'foo',
+        version: '1.2.3',
+        workPath,
+        meta: { isDev: false },
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockExeca).toHaveBeenCalled();
+    const [cmd, args, opts] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args.slice(0, 2)).toEqual(['pip', 'install']);
+    expect(args).toContain('--target');
+    expect(args).toContain('_vendor');
+    expect(args).toContain('foo==1.2.3');
+    expect(opts).toHaveProperty('cwd', workPath);
+  });
+});

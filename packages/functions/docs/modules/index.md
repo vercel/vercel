@@ -4,17 +4,21 @@
 
 ### Interfaces
 
+- [DangerouslyDeleteOptions](../interfaces/index.DangerouslyDeleteOptions.md)
 - [Geo](../interfaces/index.Geo.md)
+- [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
 
 ### Functions
 
 - [attachDatabasePool](index.md#attachdatabasepool)
+- [dangerouslyDeleteByTag](index.md#dangerouslydeletebytag)
 - [experimental_attachDatabasePool](index.md#experimental_attachdatabasepool)
 - [geolocation](index.md#geolocation)
 - [getCache](index.md#getcache)
 - [getEnv](index.md#getenv)
+- [invalidateByTag](index.md#invalidatebytag)
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
@@ -53,6 +57,27 @@ attachDatabasePool(pgPool);
 #### Defined in
 
 [packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+
+---
+
+### dangerouslyDeleteByTag
+
+▸ **dangerouslyDeleteByTag**(`tag`, `options?`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name       | Type                                                                          |
+| :--------- | :---------------------------------------------------------------------------- |
+| `tag`      | `string` \| `string`[]                                                        |
+| `options?` | [`DangerouslyDeleteOptions`](../interfaces/index.DangerouslyDeleteOptions.md) |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/purge/index.ts:13](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L13)
 
 ---
 
@@ -210,6 +235,26 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 #### Defined in
 
 [packages/functions/src/get-env.ts:6](https://github.com/vercel/vercel/blob/main/packages/functions/src/get-env.ts#L6)
+
+---
+
+### invalidateByTag
+
+▸ **invalidateByTag**(`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Parameters
+
+| Name  | Type                   |
+| :---- | :--------------------- |
+| `tag` | `string` \| `string`[] |
+
+#### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Defined in
+
+[packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L5)
 
 ---
 

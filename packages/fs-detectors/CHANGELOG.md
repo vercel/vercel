@@ -1,5 +1,57 @@
 # @vercel/fs-detectors
 
+## 5.5.6
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339)]:
+  - @vercel/frameworks@3.9.2
+
+## 5.5.5
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
+- Updated dependencies [[`e1c2e723925598e69811da2004bf023658bfdb9e`](https://github.com/vercel/vercel/commit/e1c2e723925598e69811da2004bf023658bfdb9e)]:
+  - @vercel/frameworks@3.9.1
+
+## 5.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`426aca07b47590a0f1b7631e92c8776d5f8d661d`](https://github.com/vercel/vercel/commit/426aca07b47590a0f1b7631e92c8776d5f8d661d)]:
+  - @vercel/frameworks@3.9.0
+
+## 5.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`5d7922f15f0c969b347dabc15c52972f1e482a38`](https://github.com/vercel/vercel/commit/5d7922f15f0c969b347dabc15c52972f1e482a38)]:
+  - @vercel/frameworks@3.8.5
+
+## 5.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`1d04886f34e8fa705f22333422ea0c0c315c4006`](https://github.com/vercel/vercel/commit/1d04886f34e8fa705f22333422ea0c0c315c4006)]:
+  - @vercel/frameworks@3.8.4
+
+## 5.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`e01478ab10bf1fcf0bcbc904b16bfb82689b0bd3`](https://github.com/vercel/vercel/commit/e01478ab10bf1fcf0bcbc904b16bfb82689b0bd3)]:
+  - @vercel/frameworks@3.8.3
+
+## 5.5.0
+
+### Minor Changes
+
+- Support turbo.jsonc ([#13792](https://github.com/vercel/vercel/pull/13792))
+
 ## 5.4.16
 
 ### Patch Changes

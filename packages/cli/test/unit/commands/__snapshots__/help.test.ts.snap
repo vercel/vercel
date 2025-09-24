@@ -753,6 +753,13 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 nothing 
                                 has     
                                 changed 
+       --guidance               Receive 
+                                command 
+                                suggest…
+                                once    
+                                deploym…
+                                is      
+                                complete
   -l,  --logs                   Print   
                                 the     
                                 build   
@@ -921,6 +928,8 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
                                 changed                                         
+       --guidance               Receive command suggestions once deployment is  
+                                complete                                        
   -l,  --logs                   Print the build logs                            
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m   
                                 KEY1=value1 -m KEY2=value2\`)                    
@@ -993,6 +1002,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
+       --guidance               Receive command suggestions once deployment is complete                                 
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
        --no-wait                Don't wait for the deployment to finish                                                 
@@ -1786,6 +1796,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
   Options:
 
    --force      Force overwrites when a command would normally fail                                                      
+   --guidance   Receive command suggestions once command is complete                                                     
    --sensitive  Add a sensitive Environment Variable                                                                     
 
 
@@ -1880,6 +1891,17 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
                                       …
                                       …
                                       …
+  update  name [environment]          …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
+                                      …
 
 
   Global Options:
@@ -1940,6 +1962,9 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
                                       to a file [.env.local]              
   remove  name [environment]          Remove an Environment Variable (see 
                                       examples below)                     
+  update  name [environment]          Update the value of an existing     
+                                      Environment Variable (see examples  
+                                      below)                              
 
 
   Global Options:
@@ -1972,6 +1997,7 @@ exports[`help command > env help output snapshots > env help column width 120 1`
   pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
                                       file [.env.local]                                                           
   remove  name [environment]          Remove an Environment Variable (see examples below)                         
+  update  name [environment]          Update the value of an existing Environment Variable (see examples below)   
 
 
   Global Options:
@@ -1992,9 +2018,14 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
 exports[`help command > env help output snapshots > env list help output snapshots > env list help column width 120 1`] = `
 "
-  ▲ vercel env list [environment] [git-branch]
+  ▲ vercel env list [environment] [git-branch] [options]
 
   List all Environment Variables for a Project                                                                          
+
+  Options:
+
+   --guidance  Receive command suggestions once command is complete                                                      
+
 
   Global Options:
 
@@ -3404,17 +3435,7 @@ exports[`help command > login help output snapshots > login help column width 40
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team 
-  id.                                   
-
-  Options:
-
-   --future  Sign in using OAuth Device  
-             Authorization               
-   --github  Log in with GitHub          
-   --oob     Log in with "out of band"   
-             authentication              
-
+  Sign in to your Vercel account.       
 
   Global Options:
 
@@ -3456,21 +3477,9 @@ exports[`help command > login help output snapshots > login help column width 40
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;
@@ -3479,14 +3488,7 @@ exports[`help command > login help output snapshots > login help column width 80
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team id.                                     
-
-  Options:
-
-   --future  Sign in using OAuth Device Authorization                            
-   --github  Log in with GitHub                                                  
-   --oob     Log in with "out of band" authentication                            
-
+  Sign in to your Vercel account.                                               
 
   Global Options:
 
@@ -3504,21 +3506,9 @@ exports[`help command > login help output snapshots > login help column width 80
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;
@@ -3527,14 +3517,7 @@ exports[`help command > login help output snapshots > login help column width 12
 "
   ▲ vercel login [email or team id] [options]
 
-  Authenticate using your email or team id.                                                                             
-
-  Options:
-
-   --future  Sign in using OAuth Device Authorization                                                                    
-   --github  Log in with GitHub                                                                                          
-   --oob     Log in with "out of band" authentication                                                                    
-
+  Sign in to your Vercel account.                                                                                       
 
   Global Options:
 
@@ -3551,21 +3534,9 @@ exports[`help command > login help output snapshots > login help column width 12
 
   Examples:
 
-  - Log into the Vercel platform
+  - Sign in to your Vercel account.
 
     $ vercel login
-
-  - Log in using a specific email address
-
-    $ vercel login username@example.com
-
-  - Log in using a specific team "slug" for SAML Single Sign-On
-
-    $ vercel login acme
-
-  - Log in using GitHub in "out-of-band" mode
-
-    $ vercel login --github --oob
 
 "
 `;

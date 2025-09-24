@@ -171,6 +171,9 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
+    // telemetryClient.trackCliFlagStandalone(
+    //   (parsedArgs.flags as any)['--experimentalStandalone']
+    // );
   } catch (error) {
     printError(error);
     return 1;
@@ -190,6 +193,11 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
+  // FIXME: standalone:replace env var with flag
+  // const standalone = Boolean(
+  //   (parsedArgs.flags as any)['--experimentalStandalone']
+  // );
+  const standalone = process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
 
   try {
     await validateNpmrc(cwd);
@@ -323,7 +331,7 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span)
+          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
         );
     } finally {
       await rootSpan.stop();
@@ -375,7 +383,8 @@ async function doBuild(
   buildsJson: BuildsManifest,
   cwd: string,
   outputDir: string,
-  span: Span
+  span: Span,
+  standalone: boolean = false
 ): Promise<void> {
   const { localConfigPath } = client;
 
@@ -617,7 +626,18 @@ async function doBuild(
       let buildResult: BuildResultV2 | BuildResultV3;
       try {
         buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          () => builder.build(buildOptions)
+          () => {
+            if (
+              process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
+              'name' in builder &&
+              builder.name === 'express' &&
+              'experimentalBuild' in builder &&
+              typeof builder.experimentalBuild === 'function'
+            ) {
+              return builder.experimentalBuild(buildOptions);
+            }
+            return builder.build(buildOptions);
+          }
         );
 
         // If the build result has no routes and the framework has default routes,
@@ -695,7 +715,8 @@ async function doBuild(
               build,
               builder,
               builderPkg,
-              localConfig
+              localConfig,
+              standalone
             )
           )
           .then(

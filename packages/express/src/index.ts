@@ -1,9 +1,15 @@
 export const version = 3;
 export * from './build';
+export {
+  build as experimentalBuild,
+  version as experimentalVersion,
+} from './experimental/build';
 // @ts-expect-error - FIXME: startDevServer types are not exported
 import { startDevServer as nodeStartDevServer } from '@vercel/node';
-import { findEntrypoint } from './build';
+import { entrypointCallback } from './build';
 import type { ShouldServe, StartDevServer } from '@vercel/build-utils';
+
+export const name = 'express';
 
 export const shouldServe: ShouldServe = async opts => {
   const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'
@@ -22,11 +28,12 @@ export const shouldServe: ShouldServe = async opts => {
  * need to be relative to the shim's location.
  */
 export const startDevServer: StartDevServer = async opts => {
-  const entrypoint = findEntrypoint(opts.files);
+  const entrypoint = await entrypointCallback(opts);
 
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
   return nodeStartDevServer({
     ...opts,
     entrypoint,
+    publicDir: 'public',
   });
 };
