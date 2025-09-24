@@ -254,6 +254,9 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       'uv.lock': new FileBlob({ data: '[project]\npython = "3.11"\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
     } as Record<string, FileBlob>;
 
     const result = await build({
