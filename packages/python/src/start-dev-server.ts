@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import {
@@ -77,6 +78,11 @@ export const startDevServer: StartDevServer = async opts => {
     if (!env.PY_COLORS) env.PY_COLORS = '1';
     if (!env.CLICOLOR_FORCE) env.CLICOLOR_FORCE = '1';
 
+    // Track child process and listeners for cleanup on shutdown
+    let childProcess: ChildProcess | null = null;
+    let stdoutLogListener: ((buf: Buffer) => void) | null = null;
+    let stderrLogListener: ((buf: Buffer) => void) | null = null;
+
     const childReady = new Promise<{ port: number; pid: number }>(
       (resolve, reject) => {
         let resolved = false;
@@ -125,6 +131,7 @@ export const startDevServer: StartDevServer = async opts => {
               env,
               stdio: ['inherit', 'pipe', 'pipe'],
             });
+            childProcess = child;
 
             // Forward only useful logs: HTTP access lines and important errors
             const forwardLine = (line: string, isErr: boolean) => {
@@ -143,18 +150,20 @@ export const startDevServer: StartDevServer = async opts => {
                 );
               }
             };
-            child.stdout?.on('data', (buf: Buffer) => {
+            stdoutLogListener = (buf: Buffer) => {
               const s = buf.toString();
               for (const line of s.split(/\r?\n/)) {
                 if (line) forwardLine(line, false);
               }
-            });
-            child.stderr?.on('data', (buf: Buffer) => {
+            };
+            stderrLogListener = (buf: Buffer) => {
               const s = buf.toString();
               for (const line of s.split(/\r?\n/)) {
                 if (line) forwardLine(line, true);
               }
-            });
+            };
+            child.stdout?.on('data', stdoutLogListener);
+            child.stderr?.on('data', stderrLogListener);
 
             const readinessRegexes = [
               /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
@@ -209,6 +218,22 @@ export const startDevServer: StartDevServer = async opts => {
     const shutdown = async () => {
       // Restore default Node warning behavior first
       restoreWarningSilencer();
+      // Remove log forwarding listeners to prevent leaks
+      try {
+        if (childProcess) {
+          if (stdoutLogListener) {
+            childProcess.stdout?.removeListener('data', stdoutLogListener);
+          }
+          if (stderrLogListener) {
+            childProcess.stderr?.removeListener('data', stderrLogListener);
+          }
+        }
+      } catch (err: any) {
+        debug(`Error removing listeners: ${err}`);
+      } finally {
+        stdoutLogListener = null;
+        stderrLogListener = null;
+      }
       try {
         process.kill(pid, 'SIGTERM');
       } catch (err: any) {
