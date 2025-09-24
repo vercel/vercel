@@ -143,9 +143,9 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     ignore: args.config.excludeFiles,
   });
   for (const file of nftResult.fileList) {
-    if (file.startsWith(relativeOutputDir)) {
-      continue;
-    }
+    // if (file.startsWith(relativeOutputDir)) {
+    //   continue;
+    // }
     files[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
   }
   return {
