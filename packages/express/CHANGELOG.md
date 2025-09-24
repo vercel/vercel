@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.22
+
+### Patch Changes
+
+- Include source files in build output trace ([#13984](https://github.com/vercel/vercel/pull/13984))
+
 ## 0.0.21
 
 ### Patch Changes
