@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { createServer, createConnection } from 'net';
+import { createServer } from 'net';
 import type { AddressInfo } from 'net';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
@@ -67,59 +67,6 @@ async function getAvailablePort(host: string): Promise<number> {
         }
       });
     });
-  });
-}
-
-// Wait until a TCP connection to host:port succeeds or timeout
-async function waitForPort(
-  host: string,
-  port: number,
-  timeoutMs: number
-): Promise<void> {
-  const start = Date.now();
-  return new Promise<void>((resolve, reject) => {
-    const tryOnce = () => {
-      const socket = createConnection({ host, port });
-      let settled = false;
-      const cleanup = () => {
-        if (settled) return;
-        settled = true;
-        try {
-          socket.destroy();
-        } catch (e) {
-          debug(`Error destroying socket: ${e}`);
-        }
-      };
-      socket.once('connect', () => {
-        cleanup();
-        resolve();
-      });
-      socket.once('error', () => {
-        cleanup();
-        if (Date.now() - start >= timeoutMs) {
-          reject(
-            new Error(
-              `Timed out waiting for ${host}:${port} to accept connections`
-            )
-          );
-        } else {
-          setTimeout(tryOnce, 50);
-        }
-      });
-      socket.setTimeout(1000, () => {
-        cleanup();
-        if (Date.now() - start >= timeoutMs) {
-          reject(
-            new Error(
-              `Timed out waiting for ${host}:${port} to accept connections`
-            )
-          );
-        } else {
-          setTimeout(tryOnce, 50);
-        }
-      });
-    };
-    tryOnce();
   });
 }
 
@@ -277,30 +224,6 @@ export const startDevServer: StartDevServer = async opts => {
             child.stdout?.on('data', onDetect);
             child.stderr?.on('data', onDetect);
 
-            // Additionally verify the port is accepting connections to avoid reloader race
-            waitForPort(host, fixedPort, 10000)
-              .then(() => {
-                if (!resolved && child.pid) {
-                  resolved = true;
-                  child.stdout?.removeListener('data', onDetect);
-                  child.stderr?.removeListener('data', onDetect);
-                  resolve({ port: fixedPort, pid: child.pid });
-                }
-              })
-              .catch(err => {
-                if (!resolved) {
-                  resolved = true;
-                  // Ensure listeners are removed and child is terminated on failure
-                  child.stdout?.removeListener('data', onDetect);
-                  child.stderr?.removeListener('data', onDetect);
-                  try {
-                    child.kill('SIGTERM');
-                  } catch (err: any) {
-                    debug(`Error killing child: ${err}`);
-                  }
-                  reject(err);
-                }
-              });
             child.once('error', err => {
               if (!resolved) reject(err);
             });
