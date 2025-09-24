@@ -341,7 +341,15 @@ export const build: BuildV3 = async ({
 
 export { startDevServer };
 
-export const shouldServe: ShouldServe = () => true;
+export const shouldServe: ShouldServe = async opts => {
+  const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  if (requestPath.startsWith('api') && opts.hasMatched) {
+    // Don't override API routes, otherwise serve it
+    return false;
+  }
+  // NOTE: public assets are served by the default handler
+  return true;
+};
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
