@@ -143,10 +143,17 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
     ignore: args.config.excludeFiles,
   });
   for (const file of nftResult.fileList) {
-    // if (file.startsWith(relativeOutputDir)) {
-    //   continue;
-    // }
-    files[file] = new FileFsRef({ fsPath: file, mode: 0o644 });
+    if (file.startsWith(relativeOutputDir)) {
+      const stats = lstatSync(file);
+      const relPath = relative(outputDir, file);
+      files[relPath] = new FileFsRef({
+        fsPath: file,
+        mode: stats.mode,
+      });
+    } else {
+      const stats = lstatSync(file);
+      files[file] = new FileFsRef({ fsPath: file, mode: stats.mode });
+    }
   }
   return {
     files,
