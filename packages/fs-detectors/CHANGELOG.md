@@ -1,5 +1,21 @@
 # @vercel/fs-detectors
 
+## 5.5.7
+
+### Patch Changes
+
+- Updated dependencies [[`3eb70a1571f5740859d25a0dcfb8d03c9042ba52`](https://github.com/vercel/vercel/commit/3eb70a1571f5740859d25a0dcfb8d03c9042ba52)]:
+  - @vercel/frameworks@3.9.3
+
+## 5.5.6
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339)]:
+  - @vercel/frameworks@3.9.2
+
 ## 5.5.5
 
 ### Patch Changes

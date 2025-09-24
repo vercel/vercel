@@ -1,5 +1,55 @@
 # vercel
 
+## 48.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`9997fe264bb50c0f9dc610a276a0fa4049b8c72e`](https://github.com/vercel/vercel/commit/9997fe264bb50c0f9dc610a276a0fa4049b8c72e)]:
+  - @vercel/express@0.0.22
+
+## 48.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`1327110e0e866b44c6012069442ca2b16a6706b2`](https://github.com/vercel/vercel/commit/1327110e0e866b44c6012069442ca2b16a6706b2), [`057a44929ceeafd6848ade9ac5cc47ec0d357496`](https://github.com/vercel/vercel/commit/057a44929ceeafd6848ade9ac5cc47ec0d357496)]:
+  - @vercel/next@4.13.0
+  - @vercel/express@0.0.21
+
+## 48.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`ec3a2a8a334976d94d3cc79e1b134e11f75cd78f`](https://github.com/vercel/vercel/commit/ec3a2a8a334976d94d3cc79e1b134e11f75cd78f)]:
+  - @vercel/express@0.0.20
+
+## 48.1.3
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
+- Updated dependencies [[`353eca54fe2a892ca04fa66a1665d89d7a722a7a`](https://github.com/vercel/vercel/commit/353eca54fe2a892ca04fa66a1665d89d7a722a7a)]:
+  - @vercel/express@0.0.19
+
+## 48.1.2
+
+### Patch Changes
+
+- Fix relative path for experimental standalone mode ([#13973](https://github.com/vercel/vercel/pull/13973))
+
+## 48.1.1
+
+### Patch Changes
+
+- Add support for VERCEL_EXPERIMENTAL_STANDALONE_BUILD build env ([#13948](https://github.com/vercel/vercel/pull/13948))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339), [`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0), [`6142e863d187c54af7f774f72412f33ca93ed967`](https://github.com/vercel/vercel/commit/6142e863d187c54af7f774f72412f33ca93ed967)]:
+  - @vercel/h3@0.1.2
+  - @vercel/node@5.3.24
+  - @vercel/detect-agent@1.0.0
+  - @vercel/express@0.0.18
+  - @vercel/hono@0.1.2
+
 ## 48.1.0
 
 ### Minor Changes

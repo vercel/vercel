@@ -1,5 +1,17 @@
 # @vercel/frameworks
 
+## 3.9.3
+
+### Patch Changes
+
+- [python] update fastapi logo ([#13982](https://github.com/vercel/vercel/pull/13982))
+
+## 3.9.2
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
 ## 3.9.1
 
 ### Patch Changes
