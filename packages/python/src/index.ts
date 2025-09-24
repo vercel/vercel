@@ -51,6 +51,29 @@ function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
 
 export const version = 3;
 
+function findDir({
+  file,
+  entryDirectory,
+  workPath,
+  fsFiles,
+}: {
+  file: string;
+  entryDirectory: string;
+  workPath: string;
+  fsFiles: Record<string, unknown>;
+}): string | null {
+  if (fsFiles[join(entryDirectory, file)]) {
+    return join(workPath, entryDirectory);
+  }
+
+  if (fsFiles[file]) {
+    return workPath;
+  }
+
+  // Case 3: File not found in either location
+  return null;
+}
+
 export async function downloadFilesInWorkPath({
   entrypoint,
   workPath,
@@ -140,16 +163,19 @@ export const build: BuildV3 = async ({
   const hasReqLocal = !!fsFiles[join(entryDirectory, 'requirements.txt')];
   const hasReqGlobal = !!fsFiles['requirements.txt'];
 
-  const uvLockDir = fsFiles[join(entryDirectory, 'uv.lock')]
-    ? join(workPath, entryDirectory)
-    : fsFiles['uv.lock']
-      ? workPath
-      : null;
-  const pyprojectDir = fsFiles[join(entryDirectory, 'pyproject.toml')]
-    ? join(workPath, entryDirectory)
-    : fsFiles['pyproject.toml']
-      ? workPath
-      : null;
+  const uvLockDir = findDir({
+    file: 'uv.lock',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
+
+  const pyprojectDir = findDir({
+    file: 'pyproject.toml',
+    entryDirectory,
+    workPath,
+    fsFiles,
+  });
 
   const pipfileLockDir = fsFiles[join(entryDirectory, 'Pipfile.lock')]
     ? join(workPath, entryDirectory)
@@ -173,8 +199,9 @@ export const build: BuildV3 = async ({
     } catch {
       debug('Failed to parse pyproject.toml');
     }
-    if (requiresPython && /\b\d+\.\d+\b/.test(requiresPython.trim())) {
-      const exact = requiresPython.trim().match(/\b\d+\.\d+\b/)![0];
+    const VERSION_REGEX = /\b\d+\.\d+\b/;
+    const exact = requiresPython?.trim().match(VERSION_REGEX)?.[0];
+    if (exact) {
       const selected = getSupportedPythonVersion({
         isDev: meta.isDev,
         declaredPythonVersion: { version: exact, source: 'pyproject.toml' },
