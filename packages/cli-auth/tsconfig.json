@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules", "*.js", "*.js.map"],
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "outDir": ".",
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "noEmit": false,
+    "lib": ["ESNext"]
+  }
+}
