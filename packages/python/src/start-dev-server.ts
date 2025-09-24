@@ -146,8 +146,9 @@ export const startDevServer: StartDevServer = async opts => {
               const port = Number(portMatch[1]);
               if (!resolved) {
                 resolved = true;
-                child.stdout?.off('data', onDetect);
-                child.stderr?.off('data', onDetect);
+                // Use removeListener for broad Node compatibility (and mocked emitters)
+                child.stdout?.removeListener('data', onDetect);
+                child.stderr?.removeListener('data', onDetect);
                 resolve({ port, pid: child.pid });
               }
             }
