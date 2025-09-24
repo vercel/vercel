@@ -1,20 +1,20 @@
 import fs from 'fs';
 import execa from 'execa';
 import { promisify } from 'util';
-import { join, dirname, basename, posix as pathPosix } from 'path';
+import { join, dirname, basename, parse } from 'path';
 import {
   getWriteableDirectory,
   download,
   glob,
   Lambda,
   FileBlob,
-  shouldServe,
   debug,
   NowBuildError,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
   type Files,
+  type ShouldServe,
   FileFsRef,
 } from '@vercel/build-utils';
 import {
@@ -23,30 +23,15 @@ import {
   resolveVendorDir,
 } from './install';
 import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { startDevServer } from './start-dev-server';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-const fastapiEntrypointFilenames = ['app', 'index', 'server', 'main'];
-const fastapiEntrypointDirs = ['', 'src', 'app'];
-const fastapiContentRegex =
-  /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
-
-const fastapiCandidateEntrypoints = fastapiEntrypointFilenames.flatMap(
-  filename =>
-    fastapiEntrypointDirs.map(dir => pathPosix.join(dir, `${filename}.py`))
-);
-
-function isFastapiEntrypoint(file: FileFsRef | { fsPath?: string }): boolean {
-  try {
-    const fsPath = (file as FileFsRef).fsPath;
-    if (!fsPath) return false;
-    const contents = fs.readFileSync(fsPath, 'utf8');
-    return fastapiContentRegex.test(contents);
-  } catch {
-    return false;
-  }
-}
+import {
+  FASTAPI_CANDIDATE_ENTRYPOINTS,
+  detectFastapiEntrypoint,
+} from './entrypoint';
 
 async function pipenvConvert(
   cmd: string,
@@ -124,28 +109,15 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero-config entrypoint discovery
-  if (!fsFiles[entrypoint]) {
-    let discovered: string | undefined;
-
-    if (config?.framework === 'fastapi') {
-      const entrypointCandidates = fastapiCandidateEntrypoints.filter(
-        c => !!fsFiles[c]
-      );
-      if (entrypointCandidates.length) {
-        const fastapiEntrypoint = entrypointCandidates.find(c =>
-          isFastapiEntrypoint(fsFiles[c] as FileFsRef)
-        );
-        discovered = fastapiEntrypoint || entrypointCandidates[0];
-      }
-    }
-
-    if (discovered) {
+  if (!fsFiles[entrypoint] && config?.framework === 'fastapi') {
+    const detected = await detectFastapiEntrypoint(workPath, entrypoint);
+    if (detected) {
       debug(
-        `Resolved Python entrypoint to "${discovered}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = discovered;
-    } else if (config?.framework === 'fastapi') {
-      const searchedList = fastapiCandidateEntrypoints.join(', ');
+      entrypoint = detected;
+    } else {
+      const searchedList = FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: 'FASTAPI_ENTRYPOINT_NOT_FOUND',
         message: `No FastAPI entrypoint found. Searched for: ${searchedList}`,
@@ -291,7 +263,7 @@ export const build: BuildV3 = async ({
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
@@ -368,7 +340,39 @@ export const build: BuildV3 = async ({
   return { output };
 };
 
-export { shouldServe };
+export { startDevServer };
+
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'fastapi') {
+    return true;
+  }
+  return defaultShouldServe(opts);
+};
+
+export const defaultShouldServe: ShouldServe = ({
+  entrypoint,
+  files,
+  requestPath,
+}) => {
+  requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  entrypoint = entrypoint.replace(/\\/g, '/'); // windows compatibility
+
+  if (entrypoint === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  const { dir, name } = parse(entrypoint);
+  if (name === 'index' && dir === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  return false;
+};
+
+function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
+  return Object.hasOwnProperty.call(obj, key);
+}
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
