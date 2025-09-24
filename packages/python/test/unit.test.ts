@@ -410,8 +410,15 @@ describe('startDevServer', () => {
     let spawnMock: jest.Mock<any, any> = jest.fn();
     jest.doMock('child_process', () => {
       const { EventEmitter } = require('events');
-      spawnMock = jest.fn(() => {
+      spawnMock = jest.fn((cmd: string) => {
         const child = new EventEmitter();
+        // Simulate Windows taskkill completing so shutdown() resolves on win32
+        if (cmd === 'taskkill') {
+          process.nextTick(() => {
+            child.emit('exit', 0);
+          });
+          return child;
+        }
         (child as any).pid = 43210;
         (child as any).stdout = new EventEmitter();
         (child as any).stderr = new EventEmitter();
@@ -508,8 +515,15 @@ describe('startDevServer', () => {
     let spawnMock: jest.Mock<any, any> = jest.fn();
     jest.doMock('child_process', () => {
       const { EventEmitter } = require('events');
-      spawnMock = jest.fn(() => {
+      spawnMock = jest.fn((cmd: string) => {
         const child = new EventEmitter();
+        // Simulate Windows taskkill completing so shutdown() resolves on win32
+        if (cmd === 'taskkill') {
+          process.nextTick(() => {
+            child.emit('exit', 0);
+          });
+          return child;
+        }
         (child as any).pid = 54321;
         (child as any).stdout = new EventEmitter();
         (child as any).stderr = new EventEmitter();
