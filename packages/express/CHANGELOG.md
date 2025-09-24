@@ -1,5 +1,11 @@
 # @vercel/express
 
+## 0.0.21
+
+### Patch Changes
+
+- Use NodejsLambda instead of Lambda ([#13980](https://github.com/vercel/vercel/pull/13980))
+
 ## 0.0.20
 
 ### Patch Changes

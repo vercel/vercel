@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.9.3
+
+### Patch Changes
+
+- [python] update fastapi logo ([#13982](https://github.com/vercel/vercel/pull/13982))
+
 ## 3.9.2
 
 ### Patch Changes
