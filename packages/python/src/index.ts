@@ -1,7 +1,7 @@
 import fs from 'fs';
 import execa from 'execa';
 import { promisify } from 'util';
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, parse } from 'path';
 import {
   getWriteableDirectory,
   download,
@@ -15,6 +15,7 @@ import {
   type BuildV3,
   type Files,
   type ShouldServe,
+  FileFsRef,
 } from '@vercel/build-utils';
 import {
   installRequirement,
@@ -341,15 +342,37 @@ export const build: BuildV3 = async ({
 
 export { startDevServer };
 
-export const shouldServe: ShouldServe = async opts => {
-  const requestPath = opts.requestPath.replace(/\/$/, ''); // sanitize trailing '/'
-  if (requestPath.startsWith('api') && opts.hasMatched) {
-    // Don't override API routes, otherwise serve it
-    return false;
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'fastapi') {
+    return true;
   }
-  // NOTE: public assets are served by the default handler
-  return true;
+  return defaultShouldServe(opts);
 };
+
+export const defaultShouldServe: ShouldServe = ({
+  entrypoint,
+  files,
+  requestPath,
+}) => {
+  requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
+  entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility
+
+  if (entrypoint === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  const { dir, name } = parse(entrypoint);
+  if (name === 'index' && dir === requestPath && hasProp(files, entrypoint)) {
+    return true;
+  }
+
+  return false;
+};
+
+function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
+  return Object.hasOwnProperty.call(obj, key);
+}
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
