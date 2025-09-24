@@ -8,6 +8,39 @@ import {
 import { getLatestPythonVersion } from './version';
 import { detectAsgiServer, isInVirtualEnv, useVirtualEnv } from './utils';
 
+// Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
+// Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
+// Returns a restore function to undo the override.
+function silenceNodeWarnings() {
+  const original = process.emitWarning.bind(
+    process
+  ) as typeof process.emitWarning;
+  let active = true;
+  const wrapped: typeof process.emitWarning = ((
+    warning: unknown,
+    ...args: unknown[]
+  ) => {
+    if (!active) {
+      return (original as typeof process.emitWarning)(
+        warning as any,
+        ...(args as any[])
+      );
+    }
+    // Swallow all warnings while active
+    return;
+  }) as typeof process.emitWarning;
+
+  process.emitWarning = wrapped;
+
+  return () => {
+    if (!active) return;
+    active = false;
+    if (process.emitWarning === wrapped) {
+      process.emitWarning = original;
+    }
+  };
+}
+
 // Regex to strip ANSI escape sequences for matching while preserving colored output
 // Use RegExp constructor to avoid linter complaining about control chars in regex literals
 const ANSI_PATTERN =
@@ -23,183 +56,195 @@ export const startDevServer: StartDevServer = async opts => {
     return null;
   }
 
-  const detected = await detectFastapiEntrypoint(workPath, rawEntrypoint);
-  if (!detected) {
-    throw new Error(
-      `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
-    );
-  }
-  const entry = detected;
+  // Silence all Node warnings while the dev server is running. Restore on shutdown.
+  const restoreWarningSilencer = silenceNodeWarnings();
+  try {
+    const detected = await detectFastapiEntrypoint(workPath, rawEntrypoint);
+    if (!detected) {
+      throw new Error(
+        `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    const entry = detected;
 
-  // Convert to module path, e.g. "src/app.py" -> "src.app"
-  const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
+    // Convert to module path, e.g. "src/app.py" -> "src.app"
+    const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
 
-  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  // Encourage colorized output from Python CLIs even when stdio is piped
-  if (!env.TERM) env.TERM = 'xterm-256color';
-  if (!env.FORCE_COLOR) env.FORCE_COLOR = '1';
-  if (!env.PY_COLORS) env.PY_COLORS = '1';
-  if (!env.CLICOLOR_FORCE) env.CLICOLOR_FORCE = '1';
+    const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+    // Encourage colorized output from Python CLIs even when stdio is piped
+    if (!env.TERM) env.TERM = 'xterm-256color';
+    if (!env.FORCE_COLOR) env.FORCE_COLOR = '1';
+    if (!env.PY_COLORS) env.PY_COLORS = '1';
+    if (!env.CLICOLOR_FORCE) env.CLICOLOR_FORCE = '1';
 
-  const childReady = new Promise<{ port: number; pid: number }>(
-    (resolve, reject) => {
-      let resolved = false;
-      const { pythonPath: systemPython } = getLatestPythonVersion(meta);
-      let pythonCmd = systemPython;
-      const venv = isInVirtualEnv();
+    const childReady = new Promise<{ port: number; pid: number }>(
+      (resolve, reject) => {
+        let resolved = false;
+        const { pythonPath: systemPython } = getLatestPythonVersion(meta);
+        let pythonCmd = systemPython;
+        const venv = isInVirtualEnv();
 
-      if (venv) {
-        debug(`Running in virtualenv at ${venv}`);
-      } else {
-        const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
-          workPath,
-          env,
-          systemPython
-        );
-        pythonCmd = venvPythonCmd;
-        if (venvRoot) {
-          debug(`Using virtualenv at ${venvRoot}`);
+        if (venv) {
+          debug(`Running in virtualenv at ${venv}`);
         } else {
-          debug('No virtualenv found');
+          const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
+            workPath,
+            env,
+            systemPython
+          );
+          pythonCmd = venvPythonCmd;
+          if (venvRoot) {
+            debug(`Using virtualenv at ${venvRoot}`);
+          } else {
+            debug('No virtualenv found');
+          }
+        }
+
+        detectAsgiServer(workPath, pythonCmd)
+          .then(serverKind => {
+            if (resolved) return; // in case preflight was rejected
+            const argv =
+              serverKind === 'uvicorn'
+                ? [
+                    '-m',
+                    'uvicorn',
+                    `${modulePath}:app`,
+                    '--reload',
+                    '--host',
+                    '127.0.0.1',
+                    '--port',
+                    '0',
+                    '--use-colors',
+                  ]
+                : [
+                    '-m',
+                    'hypercorn',
+                    `${modulePath}:app`,
+                    '--reload',
+                    '-b',
+                    '127.0.0.1:0',
+                  ];
+            debug(
+              `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
+            );
+            const child = spawn(pythonCmd, argv, {
+              cwd: workPath,
+              env,
+              stdio: ['inherit', 'pipe', 'pipe'],
+            });
+
+            // Forward only useful logs: HTTP access lines and important errors
+            const forwardLine = (line: string, isErr: boolean) => {
+              const clean = stripAnsi(line);
+              const hasMethod =
+                /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\b/.test(
+                  clean
+                );
+              const hasHttp = /\bHTTP\/(1\.[01]|2)\b/.test(clean);
+              const hasStatus = /\b\d{3}\b/.test(clean);
+              const isAccess = hasMethod && hasHttp && hasStatus;
+              const isImportant = /(ERROR|CRITICAL|Traceback)/i.test(clean);
+              if (isAccess || isImportant) {
+                (isErr ? process.stderr : process.stdout).write(
+                  line.endsWith('\n') ? line : line + '\n'
+                );
+              }
+            };
+            child.stdout?.on('data', (buf: Buffer) => {
+              const s = buf.toString();
+              for (const line of s.split(/\r?\n/)) {
+                if (line) forwardLine(line, false);
+              }
+            });
+            child.stderr?.on('data', (buf: Buffer) => {
+              const s = buf.toString();
+              for (const line of s.split(/\r?\n/)) {
+                if (line) forwardLine(line, true);
+              }
+            });
+
+            const readinessRegexes = [
+              /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+              /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+              /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
+            ];
+
+            const onDetect = (chunk: Buffer) => {
+              const text = chunk.toString();
+              const clean = stripAnsi(text);
+              let portMatch: RegExpMatchArray | null = null;
+              for (const rx of readinessRegexes) {
+                const m = clean.match(rx);
+                if (m) {
+                  portMatch = m;
+                  break;
+                }
+              }
+              if (portMatch && child.pid) {
+                const port = Number(portMatch[1]);
+                if (!resolved) {
+                  resolved = true;
+                  // Use removeListener for broad Node compatibility (and mocked emitters)
+                  child.stdout?.removeListener('data', onDetect);
+                  child.stderr?.removeListener('data', onDetect);
+                  resolve({ port, pid: child.pid });
+                }
+              }
+            };
+
+            child.stdout?.on('data', onDetect);
+            child.stderr?.on('data', onDetect);
+            child.once('error', err => {
+              if (!resolved) reject(err);
+            });
+            child.once('exit', (code, signal) => {
+              if (!resolved)
+                reject(
+                  new Error(
+                    `${serverKind} server exited before binding (code=${code}, signal=${signal})`
+                  )
+                );
+            });
+          })
+          .catch(reject);
+      }
+    );
+
+    const { port, pid } = await childReady;
+
+    const shutdown = async () => {
+      // Restore default Node warning behavior first
+      restoreWarningSilencer();
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {
+        // ignore
+      }
+      // Fallback in case the process does not terminate promptly
+      await new Promise(r => setTimeout(r, 1500));
+      if (process.platform === 'win32') {
+        try {
+          await new Promise<void>(resolve => {
+            const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F']);
+            killer.once('exit', () => resolve());
+            killer.once('error', () => resolve());
+          });
+        } catch {
+          // ignore
+        }
+      } else {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          // ignore
         }
       }
+    };
 
-      detectAsgiServer(workPath, pythonCmd)
-        .then(serverKind => {
-          if (resolved) return; // in case preflight was rejected
-          const argv =
-            serverKind === 'uvicorn'
-              ? [
-                  '-m',
-                  'uvicorn',
-                  `${modulePath}:app`,
-                  '--reload',
-                  '--host',
-                  '127.0.0.1',
-                  '--port',
-                  '0',
-                  '--use-colors',
-                ]
-              : [
-                  '-m',
-                  'hypercorn',
-                  `${modulePath}:app`,
-                  '--reload',
-                  '-b',
-                  '127.0.0.1:0',
-                ];
-          debug(
-            `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
-          );
-          const child = spawn(pythonCmd, argv, {
-            cwd: workPath,
-            env,
-            stdio: ['inherit', 'pipe', 'pipe'],
-          });
-
-          // Forward only useful logs: HTTP access lines and important errors
-          const forwardLine = (line: string, isErr: boolean) => {
-            const clean = stripAnsi(line);
-            const hasMethod =
-              /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\b/.test(clean);
-            const hasHttp = /\bHTTP\/(1\.[01]|2)\b/.test(clean);
-            const hasStatus = /\b\d{3}\b/.test(clean);
-            const isAccess = hasMethod && hasHttp && hasStatus;
-            const isImportant = /(ERROR|CRITICAL|Traceback)/i.test(clean);
-            if (isAccess || isImportant) {
-              (isErr ? process.stderr : process.stdout).write(
-                line.endsWith('\n') ? line : line + '\n'
-              );
-            }
-          };
-          child.stdout?.on('data', (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line) forwardLine(line, false);
-            }
-          });
-          child.stderr?.on('data', (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line) forwardLine(line, true);
-            }
-          });
-
-          const readinessRegexes = [
-            /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-            /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-            /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-          ];
-
-          const onDetect = (chunk: Buffer) => {
-            const text = chunk.toString();
-            const clean = stripAnsi(text);
-            let portMatch: RegExpMatchArray | null = null;
-            for (const rx of readinessRegexes) {
-              const m = clean.match(rx);
-              if (m) {
-                portMatch = m;
-                break;
-              }
-            }
-            if (portMatch && child.pid) {
-              const port = Number(portMatch[1]);
-              if (!resolved) {
-                resolved = true;
-                // Use removeListener for broad Node compatibility (and mocked emitters)
-                child.stdout?.removeListener('data', onDetect);
-                child.stderr?.removeListener('data', onDetect);
-                resolve({ port, pid: child.pid });
-              }
-            }
-          };
-
-          child.stdout?.on('data', onDetect);
-          child.stderr?.on('data', onDetect);
-          child.once('error', err => {
-            if (!resolved) reject(err);
-          });
-          child.once('exit', (code, signal) => {
-            if (!resolved)
-              reject(
-                new Error(
-                  `${serverKind} server exited before binding (code=${code}, signal=${signal})`
-                )
-              );
-          });
-        })
-        .catch(reject);
-    }
-  );
-
-  const { port, pid } = await childReady;
-
-  const shutdown = async () => {
-    try {
-      process.kill(pid, 'SIGTERM');
-    } catch {
-      // ignore
-    }
-    // Fallback in case the process does not terminate promptly
-    await new Promise(r => setTimeout(r, 1500));
-    if (process.platform === 'win32') {
-      try {
-        await new Promise<void>(resolve => {
-          const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F']);
-          killer.once('exit', () => resolve());
-          killer.once('error', () => resolve());
-        });
-      } catch {
-        // ignore
-      }
-    } else {
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  return { port, pid, shutdown };
+    return { port, pid, shutdown };
+  } catch (err) {
+    // Startup failed before we returned a shutdown function; restore filter now
+    restoreWarningSilencer();
+    throw err;
+  }
 };
