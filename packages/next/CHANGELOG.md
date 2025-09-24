@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.13.0
+
+### Minor Changes
+
+- Let global error handlers handle errors that next.js passes up to the function runtime rather than directly exiting the process ([#13981](https://github.com/vercel/vercel/pull/13981))
+
 ## 4.12.6
 
 ### Patch Changes
