@@ -128,6 +128,16 @@ test(
 );
 
 test(
+  '[vercel dev] Use `@vercel/python` with FastAPI requirements.txt',
+  testFixtureStdio('python-fastapi', async (testPath: any) => {
+    const name = 'Alice';
+    await testPath(200, `/`, new RegExp(`Hello, World!`));
+    await testPath(200, `/api`, new RegExp(`Hello, API!`));
+    await testPath(200, `/api/hello/${name}`, new RegExp(`Hello, ${name}!`));
+  })
+);
+
+test(
   '[vercel dev] Should work with nested `tsconfig.json` files',
   testFixtureStdio('nested-tsconfig', async (testPath: any) => {
     await testPath(200, `/`, /Nested tsconfig.json test page/);
