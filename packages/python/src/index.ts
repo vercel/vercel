@@ -263,7 +263,7 @@ export const build: BuildV3 = async ({
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
   debug('Entrypoint is', entrypoint);
-  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/, '');
+  const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
@@ -356,7 +356,7 @@ export const defaultShouldServe: ShouldServe = ({
   requestPath,
 }) => {
   requestPath = requestPath.replace(/\/$/, ''); // sanitize trailing '/'
-  entrypoint = entrypoint.replace(/\\/, '/'); // windows compatibility
+  entrypoint = entrypoint.replace(/\\/g, '/'); // windows compatibility
 
   if (entrypoint === requestPath && hasProp(files, entrypoint)) {
     return true;

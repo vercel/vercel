@@ -87,7 +87,7 @@ async function waitForPort(
         try {
           socket.destroy();
         } catch (e) {
-          /* ignore */
+          debug(`Error destroying socket: ${e}`);
         }
       };
       socket.once('connect', () => {
@@ -290,6 +290,14 @@ export const startDevServer: StartDevServer = async opts => {
               .catch(err => {
                 if (!resolved) {
                   resolved = true;
+                  // Ensure listeners are removed and child is terminated on failure
+                  child.stdout?.removeListener('data', onDetect);
+                  child.stderr?.removeListener('data', onDetect);
+                  try {
+                    child.kill('SIGTERM');
+                  } catch (err: any) {
+                    debug(`Error killing child: ${err}`);
+                  }
                   reject(err);
                 }
               });
@@ -316,8 +324,8 @@ export const startDevServer: StartDevServer = async opts => {
       restoreWarningSilencer();
       try {
         process.kill(pid, 'SIGTERM');
-      } catch {
-        // ignore
+      } catch (err: any) {
+        debug(`Error killing child: ${err}`);
       }
       // Fallback in case the process does not terminate promptly
       await new Promise(r => setTimeout(r, 1500));
@@ -328,14 +336,14 @@ export const startDevServer: StartDevServer = async opts => {
             killer.once('exit', () => resolve());
             killer.once('error', () => resolve());
           });
-        } catch {
-          // ignore
+        } catch (err: any) {
+          debug(`Error killing child: ${err}`);
         }
       } else {
         try {
           process.kill(pid, 'SIGKILL');
-        } catch {
-          // ignore
+        } catch (err: any) {
+          debug(`Error killing child: ${err}`);
         }
       }
     };
