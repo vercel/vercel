@@ -2,4 +2,4 @@
 "@vercel/frameworks": patch
 ---
 
-[python] update fastapi logo
+[python] fastapi route redirects fix
