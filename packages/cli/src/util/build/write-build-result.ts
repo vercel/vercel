@@ -64,7 +64,7 @@ export async function writeBuildResult(
     'experimentalVersion' in builder &&
     process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
     'name' in builder &&
-    builder.name === 'express'
+    (builder.name === 'express' || builder.name === 'hono')
   ) {
     version = builder.experimentalVersion as 2 | 3;
   }

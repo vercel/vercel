@@ -630,7 +630,7 @@ async function doBuild(
             if (
               process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
               'name' in builder &&
-              builder.name === 'express' &&
+              (builder.name === 'express' || builder.name === 'hono') &&
               'experimentalBuild' in builder &&
               typeof builder.experimentalBuild === 'function'
             ) {
