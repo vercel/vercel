@@ -16,19 +16,16 @@ export async function logout(client: Client): Promise<number> {
 
   o.spinner('Logging out…', 200);
 
-  const oauthClient = await oauth.init();
-  const revocationResponse = await oauthClient.revokeToken(authConfig.token);
-
-  let logoutError = false;
-  if (isOAuthError(revocationResponse)) {
-    o.debug(`'Revocation response:', ${revocationResponse.message}`);
-    o.error(revocationResponse.message);
-    o.debug(revocationResponse.cause);
-    o.error('Failed during logout');
-    logoutError = true;
-  }
-
   try {
+    const oauthClient = await oauth.init();
+    const revocationResponse = await oauthClient.revokeToken(authConfig.token);
+
+    if (isOAuthError(revocationResponse)) {
+      o.debug(`'Revocation response:', ${revocationResponse.message}`);
+      o.error(revocationResponse.message);
+      o.debug(revocationResponse.cause);
+      throw revocationResponse;
+    }
     client.updateConfig({ currentTeam: undefined });
     client.writeToConfigFile();
 
@@ -36,12 +33,10 @@ export async function logout(client: Client): Promise<number> {
     client.writeToAuthConfigFile();
     o.debug('Configuration has been deleted');
 
-    if (!logoutError) {
-      o.success('Logged out!');
-      return 0;
-    }
+    o.success('Logged out!');
+    return 0;
   } catch (err: unknown) {
-    o.debug(errorToString(err));
+    if (!isOAuthError(err)) o.debug(errorToString(err));
     o.error('Failed during logout');
   }
   return 1;
