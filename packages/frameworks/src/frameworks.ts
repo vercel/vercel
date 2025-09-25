@@ -2532,6 +2532,7 @@ export const frameworks = [
     name: 'Express',
     slug: 'express',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
+    demo: 'https://express-vercel-example-demo.vercel.app/',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
