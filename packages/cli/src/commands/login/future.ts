@@ -18,8 +18,6 @@ export async function login(
   telemetry: LoginTelemetryClient
 ): Promise<number> {
   const oauthClient = await oauth.init();
-  const deviceAuthorization = await oauthClient.deviceAuthorizationRequest();
-
   const {
     device_code,
     user_code,
@@ -27,7 +25,7 @@ export async function login(
     verification_uri_complete,
     expiresAt,
     interval,
-  } = deviceAuthorization;
+  } = await oauthClient.deviceAuthorizationRequest();
 
   let rlClosed = false;
   const rl = readline
