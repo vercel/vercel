@@ -18,12 +18,6 @@ async def favicon():
     return FileResponse("public/favicon.ico")
 
 
-@app.get("/error/{code}", include_in_schema=False)
-async def error(code: int):
-    bruh = 1 / 0
-    raise HTTPException(status_code=code, detail=f"Error {code}")
-
-
 @app.get("/api/data")
 def get_sample_data():
     return {
