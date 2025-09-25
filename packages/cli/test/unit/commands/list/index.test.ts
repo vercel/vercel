@@ -422,4 +422,88 @@ describe('list', () => {
     await expect(client.stdout).toOutput(`https://${prodDeployment.url}`);
     await prom;
   });
+
+  describe('--status', () => {
+    it('should filter deployments by status', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({
+        creator: user,
+        state: 'READY',
+        createdAt: Date.now() - 1000,
+      });
+      useDeployment({
+        creator: user,
+        state: 'BUILDING',
+        createdAt: Date.now(),
+      });
+
+      client.setArgv('list', project.name!, '--status', 'READY');
+      await list(client);
+
+      // Check that the API was called with the correct status filter
+      expect(client.fetchPaginated).toHaveBeenCalledWith(
+        expect.stringMatching(/state=READY/)
+      );
+    });
+
+    it('should filter deployments by multiple statuses', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--status', 'READY,BUILDING');
+      await list(client);
+
+      // Check that the API was called with the correct status filter
+      expect(client.fetchPaginated).toHaveBeenCalledWith(
+        expect.stringMatching(/state=READY%2CBUILDING/)
+      );
+    });
+
+    it('should error on invalid status', async () => {
+      useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+
+      client.setArgv('list', project.name!, '--status', 'INVALID');
+      const exitCode = await list(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Invalid status values: INVALID. Valid values are: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED'
+      );
+    });
+
+    it('should track status telemetry', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--status', 'READY');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:status',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
 });
