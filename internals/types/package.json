@@ -14,6 +14,7 @@
     "@vercel/routing-utils": "5.1.1"
   },
   "devDependencies": {
+    "@vercel/cli-auth": "workspace:*",
     "@vercel-internals/tsconfig": "workspace:*",
     "@vercel/style-guide": "4.0.2",
     "typescript": "4.9.4"

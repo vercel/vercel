@@ -5,9 +5,19 @@ import XDGAppPaths from 'xdg-app-paths';
 import { z } from 'zod/mini';
 
 const Credentials = z.object({
-  token: z.string().check(z.minLength(1)),
-  refresh_token: z.optional(z.string().check(z.minLength(1))),
+  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
+  token: z.optional(z.string()),
+  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
+  refreshToken: z.optional(z.string().check(z.minLength(1))),
+  /**
+   * The absolute time (seconds) when the {@link Credentials.token} expires.
+   * Used to optimistically check if the token is still valid.
+   */
   expiresAt: z.optional(z.number()),
+  /** Whether to skip writing the credentials to disk during {@link CredentialsStore.update} */
+  skipWrite: z.optional(z.boolean()),
+  '// Note': z.optional(z.string()),
+  '// Docs': z.optional(z.string()),
 });
 
 export type Credentials = z.infer<typeof Credentials>;
@@ -43,20 +53,19 @@ function getGlobalPathConfig(dir: string): string {
 }
 
 export function CredentialsStore(dir: string) {
+  const configPath = path.join(getGlobalPathConfig(dir), 'auth.json');
   return {
-    get() {
-      try {
-        const pathname = path.join(getGlobalPathConfig(dir), 'auth.json');
-        return Credentials.parse(JSON.parse(fs.readFileSync(pathname, 'utf8')));
-      } catch {
-        return null;
-      }
+    configPath,
+    get(): Credentials {
+      return Credentials.parse(JSON.parse(fs.readFileSync(configPath, 'utf8')));
     },
-    update(config: Partial<Credentials>) {
-      const pathname = path.join(getGlobalPathConfig(dir), 'auth.json');
-      fs.mkdirSync(path.dirname(pathname), { recursive: true });
-      console.log('Writing auth config to', pathname);
-      fs.writeFileSync(pathname, JSON.stringify(config, null, 2) + '\n');
+    /** Update the credentials store. If `skipWrite` is set, the update will be skipped. */
+    update(config: Partial<Credentials>): void {
+      if (config.skipWrite) return;
+      fs.mkdirSync(path.dirname(configPath), { recursive: true });
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', {
+        mode: 0o600,
+      });
     },
   };
 }
