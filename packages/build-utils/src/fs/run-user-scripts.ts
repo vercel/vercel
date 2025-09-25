@@ -36,6 +36,8 @@ const NO_OVERRIDE = {
 
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
+export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
+export const PNPM_PREFERRED_AT = new Date('2025-04-01T00:00:00Z');
 export interface ScanParentDirsResult {
   /**
    * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
@@ -341,7 +343,8 @@ export async function getNodeVersion(
 export async function scanParentDirs(
   destPath: string,
   readPackageJson = false,
-  base = '/'
+  base = '/',
+  projectCreatedAt: number | undefined = undefined
 ): Promise<ScanParentDirsResult> {
   assert(path.isAbsolute(destPath));
 
@@ -443,7 +446,8 @@ export async function scanParentDirs(
   } else {
     cliType = detectPackageManagerNameWithoutLockfile(
       packageJsonPackageManager,
-      turboSupportsCorepackHome
+      turboSupportsCorepackHome,
+      projectCreatedAt
     );
   }
 
@@ -535,10 +539,25 @@ export function turboVersionSpecifierSupportsCorepack(
   return gte(minTurboBeingUsed, versionSupportingCorepack);
 }
 
+function getDefaultPackageManager(
+  projectCreatedAt: number | undefined
+): CliType {
+  if (process.env['VERCEL_ENABLE_DEFAULT_PNPM'] === '1') {
+    return 'pnpm';
+  }
+
+  if (projectCreatedAt && projectCreatedAt <= PNPM_PREFERRED_AT.getTime()) {
+    return 'npm';
+  }
+
+  return 'pnpm';
+}
+
 function detectPackageManagerNameWithoutLockfile(
   packageJsonPackageManager: string | undefined,
-  turboSupportsCorepackHome: boolean | undefined
-) {
+  turboSupportsCorepackHome: boolean | undefined,
+  projectCreatedAt: number | undefined
+): CliType {
   if (
     usingCorepack(
       process.env,
@@ -556,14 +575,15 @@ function detectPackageManagerNameWithoutLockfile(
       case 'bun':
         return corepackPackageManager.packageName;
       case undefined:
-        return 'npm';
+        return getDefaultPackageManager(projectCreatedAt);
       default:
         throw new Error(
           `Unknown package manager "${corepackPackageManager?.packageName}". Change your package.json "packageManager" field to a known package manager: npm, pnpm, yarn, bun.`
         );
     }
   }
-  return 'npm';
+
+  return getDefaultPackageManager(projectCreatedAt);
 }
 
 export function usingCorepack(
@@ -750,7 +770,7 @@ export async function runNpmInstall(
       lockfileVersion,
       packageJsonPackageManager,
       turboSupportsCorepackHome,
-    } = await scanParentDirs(destPath, true);
+    } = await scanParentDirs(destPath, true, '/', projectCreatedAt);
 
     if (!packageJsonPath) {
       debug(
@@ -944,8 +964,6 @@ type DetectedPnpmVersion =
   | 'pnpm 8'
   | 'pnpm 9'
   | 'pnpm 10';
-
-export const PNPM_10_PREFERRED_AT = new Date('2025-02-27T20:00:00Z');
 
 function detectPnpmVersion(
   lockfileVersion: number | undefined,
@@ -1371,7 +1389,7 @@ export async function runCustomInstallCommand({
     packageJson,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-  } = await scanParentDirs(destPath, true);
+  } = await scanParentDirs(destPath, true, '/', projectCreatedAt);
   const env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
@@ -1404,7 +1422,7 @@ export async function runPackageJsonScript(
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-  } = await scanParentDirs(destPath, true);
+  } = await scanParentDirs(destPath, true, '/', projectCreatedAt);
   const scriptName = getScriptName(
     packageJson,
     typeof scriptNames === 'string' ? [scriptNames] : scriptNames
