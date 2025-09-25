@@ -3263,6 +3263,18 @@ exports[`help command > list help output snapshots > list help column width 40 1
                                KEY=value\`…
                                Can appear 
                                many times.
+  -s,  --status <STATUS>       Filter     
+                               deployments
+                               by their   
+                               status. Can
+                               be         
+                               comma-sepa…
+                               for        
+                               multiple   
+                               statuses   
+                               (e.g.:     
+                               \`--status  
+                               BUILDING,R…
   -y,  --yes                   Accept     
                                default    
                                value for  
@@ -3325,6 +3337,14 @@ exports[`help command > list help output snapshots > list help column width 40 1
 
     $ vercel list my-app --next 1584722256178
 
+  - Filter deployments by status
+
+    $ vercel list --status READY
+
+  - Filter deployments by multiple statuses
+
+    $ vercel list --status BUILDING,ERROR
+
 "
 `;
 
@@ -3343,6 +3363,9 @@ exports[`help command > list help output snapshots > list help column width 80 1
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention 
                                policies (e.g.: \`-p KEY=value\`). Can appear many   
                                times.                                             
+  -s,  --status <STATUS>       Filter deployments by their status. Can be         
+                               comma-separated for multiple statuses (e.g.:       
+                               \`--status BUILDING,READY\`)                         
   -y,  --yes                   Accept default value for all prompts               
 
 
@@ -3378,6 +3401,14 @@ exports[`help command > list help output snapshots > list help column width 80 1
 
     $ vercel list my-app --next 1584722256178
 
+  - Filter deployments by status
+
+    $ vercel list --status READY
+
+  - Filter deployments by multiple statuses
+
+    $ vercel list --status BUILDING,ERROR
+
 "
 `;
 
@@ -3394,6 +3425,8 @@ exports[`help command > list help output snapshots > list help column width 120 
   -N,  --next <MS>             Show next page of results                                                                  
   -p,  --policy <KEY=VALUE>    See deployments with provided Deployment Retention policies (e.g.: \`-p KEY=value\`). Can    
                                appear many times.                                                                         
+  -s,  --status <STATUS>       Filter deployments by their status. Can be comma-separated for multiple statuses (e.g.:    
+                               \`--status BUILDING,READY\`)                                                                 
   -y,  --yes                   Accept default value for all prompts                                                       
 
 
@@ -3427,6 +3460,14 @@ exports[`help command > list help output snapshots > list help column width 120 
   - Paginate deployments for a project, where \`1584722256178\` is the time in milliseconds since the UNIX epoch
 
     $ vercel list my-app --next 1584722256178
+
+  - Filter deployments by status
+
+    $ vercel list --status READY
+
+  - Filter deployments by multiple statuses
+
+    $ vercel list --status BUILDING,ERROR
 
 "
 `;

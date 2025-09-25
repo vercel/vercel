@@ -183,12 +183,21 @@ function setupDeploymentEndpoints(): void {
   });
 
   function handleGetDeployments(req: Request, res: Response) {
-    const currentDeployments = Array.from(deployments.values()).sort(
+    let currentDeployments = Array.from(deployments.values()).sort(
       (a: Deployment, b: Deployment) => {
         // sort in reverse chronological order
         return (b?.createdAt || 0) - (a?.createdAt || 0);
       }
     );
+
+    // Filter by state if provided
+    const stateFilter = req.query.state;
+    if (stateFilter && typeof stateFilter === 'string') {
+      const allowedStates = stateFilter.split(',').map(s => s.trim());
+      currentDeployments = currentDeployments.filter(deployment =>
+        allowedStates.includes(deployment.readyState || '')
+      );
+    }
 
     res.json({
       pagination: {

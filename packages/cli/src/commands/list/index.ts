@@ -81,6 +81,7 @@ export default async function list(client: Client) {
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
+  telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
 
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
@@ -96,6 +97,33 @@ export default async function list(client: Client) {
     flagName: 'environment',
     flags: parsedArgs.flags,
   });
+
+  const statusFlag = parsedArgs.flags['--status'];
+  let status: string | undefined;
+  if (statusFlag) {
+    // Validate status values
+    const validStatuses = [
+      'BUILDING',
+      'ERROR',
+      'INITIALIZING',
+      'QUEUED',
+      'READY',
+      'CANCELED',
+    ];
+    const statusValues = statusFlag.split(',').map(s => s.trim().toUpperCase());
+    const invalidStatuses = statusValues.filter(
+      s => !validStatuses.includes(s)
+    );
+
+    if (invalidStatuses.length > 0) {
+      error(
+        `Invalid status values: ${invalidStatuses.join(', ')}. Valid values are: ${validStatuses.join(', ')}`
+      );
+      return 1;
+    }
+
+    status = statusValues.join(',');
+  }
 
   let project: Project;
   let pagination: PaginationOptions | undefined;
@@ -203,6 +231,10 @@ export default async function list(client: Client) {
 
     if (target) {
       query.set('target', target);
+    }
+
+    if (status) {
+      query.set('state', status);
     }
     for await (const chunk of client.fetchPaginated<{
       deployments: Deployment[];
