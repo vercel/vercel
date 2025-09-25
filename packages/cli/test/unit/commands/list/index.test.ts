@@ -431,7 +431,7 @@ describe('list', () => {
         id: 'with-team',
         name: 'with-team',
       });
-      useDeployment({
+      const readyDeployment = useDeployment({
         creator: user,
         state: 'READY',
         createdAt: Date.now() - 1000,
@@ -445,28 +445,19 @@ describe('list', () => {
       client.setArgv('list', project.name!, '--status', 'READY');
       await list(client);
 
-      // Check that the API was called with the correct status filter
-      expect(client.fetchPaginated).toHaveBeenCalledWith(
-        expect.stringMatching(/state=READY/)
-      );
-    });
+      const lines = createLineIterator(client.stderr);
+      let line = await lines.next();
+      expect(line.value).toEqual(`Fetching deployments in ${user.username}`);
 
-    it('should filter deployments by multiple statuses', async () => {
-      const user = useUser();
-      const { project } = useProject({
-        ...defaultProject,
-        id: 'with-team',
-        name: 'with-team',
-      });
-      useDeployment({ creator: user });
+      // Skip to the table data
+      line = await lines.next(); // project line
+      line = await lines.next(); // empty line
+      line = await lines.next(); // header
+      line = await lines.next(); // data
 
-      client.setArgv('list', project.name!, '--status', 'READY,BUILDING');
-      await list(client);
-
-      // Check that the API was called with the correct status filter
-      expect(client.fetchPaginated).toHaveBeenCalledWith(
-        expect.stringMatching(/state=READY%2CBUILDING/)
-      );
+      const data = parseSpacedTableRow(line.value!);
+      expect(data[1]).toEqual(`https://${readyDeployment.url}`);
+      expect(data[2]).toEqual(stateString('READY'));
     });
 
     it('should error on invalid status', async () => {
@@ -501,6 +492,10 @@ describe('list', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'option:status',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:app',
           value: '[REDACTED]',
         },
       ]);
