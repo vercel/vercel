@@ -10,7 +10,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
 import { isOAuthError, oauth } from '../../util/oauth';
-import output from '../../output-manager';
+import o from '../../output-manager';
 import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
 export async function login(
@@ -44,24 +44,24 @@ export async function login(
   rl.question(
     `
   Visit ${chalk.bold(
-    output.link(
+    o.link(
       verification_uri.replace('https://', ''),
       verification_uri_complete,
       { color: false, fallback: () => verification_uri_complete }
     )
-  )}${output.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
+  )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}
   ${chalk.grey('Press [ENTER] to open the browser')}
 `,
     () => {
       open.default(verification_uri_complete);
-      output.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
-      output.spinner('Waiting for authentication...');
+      o.print(eraseLines(2)); // "Waiting for authentication..." gets printed twice, this removes one when Enter is pressed
+      o.spinner('Waiting for authentication...');
       rl.close();
       rlClosed = true;
     }
   );
 
-  output.spinner('Waiting for authentication...');
+  o.spinner('Waiting for authentication...');
 
   let intervalMs = interval * 1000;
   let error: Error | undefined = new Error(
@@ -77,7 +77,7 @@ export async function login(
         // 2x backoff on connection timeouts per spec https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
         if (tokenResponseError.message.includes('timeout')) {
           intervalMs *= 2;
-          output.debug(
+          o.debug(
             `Connection timeout. Slowing down, polling every ${intervalMs / 1000}s...`
           );
           await wait(intervalMs);
@@ -86,7 +86,7 @@ export async function login(
         return tokenResponseError;
       }
 
-      output.debug(
+      o.debug(
         `'Device Access Token response:', ${await tokenResponse.clone().text()}`
       );
 
@@ -101,7 +101,7 @@ export async function login(
             continue;
           case 'slow_down':
             intervalMs += 5 * 1000;
-            output.debug(
+            o.debug(
               `Authorization server requests to slow down. Polling every ${intervalMs / 1000}s...`
             );
             await wait(intervalMs);
@@ -116,7 +116,7 @@ export async function login(
       // If we get here, we throw away any possible token errors like polling, or timeouts
       error = undefined;
 
-      output.print(eraseLines(2));
+      o.print(eraseLines(2));
 
       // user is not currently authenticated on this machine
       const isInitialLogin = !client.authConfig.token;
@@ -137,15 +137,15 @@ export async function login(
       client.writeToAuthConfigFile();
       client.writeToConfigFile();
 
-      output.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
+      o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
-      output.print(`
+      o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
 
   ${emoji('tip')} To deploy every commit automatically,
-  connect a Git Repository (${chalk.bold(output.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+  connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
       return;
     }
@@ -153,7 +153,7 @@ export async function login(
 
   error = await pollForToken();
 
-  output.stopSpinner();
+  o.stopSpinner();
   if (!rlClosed) {
     rl.close();
   }
