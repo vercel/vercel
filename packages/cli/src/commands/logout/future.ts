@@ -14,10 +14,9 @@ export async function logout(client: Client): Promise<number> {
     return 0;
   }
 
-  const oauthClient = await oauth.init();
-
   o.spinner('Logging out…', 200);
 
+  const oauthClient = await oauth.init();
   const revocationResponse = await oauthClient.revokeToken(authConfig.token);
 
   let logoutError = false;
