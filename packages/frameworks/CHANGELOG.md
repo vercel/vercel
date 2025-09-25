@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.9.4
+
+### Patch Changes
+
+- [python] fastapi route redirects fix ([#13972](https://github.com/vercel/vercel/pull/13972))
+
 ## 3.9.3
 
 ### Patch Changes

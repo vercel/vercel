@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.6
+
+### Patch Changes
+
+- [python] switch build pip install step to prefer uv ([#13967](https://github.com/vercel/vercel/pull/13967))
+
 ## 5.0.5
 
 ### Patch Changes
