@@ -38,6 +38,35 @@ async function getDeploymentUrl(
   }
 }
 
+async function getDeploymentUrlBySha(
+  client: Client,
+  projectId: string,
+  sha: string
+): Promise<string | null> {
+  const query = new URLSearchParams({ projectId });
+
+  try {
+    const response = await client.fetch<{ deployments: Deployment[] }>(
+      `/v6/deployments?${query}`
+    );
+
+    // Find deployment with matching SHA
+    const deployment = response.deployments.find(
+      dep =>
+        dep.meta?.githubCommitSha === sha || dep.meta?.gitlabCommitSha === sha
+    );
+
+    if (!deployment || !deployment.url) {
+      return null;
+    }
+
+    return `https://${deployment.url}`;
+  } catch (error) {
+    output.debug(`Failed to fetch deployment by SHA: ${error}`);
+    return null;
+  }
+}
+
 function generateRandomSecret(length = 32) {
   const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -158,7 +187,11 @@ export default async function curl(client: Client) {
 
   // Parse environment flags
   const args = client.argv.slice(2);
-  const flags: { '--prod'?: boolean; '--environment'?: string } = {};
+  const flags: {
+    '--prod'?: boolean;
+    '--environment'?: string;
+    '--sha'?: string;
+  } = {};
 
   // Extract environment flags
   for (let i = 0; i < args.length; i++) {
@@ -167,6 +200,8 @@ export default async function curl(client: Client) {
       flags['--prod'] = true;
     } else if (arg === '--environment' && i + 1 < args.length) {
       flags['--environment'] = args[i + 1];
+    } else if (arg === '--sha' && i + 1 < args.length) {
+      flags['--sha'] = args[i + 1];
     }
   }
 
@@ -175,9 +210,20 @@ export default async function curl(client: Client) {
     flags,
   });
 
-  // Get deployment URL based on target
+  // Get deployment URL based on SHA or target
   let baseUrl: string;
-  if (target) {
+  if (flags['--sha']) {
+    const deploymentUrl = await getDeploymentUrlBySha(
+      client,
+      linkedProject.project.id,
+      flags['--sha']
+    );
+    if (!deploymentUrl) {
+      output.error(`No deployment found for SHA "${flags['--sha']}"`);
+      return 1;
+    }
+    baseUrl = deploymentUrl;
+  } else if (target) {
     const deploymentUrl = await getDeploymentUrl(
       client,
       linkedProject.project.id,
@@ -206,7 +252,7 @@ export default async function curl(client: Client) {
     if (arg === '--prod' || arg === '--production') {
       // Skip this flag
       continue;
-    } else if (arg === '--environment' || arg === '--cwd') {
+    } else if (arg === '--environment' || arg === '--cwd' || arg === '--sha') {
       // Skip this flag and its value
       i++; // Skip the next argument too
       continue;
@@ -214,7 +260,7 @@ export default async function curl(client: Client) {
     curlArgs.push(arg);
   }
 
-  // Find the first argument that looks like a path (starts with '/' or doesn't start with '-')
+  // Find the first argument that looks like a path or URL (doesn't start with '-')
   let pathIndex = -1;
   let path = '/';
 
@@ -241,23 +287,35 @@ export default async function curl(client: Client) {
       }
       continue;
     }
-    // This is likely the path argument
+    // This is likely the path/URL argument
     pathIndex = i;
     path = arg;
     break;
   }
 
-  // Build the full URL
-  const fullUrl = path.startsWith('/')
-    ? `${baseUrl}${path}`
-    : `${baseUrl}/${path}`;
+  // Check if path is already a full URL
+  const isFullUrl = path.startsWith('http://') || path.startsWith('https://');
 
-  // Replace the path with the full URL
-  if (pathIndex >= 0) {
-    curlArgs[pathIndex] = fullUrl;
+  if (isFullUrl) {
+    // If it's already a full URL, use it as-is
+    if (pathIndex >= 0) {
+      curlArgs[pathIndex] = path;
+    } else {
+      curlArgs.unshift(path);
+    }
   } else {
-    // No path specified, add the base URL
-    curlArgs.unshift(baseUrl);
+    // Build the full URL from base URL and path
+    const fullUrl = path.startsWith('/')
+      ? `${baseUrl}${path}`
+      : `${baseUrl}/${path}`;
+
+    // Replace the path with the full URL
+    if (pathIndex >= 0) {
+      curlArgs[pathIndex] = fullUrl;
+    } else {
+      // No path specified, add the base URL
+      curlArgs.unshift(baseUrl);
+    }
   }
 
   // Add deployment protection bypass token if available

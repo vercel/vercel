@@ -167,6 +167,7 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = [];
+  const jsonOnlyCommands: string[] = ['httpstat', 'curl'];
   if (betaCommands.includes(targetOrSubcommand)) {
     output.print(
       `${chalk.grey(
@@ -175,7 +176,7 @@ const main = async () => {
         } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
       )}\n`
     );
-  } else {
+  } else if (!jsonOnlyCommands.includes(targetOrSubcommand)) {
     output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
   }
 
@@ -623,6 +624,9 @@ const main = async () => {
           break;
         case 'curl':
           func = require('./commands/curl').default;
+          break;
+        case 'httpstat':
+          func = require('./commands/httpstat').default;
           break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);

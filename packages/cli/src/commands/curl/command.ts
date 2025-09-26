@@ -40,6 +40,14 @@ export const curlCommand = {
       deprecated: false,
     },
     {
+      name: 'sha',
+      description: 'Target a specific deployment by SHA',
+      shorthand: null,
+      argument: 'SHA',
+      type: String,
+      deprecated: false,
+    },
+    {
       name: 'cwd',
       description: 'Current working directory to resolve linked project from',
       shorthand: null,
@@ -60,6 +68,10 @@ export const curlCommand = {
     {
       name: 'Send a request to a specific environment',
       value: `${packageName} curl /api/hello --environment staging`,
+    },
+    {
+      name: 'Send a request to a specific deployment by SHA',
+      value: `${packageName} curl /api/hello --sha abcd1234`,
     },
     {
       name: 'Send a POST request with data',
