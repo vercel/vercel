@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "Hello, World!" },
+    { "path": "/api", "status": 200, "mustContain": "Hello, API!" },
+    { "path": "/logo.svg", "status": 200, "mustContain": "<svg" }
+  ]
+}
