@@ -3,32 +3,22 @@ import { join } from 'path';
 import { outputFile } from 'fs-extra';
 import { readFileSync } from 'fs';
 import { rm } from 'fs/promises';
+import { spawn } from 'child_process';
 import { pathToRegexp } from 'path-to-regexp';
 import { rolldown } from './rolldown';
 import { z } from 'zod';
 
 export const introspectApp = async (
-  _args: Parameters<BuildV2>[0],
+  args: Parameters<BuildV2>[0],
   options: Awaited<ReturnType<typeof rolldown>>
 ) => {
-  // Parse routes from the bundled JavaScript file
-  const routes = await parseRoutesFromBundle(options);
+  // Inject route capture into the bundled JavaScript
+  await injectRouteCapture(options);
 
-  // Create introspection.json with the parsed routes for observability
-  const introspectionData = {
-    routes,
-    views: undefined,
-    staticPaths: undefined,
-    viewEngine: undefined,
-  };
+  // Invoke the function to extract routes at runtime
+  await invokeFunction(args, options);
 
-  const introspectionPath = getIntrospectionPath(options);
-  await outputFile(
-    introspectionPath,
-    JSON.stringify(introspectionData, null, 2)
-  );
-
-  // Process the routes to convert them to Vercel format
+  // Process the introspection results
   const {
     routes: routesFromIntrospection,
     views,
@@ -40,67 +30,10 @@ export const introspectApp = async (
   await cleanup(options);
 
   console.log(
-    `Generated introspection.json with ${Object.keys(routes).length} routes for observability`
+    `Generated introspection.json with ${routesFromIntrospection.length} routes for observability`
   );
 
   return { routes: routesFromIntrospection, views, staticPaths, viewEngine };
-};
-
-const parseRoutesFromBundle = async (
-  options: Awaited<ReturnType<typeof rolldown>>
-) => {
-  const bundlePath = join(options.outputDir, options.handler);
-
-  try {
-    const bundleContent = readFileSync(bundlePath, 'utf8');
-    const routes: Record<string, { methods: string[] }> = {};
-
-    // Parse app.get(), app.post(), etc. calls
-    const methodPatterns = [
-      { method: 'GET', pattern: /app\.get\(["']([^"']+)["']/g },
-      { method: 'POST', pattern: /app\.post\(["']([^"']+)["']/g },
-      { method: 'PUT', pattern: /app\.put\(["']([^"']+)["']/g },
-      { method: 'DELETE', pattern: /app\.delete\(["']([^"']+)["']/g },
-      { method: 'PATCH', pattern: /app\.patch\(["']([^"']+)["']/g },
-      { method: 'OPTIONS', pattern: /app\.options\(["']([^"']+)["']/g },
-      { method: 'HEAD', pattern: /app\.head\(["']([^"']+)["']/g },
-      { method: 'ALL', pattern: /app\.all\(["']([^"']+)["']/g },
-    ];
-
-    for (const { method, pattern } of methodPatterns) {
-      let match;
-      while ((match = pattern.exec(bundleContent)) !== null) {
-        const path = match[1];
-        if (!routes[path]) {
-          routes[path] = { methods: [] };
-        }
-        if (!routes[path].methods.includes(method)) {
-          routes[path].methods.push(method);
-        }
-      }
-    }
-
-    // Handle app.all() routes - they should include all HTTP methods
-    for (const [, routeData] of Object.entries(routes)) {
-      if (routeData.methods.includes('ALL')) {
-        routeData.methods = [
-          'GET',
-          'POST',
-          'PUT',
-          'DELETE',
-          'PATCH',
-          'OPTIONS',
-          'HEAD',
-        ];
-      }
-    }
-
-    console.log(`Parsed ${Object.keys(routes).length} routes from bundle`);
-    return routes;
-  } catch (error) {
-    console.log('Failed to parse routes from bundle:', error);
-    return {};
-  }
 };
 
 const processIntrospection = async (
@@ -154,7 +87,188 @@ const getIntrospectionPath = (options: { outputDir: string }) => {
 };
 
 const cleanup = async (options: Awaited<ReturnType<typeof rolldown>>) => {
+  await rm(join(options.outputDir, 'node_modules'), {
+    recursive: true,
+    force: true,
+  });
   await rm(getIntrospectionPath(options), { force: true });
+};
+
+const invokeFunction = async (
+  args: Parameters<BuildV2>[0],
+  options: Awaited<ReturnType<typeof rolldown>>
+) => {
+  await new Promise(resolve => {
+    try {
+      const child = spawn('node', [join(options.outputDir, options.handler)], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: options.outputDir,
+        env: {
+          ...process.env,
+          ...(args.meta?.env || {}),
+          ...(args.meta?.buildEnv || {}),
+        },
+      });
+
+      setTimeout(() => {
+        child.kill('SIGTERM');
+      }, 5000);
+
+      child.on('error', () => {
+        console.log(
+          `Unable to extract routes from hono, route level observability will not be available`
+        );
+        resolve(undefined);
+      });
+
+      child.on('close', () => {
+        resolve(undefined);
+      });
+    } catch (error) {
+      console.log(
+        `Unable to extract routes from hono, route level observability will not be available`
+      );
+      resolve(undefined);
+    }
+  });
+};
+
+const injectRouteCapture = async (
+  options: Awaited<ReturnType<typeof rolldown>>
+) => {
+  const bundlePath = join(options.outputDir, options.handler);
+  const introspectionPath = getIntrospectionPath(options);
+
+  try {
+    let bundleContent = readFileSync(bundlePath, 'utf8');
+
+    // Add route capture code at the beginning of the bundle
+    const routeCaptureCode = `
+// Route capture for introspection
+import fs from 'fs';
+import path from 'path';
+const routes = {};
+let routesExtracted = false;
+
+function addRoute(method, path) {
+  if (!routes[path]) {
+    routes[path] = { methods: [] };
+  }
+  if (!routes[path].methods.includes(method)) {
+    routes[path].methods.push(method);
+  }
+}
+
+// Handle app.all() routes - they should include all HTTP methods
+const processAllRoutes = () => {
+  for (const [path, routeData] of Object.entries(routes)) {
+    if (routeData.methods.includes('ALL')) {
+      routeData.methods = [
+        'GET',
+        'POST',
+        'PUT',
+        'DELETE',
+        'PATCH',
+        'OPTIONS',
+        'HEAD',
+      ];
+    }
+  }
+};
+
+const extractRoutes = () => {
+  if (routesExtracted) {
+    return;
+  }
+  routesExtracted = true;
+
+  processAllRoutes();
+
+  // Ensure directory exists
+  const dir = path.dirname('${introspectionPath}');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFileSync('${introspectionPath}', JSON.stringify({
+    routes,
+    views: undefined,
+    staticPaths: undefined,
+    viewEngine: undefined
+  }, null, 2));
+};
+
+process.on('exit', () => {
+  extractRoutes();
+});
+
+process.on('SIGINT', () => {
+  extractRoutes();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  extractRoutes();
+  process.exit(0);
+});
+
+`;
+
+    // Inject the route capture code after the imports
+    const importEndIndex = bundleContent.indexOf('//#region index.js');
+    if (importEndIndex !== -1) {
+      bundleContent =
+        bundleContent.slice(0, importEndIndex) +
+        routeCaptureCode +
+        bundleContent.slice(importEndIndex);
+    } else {
+      // Fallback: inject at the beginning
+      bundleContent = routeCaptureCode + bundleContent;
+    }
+
+    // Replace route method calls to capture routes
+    // Use a more sophisticated regex to capture the path parameter
+    bundleContent = bundleContent.replace(
+      /app\.get\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("GET", ${path}); app.get(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.post\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("POST", ${path}); app.post(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.put\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("PUT", ${path}); app.put(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.delete\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("DELETE", ${path}); app.delete(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.patch\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("PATCH", ${path}); app.patch(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.options\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("OPTIONS", ${path}); app.options(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.head\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("HEAD", ${path}); app.head(${path}`
+    );
+    bundleContent = bundleContent.replace(
+      /app\.all\((["'][^"']+["'])/g,
+      (match, path) => `addRoute("ALL", ${path}); app.all(${path}`
+    );
+
+    // Write the modified bundle back
+    await outputFile(bundlePath, bundleContent);
+
+    console.log('Injected route capture into bundled JavaScript');
+  } catch (error) {
+    console.log('Failed to inject route capture:', error);
+    throw error;
+  }
 };
 
 const convertHonoRoute = (route: string, routeData: { methods: string[] }) => {
