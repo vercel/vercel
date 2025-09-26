@@ -133,6 +133,8 @@ test(
     const name = 'Alice';
     await testPath(200, `/`, new RegExp(`Hello, World!`));
     await testPath(200, `/api`, new RegExp(`Hello, API!`));
+    // public assets should be served at root in dev
+    await testPath(200, `/logo.svg`, /svg|<svg/);
     await testPath(200, `/api/hello/${name}`, new RegExp(`Hello, ${name}!`));
   })
 );
