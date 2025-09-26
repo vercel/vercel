@@ -67,8 +67,8 @@ export function CredentialsStore(dir: string) {
     /** Update the credentials store. If `skipWrite` is set, the update will be skipped. */
     update(config: Partial<Credentials>): void {
       if (config.skipWrite) return;
-      fs.mkdirSync(path.dirname(configPath), { recursive: true });
       const parsedConfig = Credentials.parse(config);
+      fs.mkdirSync(path.dirname(configPath), { recursive: true });
       fs.writeFileSync(
         configPath,
         JSON.stringify(parsedConfig, null, 2) + '\n',
