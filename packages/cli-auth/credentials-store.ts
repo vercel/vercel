@@ -68,9 +68,12 @@ export function CredentialsStore(dir: string) {
     update(config: Partial<Credentials>): void {
       if (config.skipWrite) return;
       fs.mkdirSync(path.dirname(configPath), { recursive: true });
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', {
-        mode: 0o600,
-      });
+      const parsedConfig = Credentials.parse(config);
+      fs.writeFileSync(
+        configPath,
+        JSON.stringify(parsedConfig, null, 2) + '\n',
+        { mode: 0o600 }
+      );
     },
   };
 }
