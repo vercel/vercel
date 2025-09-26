@@ -621,6 +621,9 @@ const main = async () => {
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = require('./commands/certs').default;
           break;
+        case 'curl':
+          func = require('./commands/curl').default;
+          break;
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
