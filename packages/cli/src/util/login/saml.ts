@@ -2,7 +2,7 @@ import { URL } from 'url';
 import login from '../../commands/login';
 import output from '../../output-manager';
 import type Client from '../client';
-import { inspectTokenRequest, processInspectTokenResponse } from '../oauth';
+import { oauth } from '../oauth';
 import doOauthLogin from './oauth';
 
 export default async function doSamlLogin(
@@ -33,12 +33,8 @@ async function decodeToken(client: Client) {
     );
   }
 
-  const inspectResponse = await inspectTokenRequest(token);
-
-  const [inspectError, inspectResult] =
-    await processInspectTokenResponse(inspectResponse);
-
-  if (inspectError) throw inspectError;
+  const oauthClient = await oauth.init();
+  const inspectResult = await oauthClient.introspectToken(token);
 
   if (
     !inspectResult.active ||

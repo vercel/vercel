@@ -210,6 +210,9 @@ importers:
       '@vercel-internals/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@vercel/cli-auth':
+        specifier: workspace:*
+        version: link:../../packages/cli-auth
       '@vercel/style-guide':
         specifier: 4.0.2
         version: 4.0.2(eslint@8.24.0)(jest@29.5.0)(prettier@3.3.3)(typescript@4.9.4)
@@ -342,6 +345,9 @@ importers:
       '@vercel/build-utils':
         specifier: 12.1.0
         version: link:../build-utils
+      '@vercel/cli-auth':
+        specifier: workspace:*
+        version: link:../cli-auth
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent

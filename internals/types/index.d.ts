@@ -3,7 +3,7 @@ import type { Readable, Writable } from 'stream';
 import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import type { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
-
+import type { Credentials } from '@vercel/cli-auth/credentials-store';
 export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
 export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
@@ -26,20 +26,7 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  skipWrite?: boolean;
-  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
-  token?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the {@link AuthConfig.token} expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  expiresAt?: number;
-}
+type AuthConfig = Credentials;
 
 export interface GlobalConfig {
   '// Note'?: string;
