@@ -17,14 +17,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "xdg-app-paths": "8.3.0",
+    "xdg-app-paths": "5",
     "zod": "4.1.11"
   },
   "devDependencies": {
     "@types/node": "22",
+    "memfs": "4.14.0",
+    "typescript": "5.9.2",
     "vite": "7.1.7",
-    "vitest": "2.1.4",
-    "typescript": "5.9.2"
+    "vitest": "2.1.4"
   },
   "ci-cd": {
     "//": "https://www.notion.so/1d6e06b059c48017a7afe7e8698de336",

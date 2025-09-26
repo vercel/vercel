@@ -1,6 +1,8 @@
 import path from 'node:path';
-import fs from 'node:fs';
+import * as fs from 'node:fs';
 import { homedir } from 'node:os';
+// NOTE: We are pinned on v5 because newer versions behave differently
+// when there are dots in the application name, eg. `com.vercel.cli` becomes `com.vercel`
 import XDGAppPaths from 'xdg-app-paths';
 import { z } from 'zod/mini';
 
@@ -32,8 +34,11 @@ function isDirectory(path: string): boolean {
   }
 }
 
-/** Returns in which directory the config should be present */
-function getGlobalPathConfig(dir: string): string {
+/**
+ * Returns in which directory the config should be present
+ * @internal Should only be used in {@link CredentialsStore} or tests.
+ */
+export function getGlobalPathConfig(dir: string): string {
   const vercelDirectories = XDGAppPaths(dir).dataDirs();
 
   const possibleConfigPaths = [
