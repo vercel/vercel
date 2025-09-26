@@ -11,6 +11,10 @@ import type {
   ProjectSettings,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
+import {
+  isBackendFramework,
+  validEntrypoints as validBackendEntrypoints,
+} from '@vercel/build-utils/dist/prepare-backend';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -726,24 +730,10 @@ function checkUnusedFunctions(
   }
   if (
     frontendBuilder &&
-    (isOfficialRuntime('express', frontendBuilder.use) ||
-      isOfficialRuntime('hono', frontendBuilder.use))
+    isBackendFramework(frontendBuilder.config?.framework)
   ) {
-    // Copied from builder entrypoint detection
-    const validFilenames = [
-      'app',
-      'index',
-      'server',
-      'src/app',
-      'src/index',
-      'src/server',
-    ];
-    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
-    const validEntrypoints = validFilenames.flatMap(filename =>
-      validExtensions.map(extension => `${filename}.${extension}`)
-    );
     for (const fnKey of unusedFunctions.values()) {
-      if (validEntrypoints.includes(fnKey)) {
+      if (validBackendEntrypoints.includes(fnKey)) {
         unusedFunctions.delete(fnKey);
       }
     }
