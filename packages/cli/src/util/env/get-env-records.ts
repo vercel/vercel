@@ -11,7 +11,8 @@ export type EnvRecordsSource =
   | 'vercel-cli:env:update'
   | 'vercel-cli:env:pull'
   | 'vercel-cli:dev'
-  | 'vercel-cli:pull';
+  | 'vercel-cli:pull'
+  | 'vercel-cli:link';
 
 export default async function getEnvRecords(
   client: Client,
