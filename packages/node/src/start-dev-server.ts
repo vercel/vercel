@@ -21,9 +21,32 @@ import {
 import { fixConfig } from './typescript';
 import { getRegExpFromMatchers } from './utils';
 
+const resolveTypescript = (p: string): string => {
+  try {
+    return require_.resolve('typescript', {
+      paths: [p],
+    });
+  } catch (_) {
+    return '';
+  }
+};
+
+const requireTypescript = (p: string): TypescriptModule => require_(p);
+
+let ts: TypescriptModule | null = null;
+let compiler = resolveTypescript(process.cwd());
+
+if (compiler) {
+  ts = requireTypescript(compiler);
+}
+
+if (!ts) {
+  compiler = resolveTypescript(join(__dirname, '..'));
+  ts = requireTypescript(compiler);
+}
+
 const require_ = createRequire(__filename);
 const treeKill = promisify(_treeKill);
-const tscPath = resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
 
 type TypescriptModule = typeof import('typescript');
 
@@ -161,7 +184,7 @@ export const startDevServer: StartDevServer = async opts => {
     if (isTypeScript) {
       // Invoke `tsc --noEmit` asynchronously in the background, so
       // that the HTTP request is not blocked by the type checking.
-      doTypeCheck(opts, pathToTsConfig).catch((err: Error) => {
+      doTypeCheck(opts, pathToTsConfig, compiler).catch((err: Error) => {
         console.error('Type check for %j failed:', entrypoint, err);
       });
     }
@@ -191,16 +214,12 @@ export const startDevServer: StartDevServer = async opts => {
 
 async function doTypeCheck(
   { entrypoint, workPath, meta = {} }: StartDevServerOptions,
-  projectTsConfig: string | null
+  projectTsConfig: string | null,
+  compiler?: string
 ): Promise<void> {
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointCacheDir = join(devCacheDir, 'node', entrypoint);
 
-  // In order to type-check a single file, a standalone tsconfig
-  // file needs to be created that inherits from the base one :(
-  // See: https://stackoverflow.com/a/44748041/376773
-  //
-  // A different filename needs to be used for different `extends` tsconfig.json
   const tsconfigName = projectTsConfig
     ? `tsconfig-with-${relative(workPath, projectTsConfig).replace(
         /[\\/.]/g,
@@ -223,6 +242,10 @@ async function doTypeCheck(
     if (isErrnoException(error) && error.code !== 'EEXIST') throw error;
   }
 
+  const tscPath = compiler
+    ? resolve(dirname(compiler), '../bin/tsc')
+    : resolve(dirname(require_.resolve('typescript')), '../bin/tsc');
+
   const child = spawn(
     process.execPath,
     [
@@ -239,5 +262,6 @@ async function doTypeCheck(
       stdio: 'inherit',
     }
   );
+
   await once.spread<[number, string | null]>(child, 'close');
 }
