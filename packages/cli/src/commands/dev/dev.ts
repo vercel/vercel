@@ -26,7 +26,8 @@ export default async function dev(
   client: Client,
   opts: Partial<Options>,
   args: string[],
-  telemetry: DevTelemetryClient
+  telemetry: DevTelemetryClient,
+  rawFlags?: Record<string, any>
 ) {
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -87,6 +88,7 @@ export default async function dev(
     projectSettings,
     envValues,
     repoRoot,
+    rawFlags,
   });
 
   const controller = new AbortController();
