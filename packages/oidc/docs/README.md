@@ -4,10 +4,25 @@
 
 ### Functions
 
+- [getContext](README.md#getcontext)
 - [getVercelOidcToken](README.md#getverceloidctoken)
 - [getVercelOidcTokenSync](README.md#getverceloidctokensync)
 
 ## Functions
+
+### getContext
+
+▸ **getContext**(): `Context`
+
+#### Returns
+
+`Context`
+
+#### Defined in
+
+[get-context.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-context.ts#L7)
+
+---
 
 ### getVercelOidcToken
 
