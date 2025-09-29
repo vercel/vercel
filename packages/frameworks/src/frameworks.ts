@@ -2980,7 +2980,7 @@ export const frameworks = [
   {
     name: 'NestJS',
     slug: 'nestjs',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestj.svg',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestjs.svg',
     tagline:
       'Framework for building efficient, scalable Node.js server-side applications',
     description:
