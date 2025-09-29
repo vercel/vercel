@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
-import ms from 'ms';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -145,7 +144,8 @@ export function getTokenPayload(token: string): TokenPayload {
   return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
 }
 
+const TIME_15_MINUTES_IN_MS = 15 * 60 * 1000;
+
 export function isExpired(token: TokenPayload): boolean {
-  const timeout = ms('15m');
-  return token.exp * 1000 < Date.now() + timeout;
+  return token.exp * 1000 < Date.now() + TIME_15_MINUTES_IN_MS;
 }
