@@ -586,6 +586,28 @@ export const build: BuildV2 = async buildOptions => {
     } as BuildResultBuildOutput;
   }
 
+  // Ensure Next.js output directory exists and is not empty before reading manifests
+  {
+    const nextOutputDirFsPath = path.join(entryPath, outputDirectory);
+    const exists = await pathExists(nextOutputDirFsPath);
+    if (!exists) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_MISSING',
+        message:
+          `The Next.js output directory "${nextOutputDirFsPath}" does not exist. This is often caused by a misconfigured outputDirectory or incorrect caching in your monorepo. Ensure your build produces the correct \'${outputDirectory}\' folder for the entry at "${entryPath}".`,
+      });
+    }
+
+    const filesInOutput = await glob('*', nextOutputDirFsPath);
+    if (Object.keys(filesInOutput).length === 0) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_EMPTY',
+        message:
+          `The Next.js output directory "${nextOutputDirFsPath}" is empty. This is often caused by a misconfigured outputDirectory or caching the wrong artifacts (e.g. Turborepo). Ensure your build step runs \'next build\' for this entry and outputs to \'${outputDirectory}\'.`,
+      });
+    }
+  }
+
   let appMountPrefixNoTrailingSlash = path.posix
     .join('/', entryDirectory)
     .replace(/\/+$/, '');
