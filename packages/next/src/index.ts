@@ -568,6 +568,32 @@ export const build: BuildV2 = async buildOptions => {
     await buildCallback(buildOptions);
   }
 
+  // Validate that the Next.js output directory exists and is not empty
+  // before attempting to read any manifests from it. This helps surface a
+  // clearer error when `outputDirectory` is misconfigured or when caches
+  // restore the wrong path.
+  {
+    const resolvedOutputDir = path.join(entryPath, outputDirectory);
+    const exists = await pathExists(resolvedOutputDir);
+    if (!exists) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_MISSING',
+        message:
+          `The Next.js output directory "${outputDirectory}" (resolved to "${resolvedOutputDir}") was not found. ` +
+          `Ensure your build produces the correct output directory (e.g. ".next" or your custom distDir) and that your Project Settings/outputDirectory is correct. If using Turborepo, verify your cache keys and restore path.`,
+      });
+    }
+    const outputFiles = await glob('**', resolvedOutputDir);
+    if (Object.keys(outputFiles).length === 0) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_EMPTY',
+        message:
+          `The Next.js output directory "${outputDirectory}" (resolved to "${resolvedOutputDir}") is empty. ` +
+          `This is often caused by a misconfigured outputDirectory, a different distDir in next.config.js, or restoring the wrong cache with Turborepo. Ensure your build outputs are present before deployment.`,
+      });
+    }
+  }
+
   let buildOutputVersion: undefined | number;
 
   try {
