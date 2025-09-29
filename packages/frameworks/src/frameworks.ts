@@ -2029,7 +2029,7 @@ export const frameworks = [
     description:
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
-    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
     detectors: {
       some: [
         {
@@ -2055,7 +2055,8 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        value: 'uvicorn main:app --reload --port $PORT',
+        placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
         value: 'N/A',
@@ -2068,7 +2069,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/main',
+        dest: '/',
       },
     ],
   },
@@ -2531,6 +2532,7 @@ export const frameworks = [
     name: 'Express',
     slug: 'express',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
+    demo: 'https://express-vercel-example-demo.vercel.app/',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',

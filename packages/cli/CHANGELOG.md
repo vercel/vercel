@@ -1,5 +1,20 @@
 # vercel
 
+## 48.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`9997fe264bb50c0f9dc610a276a0fa4049b8c72e`](https://github.com/vercel/vercel/commit/9997fe264bb50c0f9dc610a276a0fa4049b8c72e)]:
+  - @vercel/express@0.0.22
+
+## 48.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`1327110e0e866b44c6012069442ca2b16a6706b2`](https://github.com/vercel/vercel/commit/1327110e0e866b44c6012069442ca2b16a6706b2), [`057a44929ceeafd6848ade9ac5cc47ec0d357496`](https://github.com/vercel/vercel/commit/057a44929ceeafd6848ade9ac5cc47ec0d357496)]:
+  - @vercel/next@4.13.0
+  - @vercel/express@0.0.21
+
 ## 48.1.4
 
 ### Patch Changes
