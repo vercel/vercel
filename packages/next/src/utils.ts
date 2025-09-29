@@ -348,8 +348,7 @@ type RoutesManifestV4 = Omit<RoutesManifestOld, 'dynamicRoutes' | 'version'> & {
 export type RoutesManifest = RoutesManifestV4 | RoutesManifestOld;
 
 export async function getRoutesManifest(
-  entryPath: string,
-  outputDirectory: string,
+  resolvedOutputDirectory: string,
   nextVersion?: string
 ): Promise<RoutesManifest | undefined> {
   const shouldHaveManifest =
@@ -357,8 +356,7 @@ export async function getRoutesManifest(
   if (!shouldHaveManifest) return;
 
   const pathRoutesManifest = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'routes-manifest.json'
   );
   const hasRoutesManifest = await fs
@@ -811,12 +809,10 @@ export type NextImagesManifest = {
 };
 
 export async function getImagesManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<NextImagesManifest | undefined> {
   const pathImagesManifest = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'images-manifest.json'
   );
 
@@ -1257,12 +1253,10 @@ export async function getExportStatus(
 }
 
 export async function getRequiredServerFilesManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<NextRequiredServerFilesManifest | false> {
   const pathRequiredServerFilesManifest = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'required-server-files.json'
   );
 
@@ -1305,12 +1299,10 @@ export async function getRequiredServerFilesManifest(
 }
 
 export async function getPrerenderManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<NextPrerenderedRoutes> {
   const pathPrerenderManifest = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'prerender-manifest.json'
   );
 
@@ -3652,6 +3644,7 @@ export async function getNodeMiddleware({
   isCorrectMiddlewareOrder,
   functionsConfigManifest,
   requiredServerFilesManifest,
+  resolvedOutputDirectory,
 }: {
   config: Config;
   baseDir: string;
@@ -3668,6 +3661,7 @@ export async function getNodeMiddleware({
   routesManifest: RoutesManifest;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  resolvedOutputDirectory: string;
 }): Promise<null | {
   lambdas: Record<string, NodejsLambda>;
   routes: RouteWithSrc[];
@@ -3722,8 +3716,7 @@ export async function getNodeMiddleware({
   });
 
   const middlewareFile = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'server',
     'middleware.js'
   );
@@ -3822,6 +3815,7 @@ export async function getMiddlewareBundle({
   prerenderBypassToken,
   nextVersion,
   appPathRoutesManifest,
+  resolvedOutputDirectory,
 }: {
   config: Config;
   entryPath: string;
@@ -3831,14 +3825,14 @@ export async function getMiddlewareBundle({
   isCorrectMiddlewareOrder: boolean;
   nextVersion: string;
   appPathRoutesManifest: Record<string, string>;
+  resolvedOutputDirectory: string;
 }): Promise<{
   staticRoutes: Route[];
   dynamicRouteMap: ReadonlyMap<string, RouteWithSrc>;
   edgeFunctions: Record<string, EdgeFunction>;
 }> {
   const middlewareManifest = await getMiddlewareManifest(
-    entryPath,
-    outputDirectory
+    resolvedOutputDirectory
   );
   const sortedFunctions = [
     ...(!middlewareManifest
@@ -4066,12 +4060,10 @@ export async function getMiddlewareBundle({
  * undefined.
  */
 export async function getFunctionsConfigManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<FunctionsConfigManifestV1 | undefined> {
   const functionConfigManifestPath = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     './server/functions-config-manifest.json'
   );
 
@@ -4097,12 +4089,10 @@ export async function getFunctionsConfigManifest(
  * undefined.
  */
 export async function getMiddlewareManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<MiddlewareManifestV3 | undefined> {
   const middlewareManifestPath = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     './server/middleware-manifest.json'
   );
 
@@ -4311,12 +4301,10 @@ export type VariantsManifest = {
 };
 
 export async function getVariantsManifest(
-  entryPath: string,
-  outputDirectory: string
+  resolvedOutputDirectory: string
 ): Promise<null | VariantsManifest> {
   const pathVariantsManifest = path.join(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     'variants-manifest.json'
   );
 
@@ -4333,30 +4321,33 @@ export async function getVariantsManifest(
   return variantsManifest;
 }
 
-export async function getServerlessPages(params: {
+export async function getServerlessPages({
+  pagesDir,
+  resolvedOutputDirectory,
+  appPathRoutesManifest,
+}: {
   pagesDir: string;
-  entryPath: string;
-  outputDirectory: string;
+  resolvedOutputDirectory: string;
   appPathRoutesManifest?: Record<string, string>;
 }) {
-  const appDir = path.join(params.pagesDir, '../app');
+  const appDir = path.join(pagesDir, '../app');
   const [pages, appPaths, middlewareManifest] = await Promise.all([
-    glob('**/!(_middleware).js', params.pagesDir),
-    params.appPathRoutesManifest
+    glob('**/!(_middleware).js', pagesDir),
+    appPathRoutesManifest
       ? Promise.all([
           glob('**/page.js', appDir),
           glob('**/route.js', appDir),
           glob('**/_not-found.js', appDir),
         ]).then(items => Object.assign(...items))
       : Promise.resolve({} as Record<string, FileFsRef>),
-    getMiddlewareManifest(params.entryPath, params.outputDirectory),
+    getMiddlewareManifest(resolvedOutputDirectory),
   ]);
 
   const normalizedAppPaths: typeof appPaths = {};
 
-  if (params.appPathRoutesManifest) {
+  if (appPathRoutesManifest) {
     for (const [entry, normalizedEntry] of Object.entries(
-      params.appPathRoutesManifest
+      appPathRoutesManifest
     )) {
       const normalizedPath = `${path.join(
         '.',
@@ -4378,10 +4369,7 @@ export async function getServerlessPages(params: {
       middlewareManifest?.functions?.[edgeFunctionFile].name ||
       edgeFunctionFile;
 
-    edgePath = normalizeEdgeFunctionPath(
-      edgePath,
-      params.appPathRoutesManifest || {}
-    );
+    edgePath = normalizeEdgeFunctionPath(edgePath, appPathRoutesManifest || {});
     edgePath = (edgePath || 'index') + '.js';
     delete normalizedAppPaths[edgePath];
     delete pages[edgePath];
