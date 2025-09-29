@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
@@ -58,7 +58,9 @@ function createDevStaticShim(
   modulePath: string
 ): string | null {
   try {
-    const shimPath = join(workPath, `${ASGI_SHIM_MODULE}.py`);
+    const vercelPythonDir = join(workPath, '.vercel', 'python');
+    mkdirSync(vercelPythonDir, { recursive: true });
+    const shimPath = join(vercelPythonDir, `${ASGI_SHIM_MODULE}.py`);
     const templatePath = join(__dirname, '..', `${ASGI_SHIM_MODULE}.py`);
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template.replace(/__VC_DEV_MODULE_PATH__/g, modulePath);
@@ -131,6 +133,15 @@ export const startDevServer: StartDevServer = async opts => {
         // Create a tiny ASGI shim that serves static files first (when present)
         // and falls back to the user's app. Always applied for consistent behavior.
         const devShimModule = createDevStaticShim(workPath, modulePath);
+
+        // Add .vercel/python to PYTHONPATH so the shim can be imported
+        if (devShimModule) {
+          const vercelPythonDir = join(workPath, '.vercel', 'python');
+          const existingPythonPath = env.PYTHONPATH || '';
+          env.PYTHONPATH = existingPythonPath
+            ? `${vercelPythonDir}:${existingPythonPath}`
+            : vercelPythonDir;
+        }
 
         detectAsgiServer(workPath, pythonCmd)
           .then(async serverKind => {
