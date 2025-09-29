@@ -343,6 +343,7 @@ export const build: BuildV3 = async ({
     '**/.venv/**',
     '**/venv/**',
     '**/__pycache__/**',
+    '**/public/**',
   ];
 
   const lambdaEnv = {} as Record<string, string>;
@@ -402,6 +403,12 @@ export { startDevServer };
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
   if (framework === 'fastapi') {
+    const requestPath = opts.requestPath.replace(/\/$/, '');
+    // Don't override API routes if another builder already matched them
+    if (requestPath.startsWith('api') && opts.hasMatched) {
+      return false;
+    }
+    // Public assets are served by the static builder / default handler
     return true;
   }
   return defaultShouldServe(opts);

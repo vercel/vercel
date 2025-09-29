@@ -2062,7 +2062,7 @@ export const frameworks = [
         value: 'N/A',
       },
     },
-    getOutputDirName: async () => '',
+    getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
         handle: 'filesystem',

@@ -346,10 +346,13 @@ export async function detectBuilders(
   }
 
   if (frontendBuilder) {
-    // Add @vercel/static build for public files when using @vercel/express or @vercel/hono
+    // Add @vercel/static build for public files for server-based frameworks
+    // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
+    // This applies to Express, Hono, and any Python-based server frameworks.
     if (
       frontendBuilder?.use === '@vercel/express' ||
-      frontendBuilder?.use === '@vercel/hono'
+      frontendBuilder?.use === '@vercel/hono' ||
+      frontendBuilder?.use === '@vercel/python'
     ) {
       builders.push({
         src: 'public/**/*',
