@@ -1,4 +1,6 @@
 import { spawn } from 'child_process';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { StartDevServer } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
@@ -48,6 +50,28 @@ const ANSI_PATTERN =
   '[\\u001B\\u009B][[\\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nq-uy=><]';
 const ANSI_ESCAPE_RE = new RegExp(ANSI_PATTERN, 'g');
 const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
+
+const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
+
+function createDevStaticShim(
+  workPath: string,
+  modulePath: string
+): string | null {
+  try {
+    const vercelPythonDir = join(workPath, '.vercel', 'python');
+    mkdirSync(vercelPythonDir, { recursive: true });
+    const shimPath = join(vercelPythonDir, `${ASGI_SHIM_MODULE}.py`);
+    const templatePath = join(__dirname, '..', `${ASGI_SHIM_MODULE}.py`);
+    const template = readFileSync(templatePath, 'utf8');
+    const shimSource = template.replace(/__VC_DEV_MODULE_PATH__/g, modulePath);
+    writeFileSync(shimPath, shimSource, 'utf8');
+    debug(`Prepared Python dev static shim at ${shimPath}`);
+    return ASGI_SHIM_MODULE;
+  } catch (err: any) {
+    debug(`Failed to prepare dev static shim: ${err?.message || err}`);
+    return null;
+  }
+}
 
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint: rawEntrypoint, workPath, meta = {}, config } = opts;
@@ -106,6 +130,19 @@ export const startDevServer: StartDevServer = async opts => {
           }
         }
 
+        // Create a tiny ASGI shim that serves static files first (when present)
+        // and falls back to the user's app. Always applied for consistent behavior.
+        const devShimModule = createDevStaticShim(workPath, modulePath);
+
+        // Add .vercel/python to PYTHONPATH so the shim can be imported
+        if (devShimModule) {
+          const vercelPythonDir = join(workPath, '.vercel', 'python');
+          const existingPythonPath = env.PYTHONPATH || '';
+          env.PYTHONPATH = existingPythonPath
+            ? `${vercelPythonDir}:${existingPythonPath}`
+            : vercelPythonDir;
+        }
+
         detectAsgiServer(workPath, pythonCmd)
           .then(async serverKind => {
             if (resolved) return; // in case preflight was rejected
@@ -115,14 +152,20 @@ export const startDevServer: StartDevServer = async opts => {
                 ? [
                     '-m',
                     'uvicorn',
-                    `${modulePath}:app`,
+                    `${devShimModule || modulePath}:app`,
                     '--host',
                     host,
                     '--port',
                     '0',
                     '--use-colors',
                   ]
-                : ['-m', 'hypercorn', `${modulePath}:app`, '-b', `${host}:0`];
+                : [
+                    '-m',
+                    'hypercorn',
+                    `${devShimModule || modulePath}:app`,
+                    '-b',
+                    `${host}:0`,
+                  ];
             debug(
               `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
             );
