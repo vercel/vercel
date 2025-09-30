@@ -1,5 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks
 import asyncio
+import os
 
 
 app = FastAPI()
@@ -10,28 +11,33 @@ def read_root():
     return {"message": "Hello, World!"}
 
 
-async def _bg_work(token: str):
-    # simulate async work after response is sent (dev early-flush)
-    await asyncio.sleep(0.3)
-    print(f"BG-DONE {token}")
+def _token_path(token: str) -> str:
+    return f"/tmp/fastapi-bg-{token}"
 
 
-@app.get("/bg")
-async def trigger_bg(token: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(_bg_work, token)
+async def _bg_write_file(token: str):
+    await asyncio.sleep(0.5)
+    path = _token_path(token)
+    # Ensure directory exists (should for /tmp, but safe)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(token)
+
+
+@app.get("/bg-file")
+async def bg_file(token: str, background_tasks: BackgroundTasks):
+    background_tasks.add_task(_bg_write_file, token)
     return {"status": "queued", "token": token}
 
 
-async def _bg_crash(token: str):
-    # quick log marker, then raise to produce an error trace in logs
-    await asyncio.sleep(0.1)
-    print(f"BG-CRASH {token}")
-    raise RuntimeError("bg crash")
-
-
-@app.get("/bg-crash")
-async def trigger_bg_crash(token: str, background_tasks: BackgroundTasks):
-    background_tasks.add_task(_bg_crash, token)
-    return {"status": "queued", "token": token, "mode": "crash"}
-
-
+@app.get("/bg-status")
+async def bg_status(token: str):
+    path = _token_path(token)
+    try:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                content = f.read()
+            return "true" if token in content else "false"
+        return "false"
+    except Exception:
+        return "false"
