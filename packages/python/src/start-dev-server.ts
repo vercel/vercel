@@ -55,7 +55,7 @@ const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
-// This is necessary for bacgkround tasks to continue after HTTP response.
+// This is necessary for background tasks to continue after HTTP response.
 const PERSISTENT_SERVERS = new Map<
   string,
   {
