@@ -377,6 +377,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
                             token = storage.set(request_context)
                         else:
                             token = None
+                        # Track if headers were sent, so we can synthesize a 500 on early failure
+                        response_started = False
                         try:
                             async def runner():
                                 # Per-request app queue
@@ -387,13 +389,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                     app_queue = asyncio.Queue()
 
                                 await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
-                                # ^ why did we switch this from app_queue.put_nowait to app_queue.put?
 
                                 async def receive():
                                     message = await app_queue.get()
                                     return message
-
-                                response_started = False
 
                                 async def send(event):
                                     nonlocal response_started
@@ -414,13 +413,34 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                                 self.wfile.flush()
                                             finally:
                                                 response_done.set()
+                                                try:
+                                                    app_queue.put_nowait({'type': 'http.disconnect'})
+                                                except Exception:
+                                                    pass
 
                                 # Run ASGI app (includes background tasks)
                                 asgi_instance = app(scope, receive, send)
                                 await asgi_instance
 
                             asyncio.run(runner())
+                        except Exception:
+                            # If the app raised before starting the response, synthesize a 500
+                            try:
+                                if not response_started:
+                                    self.send_response(500)
+                                    self.end_headers()
+                                try:
+                                    self.wfile.flush()
+                                except Exception:
+                                    pass
+                            except Exception:
+                                pass
                         finally:
+                            # Always unblock the waiting thread to avoid hangs
+                            try:
+                                response_done.set()
+                            except Exception:
+                                pass
                             if token is not None:
                                 storage.reset(token)
 

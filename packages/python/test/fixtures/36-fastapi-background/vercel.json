@@ -1,0 +1,10 @@
+{
+  "builds": [
+    { "src": "src/server.py", "use": "@vercel/python", "config": { "framework": "fastapi" } }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/src/server.py" }
+  ]
+}
+
+
