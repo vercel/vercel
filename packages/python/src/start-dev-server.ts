@@ -160,11 +160,6 @@ export const startDevServer: StartDevServer = async opts => {
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
 
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  // Encourage colorized output from Python CLIs even when stdio is piped
-  if (!env.TERM) env.TERM = 'xterm-256color';
-  if (!env.FORCE_COLOR) env.FORCE_COLOR = '1';
-  if (!env.PY_COLORS) env.PY_COLORS = '1';
-  if (!env.CLICOLOR_FORCE) env.CLICOLOR_FORCE = '1';
 
   // Check for an existing persistent server
   const serverKey = `${workPath}::${entry}`;
