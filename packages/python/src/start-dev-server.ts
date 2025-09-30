@@ -160,8 +160,6 @@ export const startDevServer: StartDevServer = async opts => {
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
 
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  // Ensure Python child process is unbuffered so background-task prints/logs appear immediately
-  env.PYTHONUNBUFFERED = env.PYTHONUNBUFFERED || '1';
   // Encourage colorized output from Python CLIs even when stdio is piped
   if (!env.TERM) env.TERM = 'xterm-256color';
   if (!env.FORCE_COLOR) env.FORCE_COLOR = '1';
