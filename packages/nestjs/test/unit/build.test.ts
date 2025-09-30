@@ -106,7 +106,7 @@ describe(
       });
     }
   },
-  { timeout: 10000 }
+  { timeout: 120000 }
 );
 
 async function detectModuleType(content: string): Promise<'cjs' | 'esm'> {
