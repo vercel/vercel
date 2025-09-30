@@ -350,7 +350,7 @@ export const build: BuildV3 = async ({
   lambdaEnv.PYTHONPATH = vendorDir;
   // Ensure stdout/stderr are unbuffered so logs from background tasks
   // are flushed promptly to the platform logs.
-  lambdaEnv.PYTHONUNBUFFERED = '1';
+  lambdaEnv.PYTHONUNBUFFERED = '1'; // didn't fix - maybe remove
 
   const globOptions: GlobOptions = {
     cwd: workPath,
