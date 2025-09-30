@@ -181,13 +181,40 @@ export const startDevServer: StartDevServer = async opts => {
     };
   }
 
+  // Check for a pending start operation before spawning a new server
+  {
+    const pending = PENDING_STARTS.get(serverKey);
+    if (pending) {
+      const { port, pid } = await pending;
+      return {
+        port,
+        pid,
+        shutdown: async () => {},
+      };
+    }
+  }
+
   // Track child process and listeners
   let childProcess: ChildProcess | null = null;
   let stdoutLogListener: ((buf: Buffer) => void) | null = null;
   let stderrLogListener: ((buf: Buffer) => void) | null = null;
 
+  // Create placeholder promise and immediately claim the slot to prevent races
+  let resolveChildReady: (value: { port: number; pid: number }) => void;
+  let rejectChildReady: (reason: any) => void;
   const childReady = new Promise<{ port: number; pid: number }>(
     (resolve, reject) => {
+      resolveChildReady = resolve;
+      rejectChildReady = reject;
+    }
+  );
+
+  // Mark start as pending immediately to dedupe concurrent requests
+  PENDING_STARTS.set(serverKey, childReady);
+
+  try {
+    // Now spawn the actual server process
+    await new Promise<void>((resolve, reject) => {
       let resolved = false;
       const { pythonPath: systemPython } = getLatestPythonVersion(meta);
       let pythonCmd = systemPython;
@@ -300,7 +327,8 @@ export const startDevServer: StartDevServer = async opts => {
                 child.stdout?.removeListener('data', onDetect);
                 child.stderr?.removeListener('data', onDetect);
                 const port = Number(portMatch[1]);
-                resolve({ port, pid: child.pid });
+                resolveChildReady({ port, pid: child.pid });
+                resolve();
               }
             }
           };
@@ -309,49 +337,42 @@ export const startDevServer: StartDevServer = async opts => {
           child.stderr?.on('data', onDetect);
 
           child.once('error', err => {
-            if (!resolved) reject(err);
+            if (!resolved) {
+              rejectChildReady(err);
+              reject(err);
+            }
           });
           child.once('exit', (code, signal) => {
-            if (!resolved)
-              reject(
-                new Error(
-                  `${serverKind} server exited before binding (code=${code}, signal=${signal})`
-                )
+            if (!resolved) {
+              const err = new Error(
+                `${serverKind} server exited before binding (code=${code}, signal=${signal})`
               );
+              rejectChildReady(err);
+              reject(err);
+            }
           });
         })
-        .catch(reject);
-    }
-  );
+        .catch(err => {
+          rejectChildReady(err);
+          reject(err);
+        });
+    });
 
-  // If a start is already pending for this key, await it and reuse
-  const pending = PENDING_STARTS.get(serverKey);
-  if (pending) {
-    const { port, pid } = await pending;
-    return {
+    const { port, pid } = await childReady;
+
+    // Persist for reuse across requests
+    PERSISTENT_SERVERS.set(serverKey, {
       port,
       pid,
-      shutdown: async () => {},
-    };
-  }
+      child: childProcess!,
+      stdoutLogListener,
+      stderrLogListener,
+    });
 
-  // Mark start as pending to dedupe concurrent requests
-  PENDING_STARTS.set(serverKey, childReady);
-
-  const { port, pid } = await childReady.finally(() => {
+    // No-op shutdown so CLI won't kill the server after each request
+    const shutdown = async () => {};
+    return { port, pid, shutdown };
+  } finally {
     PENDING_STARTS.delete(serverKey);
-  });
-
-  // Persist for reuse across requests
-  PERSISTENT_SERVERS.set(serverKey, {
-    port,
-    pid,
-    child: childProcess!,
-    stdoutLogListener,
-    stderrLogListener,
-  });
-
-  // No-op shutdown so CLI won't kill the server after each request
-  const shutdown = async () => {};
-  return { port, pid, shutdown };
+  }
 };
