@@ -24,9 +24,20 @@ async def _bg_write_file(token: str):
         f.write(token)
 
 
+async def _bg_crash(token: str):
+    await asyncio.sleep(0.5)
+    raise Exception(f"Intentional crash for token: {token}")
+
+
 @app.get("/bg-file")
 async def bg_file(token: str, background_tasks: BackgroundTasks):
     background_tasks.add_task(_bg_write_file, token)
+    return {"status": "queued", "token": token}
+
+
+@app.get("/bg-crash")
+async def bg_crash(token: str, background_tasks: BackgroundTasks):
+    background_tasks.add_task(_bg_crash, token)
     return {"status": "queued", "token": token}
 
 
