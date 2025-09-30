@@ -2,15 +2,17 @@
   "probes": [
     { "path": "/", "status": 200, "mustContain": "Hello, World!" },
     { "path": "/bg?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
-    { "path": "/openapi.json", "status": 200 },
+    { "path": "/", "status": 200 },
     { "logMustNotContain": "BG-DONE RANDOMNESS_PLACEHOLDER" },
     { "delay": 4000 },
+    { "path": "/", "status": 200 },
     { "logMustContain": "BG-DONE RANDOMNESS_PLACEHOLDER" },
 
     { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
-    { "path": "/openapi.json", "status": 200 },
+    { "path": "/", "status": 200 },
     { "logMustNotContain": "BG-CRASH RANDOMNESS_PLACEHOLDER" },
     { "delay": 4000 },
+    { "path": "/", "status": 200 },
     { "logMustContain": "BG-CRASH RANDOMNESS_PLACEHOLDER" }
   ]
 }
