@@ -1158,10 +1158,7 @@ export const build: BuildV2 = async buildOptions => {
 
     debug('Preparing serverless function files...');
 
-    const dotNextRootFiles = await glob(
-      `${resolvedOutputDirectory}/*`,
-      entryPath
-    );
+    const dotNextRootFiles = await glob(`${outputDirectory}/*`, entryPath);
     const dotNextServerRootFiles = await glob(
       `${outputDirectory}/server/*`,
       entryPath
