@@ -3,12 +3,12 @@
     { "path": "/", "status": 200, "mustContain": "Hello, World!" },
     { "path": "/bg?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
     { "logMustNotContain": "BG-DONE RANDOMNESS_PLACEHOLDER" },
-    { "delay": 2000 },
+    { "delay": 4000 },
     { "logMustContain": "BG-DONE RANDOMNESS_PLACEHOLDER" },
 
     { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
     { "logMustNotContain": "BG-CRASH RANDOMNESS_PLACEHOLDER" },
-    { "delay": 2000 },
+    { "delay": 4000 },
     { "logMustContain": "BG-CRASH RANDOMNESS_PLACEHOLDER" }
   ]
 }
