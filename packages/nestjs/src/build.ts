@@ -23,11 +23,7 @@ const validFilenames = [
 
 export const require_ = createRequire(__filename);
 
-const validExtensions = [
-  // 'js', 'cjs', 'mjs',
-  'ts',
-  // 'cts', 'mts'
-];
+const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
 
 const entrypointsForMessage = validFilenames
   .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
@@ -66,10 +62,7 @@ export const build: BuildV3 = async args => {
 export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
   // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
-  const entrypointGlob = `{${validFilenames
-    .map(entrypoint => `${entrypoint}`)
-    .join(',')}}.{${validExtensions.join(',')}}`;
-
+  const entrypointGlob = `{${validFilenames.map(entrypoint => `${entrypoint}`).join(',')}}.{${validExtensions.join(',')}}`;
   const dir = args.config.projectSettings?.outputDirectory?.replace(
     /^\/+|\/+$/g,
     ''
