@@ -144,18 +144,29 @@ const injectRouteCapture = async (
 
     // Add route capture code at the beginning of the bundle
     const routeCaptureCode = `
-// Route capture for introspection
+// Route capture for introspection using Hono's built-in methods
 import fs from 'fs';
 import path from 'path';
 const routes = {};
 let routesExtracted = false;
 
-function addRoute(method, path) {
-  if (!routes[path]) {
-    routes[path] = { methods: [] };
+// Function to extract routes using Hono's built-in app.routes
+function extractRoutesFromApp(app) {
+  if (!app || !app.routes) {
+    return;
   }
-  if (!routes[path].methods.includes(method)) {
-    routes[path].methods.push(method);
+  
+  // Use Hono's built-in routes property
+  for (const route of app.routes) {
+    const routePath = route.path;
+    const method = route.method.toUpperCase();
+    
+    if (!routes[routePath]) {
+      routes[routePath] = { methods: [] };
+    }
+    if (!routes[routePath].methods.includes(method)) {
+      routes[routePath].methods.push(method);
+    }
   }
 }
 
@@ -181,6 +192,19 @@ const extractRoutes = () => {
     return;
   }
   routesExtracted = true;
+
+  // Extract routes from all Hono instances
+  if (typeof app !== 'undefined') {
+    extractRoutesFromApp(app);
+  }
+  
+  // Also check for other common variable names
+  const commonNames = ['api', 'router', 'server', 'hono', 'honoApp'];
+  for (const name of commonNames) {
+    if (typeof globalThis[name] !== 'undefined') {
+      extractRoutesFromApp(globalThis[name]);
+    }
+  }
 
   processAllRoutes();
 
@@ -225,41 +249,6 @@ process.on('SIGTERM', () => {
       // Fallback: inject at the beginning
       bundleContent = routeCaptureCode + bundleContent;
     }
-
-    // Replace route method calls to capture routes
-    // Use a more sophisticated regex to capture the path parameter
-    bundleContent = bundleContent.replace(
-      /app\.get\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("GET", ${path}); app.get(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.post\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("POST", ${path}); app.post(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.put\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("PUT", ${path}); app.put(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.delete\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("DELETE", ${path}); app.delete(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.patch\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("PATCH", ${path}); app.patch(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.options\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("OPTIONS", ${path}); app.options(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.head\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("HEAD", ${path}); app.head(${path}`
-    );
-    bundleContent = bundleContent.replace(
-      /app\.all\((["'][^"']+["'])/g,
-      (match, path) => `addRoute("ALL", ${path}); app.all(${path}`
-    );
 
     // Write the modified bundle back
     await outputFile(bundlePath, bundleContent);
