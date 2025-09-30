@@ -9,17 +9,7 @@ const frameworkName = 'nestjs';
 const REGEX =
   /(?:from|require|import)\s*(?:\(\s*)?["']@nestjs\/core["']\s*(?:\))?/g;
 
-const validFilenames = [
-  // 'app',
-  // 'index',
-  // 'server',
-  // 'src/app',
-  // 'src/index',
-  // 'src/server',
-
-  // actual TODO:
-  'src/main',
-];
+const validFilenames = ['src/app', 'src/main'];
 
 export const require_ = createRequire(__filename);
 
