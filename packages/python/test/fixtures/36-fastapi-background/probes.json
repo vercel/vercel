@@ -9,5 +9,3 @@
     { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" }
   ]
 }
-
-
