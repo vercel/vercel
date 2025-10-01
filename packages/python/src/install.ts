@@ -100,10 +100,10 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
 
 async function pipInstall(
   pipPath: string,
+  uvPath: string | null,
   workPath: string,
   args: string[],
-  targetDir?: string,
-  uvPath?: string | null
+  targetDir?: string
 ) {
   const target = targetDir
     ? join(targetDir, resolveVendorDir())
@@ -288,29 +288,29 @@ export async function installRequirement({
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, workPath, [exact, ...args], targetDir, uvPath);
+  await pipInstall(pipPath, uvPath, workPath, [exact, ...args], targetDir);
 }
 
 interface InstallRequirementsFileArg {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   filePath: string;
   workPath: string;
   targetDir?: string;
   meta: Meta;
   args?: string[];
-  uvPath?: string | null;
 }
 
 export async function installRequirementsFile({
   pythonPath,
   pipPath,
+  uvPath,
   filePath,
   workPath,
   targetDir,
   meta,
   args = [],
-  uvPath,
 }: InstallRequirementsFileArg) {
   // The Vercel platform already handles `requirements.txt` for frontend projects,
   // but the installation logic there is different, because it seems to install all
@@ -327,10 +327,10 @@ export async function installRequirementsFile({
   }
   await pipInstall(
     pipPath,
+    uvPath,
     workPath,
     ['--upgrade', '-r', filePath, ...args],
-    targetDir,
-    uvPath
+    targetDir
   );
 }
 
