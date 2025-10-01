@@ -264,11 +264,11 @@ export const build: BuildV3 = async ({
       await installRequirementsFile({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
+        uvPath,
         filePath: exportedReq,
         workPath,
         targetDir: vendorBaseDir,
         meta,
-        uvPath,
       });
       installedFromProjectFiles = true;
     } else {
@@ -287,11 +287,11 @@ export const build: BuildV3 = async ({
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
+      uvPath,
       filePath: exportedReq,
       workPath,
       targetDir: vendorBaseDir,
       meta,
-      uvPath,
     });
     installedFromProjectFiles = true;
   } else if (pipfileLockDir || pipfileDir) {
