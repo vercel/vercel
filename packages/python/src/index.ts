@@ -256,6 +256,11 @@ export const build: BuildV3 = async ({
   } catch (err) {
     if (uvLockDir || (pyprojectDir && !hasReqLocal && !hasReqGlobal)) {
       console.log('Failed to install uv');
+      throw new Error(
+        `uv is required for this project but failed to install: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
     }
     debug('Failed to install uv', err);
   }
