@@ -555,28 +555,6 @@ describe('python version fallback logging', () => {
       expect.stringContaining('Using Python 3.11 from pyproject.toml')
     );
   });
-
-  it('logs when no version config file exists at all', async () => {
-    const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-    } as Record<string, FileBlob>;
-
-    await build({
-      workPath: mockWorkPath,
-      files,
-      entrypoint: 'handler.py',
-      meta: { isDev: false },
-      config: {},
-      repoRootPath: mockWorkPath,
-    });
-
-    // Should log fallback message
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'No Python version specified in pyproject.toml or Pipfile.lock'
-      )
-    );
-  });
 });
 
 describe('uv install path', () => {

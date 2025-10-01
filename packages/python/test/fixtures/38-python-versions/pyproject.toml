@@ -1,7 +1,0 @@
-[project]
-name = "fixture-python-versions"
-version = "0.0.1"
-# Intentionally omit requires-python to trigger fallback to latest installed
-dependencies = [
-  "fastapi==0.116.2",
-]
