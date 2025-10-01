@@ -1,5 +1,17 @@
 # @vercel/oidc
 
+## 3.0.1
+
+### Patch Changes
+
+- feat(oidc): export `getContext()` method ([#14004](https://github.com/vercel/vercel/pull/14004))
+
+- feat(oidc): add conditional export for browsers ([#14005](https://github.com/vercel/vercel/pull/14005))
+
+  Introduces a browser export with mock methods that don't require access to a file system or environment variables. This makes `@vercel/oidc` usable for universal libraries that are run in both frontend and backend.
+
+- fix(oidc): remove `ms` dependency ([#14003](https://github.com/vercel/vercel/pull/14003))
+
 ## 3.0.0
 
 ### Major Changes
