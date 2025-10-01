@@ -5,6 +5,8 @@ import importlib
 import base64
 import json
 import inspect
+import threading
+import asyncio
 from importlib import util
 from http.server import BaseHTTPRequestHandler
 import socket
@@ -256,6 +258,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 method()
                 self.wfile.flush()
     elif 'app' in __vc_variables:
+        # WSGI
         if (
             not inspect.iscoroutinefunction(__vc_module.app) and
             not inspect.iscoroutinefunction(__vc_module.app.__call__)
@@ -321,10 +324,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                     finally:
                         if hasattr(response, 'close'):
                             response.close()
+        # ASGI
         else:
             from urllib.parse import urlparse
             from io import BytesIO
-            import asyncio
 
             app = __vc_module.app
 
@@ -339,6 +342,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                             headers_encoded.append([k.lower().encode(), [i.encode() for i in v]])
                         else:
                             headers_encoded.append([k.lower().encode(), v.encode()])
+
                     scope = {
                         'server': (self.headers.get('host', 'lambda'), self.headers.get('x-forwarded-port', 80)),
                         'client': (self.headers.get(
@@ -361,41 +365,91 @@ if 'VERCEL_IPC_PATH' in os.environ:
                     else:
                         body = b''
 
-                    if _use_legacy_asyncio:
-                        loop = asyncio.new_event_loop()
-                        app_queue = asyncio.Queue(loop=loop)
-                    else:
-                        app_queue = asyncio.Queue()
-                    app_queue.put_nowait({'type': 'http.request', 'body': body, 'more_body': False})
+                    # Event to signal that the response has been fully sent
+                    response_done = threading.Event()
 
-                    # Prepare ASGI receive function
-                    async def receive():
-                        message = await app_queue.get()
-                        return message
+                    # Propagate request context to background thread for logging & metrics
+                    request_context = storage.get()
 
-                    # Prepare ASGI send function
-                    response_started = False
-                    async def send(event):
-                        nonlocal response_started
-                        if event['type'] == 'http.response.start':
-                            self.send_response(event['status'])
-                            if 'headers' in event:
-                                for name, value in event['headers']:
-                                    self.send_header(name.decode(), value.decode())
-                            self.end_headers()
-                            response_started = True
-                        elif event['type'] == 'http.response.body':
-                            self.wfile.write(event['body'])
-                            if not event.get('more_body', False):
-                                self.wfile.flush()
+                    def run_asgi():
+                        # Ensure request context is available in this thread
+                        if request_context is not None:
+                            token = storage.set(request_context)
+                        else:
+                            token = None
+                        # Track if headers were sent, so we can synthesize a 500 on early failure
+                        response_started = False
+                        try:
+                            async def runner():
+                                # Per-request app queue
+                                if _use_legacy_asyncio:
+                                    loop = asyncio.get_running_loop()
+                                    app_queue = asyncio.Queue(loop=loop)
+                                else:
+                                    app_queue = asyncio.Queue()
 
-                    # Run the ASGI application
-                    asgi_instance = app(scope, receive, send)
-                    if _use_legacy_asyncio:
-                        asgi_task = loop.create_task(asgi_instance)
-                        loop.run_until_complete(asgi_task)
-                    else:
-                        asyncio.run(asgi_instance)
+                                await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
+
+                                async def receive():
+                                    message = await app_queue.get()
+                                    return message
+
+                                async def send(event):
+                                    nonlocal response_started
+                                    if event['type'] == 'http.response.start':
+                                        self.send_response(event['status'])
+                                        if 'headers' in event:
+                                            for name, value in event['headers']:
+                                                self.send_header(name.decode(), value.decode())
+                                        self.end_headers()
+                                        response_started = True
+                                    elif event['type'] == 'http.response.body':
+                                        # Stream body as it is produced; flush on completion
+                                        body_bytes = event.get('body', b'') or b''
+                                        if body_bytes:
+                                            self.wfile.write(body_bytes)
+                                        if not event.get('more_body', False):
+                                            try:
+                                                self.wfile.flush()
+                                            finally:
+                                                response_done.set()
+                                                try:
+                                                    app_queue.put_nowait({'type': 'http.disconnect'})
+                                                except Exception:
+                                                    pass
+
+                                # Run ASGI app (includes background tasks)
+                                asgi_instance = app(scope, receive, send)
+                                await asgi_instance
+
+                            asyncio.run(runner())
+                        except Exception:
+                            # If the app raised before starting the response, synthesize a 500
+                            try:
+                                if not response_started:
+                                    self.send_response(500)
+                                    self.end_headers()
+                                try:
+                                    self.wfile.flush()
+                                except Exception:
+                                    pass
+                            except Exception:
+                                pass
+                        finally:
+                            # Always unblock the waiting thread to avoid hangs
+                            try:
+                                response_done.set()
+                            except Exception:
+                                pass
+                            if token is not None:
+                                storage.reset(token)
+
+                    # Run ASGI in background thread to allow returning after final flush
+                    t = threading.Thread(target=run_asgi, daemon=True)
+                    t.start()
+
+                    # Wait until final body chunk has been flushed to client
+                    response_done.wait()
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
