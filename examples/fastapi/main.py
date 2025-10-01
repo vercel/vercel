@@ -1,21 +1,12 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.exceptions import HTTPException
+from fastapi.responses import HTMLResponse
+
 
 app = FastAPI(
     title="Vercel + FastAPI",
     description="Vercel + FastAPI",
     version="1.0.0",
 )
-
-
-app.mount("/public", StaticFiles(directory="public"), name="public")
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return FileResponse("public/favicon.ico")
 
 
 @app.get("/api/data")
