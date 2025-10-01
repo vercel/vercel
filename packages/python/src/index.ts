@@ -23,7 +23,7 @@ import {
   exportRequirementsFromPipfile,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
-import { getLatestPythonVersion, getSupportedPythonVersion } from './version';
+import { getSupportedPythonVersion } from './version';
 import { startDevServer } from './start-dev-server';
 
 const readFile = promisify(fs.readFile);
@@ -85,8 +85,6 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
 }) => {
-  let pythonVersion = getLatestPythonVersion(meta);
-
   workPath = await downloadFilesInWorkPath({
     workPath,
     files: originalFiles,
@@ -161,6 +159,10 @@ export const build: BuildV3 = async ({
       : null;
 
   // Determine Python version from pyproject.toml or Pipfile.lock if present.
+  let declaredPythonVersion:
+    | { version: string; source: 'Pipfile.lock' | 'pyproject.toml' }
+    | undefined;
+
   if (pyprojectDir) {
     let requiresPython: string | undefined;
     try {
@@ -168,17 +170,20 @@ export const build: BuildV3 = async ({
         project?: { ['requires-python']?: string };
       }>(join(pyprojectDir, 'pyproject.toml'));
       requiresPython = pyproject?.project?.['requires-python'];
-    } catch {
-      debug('Failed to parse pyproject.toml');
+    } catch (err) {
+      debug('Failed to parse pyproject.toml', err);
     }
     const VERSION_REGEX = /\b\d+\.\d+\b/;
     const exact = requiresPython?.trim().match(VERSION_REGEX)?.[0];
     if (exact) {
-      const selected = getSupportedPythonVersion({
-        isDev: meta.isDev,
-        declaredPythonVersion: { version: exact, source: 'pyproject.toml' },
-      });
-      pythonVersion = selected;
+      declaredPythonVersion = { version: exact, source: 'pyproject.toml' };
+      debug(
+        `Found Python version ${exact} in pyproject.toml (requires-python: "${requiresPython}")`
+      );
+    } else if (requiresPython) {
+      debug(
+        `Could not parse Python version from pyproject.toml requires-python: "${requiresPython}"`
+      );
     }
   } else if (pipfileLockDir) {
     let lock: {
@@ -194,13 +199,16 @@ export const build: BuildV3 = async ({
       });
     }
     const pyFromLock = lock?._meta?.requires?.python_version;
-    pythonVersion = getSupportedPythonVersion({
-      isDev: meta.isDev,
-      declaredPythonVersion: pyFromLock
-        ? { version: pyFromLock, source: 'Pipfile.lock' }
-        : undefined,
-    });
+    if (pyFromLock) {
+      declaredPythonVersion = { version: pyFromLock, source: 'Pipfile.lock' };
+      debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
+    }
   }
+
+  const pythonVersion = getSupportedPythonVersion({
+    isDev: meta.isDev,
+    declaredPythonVersion,
+  });
 
   fsFiles = await glob('**', workPath);
   const requirementsTxt = join(entryDirectory, 'requirements.txt');

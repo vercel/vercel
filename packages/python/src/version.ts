@@ -105,16 +105,28 @@ export function getSupportedPythonVersion({
       // Otherwise, prefer the requested version if installed; fall back to latest installed
       if (isInstalled(requested)) {
         selection = requested;
+        console.log(`Using Python ${selection.version} from ${source}`);
       } else {
         console.warn(
           `Warning: Python version "${version}" detected in ${source} is not installed and will be ignored. http://vercel.link/python-version`
+        );
+        console.log(
+          `Falling back to latest installed version: ${selection.version}`
         );
       }
     } else {
       console.warn(
         `Warning: Python version "${version}" detected in ${source} is invalid and will be ignored. http://vercel.link/python-version`
       );
+      console.log(
+        `Falling back to latest installed version: ${selection.version}`
+      );
     }
+  } else {
+    // Log when no version is specified to help users understand the fallback behavior
+    console.log(
+      `No Python version specified in pyproject.toml or Pipfile.lock. Using latest installed version: ${selection.version}`
+    );
   }
 
   if (isDiscontinued(selection)) {
