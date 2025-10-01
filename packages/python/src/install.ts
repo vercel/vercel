@@ -102,9 +102,12 @@ async function pipInstall(
   pipPath: string,
   pythonPath: string,
   workPath: string,
-  args: string[]
+  args: string[],
+  targetDir?: string
 ) {
-  const target = resolveVendorDir();
+  const target = targetDir
+    ? join(targetDir, resolveVendorDir())
+    : resolveVendorDir();
   // See: https://github.com/pypa/pip/issues/4222#issuecomment-417646535
   //
   // Disable installing to the Python user install directory, which is
@@ -262,6 +265,7 @@ interface InstallRequirementArg {
   dependency: string;
   version: string;
   workPath: string;
+  targetDir?: string;
   meta: Meta;
   args?: string[];
 }
@@ -276,17 +280,22 @@ export async function installRequirement({
   dependency,
   version,
   workPath,
+  targetDir,
   meta,
   args = [],
 }: InstallRequirementArg) {
-  if (meta.isDev && (await isInstalled(pythonPath, dependency, workPath))) {
+  const actualTargetDir = targetDir || workPath;
+  if (
+    meta.isDev &&
+    (await isInstalled(pythonPath, dependency, actualTargetDir))
+  ) {
     debug(
-      `Skipping ${dependency} dependency installation, already installed in ${workPath}`
+      `Skipping ${dependency} dependency installation, already installed in ${actualTargetDir}`
     );
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, pythonPath, workPath, [exact, ...args]);
+  await pipInstall(pipPath, pythonPath, workPath, [exact, ...args], targetDir);
 }
 
 interface InstallRequirementsFileArg {
@@ -294,6 +303,7 @@ interface InstallRequirementsFileArg {
   pipPath: string;
   filePath: string;
   workPath: string;
+  targetDir?: string;
   meta: Meta;
   args?: string[];
 }
@@ -303,6 +313,7 @@ export async function installRequirementsFile({
   pipPath,
   filePath,
   workPath,
+  targetDir,
   meta,
   args = [],
 }: InstallRequirementsFileArg) {
@@ -311,19 +322,21 @@ export async function installRequirementsFile({
   // of the dependencies globally, whereas, for this Runtime, we want it to happen only
   // locally, so we'll run a separate installation.
 
+  const actualTargetDir = targetDir || workPath;
   if (
     meta.isDev &&
-    (await areRequirementsInstalled(pythonPath, filePath, workPath))
+    (await areRequirementsInstalled(pythonPath, filePath, actualTargetDir))
   ) {
     debug(`Skipping requirements file installation, already installed`);
     return;
   }
-  await pipInstall(pipPath, pythonPath, workPath, [
-    '--upgrade',
-    '-r',
-    filePath,
-    ...args,
-  ]);
+  await pipInstall(
+    pipPath,
+    pythonPath,
+    workPath,
+    ['--upgrade', '-r', filePath, ...args],
+    targetDir
+  );
 }
 
 export async function exportRequirementsFromUv(
