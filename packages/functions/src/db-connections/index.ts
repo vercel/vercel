@@ -158,7 +158,11 @@ const bootTime = Date.now();
 const maximumDuration = 15 * 60 * 1000 - 1000; // 15 minutes - 1 second
 
 function waitUntilIdleTimeout(dbPool: DbPool) {
-  if (!process.env.VERCEL_URL || !process.env.VERCEL_REGION) {
+  if (
+    !process.env.VERCEL_URL ||
+    // This is not set during builds where we don't need to wait for idle connections using the mechanism
+    !process.env.VERCEL_REGION
+  ) {
     // We're not running in a Vercel function, so we don't need to wait for idle connections.
     return;
   }
