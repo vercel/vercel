@@ -123,7 +123,6 @@ export function getSupportedPythonVersion({
       );
     }
   } else {
-    // Log when no version is specified to help users understand the fallback behavior
     console.log(
       `No Python version specified in pyproject.toml or Pipfile.lock. Using latest installed version: ${selection.version}`
     );

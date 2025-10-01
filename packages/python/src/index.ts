@@ -229,7 +229,26 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  console.log('Installing required dependencies...');
+  let installationSource: string | undefined;
+  if (uvLockDir && pyprojectDir) {
+    installationSource = 'uv.lock';
+  } else if (pyprojectDir) {
+    installationSource = 'pyproject.toml';
+  } else if (pipfileLockDir) {
+    installationSource = 'Pipfile.lock';
+  } else if (pipfileDir) {
+    installationSource = 'Pipfile';
+  } else if (fsFiles[requirementsTxt] || fsFiles['requirements.txt']) {
+    installationSource = 'requirements.txt';
+  }
+  if (installationSource) {
+    console.log(
+      `Installing required dependencies from ${installationSource}...`
+    );
+  } else {
+    console.log('Installing required dependencies...');
+  }
+
   let uvPath: string | null = null;
   try {
     uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
