@@ -9,8 +9,8 @@ def read_root():
 
 @app.get("/api/wheels")
 def read_wheels():
-    from example_pkg_one import example_pkg_one
-    from example_pkg_two import example_pkg_two
+    import example_pkg_one
+    import example_pkg_two
     return {
         "packages": [
             {"name": "example_pkg_one", "version": example_pkg_one.__version__},
