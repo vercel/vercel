@@ -194,6 +194,42 @@ test('default command should work with --cwd option', async () => {
   );
 });
 
+test('should error when --cwd points to non-existent directory', async () => {
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory'
+  );
+
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['--cwd', 'non-existent-directory'],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
+  expect(stderr).toContain('The provided path');
+  expect(stderr).toContain('does not exist');
+});
+
+test('should error when --cwd points to a file instead of directory', async () => {
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory'
+  );
+
+  const { exitCode, stdout, stderr } = await execCli(
+    binaryPath,
+    ['--cwd', 'list/README.md'],
+    {
+      cwd: projectDir,
+    }
+  );
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(1);
+  expect(stderr).toContain('The provided path');
+  expect(stderr).toContain('is a file, but expected a directory');
+});
+
 test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
   const projectDir = await setupE2EFixture(
     'deploy-default-with-prebuilt-preview'

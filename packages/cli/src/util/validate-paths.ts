@@ -13,6 +13,25 @@ export async function validateRootDirectory(
   path: string,
   errorSuffix = ''
 ) {
+  const suffix = errorSuffix ? ` ${errorSuffix}` : '';
+
+  if (!(await validateDirectoryExists(path, errorSuffix))) {
+    return false;
+  }
+
+  if (!path.startsWith(cwd)) {
+    output.error(
+      `The provided path ${chalk.cyan(
+        `"${toHumanPath(path)}"`
+      )} is outside of the project.${suffix}`
+    );
+    return false;
+  }
+
+  return true;
+}
+
+export async function validateDirectoryExists(path: string, errorSuffix = '') {
   const pathStat = await lstat(path).catch(() => null);
   const suffix = errorSuffix ? ` ${errorSuffix}` : '';
 
@@ -30,15 +49,6 @@ export async function validateRootDirectory(
       `The provided path ${chalk.cyan(
         `“${toHumanPath(path)}”`
       )} is a file, but expected a directory.${suffix}`
-    );
-    return false;
-  }
-
-  if (!path.startsWith(cwd)) {
-    output.error(
-      `The provided path ${chalk.cyan(
-        `“${toHumanPath(path)}”`
-      )} is outside of the project.${suffix}`
     );
     return false;
   }

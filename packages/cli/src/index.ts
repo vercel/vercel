@@ -76,6 +76,7 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { validateDirectoryExists } from './util/validate-paths';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -326,7 +327,12 @@ const main = async () => {
 
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
-    client.cwd = parsedArgs.flags['--cwd'];
+    const cwdPath = parsedArgs.flags['--cwd'];
+    const cwdExists = await validateDirectoryExists(cwdPath);
+    if (!cwdExists) {
+      return 1;
+    }
+    client.cwd = cwdPath;
   }
   const { cwd } = client;
 
