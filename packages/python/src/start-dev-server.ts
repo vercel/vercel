@@ -53,6 +53,70 @@ const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
 
 const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
 
+// Persistent dev servers keyed by workPath + modulePath so background tasks
+// can continue after HTTP response. Reused across requests in `vercel dev`.
+// This is necessary for background tasks to continue after HTTP response.
+const PERSISTENT_SERVERS = new Map<
+  string,
+  {
+    port: number;
+    pid: number;
+    child: ChildProcess;
+    stdoutLogListener: ((buf: Buffer) => void) | null;
+    stderrLogListener: ((buf: Buffer) => void) | null;
+  }
+>();
+
+// Track pending start operations to avoid races spawning multiple servers
+const PENDING_STARTS = new Map<
+  string,
+  Promise<{ port: number; pid: number }>
+>();
+
+let restoreWarnings: (() => void) | null = null;
+let cleanupHandlersInstalled = false;
+
+function installGlobalCleanupHandlers() {
+  if (cleanupHandlersInstalled) return;
+  cleanupHandlersInstalled = true;
+
+  const killAll = () => {
+    for (const [key, info] of PERSISTENT_SERVERS.entries()) {
+      try {
+        process.kill(info.pid, 'SIGTERM');
+      } catch (err: any) {
+        debug(`Error sending SIGTERM to ${info.pid}: ${err}`);
+      }
+      try {
+        process.kill(info.pid, 'SIGKILL');
+      } catch (err: any) {
+        debug(`Error sending SIGKILL to ${info.pid}: ${err}`);
+      }
+      PERSISTENT_SERVERS.delete(key);
+    }
+    if (restoreWarnings) {
+      try {
+        restoreWarnings();
+      } catch (err: any) {
+        debug(`Error restoring warnings: ${err}`);
+      }
+      restoreWarnings = null;
+    }
+  };
+
+  process.on('SIGINT', () => {
+    killAll();
+    process.exit(130);
+  });
+  process.on('SIGTERM', () => {
+    killAll();
+    process.exit(143);
+  });
+  process.on('exit', () => {
+    killAll();
+  });
+}
+
 function createDevStaticShim(
   workPath: string,
   modulePath: string
@@ -81,232 +145,227 @@ export const startDevServer: StartDevServer = async opts => {
     return null;
   }
 
-  // Silence all Node warnings while the dev server is running. Restore on shutdown.
-  const restoreWarningSilencer = silenceNodeWarnings();
-  try {
-    const detected = await detectFastapiEntrypoint(workPath, rawEntrypoint);
-    if (!detected) {
-      throw new Error(
-        `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
-      );
-    }
-    const entry = detected;
-
-    // Convert to module path, e.g. "src/app.py" -> "src.app"
-    const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
-
-    const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-    // Encourage colorized output from Python CLIs even when stdio is piped
-    if (!env.TERM) env.TERM = 'xterm-256color';
-    if (!env.FORCE_COLOR) env.FORCE_COLOR = '1';
-    if (!env.PY_COLORS) env.PY_COLORS = '1';
-    if (!env.CLICOLOR_FORCE) env.CLICOLOR_FORCE = '1';
-
-    // Track child process and listeners for cleanup on shutdown
-    let childProcess: ChildProcess | null = null;
-    let stdoutLogListener: ((buf: Buffer) => void) | null = null;
-    let stderrLogListener: ((buf: Buffer) => void) | null = null;
-
-    const childReady = new Promise<{ port: number; pid: number }>(
-      (resolve, reject) => {
-        let resolved = false;
-        const { pythonPath: systemPython } = getLatestPythonVersion(meta);
-        let pythonCmd = systemPython;
-        const venv = isInVirtualEnv();
-
-        if (venv) {
-          debug(`Running in virtualenv at ${venv}`);
-        } else {
-          const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
-            workPath,
-            env,
-            systemPython
-          );
-          pythonCmd = venvPythonCmd;
-          if (venvRoot) {
-            debug(`Using virtualenv at ${venvRoot}`);
-          } else {
-            debug('No virtualenv found');
-          }
-        }
-
-        // Create a tiny ASGI shim that serves static files first (when present)
-        // and falls back to the user's app. Always applied for consistent behavior.
-        const devShimModule = createDevStaticShim(workPath, modulePath);
-
-        // Add .vercel/python to PYTHONPATH so the shim can be imported
-        if (devShimModule) {
-          const vercelPythonDir = join(workPath, '.vercel', 'python');
-          const existingPythonPath = env.PYTHONPATH || '';
-          env.PYTHONPATH = existingPythonPath
-            ? `${vercelPythonDir}:${existingPythonPath}`
-            : vercelPythonDir;
-        }
-
-        detectAsgiServer(workPath, pythonCmd)
-          .then(async serverKind => {
-            if (resolved) return; // in case preflight was rejected
-            const host = '127.0.0.1';
-            const argv =
-              serverKind === 'uvicorn'
-                ? [
-                    '-m',
-                    'uvicorn',
-                    `${devShimModule || modulePath}:app`,
-                    '--host',
-                    host,
-                    '--port',
-                    '0',
-                    '--use-colors',
-                  ]
-                : [
-                    '-m',
-                    'hypercorn',
-                    `${devShimModule || modulePath}:app`,
-                    '-b',
-                    `${host}:0`,
-                  ];
-            debug(
-              `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
-            );
-            const child = spawn(pythonCmd, argv, {
-              cwd: workPath,
-              env,
-              stdio: ['inherit', 'pipe', 'pipe'],
-            });
-            childProcess = child;
-
-            // Forward only useful logs: HTTP access lines and important errors
-            const forwardLine = (line: string, isErr: boolean) => {
-              const clean = stripAnsi(line);
-              const hasMethod =
-                /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\b/.test(
-                  clean
-                );
-              const hasHttp = /\bHTTP\/(1\.[01]|2)\b/.test(clean);
-              const hasStatus = /\b\d{3}\b/.test(clean);
-              const isAccess = hasMethod && hasHttp && hasStatus;
-              const isImportant = /(ERROR|CRITICAL|Traceback)/i.test(clean);
-              if (isAccess || isImportant) {
-                (isErr ? process.stderr : process.stdout).write(
-                  line.endsWith('\n') ? line : line + '\n'
-                );
-              }
-            };
-            stdoutLogListener = (buf: Buffer) => {
-              const s = buf.toString();
-              for (const line of s.split(/\r?\n/)) {
-                if (line) forwardLine(line, false);
-              }
-            };
-            stderrLogListener = (buf: Buffer) => {
-              const s = buf.toString();
-              for (const line of s.split(/\r?\n/)) {
-                if (line) forwardLine(line, true);
-              }
-            };
-            child.stdout?.on('data', stdoutLogListener);
-            child.stderr?.on('data', stderrLogListener);
-
-            const readinessRegexes = [
-              /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-              /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-              /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-            ];
-
-            const onDetect = (chunk: Buffer) => {
-              const text = chunk.toString();
-              const clean = stripAnsi(text);
-              let portMatch: RegExpMatchArray | null = null;
-              for (const rx of readinessRegexes) {
-                const m = clean.match(rx);
-                if (m) {
-                  portMatch = m;
-                  break;
-                }
-              }
-              if (portMatch && child.pid) {
-                if (!resolved) {
-                  resolved = true;
-                  // Use removeListener for broad Node compatibility (and mocked emitters)
-                  child.stdout?.removeListener('data', onDetect);
-                  child.stderr?.removeListener('data', onDetect);
-                  const port = Number(portMatch[1]);
-                  resolve({ port, pid: child.pid });
-                }
-              }
-            };
-
-            child.stdout?.on('data', onDetect);
-            child.stderr?.on('data', onDetect);
-
-            child.once('error', err => {
-              if (!resolved) reject(err);
-            });
-            child.once('exit', (code, signal) => {
-              if (!resolved)
-                reject(
-                  new Error(
-                    `${serverKind} server exited before binding (code=${code}, signal=${signal})`
-                  )
-                );
-            });
-          })
-          .catch(reject);
-      }
+  // Silence Node warnings and install cleanup handlers once
+  if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
+  installGlobalCleanupHandlers();
+  const detected = await detectFastapiEntrypoint(workPath, rawEntrypoint);
+  if (!detected) {
+    throw new Error(
+      `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
     );
+  }
+  const entry = detected;
+
+  // Convert to module path, e.g. "src/app.py" -> "src.app"
+  const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
+
+  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+
+  // Check for an existing persistent server
+  const serverKey = `${workPath}::${entry}`;
+  const existing = PERSISTENT_SERVERS.get(serverKey);
+  if (existing) {
+    return {
+      port: existing.port,
+      pid: existing.pid,
+      shutdown: async () => {
+        // no-op so CLI does not kill persistent server per request
+      },
+    };
+  }
+
+  // Check for a pending start operation before spawning a new server
+  {
+    const pending = PENDING_STARTS.get(serverKey);
+    if (pending) {
+      const { port, pid } = await pending;
+      return {
+        port,
+        pid,
+        shutdown: async () => {},
+      };
+    }
+  }
+
+  // Track child process and listeners
+  let childProcess: ChildProcess | null = null;
+  let stdoutLogListener: ((buf: Buffer) => void) | null = null;
+  let stderrLogListener: ((buf: Buffer) => void) | null = null;
+
+  // Create placeholder promise and immediately claim the slot to prevent races
+  let resolveChildReady: (value: { port: number; pid: number }) => void;
+  let rejectChildReady: (reason: any) => void;
+  const childReady = new Promise<{ port: number; pid: number }>(
+    (resolve, reject) => {
+      resolveChildReady = resolve;
+      rejectChildReady = reject;
+    }
+  );
+
+  // Mark start as pending immediately to dedupe concurrent requests
+  PENDING_STARTS.set(serverKey, childReady);
+
+  try {
+    // Now spawn the actual server process
+    await new Promise<void>((resolve, reject) => {
+      let resolved = false;
+      const { pythonPath: systemPython } = getLatestPythonVersion(meta);
+      let pythonCmd = systemPython;
+      const venv = isInVirtualEnv();
+
+      if (venv) {
+        debug(`Running in virtualenv at ${venv}`);
+      } else {
+        const { pythonCmd: venvPythonCmd, venvRoot } = useVirtualEnv(
+          workPath,
+          env,
+          systemPython
+        );
+        pythonCmd = venvPythonCmd;
+        if (venvRoot) {
+          debug(`Using virtualenv at ${venvRoot}`);
+        } else {
+          debug('No virtualenv found');
+        }
+      }
+
+      // Create a tiny ASGI shim that serves static files first (when present)
+      // and falls back to the user's app. Always applied for consistent behavior.
+      const devShimModule = createDevStaticShim(workPath, modulePath);
+
+      // Add .vercel/python to PYTHONPATH so the shim can be imported
+      if (devShimModule) {
+        const vercelPythonDir = join(workPath, '.vercel', 'python');
+        const existingPythonPath = env.PYTHONPATH || '';
+        env.PYTHONPATH = existingPythonPath
+          ? `${vercelPythonDir}:${existingPythonPath}`
+          : vercelPythonDir;
+      }
+
+      detectAsgiServer(workPath, pythonCmd)
+        .then(async serverKind => {
+          if (resolved) return; // in case preflight was rejected
+          const host = '127.0.0.1';
+          const argv =
+            serverKind === 'uvicorn'
+              ? [
+                  '-u',
+                  '-m',
+                  'uvicorn',
+                  `${devShimModule || modulePath}:app`,
+                  '--host',
+                  host,
+                  '--port',
+                  '0',
+                  '--use-colors',
+                ]
+              : [
+                  '-u',
+                  '-m',
+                  'hypercorn',
+                  `${devShimModule || modulePath}:app`,
+                  '-b',
+                  `${host}:0`,
+                ];
+          debug(
+            `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
+          );
+          const child = spawn(pythonCmd, argv, {
+            cwd: workPath,
+            env,
+            stdio: ['inherit', 'pipe', 'pipe'],
+          });
+          childProcess = child;
+
+          stdoutLogListener = (buf: Buffer) => {
+            const s = buf.toString();
+            for (const line of s.split(/\r?\n/)) {
+              if (line) {
+                process.stdout.write(line.endsWith('\n') ? line : line + '\n');
+              }
+            }
+          };
+          stderrLogListener = (buf: Buffer) => {
+            const s = buf.toString();
+            for (const line of s.split(/\r?\n/)) {
+              if (line) {
+                process.stderr.write(line.endsWith('\n') ? line : line + '\n');
+              }
+            }
+          };
+          child.stdout?.on('data', stdoutLogListener);
+          child.stderr?.on('data', stderrLogListener);
+
+          const readinessRegexes = [
+            /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+            /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+            /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
+          ];
+
+          const onDetect = (chunk: Buffer) => {
+            const text = chunk.toString();
+            const clean = stripAnsi(text);
+            let portMatch: RegExpMatchArray | null = null;
+            for (const rx of readinessRegexes) {
+              const m = clean.match(rx);
+              if (m) {
+                portMatch = m;
+                break;
+              }
+            }
+            if (portMatch && child.pid) {
+              if (!resolved) {
+                resolved = true;
+                // Use removeListener for broad Node compatibility (and mocked emitters)
+                child.stdout?.removeListener('data', onDetect);
+                child.stderr?.removeListener('data', onDetect);
+                const port = Number(portMatch[1]);
+                resolveChildReady({ port, pid: child.pid });
+                resolve();
+              }
+            }
+          };
+
+          child.stdout?.on('data', onDetect);
+          child.stderr?.on('data', onDetect);
+
+          child.once('error', err => {
+            if (!resolved) {
+              rejectChildReady(err);
+              reject(err);
+            }
+          });
+          child.once('exit', (code, signal) => {
+            if (!resolved) {
+              const err = new Error(
+                `${serverKind} server exited before binding (code=${code}, signal=${signal})`
+              );
+              rejectChildReady(err);
+              reject(err);
+            }
+          });
+        })
+        .catch(err => {
+          rejectChildReady(err);
+          reject(err);
+        });
+    });
 
     const { port, pid } = await childReady;
 
-    const shutdown = async () => {
-      // Restore default Node warning behavior first
-      restoreWarningSilencer();
-      // Remove log forwarding listeners to prevent leaks
-      try {
-        if (childProcess) {
-          if (stdoutLogListener) {
-            childProcess.stdout?.removeListener('data', stdoutLogListener);
-          }
-          if (stderrLogListener) {
-            childProcess.stderr?.removeListener('data', stderrLogListener);
-          }
-        }
-      } catch (err: any) {
-        debug(`Error removing listeners: ${err}`);
-      } finally {
-        stdoutLogListener = null;
-        stderrLogListener = null;
-      }
-      try {
-        process.kill(pid, 'SIGTERM');
-      } catch (err: any) {
-        debug(`Error killing child: ${err}`);
-      }
-      // Fallback in case the process does not terminate promptly
-      await new Promise(r => setTimeout(r, 1500));
-      if (process.platform === 'win32') {
-        try {
-          await new Promise<void>(resolve => {
-            const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F']);
-            killer.once('exit', () => resolve());
-            killer.once('error', () => resolve());
-          });
-        } catch (err: any) {
-          debug(`Error killing child: ${err}`);
-        }
-      } else {
-        try {
-          process.kill(pid, 'SIGKILL');
-        } catch (err: any) {
-          debug(`Error killing child: ${err}`);
-        }
-      }
-    };
+    // Persist for reuse across requests
+    PERSISTENT_SERVERS.set(serverKey, {
+      port,
+      pid,
+      child: childProcess!,
+      stdoutLogListener,
+      stderrLogListener,
+    });
 
+    // No-op shutdown so CLI won't kill the server after each request
+    const shutdown = async () => {};
     return { port, pid, shutdown };
-  } catch (err) {
-    // Startup failed before we returned a shutdown function; restore filter now
-    restoreWarningSilencer();
-    throw err;
+  } finally {
+    PENDING_STARTS.delete(serverKey);
   }
 };

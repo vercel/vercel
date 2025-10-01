@@ -1,0 +1,11 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "Hello, World!" },
+    { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-status?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "false" },
+    { "delay": 2000 },
+    { "path": "/bg-status?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "true", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" }
+  ]
+}
