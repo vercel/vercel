@@ -227,7 +227,8 @@ export const build: BuildV3 = async ({
     pipPath: pythonVersion.pipPath,
     dependency: 'werkzeug',
     version: '1.0.1',
-    workPath: vendorBaseDir,
+    workPath,
+    targetDir: vendorBaseDir,
     meta,
   });
 
@@ -246,7 +247,8 @@ export const build: BuildV3 = async ({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
         filePath: exportedReq,
-        workPath: vendorBaseDir,
+        workPath,
+        targetDir: vendorBaseDir,
         meta,
       });
       installedFromProjectFiles = true;
@@ -269,7 +271,8 @@ export const build: BuildV3 = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: exportedReq,
-      workPath: vendorBaseDir,
+      workPath,
+      targetDir: vendorBaseDir,
       meta,
     });
     installedFromProjectFiles = true;
@@ -288,7 +291,8 @@ export const build: BuildV3 = async ({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
         filePath: exportedReq,
-        workPath: vendorBaseDir,
+        workPath,
+        targetDir: vendorBaseDir,
         meta,
       });
       installedFromProjectFiles = true;
@@ -302,7 +306,8 @@ export const build: BuildV3 = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath: vendorBaseDir,
+      workPath,
+      targetDir: vendorBaseDir,
       meta,
     });
   } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
@@ -312,7 +317,8 @@ export const build: BuildV3 = async ({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
       filePath: requirementsTxtPath,
-      workPath: vendorBaseDir,
+      workPath,
+      targetDir: vendorBaseDir,
       meta,
     });
   }
