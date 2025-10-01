@@ -21,6 +21,7 @@ import {
   resolveVendorDir,
   exportRequirementsFromUv,
   exportRequirementsFromPipfile,
+  getUvBinaryOrInstall,
 } from './install';
 import { readConfigFile } from '@vercel/build-utils';
 import { getSupportedPythonVersion } from './version';
@@ -229,6 +230,16 @@ export const build: BuildV3 = async ({
   }
 
   console.log('Installing required dependencies...');
+  let uvPath: string | null = null;
+  try {
+    uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
+    console.log(`Using uv at "${uvPath}"`);
+  } catch (err) {
+    if (uvLockDir || (pyprojectDir && !hasReqLocal && !hasReqGlobal)) {
+      console.log('Failed to install uv');
+    }
+    debug('Failed to install uv', err);
+  }
 
   await installRequirement({
     pythonPath: pythonVersion.pythonPath,
@@ -238,6 +249,7 @@ export const build: BuildV3 = async ({
     workPath,
     targetDir: vendorBaseDir,
     meta,
+    uvPath,
   });
 
   let installedFromProjectFiles = false;
@@ -246,11 +258,9 @@ export const build: BuildV3 = async ({
   if (uvLockDir) {
     debug('Found "uv.lock"');
     if (pyprojectDir) {
-      const exportedReq = await exportRequirementsFromUv(
-        pythonVersion.pythonPath,
-        pyprojectDir,
-        { locked: true }
-      );
+      const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
+        locked: true,
+      });
       await installRequirementsFile({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
@@ -258,6 +268,7 @@ export const build: BuildV3 = async ({
         workPath,
         targetDir: vendorBaseDir,
         meta,
+        uvPath,
       });
       installedFromProjectFiles = true;
     } else {
@@ -270,11 +281,9 @@ export const build: BuildV3 = async ({
         'Detected both pyproject.toml and requirements.txt but no lockfile; using pyproject.toml'
       );
     }
-    const exportedReq = await exportRequirementsFromUv(
-      pythonVersion.pythonPath,
-      pyprojectDir,
-      { locked: false }
-    );
+    const exportedReq = await exportRequirementsFromUv(pyprojectDir, uvPath, {
+      locked: false,
+    });
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
@@ -282,6 +291,7 @@ export const build: BuildV3 = async ({
       workPath,
       targetDir: vendorBaseDir,
       meta,
+      uvPath,
     });
     installedFromProjectFiles = true;
   } else if (pipfileLockDir || pipfileDir) {
@@ -292,6 +302,7 @@ export const build: BuildV3 = async ({
       const exportedReq = await exportRequirementsFromPipfile({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
+        uvPath,
         projectDir: pipfileLockDir || pipfileDir!,
         meta,
       });
@@ -302,6 +313,7 @@ export const build: BuildV3 = async ({
         workPath,
         targetDir: vendorBaseDir,
         meta,
+        uvPath,
       });
       installedFromProjectFiles = true;
     }
@@ -317,6 +329,7 @@ export const build: BuildV3 = async ({
       workPath,
       targetDir: vendorBaseDir,
       meta,
+      uvPath,
     });
   } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
@@ -328,6 +341,7 @@ export const build: BuildV3 = async ({
       workPath,
       targetDir: vendorBaseDir,
       meta,
+      uvPath,
     });
   }
 

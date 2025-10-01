@@ -448,6 +448,45 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('python versions fixture (38-python-versions)', () => {
+  it('falls back to latest installed when requires-python is missing and logs it', async () => {
+    const workPath = path.join(tmpdir(), `python-versions-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    // Mock installed Pythons: 3.12 not installed, 3.11 installed
+    makeMockPython('3.11');
+
+    const files = {
+      'server.py': new FileBlob({
+        data: 'print("hello world")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "fixture-python-versions"\nversion = "0.0.1"\ndependencies = [\n  "fastapi==0.116.2",\n]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'server.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: workPath,
+    });
+
+    expect(result.output).toBeDefined();
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'No Python version specified in pyproject.toml or Pipfile.lock. Using latest installed version:'
+      )
+    );
+
+    logSpy.mockRestore();
+    fs.removeSync(workPath);
+  });
+});
+
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
   let consoleLogSpy: jest.SpyInstance;
@@ -573,6 +612,7 @@ describe('uv install path', () => {
       await installRequirement({
         pythonPath: '/usr/bin/python3',
         pipPath: '/usr/bin/pip3',
+        uvPath: '/mock/uv',
         dependency: 'foo',
         version: '1.2.3',
         workPath,
