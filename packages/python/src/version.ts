@@ -22,18 +22,21 @@ const allOptions: PythonVersion[] = [
     pipPath: 'pip3.11',
     pythonPath: 'python3.11',
     runtime: 'python3.11',
+    discontinueDate: new Date('2026-06-30'),
   },
   {
     version: '3.10',
     pipPath: 'pip3.10',
     pythonPath: 'python3.10',
     runtime: 'python3.10',
+    discontinueDate: new Date('2026-06-30'),
   },
   {
     version: '3.9',
     pipPath: 'pip3.9',
     pythonPath: 'python3.9',
     runtime: 'python3.9',
+    discontinueDate: new Date('2025-12-15'),
   },
   {
     version: '3.6',
