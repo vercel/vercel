@@ -317,8 +317,15 @@ export const build: BuildV3 = async ({
     });
   }
 
+  const originalAdapterDirPath = join(__dirname, '..', 'vc_adapter');
+  const originalAdapterDirContents = await glob(
+    '**',
+    originalAdapterDirPath,
+    'vc_adapter'
+  );
   const originalPyPath = join(__dirname, '..', 'vc_init.py');
   const originalHandlerPyContents = await readFile(originalPyPath, 'utf8');
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -331,6 +338,14 @@ export const build: BuildV3 = async ({
     .replace(/__VC_HANDLER_MODULE_NAME/g, moduleName)
     .replace(/__VC_HANDLER_ENTRYPOINT/g, entrypointWithSuffix)
     .replace(/__VC_HANDLER_VENDOR_DIR/g, vendorDir);
+
+  const adapterFilePathsToContents = {} as Record<string, string>;
+  for (const [p, f] of Object.entries(originalAdapterDirContents)) {
+    adapterFilePathsToContents[p] = await readFile(
+      (f as FileFsRef).fsPath,
+      'utf8'
+    );
+  }
 
   const predefinedExcludes = [
     '.git/**',
@@ -373,10 +388,10 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // in order to allow the user to have `server.py`, we
-  // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
-
+  for (const [p, f] of Object.entries(adapterFilePathsToContents)) {
+    files[p] = new FileBlob({ data: f });
+  }
   files[`${handlerPyFilename}.py`] = new FileBlob({ data: handlerPyContents });
 
   // "fasthtml" framework requires a `.sesskey` file to exist,

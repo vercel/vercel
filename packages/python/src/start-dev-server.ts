@@ -51,7 +51,7 @@ const ANSI_PATTERN =
 const ANSI_ESCAPE_RE = new RegExp(ANSI_PATTERN, 'g');
 const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
 
-const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
+const DEV_SHIM_MODULE = 'vc_dev';
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
@@ -124,13 +124,18 @@ function createDevStaticShim(
   try {
     const vercelPythonDir = join(workPath, '.vercel', 'python');
     mkdirSync(vercelPythonDir, { recursive: true });
-    const shimPath = join(vercelPythonDir, `${ASGI_SHIM_MODULE}.py`);
-    const templatePath = join(__dirname, '..', `${ASGI_SHIM_MODULE}.py`);
+    const shimPath = join(vercelPythonDir, `${DEV_SHIM_MODULE}.py`);
+    const templatePath = join(
+      __dirname,
+      '..',
+      'vc_adapter',
+      `${DEV_SHIM_MODULE}.py`
+    );
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template.replace(/__VC_DEV_MODULE_PATH__/g, modulePath);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev static shim at ${shimPath}`);
-    return ASGI_SHIM_MODULE;
+    return DEV_SHIM_MODULE;
   } catch (err: any) {
     debug(`Failed to prepare dev static shim: ${err?.message || err}`);
     return null;

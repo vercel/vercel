@@ -1,7 +1,6 @@
 # Auto-generated template used by vercel dev (Python, ASGI)
 # Serves static files from PUBLIC_DIR before delegating to the user ASGI app.
 from importlib import import_module
-import os
 from os import path as _p
 
 # Optional StaticFiles import; tolerate missing deps
@@ -26,6 +25,7 @@ if _app is None:
 
 # Sanic compatibility: prefer `app.asgi` when available
 USER_ASGI_APP = getattr(_app, 'asgi', _app)
+
 
 PUBLIC_DIR = 'public'
 
