@@ -6,8 +6,9 @@
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/python",
   "files": [
     "dist",
+    "vc_adapter",
     "vc_init.py",
-    "vc_init_dev_asgi.py"
+    "vc_dev.py"
   ],
   "repository": {
     "type": "git",
