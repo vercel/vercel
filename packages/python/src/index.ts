@@ -244,12 +244,12 @@ export const build: BuildV3 = async ({
   await installRequirement({
     pythonPath: pythonVersion.pythonPath,
     pipPath: pythonVersion.pipPath,
+    uvPath,
     dependency: 'werkzeug',
     version: '1.0.1',
     workPath,
     targetDir: vendorBaseDir,
     meta,
-    uvPath,
   });
 
   let installedFromProjectFiles = false;
@@ -309,11 +309,11 @@ export const build: BuildV3 = async ({
       await installRequirementsFile({
         pythonPath: pythonVersion.pythonPath,
         pipPath: pythonVersion.pipPath,
+        uvPath,
         filePath: exportedReq,
         workPath,
         targetDir: vendorBaseDir,
         meta,
-        uvPath,
       });
       installedFromProjectFiles = true;
     }
@@ -325,11 +325,11 @@ export const build: BuildV3 = async ({
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
+      uvPath,
       filePath: requirementsTxtPath,
       workPath,
       targetDir: vendorBaseDir,
       meta,
-      uvPath,
     });
   } else if (!installedFromProjectFiles && fsFiles['requirements.txt']) {
     debug('Found global "requirements.txt"');
@@ -337,11 +337,11 @@ export const build: BuildV3 = async ({
     await installRequirementsFile({
       pythonPath: pythonVersion.pythonPath,
       pipPath: pythonVersion.pipPath,
+      uvPath,
       filePath: requirementsTxtPath,
       workPath,
       targetDir: vendorBaseDir,
       meta,
-      uvPath,
     });
   }
 
