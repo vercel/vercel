@@ -1,4 +1,4 @@
-.vercel
+.vercel/
 .venv/
 venv/
 __pycache__/
