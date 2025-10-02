@@ -1,5 +1,14 @@
 # @vercel/functions
 
+## 3.1.1
+
+### Patch Changes
+
+- Stronger detection of Vercel Runtime to reduce warnings ([#13776](https://github.com/vercel/vercel/pull/13776))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/oidc@3.0.1
+
 ## 3.1.0
 
 ### Minor Changes
