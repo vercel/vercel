@@ -4,9 +4,13 @@
 
 ### Patch Changes
 
-- [python] switch build pip install step to prefer uv ([#13967](https://github.com/vercel/vercel/pull/13967))
+- [python] switch build pip install step to prefer uv ([#14027](https://github.com/vercel/vercel/pull/14027))
 
-- [python] Use static builder for /public for FastAPI ([#14000](https://github.com/vercel/vercel/pull/14000))
+- [python] FastAPI background task support ([#14011](https://github.com/vercel/vercel/pull/14011))
+
+- [python] relative paths in requirements.txt fix ([#14022](https://github.com/vercel/vercel/pull/14022))
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
 
 ## 5.0.5
 
