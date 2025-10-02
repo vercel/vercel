@@ -135,7 +135,7 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
         if (debug) {
           console.error(error);
         } else {
-          console.error(error.message);
+          console.error(new Error(error.message));
         }
       },
       timeout,
