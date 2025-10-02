@@ -85,8 +85,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(res4Body).not.toContain('<html');
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  describe.skip('dynamic pages should resume', () => {
+  describe('dynamic pages should resume', () => {
     it.each(pages.filter(p => p.dynamic === true))(
       'should resume $pathname',
       async ({ pathname }) => {
@@ -116,8 +115,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  describe.skip('prefetch RSC payloads should return', () => {
+  describe('prefetch RSC payloads should return', () => {
     it.each(pages)(
       'should prefetch $pathname',
       async ({ pathname, dynamic }) => {
@@ -166,8 +164,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  describe.skip('dynamic RSC payloads should return', () => {
+  describe('dynamic RSC payloads should return', () => {
     it.each(pages)('should fetch $pathname', async ({ pathname, dynamic }) => {
       const expected = `${Date.now()}:${Math.random()}`;
       const res = await fetch(`${ctx.deploymentUrl}${pathname}`, {
@@ -211,8 +208,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     );
   });
 
-  // eslint-disable-next-line jest/no-disabled-tests
-  describe.skip('fallback should be used correctly', () => {
+  describe('fallback should be used correctly', () => {
     const assertRouteShell = $ => {
       expect($('[data-page]').closest('[hidden]')).toHaveLength(0);
     };
