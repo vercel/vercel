@@ -10,27 +10,35 @@ export class BuildCache {
   private readonly endpoint: string;
   private readonly headers: Record<string, string>;
   private readonly onError?: (error: Error) => void | undefined;
+  private readonly timeout: number;
 
   constructor({
     endpoint,
     headers,
     onError,
+    timeout = 500,
   }: {
     endpoint: string;
     headers: Record<string, string>;
     onError?: (error: Error) => void;
+    timeout?: number;
   }) {
     this.endpoint = endpoint;
     this.headers = headers;
     this.onError = onError;
+    this.timeout = timeout;
   }
 
   public get = async (key: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const res = await fetch(`${this.endpoint}${key}`, {
         headers: this.headers,
         method: 'GET',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status === 404) {
         return null;
@@ -48,6 +56,7 @@ export class BuildCache {
         throw new Error(`Failed to get cache: ${res.statusText}`);
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       this.onError?.(error);
       return null;
     }
@@ -62,6 +71,8 @@ export class BuildCache {
       tags?: string[];
     }
   ) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const optionalHeaders: Record<string, string> = {};
       if (options?.ttl) {
@@ -80,32 +91,42 @@ export class BuildCache {
           ...optionalHeaders,
         },
         body: JSON.stringify(value),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to set cache: ${res.status} ${res.statusText}`);
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       this.onError?.(error);
     }
   };
 
   public delete = async (key: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const res = await fetch(`${this.endpoint}${key}`, {
         method: 'DELETE',
         headers: this.headers,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to delete cache: ${res.statusText}`);
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       this.onError?.(error);
     }
   };
 
   public expireTag = async (tag: string | string[]) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       if (Array.isArray(tag)) {
         tag = tag.join(',');
@@ -113,12 +134,15 @@ export class BuildCache {
       const res = await fetch(`${this.endpoint}revalidate?tags=${tag}`, {
         method: 'POST',
         headers: this.headers,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to revalidate tag: ${res.statusText}`);
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       this.onError?.(error);
     }
   };
