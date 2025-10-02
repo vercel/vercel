@@ -448,6 +448,75 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('python version fallback logging', () => {
+  let mockWorkPath: string;
+  let consoleLogSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-version-log-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('logs when no Python version is specified in pyproject.toml', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "myproject"\nversion = "0.1.0"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    // Should log that it's falling back to latest installed
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'No Python version specified in pyproject.toml or Pipfile.lock'
+      )
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using latest installed version')
+    );
+  });
+
+  it('logs when Python version is found in pyproject.toml', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.11,<3.13"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using Python 3.11 from pyproject.toml')
+    );
+  });
+});
+
 describe('uv install path', () => {
   it('uses uv to install requirement (no fallback to pip)', async () => {
     jest.resetModules();
@@ -481,6 +550,7 @@ describe('uv install path', () => {
       await installRequirement({
         pythonPath: '/usr/bin/python3',
         pipPath: '/usr/bin/pip3',
+        uvPath: '/mock/uv',
         dependency: 'foo',
         version: '1.2.3',
         workPath,

@@ -100,7 +100,7 @@ async function getUserScriptsDir(pythonPath: string): Promise<string | null> {
 
 async function pipInstall(
   pipPath: string,
-  pythonPath: string,
+  uvPath: string | null,
   workPath: string,
   args: string[],
   targetDir?: string
@@ -117,15 +117,7 @@ async function pipInstall(
   // prefix, exec_prefix/home, or install_(plat)base
   process.env.PIP_USER = '0';
 
-  let uvBin: string | null = null;
-
-  try {
-    uvBin = await getUvBinaryOrInstall(pythonPath);
-  } catch (err) {
-    console.log('Failed to install uv, falling back to pip');
-  }
-
-  if (uvBin) {
+  if (uvPath) {
     const uvArgs = [
       'pip',
       'install',
@@ -135,10 +127,10 @@ async function pipInstall(
       target,
       ...args,
     ];
-    const prettyUv = `${uvBin} ${uvArgs.join(' ')}`;
+    const prettyUv = `${uvPath} ${uvArgs.join(' ')}`;
     debug(`Running "${prettyUv}"...`);
     try {
-      await execa(uvBin!, uvArgs, {
+      await execa(uvPath!, uvArgs, {
         cwd: workPath,
       });
       return;
@@ -217,12 +209,11 @@ async function maybeFindUvBin(pythonPath: string): Promise<string | null> {
   return null;
 }
 
-async function getUvBinaryOrInstall(pythonPath: string): Promise<string> {
+export async function getUvBinaryOrInstall(
+  pythonPath: string
+): Promise<string> {
   const uvBin = await maybeFindUvBin(pythonPath);
-  if (uvBin) {
-    console.log(`Using uv at "${uvBin}"`);
-    return uvBin;
-  }
+  if (uvBin) return uvBin;
 
   // Pip install uv
   // Note we're using pip directly instead of pipPath because we want to make sure
@@ -262,6 +253,7 @@ async function getUvBinaryOrInstall(pythonPath: string): Promise<string> {
 interface InstallRequirementArg {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   dependency: string;
   version: string;
   workPath: string;
@@ -277,6 +269,7 @@ interface InstallRequirementArg {
 export async function installRequirement({
   pythonPath,
   pipPath,
+  uvPath,
   dependency,
   version,
   workPath,
@@ -295,12 +288,13 @@ export async function installRequirement({
     return;
   }
   const exact = `${dependency}==${version}`;
-  await pipInstall(pipPath, pythonPath, workPath, [exact, ...args], targetDir);
+  await pipInstall(pipPath, uvPath, workPath, [exact, ...args], targetDir);
 }
 
 interface InstallRequirementsFileArg {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   filePath: string;
   workPath: string;
   targetDir?: string;
@@ -311,6 +305,7 @@ interface InstallRequirementsFileArg {
 export async function installRequirementsFile({
   pythonPath,
   pipPath,
+  uvPath,
   filePath,
   workPath,
   targetDir,
@@ -332,7 +327,7 @@ export async function installRequirementsFile({
   }
   await pipInstall(
     pipPath,
-    pythonPath,
+    uvPath,
     workPath,
     ['--upgrade', '-r', filePath, ...args],
     targetDir
@@ -340,26 +335,28 @@ export async function installRequirementsFile({
 }
 
 export async function exportRequirementsFromUv(
-  pythonPath: string,
   projectDir: string,
+  uvPath: string | null,
   options: { locked?: boolean } = {}
 ): Promise<string> {
   const { locked = false } = options;
-  const uvBin = await getUvBinaryOrInstall(pythonPath);
+  if (!uvPath) {
+    throw new Error('uv is not available to export requirements');
+  }
   const args: string[] = ['export'];
   // Prefer using the lockfile strictly if present
   if (locked) {
     // "--frozen" ensures the lock is respected and not updated during export
     args.push('--frozen');
   }
-  debug(`Running "${uvBin} ${args.join(' ')}" in ${projectDir}...`);
+  debug(`Running "${uvPath} ${args.join(' ')}" in ${projectDir}...`);
   let stdout: string;
   try {
-    const { stdout: out } = await execa(uvBin, args, { cwd: projectDir });
+    const { stdout: out } = await execa(uvPath, args, { cwd: projectDir });
     stdout = out;
   } catch (err) {
     throw new Error(
-      `Failed to run "${uvBin} ${args.join(' ')}": ${
+      `Failed to run "${uvPath} ${args.join(' ')}": ${
         err instanceof Error ? err.message : String(err)
       }`
     );
@@ -374,11 +371,13 @@ export async function exportRequirementsFromUv(
 export async function exportRequirementsFromPipfile({
   pythonPath,
   pipPath,
+  uvPath,
   projectDir,
   meta,
 }: {
   pythonPath: string;
   pipPath: string;
+  uvPath: string | null;
   projectDir: string;
   meta: Meta;
 }): Promise<string> {
@@ -394,6 +393,7 @@ export async function exportRequirementsFromPipfile({
     workPath: tempDir,
     meta,
     args: ['--no-warn-script-location'],
+    uvPath,
   });
 
   const tempVendorDir = join(tempDir, resolveVendorDir());
