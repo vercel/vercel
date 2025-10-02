@@ -10,11 +10,12 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "browser": "./dist/index-browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     }
   },
-  "version": "3.0.0",
+  "version": "3.0.1",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",

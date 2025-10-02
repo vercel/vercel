@@ -60,6 +60,15 @@ export class ListTelemetryClient
     }
   }
 
+  trackCliOptionStatus(status: string | undefined) {
+    if (status) {
+      this.trackCliOption({
+        option: 'status',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliArgumentApp(app: string | undefined) {
     if (app) {
       this.trackCliArgument({
