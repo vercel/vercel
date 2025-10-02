@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.1.2
+
+### Patch Changes
+
+- Stronger detection of Vercel Runtime to reduce warnings ([#13776](https://github.com/vercel/vercel/pull/13776))
+
 ## 3.1.1
 
 ### Patch Changes

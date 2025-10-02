@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 5.0.7
+
+### Patch Changes
+
+- [python] FastAPI background task support ([#14011](https://github.com/vercel/vercel/pull/14011))
+
+- [python] relative paths in requirements.txt fix ([#14022](https://github.com/vercel/vercel/pull/14022))
+
 ## 5.0.6
 
 ### Patch Changes

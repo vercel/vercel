@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.10.0
+
+### Minor Changes
+
+- Add h3 example ([#14021](https://github.com/vercel/vercel/pull/14021))
+
 ## 3.9.4
 
 ### Patch Changes
