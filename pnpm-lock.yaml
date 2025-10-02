@@ -370,7 +370,7 @@ importers:
         specifier: 5.3.24
         version: link:../node
       '@vercel/python':
-        specifier: 5.0.6
+        specifier: 5.0.7
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.6
