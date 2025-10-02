@@ -170,12 +170,61 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 func(*args, **kwargs)
         return wrapper
 
-    logging.basicConfig(level=logging.INFO)
+    # Custom handler so logs are properly categorized
+    class VCLogHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord):
+            try:
+                message = record.getMessage()
+            except Exception:
+                try:
+                    message = f"{record.msg}"
+                except Exception:
+                    message = ""
+
+            if record.levelno >= logging.CRITICAL:
+                level = "fatal"
+            elif record.levelno >= logging.ERROR:
+                level = "error"
+            elif record.levelno >= logging.WARNING:
+                level = "warn"
+            elif record.levelno >= logging.INFO:
+                level = "info"
+            else:
+                level = "debug"
+
+            ctx = storage.get()
+            if ctx is not None:
+                try:
+                    send_message({
+                        "type": "log",
+                        "payload": {
+                            "context": {
+                                "invocationId": ctx['invocationId'],
+                                "requestId": ctx['requestId'],
+                            },
+                            "message": base64.b64encode(message.encode()).decode(),
+                            "level": level,
+                        }
+                    })
+                except Exception:
+                    pass
+            else:
+                # Fallback to stdout when not in a request context
+                try:
+                    sys.stdout.write(message + "\n")
+                except Exception:
+                    pass
+
+    # Route all logging through our handler; this ensures logger.* calls from
+    # user apps set a proper severity (instead of relying on stdout/stderr).
+    logging.basicConfig(level=logging.INFO, handlers=[VCLogHandler()], force=True)
+
     logging.debug = logging_wrapper(logging.debug)
     logging.info = logging_wrapper(logging.info)
     logging.warning = logging_wrapper(logging.warning, "warn")
     logging.error = logging_wrapper(logging.error, "error")
-    logging.critical = logging_wrapper(logging.critical, "error")
+    logging.fatal = logging_wrapper(logging.fatal, "fatal")
+    logging.critical = logging_wrapper(logging.critical, "fatal")
 
     class BaseHandler(BaseHTTPRequestHandler):
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
