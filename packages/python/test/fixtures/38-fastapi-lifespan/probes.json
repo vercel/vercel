@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "status": 200, "mustContain": "Hello, World!" },
+    { "path": "/startup-okay", "status": 200, "mustContain": "lifespan ok" }
+  ]
+}

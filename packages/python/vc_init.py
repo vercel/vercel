@@ -8,17 +8,20 @@ import json
 import inspect
 import threading
 import asyncio
-import http
 import time
 from importlib import util
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socket
 import functools
 import logging
 import builtins
-from typing import Callable, Literal
 import contextvars
-import io
+import atexit
+import http
+import enum
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO, TextIOBase
+from typing import Callable, Awaitable, Literal, TypeAlias, TypedDict, MutableMapping, Any, Protocol
+
 
 _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
@@ -51,6 +54,7 @@ __vc_variables = dir(__vc_module)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
+
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
@@ -61,6 +65,7 @@ def format_headers(headers, decode=False):
             keyToList[key] = []
         keyToList[key].append(value)
     return keyToList
+
 
 # Custom logging handler so logs are properly categorized
 class VCLogHandler(logging.Handler):
@@ -120,7 +125,7 @@ class VCLogHandler(logging.Handler):
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
     # Override sys.stdout and sys.stderr to map logs to the correct request
     class StreamWrapper:
-        def __init__(self, stream: io.TextIOBase, stream_name: Literal["stdout", "stderr"]):
+        def __init__(self, stream: TextIOBase, stream_name: Literal["stdout", "stderr"]):
             self.stream = stream
             self.stream_name = stream_name
 
@@ -189,6 +194,169 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
         return wrapper
 
     builtins.print = print_wrapper(builtins.print)
+
+
+Headers: TypeAlias = list[list[bytes]]
+Message: TypeAlias = MutableMapping[str, Any]
+Scope: TypeAlias = MutableMapping[str, Any]
+Receive: TypeAlias = Callable[[], Awaitable[Message]]
+Send: TypeAlias = Callable[[Message], Awaitable[None]]
+
+
+class ASGI(Protocol):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None: ...  # pragma: no cover
+
+
+class WSGIStartResponse(Protocol):
+    def __call__(
+        self, status: str, headers: Headers, exc_info: Any | None = None,
+    ) -> None: ...  # pragma: no cover
+
+
+class WSGI(Protocol):
+    def __call__(
+        self,
+        environ: MutableMapping[str, Any],
+        start_response: WSGIStartResponse,
+    ) -> Any: ...  # pragma: no cover
+
+
+def is_asgi_app(app: ASGI | WSGI) -> bool:
+    return (
+        inspect.iscoroutinefunction(app)
+        or inspect.iscoroutinefunction(getattr(app, '__call__', None))
+    )
+
+
+# ASGI lifespan manager
+ASGI_LIFESPAN_MANAGER = None
+ASGI_LIFESPAN_LOCK = threading.Lock()
+
+
+class ASGILifespanManager:
+    def __init__(self, app: ASGI):
+        self.app = app
+        self.loop = asyncio.new_event_loop()
+        self.queue = None
+        self.state = {}
+        self.started = threading.Event()
+        self.stopped = threading.Event()
+        self.thread = threading.Thread(
+            target=self._run, name='vercel-asgi-lifespan', daemon=True
+        )
+
+    def _run(self):
+        asyncio.set_event_loop(self.loop)
+
+        # Create queue within the event loop context
+        if _use_legacy_asyncio:
+            self.queue = asyncio.Queue(loop=self.loop)
+        else:
+            self.queue = asyncio.Queue()
+
+        async def receive():
+            return await self.queue.get()
+
+        async def send(message):
+            typ = message.get('type')
+            if typ == 'lifespan.startup.complete':
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+            elif typ == 'lifespan.startup.failed':
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+            elif typ in ('lifespan.shutdown.complete', 'lifespan.shutdown.failed'):
+                try:
+                    self.stopped.set()
+                except Exception:
+                    pass
+
+        async def runner():
+            try:
+                await self.app(
+                    {
+                        'type': 'lifespan',
+                        'asgi': {'spec_version': '2.0', 'version': '3.0'},
+                        'state': self.state,
+                    },
+                    receive,
+                    send,
+                )
+            except Exception:
+                # Treat lifespan as unsupported; unblock waiters
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+                try:
+                    self.stopped.set()
+                except Exception:
+                    pass
+
+        # Start the lifespan application
+        self.loop.create_task(runner())
+
+        async def push_startup():
+            await self.queue.put({'type': 'lifespan.startup'})
+
+        self.loop.create_task(push_startup())
+        self.loop.run_forever()
+
+    def ensure_started(self):
+        if not self.thread.is_alive():
+            self.thread.start()
+        # Wait up to 10s for startup (best effort)
+        try:
+            self.started.wait(timeout=10.0)
+        except Exception:
+            pass
+
+    def shutdown(self):
+        # Send shutdown and stop loop
+        try:
+            def push_shutdown():
+                try:
+                    self.loop.create_task(self.queue.put({'type': 'lifespan.shutdown'}))
+                except Exception:
+                    pass
+
+            self.loop.call_soon_threadsafe(push_shutdown)
+        except Exception:
+            pass
+        try:
+            self.stopped.wait(timeout=2.0)
+        except Exception:
+            pass
+        try:
+            self.loop.call_soon_threadsafe(self.loop.stop)
+        except Exception:
+            pass
+        try:
+            self.thread.join(timeout=2.0)
+        except Exception:
+            pass
+
+
+def _ensure_lifespan(app: ASGI):
+    global ASGI_LIFESPAN_MANAGER
+    if ASGI_LIFESPAN_MANAGER is not None:
+        return
+    with ASGI_LIFESPAN_LOCK:
+        if ASGI_LIFESPAN_MANAGER is None:
+            mgr = ASGILifespanManager(app)
+            ASGI_LIFESPAN_MANAGER = mgr
+            try:
+                mgr.ensure_started()
+            except Exception:
+                pass
+            try:
+                atexit.register(mgr.shutdown)
+            except Exception:
+                pass
 
 
 if 'VERCEL_IPC_PATH' in os.environ:
@@ -325,15 +493,12 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 method()
                 self.wfile.flush()
     elif 'app' in __vc_variables:
-        # WSGI
-        if (
-            not inspect.iscoroutinefunction(__vc_module.app) and
-            not inspect.iscoroutinefunction(__vc_module.app.__call__)
-        ):
-            from io import BytesIO
+        app = __vc_module.app
+        is_asgi = is_asgi_app(app)
 
+        # WSGI
+        if not is_asgi:
             string_types = (str,)
-            app = __vc_module.app
 
             def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
                 if isinstance(s, str):
@@ -394,9 +559,12 @@ if 'VERCEL_IPC_PATH' in os.environ:
         # ASGI
         else:
             from urllib.parse import urlparse
-            from io import BytesIO
 
-            app = __vc_module.app
+            # Initialize unified ASGI lifespan manager
+            try:
+                _ensure_lifespan(app)
+            except Exception:
+                pass
 
             class Handler(BaseHandler):
                 def handle_request(self):
@@ -447,7 +615,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         # Track if headers were sent, so we can synthesize a 500 on early failure
                         response_started = False
                         try:
-                            async def runner():
+                            async def runner_capture():
                                 # Per-request app queue
                                 if _use_legacy_asyncio:
                                     loop = asyncio.get_running_loop()
@@ -457,39 +625,98 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
                                 await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
 
+                                captured = {
+                                    'status': None,
+                                    'headers': [],
+                                    'body': bytearray(),
+                                }
+
                                 async def receive():
-                                    message = await app_queue.get()
-                                    return message
+                                    return await app_queue.get()
 
                                 async def send(event):
                                     nonlocal response_started
-                                    if event['type'] == 'http.response.start':
-                                        self.send_response(event['status'])
-                                        if 'headers' in event:
-                                            for name, value in event['headers']:
-                                                self.send_header(name.decode(), value.decode())
-                                        self.end_headers()
+                                    et = event.get('type')
+                                    if et == 'http.response.start':
+                                        captured['status'] = int(event['status'])
+                                        captured['headers'] = event.get('headers', []) or []
                                         response_started = True
-                                    elif event['type'] == 'http.response.body':
-                                        # Stream body as it is produced; flush on completion
+                                    elif et == 'http.response.body':
                                         body_bytes = event.get('body', b'') or b''
                                         if body_bytes:
-                                            self.wfile.write(body_bytes)
+                                            captured['body'] += body_bytes
                                         if not event.get('more_body', False):
                                             try:
-                                                self.wfile.flush()
-                                            finally:
-                                                response_done.set()
+                                                app_queue.put_nowait({'type': 'http.disconnect'})
+                                            except Exception:
+                                                pass
+
+                                await app(scope, receive, send)
+                                return captured
+
+                            # If a lifespan loop is active, run the request on it to avoid cross-loop issues
+                            mgr = ASGI_LIFESPAN_MANAGER
+                            if mgr is not None and getattr(mgr, 'loop', None) is not None:
+                                fut = asyncio.run_coroutine_threadsafe(runner_capture(), mgr.loop)
+                                captured = fut.result()
+                                # Write response on handler thread
+                                status = captured.get('status') or 200
+                                self.send_response(status)
+                                headers = captured.get('headers') or []
+                                for name, value in headers:
+                                    try:
+                                        self.send_header(name.decode(), value.decode())
+                                    except Exception:
+                                        self.send_header(str(name), str(value))
+                                self.end_headers()
+                                body_bytes = bytes(captured.get('body') or b'')
+                                if body_bytes:
+                                    self.wfile.write(body_bytes)
+                                try:
+                                    self.wfile.flush()
+                                finally:
+                                    response_done.set()
+                            else:
+                                # Fallback: run request on a fresh loop and stream directly
+                                async def runner_streaming():
+                                    # Per-request app queue
+                                    if _use_legacy_asyncio:
+                                        loop = asyncio.get_running_loop()
+                                        app_queue = asyncio.Queue(loop=loop)
+                                    else:
+                                        app_queue = asyncio.Queue()
+
+                                    await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
+
+                                    async def receive():
+                                        return await app_queue.get()
+
+                                    async def send(event):
+                                        nonlocal response_started
+                                        if event['type'] == 'http.response.start':
+                                            self.send_response(event['status'])
+                                            if 'headers' in event:
+                                                for name, value in event['headers']:
+                                                    self.send_header(name.decode(), value.decode())
+                                            self.end_headers()
+                                            response_started = True
+                                        elif event['type'] == 'http.response.body':
+                                            body_bytes = event.get('body', b'') or b''
+                                            if body_bytes:
+                                                self.wfile.write(body_bytes)
+                                            if not event.get('more_body', False):
                                                 try:
-                                                    app_queue.put_nowait({'type': 'http.disconnect'})
-                                                except Exception:
-                                                    pass
+                                                    self.wfile.flush()
+                                                finally:
+                                                    response_done.set()
+                                                    try:
+                                                        app_queue.put_nowait({'type': 'http.disconnect'})
+                                                    except Exception:
+                                                        pass
 
-                                # Run ASGI app (includes background tasks)
-                                asgi_instance = app(scope, receive, send)
-                                await asgi_instance
+                                    await app(scope, receive, send)
 
-                            asyncio.run(runner())
+                                asyncio.run(runner_streaming())
                         except Exception:
                             # If the app raised before starting the response, synthesize a 500
                             try:
@@ -588,12 +815,12 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         return return_dict
 
 elif 'app' in __vc_variables:
-    if (
-        not inspect.iscoroutinefunction(__vc_module.app) and
-        not inspect.iscoroutinefunction(__vc_module.app.__call__)
-    ):
+    app = __vc_module.app
+    is_asgi = is_asgi_app(app)
+
+    # wsgi
+    if not is_asgi:
         print('using Web Server Gateway Interface (WSGI)')
-        from io import BytesIO
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
         from werkzeug.wrappers import Response
@@ -675,13 +902,13 @@ elif 'app' in __vc_variables:
                 return_dict['encoding'] = 'base64'
 
             return return_dict
+
+    # asgi
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
         # Originally authored by Jordan Eremieff and included under MIT license:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
-        import asyncio
-        import enum
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
@@ -701,25 +928,54 @@ elif 'app' in __vc_variables:
 
             def __call__(self, app, body):
                 """
-                Receives the application and any body included in the request, then builds the
-                ASGI instance using the connection scope.
-                Runs until the response is completely read from the application.
+                Execute the ASGI exchange, preferring the lifespan loop if available
+                to avoid cross-loop issues with frameworks that bind resources to
+                the event loop during startup.
                 """
-                if _use_legacy_asyncio:
-                    loop = asyncio.new_event_loop()
-                    self.app_queue = asyncio.Queue(loop=loop)
-                else:
-                    self.app_queue = asyncio.Queue()
-                self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
+                # Ensure lifespan is initialized before handling the request
+                try:
+                    _ensure_lifespan(app)
+                except Exception:
+                    pass
 
-                asgi_instance = app(self.scope, self.receive, self.send)
+                async def runner():
+                    # Create per-request app queue in the context of the running loop
+                    if _use_legacy_asyncio:
+                        loop = asyncio.get_running_loop()
+                        app_queue = asyncio.Queue(loop=loop)
+                    else:
+                        app_queue = asyncio.Queue()
 
-                if _use_legacy_asyncio:
-                    asgi_task = loop.create_task(asgi_instance)
-                    loop.run_until_complete(asgi_task)
-                else:
-                    asyncio.run(self.run_asgi_instance(asgi_instance))
-                return self.response
+                    await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
+
+                    async def receive():
+                        return await app_queue.get()
+
+                    async def send(event):
+                        message_type = event['type']
+                        if message_type == 'http.response.start':
+                            status_code = event['status']
+                            headers = Headers(event.get('headers', []))
+                            self.on_request(headers, status_code)
+                            self.state = ASGICycleState.RESPONSE
+                        elif message_type == 'http.response.body':
+                            body_bytes = event.get('body', b'') or b''
+                            self.body += body_bytes
+                            if not event.get('more_body', False):
+                                self.on_response()
+                                try:
+                                    app_queue.put_nowait({'type': 'http.disconnect'})
+                                except Exception:
+                                    pass
+
+                    await app(self.scope, receive, send)
+                    return self.response
+
+                mgr = ASGI_LIFESPAN_MANAGER
+                if mgr is not None and getattr(mgr, 'loop', None) is not None:
+                    return asyncio.run_coroutine_threadsafe(runner(), mgr.loop).result()
+                # Fallback: run the request on a fresh event loop
+                return asyncio.run(runner())
 
             async def run_asgi_instance(self, asgi_instance):
                 await asgi_instance
