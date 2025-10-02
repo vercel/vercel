@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sys
 import os
 import site
@@ -7,9 +8,17 @@ import json
 import inspect
 import threading
 import asyncio
+import http
+import time
 from importlib import util
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socket
+import functools
+import logging
+import builtins
+from typing import Callable, Literal
+import contextvars
+import io
 
 _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
@@ -53,15 +62,136 @@ def format_headers(headers, decode=False):
         keyToList[key].append(value)
     return keyToList
 
-if 'VERCEL_IPC_PATH' in os.environ:
-    from http.server import ThreadingHTTPServer
-    import http
-    import time
-    import contextvars
-    import functools
-    import builtins
-    import logging
+# Custom logging handler so logs are properly categorized
+class VCLogHandler(logging.Handler):
+    def __init__(self, send_message: Callable[[dict], None], context_getter: Callable[[], dict] | None = None):
+        super().__init__()
+        self._send_message = send_message
+        self._context_getter = context_getter
 
+    def emit(self, record):
+        try:
+            message = record.getMessage()
+        except Exception:
+            try:
+                message = f"{record.msg}"
+            except Exception:
+                message = ""
+
+        if record.levelno >= logging.CRITICAL:
+            level = "fatal"
+        elif record.levelno >= logging.ERROR:
+            level = "error"
+        elif record.levelno >= logging.WARNING:
+            level = "warn"
+        elif record.levelno >= logging.INFO:
+            level = "info"
+        else:
+            level = "debug"
+
+        ctx = None
+        try:
+            ctx = self._context_getter() if self._context_getter is not None else None
+        except Exception:
+            ctx = None
+
+        if ctx is not None:
+            try:
+                self._send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": ctx['invocationId'],
+                            "requestId": ctx['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "level": level,
+                    }
+                })
+            except Exception:
+                pass
+        else:
+            try:
+                sys.stdout.write(message + "\n")
+            except Exception:
+                pass
+
+
+def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
+    # Override sys.stdout and sys.stderr to map logs to the correct request
+    class StreamWrapper:
+        def __init__(self, stream: io.TextIOBase, stream_name: Literal["stdout", "stderr"]):
+            self.stream = stream
+            self.stream_name = stream_name
+
+        def write(self, message: str):
+            context = storage.get()
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(message.encode()).decode(),
+                        "stream": self.stream_name,
+                    }
+                })
+            else:
+                self.stream.write(message)
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+    sys.stdout = StreamWrapper(sys.stdout, "stdout")
+    sys.stderr = StreamWrapper(sys.stderr, "stderr")
+
+    # Wrap top-level logging helpers to emit structured logs when a request
+    # context is available; otherwise fall back to the original behavior.
+    def logging_wrapper(func: Callable[..., None], level: str = "info") -> Callable[..., None]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                context = storage.get()
+            except Exception:
+                context = None
+            if context is not None:
+                send_message({
+                    "type": "log",
+                    "payload": {
+                        "context": {
+                            "invocationId": context['invocationId'],
+                            "requestId": context['requestId'],
+                        },
+                        "message": base64.b64encode(f"{args[0]}".encode()).decode(),
+                        "level": level,
+                    }
+                })
+            else:
+                func(*args, **kwargs)
+        return wrapper
+
+    logging.basicConfig(level=logging.INFO, handlers=[VCLogHandler(send_message, storage.get)], force=True)
+    logging.debug = logging_wrapper(logging.debug, "debug")
+    logging.info = logging_wrapper(logging.info, "info")
+    logging.warning = logging_wrapper(logging.warning, "warn")
+    logging.error = logging_wrapper(logging.error, "error")
+    logging.fatal = logging_wrapper(logging.fatal, "fatal")
+    logging.critical = logging_wrapper(logging.critical, "fatal")
+
+    # Ensure built-in print funnels through stdout wrapper so prints are
+    # attributed to the current request context.
+    def print_wrapper(func: Callable[..., None]) -> Callable[..., None]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            sys.stdout.write(' '.join(map(str, args)) + '\n')
+        return wrapper
+
+    builtins.print = print_wrapper(builtins.print)
+
+
+if 'VERCEL_IPC_PATH' in os.environ:
     start_time = time.time()
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
@@ -112,70 +242,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
     except:
         pass
 
-    # Override sys.stdout and sys.stderr to map logs to the correct request
-    class StreamWrapper:
-        def __init__(self, stream, stream_name):
-            self.stream = stream
-            self.stream_name = stream_name
-
-        def write(self, message):
-            context = storage.get()
-            if context is not None:
-                send_message({
-                    "type": "log",
-                    "payload": {
-                        "context": {
-                            "invocationId": context['invocationId'],
-                            "requestId": context['requestId'],
-                        },
-                        "message": base64.b64encode(message.encode()).decode(),
-                        "stream": self.stream_name,
-                    }
-                })
-            else:
-                self.stream.write(message)
-
-        def __getattr__(self, name):
-            return getattr(self.stream, name)
-
-    sys.stdout = StreamWrapper(sys.stdout, "stdout")
-    sys.stderr = StreamWrapper(sys.stderr, "stderr")
-
-    # Override the global print to log to stdout
-    def print_wrapper(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            sys.stdout.write(' '.join(map(str, args)) + '\n')
-        return wrapper
-    builtins.print = print_wrapper(builtins.print)
-
-    # Override logging to maps logs to the correct request
-    def logging_wrapper(func, level="info"):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            context = storage.get()
-            if context is not None:
-                send_message({
-                    "type": "log",
-                    "payload": {
-                        "context": {
-                            "invocationId": context['invocationId'],
-                            "requestId": context['requestId'],
-                        },
-                        "message": base64.b64encode(f"{args[0]}".encode()).decode(),
-                        "level": level,
-                    }
-                })
-            else:
-                func(*args, **kwargs)
-        return wrapper
-
-    logging.basicConfig(level=logging.INFO)
-    logging.debug = logging_wrapper(logging.debug)
-    logging.info = logging_wrapper(logging.info)
-    logging.warning = logging_wrapper(logging.warning, "warn")
-    logging.error = logging_wrapper(logging.error, "error")
-    logging.critical = logging_wrapper(logging.critical, "error")
+    setup_logging(send_message, storage)
 
     class BaseHandler(BaseHTTPRequestHandler):
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
