@@ -57,7 +57,14 @@ export class BuildCache {
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
-      this.onError?.(error);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
       return null;
     }
   };
@@ -100,7 +107,14 @@ export class BuildCache {
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
-      this.onError?.(error);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 
@@ -120,7 +134,14 @@ export class BuildCache {
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
-      this.onError?.(error);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 
@@ -143,7 +164,14 @@ export class BuildCache {
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
-      this.onError?.(error);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 }
