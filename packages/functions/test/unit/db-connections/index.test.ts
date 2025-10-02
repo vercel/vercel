@@ -4,9 +4,11 @@ import { SYMBOL_FOR_REQ_CONTEXT } from '../../../src/get-context';
 
 describe('db-connections', () => {
   const vercelUrl = process.env.VERCEL_URL;
+  const vercelRegion = process.env.VERCEL_REGION;
 
   beforeEach(() => {
     process.env.VERCEL_URL = 'test.vercel.app';
+    process.env.VERCEL_REGION = 'iad1';
     vi.useFakeTimers();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -18,6 +20,7 @@ describe('db-connections', () => {
     vi.clearAllMocks();
     delete globalThis[SYMBOL_FOR_REQ_CONTEXT];
     process.env.VERCEL_URL = vercelUrl;
+    process.env.VERCEL_REGION = vercelRegion;
   });
 
   describe('supported pool types', () => {

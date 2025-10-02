@@ -56,7 +56,7 @@ attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+[packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L225)
 
 ---
 
@@ -101,7 +101,7 @@ Use attachDatabasePool instead.
 
 #### Defined in
 
-[packages/functions/src/db-connections/index.ts:221](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L221)
+[packages/functions/src/db-connections/index.ts:225](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L225)
 
 ---
 
