@@ -172,8 +172,8 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
         return wrapper
 
     logging.basicConfig(level=logging.INFO, handlers=[VCLogHandler(send_message, storage.get)], force=True)
-    logging.debug = logging_wrapper(logging.debug)
-    logging.info = logging_wrapper(logging.info)
+    logging.debug = logging_wrapper(logging.debug, "debug")
+    logging.info = logging_wrapper(logging.info, "info")
     logging.warning = logging_wrapper(logging.warning, "warn")
     logging.error = logging_wrapper(logging.error, "error")
     logging.fatal = logging_wrapper(logging.fatal, "fatal")
