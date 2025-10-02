@@ -131,13 +131,7 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
     buildCacheInstance = new BuildCache({
       endpoint: RUNTIME_CACHE_ENDPOINT,
       headers: parsedHeaders,
-      onError: (error: Error) => {
-        if (debug) {
-          console.error(error);
-        } else {
-          console.error(new Error(error.message));
-        }
-      },
+      onError: (error: Error) => console.error(error),
       timeout,
     });
   }

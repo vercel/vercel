@@ -61,6 +61,7 @@ export class BuildCache {
         const timeoutError = new Error(
           `Cache request timed out after ${this.timeout}ms`
         );
+        timeoutError.stack = error.stack;
         this.onError?.(timeoutError);
       } else {
         this.onError?.(error);
@@ -111,6 +112,7 @@ export class BuildCache {
         const timeoutError = new Error(
           `Cache request timed out after ${this.timeout}ms`
         );
+        timeoutError.stack = error.stack;
         this.onError?.(timeoutError);
       } else {
         this.onError?.(error);
@@ -138,6 +140,7 @@ export class BuildCache {
         const timeoutError = new Error(
           `Cache request timed out after ${this.timeout}ms`
         );
+        timeoutError.stack = error.stack;
         this.onError?.(timeoutError);
       } else {
         this.onError?.(error);
@@ -168,6 +171,7 @@ export class BuildCache {
         const timeoutError = new Error(
           `Cache request timed out after ${this.timeout}ms`
         );
+        timeoutError.stack = error.stack;
         this.onError?.(timeoutError);
       } else {
         this.onError?.(error);
