@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.2.0
+
+### Minor Changes
+
+- support bulk redirects in routing-utils ([#14032](https://github.com/vercel/vercel/pull/14032))
+
 ## 5.1.1
 
 ### Patch Changes
