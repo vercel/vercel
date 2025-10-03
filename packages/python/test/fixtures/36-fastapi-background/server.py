@@ -12,11 +12,11 @@ def read_root():
 
 
 def _token_path(token: str) -> str:
-    return f"/tmp/fastapi-bg-{token}"
+    return f"/tmp/logs/bg-{token}"
 
 
 async def _bg_write_file(token: str):
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(1)
     path = _token_path(token)
     # Ensure directory exists (should for /tmp, but safe)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -39,6 +39,13 @@ async def bg_file(token: str, background_tasks: BackgroundTasks):
 async def bg_crash(token: str, background_tasks: BackgroundTasks):
     background_tasks.add_task(_bg_crash, token)
     return {"status": "queued", "token": token}
+
+
+@app.get("/bg-logs")
+async def bg_logs():
+    log_dir = "/tmp/logs"
+    log_files = os.listdir(log_dir)
+    return {"status": "ok", "log_files": log_files, "count": f"{len(log_files)} log files"}
 
 
 @app.get("/bg-status")
