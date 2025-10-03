@@ -20,7 +20,7 @@ import fetch, {
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
+import { reauthenticate } from './login/saml';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
@@ -39,7 +39,7 @@ import type { Agent } from 'http';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
-import { processTokenResponse, refreshTokenRequest } from './oauth';
+import { oauth } from './oauth';
 
 const isSAMLError = (v: any): v is SAMLError => {
   return v && v.saml;
@@ -174,20 +174,9 @@ export default class Client extends EventEmitter implements Stdio {
       return;
     }
 
-    const tokenResponse = await refreshTokenRequest({
-      refresh_token: authConfig.refreshToken,
-    });
+    const oauthClient = await oauth.init();
 
-    const [tokensError, tokens] = await processTokenResponse(tokenResponse);
-
-    // If we had an error, during the refresh process, empty the auth config
-    // to force the user to re-authenticate
-    if (tokensError) {
-      output.debug('Error refreshing token, emptying auth config.');
-      this.emptyAuthConfig();
-      this.writeToAuthConfigFile();
-      return;
-    }
+    const tokens = await oauthClient.refreshToken(authConfig.refreshToken);
 
     this.updateAuthConfig({
       token: tokens.access_token,

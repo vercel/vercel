@@ -12,6 +12,7 @@ import { switchSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import login from '../login';
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -137,10 +138,10 @@ export default async function change(client: Client, argv: string[]) {
     }
 
     if (user.limited) {
-      await client.reauthenticate({
-        scope: user.username,
-        teamId: null,
-      });
+      output.log(
+        `You must re-authenticate to use ${chalk.bold(user.username)} scope.`
+      );
+      await login(client, { shouldParseArgs: false });
     }
 
     updateCurrentTeam(config);
