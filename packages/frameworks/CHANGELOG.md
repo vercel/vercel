@@ -1,12 +1,16 @@
 # @vercel/frameworks
 
-## 3.9.4
+## 3.10.0
+
+### Minor Changes
+
+- Add h3 example ([#14021](https://github.com/vercel/vercel/pull/14021))
 
 ### Patch Changes
 
-- [python] fastapi route redirects fix ([#13972](https://github.com/vercel/vercel/pull/13972))
+- [python] fastapi route redirects fix ([#14027](https://github.com/vercel/vercel/pull/14027))
 
-- [python] Use static builder for /public for FastAPI ([#14000](https://github.com/vercel/vercel/pull/14000))
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
 
 ## 3.9.3
 

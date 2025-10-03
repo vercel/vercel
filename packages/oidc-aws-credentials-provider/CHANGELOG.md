@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Updated dependencies [[`6661ea2ac385704601124e7ebe7596dcf95f0cc8`](https://github.com/vercel/vercel/commit/6661ea2ac385704601124e7ebe7596dcf95f0cc8), [`fa7b1ff73474acfef41c7dd0812e3cf778f29c15`](https://github.com/vercel/vercel/commit/fa7b1ff73474acfef41c7dd0812e3cf778f29c15), [`8beae7035bf0d3e5cfc1df337b83fbbe530c4d9b`](https://github.com/vercel/vercel/commit/8beae7035bf0d3e5cfc1df337b83fbbe530c4d9b)]:
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
   - @vercel/oidc@3.0.1
 
 ## 3.0.0

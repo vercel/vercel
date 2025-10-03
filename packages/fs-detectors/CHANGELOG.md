@@ -4,10 +4,10 @@
 
 ### Patch Changes
 
-- [python] Use static builder for /public for FastAPI ([#14000](https://github.com/vercel/vercel/pull/14000))
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
 
-- Updated dependencies [[`5931b7e07decdb166a51a574b59361820396b278`](https://github.com/vercel/vercel/commit/5931b7e07decdb166a51a574b59361820396b278), [`a8c0e30c6fe70f8a9c01d737bf638c8969e286ee`](https://github.com/vercel/vercel/commit/a8c0e30c6fe70f8a9c01d737bf638c8969e286ee)]:
-  - @vercel/frameworks@3.9.4
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`a26744ba059edf435a31ac5967fa01aeb9d1647f`](https://github.com/vercel/vercel/commit/a26744ba059edf435a31ac5967fa01aeb9d1647f), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/frameworks@3.10.0
 
 ## 5.5.7
 
