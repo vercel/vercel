@@ -17,6 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "async-listen": "3.0.0",
+    "open": "8.4.0",
     "xdg-app-paths": "5",
     "zod": "4.1.11"
   },

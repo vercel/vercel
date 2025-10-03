@@ -1,0 +1,7 @@
+.now
+.vercel
+__pycache__/
+**/__pycache__/
+.venv/
+venv/
+package-lock.json

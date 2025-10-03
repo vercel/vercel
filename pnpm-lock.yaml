@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.9.2
+        specifier: 3.10.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -352,7 +352,7 @@ importers:
         specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.20
+        specifier: 0.0.22
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -370,13 +370,13 @@ importers:
         specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.12.6
+        specifier: 4.13.0
         version: link:../next
       '@vercel/node':
         specifier: 5.3.24
         version: link:../node
       '@vercel/python':
-        specifier: 5.0.5
+        specifier: 5.0.7
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.6
@@ -539,10 +539,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.2
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.6
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -787,6 +787,12 @@ importers:
 
   packages/cli-auth:
     dependencies:
+      async-listen:
+        specifier: 3.0.0
+        version: 3.0.0
+      open:
+        specifier: 8.4.0
+        version: 8.4.0
       xdg-app-paths:
         specifier: '5'
         version: 5.1.0
@@ -1080,7 +1086,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.2
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1659,13 +1665,6 @@ importers:
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/oidc:
-    dependencies:
-      '@types/ms':
-        specifier: 2.1.0
-        version: 2.1.0
-      ms:
-        specifier: 2.1.3
-        version: 2.1.3
     devDependencies:
       tinyspawn:
         specifier: 1.3.1
@@ -2003,10 +2002,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.2
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.6
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -7617,10 +7616,6 @@ packages:
     resolution: {integrity: sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==}
     dev: true
 
-  /@types/ms@2.1.0:
-    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
-    dev: false
-
   /@types/multistream@2.1.1:
     resolution: {integrity: sha512-PqavtNFnMyXRZS5vuW16wMOKeJUCD5PIGHdNBHzF5Urjncsij90hRQ82Wcy9+uSdnmrR2Gfao6xoJVq1wAWzbA==}
     dependencies:
@@ -8841,7 +8836,7 @@ packages:
       '@vitest/spy': 2.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.17
-      vite: 5.1.8(@types/node@18.0.0)
+      vite: 5.1.8(@types/node@22.5.0)
     dev: true
 
   /@vitest/pretty-format@2.0.3:
@@ -10536,7 +10531,6 @@ packages:
   /define-lazy-prop@2.0.0:
     resolution: {integrity: sha512-Ds09qNh8yw3khSjiJjiUInaGX9xlqZDY7JVryGxdxV7NPeuqQfplOpQ66yJFZut3jLa5zOwkXw1g9EI2uKh4Og==}
     engines: {node: '>=8'}
-    dev: true
 
   /define-properties@1.2.1:
     resolution: {integrity: sha512-8QmQKqEASLd5nx0U1B1okLElbUuuttJ/AnYmRXbbbGDWh6uS208EjD4Xqq/I9wK7u0v6O08XhTWnt5XtEbR6Dg==}
@@ -11417,7 +11411,7 @@ packages:
       eslint-import-resolver-webpack:
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.5)
       debug: 3.2.7
       eslint: 8.24.0
       eslint-import-resolver-node: 0.3.9
@@ -11448,7 +11442,7 @@ packages:
         optional: true
     dependencies:
       '@rtsao/scc': 1.1.0
-      '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.24.0)(typescript@4.9.5)
       array-includes: 3.1.8
       array.prototype.findlastindex: 1.2.6
       array.prototype.flat: 1.3.3
@@ -11596,7 +11590,7 @@ packages:
         optional: true
     dependencies:
       eslint: 8.24.0
-      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.4)
+      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.24.0)(jest@29.5.0)(typescript@4.9.5)
     dev: true
 
   /eslint-plugin-react-hooks@4.6.2(eslint@8.24.0):
@@ -13127,7 +13121,6 @@ packages:
     resolution: {integrity: sha512-F+i2BKsFrH66iaUFc0woD8sLy8getkwTwtOBjvs56Cx4CgJDeKQeqfz8wAYiSb8JOprWhHH5p77PbmYCvvUuXQ==}
     engines: {node: '>=8'}
     hasBin: true
-    dev: true
 
   /is-extglob@2.1.1:
     resolution: {integrity: sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==}
@@ -13360,7 +13353,6 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       is-docker: 2.2.1
-    dev: true
 
   /isarray@0.0.1:
     resolution: {integrity: sha512-D2S+3GLxWH+uhrNEcoh/fnmYeP8E8/zHl644d/jdA0g2uyXvy3sb0qxotE+ne0LtccHknQzWwZEzhak7oJ0COQ==}
@@ -15286,7 +15278,6 @@ packages:
       define-lazy-prop: 2.0.0
       is-docker: 2.2.1
       is-wsl: 2.2.0
-    dev: true
 
   /optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}

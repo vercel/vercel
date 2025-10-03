@@ -7,10 +7,10 @@ import XDGAppPaths from 'xdg-app-paths';
 import { z } from 'zod/mini';
 
 const Credentials = z.object({
-  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
+  /** An `access_token` obtained using the OAuth Device Authorization flow. */
   token: z.optional(z.string()),
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken: z.optional(z.string().check(z.minLength(1))),
+  refreshToken: z.optional(z.string()),
   /**
    * The absolute time (seconds) when the {@link Credentials.token} expires.
    * Used to optimistically check if the token is still valid.

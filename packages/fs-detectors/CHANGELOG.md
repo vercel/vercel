@@ -1,5 +1,21 @@
 # @vercel/fs-detectors
 
+## 5.5.8
+
+### Patch Changes
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`a26744ba059edf435a31ac5967fa01aeb9d1647f`](https://github.com/vercel/vercel/commit/a26744ba059edf435a31ac5967fa01aeb9d1647f), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/frameworks@3.10.0
+
+## 5.5.7
+
+### Patch Changes
+
+- Updated dependencies [[`3eb70a1571f5740859d25a0dcfb8d03c9042ba52`](https://github.com/vercel/vercel/commit/3eb70a1571f5740859d25a0dcfb8d03c9042ba52)]:
+  - @vercel/frameworks@3.9.3
+
 ## 5.5.6
 
 ### Patch Changes

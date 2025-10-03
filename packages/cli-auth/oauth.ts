@@ -273,6 +273,8 @@ export function OAuth(config: {
   };
 }
 
+export type OAuth = ReturnType<typeof OAuth>;
+
 const TokenSet = z.object({
   /** The access token issued by the authorization server. */
   access_token: z.string(),
