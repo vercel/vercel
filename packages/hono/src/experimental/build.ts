@@ -38,18 +38,29 @@ export const build: BuildV2 = async args => {
 
       // Skip if we've already used this path
       if (!usedPaths.has(normalizedPath)) {
-        output[route.dest] = lambda;
+        output[normalizedPath] = lambda;
         usedPaths.add(normalizedPath);
       }
     }
   }
 
   // Create a routes array that includes filesystem handling, introspection routes, and catch-all
+  // Normalize route destinations to match the output function keys
+  const normalizedRoutes = routes.map(route => {
+    if (route.dest && route.dest !== '/') {
+      return {
+        ...route,
+        dest: route.dest.replace(/\/$/, ''),
+      };
+    }
+    return route;
+  });
+
   const mainRoutes = [
     {
       handle: 'filesystem',
     },
-    ...routes,
+    ...normalizedRoutes,
     {
       src: '/(.*)',
       dest: '/',
