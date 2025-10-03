@@ -292,4 +292,24 @@ describe('detectFrameworkRecord', () => {
     const framework = await detectFrameworkRecord({ fs, frameworkList });
     expect(framework?.slug).toBe('h3');
   });
+
+  it('Detects NestJS', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({
+        dependencies: {
+          '@nestjs/core': 'latest',
+        },
+        devDependencies: {
+          eslint: '^8.6.0',
+          prettier: '^3.0.2',
+          typescript: '^5.1.6',
+        },
+      }),
+      'src/main.ts':
+        'import { NestFactory } from "@nestjs/core";\nimport { AppModule } from "./app.module";\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  await app.listen(3000);\n}\nbootstrap();',
+    });
+
+    const framework = await detectFrameworkRecord({ fs, frameworkList });
+    expect(framework?.slug).toBe('nestjs');
+  });
 });

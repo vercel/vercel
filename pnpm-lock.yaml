@@ -1367,6 +1367,40 @@ importers:
 
   packages/mcp-adapter: {}
 
+  packages/nestjs:
+    dependencies:
+      '@vercel/node':
+        specifier: 5.3.24
+        version: link:../node
+      '@vercel/static-config':
+        specifier: 3.1.2
+        version: link:../static-config
+    devDependencies:
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@vercel/build-utils':
+        specifier: 12.1.0
+        version: link:../build-utils
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@14.18.33)
+      vitest:
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
+
   packages/next:
     dependencies:
       '@vercel/nft':
