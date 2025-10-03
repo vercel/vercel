@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.9.3
+        specifier: 3.10.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -370,7 +370,7 @@ importers:
         specifier: 5.3.24
         version: link:../node
       '@vercel/python':
-        specifier: 5.0.5
+        specifier: 5.0.7
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.6
@@ -533,10 +533,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.3
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.7
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1074,7 +1074,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.3
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1653,13 +1653,6 @@ importers:
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/oidc:
-    dependencies:
-      '@types/ms':
-        specifier: 2.1.0
-        version: 2.1.0
-      ms:
-        specifier: 2.1.3
-        version: 2.1.3
     devDependencies:
       tinyspawn:
         specifier: 1.3.1
@@ -1997,10 +1990,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.3
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.7
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -7610,10 +7603,6 @@ packages:
   /@types/ms@0.7.31:
     resolution: {integrity: sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==}
     dev: true
-
-  /@types/ms@2.1.0:
-    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
-    dev: false
 
   /@types/multistream@2.1.1:
     resolution: {integrity: sha512-PqavtNFnMyXRZS5vuW16wMOKeJUCD5PIGHdNBHzF5Urjncsij90hRQ82Wcy9+uSdnmrR2Gfao6xoJVq1wAWzbA==}
