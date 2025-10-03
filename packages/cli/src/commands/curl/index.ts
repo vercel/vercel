@@ -156,6 +156,9 @@ async function getDeploymentProtectionToken(
 
   // generate a new token if no automation-bypass token is found
   const token = await generateDeploymentProtectionToken(client, project.id);
+  // this seems to take a sec to propagate to proxy, so we wait a sec
+  // sleep for 1s
+  await new Promise(resolve => setTimeout(resolve, 1000));
   return token;
 }
 
