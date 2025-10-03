@@ -2954,7 +2954,14 @@ export const onPrerenderRoute =
           fallbackRootParams.length > 0
         ) {
           htmlAllowQuery = fallbackRootParams;
-        } else if (postponedPrerender) {
+        }
+        // We additionally vary based on if there's a postponed prerender
+        // because if there isn't, then that means that we generated an
+        // empty shell, and producing an empty RSC shell would be a waste.
+        // If there is a postponed prerender, then the RSC shell would be
+        // non-empty, and it would be valuable to also generate an empty
+        // RSC shell.
+        else if (postponedPrerender) {
           htmlAllowQuery = [];
         }
       }
@@ -3088,23 +3095,34 @@ export const onPrerenderRoute =
         else if (
           outputPathData &&
           routesManifest?.rsc?.dynamicRSCPrerender &&
-          routesManifest?.ppr?.chain?.headers &&
-          postponedState
+          routesManifest?.ppr?.chain?.headers
         ) {
-          const contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
-            rscContentTypeHeader
-          )}`;
+          let contentType = rscContentTypeHeader;
+          if (postponedState) {
+            contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+              rscContentTypeHeader
+            )}`;
+          }
 
-          // If the application has client segment cache, client segment
-          // parsing, and ppr enabled, then we can use a blank allowQuery
-          // for the segment prerenders. This is because we know that the
-          // segments do not vary based on the route parameters. It's important
-          // that this mirrors the logic in the segment prerender below so that
-          // they are both part of the same prerender group and are revalidated
-          // together.
-          let rdcRSCAllowQuery = allowQuery;
-          if (isAppClientParamParsingEnabled) {
-            rdcRSCAllowQuery = [];
+          // We follow the same logic as the HTML allowQuery as it's already
+          // going to vary based on if there's a static shell generated or if
+          // there's fallback root params. If there are fallback root params,
+          // and we can serve a fallback, then we should follow the same logic
+          // for the dynamic RSC routes.
+          const rdcRSCAllowQuery = htmlAllowQuery;
+
+          // Use the fallback value for the RSC route if the route doesn't
+          // vary based on the route parameters.
+          let fallback: FileBlob | null = null;
+          if (
+            rdcRSCAllowQuery &&
+            rdcRSCAllowQuery.length === 0 &&
+            postponedState
+          ) {
+            fallback = new FileBlob({
+              data: postponedState,
+              contentType,
+            });
           }
 
           prerenders[normalizePathData(outputPathData)] = new Prerender({
@@ -3112,15 +3130,7 @@ export const onPrerenderRoute =
             staleExpiration: initialExpire,
             lambda,
             allowQuery: rdcRSCAllowQuery,
-            fallback:
-              // Use the fallback value for the RSC route if the route doesn't
-              // vary based on the route parameters.
-              rdcRSCAllowQuery && rdcRSCAllowQuery.length === 0
-                ? new FileBlob({
-                    data: postponedState,
-                    contentType,
-                  })
-                : null,
+            fallback,
             group: prerenderGroup,
             bypassToken: prerenderManifest.bypassToken,
             experimentalBypassFor,
@@ -3173,15 +3183,12 @@ export const onPrerenderRoute =
               routeFileNoExt + prefetchSegmentDirSuffix
             );
 
-            // If the application has client segment cache, client segment
-            // parsing, and ppr enabled, then we can use a blank allowQuery
-            // for the segment prerenders. This is because we know that the
-            // segments do not vary based on the route parameters.
-            let segmentAllowQuery = allowQuery;
-            // TODO(NAR-402): Investigate omitted routes
-            if (isAppClientParamParsingEnabled && (isFallback || isBlocking)) {
-              segmentAllowQuery = [];
-            }
+            // We follow the same logic as the HTML allowQuery as it's already
+            // going to vary based on if there's a static shell generated or if
+            // there's fallback root params. If there are fallback root params,
+            // and we can serve a fallback, then we should follow the same logic
+            // for the segment prerenders.
+            const segmentAllowQuery = htmlAllowQuery;
 
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
@@ -3190,14 +3197,13 @@ export const onPrerenderRoute =
                   segmentPath
                 ) + prefetchSegmentSuffix;
 
-              let fallback: FileFsRef | null = null;
-
               // Only use the fallback value when the allowQuery is defined and
               // is empty, which means that the segments do not vary based on
               // the route parameters. This is safer than ensuring that we only
               // use the fallback when this is not a fallback because we know in
               // this new logic that it doesn't vary based on the route
               // parameters and therefore can be used for all requests instead.
+              let fallback: FileFsRef | null = null;
               if (segmentAllowQuery && segmentAllowQuery.length === 0) {
                 const fsPath = path.join(
                   segmentsDir,
