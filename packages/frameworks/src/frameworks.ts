@@ -59,6 +59,100 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'Gin',
+    slug: 'gin',
+    demo: 'https://gin-template.vercel.app',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/gin.svg',
+    tagline: 'Gin is a HTTP web framework written in Go (Golang).',
+    description: 'A Gin web app with zero-config Go serverless support.',
+    website: 'https://gin-gonic.com/',
+    detectors: {
+      some: [
+        { path: 'main.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'server.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'index.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'app.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'src/main.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'src/server.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'src/index.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'src/app.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'cmd/main.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'cmd/server.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'api/main.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'api/server.go', matchContent: 'github.com/gin-gonic/gin' },
+        { path: 'app/main.go', matchContent: 'github.com/gin-gonic/gin' },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'Ruby on Rails',
+    slug: 'rails',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/rails.svg',
+    tagline: 'Compress the complexity of modern web apps.',
+    description: 'A Rails app, using Rack via config.ru.',
+    website: 'https://rubyonrails.org',
+    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    detectors: {
+      some: [
+        {
+          path: 'config.ru',
+        },
+        {
+          path: 'Gemfile',
+          matchContent: 'gem\\s+["\']rails["\']',
+        },
+        {
+          path: 'bin/rails',
+        },
+        {
+          path: 'config/application.rb',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        value: 'bundle install',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'bundle exec rails server -p $PORT',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Next.js',
     slug: 'nextjs',
     demo: 'https://nextjs-template.vercel.app',
@@ -2029,20 +2123,68 @@ export const frameworks = [
     description:
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: 'main.py', use: '@vercel/python' },
     detectors: {
       some: [
         {
-          path: 'requirements.txt',
-          matchContent: 'fastapi',
+          path: 'app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
         {
-          path: 'pyproject.toml',
-          matchContent: 'fastapi',
+          path: 'index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
         {
-          path: 'Pipfile',
-          matchContent: 'fastapi',
+          path: 'server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'src/main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/app.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/index.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/server.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
+        },
+        {
+          path: 'app/main.py',
+          matchContent:
+            '(from\\s+fastapi\\s+import\\s+FastAPI|import\\s+fastapi|FastAPI\\s*\\()',
         },
       ],
     },
@@ -2055,21 +2197,20 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        placeholder: 'None',
-        value: null,
+        value: 'uvicorn main:app --reload --port $PORT',
       },
       outputDirectory: {
         value: 'N/A',
       },
     },
-    getOutputDirName: async () => 'public',
+    getOutputDirName: async () => '',
     defaultRoutes: [
       {
         handle: 'filesystem',
       },
       {
         src: '/(.*)',
-        dest: '/',
+        dest: '/main',
       },
     ],
   },
@@ -2532,7 +2673,6 @@ export const frameworks = [
     name: 'Express',
     slug: 'express',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
-    demo: 'https://express-vercel-example-demo.vercel.app/',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
@@ -2975,55 +3115,6 @@ export const frameworks = [
       },
     },
     dependency: 'h3',
-    getOutputDirName: async () => 'public',
-  },
-  {
-    name: 'NestJS',
-    slug: 'nestjs',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestjs.svg',
-    tagline:
-      'Framework for building efficient, scalable Node.js server-side applications',
-    description:
-      'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
-    website: 'https://nestjs.com/',
-    useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/',
-      },
-    ],
-    detectors: {
-      every: [{ matchPackage: '@nestjs/core' }],
-      some: [
-        {
-          path: 'src/main.ts',
-          matchContent:
-            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
-        },
-      ],
-    },
-    settings: {
-      installCommand: {
-        placeholder:
-          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
-      },
-      buildCommand: {
-        placeholder: 'None',
-        value: null,
-      },
-      devCommand: {
-        placeholder: 'None',
-        value: null,
-      },
-      outputDirectory: {
-        value: 'N/A',
-      },
-    },
-    dependency: 'nestjs',
     getOutputDirName: async () => 'public',
   },
   {

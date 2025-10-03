@@ -6,6 +6,18 @@ require 'json'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
 
+# Ensure Bundler is initialized so vendored gems under ./vendor are on the load path
+begin
+  gemfile = File.join(Dir.pwd, 'Gemfile')
+  if File.file?(gemfile)
+    ENV['BUNDLE_GEMFILE'] ||= gemfile
+    ENV['BUNDLE_PATH'] ||= File.join(Dir.pwd, 'vendor', 'bundle')
+    require 'bundler/setup'
+  end
+rescue LoadError
+  # Bundler not available; continue without it
+end
+
 ENV['RAILS_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 

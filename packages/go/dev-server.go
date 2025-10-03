@@ -1,11 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
-	"net"
-	"net/http"
-	"os"
-	"strconv"
+    "io/ioutil"
+    "net"
+    "net/http"
+    "os"
+    "path/filepath"
+    "strconv"
 )
 
 func main() {
@@ -32,5 +33,34 @@ func main() {
 		}
 	}
 
-	panic(http.Serve(listener, handler))
+    // Optionally serve static files from a public directory first, then fallback to handler
+    publicDir := os.Getenv("VERCEL_DEV_PUBLIC_DIR")
+    var finalHandler http.Handler = handler
+    if publicDir != "" {
+        fileServer := http.FileServer(http.Dir(publicDir))
+        mux := http.NewServeMux()
+        mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+            // Check if the requested path maps to a file or index.html in publicDir
+            // If so, serve it; otherwise fallback to the user's handler
+            p := r.URL.Path
+            if p == "" || p == "/" {
+                p = "/index.html"
+            }
+            absPath := filepath.Join(publicDir, filepath.FromSlash(p))
+            if info, err := os.Stat(absPath); err == nil && !info.IsDir() {
+                fileServer.ServeHTTP(w, r)
+                return
+            }
+            // Try directory index
+            dirIndex := filepath.Join(publicDir, filepath.FromSlash(filepath.Clean(r.URL.Path+"/index.html")))
+            if info, err := os.Stat(dirIndex); err == nil && !info.IsDir() {
+                fileServer.ServeHTTP(w, r)
+                return
+            }
+            handler.ServeHTTP(w, r)
+        })
+        finalHandler = mux
+    }
+
+    panic(http.Serve(listener, finalHandler))
 }

@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/products", "status": 200, "mustContain": "Products#index" }
+  ]
+}

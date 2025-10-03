@@ -29,10 +29,12 @@ import {
   download,
   Lambda,
   getWriteableDirectory,
-  shouldServe,
+  shouldServe as defaultShouldServe,
   debug,
   cloneEnv,
   getProvidedRuntime,
+  NowBuildError,
+  type ShouldServe,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -44,8 +46,14 @@ import {
   GoWrapper,
   OUT_EXTENSION,
 } from './go-helpers';
+import {
+  detectGinEntrypoint,
+  GIN_CANDIDATE_ENTRYPOINTS,
+  detectGinAccessor,
+  renderGinWrapperSource,
+} from './entrypoint';
 
-export { shouldServe };
+// custom shouldServe implemented below
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else
@@ -108,6 +116,19 @@ type UndoActions = {
 };
 
 export const version = 3;
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'gin') {
+    const requestPath = opts.requestPath.replace(/\/$/, '');
+    // Don't override API routes if another builder already matched them
+    if (requestPath.startsWith('api') && opts.hasMatched) {
+      return false;
+    }
+    // Public assets are served by the static builder / default handler
+    return true;
+  }
+  return defaultShouldServe(opts);
+};
 
 export async function build({
   files,
@@ -136,6 +157,29 @@ export async function build({
   });
 
   try {
+    // Zero-config entrypoint discovery for Gin
+    try {
+      const fsFiles = await glob('**', workPath);
+      if (!fsFiles[entrypoint] && config?.framework === 'gin') {
+        const detected = await detectGinEntrypoint(workPath, entrypoint);
+        if (detected) {
+          debug(
+            `Resolved Go entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+          );
+          entrypoint = detected;
+        } else {
+          const searchedList = GIN_CANDIDATE_ENTRYPOINTS.join(', ');
+          throw new NowBuildError({
+            code: 'GIN_ENTRYPOINT_NOT_FOUND',
+            message: `No Gin entrypoint found. Searched for: ${searchedList}`,
+          });
+        }
+      }
+    } catch (err) {
+      // If glob fails or anything else, proceed to regular flow; the build will error later if needed
+      debug('Gin zero-config detection skipped or failed', err as any);
+    }
+
     if (env.GIT_CREDENTIALS) {
       debug('Initialize Git credentials...');
       await initPrivateGit(env.GIT_CREDENTIALS);
@@ -153,7 +197,7 @@ export async function build({
   `);
     }
 
-    const originalEntrypointAbsolute = join(workPath, entrypoint);
+    // originalEntrypointAbsolute was unused
     const renamedEntrypoint = getRenamedEntrypoint(entrypoint);
     if (renamedEntrypoint) {
       await move(join(workPath, entrypoint), join(workPath, renamedEntrypoint));
@@ -166,6 +210,7 @@ export async function build({
 
     const entrypointAbsolute = join(workPath, entrypoint);
     const entrypointDirname = dirname(entrypointAbsolute);
+    let handlerDefinitionPath = entrypointAbsolute;
 
     const { goModPath, isGoModInRootDir } = await findGoModPath(
       entrypointDirname,
@@ -176,11 +221,51 @@ export async function build({
       throw new Error('`go.mod` is required to use a `vendor` directory.');
     }
 
-    const analyzed = await getAnalyzedEntrypoint({
-      entrypoint,
-      modulePath: goModPath ? dirname(goModPath) : undefined,
-      workPath,
-    });
+    let analyzed;
+    try {
+      analyzed = await getAnalyzedEntrypoint({
+        entrypoint,
+        modulePath: goModPath ? dirname(goModPath) : undefined,
+        workPath,
+      });
+    } catch (err) {
+      if (config?.framework === 'gin') {
+        // Attempt to auto-wrap a Gin engine into an http.HandlerFunc
+        const rel = entrypoint.endsWith('.go')
+          ? entrypoint
+          : `${entrypoint}.go`;
+        const acc = await detectGinAccessor(workPath, rel);
+        if (acc) {
+          // Determine package name from entrypoint file
+          let pkgName = 'handler';
+          try {
+            const contents = await readFile(entrypointAbsolute, 'utf8');
+            const m = contents.match(/\bpackage\s+(\S+)/);
+            if (m) pkgName = m[1];
+          } catch (err) {
+            debug('Failed to read entrypoint for package name', err as any);
+          }
+          const wrapperPath = join(
+            entrypointDirname,
+            '__vercel_gin_wrapper.go'
+          );
+          const wrapperSrc = renderGinWrapperSource(pkgName, acc);
+          await writeFile(wrapperPath, wrapperSrc);
+          undo.fileActions.push({ to: undefined, from: wrapperPath });
+          handlerDefinitionPath = wrapperPath;
+          // Re-analyze now that an exported handler exists
+          analyzed = await getAnalyzedEntrypoint({
+            entrypoint,
+            modulePath: goModPath ? dirname(goModPath) : undefined,
+            workPath,
+          });
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     // check if package name other than main
     // using `go.mod` way building the handler
@@ -196,12 +281,12 @@ export async function build({
       entrypoint
     );
     await renameHandlerFunction(
-      entrypointAbsolute,
+      handlerDefinitionPath,
       originalFunctionName,
       handlerFunctionName
     );
     undo.functionRenames.push({
-      fsPath: originalEntrypointAbsolute,
+      fsPath: handlerDefinitionPath,
       from: handlerFunctionName,
       to: originalFunctionName,
     });
@@ -816,7 +901,7 @@ async function writeGoWork(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, meta = {}, config } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
   const entrypointDir = dirname(entrypoint);
 
@@ -825,6 +910,22 @@ export async function startDevServer(
   let entrypointWithExt = entrypoint;
   if (!entrypoint.endsWith('.go')) {
     entrypointWithExt += '.go';
+  }
+
+  // Zero-config entrypoint discovery for Gin in dev as well
+  try {
+    const exists = await pathExists(join(workPath, entrypointWithExt));
+    if (!exists && config?.framework === 'gin') {
+      const detected = await detectGinEntrypoint(workPath, entrypointWithExt);
+      if (detected) {
+        debug(
+          `Resolved Go entrypoint (dev) to "${detected}" (configured "${entrypointWithExt}" not found).`
+        );
+        entrypointWithExt = detected;
+      }
+    }
+  } catch (err) {
+    debug('Gin dev entrypoint detection skipped or failed', err as any);
   }
 
   const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
@@ -836,14 +937,57 @@ export async function startDevServer(
     workPath
   );
   const modulePath = goModPath ? dirname(goModPath) : undefined;
-  const analyzed = await getAnalyzedEntrypoint({
-    entrypoint: entrypointWithExt,
-    modulePath,
-    workPath,
-  });
+  let analyzed: any;
+  let overrideHandlerName: string | undefined;
+  let ginAccessor: { kind: 'var' | 'func'; name: string } | null = null;
+  try {
+    analyzed = await getAnalyzedEntrypoint({
+      entrypoint: entrypointWithExt,
+      modulePath,
+      workPath,
+    });
+  } catch (err) {
+    if (config?.framework === 'gin') {
+      try {
+        ginAccessor = await detectGinAccessor(workPath, entrypointWithExt);
+      } catch (err) {
+        debug('Gin accessor detection failed', err as any);
+      }
+      if (ginAccessor) {
+        overrideHandlerName = 'VercelDevAdapter';
+        // Best-effort derive package name
+        let pkgName = 'handler';
+        try {
+          const src = await readFile(join(workPath, entrypointWithExt), 'utf8');
+          const m = src.match(/\bpackage\s+(\S+)/);
+          if (m) pkgName = m[1];
+        } catch (err) {
+          debug('Failed to read entrypoint for package name', err as any);
+        }
+        analyzed = { functionName: overrideHandlerName, packageName: pkgName };
+      } else {
+        throw err;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   await Promise.all([
     copyEntrypoint(entrypointWithExt, tmpPackage),
+    (async () => {
+      if (overrideHandlerName && ginAccessor) {
+        const wrapperSrc = renderGinWrapperSource(
+          'main',
+          ginAccessor,
+          overrideHandlerName
+        );
+        await writeFile(
+          join(tmpPackage, '__vercel_gin_dev_wrapper.go'),
+          wrapperSrc
+        );
+      }
+    })(),
     copyDevServer(analyzed.functionName, tmpPackage),
     writeGoMod({
       destDir: tmp,
@@ -861,6 +1005,16 @@ export async function startDevServer(
   const env = cloneEnv(process.env, meta.env, {
     VERCEL_DEV_PORT_FILE: portFile,
   });
+
+  // Expose public dir for static-first dev server behavior (optional)
+  if (opts.publicDir) {
+    env.VERCEL_DEV_PUBLIC_DIR = join(workPath, opts.publicDir);
+  } else {
+    const publicCandidate = join(workPath, 'public');
+    if (await pathExists(publicCandidate)) {
+      env.VERCEL_DEV_PUBLIC_DIR = publicCandidate;
+    }
+  }
 
   const executable = `./vercel-dev-server-go${
     process.platform === 'win32' ? '.exe' : ''

@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "hello from gin:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}
+

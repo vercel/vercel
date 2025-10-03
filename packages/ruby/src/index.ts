@@ -1,14 +1,7 @@
 import { EOL } from 'os';
 import { join, dirname } from 'path';
 import execa from 'execa';
-import {
-  ensureDir,
-  move,
-  remove,
-  pathExists,
-  readFile,
-  writeFile,
-} from 'fs-extra';
+import { move, remove, pathExists, readFile, writeFile } from 'fs-extra';
 import {
   download,
   getWriteableDirectory,
@@ -18,8 +11,10 @@ import {
   walkParentDirs,
   cloneEnv,
   FileBlob,
+  NowBuildError,
   type Files,
   type BuildV3,
+  type GlobOptions,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
 
@@ -95,19 +90,60 @@ async function bundleInstall(
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
   if (major >= 3) {
-    const result = await execa('bundler', ['add', 'webrick'], {
-      cwd: dirname(gemfilePath),
-      stdio: 'pipe',
-      env: bundlerEnv,
-      reject: false,
-    });
-    if (result.exitCode !== 0) {
-      console.log(result.stdout);
-      console.error(result.stderr);
-      throw result;
+    const hasWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/m.test(
+      gemfileContent
+    );
+    const injectedPath = join(dirname(gemfilePath), 'injected gems');
+    let hasInjectedWebrick = false;
+    try {
+      if (await pathExists(injectedPath)) {
+        const injected = await readFile(injectedPath, 'utf8');
+        hasInjectedWebrick = /(?:^|\n)\s*(?!#)\s*gem\s+["']webrick["']/.test(
+          injected
+        );
+        // If Gemfile already includes webrick, ensure stale Bundler "injected gems" file
+        // does not re-inject a conflicting version requirement.
+        if (hasWebrick && hasInjectedWebrick) {
+          const filtered = injected
+            .split(/\r?\n/)
+            .filter(line => !/^\s*gem\s+["']webrick["']/.test(line))
+            .join('\n')
+            .trim();
+          if (filtered.length === 0) {
+            await remove(injectedPath);
+            debug('ruby: removed stale "injected gems" file');
+          } else if (filtered !== injected.trim()) {
+            await writeFile(injectedPath, filtered + '\n');
+            debug('ruby: filtered webrick from "injected gems" file');
+          }
+          hasInjectedWebrick = false;
+        }
+      }
+    } catch (err) {
+      debug('ruby: failed to process "injected gems" file', err);
+    }
+
+    if (!hasWebrick && !hasInjectedWebrick) {
+      console.log('Installing required gems...');
+      const result = await execa('bundler', ['add', 'webrick'], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        console.log(result.stdout);
+        console.error(result.stderr);
+        throw result;
+      }
+    } else {
+      debug(
+        `ruby: skipping bundler add for webrick (Gemfile=${hasWebrick}, injected=${hasInjectedWebrick})`
+      );
     }
   }
 
+  console.log('Running bundle install...');
   const result = await execa(
     bundlePath,
     ['install', '--deployment', '--gemfile', gemfilePath, '--path', bundleDir],
@@ -134,6 +170,31 @@ export const build: BuildV3 = async ({
   meta = {},
 }) => {
   await download(files, workPath, meta);
+  const fsFiles = await glob('**', workPath);
+  debug(`ruby: downloaded files to workPath=${workPath}`);
+
+  // Zero-config entrypoint discovery for Rails
+  if (!fsFiles[entrypoint] && config?.framework === 'rails') {
+    const candidateDirs = ['', 'src', 'app'];
+    const candidates = candidateDirs.map(d =>
+      d ? `${d}/config.ru` : 'config.ru'
+    );
+    const existing = candidates.filter(p => !!fsFiles[p]);
+    debug(
+      `ruby: rails entrypoint candidates=${JSON.stringify(candidates)} existing=${JSON.stringify(existing)}`
+    );
+    if (existing.length > 0) {
+      debug(
+        `ruby: resolved rails entrypoint from=${entrypoint} to=${existing[0]}`
+      );
+      entrypoint = existing[0];
+    } else {
+      throw new NowBuildError({
+        code: 'RAILS_ENTRYPOINT_NOT_FOUND',
+        message: `No Rails entrypoint found. Searched for: ${candidates.join(', ')}`,
+      });
+    }
+  }
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
   const gemfileName = 'Gemfile';
 
@@ -142,26 +203,43 @@ export const build: BuildV3 = async ({
     start: entrypointFsDirname,
     filename: gemfileName,
   });
+  debug(`ruby: gemfile detected at path=${gemfilePath || '<none>'}`);
 
   // Ensure a `Gemfile` exists so that webrick can be installed for Ruby 3.2
   if (!gemfilePath) {
     gemfilePath = join(entrypointFsDirname, gemfileName);
     await writeFile(gemfilePath, `source "https://rubygems.org"${EOL}`);
+    debug(`ruby: created default Gemfile at ${gemfilePath}`);
   }
 
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
+  debug(`ruby: installing bundler and resolving ruby runtime...`);
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
     await installBundler(meta, gemfileContents);
+  debug(
+    `ruby: bundler installed, runtime=${runtime} rubyPath=${rubyPath} gemHome=${gemHome}`
+  );
   process.env.GEM_HOME = gemHome;
+  // Cache vendor gems under .vercel/ruby similar to Python implementation
+  const entryDirectory = dirname(entrypoint);
+  const vendorBaseDir = join(workPath, '.vercel', 'ruby', runtime);
+  // Keep directory structure keyed by entry directory to avoid collisions
+  const scopedVendorBaseDir = join(vendorBaseDir, entryDirectory);
+  debug(`ruby: vendor base dir (cache) at ${scopedVendorBaseDir}`);
   debug(`Checking existing vendor directory at "${vendorPath}"`);
   const vendorDir = join(workPath, vendorPath);
-  const bundleDir = join(workPath, 'vendor', 'bundle');
+  // Install gems into .vercel cache path instead of project root vendor/
+  const bundleDir = join(scopedVendorBaseDir, 'vendor', 'bundle');
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
   const hasRootVendorDir = await pathExists(vendorDir);
   const hasRelativeVendorDir = await pathExists(relativeVendorDir);
-  const hasVendorDir = hasRootVendorDir || hasRelativeVendorDir;
+  const hasCachedVendorDir = await pathExists(
+    join(scopedVendorBaseDir, vendorPath)
+  );
+  const hasVendorDir =
+    hasRootVendorDir || hasRelativeVendorDir || hasCachedVendorDir;
 
   if (hasRelativeVendorDir) {
     if (hasRootVendorDir) {
@@ -178,8 +256,6 @@ export const build: BuildV3 = async ({
     debug('found vendor directory in project root');
   }
 
-  await ensureDir(vendorDir);
-
   // no vendor directory, check for Gemfile to install
   if (!hasVendorDir) {
     if (gemfilePath) {
@@ -189,15 +265,20 @@ export const build: BuildV3 = async ({
 
       // try installing. this won't work if native extensions are required.
       // if that's the case, gems should be vendored locally before deploying.
+      debug(
+        `ruby: running bundle install (bundlerPath=${bundlerPath}) to ${bundleDir}`
+      );
       await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath, major);
+      debug('ruby: bundle install completed');
     }
   } else {
     debug('found vendor directory, skipping "bundle install"...');
   }
 
-  // try to remove gem cache to slim bundle size
+  // Try to remove gem cache to slim bundle size (from cached vendor)
   try {
-    await remove(join(vendorDir, 'cache'));
+    await remove(join(scopedVendorBaseDir, 'vendor', 'bundle', 'cache'));
+    debug('ruby: removed vendor cache directory from cache');
   } catch (e) {
     // don't do anything here
   }
@@ -218,11 +299,43 @@ export const build: BuildV3 = async ({
   // something else
   const handlerRbFilename = 'vc__handler__ruby';
 
-  const outputFiles: Files = await glob('**', workPath);
+  // Apply predefined default excludes similar to Python runtime so we don't
+  // accidentally include large/development-only folders (like .vercel) in the Lambda
+  const predefinedExcludes = [
+    '.git/**',
+    '.gitignore',
+    '.vercel/**',
+    '.pnpm-store/**',
+    '**/node_modules/**',
+    '**/.next/**',
+    '**/.nuxt/**',
+  ];
+
+  const globOptions: GlobOptions = {
+    cwd: workPath,
+    ignore: predefinedExcludes,
+  };
+
+  const outputFiles: Files = await glob('**', globOptions);
+  // Mount cached vendor directory into the Lambda output under vendor/
+  try {
+    const cachedVendorAbs = join(scopedVendorBaseDir, 'vendor');
+    if (await pathExists(cachedVendorAbs)) {
+      const vendorFiles = await glob('**', cachedVendorAbs, 'vendor');
+      for (const [p, f] of Object.entries(vendorFiles)) {
+        outputFiles[p] = f;
+      }
+      debug('ruby: included cached vendor directory from .vercel into output');
+    }
+  } catch (err) {
+    console.log('Failed to include cached vendor directory');
+    throw err;
+  }
 
   outputFiles[`${handlerRbFilename}.rb`] = new FileBlob({
     data: nowHandlerRbContents,
   });
+  debug(`ruby: wrote handler file ${handlerRbFilename}.rb`);
 
   // static analysis is impossible with ruby.
   // instead, provide `includeFiles` and `excludeFiles` config options to reduce bundle size.
@@ -259,6 +372,9 @@ export const build: BuildV3 = async ({
     runtime,
     environment: {},
   });
+  debug(
+    `ruby: lambda output prepared (files=${Object.keys(outputFiles).length})`
+  );
 
   return { output };
 };
