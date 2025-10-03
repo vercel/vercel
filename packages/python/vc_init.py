@@ -881,10 +881,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 pass
                             if token is not None:
                                 storage.reset(token)
-                                try:
-                                    app_done.set()
-                                except Exception:
-                                    pass
+                            try:
+                                app_done.set()
+                            except Exception:
+                                pass
 
                     # Run ASGI in background thread to allow returning after final flush
                     t = threading.Thread(target=run_asgi, daemon=True)
