@@ -11,7 +11,7 @@
     { "path": "/bg-file?token=4", "status": 200, "mustContain": "queued" },
     { "path": "/bg-file?token=5", "status": 200, "mustContain": "queued" },
     { "delay": 1000 },
-    { "path": "/bg-count", "status": 200, "mustContain": "5 log files", "retries": 10, "retryDelay": 1000 },
+    { "path": "/bg-logs", "status": 200, "mustContain": "5 log files", "retries": 10, "retryDelay": 1000 },
 
     { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" }
   ]

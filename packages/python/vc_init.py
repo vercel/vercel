@@ -229,7 +229,6 @@ def is_asgi_app(app: ASGI | WSGI) -> bool:
     )
 
 
-# ASGI lifespan manager
 ASGI_LIFESPAN_MANAGER = None
 ASGI_LIFESPAN_LOCK = threading.Lock()
 
@@ -652,6 +651,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         'method': self.command,
                         'path': url.path,
                         'raw_path': url.path.encode(),
+                        'state': ASGI_LIFESPAN_MANAGER.state if ASGI_LIFESPAN_MANAGER is not None else {},
                     }
 
                     if 'content-length' in self.headers:
@@ -1229,6 +1229,7 @@ elif 'app' in __vc_variables:
                 'method': payload['method'],
                 'path': path,
                 'raw_path': path.encode(),
+                'state': ASGI_LIFESPAN_MANAGER.state if ASGI_LIFESPAN_MANAGER is not None else {},
             }
 
             asgi_cycle = ASGICycle(scope)
