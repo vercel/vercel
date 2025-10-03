@@ -2978,6 +2978,55 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
+    name: 'NestJS',
+    slug: 'nestjs',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestjs.svg',
+    tagline:
+      'Framework for building efficient, scalable Node.js server-side applications',
+    description:
+      'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
+    website: 'https://nestjs.com/',
+    useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: '@nestjs/core' }],
+      some: [
+        {
+          path: 'src/main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'nestjs',
+    getOutputDirName: async () => 'public',
+  },
+  {
     name: 'xmcp',
     slug: 'xmcp',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/xmcp.svg',
