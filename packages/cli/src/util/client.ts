@@ -20,7 +20,7 @@ import fetch, {
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
-import reauthenticate from './login/reauthenticate';
+import { reauthenticate } from './login/saml';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';

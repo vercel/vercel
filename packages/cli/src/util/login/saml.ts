@@ -1,14 +1,16 @@
-import { URL } from 'url';
 import login from '../../commands/login';
 import output from '../../output-manager';
 import type Client from '../client';
 import { oauth } from '../oauth';
-import doOauthLogin from './oauth';
+import { reauthorizeTeam } from '@vercel/cli-auth/sso';
+import { bold } from 'chalk';
+import type { LoginResult, SAMLError } from './types';
+import error from '../output/error';
+import { getCommandName } from '../pkg-name';
 
 export default async function doSamlLogin(
   client: Client,
-  teamIdOrSlug: string,
-  ssoUserId?: string
+  teamIdOrSlug: string
 ) {
   if (!client.authConfig.refreshToken) {
     output.log('Token is outdated, please log in again.');
@@ -16,38 +18,70 @@ export default async function doSamlLogin(
     if (exitCode !== 0) return exitCode;
   }
 
-  const { session_id, client_id } = await decodeToken(client);
-  const params = { session_id, client_id };
-  const url = new URL(
-    `https://vercel.com/sso/${teamIdOrSlug}?${new URLSearchParams(params).toString()}`
-  );
-  return doOauthLogin(client, url, 'SAML Single Sign-On', ssoUserId);
+  await reauthorizeTeam({
+    team: teamIdOrSlug,
+    token: client.authConfig.token,
+    oauth: await oauth.init(),
+  });
+
+  return 0;
 }
 
-async function decodeToken(client: Client) {
-  const { token } = client.authConfig;
-
-  if (!token) {
-    throw new Error(
-      `No existing credentials found. Please run \`vercel login\`.`
+export async function reauthenticate(
+  client: Client,
+  error: Pick<SAMLError, 'enforced' | 'scope' | 'teamId'>
+): Promise<LoginResult> {
+  if (error.teamId && error.enforced) {
+    // If team has SAML enforced then trigger the SSO login directly
+    output.log(
+      `You must re-authenticate with SAML to use ${bold(error.scope)} scope.`
     );
+    if (await client.input.confirm(`Log in with SAML?`, true)) {
+      return doSamlLogin(client, error.scope ?? error.teamId);
+    }
+  } else {
+    // Personal account, or team that does not have SAML enforced
+    output.log(`You must re-authenticate to use ${bold(error.scope)} scope.`);
+    return showLoginPrompt(client, error);
+  }
+  return 1;
+}
+
+async function showLoginPrompt(
+  client: Client,
+  error?: Pick<SAMLError, 'teamId' | 'scope'>
+) {
+  if (error) {
+    const slug =
+      error?.scope ||
+      error?.teamId ||
+      (await readInput(client, 'Enter your Team slug:'));
+    return await doSamlLogin(client, slug);
   }
 
-  const oauthClient = await oauth.init();
-  const inspectResult = await oauthClient.introspectToken(token);
+  return await login(client, { shouldParseArgs: false });
+}
 
-  if (
-    !inspectResult.active ||
-    !inspectResult.session_id ||
-    !inspectResult.client_id
-  ) {
-    throw new Error(
-      `Invalid token type. Run \`vercel login\` to log-in and try again.`
-    );
+async function readInput(client: Client, message: string): Promise<string> {
+  let input;
+
+  while (!input) {
+    try {
+      input = await client.input.text({ message });
+    } catch (err: any) {
+      output.print('\n'); // \n
+
+      if (err.isTtyError) {
+        throw new Error(
+          error(
+            `Interactive mode not supported – please run ${getCommandName(
+              `login you@domain.com`
+            )}`
+          )
+        );
+      }
+    }
   }
 
-  return {
-    session_id: inspectResult.session_id,
-    client_id: inspectResult.client_id,
-  };
+  return input;
 }
