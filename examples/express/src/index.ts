@@ -2,13 +2,20 @@ import express from 'express'
 
 const app = express()
 
-const welcomeStrings = [
-  "Hello Express!",
-  "To learn more about Express on Vercel, visit https://vercel.com/docs/frameworks/backend/express",
-]
-
 app.get('/', (_req, res) => {
-  res.send(welcomeStrings.join('\n\n'))
+  res.send('Hello Express!')
+})
+
+app.get('/api/users/:id', (_req, res) => {
+  res.json({ id: _req.params.id })
+})
+
+app.get('/api/posts/:postId/comments/:commentId', (_req, res) => {
+  res.json({ postId: _req.params.postId, commentId: _req.params.commentId })
+})
+
+app.get('/special/chars/!@#$%^&*()', (_req, res) => {
+  res.send('Special chars route')
 })
 
 export default app

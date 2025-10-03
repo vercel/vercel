@@ -635,6 +635,14 @@ async function doBuild(
               typeof builder.experimentalBuild === 'function'
             ) {
               return builder.experimentalBuild(buildOptions);
+            } else if (
+              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
+              'name' in builder &&
+              builder.name === 'hono' &&
+              'experimentalBuild' in builder &&
+              typeof builder.experimentalBuild === 'function'
+            ) {
+              return builder.experimentalBuild(buildOptions);
             }
             return builder.build(buildOptions);
           }
