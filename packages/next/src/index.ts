@@ -2914,9 +2914,19 @@ export const diagnostics: Diagnostics = async ({
       'trace',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
+    // Collect `.next/trace-build` file
+    ...(await glob(
+      'trace-build',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
     // Collect `.next/turbopack` file
     ...(await glob(
       'turbopack',
+      path.join(basePath, diagnosticsEntrypoint, outputDirectory)
+    )),
+    // Collect `.next/trace-turbopack` file
+    ...(await glob(
+      'trace-turbopack',
       path.join(basePath, diagnosticsEntrypoint, outputDirectory)
     )),
   };

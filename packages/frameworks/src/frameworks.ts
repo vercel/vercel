@@ -2018,8 +2018,9 @@ export const frameworks = [
     ],
   },
   {
-    name: 'FastAPI (Experimental)',
+    name: 'FastAPI',
     slug: 'fastapi',
+    demo: 'https://vercel-fastapi-gamma-smoky.vercel.app/',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/fastapi.svg',
@@ -2028,7 +2029,7 @@ export const frameworks = [
     description:
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
-    useRuntime: { src: 'main.py', use: '@vercel/python' },
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
     detectors: {
       some: [
         {
@@ -2054,25 +2055,26 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        value: 'uvicorn main:app --reload --port $PORT',
+        placeholder: 'None',
+        value: null,
       },
       outputDirectory: {
         value: 'N/A',
       },
     },
-    getOutputDirName: async () => '',
+    getOutputDirName: async () => 'public',
     defaultRoutes: [
       {
         handle: 'filesystem',
       },
       {
         src: '/(.*)',
-        dest: '/main',
+        dest: '/',
       },
     ],
   },
   {
-    name: 'FastHTML (Experimental)',
+    name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
@@ -2530,6 +2532,7 @@ export const frameworks = [
     name: 'Express',
     slug: 'express',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/express.svg',
+    demo: 'https://express-vercel-example-demo.vercel.app/',
     darkModeLogo:
       'https://api-frameworks.vercel.sh/framework-logos/express-dark.svg',
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
@@ -2751,7 +2754,7 @@ export const frameworks = [
     getOutputDirName: async () => 'public',
   },
   {
-    name: 'h3',
+    name: 'H3',
     slug: 'h3',
     logo: 'https://api-frameworks.vercel.sh/framework-logos/h3.svg',
     tagline: 'Universal, Tiny, and Fast Servers',
@@ -2972,6 +2975,55 @@ export const frameworks = [
       },
     },
     dependency: 'h3',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'NestJS',
+    slug: 'nestjs',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestjs.svg',
+    tagline:
+      'Framework for building efficient, scalable Node.js server-side applications',
+    description:
+      'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
+    website: 'https://nestjs.com/',
+    useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: '@nestjs/core' }],
+      some: [
+        {
+          path: 'src/main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'nestjs',
     getOutputDirName: async () => 'public',
   },
   {

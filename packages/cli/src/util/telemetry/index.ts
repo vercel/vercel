@@ -124,7 +124,7 @@ export class TelemetryClient {
     });
   }
 
-  protected trackAgenticUse(agent: string | false) {
+  protected trackAgenticUse(agent: string | undefined) {
     if (agent) {
       this.track({
         key: 'agent',

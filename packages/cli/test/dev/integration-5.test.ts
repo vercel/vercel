@@ -587,3 +587,19 @@ describe('[vercel dev] ESM serverless functions', () => {
     )
   );
 });
+
+describe('[vercel dev] Hono', () => {
+  test(
+    '[vercel dev] Hono with public folder',
+    testFixtureStdio(
+      'hono-no-export',
+      async (_testPath: any, port: number) => {
+        const res = await fetch(`http://localhost:${port}/test.json`);
+        validateResponseHeaders(res);
+        const json2 = await res.json();
+        expect(json2).toHaveProperty('message', 'Hello Hono!');
+      },
+      { skipDeploy: true }
+    )
+  );
+});

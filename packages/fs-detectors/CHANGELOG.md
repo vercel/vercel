@@ -1,5 +1,39 @@
 # @vercel/fs-detectors
 
+## 5.5.8
+
+### Patch Changes
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`a26744ba059edf435a31ac5967fa01aeb9d1647f`](https://github.com/vercel/vercel/commit/a26744ba059edf435a31ac5967fa01aeb9d1647f), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/frameworks@3.10.0
+
+## 5.5.7
+
+### Patch Changes
+
+- Updated dependencies [[`3eb70a1571f5740859d25a0dcfb8d03c9042ba52`](https://github.com/vercel/vercel/commit/3eb70a1571f5740859d25a0dcfb8d03c9042ba52)]:
+  - @vercel/frameworks@3.9.3
+
+## 5.5.6
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339)]:
+  - @vercel/frameworks@3.9.2
+
+## 5.5.5
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
+- Updated dependencies [[`e1c2e723925598e69811da2004bf023658bfdb9e`](https://github.com/vercel/vercel/commit/e1c2e723925598e69811da2004bf023658bfdb9e)]:
+  - @vercel/frameworks@3.9.1
+
 ## 5.5.4
 
 ### Patch Changes

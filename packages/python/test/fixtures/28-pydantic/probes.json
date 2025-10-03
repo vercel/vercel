@@ -1,6 +1,12 @@
 {
   "probes": [
     {
+      "logMustContain": "uv at \""
+    },
+    {
+      "logMustNotContain": "falling back to pip"
+    },
+    {
       "path": "/api/hello",
       "method": "POST",
       "body": {

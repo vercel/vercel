@@ -1,5 +1,104 @@
 # vercel
 
+## 48.2.0
+
+### Minor Changes
+
+- Add --status flag to list command for deployment filtering ([#13993](https://github.com/vercel/vercel/pull/13993))
+
+  The `vercel list` command now supports filtering deployments by their status using the `--status` or `-s` flag. This feature allows users to filter deployments by one or more status values.
+
+  Features:
+
+  - Filter by single status: `vercel list --status READY`
+  - Filter by multiple statuses: `vercel list --status READY,BUILDING`
+  - Support for all deployment statuses: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED
+  - Input validation with clear error messages
+  - Compatible with existing filters (environment, meta, etc.)
+  - Comprehensive test coverage and telemetry tracking
+
+### Patch Changes
+
+- Updated dependencies [[`2eebd3a0029d20070811c9fc8dd37f6edb947f26`](https://github.com/vercel/vercel/commit/2eebd3a0029d20070811c9fc8dd37f6edb947f26), [`4f0ff3381b6ff2dec417413993ea749577441586`](https://github.com/vercel/vercel/commit/4f0ff3381b6ff2dec417413993ea749577441586)]:
+  - @vercel/python@5.0.7
+
+## 48.1.7
+
+### Patch Changes
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`ede42e5bd507996632b0b0630cfd757ddcc8a9f1`](https://github.com/vercel/vercel/commit/ede42e5bd507996632b0b0630cfd757ddcc8a9f1), [`a96e57b68cf1344a147862c957024a9c48330aae`](https://github.com/vercel/vercel/commit/a96e57b68cf1344a147862c957024a9c48330aae), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/python@5.0.6
+
+## 48.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`9997fe264bb50c0f9dc610a276a0fa4049b8c72e`](https://github.com/vercel/vercel/commit/9997fe264bb50c0f9dc610a276a0fa4049b8c72e)]:
+  - @vercel/express@0.0.22
+
+## 48.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`1327110e0e866b44c6012069442ca2b16a6706b2`](https://github.com/vercel/vercel/commit/1327110e0e866b44c6012069442ca2b16a6706b2), [`057a44929ceeafd6848ade9ac5cc47ec0d357496`](https://github.com/vercel/vercel/commit/057a44929ceeafd6848ade9ac5cc47ec0d357496)]:
+  - @vercel/next@4.13.0
+  - @vercel/express@0.0.21
+
+## 48.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`ec3a2a8a334976d94d3cc79e1b134e11f75cd78f`](https://github.com/vercel/vercel/commit/ec3a2a8a334976d94d3cc79e1b134e11f75cd78f)]:
+  - @vercel/express@0.0.20
+
+## 48.1.3
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
+- Updated dependencies [[`353eca54fe2a892ca04fa66a1665d89d7a722a7a`](https://github.com/vercel/vercel/commit/353eca54fe2a892ca04fa66a1665d89d7a722a7a)]:
+  - @vercel/express@0.0.19
+
+## 48.1.2
+
+### Patch Changes
+
+- Fix relative path for experimental standalone mode ([#13973](https://github.com/vercel/vercel/pull/13973))
+
+## 48.1.1
+
+### Patch Changes
+
+- Add support for VERCEL_EXPERIMENTAL_STANDALONE_BUILD build env ([#13948](https://github.com/vercel/vercel/pull/13948))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339), [`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0), [`6142e863d187c54af7f774f72412f33ca93ed967`](https://github.com/vercel/vercel/commit/6142e863d187c54af7f774f72412f33ca93ed967)]:
+  - @vercel/h3@0.1.2
+  - @vercel/node@5.3.24
+  - @vercel/detect-agent@1.0.0
+  - @vercel/express@0.0.18
+  - @vercel/hono@0.1.2
+
+## 48.1.0
+
+### Minor Changes
+
+- Add `env update` command to update an environment variable. ([#13894](https://github.com/vercel/vercel/pull/13894))
+
+  Previously it was required to remove and re-add the environment variable to update it.
+
+### Patch Changes
+
+- Updated dependencies [[`07d80bc46919ed8d0ad9dc5938848d39224d7db2`](https://github.com/vercel/vercel/commit/07d80bc46919ed8d0ad9dc5938848d39224d7db2), [`7e4b04b4f110142b5fd09ba4567b79ac3aa432c5`](https://github.com/vercel/vercel/commit/7e4b04b4f110142b5fd09ba4567b79ac3aa432c5), [`20849c717da6d26d3487c414bee1560d0dd78909`](https://github.com/vercel/vercel/commit/20849c717da6d26d3487c414bee1560d0dd78909), [`aaddc91799f5b26a626dd1a7c0e070f334d09be5`](https://github.com/vercel/vercel/commit/aaddc91799f5b26a626dd1a7c0e070f334d09be5)]:
+  - @vercel/python@5.0.5
+  - @vercel/next@4.12.6
+  - @vercel/node@5.3.23
+  - @vercel/express@0.0.17
+  - @vercel/h3@0.1.1
+  - @vercel/hono@0.1.1
+
 ## 48.0.3
 
 ### Patch Changes

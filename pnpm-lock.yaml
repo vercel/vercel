@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.0
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.9.0
+        specifier: 3.10.0
         version: link:../packages/frameworks
 
   internals/constants:
@@ -343,10 +343,10 @@ importers:
         specifier: 12.1.0
         version: link:../build-utils
       '@vercel/detect-agent':
-        specifier: 0.2.0
+        specifier: workspace:*
         version: link:../detect-agent
       '@vercel/express':
-        specifier: 0.0.16
+        specifier: 0.0.22
         version: link:../express
       '@vercel/fun':
         specifier: 1.1.6
@@ -355,22 +355,22 @@ importers:
         specifier: 3.2.3
         version: link:../go
       '@vercel/h3':
-        specifier: 0.1.0
+        specifier: 0.1.2
         version: link:../h3
       '@vercel/hono':
-        specifier: 0.1.0
+        specifier: 0.1.2
         version: link:../hono
       '@vercel/hydrogen':
         specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.12.5
+        specifier: 4.13.0
         version: link:../next
       '@vercel/node':
-        specifier: 5.3.22
+        specifier: 5.3.24
         version: link:../node
       '@vercel/python':
-        specifier: 5.0.4
+        specifier: 5.0.7
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.6
@@ -527,16 +527,16 @@ importers:
         specifier: workspace:*
         version: link:../../internals/types
       '@vercel/client':
-        specifier: 16.0.1
+        specifier: 17.0.0
         version: link:../client
       '@vercel/error-utils':
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.0
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.4
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -929,16 +929,34 @@ importers:
 
   packages/express:
     dependencies:
+      '@vercel/nft':
+        specifier: 0.30.1
+        version: 0.30.1
       '@vercel/node':
-        specifier: 5.3.22
+        specifier: 5.3.24
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      path-to-regexp:
+        specifier: 8.3.0
+        version: 8.3.0
+      rolldown:
+        specifier: 1.0.0-beta.35
+        version: 1.0.0-beta.35
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
+      '@types/fs-extra':
+        specifier: '11'
+        version: 11.0.1
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -951,9 +969,6 @@ importers:
       execa:
         specifier: 3.2.0
         version: 3.2.0
-      fs-extra:
-        specifier: 11.1.0
-        version: 11.1.0
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1034,7 +1049,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.0
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -1254,7 +1269,7 @@ importers:
   packages/h3:
     dependencies:
       '@vercel/node':
-        specifier: 5.3.22
+        specifier: 5.3.24
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
@@ -1287,16 +1302,34 @@ importers:
 
   packages/hono:
     dependencies:
+      '@vercel/nft':
+        specifier: 0.30.1
+        version: 0.30.1
       '@vercel/node':
-        specifier: 5.3.22
+        specifier: 5.3.24
         version: link:../node
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      path-to-regexp:
+        specifier: 8.3.0
+        version: 8.3.0
+      rolldown:
+        specifier: 1.0.0-beta.35
+        version: 1.0.0-beta.35
       ts-morph:
         specifier: 12.0.0
         version: 12.0.0
+      zod:
+        specifier: 3.22.4
+        version: 3.22.4
     devDependencies:
+      '@types/fs-extra':
+        specifier: '11'
+        version: 11.0.1
       '@types/jest':
         specifier: 27.5.1
         version: 27.5.1
@@ -1309,9 +1342,6 @@ importers:
       execa:
         specifier: 3.2.0
         version: 3.2.0
-      fs-extra:
-        specifier: 11.1.0
-        version: 11.1.0
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
@@ -1351,6 +1381,40 @@ importers:
         version: 16.0.0
 
   packages/mcp-adapter: {}
+
+  packages/nestjs:
+    dependencies:
+      '@vercel/node':
+        specifier: 5.3.24
+        version: link:../node
+      '@vercel/static-config':
+        specifier: 3.1.2
+        version: link:../static-config
+    devDependencies:
+      '@types/jest':
+        specifier: 27.5.1
+        version: 27.5.1
+      '@types/node':
+        specifier: 14.18.33
+        version: 14.18.33
+      '@vercel/build-utils':
+        specifier: 12.1.0
+        version: link:../build-utils
+      execa:
+        specifier: 3.2.0
+        version: 3.2.0
+      fs-extra:
+        specifier: 11.1.0
+        version: 11.1.0
+      jest-junit:
+        specifier: 16.0.0
+        version: 16.0.0
+      vite:
+        specifier: ^5.1.6
+        version: 5.1.8(@types/node@14.18.33)
+      vitest:
+        specifier: ^2.0.1
+        version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/next:
     dependencies:
@@ -1613,13 +1677,6 @@ importers:
         version: 2.1.4(@edge-runtime/vm@3.2.0)(@types/node@16.18.11)
 
   packages/oidc:
-    dependencies:
-      '@types/ms':
-        specifier: 2.1.0
-        version: 2.1.0
-      ms:
-        specifier: 2.1.3
-        version: 2.1.3
     devDependencies:
       tinyspawn:
         specifier: 1.3.1
@@ -1957,10 +2014,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.9.0
+        specifier: 3.10.0
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.5.4
+        specifier: 5.5.8
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.1.1
@@ -3808,29 +3865,26 @@ packages:
     dependencies:
       '@edge-runtime/primitives': 4.1.0
 
-  /@emnapi/core@1.4.3:
-    resolution: {integrity: sha512-4m62DuCE07lw01soJwPiBGC0nAww0Q+RY70VZ+n49yDIO13yyinhbWCeNnaob0lakDtWQzSdtNWzJeOJt2ma+g==}
+  /@emnapi/core@1.5.0:
+    resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
     requiresBuild: true
     dependencies:
-      '@emnapi/wasi-threads': 1.0.2
+      '@emnapi/wasi-threads': 1.1.0
       tslib: 2.8.1
-    dev: true
     optional: true
 
-  /@emnapi/runtime@1.4.3:
-    resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
+  /@emnapi/runtime@1.5.0:
+    resolution: {integrity: sha512-97/BJ3iXHww3djw6hYIfErCZFee7qCtrneuLa20UXFCOTCfBM2cvQHjWJ2EG0s0MtdNwInarqCTz35i4wWXHsQ==}
     requiresBuild: true
     dependencies:
       tslib: 2.8.1
-    dev: true
     optional: true
 
-  /@emnapi/wasi-threads@1.0.2:
-    resolution: {integrity: sha512-5n3nTJblwRi8LlXkJ9eBzu+kZR8Yxcc7ubakyQTFzPMtIhFpUBRbsnc2Dv88IZDIbCDlBiWrknhB4Lsz7mg6BA==}
+  /@emnapi/wasi-threads@1.1.0:
+    resolution: {integrity: sha512-WI0DdZ8xFSbgMjR1sFsKABJ/C5OnRrjT06JXbZKexJGrDuPTzZdDYfFlsgcCXCyf+suG5QU2e/y1Wo2V/OapLQ==}
     requiresBuild: true
     dependencies:
       tslib: 2.8.1
-    dev: true
     optional: true
 
   /@esbuild/aix-ppc64@0.19.12:
@@ -4967,10 +5021,20 @@ packages:
     resolution: {integrity: sha512-OKRBiajrrxB9ATokgEQoG87Z25c67pCpYcCwmXYX8PBftC9pBfN18gnm/fh1wurSLEKIAt+QRFLFCQISrb66Jg==}
     requiresBuild: true
     dependencies:
-      '@emnapi/core': 1.4.3
-      '@emnapi/runtime': 1.4.3
+      '@emnapi/core': 1.5.0
+      '@emnapi/runtime': 1.5.0
       '@tybys/wasm-util': 0.9.0
     dev: true
+    optional: true
+
+  /@napi-rs/wasm-runtime@1.0.5:
+    resolution: {integrity: sha512-TBr9Cf9onSAS2LQ2+QHx6XcC6h9+RIzJgbqG3++9TUZSH204AwEy5jg3BTQ0VATsyoGj4ee49tN/y6rvaOOtcg==}
+    requiresBuild: true
+    dependencies:
+      '@emnapi/core': 1.5.0
+      '@emnapi/runtime': 1.5.0
+      '@tybys/wasm-util': 0.10.1
+    dev: false
     optional: true
 
   /@next/env@11.1.2:
@@ -5047,6 +5111,15 @@ packages:
     dependencies:
       which: 3.0.0
     dev: true
+
+  /@oxc-project/runtime@0.82.3:
+    resolution: {integrity: sha512-LNh5GlJvYHAnMurO+EyA8jJwN1rki7l3PSHuosDh2I7h00T6/u9rCkUjg/SvPmT1CZzvhuW0y+gf7jcqUy/Usg==}
+    engines: {node: '>=6.9.0'}
+    dev: false
+
+  /@oxc-project/types@0.82.3:
+    resolution: {integrity: sha512-6nCUxBnGX0c6qfZW5MaF6/fmu5dHJDMiMPaioKHKs5mi5+8/FHQ7WGjgQIz1zxpmceMYfdIXkOaLYE+ejbuOtA==}
+    dev: false
 
   /@pkgjs/parseargs@0.11.0:
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -5139,6 +5212,124 @@ packages:
       typescript: 5.7.3
       undici: 6.21.2
     dev: true
+
+  /@rolldown/binding-android-arm64@1.0.0-beta.35:
+    resolution: {integrity: sha512-zVTg0544Ib1ldJSWwjy8URWYHlLFJ98rLnj+2FIj5fRs4KqGKP4VgH/pVUbXNGxeLFjItie6NSK1Un7nJixneQ==}
+    cpu: [arm64]
+    os: [android]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-darwin-arm64@1.0.0-beta.35:
+    resolution: {integrity: sha512-WPy0qx22CABTKDldEExfpYHWHulRoPo+m/YpyxP+6ODUPTQexWl8Wp12fn1CVP0xi0rOBj7ugs6+kKMAJW56wQ==}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-darwin-x64@1.0.0-beta.35:
+    resolution: {integrity: sha512-3k1TabJafF/GgNubXMkfp93d5p30SfIMOmQ5gm1tFwO+baMxxVPwDs3FDvSl+feCWwXxBA+bzemgkaDlInmp1Q==}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-freebsd-x64@1.0.0-beta.35:
+    resolution: {integrity: sha512-GAiapN5YyIocnBVNEiOxMfWO9NqIeEKKWohj1sPLGc61P+9N1meXOOCiAPbLU+adXq0grtbYySid+Or7f2q+Mg==}
+    cpu: [x64]
+    os: [freebsd]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.35:
+    resolution: {integrity: sha512-okPKKIE73qkUMvq7dxDyzD0VIysdV4AirHqjf8tGTjuNoddUAl3WAtMYbuZCEKJwUyI67UINKO1peFVlYEb+8w==}
+    cpu: [arm]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-linux-arm64-gnu@1.0.0-beta.35:
+    resolution: {integrity: sha512-Nky8Q2cxyKVkEETntrvcmlzNir5khQbDfX3PflHPbZY7XVZalllRqw7+MW5vn+jTsk5BfKVeLsvrF4344IU55g==}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-linux-arm64-musl@1.0.0-beta.35:
+    resolution: {integrity: sha512-8aHpWVSfZl3Dy2VNFG9ywmlCPAJx45g0z+qdOeqmYceY7PBAT4QGzii9ig1hPb1pY8K45TXH44UzQwr2fx352Q==}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-linux-x64-gnu@1.0.0-beta.35:
+    resolution: {integrity: sha512-1r1Ac/vTcm1q4kRiX/NB6qtorF95PhjdCxKH3Z5pb+bWMDZnmcz18fzFlT/3C6Qpj/ZqUF+EUrG4QEDXtVXGgg==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-linux-x64-musl@1.0.0-beta.35:
+    resolution: {integrity: sha512-AFl1LnuhUBDfX2j+cE6DlVGROv4qG7GCPDhR1kJqi2+OuXGDkeEjqRvRQOFErhKz1ckkP/YakvN7JheLJ2PKHQ==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-openharmony-arm64@1.0.0-beta.35:
+    resolution: {integrity: sha512-Tuwb8vPs+TVJlHhyLik+nwln/burvIgaPDgg6wjNZ23F1ttjZi0w0rQSZfAgsX4jaUbylwCETXQmTp3w6vcJMw==}
+    cpu: [arm64]
+    os: [openharmony]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-wasm32-wasi@1.0.0-beta.35:
+    resolution: {integrity: sha512-rG0OozgqNUYcpu50MpICMlJflexRVtQfjlN9QYf6hoel46VvY0FbKGwBKoeUp2K5D4i8lV04DpEMfTZlzRjeiA==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
+    requiresBuild: true
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.0.5
+    dev: false
+    optional: true
+
+  /@rolldown/binding-win32-arm64-msvc@1.0.0-beta.35:
+    resolution: {integrity: sha512-WeOfAZrycFo9+ZqTDp3YDCAOLolymtKGwImrr9n+OW0lpwI2UKyKXbAwGXRhydAYbfrNmuqWyfyoAnLh3X9Hjg==}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-win32-ia32-msvc@1.0.0-beta.35:
+    resolution: {integrity: sha512-XkLT7ikKGiUDvLh7qtJHRukbyyP1BIrD1xb7A+w4PjIiOKeOH8NqZ+PBaO4plT7JJnLxx+j9g/3B7iylR1nTFQ==}
+    cpu: [ia32]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/binding-win32-x64-msvc@1.0.0-beta.35:
+    resolution: {integrity: sha512-rftASFKVzjbcQHTCYHaBIDrnQFzbeV50tm4hVugG3tPjd435RHZC2pbeGV5IPdKEqyJSuurM/GfbV3kLQ3LY/A==}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@rolldown/pluginutils@1.0.0-beta.35:
+    resolution: {integrity: sha512-slYrCpoxJUqzFDDNlvrOYRazQUNRvWPjXA17dAOISY3rDMxX6k8K4cj2H+hEYMHF81HO3uNd5rHVigAWRM5dSg==}
+    dev: false
 
   /@rollup/pluginutils@5.1.4:
     resolution: {integrity: sha512-USm05zrsFxYLPdWWq+K3STlWiT/3ELn3RcV5hJMghpeAIhxfsUIg6mt12CBJBInWMV4VneoV7SfGv8xIwo2qNQ==}
@@ -6544,6 +6735,14 @@ packages:
   /@tsconfig/node16@1.0.4:
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
 
+  /@tybys/wasm-util@0.10.1:
+    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
+    requiresBuild: true
+    dependencies:
+      tslib: 2.8.1
+    dev: false
+    optional: true
+
   /@tybys/wasm-util@0.9.0:
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
     requiresBuild: true
@@ -6907,10 +7106,6 @@ packages:
   /@types/ms@0.7.31:
     resolution: {integrity: sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==}
     dev: true
-
-  /@types/ms@2.1.0:
-    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
-    dev: false
 
   /@types/multistream@2.1.1:
     resolution: {integrity: sha512-PqavtNFnMyXRZS5vuW16wMOKeJUCD5PIGHdNBHzF5Urjncsij90hRQ82Wcy9+uSdnmrR2Gfao6xoJVq1wAWzbA==}
@@ -8465,6 +8660,11 @@ packages:
   /ansi-styles@6.2.1:
     resolution: {integrity: sha512-bN798gFfQX+viw3R7yrGWRqnrN2oRkEkUjjl4JNn4E8GxxbjtG3FbrEIIY3l8/hrwUwIeCZvi4QuOTP4MErVug==}
     engines: {node: '>=12'}
+
+  /ansis@4.1.0:
+    resolution: {integrity: sha512-BGcItUBWSMRgOCe+SVZJ+S7yTRG0eGt9cXAHev72yuGcY23hnLA7Bky5L/xLyPINoSN95geovfBkqoTlNZYa7w==}
+    engines: {node: '>=14'}
+    dev: false
 
   /any-observable@0.3.0(rxjs@6.6.7):
     resolution: {integrity: sha512-/FQM1EDkTsf63Ub2C6O7GuYFDsSXUwsaZDurV0np41ocwq0jthUAYCmhBX9f+KwlaCgIuWyr/4WlUQUBfKfZog==}
@@ -14754,6 +14954,10 @@ packages:
     resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
     dev: false
 
+  /path-to-regexp@8.3.0:
+    resolution: {integrity: sha512-7jdwVIRtsP8MYpdXSwOS0YdD0Du+qOoF/AEPIt88PcCFrZCzx41oxku1jD88hZBwbNUIEfpqvuhjFaMAqMTWnA==}
+    dev: false
+
   /path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
@@ -15448,6 +15652,31 @@ packages:
     dependencies:
       glob: 7.2.3
     dev: true
+
+  /rolldown@1.0.0-beta.35:
+    resolution: {integrity: sha512-gJATyqcsJe0Cs8RMFO8XgFjfTc0lK1jcSvirDQDSIfsJE+vt53QH/Ob+OBSJsXb98YtZXHfP/bHpELpPwCprow==}
+    hasBin: true
+    dependencies:
+      '@oxc-project/runtime': 0.82.3
+      '@oxc-project/types': 0.82.3
+      '@rolldown/pluginutils': 1.0.0-beta.35
+      ansis: 4.1.0
+    optionalDependencies:
+      '@rolldown/binding-android-arm64': 1.0.0-beta.35
+      '@rolldown/binding-darwin-arm64': 1.0.0-beta.35
+      '@rolldown/binding-darwin-x64': 1.0.0-beta.35
+      '@rolldown/binding-freebsd-x64': 1.0.0-beta.35
+      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-beta.35
+      '@rolldown/binding-linux-arm64-gnu': 1.0.0-beta.35
+      '@rolldown/binding-linux-arm64-musl': 1.0.0-beta.35
+      '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.35
+      '@rolldown/binding-linux-x64-musl': 1.0.0-beta.35
+      '@rolldown/binding-openharmony-arm64': 1.0.0-beta.35
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.35
+      '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.35
+      '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.35
+      '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.35
+    dev: false
 
   /rollup@3.29.5:
     resolution: {integrity: sha512-GVsDdsbJzzy4S/v3dqWPJ7EfvZJfCHiDqe80IyrF59LYuP+e6U1LJoUqeuqRbwAWoMNoXivMNeNAOf5E22VA1w==}
@@ -18141,3 +18370,7 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  /zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false

@@ -279,8 +279,8 @@ const main = async () => {
     },
   });
 
-  const agent = await determineAgent();
-  telemetry.trackAgenticUse(agent);
+  const { agent } = await determineAgent();
+  telemetry.trackAgenticUse(agent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
