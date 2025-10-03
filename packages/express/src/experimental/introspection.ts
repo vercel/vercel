@@ -164,7 +164,9 @@ const invokeFunction = async (
 };
 
 const expressShimSource = (args: { outputDir: string }) => {
-  const pathToExpress = require_.resolve('express');
+  const pathToExpress = require_.resolve('express', {
+    paths: [args.outputDir],
+  });
   const introspectionPath = getIntrospectionPath(args);
   return `
 const fs = require('fs');
@@ -204,10 +206,11 @@ const extractRoutes = () => {
   routesExtracted = true;
 
   const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
-  if (!app || !app._router) {
+  if (!app) {
     return;
   }
-  for (const route of app._router.stack) {
+  const router = app._router || app.router
+  for (const route of router.stack) {
     if(route.route) {
       const m = [];
       for (const method of methods) {

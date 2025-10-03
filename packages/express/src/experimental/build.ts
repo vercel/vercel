@@ -1,5 +1,5 @@
 export const version = 2;
-import { BuildV2, Lambda } from '@vercel/build-utils';
+import { BuildV2, NodejsLambda } from '@vercel/build-utils';
 import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
 import { rolldown } from './rolldown';
 import { entrypointCallback } from './find-entrypoint';
@@ -17,12 +17,18 @@ export const build: BuildV2 = async args => {
 
   const { routes } = await introspectApp(args, rolldownResult);
 
-  const lambda = new Lambda({
+  const lambda = new NodejsLambda({
     runtime: downloadResult.nodeVersion.runtime,
     ...rolldownResult,
+    shouldAddHelpers: false,
+    shouldAddSourcemapSupport: true,
+    framework: {
+      slug: 'express',
+    },
+    awsLambdaHandler: '',
   });
 
-  const output: Record<string, Lambda> = { index: lambda };
+  const output: Record<string, NodejsLambda> = { index: lambda };
   for (const route of routes) {
     if (route.dest) {
       if (route.dest === '/') {
