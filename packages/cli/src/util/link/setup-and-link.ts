@@ -149,7 +149,8 @@ export default async function setupAndLink(
       },
       project.name,
       org.slug,
-      successEmoji
+      successEmoji,
+      autoConfirm
     );
     return { status: 'linked', org, project };
   }
