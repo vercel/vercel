@@ -1,12 +1,9 @@
-import { Files, FileFsRef, type BuildV3, glob } from '@vercel/build-utils';
-// @ts-expect-error - FIXME: framework build is not exported
-import { build as nodeBuild } from '@vercel/node';
 import { createRequire } from 'module';
 import { join } from 'path';
 import fs from 'fs';
-
-const frameworkName = 'express';
-const REGEX = /(?:from|require|import)\s*(?:\(\s*)?["']express["']\s*(?:\))?/g;
+import { BuildV3, Files } from './types';
+import glob from './fs/glob';
+import FileFsRef from './file-fs-ref';
 
 const validFilenames = [
   'app',
@@ -17,40 +14,42 @@ const validFilenames = [
   'src/server',
 ];
 
+const backendFrameworks = ['express', 'hono', 'h3'];
+
+export const isBackendFramework = (frameworkName?: string | null) => {
+  return frameworkName && backendFrameworks.includes(frameworkName);
+};
+
 export const require_ = createRequire(__filename);
 
 const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
+
+export const validEntrypoints = validFilenames.flatMap(filename =>
+  validExtensions.map(extension => `${filename}.${extension}`)
+);
 
 const entrypointsForMessage = validFilenames
   .map(filename => `- ${filename}.{${validExtensions.join(',')}}`)
   .join('\n');
 
-export const build: BuildV3 = async args => {
+export const prepareBackend = async (
+  args: Parameters<BuildV3>[0],
+  frameworkName: string,
+  REGEX: RegExp
+) => {
   // Introducing new behavior for the node builder where Typescript errors always
   // fail the build. Previously, this relied on noEmitOnError being true in the tsconfig.json
   process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
 
   // Express's rendering engine support using the views directory as the entrypoint.
-  const includeFiles = ['views/**/*'];
-  const includeFilesFromConfig = args.config.includeFiles;
-  if (includeFilesFromConfig) {
-    includeFiles.push(...includeFilesFromConfig);
-  }
-
-  const res = await nodeBuild({
+  const nodeBuilderArgs = {
     ...args,
-    config: {
-      ...args.config,
-      includeFiles,
-    },
-    // this is package.json, but we'll replace it with the return value of the entrypointCallback
-    // after install and build scripts have had a chance to run
     entrypoint: 'package.json',
     considerBuildCommand: true,
     entrypointCallback: async () => {
-      return entrypointCallback(args);
+      return entrypointCallback(args, frameworkName, REGEX);
     },
-  });
+  };
   let version = undefined;
   try {
     const resolved = require_.resolve(`${frameworkName}/package.json`, {
@@ -63,14 +62,18 @@ export const build: BuildV3 = async args => {
   } catch (e) {
     // ignore
   }
-  res.output.framework = {
+  const framework = {
     slug: frameworkName,
     version,
   };
-  return res;
+  return { nodeBuilderArgs, framework };
 };
 
-export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
+export const entrypointCallback = async (
+  args: Parameters<BuildV3>[0],
+  frameworkName: string,
+  REGEX: RegExp
+) => {
   const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
   // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
   const entrypointGlob = `{${validFilenames
@@ -84,14 +87,17 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   // if an output directory is specified, look there first for an entrypoint
   if (dir) {
     const { entrypoint: entrypointFromOutputDir, entrypointsNotMatchingRegex } =
-      findEntrypoint(await glob(entrypointGlob, join(args.workPath, dir)));
+      findEntrypoint(
+        await glob(entrypointGlob, join(args.workPath, dir)),
+        REGEX
+      );
     if (entrypointFromOutputDir) {
       return join(dir, entrypointFromOutputDir);
     }
 
     if (entrypointsNotMatchingRegex.length > 0) {
       throw new Error(
-        `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+        `No entrypoint found which imports ${frameworkName}. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
       );
     }
     throw new Error(
@@ -100,7 +106,7 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
   }
   const files = await glob(entrypointGlob, args.workPath);
   const { entrypoint: entrypointFromRoot, entrypointsNotMatchingRegex } =
-    findEntrypoint(files);
+    findEntrypoint(files, REGEX);
   if (entrypointFromRoot) {
     return entrypointFromRoot;
   }
@@ -111,7 +117,12 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
       args.workPath
     );
     if (entrypointFromPackageJson[mainPackageEntrypoint]) {
-      if (checkMatchesRegex(entrypointFromPackageJson[mainPackageEntrypoint])) {
+      if (
+        checkMatchesRegex(
+          entrypointFromPackageJson[mainPackageEntrypoint],
+          REGEX
+        )
+      ) {
         return mainPackageEntrypoint;
       }
     }
@@ -119,7 +130,7 @@ export const entrypointCallback = async (args: Parameters<BuildV3>[0]) => {
 
   if (entrypointsNotMatchingRegex.length > 0) {
     throw new Error(
-      `No entrypoint found which imports express. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
+      `No entrypoint found which imports ${frameworkName}. Found possible ${pluralize('entrypoint', entrypointsNotMatchingRegex.length)}: ${entrypointsNotMatchingRegex.join(', ')}`
     );
   }
   throw new Error(
@@ -131,7 +142,7 @@ function pluralize(word: string, count: number) {
   return count === 1 ? word : `${word}s`;
 }
 
-export const findEntrypoint = (files: Record<string, FileFsRef>) => {
+const findEntrypoint = (files: Record<string, FileFsRef>, REGEX: RegExp) => {
   const allEntrypoints = validFilenames.flatMap(filename =>
     validExtensions.map(extension => `${filename}.${extension}`)
   );
@@ -143,14 +154,14 @@ export const findEntrypoint = (files: Record<string, FileFsRef>) => {
   const entrypointsMatchingRegex = possibleEntrypointsInFiles.filter(
     entrypoint => {
       const file = files[entrypoint];
-      return checkMatchesRegex(file);
+      return checkMatchesRegex(file, REGEX);
     }
   );
 
   const entrypointsNotMatchingRegex = possibleEntrypointsInFiles.filter(
     entrypoint => {
       const file = files[entrypoint];
-      return !checkMatchesRegex(file);
+      return !checkMatchesRegex(file, REGEX);
     }
   );
 
@@ -167,7 +178,7 @@ export const findEntrypoint = (files: Record<string, FileFsRef>) => {
   };
 };
 
-const checkMatchesRegex = (file: FileFsRef) => {
+const checkMatchesRegex = (file: FileFsRef, REGEX: RegExp) => {
   const content = fs.readFileSync(file.fsPath, 'utf-8');
   const matchesContent = content.match(REGEX);
   return matchesContent !== null;
