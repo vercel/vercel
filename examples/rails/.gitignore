@@ -36,5 +36,10 @@
 .vercel/
 .vercel
 
-/vendor/
+vendor/
 /vendor/bundle
+
+/tmp/
+tmp/
+log/
+/log/
