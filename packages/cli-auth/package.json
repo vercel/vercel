@@ -1,0 +1,40 @@
+{
+  "name": "@vercel/cli-auth",
+  "description": "Used by Vercel's CLIs to handle authentication",
+  "version": "0.0.0",
+  "private": false,
+  "files": [
+    "*.js",
+    "*.js.map",
+    "*.ts",
+    "!vitest.config.mts",
+    "!**/*.test.ts"
+  ],
+  "scripts": {
+    "build": "pnpm clear && tsc -b",
+    "clear": "rm -rf *.js *.d.ts *.js.map tsconfig.tsbuildinfo",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "async-listen": "3.0.0",
+    "open": "8.4.0",
+    "xdg-app-paths": "5",
+    "zod": "4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "22",
+    "memfs": "4.14.0",
+    "typescript": "5.9.2",
+    "vite": "7.1.7",
+    "vitest": "2.1.4"
+  },
+  "ci-cd": {
+    "//": "https://www.notion.so/1d6e06b059c48017a7afe7e8698de336",
+    "test": {
+      "requiredDependencies": [
+        "@api/tests"
+      ]
+    }
+  }
+}
