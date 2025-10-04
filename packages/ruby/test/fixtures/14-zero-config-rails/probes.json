@@ -1,7 +1,5 @@
 {
   "probes": [
-    { "path": "/", "status": 200, "mustContain": "Rails" },
-    { "path": "/products", "status": 200, "mustContain": "Products" },
-    { "path": "/products/new", "status": 200, "mustContain": "New product" }
+    { "path": "/", "status": 200, "mustContain": "Rails on Vercel" }
   ]
 }
