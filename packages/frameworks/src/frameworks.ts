@@ -3115,7 +3115,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/config',
+        dest: '/',
       },
     ],
   },
