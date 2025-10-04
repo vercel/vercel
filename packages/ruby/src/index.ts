@@ -71,14 +71,15 @@ async function detectVendorPlatforms(vendorRoot: string): Promise<string[]> {
 function isPlatformCompatible(platforms: string[]): boolean {
   if (platforms.length === 0) return true; // no native extensions
   const wantsLinux = process.platform === 'linux';
-  const wantsArch = process.arch === 'arm64' ? 'arm64' : 'x86_64';
+  const wantsArch =
+    process.arch === 'arm64' ? (wantsLinux ? 'aarch64' : 'arm64') : 'x86_64';
   // Accept any entry that matches both OS and arch tokens
   return platforms.some(p => {
     const lower = p.toLowerCase();
     const osOk = wantsLinux
       ? lower.includes('linux')
       : lower.includes('darwin');
-    // Ruby extension directories often use "x86_64" and "arm64" tokens
+    // Ruby extensions: "x86_64" (x86_64), "aarch64" (Linux ARM64), "arm64" (Darwin ARM64)
     const archOk = lower.includes(wantsArch);
     return osOk && archOk;
   });
@@ -298,7 +299,7 @@ export const build: BuildV3 = async ({
   let hasRootVendorDir = await pathExists(vendorDir);
   let hasRelativeVendorDir = await pathExists(relativeVendorDir);
   const cachedVendorAbs = join(scopedVendorBaseDir, 'vendor');
-  const hasCachedVendorDir = await pathExists(
+  let hasCachedVendorDir = await pathExists(
     join(scopedVendorBaseDir, vendorPath)
   );
 
@@ -313,6 +314,7 @@ export const build: BuildV3 = async ({
           )}) at ${cachedVendorAbs}`
         );
         await remove(cachedVendorAbs);
+        hasCachedVendorDir = false;
       }
     } catch (err) {
       debug('ruby: failed to inspect cached vendor platform', err);
