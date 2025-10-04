@@ -450,6 +450,21 @@ export async function getBuildMatches(
       }
     }
 
+    if (buildConfig.config?.framework === 'rails') {
+      // Prefer config.ru in common locations for Rails
+      const candidateDirs = ['', 'src', 'app'];
+      const candidates: string[] = [];
+      for (const dir of candidateDirs) {
+        candidates.push(dir ? `${dir}/config.ru` : 'config.ru');
+      }
+      if (!fileList.includes(src)) {
+        const existing = candidates.filter(p => fileList.includes(p));
+        if (existing.length > 0) {
+          src = existing[0];
+        }
+      }
+    }
+
     // lambda function files are trimmed of their file extension
     const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);

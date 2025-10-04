@@ -3069,6 +3069,57 @@ export const frameworks = [
     getOutputDirName: async () => 'dist',
   },
   {
+    name: 'Ruby on Rails',
+    slug: 'rails',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/rails.svg',
+    tagline: 'Compress the complexity of modern web apps.',
+    description: 'A Rails app, using Rack via config.ru.',
+    website: 'https://rubyonrails.org',
+    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    detectors: {
+      some: [
+        {
+          path: 'config.ru',
+        },
+        {
+          path: 'Gemfile',
+          matchContent: 'gem\\s+["\']rails["\']',
+        },
+        {
+          path: 'bin/rails',
+        },
+        {
+          path: 'config/application.rb',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        value: 'bundle install',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        value: 'bundle exec rails server -p $PORT',
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/config',
+      },
+    ],
+  },
+  {
     name: 'Other',
     slug: null,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
