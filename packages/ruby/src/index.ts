@@ -1,7 +1,14 @@
 import { EOL } from 'os';
 import { join, dirname } from 'path';
 import execa from 'execa';
-import { move, remove, pathExists, readFile, writeFile } from 'fs-extra';
+import {
+  move,
+  remove,
+  pathExists,
+  readFile,
+  writeFile,
+  readdir,
+} from 'fs-extra';
 import {
   download,
   getWriteableDirectory,
@@ -37,6 +44,44 @@ async function matchPaths(
   );
 
   return patternPaths.reduce((a, b) => a.concat(b), []);
+}
+
+async function detectVendorPlatforms(vendorRoot: string): Promise<string[]> {
+  try {
+    const rubyPath = join(vendorRoot, 'bundle', 'ruby');
+    if (!(await pathExists(rubyPath))) return [];
+    const versions = await readdir(rubyPath);
+    for (const ver of versions) {
+      const extPath = join(rubyPath, ver, 'extensions');
+      if (await pathExists(extPath)) {
+        try {
+          const platforms = await readdir(extPath);
+          if (platforms && platforms.length > 0) return platforms;
+        } catch (err) {
+          debug('ruby: failed to list vendor extension platforms', err);
+        }
+      }
+    }
+  } catch (err) {
+    debug('ruby: failed to detect vendor platforms', err);
+  }
+  return [];
+}
+
+function isPlatformCompatible(platforms: string[]): boolean {
+  if (platforms.length === 0) return true; // no native extensions
+  const wantsLinux = process.platform === 'linux';
+  const wantsArch = process.arch === 'arm64' ? 'arm64' : 'x86_64';
+  // Accept any entry that matches both OS and arch tokens
+  return platforms.some(p => {
+    const lower = p.toLowerCase();
+    const osOk = wantsLinux
+      ? lower.includes('linux')
+      : lower.includes('darwin');
+    // Ruby extension directories often use "x86_64" and "arm64" tokens
+    const archOk = lower.includes(wantsArch);
+    return osOk && archOk;
+  });
 }
 
 async function bundleInstall(
@@ -86,6 +131,24 @@ async function bundleInstall(
     BUNDLE_APP_CONFIG: bundleAppConfig,
     BUNDLE_JOBS: '4',
   });
+
+  // Ensure Gemfile.lock contains the correct target platform for the current build env
+  // so Bundler resolves native gems for the Lambda runtime architecture.
+  try {
+    if (process.platform === 'linux') {
+      const archToken = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+      const platform = `${archToken}-linux`;
+      debug(`ruby: ensuring Gemfile.lock has platform ${platform}`);
+      await execa('bundler', ['lock', '--add-platform', platform], {
+        cwd: dirname(gemfilePath),
+        stdio: 'pipe',
+        env: bundlerEnv,
+        reject: false,
+      });
+    }
+  } catch (err) {
+    debug('ruby: failed to add platform to Gemfile.lock (non-fatal)', err);
+  }
 
   // "webrick" needs to be installed for Ruby 3+ to fix runtime error:
   // webrick is not part of the default gems since Ruby 3.0.0. Install webrick from RubyGems.
@@ -222,10 +285,9 @@ export const build: BuildV3 = async ({
     `ruby: bundler installed, runtime=${runtime} rubyPath=${rubyPath} gemHome=${gemHome}`
   );
   process.env.GEM_HOME = gemHome;
-  // Cache vendor gems under .vercel/ruby similar to Python implementation
+  // Cache vendor gems under .vercel/ruby/<runtime>/<entryDir>
   const entryDirectory = dirname(entrypoint);
   const vendorBaseDir = join(workPath, '.vercel', 'ruby', runtime);
-  // Keep directory structure keyed by entry directory to avoid collisions
   const scopedVendorBaseDir = join(vendorBaseDir, entryDirectory);
   debug(`ruby: vendor base dir (cache) at ${scopedVendorBaseDir}`);
   debug(`Checking existing vendor directory at "${vendorPath}"`);
@@ -233,11 +295,62 @@ export const build: BuildV3 = async ({
   // Install gems into .vercel cache path instead of project root vendor/
   const bundleDir = join(scopedVendorBaseDir, 'vendor', 'bundle');
   const relativeVendorDir = join(entrypointFsDirname, vendorPath);
-  const hasRootVendorDir = await pathExists(vendorDir);
-  const hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  let hasRootVendorDir = await pathExists(vendorDir);
+  let hasRelativeVendorDir = await pathExists(relativeVendorDir);
+  const cachedVendorAbs = join(scopedVendorBaseDir, 'vendor');
   const hasCachedVendorDir = await pathExists(
     join(scopedVendorBaseDir, vendorPath)
   );
+
+  // If a cached vendor exists but targets a different platform/arch, clear it
+  if (hasCachedVendorDir) {
+    try {
+      const platforms = await detectVendorPlatforms(cachedVendorAbs);
+      if (!isPlatformCompatible(platforms)) {
+        debug(
+          `ruby: clearing incompatible cached vendor (platforms=${platforms.join(
+            ','
+          )}) at ${cachedVendorAbs}`
+        );
+        await remove(cachedVendorAbs);
+      }
+    } catch (err) {
+      debug('ruby: failed to inspect cached vendor platform', err);
+    }
+  }
+
+  // If a root vendor exists but targets a different platform/arch, ignore it
+  if (hasRootVendorDir) {
+    try {
+      const platforms = await detectVendorPlatforms(vendorDir);
+      if (!isPlatformCompatible(platforms)) {
+        debug(
+          `ruby: ignoring incompatible root vendor (platforms=${platforms.join(',')}) at ${vendorDir}`
+        );
+        await remove(vendorDir);
+        hasRootVendorDir = false;
+      }
+    } catch (err) {
+      debug('ruby: failed to inspect root vendor platform', err);
+    }
+  }
+
+  // If a relative vendor exists but targets a different platform/arch, ignore it
+  if (hasRelativeVendorDir) {
+    try {
+      const platforms = await detectVendorPlatforms(relativeVendorDir);
+      if (!isPlatformCompatible(platforms)) {
+        debug(
+          `ruby: ignoring incompatible relative vendor (platforms=${platforms.join(',')}) at ${relativeVendorDir}`
+        );
+        await remove(relativeVendorDir);
+        hasRelativeVendorDir = false;
+      }
+    } catch (err) {
+      debug('ruby: failed to inspect relative vendor platform', err);
+    }
+  }
+
   const hasVendorDir =
     hasRootVendorDir || hasRelativeVendorDir || hasCachedVendorDir;
 
@@ -309,6 +422,7 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
+    '**/tmp/**',
   ];
 
   const globOptions: GlobOptions = {

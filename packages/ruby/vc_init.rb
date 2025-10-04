@@ -20,6 +20,7 @@ end
 
 ENV['RAILS_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
+ENV['BOOTSNAP_CACHE_DIR'] ||= '/tmp/bootsnap'
 
 def rack_handler(httpMethod, path, body, headers)
   require 'rack'
