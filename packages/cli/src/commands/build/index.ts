@@ -199,13 +199,6 @@ export default async function main(client: Client): Promise<number> {
   // );
   const standalone = process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
 
-  try {
-    await validateNpmrc(cwd);
-  } catch (err) {
-    output.prettyError(err);
-    return 1;
-  }
-
   // If repo linked, update `cwd` to the repo root
   const link = await getProjectLink(client, cwd);
   const projectRootDirectory = link?.projectRootDirectory ?? '';
@@ -423,6 +416,10 @@ async function doBuild(
     throw validateError;
   }
 
+  if (!localConfig.allowUseNodeVersion) {
+    await validateNpmrc(cwd);
+  }
+
   const projectSettings = {
     ...project.settings,
     ...pickOverrides(localConfig),
@@ -606,6 +603,8 @@ async function doBuild(
             nodeVersion: projectSettings.nodeVersion,
           }
         : build.config || {};
+      // This option is used in packages/cli/src/util/build/static-builder.ts.
+      buildConfig.allowUseNodeVersion = localConfig.allowUseNodeVersion;
 
       const builderSpan = span.child('vc.builder', {
         name: builderPkg.name,

@@ -1,5 +1,8 @@
 import minimatch from 'minimatch';
-import { shouldServe as defaultShouldServe } from '@vercel/build-utils';
+import {
+  shouldServe as defaultShouldServe,
+  FileBlob,
+} from '@vercel/build-utils';
 import type { BuildV2, Files, ShouldServe } from '@vercel/build-utils';
 
 export const version = 2;
@@ -37,6 +40,29 @@ export const build: BuildV2 = async ({ entrypoint, files, config }) => {
         // static output files are moved to the root directory
         filename = filename.slice(outputMatch.length);
       }
+    }
+
+    if (filename === '.npmrc' && config.allowUseNodeVersion) {
+      // If the .npmrc file contains a `use-node-version` line, we remove it.
+      const stream = fileFsRef.toStream();
+      let content = '';
+      await new Promise((resolve, reject) => {
+        stream.on('data', chunk => {
+          content += chunk.toString('utf8');
+        });
+        stream.on('end', resolve);
+        stream.on('error', reject);
+      });
+      const updatedContent = content
+        .split('\n')
+        .filter(line => !line.includes('use-node-version'))
+        .join('\n');
+      output[filename] = new FileBlob({
+        mode: fileFsRef.mode,
+        contentType: fileFsRef.contentType,
+        data: Buffer.from(updatedContent, 'utf8'),
+      });
+      continue;
     }
 
     output[filename] = fileFsRef;
