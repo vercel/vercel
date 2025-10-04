@@ -76,6 +76,26 @@ interface CassandraPool {
   connect?: (callback?: (err?: Error) => void) => Promise<void>;
   execute?: (query: string, params?: any[], options?: any) => Promise<any>;
 }
+
+// Based on @prisma/client.PrismaClient
+interface PrismaPool {
+  $connect?: () => Promise<void>;
+  $disconnect?: () => Promise<void>;
+  $on?: (
+    event: 'query' | 'info' | 'warn' | 'error',
+    listener: (...args: any[]) => void
+  ) => void;
+  // Internal engine access (may not be available in all versions)
+  _engine?: {
+    config?: {
+      datasources?: Array<{
+        url?: {
+          value?: string;
+        };
+      }>;
+    };
+  };
+}
 /**
  * The database pool object. The supported pool types are:
  * - PostgreSQL (pg)
@@ -84,6 +104,7 @@ interface CassandraPool {
  * - MongoDB
  * - Redis (ioredis)
  * - Cassandra (cassandra-driver)
+ * - Prisma (@prisma/client)
  * - OTHER: This method uses duck-typing to detect the pool type. Respectively you can
  *   pass in any object with a compatible interface.
  */
@@ -94,7 +115,8 @@ export type DbPool =
   | MariaDBPool
   | MongoDBPool
   | RedisPool
-  | CassandraPool;
+  | CassandraPool
+  | PrismaPool;
 
 function getIdleTimeout(dbPool: DbPool): number {
   // PostgreSQL (pg) - default: 10000ms
@@ -121,6 +143,28 @@ function getIdleTimeout(dbPool: DbPool): number {
     if ('connect' in dbPool && 'execute' in dbPool) {
       return 30000;
     }
+  }
+
+  // Prisma - try to extract pool_timeout from datasource URL, default: 10000ms
+  if ('$connect' in dbPool && '$disconnect' in dbPool) {
+    const prismaPool = dbPool as PrismaPool;
+    try {
+      const datasourceUrl =
+        prismaPool._engine?.config?.datasources?.[0]?.url?.value;
+      if (datasourceUrl && typeof datasourceUrl === 'string') {
+        const urlParams = new URLSearchParams(
+          datasourceUrl.split('?')[1] || ''
+        );
+        const poolTimeout = urlParams.get('pool_timeout');
+        if (poolTimeout) {
+          const timeout = parseInt(poolTimeout, 10) * 1000; // Convert seconds to ms
+          return timeout > 0 ? timeout : 10000;
+        }
+      }
+    } catch (error) {
+      // Fallback to default if parsing fails
+    }
+    return 10000;
   }
 
   if ('config' in dbPool && dbPool.config) {
@@ -209,6 +253,7 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
  * - MongoDB
  * - Redis (ioredis)
  * - Cassandra (cassandra-driver)
+ * - Prisma (@prisma/client)
  * - OTHER: This method uses duck-typing to detect the pool type. Respectively you can
  *   pass in any object with a compatible interface.
  *
@@ -218,6 +263,11 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
  *   connectionString: process.env.DATABASE_URL,
  * });
  * attachDatabasePool(pgPool);
+ *
+ * // Or with Prisma:
+ * import { PrismaClient } from '@prisma/client';
+ * const prisma = new PrismaClient();
+ * attachDatabasePool(prisma);
  * ```
  *
  * @experimental
@@ -311,6 +361,43 @@ export function attachDatabasePool(dbPool: DbPool) {
       }
       waitUntilIdleTimeout(dbPool);
     });
+    return;
+  }
+
+  // Prisma - Monitor query events and connection pool errors
+  if (
+    '$connect' in dbPool &&
+    '$disconnect' in dbPool &&
+    '$on' in dbPool &&
+    dbPool.$on
+  ) {
+    const prismaPool = dbPool as PrismaPool;
+
+    // Listen for query events to track activity
+    prismaPool.$on!('query', () => {
+      if (DEBUG) {
+        console.log('Prisma query executed');
+      }
+      waitUntilIdleTimeout(dbPool);
+    });
+
+    // Listen for connection pool timeout errors to trigger cleanup
+    prismaPool.$on!('error', (e: any) => {
+      if (DEBUG) {
+        console.log('Prisma error event:', e.message);
+      }
+      // Trigger cleanup on connection pool related errors
+      if (
+        e.message &&
+        (e.message.includes(
+          'Timed out fetching a new connection from the connection pool'
+        ) ||
+          e.message.includes("Can't reach database server"))
+      ) {
+        waitUntilIdleTimeout(dbPool);
+      }
+    });
+
     return;
   }
 
