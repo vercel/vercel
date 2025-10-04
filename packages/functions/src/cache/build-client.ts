@@ -10,29 +10,37 @@ export class BuildCache {
   private readonly endpoint: string;
   private readonly headers: Record<string, string>;
   private readonly onError?: (error: Error) => void | undefined;
+  private readonly timeout: number;
 
   constructor({
     endpoint,
     headers,
     onError,
+    timeout = 500,
   }: {
     endpoint: string;
     headers: Record<string, string>;
     onError?: (error: Error) => void;
+    timeout?: number;
   }) {
     this.endpoint = endpoint;
     this.headers = headers;
     this.onError = onError;
+    this.timeout = timeout;
   }
 
   public get = async (key: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const res = await fetch(`${this.endpoint}${key}`, {
         headers: this.headers,
         method: 'GET',
+        signal: controller.signal,
       });
 
       if (res.status === 404) {
+        clearTimeout(timeoutId);
         return null;
       }
       if (res.status === 200) {
@@ -41,14 +49,27 @@ export class BuildCache {
         ) as PkgCacheState | null;
         if (cacheState !== PkgCacheState.Fresh) {
           res.body?.cancel?.();
+          clearTimeout(timeoutId);
           return null;
         }
-        return (await res.json()) as unknown;
+        const result = (await res.json()) as unknown;
+        clearTimeout(timeoutId);
+        return result;
       } else {
+        clearTimeout(timeoutId);
         throw new Error(`Failed to get cache: ${res.statusText}`);
       }
     } catch (error: any) {
-      this.onError?.(error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        timeoutError.stack = error.stack;
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
       return null;
     }
   };
@@ -62,6 +83,8 @@ export class BuildCache {
       tags?: string[];
     }
   ) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const optionalHeaders: Record<string, string> = {};
       if (options?.ttl) {
@@ -80,32 +103,58 @@ export class BuildCache {
           ...optionalHeaders,
         },
         body: JSON.stringify(value),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to set cache: ${res.status} ${res.statusText}`);
       }
     } catch (error: any) {
-      this.onError?.(error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        timeoutError.stack = error.stack;
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 
   public delete = async (key: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       const res = await fetch(`${this.endpoint}${key}`, {
         method: 'DELETE',
         headers: this.headers,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to delete cache: ${res.statusText}`);
       }
     } catch (error: any) {
-      this.onError?.(error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        timeoutError.stack = error.stack;
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 
   public expireTag = async (tag: string | string[]) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
       if (Array.isArray(tag)) {
         tag = tag.join(',');
@@ -113,13 +162,24 @@ export class BuildCache {
       const res = await fetch(`${this.endpoint}revalidate?tags=${tag}`, {
         method: 'POST',
         headers: this.headers,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status !== 200) {
         throw new Error(`Failed to revalidate tag: ${res.statusText}`);
       }
     } catch (error: any) {
-      this.onError?.(error);
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `Cache request timed out after ${this.timeout}ms`
+        );
+        timeoutError.stack = error.stack;
+        this.onError?.(timeoutError);
+      } else {
+        this.onError?.(error);
+      }
     }
   };
 }
