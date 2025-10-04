@@ -120,3 +120,5 @@ export { NODE_VERSIONS } from './fs/node-version';
 export { getInstalledPackageVersion } from './get-installed-package-version';
 
 export { defaultCachePathGlob } from './default-cache-path-glob';
+
+export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
