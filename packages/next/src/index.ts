@@ -226,6 +226,7 @@ export const build: BuildV2 = async buildOptions => {
     entryPath = path.join(entryPath, config.rootDirectory as string);
   }
   const outputDirectory = path.join('./', config.outputDirectory || '.next');
+  const resolvedOutputDirectory = path.join(entryPath, outputDirectory);
   const dotNextStatic = path.join(entryPath, outputDirectory, 'static');
   // TODO: remove after testing used for simulating root directory monorepo
   // setting that can't be triggered with vercel.json
@@ -240,6 +241,7 @@ export const build: BuildV2 = async buildOptions => {
         entryPath,
         entryDirectory,
         outputDirectory,
+        resolvedOutputDirectory,
       },
       null,
       2
@@ -568,11 +570,36 @@ export const build: BuildV2 = async buildOptions => {
     await buildCallback(buildOptions);
   }
 
+  // Validate that the Next.js output directory exists and is not empty
+  // before attempting to read any manifests from it. This helps surface a
+  // clearer error when `outputDirectory` is misconfigured or when caches
+  // restore the wrong path.
+  {
+    const exists = await pathExists(resolvedOutputDirectory);
+    if (!exists) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_MISSING',
+        message:
+          `The Next.js output directory "${resolvedOutputDirectory}" (resolved from "${outputDirectory}") was not found. ` +
+          `Ensure your build produces the correct output directory (e.g. ".next" or your custom distDir) and that your Project Settings/outputDirectory is correct. If using Turborepo, verify your cache keys and restore path.`,
+      });
+    }
+    const outputFiles = await glob('*', resolvedOutputDirectory);
+    if (Object.keys(outputFiles).length === 0) {
+      throw new NowBuildError({
+        code: 'NEXT_OUTPUT_DIR_EMPTY',
+        message:
+          `The Next.js output directory "${resolvedOutputDirectory}" (resolved from "${outputDirectory}") is empty. ` +
+          `This is often caused by a misconfigured outputDirectory, a different distDir in next.config.js, or restoring the wrong cache with Turborepo. Ensure your build outputs are present before deployment.`,
+      });
+    }
+  }
+
   let buildOutputVersion: undefined | number;
 
   try {
     const data = await readJSON(
-      path.join(outputDirectory, 'output/config.json')
+      path.join(resolvedOutputDirectory, 'output/config.json')
     );
     buildOutputVersion = data.version;
   } catch (_) {
@@ -581,7 +608,7 @@ export const build: BuildV2 = async buildOptions => {
 
   if (buildOutputVersion) {
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(resolvedOutputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }
@@ -591,31 +618,23 @@ export const build: BuildV2 = async buildOptions => {
     .replace(/\/+$/, '');
 
   const requiredServerFilesManifest = isServerMode
-    ? await getRequiredServerFilesManifest(entryPath, outputDirectory)
+    ? await getRequiredServerFilesManifest(resolvedOutputDirectory)
     : false;
 
   isServerMode = Boolean(requiredServerFilesManifest);
 
   const functionsConfigManifest = await getFunctionsConfigManifest(
-    entryPath,
-    outputDirectory
+    resolvedOutputDirectory
   );
 
-  const variantsManifest = await getVariantsManifest(
-    entryPath,
-    outputDirectory
-  );
+  const variantsManifest = await getVariantsManifest(resolvedOutputDirectory);
 
   const routesManifest = await getRoutesManifest(
-    entryPath,
-    outputDirectory,
+    resolvedOutputDirectory,
     nextVersion
   );
-  const imagesManifest = await getImagesManifest(entryPath, outputDirectory);
-  const prerenderManifest = await getPrerenderManifest(
-    entryPath,
-    outputDirectory
-  );
+  const imagesManifest = await getImagesManifest(resolvedOutputDirectory);
+  const prerenderManifest = await getPrerenderManifest(resolvedOutputDirectory);
   const omittedPrerenderRoutes: ReadonlySet<string> = new Set(
     Object.keys(prerenderManifest.omittedRoutes)
   );
@@ -649,13 +668,10 @@ export const build: BuildV2 = async buildOptions => {
         })
       : undefined;
 
-  const privateOutputs = await getPrivateOutputs(
-    path.join(entryPath, outputDirectory),
-    {
-      'next-stats.json': '_next/__private/stats.json',
-      trace: '_next/__private/trace',
-    }
-  );
+  const privateOutputs = await getPrivateOutputs(resolvedOutputDirectory, {
+    'next-stats.json': '_next/__private/stats.json',
+    trace: '_next/__private/trace',
+  });
 
   const headers: Route[] = [];
   const beforeFilesRewrites: Route[] = [];
@@ -672,7 +688,7 @@ export const build: BuildV2 = async buildOptions => {
   if (isLegacy || isSharedLambdas || isServerMode) {
     try {
       buildId = await readFile(
-        path.join(entryPath, outputDirectory, 'BUILD_ID'),
+        path.join(resolvedOutputDirectory, 'BUILD_ID'),
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
@@ -1160,8 +1176,7 @@ export const build: BuildV2 = async buildOptions => {
       nextFiles['next.config.js'] = filesAfterBuild['next.config.js'];
     }
     const pagesDir = path.join(
-      entryPath,
-      outputDirectory,
+      resolvedOutputDirectory,
       'server',
       'static',
       buildId,
@@ -1169,8 +1184,7 @@ export const build: BuildV2 = async buildOptions => {
     );
     const { pages } = await getServerlessPages({
       pagesDir,
-      entryPath,
-      outputDirectory,
+      resolvedOutputDirectory,
     });
     const launcherPath = path.join(__dirname, 'legacy-launcher.js');
     const launcherData = await readFile(launcherPath, 'utf8');
@@ -1260,8 +1274,7 @@ export const build: BuildV2 = async buildOptions => {
 
     const { pages, appPaths: lambdaAppPaths } = await getServerlessPages({
       pagesDir,
-      entryPath,
-      outputDirectory,
+      resolvedOutputDirectory,
       appPathRoutesManifest,
     });
 
@@ -1551,6 +1564,7 @@ export const build: BuildV2 = async buildOptions => {
         isAppClientParamParsingEnabled,
         clientParamParsingOrigins,
         files,
+        resolvedOutputDirectory,
       });
     }
 

@@ -123,6 +123,7 @@ export async function serverBuild({
   dynamicPrefix,
   entryDirectory,
   outputDirectory,
+  resolvedOutputDirectory,
   redirects,
   beforeFilesRewrites,
   afterFilesRewrites,
@@ -177,6 +178,7 @@ export async function serverBuild({
   nodeVersion: NodeVersion;
   entryDirectory: string;
   outputDirectory: string;
+  resolvedOutputDirectory: string;
   headers: Route[];
   workPath: string;
   beforeFilesRewrites: Route[];
@@ -1520,6 +1522,7 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
     functionsConfigManifest,
     requiredServerFilesManifest,
+    resolvedOutputDirectory,
   });
 
   const middleware = await getMiddlewareBundle({
@@ -1531,6 +1534,7 @@ export async function serverBuild({
     prerenderBypassToken: prerenderManifest.bypassToken || '',
     nextVersion,
     appPathRoutesManifest: appPathRoutesManifest || {},
+    resolvedOutputDirectory,
   });
 
   if (appPathRoutesManifest) {
