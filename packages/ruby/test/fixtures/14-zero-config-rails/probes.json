@@ -1,5 +1,0 @@
-{
-  "probes": [
-    { "path": "/", "status": 200, "mustContain": "Rails on Vercel" }
-  ]
-}

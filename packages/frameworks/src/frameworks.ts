@@ -3075,7 +3075,7 @@ export const frameworks = [
     tagline: 'Compress the complexity of modern web apps.',
     description: 'A Rails app, using Rack via config.ru.',
     website: 'https://rubyonrails.org',
-    useRuntime: { src: 'config.ru', use: '@vercel/ruby' },
+    useRuntime: { src: 'index.ru', use: '@vercel/ruby' },
     detectors: {
       some: [
         {
@@ -3115,7 +3115,7 @@ export const frameworks = [
       },
       {
         src: '/(.*)',
-        dest: '/config.ru',
+        dest: '/',
       },
     ],
   },
