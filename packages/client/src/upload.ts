@@ -28,6 +28,15 @@ const isClientNetworkError = (err: Error) => {
   return false;
 };
 
+const isSocketLevelError = (err: Error) => {
+  if (!err.message) return false;
+  return (
+    err.message.includes('ECONNRESET') ||
+    err.message.includes('socket hang up') ||
+    err.message.includes('network socket disconnected')
+  );
+};
+
 export async function* upload(
   files: FilesMap,
   clientOptions: VercelClientOptions,
@@ -195,7 +204,7 @@ export async function* upload(
         if (err) {
           if (isClientNetworkError(err)) {
             debug('Network error, retrying: ' + err.message);
-            if (!clientOptions.agent) {
+            if (!clientOptions.agent && isSocketLevelError(err)) {
               try {
                 defaultAgent.destroy?.();
               } catch (destroyError: any) {
