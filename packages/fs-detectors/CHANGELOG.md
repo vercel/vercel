@@ -1,5 +1,17 @@
 # @vercel/fs-detectors
 
+## 5.6.0
+
+### Minor Changes
+
+- Add zero config support for NestJS ([#14009](https://github.com/vercel/vercel/pull/14009))
+
+### Patch Changes
+
+- Updated dependencies [[`07cefee4765af8797855092d387a834eaa8a987a`](https://github.com/vercel/vercel/commit/07cefee4765af8797855092d387a834eaa8a987a), [`4d0d2ec6cea57e0ec6e55132f6a2007309e2916b`](https://github.com/vercel/vercel/commit/4d0d2ec6cea57e0ec6e55132f6a2007309e2916b), [`6deaf1c665aeacd57d075d2b808a8b2880023b53`](https://github.com/vercel/vercel/commit/6deaf1c665aeacd57d075d2b808a8b2880023b53)]:
+  - @vercel/routing-utils@5.2.0
+  - @vercel/frameworks@3.11.0
+
 ## 5.5.8
 
 ### Patch Changes
