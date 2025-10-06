@@ -364,7 +364,7 @@ importers:
         specifier: 1.2.4
         version: link:../hydrogen
       '@vercel/next':
-        specifier: 4.13.1
+        specifier: 4.13.2
         version: link:../next
       '@vercel/node':
         specifier: 5.3.24
@@ -376,7 +376,7 @@ importers:
         specifier: 2.3.6
         version: link:../redwood
       '@vercel/remix-builder':
-        specifier: 5.4.12
+        specifier: 5.4.13
         version: link:../remix
       '@vercel/ruby':
         specifier: 2.2.1
