@@ -18,7 +18,7 @@
     { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S3&count=3", "status": 200, "mustContain": "queued" },
     { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S4&count=3", "status": 200, "mustContain": "queued" },
     { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S5&count=3", "status": 200, "mustContain": "queued" },
-    { "delay": 12000 },
+    { "delay": 10000 },
     { "path": "/bg-logs", "status": 200, "mustContain": "20 log files", "retries": 10, "retryDelay": 1000 },
 
     { "path": "/bg-files-concurrent?token=RANDOMNESS_PLACEHOLDER-C&count=10", "status": 200, "mustContain": "queued" },
