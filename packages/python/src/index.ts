@@ -116,7 +116,7 @@ export const build: BuildV3 = async ({
 
   let fsFiles = await glob('**', workPath);
 
-  // Zero-config entrypoint discovery
+  // Zero config entrypoint discovery
   if (!fsFiles[entrypoint] && config?.framework === 'fastapi') {
     const detected = await detectFastapiEntrypoint(workPath, entrypoint);
     if (detected) {
