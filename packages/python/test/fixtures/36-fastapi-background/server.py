@@ -81,7 +81,7 @@ async def bg_status(token: str):
 
 @app.get("/bg-logs")
 async def bg_logs():
-    logger.info("Getting logs")
+    logger.info("Getting background logs")
     log_dir = "/tmp/logs"
     if not os.path.exists(log_dir):
         log_files = []
