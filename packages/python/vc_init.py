@@ -491,10 +491,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 asgi_instance = app(scope, receive, send)
                                 await asgi_instance
                                 # Mark app completion when the ASGI callable returns
-                                try:
-                                    app_done.set()
-                                except Exception:
-                                    pass
+                                app_done.set()
 
                             asyncio.run(runner())
                         except Exception:
@@ -511,15 +508,9 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 pass
                         finally:
                             # Always unblock the waiting thread to avoid hangs
-                            try:
-                                response_done.set()
-                            except Exception:
-                                pass
+                            response_done.set()
                             # Ensure app completion is always signaled
-                            try:
-                                app_done.set()
-                            except Exception:
-                                pass
+                            app_done.set()
                             if token is not None:
                                 storage.reset(token)
 
