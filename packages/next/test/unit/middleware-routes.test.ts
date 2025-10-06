@@ -1,4 +1,3 @@
-import path from 'path';
 import { getMiddlewareBundle } from '../../src/utils';
 import { genDir } from '../utils';
 
@@ -214,14 +213,13 @@ describe('middleware routes', () => {
   });
 });
 
-async function getMiddlewareRoutes(manifest: any) {
+async function getMiddlewareRoutes(manifest) {
   const dir = await genDir({
     '.next/server/middleware-manifest.json': JSON.stringify(manifest),
   });
   const middleware = await getMiddlewareBundle({
     entryPath: dir,
     outputDirectory: '.next',
-    resolvedOutputDirectory: path.join(dir, '.next'),
     routesManifest: {
       version: 4,
       dynamicRoutes: [],

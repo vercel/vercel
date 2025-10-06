@@ -405,7 +405,8 @@ describe('getServerlessPages', () => {
 
     const { pages, appPaths } = await getServerlessPages({
       pagesDir: path.resolve(path.join(dir, '.next/server/pages')),
-      resolvedOutputDirectory: os.tmpdir(),
+      entryPath: os.tmpdir(),
+      outputDirectory: os.tmpdir(),
       appPathRoutesManifest: {
         '/_not-found': '/_not-found',
         '/favicon.ico/route': '/favicon.ico',
