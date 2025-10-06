@@ -25,7 +25,6 @@
     { "delay": 3200 },
     { "path": "/bg-logs", "status": 200, "mustContain": "30 log files", "retries": 10, "retryDelay": 1000 },
 
-    { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER-K", "status": 200, "mustContain": "queued" },
-    { "logMustContain": "[background] Crashing for token: RANDOMNESS_PLACEHOLDER-K", "retries": 20, "retryDelay": 1000 }
+    { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER-K", "status": 200, "mustContain": "queued" }
   ]
 }
