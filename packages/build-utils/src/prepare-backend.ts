@@ -55,9 +55,9 @@ export const prepareBackend = async (
     const resolved = require_.resolve(`${frameworkName}/package.json`, {
       paths: [args.workPath],
     });
-    const expressVersion: string = require_(resolved).version;
-    if (expressVersion) {
-      version = expressVersion;
+    const packageVersion: string = require_(resolved).version;
+    if (packageVersion) {
+      version = packageVersion;
     }
   } catch (e) {
     // ignore
