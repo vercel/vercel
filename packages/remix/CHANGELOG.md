@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.4.13
+
+### Patch Changes
+
+- Add support for using routes() helper for top-level index routes ([#13933](https://github.com/vercel/vercel/pull/13933))
+
 ## 5.4.12
 
 ### Patch Changes
