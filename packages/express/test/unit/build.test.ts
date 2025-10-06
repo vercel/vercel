@@ -188,20 +188,20 @@ const failingFixtures: Record<
     };
   }
 > = {
-  // '01-server-ts-no-module-no-tsconfig': {},
-  // '02-missing-entrypoint': {},
-  // '03-missing-entrypoint-with-build-and-main': {},
-  // '04-missing-entrypoint-with-build-and-output-dir': {
-  //   projectSettings: {
-  //     outputDirectory: 'dist',
-  //   },
-  // },
-  // '05-missing-entrypoint-with-main': {},
-  // '06-missing-entrypoint-with-output-dir': {
-  //   projectSettings: {
-  //     outputDirectory: 'dist',
-  //   },
-  // },
+  '01-server-ts-no-module-no-tsconfig': {},
+  '02-missing-entrypoint': {},
+  '03-missing-entrypoint-with-build-and-main': {},
+  '04-missing-entrypoint-with-build-and-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
+  '05-missing-entrypoint-with-main': {},
+  '06-missing-entrypoint-with-output-dir': {
+    projectSettings: {
+      outputDirectory: 'dist',
+    },
+  },
   '07-invalid-ts': {},
 };
 
