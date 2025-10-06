@@ -1530,12 +1530,12 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  describe('VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', () => {
-    it('should convert FileFsRef to FileBlob when VERCEL_EXPERIMENTAL_STANDALONE_BUILD is used', async () => {
+  describe('--standalone flag', () => {
+    it('should convert FileFsRef to FileBlob when --standalone is used', async () => {
       const cwd = fixture('node');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
+      client.setArgv('build', '--standalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1571,11 +1571,11 @@ describe.skipIf(flakey)('build', () => {
       }
     });
 
-    it('should work with static builds and VERCEL_EXPERIMENTAL_STANDALONE_BUILD env', async () => {
+    it('should work with static builds and --standalone flag', async () => {
       const cwd = fixture('static');
       const output = join(cwd, '.vercel/output');
       client.cwd = cwd;
-      process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD = '1';
+      client.setArgv('build', '--standalone');
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
