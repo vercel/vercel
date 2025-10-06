@@ -9,6 +9,7 @@ import type { Server } from 'http';
 import type Client from '../client';
 import output from '../../output-manager';
 
+// @ts-expect-error TODO: drop `node-fetch`
 const toHeaders = buildToHeaders({ Headers });
 
 export function createProxy(client: Client): Server {
@@ -18,6 +19,7 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const fetchRes = await client.fetch(req.url || '/', {
+        // @ts-expect-error TODO: drop `node-fetch`
         headers,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
@@ -25,6 +27,7 @@ export function createProxy(client: Client): Server {
         json: false,
       });
       res.statusCode = fetchRes.status;
+      // @ts-expect-error TODO: drop `node-fetch`
       mergeIntoServerResponse(toOutgoingHeaders(fetchRes.headers), res);
       fetchRes.body.pipe(res);
     } catch (err: unknown) {
