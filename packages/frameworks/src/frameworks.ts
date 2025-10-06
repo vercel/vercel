@@ -574,195 +574,195 @@ export const frameworks = [
       some: [
         {
           path: 'api.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'api.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'api.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'api.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'api.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'api.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'app.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'index.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'server.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/api.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/app.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/index.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.cjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.js',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.mjs',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.mts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.ts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
         {
           path: 'src/server.cts',
-          matchContent: '^\\s*export\\s+default\\b',
+          matchContent: 'export\\s+default\\b',
         },
       ],
     },

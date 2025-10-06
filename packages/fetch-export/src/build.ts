@@ -6,7 +6,7 @@ import { join } from 'path';
 import fs from 'fs';
 
 const frameworkName = 'fetch-export';
-const REGEX = /^export\s+default\b/m;
+const REGEX = /export\s+default\b/;
 
 const validFilenames = [
   'api',
