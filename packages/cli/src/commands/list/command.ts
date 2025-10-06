@@ -38,6 +38,15 @@ export const listCommand = {
       type: String,
       deprecated: false,
     },
+    {
+      name: 'status',
+      description:
+        'Filter deployments by their status. Can be comma-separated for multiple statuses (e.g.: `--status BUILDING,READY`)',
+      argument: 'STATUS',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+    },
     nextOption,
     // this can be deprecated someday
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
@@ -60,6 +69,14 @@ export const listCommand = {
     {
       name: 'Paginate deployments for a project, where `1584722256178` is the time in milliseconds since the UNIX epoch',
       value: `${packageName} list my-app --next 1584722256178`,
+    },
+    {
+      name: 'Filter deployments by status',
+      value: `${packageName} list --status READY`,
+    },
+    {
+      name: 'Filter deployments by multiple statuses',
+      value: `${packageName} list --status BUILDING,ERROR`,
     },
   ],
 } as const;
