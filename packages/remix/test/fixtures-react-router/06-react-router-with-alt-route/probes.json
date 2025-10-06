@@ -1,0 +1,18 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "Alternate Page"
+    },
+    {
+      "path": "/home",
+      "mustContain": "Welcome to React Router"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "Not Found"
+    }
+  ]
+}
+
