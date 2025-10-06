@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "lib": ["ES2021", "ESNext"],
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
