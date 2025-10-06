@@ -22,7 +22,7 @@
     { "path": "/bg-logs", "status": 200, "mustContain": "20 log files", "retries": 10, "retryDelay": 1000 },
 
     { "path": "/bg-files-concurrent?token=RANDOMNESS_PLACEHOLDER-C&count=10", "status": 200, "mustContain": "queued" },
-    { "delay": 4000 },
+    { "delay": 3200 },
     { "path": "/bg-logs", "status": 200, "mustContain": "30 log files", "retries": 10, "retryDelay": 1000 },
 
     { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER-K", "status": 200, "mustContain": "queued" },
