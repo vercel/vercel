@@ -1,4 +1,4 @@
-import { BuildV2, glob } from '@vercel/build-utils';
+import { BuildV2, glob, debug } from '@vercel/build-utils';
 import { isAbsolute, join, normalize, resolve, sep } from 'path';
 import { outputFile } from 'fs-extra';
 import { spawn } from 'child_process';
@@ -13,49 +13,69 @@ const require_ = createRequire(__filename);
 
 export const introspectApp = async (
   args: Parameters<BuildV2>[0],
-  options: Awaited<ReturnType<typeof rolldown>>
+  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
 ) => {
-  const source = expressShimSource(options);
-  await outputFile(
-    join(options.outputDir, 'node_modules', 'express', 'index.js'),
-    source
+  const source = expressShimSource(rolldownResult);
+  const shimPath = join(
+    rolldownResult.outputDir,
+    'node_modules',
+    'express',
+    'index.js'
   );
+  await outputFile(shimPath, source);
 
-  await invokeFunction(args, options);
+  debug('[@vercel/express] Running app to extract routes...');
+  await invokeFunction(args, rolldownResult);
+
   const {
     routes: routesFromIntrospection,
     views,
     staticPaths,
-  } = await processIntrospection(options);
-  await cleanup(options);
+  } = await processIntrospection(rolldownResult);
+  debug(
+    `[@vercel/express] Extracted ${routesFromIntrospection.length} routes from introspection`
+  );
+
+  await cleanupShim(rolldownResult);
 
   if (views) {
     try {
+      debug(`[@vercel/express] Collecting view files from: ${views}`);
       const validatedViews = validatePath(views, args.workPath);
       const viewFiles = await glob(join(validatedViews, '**/*'), args.workPath);
+      debug(
+        `[@vercel/express] Found ${Object.keys(viewFiles).length} view files`
+      );
       for (const [p, f] of Object.entries(viewFiles)) {
-        options.files[p] = f;
+        rolldownResult.files[p] = f;
       }
     } catch (error) {
       console.log(`Skipping invalid views path: ${views}`);
     }
   }
 
-  if (staticPaths) {
+  if (staticPaths && staticPaths.length > 0) {
     try {
+      debug(
+        `[@vercel/express] Collecting static files from: ${staticPaths.join(', ')}`
+      );
       const validatedStaticPaths = staticPaths.map(path =>
         validatePath(path, args.workPath)
       );
+      let totalStaticFiles = 0;
       for (const staticPath of validatedStaticPaths) {
         const staticFiles = await glob(join(staticPath, '**/*'), args.workPath);
+        totalStaticFiles += Object.keys(staticFiles).length;
         for (const [p, f] of Object.entries(staticFiles)) {
-          options.files[p] = f;
+          rolldownResult.files[p] = f;
         }
       }
+      debug(`[@vercel/express] Found ${totalStaticFiles} static files`);
     } catch (error) {
       console.log(`Skipping invalid static paths: ${staticPaths}`);
     }
   }
+
   const routes = [
     {
       handle: 'filesystem',
@@ -70,16 +90,18 @@ export const introspectApp = async (
   return { routes };
 };
 
-const cleanup = async (options: Awaited<ReturnType<typeof rolldown>>) => {
-  await rm(join(options.outputDir, 'node_modules'), {
+const cleanupShim = async (
+  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
+) => {
+  await rm(join(rolldownResult.outputDir, 'node_modules'), {
     recursive: true,
     force: true,
   });
-  await rm(getIntrospectionPath(options), { force: true });
+  await rm(getIntrospectionPath(rolldownResult), { force: true });
 };
 
 const processIntrospection = async (
-  options: Awaited<ReturnType<typeof rolldown>>
+  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
 ) => {
   const schema = z.object({
     routes: z
@@ -104,7 +126,10 @@ const processIntrospection = async (
     viewEngine: z.string().optional(),
   });
   try {
-    const introspectionPath = join(options.outputDir, 'introspection.json');
+    const introspectionPath = join(
+      rolldownResult.outputDir,
+      'introspection.json'
+    );
     const introspection = readFileSync(introspectionPath, 'utf8');
     return schema.parse(JSON.parse(introspection));
   } catch (error) {
@@ -126,25 +151,31 @@ const getIntrospectionPath = (options: { outputDir: string }) => {
 
 const invokeFunction = async (
   args: Parameters<BuildV2>[0],
-  options: Awaited<ReturnType<typeof rolldown>>
+  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
 ) => {
   await new Promise(resolve => {
     try {
-      const child = spawn('node', [join(options.outputDir, options.handler)], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: options.outputDir,
-        env: {
-          ...process.env,
-          ...(args.meta?.env || {}),
-          ...(args.meta?.buildEnv || {}),
-        },
-      });
+      const child = spawn(
+        'node',
+        [join(rolldownResult.outputDir, rolldownResult.handler)],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          cwd: rolldownResult.outputDir,
+          env: {
+            ...process.env,
+            ...(args.meta?.env || {}),
+            ...(args.meta?.buildEnv || {}),
+          },
+        }
+      );
 
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         child.kill('SIGTERM');
-      }, 5000);
+      }, 2000);
 
-      child.on('error', () => {
+      child.on('error', err => {
+        clearTimeout(timeout);
+        debug(`[@vercel/express] Introspection error: ${err.message}`);
         console.log(
           `Unable to extract routes from express, route level observability will not be available`
         );
@@ -152,6 +183,7 @@ const invokeFunction = async (
       });
 
       child.on('close', () => {
+        clearTimeout(timeout);
         resolve(undefined);
       });
     } catch (error) {
