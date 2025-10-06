@@ -667,6 +667,38 @@ test('convertRewrites', () => {
         destination: '/api/hello',
         statusCode: 201,
       },
+      {
+        source: '/test/:id',
+        destination: '/api/:sub_domain/:id',
+        has: [
+          {
+            type: 'host',
+            value: '(?<sub_domain>.*)\\.example\\.com',
+          },
+        ],
+      },
+      {
+        source: '/user/:id',
+        destination: '/api/:user_name/:user_type/:id',
+        has: [
+          {
+            type: 'header',
+            key: 'x-data',
+            value: '(?<user_name>.*)-(?<user_type>.*)',
+          },
+        ],
+      },
+      {
+        source: '/item/:id',
+        destination: '/products/:item_id/:category/:id',
+        has: [
+          {
+            type: 'query',
+            key: 'data',
+            value: '(?<item_id>\\d+)-(?<category>[a-z]+)',
+          },
+        ],
+      },
     ],
     ['nextInternalLocale']
   );
@@ -872,6 +904,41 @@ test('convertRewrites', () => {
       src: '^\\/rewrite-with-status$',
       status: 201,
     },
+    {
+      check: true,
+      dest: '/api/$sub_domain/$1',
+      has: [
+        {
+          type: 'host',
+          value: '(?<sub_domain>.*)\\.example\\.com',
+        },
+      ],
+      src: '^\\/test(?:\\/([^\\/]+?))$',
+    },
+    {
+      check: true,
+      dest: '/api/$user_name/$user_type/$1',
+      has: [
+        {
+          type: 'header',
+          key: 'x-data',
+          value: '(?<user_name>.*)-(?<user_type>.*)',
+        },
+      ],
+      src: '^\\/user(?:\\/([^\\/]+?))$',
+    },
+    {
+      check: true,
+      dest: '/products/$item_id/$category/$1',
+      has: [
+        {
+          type: 'query',
+          key: 'data',
+          value: '(?<item_id>\\d+)-(?<category>[a-z]+)',
+        },
+      ],
+      src: '^\\/item(?:\\/([^\\/]+?))$',
+    },
   ];
 
   deepEqual(actual, expected);
@@ -902,6 +969,9 @@ test('convertRewrites', () => {
     ['/array-query-string/10/email'],
     ['/en/hello'],
     ['/rewrite-with-status'],
+    ['/test/123', '/test/abc'],
+    ['/user/10', '/user/abc'],
+    ['/item/5', '/item/xyz'],
   ];
 
   const mustNotMatch = [
@@ -930,6 +1000,9 @@ test('convertRewrites', () => {
     ['/array-query-string/10'],
     ['/en/hello/world', '/en/hello/'],
     ['/rewrite-with-status-nope'],
+    ['/test', '/testing/123', '/test/'],
+    ['/user', '/users/10', '/user/'],
+    ['/item', '/items/5', '/item/'],
   ];
 
   assertRegexMatches(actual, mustMatch, mustNotMatch);

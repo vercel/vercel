@@ -291,7 +291,9 @@ export function sourceToRegex(source: string): {
   return { src: r.source, segments };
 }
 
-const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9]*)>/g;
+// The ECMA-262 specification explicitly allows for underscores in
+// CaptureGroupName's (see https://tc39.es/ecma262/#prod-GroupName).
+const namedGroupsRegex = /\(\?<([a-zA-Z][a-zA-Z0-9_]*)>/g;
 
 const normalizeHasKeys = (hasItems: HasField = []) => {
   for (const hasItem of hasItems) {
