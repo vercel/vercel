@@ -2074,6 +2074,57 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Flask',
+    slug: 'flask',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/flask.svg',
+    tagline: 'The Python micro web framework',
+    description: 'A Flask app, ready for production',
+    website: 'https://flask.palletsprojects.com',
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: 'flask',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: 'flask',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: 'flask',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
