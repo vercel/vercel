@@ -1,5 +1,11 @@
 # vercel
 
+## 48.2.3
+
+### Patch Changes
+
+- Introduce --standalone flag, allowing build artifacts to be fully contained within the .vercel folder. ([#14049](https://github.com/vercel/vercel/pull/14049))
+
 ## 48.2.2
 
 ### Patch Changes
