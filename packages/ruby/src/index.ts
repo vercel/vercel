@@ -1,6 +1,7 @@
 import { EOL } from 'os';
 import { join, dirname } from 'path';
 import execa from 'execa';
+import { randomBytes } from 'crypto';
 import {
   move,
   remove,
@@ -424,6 +425,7 @@ export const build: BuildV3 = async ({
     '**/node_modules/**',
     '**/.next/**',
     '**/.nuxt/**',
+    '**/public/**',
     '**/tmp/**',
   ];
 
@@ -482,11 +484,29 @@ export const build: BuildV3 = async ({
     }
   }
 
+  const lambdaEnv: Record<string, string> = {};
+  if (config?.framework) {
+    lambdaEnv.VC_FRAMEWORK = String(config.framework);
+  }
+
+  // For Rails zero-config: if user did not provide SECRET_KEY_BASE,
+  // generate a per-deployment fallback and expose it via a namespaced env var.
+  // vc_init.rb will only consume it when SECRET_KEY_BASE is absent.
+  try {
+    if (config?.framework === 'rails' && !process.env.SECRET_KEY_BASE) {
+      const fallbackSecret = randomBytes(64).toString('hex');
+      lambdaEnv.VC_GENERATED_SECRET_KEY_BASE = fallbackSecret;
+      debug('ruby: generated fallback SECRET_KEY_BASE for Rails (namespaced)');
+    }
+  } catch (err) {
+    debug('ruby: failed to generate fallback SECRET_KEY_BASE (non-fatal)', err);
+  }
+
   const output = new Lambda({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
-    environment: {},
+    environment: lambdaEnv,
   });
   debug(
     `ruby: lambda output prepared (files=${Object.keys(outputFiles).length})`
