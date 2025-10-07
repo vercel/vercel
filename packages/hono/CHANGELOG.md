@@ -1,5 +1,18 @@
 # @vercel/hono
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.25
+
+## 0.1.3
+
+### Patch Changes
+
+- Adding in experimental observability ([#13996](https://github.com/vercel/vercel/pull/13996))
+
 ## 0.1.2
 
 ### Patch Changes

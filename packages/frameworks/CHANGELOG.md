@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.11.0
+
+### Minor Changes
+
+- Add zero config support for NestJS ([#14009](https://github.com/vercel/vercel/pull/14009))
+
 ## 3.10.0
 
 ### Minor Changes
