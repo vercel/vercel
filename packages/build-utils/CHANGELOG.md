@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.1.2
+
+### Patch Changes
+
+- Reuse duplicated node builder logic ([#14031](https://github.com/vercel/vercel/pull/14031))
+
 ## 12.1.1
 
 ### Patch Changes
