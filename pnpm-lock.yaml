@@ -147,7 +147,7 @@ importers:
         specifier: 12.1.2
         version: link:../packages/build-utils
       '@vercel/frameworks':
-        specifier: 3.11.0
+        specifier: 3.11.1
         version: link:../packages/frameworks
 
   internals/constants:
@@ -370,7 +370,7 @@ importers:
         specifier: 5.3.26
         version: link:../node
       '@vercel/python':
-        specifier: 5.0.7
+        specifier: 5.0.8
         version: link:../python
       '@vercel/redwood':
         specifier: 2.3.6
@@ -533,10 +533,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.11.0
+        specifier: 3.11.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.6.0
+        specifier: 5.6.1
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.2.0
@@ -1049,7 +1049,7 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.11.0
+        specifier: 3.11.1
         version: link:../frameworks
       '@vercel/routing-utils':
         specifier: 5.2.0
@@ -2014,10 +2014,10 @@ importers:
         specifier: 2.0.3
         version: link:../error-utils
       '@vercel/frameworks':
-        specifier: 3.11.0
+        specifier: 3.11.1
         version: link:../frameworks
       '@vercel/fs-detectors':
-        specifier: 5.6.0
+        specifier: 5.6.1
         version: link:../fs-detectors
       '@vercel/routing-utils':
         specifier: 5.2.0
