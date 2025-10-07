@@ -1,7 +1,7 @@
 ---
 '@vercel/build-utils': patch
 '@vercel/nestjs': patch
-'@vercel/hono': patch
+'@vercel/h3': patch
 ---
 
 Reuse duplicated node builder logic
