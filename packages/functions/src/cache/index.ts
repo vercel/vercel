@@ -125,10 +125,22 @@ function getCacheImplementation(debug?: boolean): RuntimeCache {
       console.error('Failed to parse RUNTIME_CACHE_HEADERS:', e);
       return inMemoryCacheInstance;
     }
+    let timeout = 500;
+    if (process.env.RUNTIME_CACHE_TIMEOUT) {
+      const parsed = parseInt(process.env.RUNTIME_CACHE_TIMEOUT, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        timeout = parsed;
+      } else {
+        console.warn(
+          `Invalid RUNTIME_CACHE_TIMEOUT value: "${process.env.RUNTIME_CACHE_TIMEOUT}". Using default: ${timeout}ms`
+        );
+      }
+    }
     buildCacheInstance = new BuildCache({
       endpoint: RUNTIME_CACHE_ENDPOINT,
       headers: parsedHeaders,
       onError: (error: Error) => console.error(error),
+      timeout,
     });
   }
 
