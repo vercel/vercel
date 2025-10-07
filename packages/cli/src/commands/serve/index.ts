@@ -6,7 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { ServeTelemetryClient } from '../../util/telemetry/commands/serve';
-import { serve } from '@vercel/serve';
+import { serve } from 'cervel';
 
 export default async function main(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -39,7 +39,7 @@ export default async function main(client: Client): Promise<number> {
   // Get the current working directory from the client (already absolute)
   const cwd = client.cwd;
 
-  // Call the serve function from @vercel/serve
+  // Call the serve function from cervel
   await serve({
     cwd,
     entrypoint,

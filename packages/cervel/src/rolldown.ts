@@ -1,14 +1,15 @@
-import { debug } from '@vercel/build-utils';
-import { BuildV2, Files, PackageJson } from '@vercel/build-utils';
-import { existsSync, readFileSync } from 'fs';
-import { rm } from 'fs/promises';
+import { existsSync } from 'fs';
+import { rm, readFile } from 'fs/promises';
 import { extname, join, relative } from 'path';
 import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
 
-export const rolldown = async (args: Parameters<BuildV2>[0]) => {
+export const rolldown = async (args: {
+  entrypoint: string;
+  workPath: string;
+  repoRootPath: string;
+}) => {
   const baseDir = args.repoRootPath || args.workPath;
   const entrypointPath = join(args.workPath, args.entrypoint);
-  const files: Files = {};
   const shouldAddSourcemapSupport = false;
 
   const extension = extname(args.entrypoint);
@@ -30,9 +31,9 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   // Always include package.json from the entrypoint directory
   const packageJsonPath = join(args.workPath, 'package.json');
   const external: string[] = [];
-  let pkg: PackageJson = {};
+  let pkg: Record<string, unknown> = {};
   if (existsSync(packageJsonPath)) {
-    const source = readFileSync(packageJsonPath);
+    const source = await readFile(packageJsonPath, 'utf8');
     try {
       pkg = JSON.parse(source.toString());
     } catch (_e) {
@@ -123,16 +124,13 @@ export const rolldown = async (args: Parameters<BuildV2>[0]) => {
   if (typeof handler !== 'string') {
     throw new Error(`Unable to resolve module for ${args.entrypoint}`);
   }
-  debug(`[@vercel/express] Handler: ${handler}`);
 
-  debug('[@vercel/express] Tracing dependencies...');
   const cleanup = async () => {
     await rm(outputDir, { recursive: true, force: true });
   };
 
   return {
     result: {
-      files,
       pkg,
       shouldAddSourcemapSupport,
       handler,

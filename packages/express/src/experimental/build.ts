@@ -1,10 +1,10 @@
 export const version = 2;
 import { BuildV2, NodejsLambda, debug } from '@vercel/build-utils';
 import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
-import { rolldown } from './rolldown';
 import { entrypointCallback } from './find-entrypoint';
 import { introspectApp } from './introspection';
-import { typescript } from './typescript';
+import { nodeFileTrace } from './node-file-trace';
+import { build as serveBuild } from 'cervel';
 
 export const build: BuildV2 = async args => {
   console.log(`Using experimental express build`);
@@ -15,17 +15,11 @@ export const build: BuildV2 = async args => {
   debug('[@vercel/express] Running build command...');
   await maybeExecBuildCommand(args, downloadResult);
 
-  debug('[@vercel/express] Finding entrypoint...');
   args.entrypoint = await entrypointCallback(args);
-  debug(`[@vercel/express] Entrypoint: ${args.entrypoint}`);
 
-  debug('[@vercel/express] Compiling...');
-  const { result: rolldownResult, cleanup } = await rolldown(args);
+  const { rolldownResult, tsPromise } = await serveBuild(args);
 
-  debug('[@vercel/express] Type checking...');
-  const tsPromise = typescript(args).catch(async () => {
-    await cleanup();
-  });
+  const { files } = await nodeFileTrace(args, rolldownResult);
 
   debug('[@vercel/express] Introspecting app...');
   const { routes } = await introspectApp(args, rolldownResult);
@@ -34,6 +28,7 @@ export const build: BuildV2 = async args => {
   const lambda = new NodejsLambda({
     runtime: downloadResult.nodeVersion.runtime,
     ...rolldownResult,
+    files,
     shouldAddHelpers: false,
     shouldAddSourcemapSupport: true,
     framework: {
