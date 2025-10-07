@@ -434,6 +434,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
                     # Event to signal that the response has been fully sent
                     response_done = threading.Event()
+                    # Event to signal the ASGI app has fully completed (incl. background tasks)
+                    app_done = threading.Event()
 
                     # Propagate request context to background thread for logging & metrics
                     request_context = storage.get()
@@ -488,6 +490,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 # Run ASGI app (includes background tasks)
                                 asgi_instance = app(scope, receive, send)
                                 await asgi_instance
+                                # Mark app completion when the ASGI callable returns
+                                app_done.set()
 
                             asyncio.run(runner())
                         except Exception:
@@ -504,10 +508,9 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 pass
                         finally:
                             # Always unblock the waiting thread to avoid hangs
-                            try:
-                                response_done.set()
-                            except Exception:
-                                pass
+                            response_done.set()
+                            # Ensure app completion is always signaled
+                            app_done.set()
                             if token is not None:
                                 storage.reset(token)
 
@@ -517,6 +520,8 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
                     # Wait until final body chunk has been flushed to client
                     response_done.wait()
+                    # Also wait until the ASGI app finishes (includes background tasks)
+                    app_done.wait()
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
