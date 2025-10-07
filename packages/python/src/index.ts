@@ -34,6 +34,10 @@ import {
   FASTAPI_CANDIDATE_ENTRYPOINTS,
   detectFastapiEntrypoint,
 } from './entrypoint';
+import {
+  FLASK_CANDIDATE_ENTRYPOINTS,
+  detectFlaskEntrypoint,
+} from './entrypoint';
 
 export const version = 3;
 
@@ -112,7 +116,7 @@ export const build: BuildV3 = async ({
 
   let fsFiles = await glob('**', workPath);
 
-  // Zero-config entrypoint discovery
+  // Zero config entrypoint discovery
   if (!fsFiles[entrypoint] && config?.framework === 'fastapi') {
     const detected = await detectFastapiEntrypoint(workPath, entrypoint);
     if (detected) {
@@ -125,6 +129,20 @@ export const build: BuildV3 = async ({
       throw new NowBuildError({
         code: 'FASTAPI_ENTRYPOINT_NOT_FOUND',
         message: `No FastAPI entrypoint found. Searched for: ${searchedList}`,
+      });
+    }
+  } else if (!fsFiles[entrypoint] && config?.framework === 'flask') {
+    const detected = await detectFlaskEntrypoint(workPath, entrypoint);
+    if (detected) {
+      debug(
+        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+      );
+      entrypoint = detected;
+    } else {
+      const searchedList = FLASK_CANDIDATE_ENTRYPOINTS.join(', ');
+      throw new NowBuildError({
+        code: 'FLASK_ENTRYPOINT_NOT_FOUND',
+        message: `No Flask entrypoint found. Searched for: ${searchedList}`,
       });
     }
   }
@@ -461,6 +479,12 @@ export const shouldServe: ShouldServe = opts => {
       return false;
     }
     // Public assets are served by the static builder / default handler
+    return true;
+  } else if (framework === 'flask') {
+    const requestPath = opts.requestPath.replace(/\/$/, '');
+    if (requestPath.startsWith('api') && opts.hasMatched) {
+      return false;
+    }
     return true;
   }
   return defaultShouldServe(opts);
