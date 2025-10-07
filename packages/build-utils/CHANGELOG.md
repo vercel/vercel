@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.1.1
+
+### Patch Changes
+
+- Change archive split from 100MB -> 20MB ([#14046](https://github.com/vercel/vercel/pull/14046))
+
 ## 12.1.0
 
 ### Minor Changes
