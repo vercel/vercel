@@ -83,8 +83,7 @@ class VCRailsErrorRedirector
       html = res.body.to_s
       new_headers = build_error_headers(original_headers, status, ["Accept", "Accept-Language"], status >= 500 ? "no-store" : "public, s-maxage=60")
       response_body = env['REQUEST_METHOD'] == 'HEAD' ? [] : [html]
-      # return [status, new_headers, response_body]
-      [status, new_headers, "bruh #{ENV['VERCEL_IPC_PATH']}"]
+      return [status, new_headers, response_body]
     else
       raise "Failed to fetch CDN error page: #{res.code.to_i}, #{res.body.to_s}"
     end
