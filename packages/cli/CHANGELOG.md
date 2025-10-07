@@ -1,5 +1,61 @@
 # vercel
 
+## 48.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`0fd2477a7510c7856c6d7e6622c72b712c285fe7`](https://github.com/vercel/vercel/commit/0fd2477a7510c7856c6d7e6622c72b712c285fe7)]:
+  - @vercel/build-utils@12.1.1
+  - @vercel/express@0.0.23
+  - @vercel/h3@0.1.3
+  - @vercel/hono@0.1.4
+  - @vercel/node@5.3.25
+  - @vercel/static-build@2.7.24
+
+## 48.2.3
+
+### Patch Changes
+
+- Introduce --standalone flag, allowing build artifacts to be fully contained within the .vercel folder. ([#14049](https://github.com/vercel/vercel/pull/14049))
+
+## 48.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`9f72ec949fb0bb62f6780a6641cc1828a618e2d7`](https://github.com/vercel/vercel/commit/9f72ec949fb0bb62f6780a6641cc1828a618e2d7), [`be090db4f0504cea4258eec835e00efe3cd31d91`](https://github.com/vercel/vercel/commit/be090db4f0504cea4258eec835e00efe3cd31d91)]:
+  - @vercel/next@4.13.2
+  - @vercel/remix-builder@5.4.13
+
+## 48.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`629b79e4a92d24c773ec6b3928e3f3274fb4dc8b`](https://github.com/vercel/vercel/commit/629b79e4a92d24c773ec6b3928e3f3274fb4dc8b), [`dfb057d11dadbf394258ece1aae823d327165a40`](https://github.com/vercel/vercel/commit/dfb057d11dadbf394258ece1aae823d327165a40)]:
+  - @vercel/next@4.13.1
+  - @vercel/hono@0.1.3
+
+## 48.2.0
+
+### Minor Changes
+
+- Add --status flag to list command for deployment filtering ([#13993](https://github.com/vercel/vercel/pull/13993))
+
+  The `vercel list` command now supports filtering deployments by their status using the `--status` or `-s` flag. This feature allows users to filter deployments by one or more status values.
+
+  Features:
+
+  - Filter by single status: `vercel list --status READY`
+  - Filter by multiple statuses: `vercel list --status READY,BUILDING`
+  - Support for all deployment statuses: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED
+  - Input validation with clear error messages
+  - Compatible with existing filters (environment, meta, etc.)
+  - Comprehensive test coverage and telemetry tracking
+
+### Patch Changes
+
+- Updated dependencies [[`2eebd3a0029d20070811c9fc8dd37f6edb947f26`](https://github.com/vercel/vercel/commit/2eebd3a0029d20070811c9fc8dd37f6edb947f26), [`4f0ff3381b6ff2dec417413993ea749577441586`](https://github.com/vercel/vercel/commit/4f0ff3381b6ff2dec417413993ea749577441586)]:
+  - @vercel/python@5.0.7
+
 ## 48.1.7
 
 ### Patch Changes

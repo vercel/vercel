@@ -171,9 +171,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliOptionTarget(parsedArgs.flags['--target']);
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
-    // telemetryClient.trackCliFlagStandalone(
-    //   (parsedArgs.flags as any)['--experimentalStandalone']
-    // );
+    telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
   } catch (error) {
     printError(error);
     return 1;
@@ -193,11 +191,20 @@ export default async function main(client: Client): Promise<number> {
     }) || 'preview';
 
   const yes = Boolean(parsedArgs.flags['--yes']);
-  // FIXME: standalone:replace env var with flag
-  // const standalone = Boolean(
-  //   (parsedArgs.flags as any)['--experimentalStandalone']
-  // );
-  const standalone = process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
+
+  // Check for deprecated env var
+  const hasDeprecatedEnvVar =
+    process.env.VERCEL_EXPERIMENTAL_STANDALONE_BUILD === '1';
+  if (hasDeprecatedEnvVar) {
+    output.warn(
+      'The VERCEL_EXPERIMENTAL_STANDALONE_BUILD environment variable is deprecated. Please use the --standalone flag instead.'
+    );
+  }
+
+  // Use flag first, fall back to deprecated env var
+  const standalone = Boolean(
+    parsedArgs.flags['--standalone'] || hasDeprecatedEnvVar
+  );
 
   try {
     await validateNpmrc(cwd);
@@ -631,6 +638,14 @@ async function doBuild(
               process.env.VERCEL_EXPERIMENTAL_EXPRESS_BUILD === '1' &&
               'name' in builder &&
               builder.name === 'express' &&
+              'experimentalBuild' in builder &&
+              typeof builder.experimentalBuild === 'function'
+            ) {
+              return builder.experimentalBuild(buildOptions);
+            } else if (
+              process.env.VERCEL_EXPERIMENTAL_HONO_BUILD === '1' &&
+              'name' in builder &&
+              builder.name === 'hono' &&
               'experimentalBuild' in builder &&
               typeof builder.experimentalBuild === 'function'
             ) {
