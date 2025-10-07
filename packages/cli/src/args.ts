@@ -17,6 +17,7 @@ export const help = () => `
       cache                [cmd]       Manages cache for your current Project
       dev                              Start a local development server
       env                              Manages the Environment Variables for your current Project
+      serve                [path]      Serve the project
       git                              Manage Git provider repository for your current Project
       help                 [cmd]       Displays complete help for [cmd]
       init                 [example]   Initialize an example project
