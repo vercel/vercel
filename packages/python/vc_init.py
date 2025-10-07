@@ -8,17 +8,21 @@ import json
 import inspect
 import threading
 import asyncio
-import http
 import time
 from importlib import util
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socket
 import functools
 import logging
 import builtins
-from typing import Callable, Literal
 import contextvars
-import io
+import atexit
+import http
+import enum
+import queue
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO, TextIOBase
+from typing import Callable, Awaitable, Literal, TypeAlias, MutableMapping, Any, Protocol
+
 
 _here = os.path.dirname(__file__)
 _vendor_rel = '__VC_HANDLER_VENDOR_DIR'
@@ -51,6 +55,7 @@ __vc_variables = dir(__vc_module)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
+
 def format_headers(headers, decode=False):
     keyToList = {}
     for key, value in headers.items():
@@ -61,6 +66,7 @@ def format_headers(headers, decode=False):
             keyToList[key] = []
         keyToList[key].append(value)
     return keyToList
+
 
 # Custom logging handler so logs are properly categorized
 class VCLogHandler(logging.Handler):
@@ -120,7 +126,7 @@ class VCLogHandler(logging.Handler):
 def setup_logging(send_message: Callable[[dict], None], storage: contextvars.ContextVar[dict | None]):
     # Override sys.stdout and sys.stderr to map logs to the correct request
     class StreamWrapper:
-        def __init__(self, stream: io.TextIOBase, stream_name: Literal["stdout", "stderr"]):
+        def __init__(self, stream: TextIOBase, stream_name: Literal["stdout", "stderr"]):
             self.stream = stream
             self.stream_name = stream_name
 
@@ -191,13 +197,240 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
     builtins.print = print_wrapper(builtins.print)
 
 
+Headers: TypeAlias = list[list[bytes]]
+Message: TypeAlias = MutableMapping[str, Any]
+Scope: TypeAlias = MutableMapping[str, Any]
+Receive: TypeAlias = Callable[[], Awaitable[Message]]
+Send: TypeAlias = Callable[[Message], Awaitable[None]]
+
+
+class ASGI(Protocol):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None: ...  # pragma: no cover
+
+
+class WSGIStartResponse(Protocol):
+    def __call__(
+        self, status: str, headers: Headers, exc_info: Any | None = None,
+    ) -> None: ...  # pragma: no cover
+
+
+class WSGI(Protocol):
+    def __call__(
+        self,
+        environ: MutableMapping[str, Any],
+        start_response: WSGIStartResponse,
+    ) -> Any: ...  # pragma: no cover
+
+
+def is_asgi_app(app: ASGI | WSGI) -> bool:
+    return (
+        inspect.iscoroutinefunction(app)
+        or inspect.iscoroutinefunction(getattr(app, '__call__', None))
+    )
+
+
+ASGI_LIFESPAN_MANAGER = None
+ASGI_LIFESPAN_LOCK = threading.Lock()
+
+storage = contextvars.ContextVar('storage', default=None)
+APP: ASGI | WSGI | None = None
+IS_ASGI: bool = False
+
+
+class ASGILifespanManager:
+    def __init__(self, app: ASGI):
+        self.app = app
+        self.loop = asyncio.new_event_loop()
+        self.queue = None
+        self.state = {}
+        self.started = threading.Event()
+        self.stopped = threading.Event()
+        self.thread = threading.Thread(
+            target=self._run, name='vercel-asgi-lifespan', daemon=True
+        )
+        self.lifespan_log_token = None
+
+    def _run(self):
+        asyncio.set_event_loop(self.loop)
+
+        # Bind a synthetic logging context for lifespan so logs are forwarded via IPC
+        # even when no request context exists.
+        try:
+            self.lifespan_log_token = storage.set({'invocationId': 'lifespan', 'requestId': 0})
+        except Exception:
+            self.lifespan_log_token = None
+
+        # Create queue within the event loop context
+        if _use_legacy_asyncio:
+            self.queue = asyncio.Queue(loop=self.loop)
+        else:
+            self.queue = asyncio.Queue()
+
+        async def receive():
+            return await self.queue.get()
+
+        async def send(message):
+            typ = message.get('type')
+            if typ == 'lifespan.startup.complete':
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+            elif typ == 'lifespan.startup.failed':
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+            elif typ in ('lifespan.shutdown.complete', 'lifespan.shutdown.failed'):
+                try:
+                    self.stopped.set()
+                except Exception:
+                    pass
+
+        async def runner():
+            try:
+                await self.app(
+                    {
+                        'type': 'lifespan',
+                        'asgi': {'spec_version': '2.0', 'version': '3.0'},
+                        'state': self.state,
+                    },
+                    receive,
+                    send,
+                )
+            except Exception:
+                # Treat lifespan as unsupported; unblock waiters
+                try:
+                    self.started.set()
+                except Exception:
+                    pass
+                try:
+                    self.stopped.set()
+                except Exception:
+                    pass
+
+        # Start the lifespan application
+        self.loop.create_task(runner())
+
+        async def push_startup():
+            await self.queue.put({'type': 'lifespan.startup'})
+
+        self.loop.create_task(push_startup())
+        self.loop.run_forever()
+
+        # Reset the synthetic logging context on shutdown
+        if self.lifespan_log_token is not None:
+            try:
+                storage.reset(self.lifespan_log_token)
+            except Exception:
+                pass
+
+    def ensure_started(self):
+        if not self.thread.is_alive():
+            self.thread.start()
+        # Wait up to 10s for startup (best effort)
+        try:
+            self.started.wait(timeout=10.0)
+        except Exception:
+            pass
+
+    def shutdown(self):
+        # Send shutdown and stop loop
+        try:
+            def push_shutdown():
+                try:
+                    self.loop.create_task(self.queue.put({'type': 'lifespan.shutdown'}))
+                except Exception:
+                    pass
+
+            self.loop.call_soon_threadsafe(push_shutdown)
+        except Exception:
+            pass
+        try:
+            self.stopped.wait(timeout=2.0)
+        except Exception:
+            pass
+        try:
+            self.loop.call_soon_threadsafe(self.loop.stop)
+        except Exception:
+            pass
+        try:
+            self.thread.join(timeout=2.0)
+        except Exception:
+            pass
+
+
+def _ensure_lifespan(app: ASGI):
+    global ASGI_LIFESPAN_MANAGER
+    if ASGI_LIFESPAN_MANAGER is not None:
+        return
+    with ASGI_LIFESPAN_LOCK:
+        if ASGI_LIFESPAN_MANAGER is None:
+            mgr = ASGILifespanManager(app)
+            ASGI_LIFESPAN_MANAGER = mgr
+            try:
+                mgr.ensure_started()
+            except Exception:
+                pass
+            try:
+                atexit.register(mgr.shutdown)
+            except Exception:
+                pass
+
+
 if 'VERCEL_IPC_PATH' in os.environ:
     start_time = time.time()
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
 
-    send_message = lambda message: sock.sendall((json.dumps(message) + '\0').encode())
-    storage = contextvars.ContextVar('storage', default=None)
+    # Use a background thread to avoid blocking on IPC writes during startup
+    _ipc_queue = queue.Queue(maxsize=1024)
+
+    def _ipc_sender():
+        try:
+            while True:
+                msg = _ipc_queue.get()
+                if msg is None:
+                    break
+                try:
+                    data = (json.dumps(msg) + '\0').encode()
+                except Exception:
+                    continue
+                try:
+                    sock.sendall(data)
+                except Exception:
+                    # Best-effort; drop on failure
+                    pass
+        finally:
+            try:
+                sock.close()
+            except Exception:
+                pass
+
+    _ipc_thread = threading.Thread(target=_ipc_sender, name='vercel-ipc-sender', daemon=True)
+    _ipc_thread.start()
+
+    def send_message(message):
+        try:
+            _ipc_queue.put_nowait(message)
+            return True
+        except Exception:
+            return False
+
+    def _shutdown_ipc_sender():
+        try:
+            _ipc_queue.put_nowait(None)
+        except Exception:
+            pass
+        try:
+            _ipc_thread.join(timeout=1.0)
+        except Exception:
+            pass
+
+    try:
+        atexit.register(_shutdown_ipc_sender)
+    except Exception:
+        pass
 
     # Override urlopen from urllib3 (& requests) to send Request Metrics
     try:
@@ -325,15 +558,12 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 method()
                 self.wfile.flush()
     elif 'app' in __vc_variables:
-        # WSGI
-        if (
-            not inspect.iscoroutinefunction(__vc_module.app) and
-            not inspect.iscoroutinefunction(__vc_module.app.__call__)
-        ):
-            from io import BytesIO
+        APP = __vc_module.app
+        IS_ASGI = is_asgi_app(APP)
 
+        # WSGI
+        if not IS_ASGI:
             string_types = (str,)
-            app = __vc_module.app
 
             def wsgi_encoding_dance(s, charset="utf-8", errors="replace"):
                 if isinstance(s, str):
@@ -382,7 +612,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         return self.wfile.write
 
                     # Call the application
-                    response = app(env, start_response)
+                    response = APP(env, start_response)
                     try:
                         for data in response:
                             if data:
@@ -394,9 +624,6 @@ if 'VERCEL_IPC_PATH' in os.environ:
         # ASGI
         else:
             from urllib.parse import urlparse
-            from io import BytesIO
-
-            app = __vc_module.app
 
             class Handler(BaseHandler):
                 def handle_request(self):
@@ -424,6 +651,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         'method': self.command,
                         'path': url.path,
                         'raw_path': url.path.encode(),
+                        'state': ASGI_LIFESPAN_MANAGER.state if ASGI_LIFESPAN_MANAGER is not None else {},
                     }
 
                     if 'content-length' in self.headers:
@@ -432,8 +660,9 @@ if 'VERCEL_IPC_PATH' in os.environ:
                     else:
                         body = b''
 
-                    # Event to signal that the response has been fully sent
+                    # Events to coordinate response flush and app completion
                     response_done = threading.Event()
+                    app_done = threading.Event()
 
                     # Propagate request context to background thread for logging & metrics
                     request_context = storage.get()
@@ -447,49 +676,191 @@ if 'VERCEL_IPC_PATH' in os.environ:
                         # Track if headers were sent, so we can synthesize a 500 on early failure
                         response_started = False
                         try:
-                            async def runner():
-                                # Per-request app queue
-                                if _use_legacy_asyncio:
-                                    loop = asyncio.get_running_loop()
-                                    app_queue = asyncio.Queue(loop=loop)
-                                else:
-                                    app_queue = asyncio.Queue()
+                            # If a lifespan loop is active, run the request on it and stream
+                            # response events to the client as they arrive to preserve proper
+                            # ASGI semantics (BackgroundTasks execute after response is sent).
+                            mgr = ASGI_LIFESPAN_MANAGER
+                            if mgr is not None and getattr(mgr, 'loop', None) is not None:
+                                # Bridge events from the manager loop to this thread.
+                                event_queue = queue.Queue()
 
-                                await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
+                                async def runner_mgr_streaming():
+                                    # Per-request app queue created inside the manager loop
+                                    if _use_legacy_asyncio:
+                                        loop = asyncio.get_running_loop()
+                                        app_queue = asyncio.Queue(loop=loop)
+                                    else:
+                                        app_queue = asyncio.Queue()
 
-                                async def receive():
-                                    message = await app_queue.get()
-                                    return message
+                                    await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
 
-                                async def send(event):
-                                    nonlocal response_started
-                                    if event['type'] == 'http.response.start':
-                                        self.send_response(event['status'])
-                                        if 'headers' in event:
-                                            for name, value in event['headers']:
-                                                self.send_header(name.decode(), value.decode())
-                                        self.end_headers()
-                                        response_started = True
-                                    elif event['type'] == 'http.response.body':
-                                        # Stream body as it is produced; flush on completion
-                                        body_bytes = event.get('body', b'') or b''
-                                        if body_bytes:
-                                            self.wfile.write(body_bytes)
-                                        if not event.get('more_body', False):
-                                            try:
-                                                self.wfile.flush()
-                                            finally:
-                                                response_done.set()
+                                    async def receive():
+                                        return await app_queue.get()
+
+                                    async def send(event):
+                                        nonlocal response_started
+                                        et = event.get('type')
+                                        if et == 'http.response.start':
+                                            response_started = True
+                                        # Push event to handler thread for immediate write
+                                        try:
+                                            event_queue.put_nowait(event)
+                                        except Exception:
+                                            pass
+
+                                    # Propagate request context into manager loop for logs/metrics
+                                    token_ctx = None
+                                    try:
+                                        if request_context is not None:
+                                            token_ctx = storage.set(request_context)
+                                    except Exception:
+                                        token_ctx = None
+
+                                    try:
+                                        await APP(scope, receive, send)
+                                    finally:
+                                        try:
+                                            if token_ctx is not None:
+                                                storage.reset(token_ctx)
+                                        except Exception:
+                                            pass
+
+                                fut = asyncio.run_coroutine_threadsafe(runner_mgr_streaming(), mgr.loop)
+
+                                # Ensure the consumer unblocks even if the app errors before sending events
+                                def _notify_done(f):
+                                    try:
+                                        has_error = f.exception() is not None
+                                    except Exception:
+                                        has_error = True
+                                    try:
+                                        event_queue.put_nowait({'type': '__done__', 'error': has_error})
+                                    except Exception:
+                                        pass
+                                try:
+                                    fut.add_done_callback(_notify_done)
+                                except Exception:
+                                    pass
+
+                                try:
+                                    # Stream events as they arrive until final body or completion sentinel
+                                    headers_sent = False
+                                    finished = False
+                                    while True:
+                                        ev = event_queue.get()
+                                        et = ev.get('type')
+                                        if et == 'http.response.start':
+                                            self.send_response(ev['status'])
+                                            if 'headers' in ev:
+                                                for name, value in ev['headers']:
+                                                    try:
+                                                        self.send_header(name.decode(), value.decode())
+                                                    except Exception:
+                                                        self.send_header(str(name), str(value))
+                                            self.end_headers()
+                                            headers_sent = True
+                                        elif et == 'http.response.body':
+                                            body_bytes = ev.get('body', b'') or b''
+                                            if body_bytes:
+                                                self.wfile.write(body_bytes)
+                                            if not ev.get('more_body', False):
                                                 try:
-                                                    app_queue.put_nowait({'type': 'http.disconnect'})
-                                                except Exception:
-                                                    pass
+                                                    self.wfile.flush()
+                                                finally:
+                                                    response_done.set()
+                                                finished = True
+                                                break
+                                        elif et == '__done__':
+                                            # App completed without producing further events
+                                            if not finished:
+                                                try:
+                                                    if not headers_sent:
+                                                        self.send_response(500)
+                                                        self.end_headers()
+                                                    try:
+                                                        self.wfile.flush()
+                                                    except Exception:
+                                                        pass
+                                                finally:
+                                                    response_done.set()
+                                            break
+                                except Exception:
+                                    # If the app raised before starting the response, synthesize a 500
+                                    try:
+                                        if not response_started:
+                                            self.send_response(500)
+                                            self.end_headers()
+                                        try:
+                                            self.wfile.flush()
+                                        except Exception:
+                                            pass
+                                    except Exception:
+                                        pass
+                                finally:
+                                    # Ensure app completion is awaited to keep lifecycle accurate
+                                    try:
+                                        try:
+                                            # Wait for app coroutine (includes background tasks)
+                                            fut.result()
+                                        except Exception:
+                                            pass
+                                    finally:
+                                        try:
+                                            app_done.set()
+                                        except Exception:
+                                            pass
+                            else:
+                                # Fallback: run request on a fresh loop and stream directly
+                                async def runner_streaming():
+                                    # Per-request app queue
+                                    if _use_legacy_asyncio:
+                                        loop = asyncio.get_running_loop()
+                                        app_queue = asyncio.Queue(loop=loop)
+                                    else:
+                                        app_queue = asyncio.Queue()
 
-                                # Run ASGI app (includes background tasks)
-                                asgi_instance = app(scope, receive, send)
-                                await asgi_instance
+                                    await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
 
-                            asyncio.run(runner())
+                                    async def receive():
+                                        return await app_queue.get()
+
+                                    async def send(event):
+                                        nonlocal response_started
+                                        if event['type'] == 'http.response.start':
+                                            self.send_response(event['status'])
+                                            if 'headers' in event:
+                                                for name, value in event['headers']:
+                                                    self.send_header(name.decode(), value.decode())
+                                            self.end_headers()
+                                            response_started = True
+                                        elif event['type'] == 'http.response.body':
+                                            body_bytes = event.get('body', b'') or b''
+                                            if body_bytes:
+                                                self.wfile.write(body_bytes)
+                                            if not event.get('more_body', False):
+                                                try:
+                                                    self.wfile.flush()
+                                                finally:
+                                                    response_done.set()
+
+                                    # Propagate request context within this loop as well
+                                    token_ctx = None
+                                    try:
+                                        if request_context is not None:
+                                            token_ctx = storage.set(request_context)
+                                    except Exception:
+                                        token_ctx = None
+
+                                    try:
+                                        await APP(scope, receive, send)
+                                    finally:
+                                        try:
+                                            if token_ctx is not None:
+                                                storage.reset(token_ctx)
+                                        except Exception:
+                                            pass
+
+                                asyncio.run(runner_streaming())
                         except Exception:
                             # If the app raised before starting the response, synthesize a 500
                             try:
@@ -510,6 +881,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                 pass
                             if token is not None:
                                 storage.reset(token)
+                            try:
+                                app_done.set()
+                            except Exception:
+                                pass
 
                     # Run ASGI in background thread to allow returning after final flush
                     t = threading.Thread(target=run_asgi, daemon=True)
@@ -517,6 +892,12 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
                     # Wait until final body chunk has been flushed to client
                     response_done.wait()
+                    # Also ensure application completion (background tasks) before returning,
+                    # so we don't signal request end prematurely.
+                    try:
+                        app_done.wait()
+                    except Exception:
+                        pass
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
@@ -527,6 +908,10 @@ if 'VERCEL_IPC_PATH' in os.environ:
                 "httpPort": server.server_address[1],
             }
         })
+        # Initialize ASGI lifespan after the IPC consumer has received the server-started message
+        if APP and IS_ASGI:
+            _ensure_lifespan(APP)
+
         server.serve_forever()
 
     print('Missing variable `handler` or `app` in file "__VC_HANDLER_ENTRYPOINT".')
@@ -588,12 +973,12 @@ if 'handler' in __vc_variables or 'Handler' in __vc_variables:
         return return_dict
 
 elif 'app' in __vc_variables:
-    if (
-        not inspect.iscoroutinefunction(__vc_module.app) and
-        not inspect.iscoroutinefunction(__vc_module.app.__call__)
-    ):
+    APP = __vc_module.app
+    IS_ASGI = is_asgi_app(APP)
+
+    # wsgi
+    if not IS_ASGI:
         print('using Web Server Gateway Interface (WSGI)')
-        from io import BytesIO
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
         from werkzeug.wrappers import Response
@@ -663,7 +1048,7 @@ elif 'app' in __vc_variables:
                 if key not in ('HTTP_CONTENT_TYPE', 'HTTP_CONTENT_LENGTH'):
                     environ[key] = value
 
-            response = Response.from_app(__vc_module.app, environ)
+            response = Response.from_app(APP, environ)
 
             return_dict = {
                 'statusCode': response.status_code,
@@ -675,13 +1060,13 @@ elif 'app' in __vc_variables:
                 return_dict['encoding'] = 'base64'
 
             return return_dict
+
+    # asgi
     else:
         print('using Asynchronous Server Gateway Interface (ASGI)')
         # Originally authored by Jordan Eremieff and included under MIT license:
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/mangum/__init__.py
         # https://github.com/erm/mangum/blob/b4d21c8f5e304a3e17b88bc9fa345106acc50ad7/LICENSE
-        import asyncio
-        import enum
         from urllib.parse import urlparse
         from werkzeug.datastructures import Headers
 
@@ -701,25 +1086,54 @@ elif 'app' in __vc_variables:
 
             def __call__(self, app, body):
                 """
-                Receives the application and any body included in the request, then builds the
-                ASGI instance using the connection scope.
-                Runs until the response is completely read from the application.
+                Execute the ASGI exchange, preferring the lifespan loop if available
+                to avoid cross-loop issues with frameworks that bind resources to
+                the event loop during startup.
                 """
-                if _use_legacy_asyncio:
-                    loop = asyncio.new_event_loop()
-                    self.app_queue = asyncio.Queue(loop=loop)
-                else:
-                    self.app_queue = asyncio.Queue()
-                self.put_message({'type': 'http.request', 'body': body, 'more_body': False})
+                # Ensure lifespan is initialized before handling the request
+                try:
+                    _ensure_lifespan(app)
+                except Exception:
+                    pass
 
-                asgi_instance = app(self.scope, self.receive, self.send)
+                async def runner():
+                    # Create per-request app queue in the context of the running loop
+                    if _use_legacy_asyncio:
+                        loop = asyncio.get_running_loop()
+                        app_queue = asyncio.Queue(loop=loop)
+                    else:
+                        app_queue = asyncio.Queue()
 
-                if _use_legacy_asyncio:
-                    asgi_task = loop.create_task(asgi_instance)
-                    loop.run_until_complete(asgi_task)
-                else:
-                    asyncio.run(self.run_asgi_instance(asgi_instance))
-                return self.response
+                    await app_queue.put({'type': 'http.request', 'body': body, 'more_body': False})
+
+                    async def receive():
+                        return await app_queue.get()
+
+                    async def send(event):
+                        message_type = event['type']
+                        if message_type == 'http.response.start':
+                            status_code = event['status']
+                            headers = Headers(event.get('headers', []))
+                            self.on_request(headers, status_code)
+                            self.state = ASGICycleState.RESPONSE
+                        elif message_type == 'http.response.body':
+                            body_bytes = event.get('body', b'') or b''
+                            self.body += body_bytes
+                            if not event.get('more_body', False):
+                                self.on_response()
+                                try:
+                                    app_queue.put_nowait({'type': 'http.disconnect'})
+                                except Exception:
+                                    pass
+
+                    await app(self.scope, receive, send)
+                    return self.response
+
+                mgr = ASGI_LIFESPAN_MANAGER
+                if mgr is not None and getattr(mgr, 'loop', None) is not None:
+                    return asyncio.run_coroutine_threadsafe(runner(), mgr.loop).result()
+                # Fallback: run the request on a fresh event loop
+                return asyncio.run(runner())
 
             async def run_asgi_instance(self, asgi_instance):
                 await asgi_instance
@@ -815,10 +1229,11 @@ elif 'app' in __vc_variables:
                 'method': payload['method'],
                 'path': path,
                 'raw_path': path.encode(),
+                'state': ASGI_LIFESPAN_MANAGER.state if ASGI_LIFESPAN_MANAGER is not None else {},
             }
 
             asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(__vc_module.app, body)
+            response = asgi_cycle(APP, body)
             return response
 
 else:
