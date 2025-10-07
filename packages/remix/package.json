@@ -34,7 +34,7 @@
     "@types/jest": "27.5.1",
     "@types/node": "14.18.33",
     "@types/semver": "7.3.13",
-    "@vercel/build-utils": "12.1.0",
+    "@vercel/build-utils": "12.1.2",
     "glob": "10.3.16",
     "jest-junit": "16.0.0",
     "semver": "7.5.2",
