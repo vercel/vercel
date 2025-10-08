@@ -4,7 +4,7 @@ import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
 import { entrypointCallback } from './find-entrypoint';
 import { introspectApp } from './introspection';
 import { nodeFileTrace } from './node-file-trace';
-import { build as cervelBuild } from 'cervel-beta';
+import { build as cervelBuild } from '@vercel/cervel-beta';
 import { join } from 'path';
 
 export const build: BuildV2 = async args => {

@@ -1,5 +1,5 @@
 {
-  "name": "cervel-beta",
+  "name": "@vercel/cervel-beta",
   "version": "0.0.1",
   "license": "Apache-2.0",
   "homepage": "https://vercel.com/docs",

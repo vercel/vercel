@@ -30,7 +30,7 @@
     "rolldown": "1.0.0-beta.35",
     "ts-morph": "12.0.0",
     "zod": "3.22.4",
-    "cervel-beta": "workspace:*",
+    "@vercel/cervel-beta": "workspace:*",
     "@vercel/node": "5.3.26"
   },
   "devDependencies": {
