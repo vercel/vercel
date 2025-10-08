@@ -1,5 +1,11 @@
 # vercel
 
+## 48.2.8
+
+### Patch Changes
+
+- Update domains commands to use the new domains APIs ([#14061](https://github.com/vercel/vercel/pull/14061))
+
 ## 48.2.7
 
 ### Patch Changes
