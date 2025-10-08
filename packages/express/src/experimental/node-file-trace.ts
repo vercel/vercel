@@ -12,7 +12,6 @@ import { join, relative } from 'path';
 export const nodeFileTrace = async (
   args: BuildOptions,
   rolldownResult: {
-    files: Files;
     pkg: PackageJson;
     outputDir: string;
     handler: string;

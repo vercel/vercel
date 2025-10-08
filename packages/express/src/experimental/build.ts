@@ -22,7 +22,7 @@ export const build: BuildV2 = async args => {
   const { files } = await nodeFileTrace(args, rolldownResult);
 
   debug('[@vercel/express] Introspecting app...');
-  const { routes } = await introspectApp(args, rolldownResult);
+  const { routes } = await introspectApp(args, { ...rolldownResult, files });
   debug(`[@vercel/express] Found ${routes.length} routes`);
 
   const lambda = new NodejsLambda({

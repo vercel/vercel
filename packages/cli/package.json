@@ -50,7 +50,6 @@
     "@vercel/remix-builder": "5.4.12",
     "@vercel/ruby": "2.2.1",
     "@vercel/static-build": "2.7.23",
-    "cervel": "workspace:*",
     "chokidar": "4.0.0",
     "jose": "5.9.6"
   },
