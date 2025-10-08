@@ -34,16 +34,18 @@ export const build = async (args: {
 
 export const serve = async (args: {
   cwd: string;
-  rest: Record<string, string>;
+  rest: Record<string, string | boolean | undefined>;
 }) => {
   const entrypoint = await findEntrypoint(args.cwd);
   const srvxPath = require.resolve('srvx');
   const srvxBin = join(srvxPath, '..', '..', '..', 'bin', 'srvx.mjs');
   const tsxBin = require.resolve('tsx');
 
-  const restArgs = Object.entries(args.rest).map(
-    ([key, value]) => `--${key}=${value}`
-  );
+  const restArgs = Object.entries(args.rest)
+    .filter(([_, value]) => value !== undefined && value !== false)
+    .map(([key, value]) =>
+      typeof value === 'boolean' ? `--${key}` : `--${key}=${value}`
+    );
   if (!args.rest.import) {
     restArgs.push('--import', tsxBin);
   }
