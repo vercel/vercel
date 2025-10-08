@@ -52,41 +52,14 @@ async function checkStreaming(url, fetch) {
         // Stop early once we've observed all expected numbers
         if (numberArrivalTimes.size >= 5) {
           clearTimeout(timeout);
-          return validateTimings(url, start, numberArrivalTimes);
+          return validateTimings(url, start, numberArrivalTimes, 'streamed line');
         }
       }
     }
   }
 
   clearTimeout(timeout);
-  return validateTimings(url, start, numberArrivalTimes);
-}
-
-function validateTimings(url, start, numberArrivalTimes) {
-  // Ensure all numbers 1..5 were observed
-  for (let i = 1; i <= 5; i++) {
-    assert(
-      numberArrivalTimes.has(i),
-      `Did not observe streamed line for number ${i} from ${url}`
-    );
-  }
-
-  const first = numberArrivalTimes.get(1) - start;
-  const last = numberArrivalTimes.get(5) - start;
-
-  // First number should arrive quickly (streaming started)
-  assert(
-    first < 2000,
-    `First number from ${url} arrived too late (${first}ms) — response may be buffered`
-  );
-
-  // Overall duration between 1 and 5 should be at least ~4s (4 sleeps),
-  // but keep an upper bound to catch excessive buffering or stalls.
-  const duration = last - (numberArrivalTimes.get(1) - start);
-  assert(
-    duration >= 3500 && duration <= 20000,
-    `Unexpected streaming duration from 1->5 for ${url}: ${duration}ms`
-  );
+  return validateTimings(url, start, numberArrivalTimes, 'streamed line');
 }
 
 async function checkSSE(url, fetch) {
@@ -141,7 +114,7 @@ async function checkSSE(url, fetch) {
             // Stop early once we've observed all expected events
             if (eventArrivalTimes.size >= 5) {
               clearTimeout(timeout);
-              return validateSSETimings(url, start, eventArrivalTimes);
+              return validateTimings(url, start, eventArrivalTimes, 'SSE event');
             }
           }
         }
@@ -150,32 +123,32 @@ async function checkSSE(url, fetch) {
   }
 
   clearTimeout(timeout);
-  return validateSSETimings(url, start, eventArrivalTimes);
+  return validateTimings(url, start, eventArrivalTimes, 'SSE event');
 }
 
-function validateSSETimings(url, start, eventArrivalTimes) {
+function validateTimings(url, start, arrivalTimes, label) {
   // Ensure all events 1..5 were observed
   for (let i = 1; i <= 5; i++) {
     assert(
-      eventArrivalTimes.has(i),
-      `Did not observe SSE event for number ${i} from ${url}`
+      arrivalTimes.has(i),
+      `Did not observe ${label} for number ${i} from ${url}`
     );
   }
 
-  const first = eventArrivalTimes.get(1) - start;
-  const last = eventArrivalTimes.get(5) - start;
+  const first = arrivalTimes.get(1) - start;
+  const last = arrivalTimes.get(5) - start;
 
   // First event should arrive quickly (streaming started)
   assert(
     first < 2000,
-    `First SSE event from ${url} arrived too late (${first}ms) — response may be buffered`
+    `First ${label} from ${url} arrived too late (${first}ms) — response may be buffered`
   );
 
   // Overall duration between 1 and 5 should be at least ~4s (4 sleeps),
   // but keep an upper bound to catch excessive buffering or stalls.
-  const duration = last - (eventArrivalTimes.get(1) - start);
+  const duration = last - (arrivalTimes.get(1) - start);
   assert(
     duration >= 3500 && duration <= 20000,
-    `Unexpected SSE streaming duration from 1->5 for ${url}: ${duration}ms`
+    `Unexpected ${label} streaming duration from 1->5 for ${url}: ${duration}ms`
   );
 }
