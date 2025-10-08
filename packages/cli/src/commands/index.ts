@@ -29,7 +29,6 @@ import { redeployCommand } from './redeploy/command';
 import { removeCommand } from './remove/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
-import { serveCommand } from './serve/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
@@ -70,7 +69,6 @@ const commandsStructs = [
   removeCommand,
   rollbackCommand,
   rollingReleaseCommand,
-  serveCommand,
   targetCommand,
   teamsCommand,
   telemetryCommand,
