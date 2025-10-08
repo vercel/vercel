@@ -525,8 +525,7 @@ if 'VERCEL_IPC_PATH' in os.environ:
 
                     # Wait until final body chunk has been flushed to client
                     response_done.wait()
-                    # Also wait until the ASGI app finishes (includes background tasks)
-                    app_done.wait()
+                    # Do not block on background tasks; allow them to continue after response
 
     if 'Handler' in locals():
         server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)

@@ -1,16 +1,15 @@
 const assert = require('assert');
 
 /**
- * Custom streaming probe to verify incremental delivery from ASGI app.
- * The ASGI handler writes an intro line, then numbers 1..5 with ~1s delay.
- * This probe ensures:
- *  - The first number arrives shortly after the response starts (streaming)
- *  - All numbers 1..5 arrive in order
- *  - Overall time between 1 and 5 is at least ~4s (four delays)
+ * Custom streaming probe to verify incremental delivery from both ASGI and Sanic routes.
+ * Each handler writes an intro line, then numbers 1..5 with ~1s delay.
  */
 module.exports = async ({ deploymentUrl, fetch }) => {
-  const url = `https://${deploymentUrl}/api/asgi`;
+  await checkStreaming(`https://${deploymentUrl}/api/asgi`, fetch);
+  await checkStreaming(`https://${deploymentUrl}/api/sanic`, fetch);
+};
 
+async function checkStreaming(url, fetch) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -46,24 +45,23 @@ module.exports = async ({ deploymentUrl, fetch }) => {
         }
         // Stop early once we've observed all expected numbers
         if (numberArrivalTimes.size >= 5) {
-          // Drain the stream, then break outer loop by returning
           clearTimeout(timeout);
-          return validateTimings(start, numberArrivalTimes);
+          return validateTimings(url, start, numberArrivalTimes);
         }
       }
     }
   }
 
   clearTimeout(timeout);
-  return validateTimings(start, numberArrivalTimes);
-};
+  return validateTimings(url, start, numberArrivalTimes);
+}
 
-function validateTimings(start, numberArrivalTimes) {
+function validateTimings(url, start, numberArrivalTimes) {
   // Ensure all numbers 1..5 were observed
   for (let i = 1; i <= 5; i++) {
     assert(
       numberArrivalTimes.has(i),
-      `Did not observe streamed line for number ${i}`
+      `Did not observe streamed line for number ${i} from ${url}`
     );
   }
 
@@ -73,7 +71,7 @@ function validateTimings(start, numberArrivalTimes) {
   // First number should arrive quickly (streaming started)
   assert(
     first < 2000,
-    `First number arrived too late (${first}ms) — response may be buffered`
+    `First number from ${url} arrived too late (${first}ms) — response may be buffered`
   );
 
   // Overall duration between 1 and 5 should be at least ~4s (4 sleeps),
@@ -81,7 +79,7 @@ function validateTimings(start, numberArrivalTimes) {
   const duration = last - (numberArrivalTimes.get(1) - start);
   assert(
     duration >= 3500 && duration <= 20000,
-    `Unexpected streaming duration from 1->5: ${duration}ms`
+    `Unexpected streaming duration from 1->5 for ${url}: ${duration}ms`
   );
 }
 
