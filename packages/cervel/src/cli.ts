@@ -8,7 +8,9 @@ export const main = async () => {
   const { cwd, ...rest } = options.values;
   const [command] = options.positionals;
   if (command === 'build') {
-    await build({ cwd });
+    const { tsPromise } = await build({ cwd });
+    await tsPromise;
+    return 0;
   } else {
     await serve({ cwd, rest });
   }

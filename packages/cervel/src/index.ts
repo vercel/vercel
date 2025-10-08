@@ -18,7 +18,7 @@ export const build = async (args: { entrypoint?: string; cwd: string }) => {
     repoRootPath: args.cwd,
   });
 
-  const tsPromise = await typescript({
+  const tsPromise = typescript({
     ...args,
     entrypoint,
     workPath: args.cwd,
