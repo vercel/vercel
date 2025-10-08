@@ -1,5 +1,7 @@
 from sanic import Sanic
 from sanic import response
+
+
 app = Sanic(name='test')
 
 
