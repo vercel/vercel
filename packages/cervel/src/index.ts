@@ -1,27 +1,70 @@
-import { rolldown } from './rolldown';
-import { typescript } from './typescript';
+import { createRequire } from 'module';
+import { rolldown } from './rolldown.js';
+import { typescript } from './typescript.js';
 import { join } from 'path';
 import execa from 'execa';
-import { findEntrypoint } from './find-entrypoint';
+import { findEntrypoint } from './find-entrypoint.js';
+import { Colors as c } from './utils.js';
+import { ParseArgsOptionsConfig } from 'util';
 
-export const build = async (args: {
-  entrypoint: string;
-  workPath: string;
-  repoRootPath: string;
-}) => {
-  const rolldownResult = await rolldown(args);
-  const tsPromise = await typescript(args);
+const require = createRequire(import.meta.url);
+
+export const build = async (args: { entrypoint?: string; cwd: string }) => {
+  const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
+  const rolldownResult = await rolldown({
+    ...args,
+    entrypoint,
+    workPath: args.cwd,
+    repoRootPath: args.cwd,
+  });
+
+  const tsPromise = await typescript({
+    ...args,
+    entrypoint,
+    workPath: args.cwd,
+  });
+  console.log(
+    c.gray(
+      `${c.bold(c.cyan('✓'))} Build complete: ${c.green(
+        rolldownResult.result.outputDir.slice(args.cwd.length + 1)
+      )}`
+    )
+  );
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
 
-export const serve = async (args: { cwd: string }) => {
+export const serve = async (args: {
+  cwd: string;
+  rest: Record<string, string>;
+}) => {
   const entrypoint = await findEntrypoint(args.cwd);
   const srvxPath = require.resolve('srvx');
   const srvxBin = join(srvxPath, '..', '..', '..', 'bin', 'srvx.mjs');
   const tsxBin = require.resolve('tsx');
-  const srvxArgs = [srvxBin, '--import', tsxBin, entrypoint];
+
+  const restArgs = Object.entries(args.rest).map(
+    ([key, value]) => `--${key}=${value}`
+  );
+  if (!args.rest.import) {
+    restArgs.push('--import', tsxBin);
+  }
+  const srvxArgs = [srvxBin, ...restArgs, entrypoint];
   await execa('npx', srvxArgs, {
     cwd: args.cwd,
     stdio: 'inherit',
   });
+};
+
+// Manual copy of srvx options
+export const srvxOptions: ParseArgsOptionsConfig = {
+  help: { type: 'boolean', short: 'h' },
+  version: { type: 'boolean', short: 'v' },
+  prod: { type: 'boolean' },
+  port: { type: 'string', short: 'p' },
+  host: { type: 'string', short: 'H' },
+  static: { type: 'string', short: 's' },
+  import: { type: 'string' }, // omitted since we're providing that
+  tls: { type: 'boolean' },
+  cert: { type: 'string' },
+  key: { type: 'string' },
 };

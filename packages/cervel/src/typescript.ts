@@ -1,8 +1,9 @@
 import { createRequire } from 'module';
 import { spawn } from 'child_process';
 import { dirname, resolve, extname, join } from 'path';
+import { Colors as c } from './utils.js';
 
-const require_ = createRequire(__filename);
+const require_ = createRequire(import.meta.url);
 
 export const typescript = async (args: {
   entrypoint: string;
@@ -16,6 +17,16 @@ export const typescript = async (args: {
   }
 
   const tscPath = resolveTscPath(args);
+  if (!tscPath) {
+    console.log(
+      c.gray(
+        `${c.bold(c.cyan('✓'))} Typecheck skipped ${c.gray(
+          '(TypeScript not found)'
+        )}`
+      )
+    );
+    return Promise.resolve();
+  }
 
   return doTypeCheck(args, tscPath);
 };
@@ -55,6 +66,7 @@ async function doTypeCheck(
   await new Promise<void>((resolve, reject) => {
     child.on('close', code => {
       if (code === 0) {
+        console.log(c.gray(`${c.bold(c.cyan('✓'))} Typecheck complete`));
         resolve();
       } else {
         const output = stdout || stderr;
@@ -74,18 +86,12 @@ async function doTypeCheck(
 
 const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
   try {
-    // First try to resolve from user's project
-    const pkgPath = require_.resolve('typescript/package.json', {
+    const pkgPath = require_.resolve('typescript', {
       paths: [args.workPath],
     });
     const pkg = require_(pkgPath);
     return resolve(dirname(pkgPath), pkg.bin.tsc);
   } catch (e) {
-    // Fall back to TypeScript from @vercel/node
-    const pkgPath = require_.resolve('typescript/package.json', {
-      paths: [require_.resolve('@vercel/node')],
-    });
-    const pkg = require_(pkgPath);
-    return resolve(dirname(pkgPath), pkg.bin.tsc);
+    return null;
   }
 };

@@ -4,7 +4,7 @@ import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
 import { entrypointCallback } from './find-entrypoint';
 import { introspectApp } from './introspection';
 import { nodeFileTrace } from './node-file-trace';
-import { build as serveBuild } from 'cervel';
+import { build as cervelBuild } from 'cervel-beta';
 
 export const build: BuildV2 = async args => {
   console.log(`Using experimental express build`);
@@ -17,7 +17,10 @@ export const build: BuildV2 = async args => {
 
   args.entrypoint = await entrypointCallback(args);
 
-  const { rolldownResult, tsPromise } = await serveBuild(args);
+  const { rolldownResult, tsPromise } = await cervelBuild({
+    ...args,
+    cwd: args.workPath,
+  });
 
   const { files } = await nodeFileTrace(args, rolldownResult);
 

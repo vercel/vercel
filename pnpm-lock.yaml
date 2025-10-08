@@ -963,7 +963,7 @@ importers:
       '@vercel/static-config':
         specifier: 3.1.2
         version: link:../static-config
-      cervel:
+      cervel-beta:
         specifier: workspace:*
         version: link:../cervel
       fs-extra:

@@ -1,4 +1,4 @@
-import { readFile, access } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
 
 const frameworks = ['express', 'hono'];
@@ -33,13 +33,22 @@ export const findEntrypoint = async (cwd: string) => {
   for (const entrypoint of entrypoints) {
     const entrypointPath = join(cwd, entrypoint);
     try {
-      await access(entrypointPath);
       const content = await readFile(entrypointPath, 'utf-8');
       if (regex.test(content)) {
         return entrypoint;
       }
-    } catch {
-      // File doesn't exist, continue to next entrypoint
+    } catch (e) {
+      continue;
+    }
+  }
+  for (const entrypoint of entrypoints) {
+    const entrypointPath = join(cwd, 'src', entrypoint);
+    try {
+      const content = await readFile(entrypointPath, 'utf-8');
+      if (regex.test(content)) {
+        return join('src', entrypoint);
+      }
+    } catch (e) {
       continue;
     }
   }
