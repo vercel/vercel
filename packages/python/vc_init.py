@@ -188,7 +188,6 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
             if file is None:
                 file = sys.stdout
             if file in (sys.stdout, sys.stderr):
-                # Use our wrapped streams for context attribution
                 file.write(sep.join(map(str, args)) + end)
                 if flush:
                     file.flush()
