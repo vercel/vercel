@@ -9,13 +9,18 @@ import { ParseArgsOptionsConfig } from 'util';
 
 const require = createRequire(import.meta.url);
 
-export const build = async (args: { entrypoint?: string; cwd: string }) => {
+export const build = async (args: {
+  entrypoint?: string;
+  cwd: string;
+  out: string;
+}) => {
   const entrypoint = args.entrypoint || (await findEntrypoint(args.cwd));
   const rolldownResult = await rolldown({
     ...args,
     entrypoint,
     workPath: args.cwd,
     repoRootPath: args.cwd,
+    out: args.out,
   });
 
   const tsPromise = typescript({
@@ -23,13 +28,7 @@ export const build = async (args: { entrypoint?: string; cwd: string }) => {
     entrypoint,
     workPath: args.cwd,
   });
-  console.log(
-    c.gray(
-      `${c.bold(c.cyan('✓'))} Build complete: ${c.green(
-        rolldownResult.result.outputDir.slice(args.cwd.length + 1)
-      )}`
-    )
-  );
+  console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
   return { rolldownResult: rolldownResult.result, tsPromise };
 };
 

@@ -5,12 +5,11 @@ const args = process.argv.slice(2);
 const options = parseArgs(args);
 
 export const main = async () => {
-  const { cwd, ...rest } = options.values;
+  const { cwd, out, ...rest } = options.values;
   const [command] = options.positionals;
   if (command === 'build') {
-    const { tsPromise } = await build({ cwd });
+    const { tsPromise } = await build({ cwd, out });
     await tsPromise;
-    return 0;
   } else {
     await serve({ cwd, rest });
   }
@@ -24,6 +23,10 @@ function parseArgs(args: string[]) {
       cwd: {
         type: 'string',
         default: process.cwd(),
+      },
+      out: {
+        type: 'string',
+        default: 'dist',
       },
       ...srvxOptions,
     },

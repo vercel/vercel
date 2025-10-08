@@ -5,6 +5,7 @@ import { entrypointCallback } from './find-entrypoint';
 import { introspectApp } from './introspection';
 import { nodeFileTrace } from './node-file-trace';
 import { build as cervelBuild } from 'cervel-beta';
+import { join } from 'path';
 
 export const build: BuildV2 = async args => {
   console.log(`Using experimental express build`);
@@ -20,6 +21,7 @@ export const build: BuildV2 = async args => {
   const { rolldownResult, tsPromise } = await cervelBuild({
     ...args,
     cwd: args.workPath,
+    out: join('.vercel', 'output', 'functions', 'index.func'),
   });
 
   const { files } = await nodeFileTrace(args, rolldownResult);

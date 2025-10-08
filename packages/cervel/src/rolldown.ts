@@ -7,6 +7,7 @@ export const rolldown = async (args: {
   entrypoint: string;
   workPath: string;
   repoRootPath: string;
+  out: string;
 }) => {
   const baseDir = args.repoRootPath || args.workPath;
   const entrypointPath = join(args.workPath, args.entrypoint);
@@ -70,12 +71,7 @@ export const rolldown = async (args: {
     },
   };
 
-  const relativeOutputDir = join(
-    '.vercel',
-    'output',
-    'functions',
-    'index.func'
-  );
+  const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
   let handler: string | null = null;
   // @ts-ignore TS doesn't like the tsconfig option, but it's here https://rolldown.rs/reference/config-options#tsconfig
