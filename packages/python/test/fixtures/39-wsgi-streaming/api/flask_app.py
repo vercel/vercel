@@ -3,7 +3,7 @@ import time
 
 app = Flask(__name__)
 
-@app.route("/api/flask")
+@app.route("/api/flask_app")
 def flask_stream():
     def generate():
         yield "It's working if you see the numbers being printed once per second:\n"
