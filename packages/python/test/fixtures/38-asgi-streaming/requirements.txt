@@ -1,0 +1,2 @@
+sanic>=25.3.0
+starlette>=0.48.0
