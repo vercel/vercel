@@ -11,11 +11,12 @@
   "exports": {
     ".": {
       "browser": "./dist/index-browser.js",
+      "react-native": "./dist/index-browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     }
   },
-  "version": "3.0.1",
+  "version": "3.0.2",
   "repository": {
     "directory": "packages/oidc",
     "type": "git",

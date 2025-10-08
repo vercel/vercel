@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.11.1
+
+### Patch Changes
+
+- [python] flask zero-config ([#14055](https://github.com/vercel/vercel/pull/14055))
+
 ## 3.11.0
 
 ### Minor Changes

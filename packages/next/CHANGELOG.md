@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.13.3
+
+### Patch Changes
+
+- Fix allowQuery logic for RDC navigations with fallback root params ([#14053](https://github.com/vercel/vercel/pull/14053))
+
 ## 4.13.2
 
 ### Patch Changes
