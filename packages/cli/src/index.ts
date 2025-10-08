@@ -733,10 +733,6 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = require('./commands/rolling-release').default;
           break;
-        case 'serve':
-          telemetry.trackCliCommandServe(userSuppliedSubCommand);
-          func = require('./commands/serve').default;
-          break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = require('./commands/target').default;
