@@ -5,8 +5,8 @@ const assert = require('assert');
  * Each handler writes an intro line, then numbers 1..5 with ~1s delay.
  */
 module.exports = async ({ deploymentUrl, fetch }) => {
-  await checkStreaming(`https://${deploymentUrl}/api/asgi`, fetch);
-  await checkStreaming(`https://${deploymentUrl}/api/starlette`, fetch);
+  await checkStreaming(`https://${deploymentUrl}/api/flask`, fetch);
+  await checkStreaming(`https://${deploymentUrl}/api/wsgi`, fetch);
 };
 
 async function checkStreaming(url, fetch) {
