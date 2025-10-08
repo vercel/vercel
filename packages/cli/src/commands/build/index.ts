@@ -2,8 +2,9 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
 import minimatch from 'minimatch';
-import { join, normalize, relative, resolve, sep } from 'path';
+import { dirname, join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
+import { readFileSync } from 'fs';
 
 import {
   download,
@@ -869,6 +870,124 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+
+  // Analyze .vc-config.json files if environment variable is set
+  if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
+    await analyzeVcConfigFiles(outputDir);
+  }
+}
+
+function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
+  const funcPath = relative(outputDir, vcConfigPath)
+    .replace(/^functions\//, '')
+    .replace(/\/\.vc-config\.json$/, '')
+    .replace(/\.(?:rsc\.)?func$/, ''); // Matches both .rsc.func and .func
+  
+  return '/' + funcPath
+    .split('/')
+    .filter(part => part && part !== 'index')
+    .join('/');
+}
+
+async function analyzeVcConfigFiles(outputDir: string): Promise<void> {
+    // Find all .vc-config.json files
+    const vcConfigFiles: string[] = [];
+    const findVcConfigFiles = (dir: string) => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          findVcConfigFiles(fullPath);
+        } else if (entry.name === '.vc-config.json') {
+          vcConfigFiles.push(fullPath);
+        }
+      }
+    };
+    findVcConfigFiles(outputDir);
+
+    if (vcConfigFiles.length === 0) {
+      output.print('No .vc-config.json files found to analyze.\n');
+      return;
+    }
+
+    output.print(`Analyzing ${vcConfigFiles.length} .vc-config.json file(s)...\n`);
+
+    // Track functions exceeding 250MB limit
+    let hasExceededLimit = false;
+    const exceededFunctions: string[] = [];
+
+    // Process each .vc-config.json file
+    for (const file of vcConfigFiles) {
+      try {
+        const parsed = JSON.parse(readFileSync(file, 'utf8'));
+
+        const assets = Array.isArray(parsed.assets)
+          ? parsed.assets
+              .filter((x: any) => x && typeof x.path === 'string')
+              .map((x: any) => x.path)
+          : [];
+
+        const filePathMap =
+          parsed.filePathMap && typeof parsed.filePathMap === 'object'
+            ? Object.values(parsed.filePathMap).filter((x) => typeof x === 'string')
+            : [];
+
+        const allFiles = [
+          ...filePathMap,
+          ...assets,
+          join(dirname(file), 'index.js'),
+          join(dirname(file), 'index.js.map'),
+        ];
+
+        const stats = statFiles(allFiles);
+        const functionUrlPath = getFunctionUrlPath(file, outputDir);
+
+        const exceeds250MB = stats.size > 250;
+        
+        if (exceeds250MB) {
+          hasExceededLimit = true;
+          exceededFunctions.push(functionUrlPath);
+          output.print(
+            `${chalk.red(functionUrlPath)}: ` +
+            `${chalk.red.bold(stats.size.toFixed(2))} MB ` +
+            `${chalk.red.bold('⚠️  Exceeds 250 MB uncompressed limit')}\n`
+          );
+        } else {
+          output.print(
+            `${chalk.cyan(functionUrlPath)}: ` +
+            `${chalk.bold(stats.size.toFixed(2))} MB\n`
+          );
+        }
+      } catch (error) {
+        output.warn(`Failed to analyze ${file}: ${error}`);
+      }
+    }
+
+    // If any function exceeded the limit, exit the build process
+    if (hasExceededLimit) {
+      output.print('\n');
+      throw new NowBuildError({
+        code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
+        message: `Error: ${exceededFunctions.length} function(s) exceeded the unzipped maximum size of 250 MB.`,
+        link: 'https://vercel.link/serverless-function-size',
+        action: 'Learn More',
+      });
+    }
+}
+
+function statFiles(files: string[]): { size: number } {
+  let size = 0;
+  
+  for (const file of files) {
+    try {
+      const f = readFileSync(file);
+      size += f.byteLength * 1e-6;
+    } catch (error) {
+      // File doesn't exist or can't be read, skip it
+    }
+  }
+  
+  return { size };
 }
 
 async function getFramework(
