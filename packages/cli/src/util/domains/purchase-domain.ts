@@ -1,47 +1,87 @@
 import * as ERRORS from '../errors-ts';
 import type Client from '../client';
+import { pollForOrder } from './get-order';
+import { getDomain } from './get-domain';
+import getScope from '../get-scope';
 
-type Response = {
-  created: number;
-  ns: string[];
-  uid: string;
-  pending: boolean;
-  verified: boolean;
+type OrderResponse = {
+  orderId: string;
 };
 
 export default async function purchaseDomain(
   client: Client,
   name: string,
   expectedPrice: number,
-  renew: boolean = true
+  years: number,
+  autoRenew: boolean = true
 ) {
+  const { team, contextName } = await getScope(client);
+  const teamParam = team ? `?teamId=${team.slug}` : '';
+
   try {
-    return await client.fetch<Response>(`/v3/domains/buy`, {
-      body: { name, expectedPrice, renew },
-      method: 'POST',
-    });
+    const { orderId } = await client.fetch<OrderResponse>(
+      `/v1/registrar/domains/${name}/buy${teamParam}`,
+      {
+        body: {
+          expectedPrice,
+          autoRenew,
+          years,
+          contactInformation: {
+            firstName: 'Vercel',
+            lastName: 'Whois',
+            email: 'domains@registrar.vercel.com',
+            phone: '+14153985463',
+            address1: '100 First Street, Suite 2400',
+            city: 'San Fransisco',
+            state: 'CA',
+            zip: '94105',
+            country: 'US',
+            companyName: 'Vercel Inc.',
+          },
+        },
+        method: 'POST',
+      }
+    );
+
+    const order = await pollForOrder(client, orderId);
+
+    if (order === null) {
+      // Timed out, something went wrong
+      return new ERRORS.UnexpectedDomainPurchaseError(name);
+    }
+
+    if (order.status === 'completed') {
+      const domain = order.domains.find(domain => domain.domainName === name);
+      if (domain?.status === 'completed') {
+        const domain = await getDomain(client, contextName, name);
+        if (domain instanceof ERRORS.APIError) {
+          throw domain;
+        }
+        return domain;
+      }
+    }
+
+    if (order.error?.code === 'payment_failed') {
+      return new ERRORS.DomainPaymentError();
+    }
+
+    return new ERRORS.UnexpectedDomainPurchaseError(name);
   } catch (err: unknown) {
     if (ERRORS.isAPIError(err)) {
       if (err.code === 'invalid_domain') {
         return new ERRORS.InvalidDomain(name);
       }
-      if (err.code === 'not_available') {
+      if (err.code === 'domain_not_available') {
         return new ERRORS.DomainNotAvailable(name);
       }
-      if (err.code === 'service_unavailabe') {
-        return new ERRORS.DomainServiceNotAvailable(name);
-      }
-      if (err.code === 'unexpected_error') {
+      if (err.code === 'internal_server_error') {
         return new ERRORS.UnexpectedDomainPurchaseError(name);
       }
-      if (err.code === 'source_not_found') {
-        return new ERRORS.SourceNotFound();
-      }
-      if (err.code === 'payment_error') {
-        return new ERRORS.DomainPaymentError();
-      }
-      if (err.code === 'unsupported_tld') {
+      if (err.code === 'tld_not_supported') {
         return new ERRORS.UnsupportedTLD(name);
+      }
+      if (err.code === 'additional_contact_info_required') {
+        return new ERRORS.TLDNotSupportedViaCLI(name);
       }
     }
     throw err;

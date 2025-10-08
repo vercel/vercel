@@ -1,23 +1,19 @@
-import { stringify } from 'querystring';
 import { isAPIError, UnsupportedTLD } from '../errors-ts';
 import type Client from '../client';
 
 type Response = {
-  price: number;
-  period: number;
+  purchasePrice: number | null;
+  renewalPrice: number | null;
+  transferPrice: number | null;
+  years: number;
 };
 
-export default async function getDomainPrice(
-  client: Client,
-  name: string,
-  type?: 'new' | 'renewal'
-) {
+export default async function getDomainPrice(client: Client, name: string) {
   try {
-    const querystr = type ? stringify({ name, type }) : stringify({ name });
-    return await client.fetch<Response>(`/v3/domains/price?${querystr}`);
+    return await client.fetch<Response>(`/v1/registrar/domains/${name}/price`);
   } catch (err: unknown) {
     if (isAPIError(err)) {
-      if (err.code === 'unsupported_tld') {
+      if (err.code === 'tld_not_supported') {
         return new UnsupportedTLD(name);
       }
 
