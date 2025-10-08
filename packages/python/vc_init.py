@@ -477,6 +477,11 @@ if 'VERCEL_IPC_PATH' in os.environ:
                                         body_bytes = event.get('body', b'') or b''
                                         if body_bytes:
                                             self.wfile.write(body_bytes)
+                                            # Flush after each chunk to enable true streaming
+                                            try:
+                                                self.wfile.flush()
+                                            except Exception:
+                                                pass
                                         if not event.get('more_body', False):
                                             try:
                                                 self.wfile.flush()
