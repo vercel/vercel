@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "dependencies": {
+    "express": "5.1.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "typescript": "5.7.3",
+    "@types/express": "5.0.0"
+  }
+}

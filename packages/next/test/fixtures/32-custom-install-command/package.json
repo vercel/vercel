@@ -1,0 +1,12 @@
+{
+  "name": "32-custom-install-command",
+  "version": "0.0.0",
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}

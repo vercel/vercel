@@ -1,0 +1,17 @@
+[more]
+other = "Ещё"
+
+[allTitle]
+other = "Все {{.Title }}"
+
+[recentTitle]
+other = "Недавние {{.Title }}"
+
+[readMore]
+other = "читать дальше"
+
+[whatsInThis]
+other = "Содержание {{ .Type }}"
+
+[related]
+other = "Схожие"

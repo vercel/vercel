@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@lit-labs/ssr": "2.2.3",
+    "lit": "2.4.1"
+  }
+}

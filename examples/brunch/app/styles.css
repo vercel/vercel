@@ -1,0 +1,21 @@
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  margin: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.brunch {
+  font-family: -apple-system, Sans-Serif;
+  text-align: center;
+  font-size: 24pt;
+  color: #3f894a;
+}
+
+a {
+  color: inherit;
+}

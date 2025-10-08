@@ -1,0 +1,4 @@
+interface Inputs {
+  statusCode: number;
+  location: string;
+}

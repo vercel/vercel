@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "overrides": {
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/first",
+      "mustContain": "Hi There"
+    },
+    {
+      "path": "/second",
+      "mustContain": "Hi on About"
+    },
+    {
+      "path": "/",
+      "mustContain": "nextExport\":true"
+    }
+  ]
+}

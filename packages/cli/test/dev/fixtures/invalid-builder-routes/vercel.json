@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "https://files-17f5npcdc-testuser.vercel.app"
+    }
+  ]
+}

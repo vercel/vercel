@@ -1,0 +1,45 @@
+node_modules
+dist
+examples
+
+packages/node/src/bridge.ts
+
+packages/*/test/fixtures
+
+# cli
+packages/cli/@types
+packages/cli/download
+packages/cli/dist
+packages/cli/test/fixtures
+packages/cli/test/dev/fixtures
+packages/cli/bin
+packages/cli/link
+packages/cli/src/util/dev/templates/*.ts
+
+# client
+packages/client/tests/fixtures
+packages/client/lib
+
+# hydrogen
+packages/hydrogen/edge-entry.js
+
+# next
+packages/next/test/integration/middleware
+packages/next/test/integration/middleware-eval
+
+# middleware
+packages/middleware/src/entries.js
+
+# static-build
+packages/static-build/test/fixtures
+packages/static-build/test/build-fixtures
+packages/static-build/test/cache-fixtures
+
+# redwood
+packages/redwood/test/fixtures
+
+# remix
+packages/remix/test/fixtures-*
+
+# gatsby-plugin-vercel-analytics
+packages/gatsby-plugin-vercel-analytics

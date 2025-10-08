@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["./types", "src/**/*", "test/**/*"],
+  "exclude": ["templates/*", "**/fixtures/**"],
+  "ts-node": {
+    "swc": true // https://typestrong.org/ts-node/docs/swc/
+  }
+}

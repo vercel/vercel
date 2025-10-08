@@ -1,0 +1,24 @@
+---
+language: node_js
+node_js:
+  - "8"
+
+sudo: false
+dist: trusty
+
+addons:
+  chrome: stable
+
+cache:
+  directories:
+    - $HOME/.npm
+
+env:
+  global:
+    # See https://github.com/ember-cli/ember-cli/blob/master/docs/build-concurrency.md
+    - JOBS=1
+
+script:
+  - npm run lint:hbs
+  - npm run lint:js
+  - npm test

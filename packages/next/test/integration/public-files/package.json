@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "now-build": "node create-public-file.js && next build"
+  },
+  "dependencies": {
+    "next": "9",
+    "react": "16",
+    "react-dom": "16"
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
+}

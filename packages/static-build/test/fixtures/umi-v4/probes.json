@@ -1,0 +1,7 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "/umi.js" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "/umi.js" },
+    { "path": "/p__index.async.js", "mustContain": "Welcome to umi" }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "Welcome to <b>Gatsby!</b>" },
+    { "path": "/page-2", "mustContain": "Hi from the second page" },
+    {
+      "path": "/using-typescript",
+      "mustContain": "Gatsby supports <b>TypeScript by default</b>"
+    },
+    {
+      "path": "/page-data/sq/d/3649515864.json",
+      "responseHeaders": {
+        "cache-control": "public,max-age=0,must-revalidate"
+      }
+    },
+    {
+      "path": "/app-0ed3c8affa940e9992df.js",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/styles.b45e2bc56d5d5ce10036.css",
+      "responseHeaders": {
+        "cache-control": "public,max-age=31536000,immutable"
+      }
+    },
+    {
+      "path": "/page-data/app-data.json",
+      "responseHeaders": { "cache-control": "public,max-age=0,must-revalidate" }
+    },
+    {
+      "path": "/index.html",
+      "responseHeaders": { "cache-control": "public,max-age=0,must-revalidate" }
+    },
+    {
+      "path": "/page-data/404/page-data.json",
+      "responseHeaders": { "cache-control": "public,max-age=0,must-revalidate" }
+    },
+    {
+      "path": "/path-that-does-not-exist",
+      "mustContain": "You just hit a route that doesn&#x27;t exist..."
+    },
+    {
+      "path": "/path-that-does-not-exist",
+      "status": 404
+    }
+  ]
+}

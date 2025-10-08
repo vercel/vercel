@@ -1,0 +1,223 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "app/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          },
+          "pages/api/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": "index app page"
+    },
+    {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": "index app page",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1
+      }
+    },
+    {
+      "path": "/hello/world",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1,
+        "next-router-prefetch": 1
+      }
+    },
+    
+    {
+      "path": "/hello/world/dashboard/hello",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/rootonly/hello"
+    },
+    {
+      "path": "/hello/world/dashboard/another-edge",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
+      "path": "/hello/world/dynamic/category-1/id-1",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/hello/world/ssg",
+      "status": 200,
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/hello/world/ssg",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/hello/world/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/hello/world/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/hello/world/dashboard/deployments/123/settings",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/hello/world/dashboard/deployments/123/settings",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/hello/world/dashboard/deployments/catchall/something",
+      "status": 200,
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/hello/world/dashboard/deployments/catchall/something",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/hello/world/dashboard",
+      "status": 200,
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/hello/world/dashboard",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/hello/world/dashboard",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/hello/world/dashboard/another",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
+      "path": "/hello/world/dashboard/deployments/123",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
+    },
+    {
+      "path": "/hello/world/",
+      "status": 200,
+      "mustContain": "index app page"
+    },
+    {
+      "path": "/hello/world/blog/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog/[slug]"
+    },
+    {
+      "path": "/hello/world/blog-ssr/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog-ssr/[slug]"
+    },
+    {
+      "path": "/hello/world/blog-ssr/321",
+      "status": 200,
+      "mustContain": "hello context"
+    },
+    {
+      "path": "/hello/world/dynamic/category-1/id-1",
+      "status": 200,
+      "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"
+    },
+    {
+      "path": "/hello/world/dashboard/changelog",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/changelog"
+    },
+    {
+      "path": "/hello/world/",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    }
+  ]
+}

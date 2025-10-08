@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/api/one",
+      "mustContain": "from one.go"
+    },
+    {
+      "path": "/api/two",
+      "mustContain": "from two.go"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/static-1",
+      "status": 200,
+      "mustContain": "[slug] page"
+    },
+    {
+      "path": "/static-2",
+      "status": 200,
+      "mustContain": "[slug] page"
+    },
+    {
+      "path": "/dynamic-1",
+      "status": 200,
+      "mustContain": "[...slug] page"
+    },
+    {
+      "path": "/dynamic-2",
+      "status": 200,
+      "mustContain": "[...slug] page"
+    },
+    {
+      "path": "/long/dynamic",
+      "status": 200,
+      "mustContain": "[...slug] page"
+    }
+  ]
+}

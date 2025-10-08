@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "bun version: 1"
+    }
+  ]
+}

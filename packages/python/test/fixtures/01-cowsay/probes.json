@@ -1,0 +1,24 @@
+{
+  "probes": [
+    {
+      "logMustContain": "uv at \""
+    },
+    {
+      "logMustNotContain": "falling back to pip"
+    },
+    {
+      "path": "/api",
+      "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/api/another",
+      "mustContain": "upper:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    }
+  ]
+}

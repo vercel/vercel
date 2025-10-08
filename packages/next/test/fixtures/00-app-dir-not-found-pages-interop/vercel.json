@@ -1,0 +1,28 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 404
+    },
+    {
+      "path": "/admin/foo",
+      "status": 404
+    },
+    {
+      "path": "/app-dir/about",
+      "status": 200,
+      "mustContain": "app router page"
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "mustContain": "pages router page"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "api",
+  "devDependencies": {
+    "@types/node": "12"
+  }
+}

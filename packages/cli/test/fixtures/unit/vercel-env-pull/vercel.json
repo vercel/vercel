@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "vercel-env-pull",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index?route-param=b"
+    }
+  ]
+}

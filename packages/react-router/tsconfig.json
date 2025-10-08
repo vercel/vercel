@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "module": "Node16",
+    "target": "esnext",
+    "lib": ["esnext"],
+    "moduleResolution": "Node16",
+    "outDir": "./",
+    "types": ["node", "jest"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

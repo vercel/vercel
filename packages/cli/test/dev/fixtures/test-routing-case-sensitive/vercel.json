@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/Path", "destination": "/upper.html" },
+    { "source": "/path", "destination": "/lower.html" }
+  ],
+  "redirects": [
+    { "source": "/GoTo", "destination": "/upper.html" },
+    { "source": "/goto", "destination": "/lower.html" }
+  ]
+}

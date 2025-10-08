@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/*.js": {
+      "runtime": "edge-function@0.0.0"
+    }
+  }
+}

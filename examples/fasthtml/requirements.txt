@@ -1,0 +1,3 @@
+python-fasthtml==0.4.4
+sqlite_minutils==4.0.3
+uvicorn==0.30.1

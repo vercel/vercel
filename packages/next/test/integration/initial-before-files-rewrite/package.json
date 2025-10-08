@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "next": "10.2.2",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "ignoreNextjsUpdates": true
+}

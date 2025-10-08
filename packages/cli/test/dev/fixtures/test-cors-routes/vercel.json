@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Content-Length, Origin, User-Agent",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD, PATCH, PUT, DELETE"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(.*)",
+      "status": 204,
+      "methods": ["OPTIONS"]
+    },
+    { "src": "/", "dest": "/api/status.js" }
+  ]
+}

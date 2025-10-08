@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "probes": [
+    {
+      "path": "/api/[hello].go",
+      "mustContain": "Req Path: /api/[hello].go"
+    },
+    {
+      "path": "/api/whatever",
+      "mustContain": "Req Path: /api/whatever"
+    },
+    { "path": "/api/sub/[hi].go", "mustContain": "hi:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

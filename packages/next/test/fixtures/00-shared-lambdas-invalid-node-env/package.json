@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "next": "10.0.8",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "resolutions": {
+    "@babel/compat-data": "7.21.4"
+  },
+  "ignoreNextjsUpdates": true
+}

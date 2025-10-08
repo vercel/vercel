@@ -1,0 +1,79 @@
+<site-layout>
+  <@title>
+    Hello <strong>${input.params.name}!</strong>
+  </@title>
+  <@content>
+    <section>
+      <h2>Routes</h2>
+      <p>
+        The code for this page is at
+        <code>~/src/routes/hello/index.marko</code>. To create a new route, you create a directory under
+        <code>routes/</code>
+        and put an
+        <code>index.marko</code>
+        in it.
+      </p>
+      <p>
+        Try creating a template  at
+        <code>~/src/routes/new/index.marko</code>
+        with the following content:
+      </p>
+      <pre><code>&lt;site-layout>
+    &lt;@title>A New Page!&lt;/@title>
+&lt;/site-layout></code></pre>
+      <p>
+        Then come back and click
+        <a href="/new">this link</a>. &#127881;
+      </p>
+    </section>
+    <section>
+      <h2>Parameters</h2>
+      <p>
+        You might have noticed that even though
+        <code>hello/index.marko</code>
+        renders this page, the url is
+        <b>/hello/routing</b>.  So what's going on? Parameters!
+      </p>
+      <p>
+        Take a look at
+        <code>hello/route.js</code>
+        and you'll see it contains
+        <code>exports.path = '/hello/:name'</code>.
+      </p>
+      <p>
+        Here,
+        <code>:name</code>
+        is an
+        <a href="https://github.com/pillarjs/path-to-regexp">
+          express-style parameter
+        </a>
+        and becomes available as
+        <code>input.params.name</code>
+        within the template!  We use this
+        <b>name</b>
+        in the title of the page.  Try following one of these links or change the url directly and watch how the title changes:
+      </p>
+      <ul>
+        <li>
+          <a href="/hello/world">/hello/world</a>
+        </li>
+        <li>
+          <a href="/hello/marko">/hello/marko</a>
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>Scoped Components</h2>
+      <p>
+        Here's another component, but this one is
+        <i>scoped</i>
+        to this page.  You see, it lives in
+        <code>~/src/routes/hello/components/</code>
+        and therefore is only available to the
+        <b>hello</b>
+        page! &#128374;
+      </p>
+      <stop-watch/>
+    </section>
+  </@content>
+</site-layout>

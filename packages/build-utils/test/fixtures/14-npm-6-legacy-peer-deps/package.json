@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p public && echo 'legacy peer deps' > public/index.txt"
+  },
+  "packageManager": "npm@6.14.17",
+  "dependencies": {
+    "swr": "1.3.0",
+    "react": "16.8.0"
+  }
+}

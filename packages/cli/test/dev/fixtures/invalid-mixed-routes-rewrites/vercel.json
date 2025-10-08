@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static",
+      "config": {
+        "zeroConfig": true
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/new",
+      "destination": "/index.html"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/old",
+      "dest": "/index.html"
+    }
+  ]
+}

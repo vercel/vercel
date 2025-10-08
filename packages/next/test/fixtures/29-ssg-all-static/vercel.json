@@ -1,0 +1,108 @@
+{
+  "version": 2,
+  "uploadNowJson": true,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "probes": [
+    {
+      "path": "/forever",
+      "status": 200,
+      "mustContain": "hello"
+    },
+    {
+      "path": "/blog/post-1",
+      "status": 200,
+      "mustContain": "post-1"
+    },
+    {
+      "path": "/blog/post-2",
+      "status": 200,
+      "mustContain": "post-2"
+    },
+    {
+      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "status": 200,
+      "mustContain": "post-1"
+    },
+    {
+      "path": "/_next/data/testing-build-id/blog/post-2.json",
+      "status": 200,
+      "mustContain": "post-2"
+    },
+
+    {
+      "path": "/blog/post-1/comment-1",
+      "status": 200,
+      "mustContain": "comment-1"
+    },
+    {
+      "path": "/blog/post-2/comment-2",
+      "status": 200,
+      "mustContain": "comment-2"
+    },
+    {
+      "path": "/_next/data/testing-build-id/blog/post-1/comment-1.json",
+      "status": 200,
+      "mustContain": "comment-1"
+    },
+    {
+      "path": "/_next/data/testing-build-id/blog/post-2/comment-2.json",
+      "status": 200,
+      "mustContain": "comment-2"
+    },
+
+    {
+      "path": "/_next/data/testing-build-id/forever.json",
+      "status": 200,
+      "mustContain": "world"
+    },
+    {
+      "path": "/_next/data/testing-build-id/another2.json",
+      "status": 200,
+      "mustContain": "world"
+    },
+    {
+      "path": "/nofallback/one",
+      "status": 200,
+      "mustContain": "one"
+    },
+    {
+      "path": "/nofallback/two",
+      "status": 200,
+      "mustContain": "two"
+    },
+    {
+      "path": "/nofallback/nope",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/one.json",
+      "status": 200,
+      "mustContain": "one"
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/two.json",
+      "status": 200,
+      "mustContain": "two"
+    },
+    {
+      "path": "/_next/data/testing-build-id/nofallback/nope.json",
+      "status": 404
+    },
+    {
+      "logMustNotContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
+    },
+    {
+      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
+    },
+    {
+      "logMustNotContain": "Traced Next.js serverless functions for external files in"
+    },
+    {
+      "logMustNotContain": "All serverless functions created in"
+    },
+    {
+      "logMustNotContain": "Compressed shared serverless function files"
+    }
+  ]
+}

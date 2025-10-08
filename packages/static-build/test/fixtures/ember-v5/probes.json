@@ -1,0 +1,5 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "EmberV5" }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page",
+      "retries": 3,
+      "retryDelay": 5000
+    },
+    {
+      "path": "/another",
+      "status": 200,
+      "mustContain": "another page",
+      "retries": 3,
+      "retryDelay": 5000
+    },
+    {
+      "path": "/blog/first",
+      "status": 200,
+      "mustContain": "dynamic page",
+      "retries": 3,
+      "retryDelay": 5000
+    },
+    {
+      "path": "/fr/another",
+      "status": 200,
+      "mustContain": "another page",
+      "retries": 3,
+      "retryDelay": 5000
+    },
+    {
+      "path": "/fr/blog/first",
+      "status": 200,
+      "mustContain": "dynamic page",
+      "retries": 3,
+      "retryDelay": 5000
+    },
+    {
+      "path": "/preview-only-not-found",
+      "status": 200,
+      "mustContain": "preview notFound page"
+    },
+    {
+      "path": "/fr/preview-only-not-found",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    }
+  ]
+}

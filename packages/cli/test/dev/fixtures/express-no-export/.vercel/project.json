@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_osfFWPZ8Cxxoi4x9sySj9bHmjHwZ",
+  "orgId": "team_whnAQ3A1tbgFP0cDEVtL8tlk",
+  "projectName": "express-no-export",
+  "settings": {
+    "createdAt": 1756251134805,
+    "framework": "express",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "22.x"
+  }
+}

@@ -1,0 +1,3 @@
+# Migrated CODEOWNERS rule: * @vercel/ci-cd
+
+@vercel/ci-cd:team:optional

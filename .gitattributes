@@ -1,0 +1,14 @@
+# Ignore test fixtures in GitHub Languages
+# See https://github.com/github/linguist#vendored-code
+examples/* linguist-vendored
+utils/* linguist-vendored
+test/* linguist-vendored
+packages/*/test/* linguist-vendored
+
+# Go build fails with Windows line endings.
+*.go text eol=lf
+go.mod text eol=lf
+
+# Mark certain files as "binary" -- hide diffs
+**/test/fixtures/**/git/**/* binary
+**/test/fixtures/**/git/**/* linguist-generated

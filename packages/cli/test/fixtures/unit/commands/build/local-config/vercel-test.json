@@ -1,0 +1,15 @@
+{
+  "name": "secondary",
+  "builds": [
+    {
+      "src": "test.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/another-test",
+      "dest": "/test.html"
+    }
+  ]
+}

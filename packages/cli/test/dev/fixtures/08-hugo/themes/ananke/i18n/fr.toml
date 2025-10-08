@@ -1,0 +1,17 @@
+[more]
+other = "Plus"
+
+[allTitle]
+other = "Tous les {{.Title }}"
+
+[recentTitle]
+other = "{{.Title }} récents"
+
+[readMore]
+other = "lire plus"
+
+[whatsInThis]
+other = "Ce qui est dans {{ .Type }}"
+
+[related]
+other = "Lié"

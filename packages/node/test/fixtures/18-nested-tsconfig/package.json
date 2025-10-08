@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "nested-tsconfig",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {
+    "@vercel/node": "*",
+    "typescript": "3.7.7"
+  }
+}

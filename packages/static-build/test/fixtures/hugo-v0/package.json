@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "hugo"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

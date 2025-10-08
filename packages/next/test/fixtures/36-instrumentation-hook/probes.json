@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "isOdd: false"
+    },
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "isOdd: true"
+    }
+  ]
+}

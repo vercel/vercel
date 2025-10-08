@@ -1,0 +1,4 @@
+{
+  "version": 2,
+  "builds": [{ "src": "does-not-exist", "use": "@vercel/node" }]
+}

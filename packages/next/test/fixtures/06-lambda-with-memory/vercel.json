@@ -1,0 +1,65 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "src/pages/api/memory.js": {
+            "memory": 128
+          },
+          "src/pages/api/index.js": {
+            "memory": 192
+          },
+          "src/pages/api/sub/index.ts": {
+            "memory": 128
+          },
+          "src/pages/api/sub/another.ts": {
+            "memory": 192
+          },
+          "src/pages/about.tsx": {
+            "memory": 512
+          },
+          "src/pages/**": {
+            "memory": 128
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/api/memory",
+      "status": 200,
+      "mustContain": "128"
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "192"
+    },
+    {
+      "path": "/api/sub",
+      "status": 200,
+      "mustContain": "128"
+    },
+    {
+      "path": "/api/sub/another",
+      "status": 200,
+      "mustContain": "192"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "128"
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "mustContain": "512"
+    },
+    {
+      "logMustNotContain": "WARNING: Your application is being opted out of \"@vercel/next\" optimized lambdas mode due to `functions` config"
+    }
+  ]
+}

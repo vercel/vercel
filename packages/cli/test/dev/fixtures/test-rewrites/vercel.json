@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static",
+      "config": {
+        "zeroConfig": true
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/hello",
+      "destination": "index.html"
+    },
+    {
+      "source": "/status-rewrite-425",
+      "destination": "index.html",
+      "statusCode": 425
+    }
+  ]
+}

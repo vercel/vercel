@@ -1,0 +1,20 @@
+{
+  "name": "@aircampus/nextjs",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "4.9.5"
+  },
+  "devDependencies": {
+    "@types/node": "14.14.37",
+    "@types/react": "17.0.3",
+    "@types/react-dom": "17.0.3"
+  }
+}

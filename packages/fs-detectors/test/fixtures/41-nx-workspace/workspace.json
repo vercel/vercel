@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "projects": {
+    "myblog": "apps/app-one",
+    "svelte-app": "apps/app-two"
+  }
+}

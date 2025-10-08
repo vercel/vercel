@@ -1,0 +1,12 @@
+{
+  "name": "test-limit",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  }
+}

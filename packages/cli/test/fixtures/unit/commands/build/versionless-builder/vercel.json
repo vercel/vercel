@@ -1,0 +1,3 @@
+{
+  "builds": [{ "src": "package.json", "use": "versionless-builder@0.0.0" }]
+}

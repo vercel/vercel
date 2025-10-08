@@ -1,0 +1,26 @@
+{
+  "probes": [
+    {
+      "logMustContain": "uv at \""
+    },
+    {
+      "logMustNotContain": "falling back to pip"
+    },
+    {
+      "path": "/api/hello",
+      "method": "POST",
+      "body": {
+        "name": "RANDOMNESS_PLACEHOLDER"
+      },
+      "mustContain": "{\"name\":\"RANDOMNESS_PLACEHOLDER\"}",
+      "responseHeaders": {
+        "content-type": "application/json"
+      }
+    },
+    {
+      "path": "/api/hello",
+      "method": "GET",
+      "mustContain": "Hello, World!"
+    }
+  ]
+}

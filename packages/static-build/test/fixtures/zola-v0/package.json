@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "zola build"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/blog/about",
+      "status": 200,
+      "mustContain": "about",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/404",
+      "status": 404,
+      "mustContain": "404"
+    }
+  ]
+}

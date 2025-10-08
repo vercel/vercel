@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "This is the Home component" },
+    { "path": "/iudieufwunifiwwnuwfuw", "mustContain": "preact-10" }
+  ]
+}

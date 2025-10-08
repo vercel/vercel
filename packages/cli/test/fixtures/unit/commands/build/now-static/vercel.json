@@ -1,0 +1,8 @@
+{
+  "builds": [
+    {
+      "src": "www/**",
+      "use": "@now/static"
+    }
+  ]
+}

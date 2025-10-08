@@ -1,0 +1,13 @@
+{
+  "probes": [
+    { "path": "/", "mustContain": "<h1>Gatsby - Index</h1>" },
+    {
+      "path": "/using-ssr/",
+      "mustContain": "<h1>This page is <!-- -->rendered server side</h1>"
+    },
+    {
+      "path": "/using-dsg/",
+      "mustContain": "<h1>Hello from a DSG Page</h1>"
+    }
+  ]
+}

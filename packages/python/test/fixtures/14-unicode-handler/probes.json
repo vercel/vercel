@@ -1,0 +1,16 @@
+{
+  "probes": [
+    {
+      "path": "/api",
+      "method": "POST",
+      "body": {
+        "name": "Χριστοφορε"
+      },
+      "status": 200,
+      "mustContain": "hello, \\u03a7\\u03c1\\u03b9\\u03c3\\u03c4\\u03bf\\u03c6\\u03bf\\u03c1\\u03b5",
+      "responseHeaders": {
+        "content-type": "application/json"
+      }
+    }
+  ]
+}

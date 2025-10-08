@@ -1,0 +1,40 @@
+<random>
+  <h1>{ props.title }</h1>
+
+  <button onclick={ generate }>
+    Generate
+  </button>
+
+  <h2>
+    { state.number }
+  </h2>
+
+  <logs logs={ state.logs } onclear={ clearLogs }></logs>
+
+  <script>
+    import Logs from './logs.riot'
+
+    export default {
+      components: {
+        Logs
+      },
+      state: {
+        number: null,
+        logs: [],
+      },
+      generate(event) {
+        this.update({
+          number: Math.floor(Math.random() * 10000),
+          logs: this.state.logs.concat({
+            text: `Generate button clicked. Event type is ${ event.type }`
+          })
+        })
+      },
+      clearLogs() {
+        this.update({
+          logs: []
+        })
+      }
+    }
+  </script>
+</random>

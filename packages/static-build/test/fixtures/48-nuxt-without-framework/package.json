@@ -1,0 +1,14 @@
+{
+  "name": "48-nuxt-without-framework",
+  "version": "1.0.0",
+  "main": "pages/index.js",
+  "scripts": {
+    "dev": "nuxt dev",
+    "generate": "nuxt generate"
+  },
+  "keywords": [],
+  "private": true,
+  "dependencies": {
+    "nuxt": "2.15.2"
+  }
+}

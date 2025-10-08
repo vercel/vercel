@@ -1,0 +1,19 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404,
+      "mustContain": "pages/404"
+    },
+    {
+      "path": "/trigger-error",
+      "status": 500,
+      "mustContain": "pages/500"
+    }
+  ]
+}

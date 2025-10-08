@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "python3 -m pelican && mv output public"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

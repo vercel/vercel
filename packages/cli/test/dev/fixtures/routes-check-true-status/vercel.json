@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "builds": [{ "src": "**/*", "use": "@vercel/static" }],
+  "routes": [
+    { "src": "/secret", "status": 403, "dest": "/post", "check": true },
+    { "src": "/post", "dest": "/post.html" }
+  ]
+}

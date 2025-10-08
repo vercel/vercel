@@ -1,0 +1,3 @@
+{
+  "builds": [{ "src": "*.js", "use": "@vercel/does-not-exist" }]
+}

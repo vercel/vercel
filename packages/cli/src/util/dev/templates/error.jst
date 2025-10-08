@@ -1,0 +1,26 @@
+<main>
+  {{? it.error_code == 'EDGE_FUNCTION_INVOCATION_FAILED' }}
+    <p class="error-title error-title-guilty">
+      <strong>This Edge Function</strong><span> has crashed.</span>
+    </p>
+  {{? }}
+  {{? it.error_code == 'FUNCTION_INVOCATION_FAILED' }}
+    <p class="error-title error-title-guilty">
+      <strong>This Serverless Function</strong><span> has crashed.</span>
+    </p>
+  {{? }}
+  <p class="devinfo-container">
+    <span class="error-code"><strong>{{= it.http_status_code }}</strong>: {{! it.http_status_description }}</span>
+    {{? it.error_code }}
+    <span class="devinfo-line">Code: <code>{{! it.error_code }}</code></span>
+    {{?}}
+    <span class="devinfo-line">ID: <code>{{! it.request_id }}</code>
+  </p>
+  <p>
+    <ul>
+      <li>
+        Check the logs in your terminal window to see the application error.
+      </li>
+    </ul>
+  </p>
+</main>

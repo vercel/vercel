@@ -1,0 +1,35 @@
+# Get a list of changed packages since $SHA that have test tasks
+query GetAffectedPackages($sha: String!, $filter: PackagePredicate) {
+  affectedPackages(base: $sha, filter: $filter) {
+    length
+    items {
+      name
+      path
+      reason {
+        __typename
+        ... on FileChanged {
+          filePath
+        }
+        ... on DefaultGlobalFileChanged {
+          filePath
+        }
+        ... on DependencyChanged {
+          dependencyName
+        }
+        ... on RootInternalDepChanged {
+          rootInternalDep
+        }
+      }
+      allDependencies {
+        items {
+          name
+        }
+      }
+      tasks {
+        items {
+          name
+        }
+      }
+    }
+  }
+}

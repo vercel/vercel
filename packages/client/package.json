@@ -1,0 +1,57 @@
+{
+  "name": "@vercel/client",
+  "version": "17.0.2",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "homepage": "https://vercel.com",
+  "license": "Apache-2.0",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/client"
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "vitest-run": "vitest -c ./vitest.config.mts",
+    "vitest-unit": "glob --absolute 'tests/unit.*.test.ts'",
+    "vitest-e2e": "glob --absolute 'tests/integration-*.test.ts'",
+    "type-check": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "devDependencies": {
+    "@types/async-retry": "1.4.5",
+    "@types/fs-extra": "7.0.0",
+    "@types/jest": "27.4.1",
+    "@types/minimatch": "3.0.5",
+    "@types/ms": "0.7.30",
+    "@types/node": "16.18.119",
+    "@types/node-fetch": "2.5.4",
+    "@types/recursive-readdir": "2.2.0",
+    "@types/tar-fs": "1.16.1",
+    "jest-junit": "16.0.0",
+    "typescript": "4.9.5",
+    "vitest": "2.0.1"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "12.1.1",
+    "@vercel/error-utils": "2.0.3",
+    "@vercel/microfrontends": "1.2.2",
+    "@vercel/routing-utils": "5.2.0",
+    "async-retry": "1.2.3",
+    "async-sema": "3.0.0",
+    "fs-extra": "8.0.1",
+    "ignore": "4.0.6",
+    "minimatch": "5.0.1",
+    "ms": "2.1.2",
+    "node-fetch": "2.6.7",
+    "querystring": "^0.2.0",
+    "sleep-promise": "8.0.1",
+    "tar-fs": "1.16.3"
+  }
+}

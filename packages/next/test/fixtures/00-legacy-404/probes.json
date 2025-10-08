@@ -1,0 +1,14 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index page"
+    },
+    {
+      "path": "/non-existent",
+      "status": 404,
+      "mustContain": "custom 404"
+    }
+  ]
+}

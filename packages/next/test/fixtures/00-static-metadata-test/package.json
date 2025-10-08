@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "next": "canary",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.11",
+    "typescript": "^5.9.2"
+  },
+  "scripts": {
+    "vercel-build": "next build"
+  }
+}

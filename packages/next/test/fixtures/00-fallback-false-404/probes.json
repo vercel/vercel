@@ -1,0 +1,19 @@
+{
+  "probes": [
+    {
+      "path": "/blog/awesome",
+      "status": 200,
+      "mustContain": "blog slug"
+    },
+    {
+      "path": "/blog/does-not-exist",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    },
+    {
+      "path": "/blog/[slug]",
+      "status": 404,
+      "mustContain": "This page could not be found"
+    }
+  ]
+}

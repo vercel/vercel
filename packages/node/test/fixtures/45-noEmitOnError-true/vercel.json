@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [{ "src": "index.ts", "use": "@vercel/node" }],
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "no-emit-on-error-true:RANDOMNESS_PLACEHOLDER"
+    }
+  ]
+}

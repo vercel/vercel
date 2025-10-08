@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "path": "/api/my-endpoint",
+      "mustContain": "my-endpoint",
+      "status": 200
+    },
+    {
+      "path": "/api/other-endpoint",
+      "mustContain": "other-endpoint",
+      "status": 200
+    },
+    {
+      "path": "/api/team/zeit",
+      "mustContain": "team/zeit",
+      "status": 200
+    },
+    {
+      "path": "/api/user/myself",
+      "mustContain": "user/myself",
+      "status": 200
+    },
+    {
+      "path": "/api/not-okay/",
+      "status": 404
+    },
+    {
+      "path": "/api",
+      "status": 404
+    },
+    {
+      "path": "/api/",
+      "status": 404
+    },
+    {
+      "path": "/",
+      "mustContain": "hello from index.txt"
+    }
+  ]
+}

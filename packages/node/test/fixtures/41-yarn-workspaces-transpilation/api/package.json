@@ -1,0 +1,7 @@
+{
+  "name": "@builders-transpiled-test/api",
+  "dependencies": {
+    "@builders-transpiled-test/lib": "*"
+  },
+  "version": "1.0.0"
+}

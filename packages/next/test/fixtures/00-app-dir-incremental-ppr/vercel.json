@@ -1,0 +1,99 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "app/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          },
+          "pages/api/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "sentinel:loading"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "sentinel:dynamic"
+    },
+    {
+      "path": "/",
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      },
+      "status": 200,
+      "mustContain": "sentinel:loading",
+      "mustNotContain": "sentinel:dynamic"
+    },
+    {
+      "path": "/",
+      "headers": {
+        "rsc": "1"
+      },
+      "status": 200,
+      "mustContain": "sentinel:dynamic"
+    },
+    {
+      "path": "/disabled",
+      "status": 200,
+      "mustContain": "sentinel:loading"
+    },
+    {
+      "path": "/disabled",
+      "status": 200,
+      "mustContain": "sentinel:dynamic"
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "sentinel:static"
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "sentinel:static",
+      "headers": {
+        "rsc": "1"
+      }
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "sentinel:static",
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      }
+    },
+    {
+      "path": "/disabled",
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      },
+      "status": 200,
+      "mustNotContain": "sentinel:dynamic"
+    },
+    {
+      "path": "/disabled",
+      "headers": {
+        "rsc": "1"
+      },
+      "status": 200,
+      "mustContain": "sentinel:dynamic"
+    }
+  ]
+}

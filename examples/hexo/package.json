@@ -1,0 +1,23 @@
+{
+  "name": "hexo-site",
+  "version": "0.0.0",
+  "private": true,
+  "hexo": {
+    "version": "5.3.0"
+  },
+  "dependencies": {
+    "hexo": "^5.3.0",
+    "hexo-generator-archive": "^1.0.0",
+    "hexo-generator-category": "^1.0.0",
+    "hexo-generator-index": "^2.0.0",
+    "hexo-generator-tag": "^1.0.0",
+    "hexo-renderer-ejs": "^1.0.0",
+    "hexo-renderer-marked": "^3.3.0",
+    "hexo-renderer-stylus": "^2.0.1",
+    "hexo-server": "^2.0.0"
+  },
+  "scripts": {
+    "dev": "hexo server -p $PORT",
+    "build": "hexo generate"
+  }
+}

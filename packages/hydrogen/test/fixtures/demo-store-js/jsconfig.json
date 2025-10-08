@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "node16",
+    "lib": ["dom", "dom.iterable", "scripthost", "es2020"],
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["**/*.js", "**/*.jsx"]
+}

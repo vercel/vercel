@@ -1,0 +1,403 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "functions": {
+          "app/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          },
+          "pages/api/**/*": {
+            "maxDuration": 5,
+            "memory": 512
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "path": "/dynamic-index/hello/index",
+      "status": 200,
+      "mustContain": "dynamic-index"
+    },
+    {
+      "path": "/dynamic-index/hello/index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1,
+        "next-router-prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1,
+        "next-router-prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-dashboard",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1,
+        "next-router-prefetch": 1
+      }
+    },
+    {
+      "path": "/rewritten-to-index",
+      "status": 200,
+      "mustContain": ":",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": 1
+      }
+    },
+    {
+      "path": "/catch-all",
+      "status": 200,
+      "mustContain": "html"
+    },
+    {
+      "path": "/catch-all",
+      "status": 200,
+      "mustContain": "catch-all"
+    },
+    {
+      "path": "/catch-all",
+      "status": 200,
+      "headers": {
+        "rsc": 1
+      },
+      "mustNotContain": "<html",
+      "mustContain": "catch-all"
+    },
+    {
+      "path": "/catch-all",
+      "status": 200,
+      "headers": {
+        "rsc": 1,
+        "next-router-prefetch": 1
+      },
+      "mustNotContain": "<html",
+      "mustContain": ":"
+    },
+    {
+      "path": "/dashboard/hello",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/rootonly/hello"
+    },
+    {
+      "path": "/dashboard/another-edge",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component"
+      },
+      "mustContain": ":",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "mustContain": "hello from /ssg",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/client-nested",
+      "status": 200,
+      "mustContain": "hello",
+      "mustNotContain": "<html",
+      "headers": {
+        "rsc": "1"
+      }
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+        "content-type": "text/x-component"
+      },
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/ssg?override=1",
+      "status": 307,
+      "responseHeaders": {
+        "location": "/overridden/"
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/dashboard/deployments/123/settings",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]/settings",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/deployments/123/settings",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard/deployments/catchall/something",
+      "status": 200,
+      "mustContain": "catchall",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/deployments/catchall/something",
+      "status": 200,
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      },
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "mustContain": "hello from app/dashboard",
+      "responseHeaders": {
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "responseHeaders": {
+        "content-type": "text/x-component",
+        "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+      }
+    },
+    {
+      "path": "/dashboard/another",
+      "status": 200,
+      "mustContain": "hello from newroot/dashboard/another"
+    },
+    {
+      "path": "/dashboard/deployments/123",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "index app page"
+    },
+    {
+      "path": "/blog/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog/[slug]"
+    },
+    {
+      "path": "/blog-ssr/123",
+      "status": 200,
+      "mustContain": "hello from pages/blog-ssr/[slug]"
+    },
+    {
+      "path": "/blog-ssr/321",
+      "status": 200,
+      "mustContain": "hello context"
+    },
+    {
+      "path": "/dynamic/category-1/id-1",
+      "status": 200,
+      "mustContain": "{&quot;category&quot;:&quot;category-1&quot;,&quot;id&quot;:&quot;id-1&quot;}"
+    },
+    {
+      "path": "/dashboard/changelog",
+      "status": 200,
+      "mustContain": "hello from app/dashboard/changelog"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/gsp/one",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/gsp/two",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/api/app-headers",
+      "status": 200,
+      "mustContain": "{\"port\":\"443\"}"
+    },
+    {
+      "path": "/api/pages-headers",
+      "status": 200,
+      "mustContain": "{\"port\":\"443\"}"
+    },
+    {
+      "path": "/greedy-rewrite/test-page",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "responseHeaders": {
+        "x-matched-path": "/test-page.rsc"
+      },
+      "headers": {
+        "rsc": 1
+      }
+    },
+    {
+      "path": "/greedy-rewrite/test-page",
+      "status": 200,
+      "mustContain": ":{",
+      "mustNotContain": "<html",
+      "responseHeaders": {
+        "x-matched-path": "/test-page.prefetch.rsc"
+      },
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      }
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "mustContain": "static page"
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "headers": {
+        "rsc": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    },
+    {
+      "path": "/static",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1"
+      },
+      "mustContain": ":{",
+      "mustNotContain": "<html"
+    }
+  ]
+}

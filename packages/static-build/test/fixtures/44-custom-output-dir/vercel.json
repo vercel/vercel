@@ -1,0 +1,15 @@
+{
+  "builds": [
+    {
+      "src": "build.js",
+      "use": "@vercel/static-build",
+      "config": {
+        "zeroConfig": true,
+        "buildCommand": "node build.js",
+        "devCommand": "node dev.js",
+        "outputDirectory": "custom-output"
+      }
+    }
+  ],
+  "probes": [{ "path": "/", "mustContain": "Time of Creation:" }]
+}

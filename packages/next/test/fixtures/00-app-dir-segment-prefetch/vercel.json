@@ -1,0 +1,88 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "probes": [
+    {
+      "path": "/?_rsc=1r34m",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/index.segments/_tree.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    {
+      "path": "/blog/hello-world?_rsc=1r34m",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_tree"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/_tree.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    {
+      "path": "/blog/hello-world?_rsc=nn07o",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/_index"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/_index.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    {
+      "path": "/blog/hello-world?_rsc=ydjbj",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/blog"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.segments/blog.segment.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    {
+      "path": "/blog/hello-world?_rsc=5ga50",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/blog/$d$slug$hello-world"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.prefetch.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    },
+    {
+      "path": "/blog/hello-world?_rsc=1a29i",
+      "status": 200,
+      "headers": {
+        "rsc": "1",
+        "next-router-prefetch": "1",
+        "next-router-segment-prefetch": "/blog/$d$slug$hello-world/__PAGE__"
+      },
+      "responseHeaders": {
+        "x-matched-path": "/blog/hello-world.prefetch.rsc"
+      },
+      "mustNotContain": "Dynamic Component"
+    }
+  ]
+}

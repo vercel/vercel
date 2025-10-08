@@ -1,0 +1,3 @@
+{
+  "probes": [{ "path": "/api/proxy", "mustContain": "Example Domain" }]
+}

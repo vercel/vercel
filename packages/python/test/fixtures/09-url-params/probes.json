@@ -1,0 +1,18 @@
+{
+  "probes": [
+    {
+      "path": "/api?hello=/",
+      "mustContain": "path:  query: {'hello': '/'}",
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    },
+    {
+      "path": "/api/custom?hello=/",
+      "mustContain": "path: custom query: {'hello': '/'}",
+      "responseHeaders": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    }
+  ]
+}

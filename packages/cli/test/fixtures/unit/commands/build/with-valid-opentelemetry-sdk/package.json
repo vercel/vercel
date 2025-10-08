@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "node env.js"
+  },
+  "dependencies": {
+    "@opentelemetry/sdk-trace-node": "1.19.0"
+  }
+}
