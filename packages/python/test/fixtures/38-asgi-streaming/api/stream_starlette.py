@@ -16,6 +16,6 @@ async def starlette_stream(request):
 
 app = Starlette(
     routes=[
-        Route("/api/starlette_app", starlette_stream)
+        Route("/api/stream_starlette", starlette_stream)
     ]
 )
