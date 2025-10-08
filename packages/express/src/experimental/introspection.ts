@@ -1,4 +1,4 @@
-import { BuildV2, glob, debug } from '@vercel/build-utils';
+import { BuildV2, glob, debug, Files } from '@vercel/build-utils';
 import { isAbsolute, join, normalize, resolve, sep } from 'path';
 import { outputFile } from 'fs-extra';
 import { spawn } from 'child_process';
@@ -6,14 +6,19 @@ import { readFileSync } from 'fs';
 import { rm } from 'fs/promises';
 import { createRequire } from 'module';
 import { pathToRegexp } from 'path-to-regexp';
-import { rolldown } from './rolldown';
 import { z } from 'zod';
 
 const require_ = createRequire(__filename);
 
+type RolldownResult = {
+  outputDir: string;
+  handler: string;
+  files: Files;
+};
+
 export const introspectApp = async (
   args: Parameters<BuildV2>[0],
-  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
+  rolldownResult: RolldownResult
 ) => {
   const source = expressShimSource(rolldownResult);
   const shimPath = join(
@@ -90,9 +95,7 @@ export const introspectApp = async (
   return { routes };
 };
 
-const cleanupShim = async (
-  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
-) => {
+const cleanupShim = async (rolldownResult: RolldownResult) => {
   await rm(join(rolldownResult.outputDir, 'node_modules'), {
     recursive: true,
     force: true,
@@ -100,9 +103,7 @@ const cleanupShim = async (
   await rm(getIntrospectionPath(rolldownResult), { force: true });
 };
 
-const processIntrospection = async (
-  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
-) => {
+const processIntrospection = async (rolldownResult: RolldownResult) => {
   const schema = z.object({
     routes: z
       .record(
@@ -151,7 +152,7 @@ const getIntrospectionPath = (options: { outputDir: string }) => {
 
 const invokeFunction = async (
   args: Parameters<BuildV2>[0],
-  rolldownResult: Awaited<ReturnType<typeof rolldown>>['result']
+  rolldownResult: RolldownResult
 ) => {
   await new Promise(resolve => {
     try {
