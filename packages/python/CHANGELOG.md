@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.9
+
+### Patch Changes
+
+- reverts fastapi background task commit ([#14074](https://github.com/vercel/vercel/pull/14074))
+
 ## 5.0.8
 
 ### Patch Changes
