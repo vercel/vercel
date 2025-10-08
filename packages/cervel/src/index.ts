@@ -42,7 +42,7 @@ export const serve = async (args: {
   const tsxBin = require.resolve('tsx');
 
   const restArgs = Object.entries(args.rest)
-    .filter(([_, value]) => value !== undefined && value !== false)
+    .filter(([, value]) => value !== undefined && value !== false)
     .map(([key, value]) =>
       typeof value === 'boolean' ? `--${key}` : `--${key}=${value}`
     );
