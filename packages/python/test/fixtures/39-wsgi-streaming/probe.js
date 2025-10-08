@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 /**
- * Custom streaming probe to verify incremental delivery from both ASGI and Sanic routes.
+ * Custom streaming probe to verify incremental delivery from WSGI routes (Flask and raw WSGI).
  * Each handler writes an intro line, then numbers 1..5 with ~1s delay.
  */
 module.exports = async ({ deploymentUrl, fetch }) => {
