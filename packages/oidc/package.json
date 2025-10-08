@@ -11,6 +11,7 @@
   "exports": {
     ".": {
       "browser": "./dist/index-browser.js",
+      "react-native": "./dist/index-browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     }
