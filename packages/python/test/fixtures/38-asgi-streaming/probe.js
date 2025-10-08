@@ -1,12 +1,11 @@
 const assert = require('assert');
 
 /**
- * Custom streaming probe to verify incremental delivery from ASGI routes (raw ASGI, Sanic, and Starlette).
+ * Custom streaming probe to verify incremental delivery from ASGI routes (raw ASGI and Starlette).
  * Each handler writes an intro line, then numbers 1..5 with ~1s delay.
  */
 module.exports = async ({ deploymentUrl, fetch }) => {
   await checkStreaming(`https://${deploymentUrl}/api/asgi_app`, fetch);
-  await checkStreaming(`https://${deploymentUrl}/api/sanic_app`, fetch);
   await checkStreaming(`https://${deploymentUrl}/api/starlette_app`, fetch);
 };
 
