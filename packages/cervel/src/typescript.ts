@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import { spawn } from 'child_process';
-import { dirname, resolve, extname, join } from 'path';
+import { extname, join } from 'path';
 import { Colors as c } from './utils.js';
 
 const require_ = createRequire(import.meta.url);
@@ -86,11 +86,10 @@ async function doTypeCheck(
 
 const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
   try {
-    const pkgPath = require_.resolve('typescript', {
+    const pkgPath = require_.resolve('typescript/bin/tsc', {
       paths: [args.workPath],
     });
-    const pkg = require_(pkgPath);
-    return resolve(dirname(pkgPath), pkg.bin.tsc);
+    return pkgPath;
   } catch (e) {
     return null;
   }
