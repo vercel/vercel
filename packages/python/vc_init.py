@@ -184,8 +184,17 @@ def setup_logging(send_message: Callable[[dict], None], storage: contextvars.Con
     # attributed to the current request context.
     def print_wrapper(func: Callable[..., None]) -> Callable[..., None]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            sys.stdout.write(' '.join(map(str, args)) + '\n')
+        def wrapper(*args, sep=' ', end='\n', file=None, flush=False):
+            if file is None:
+                file = sys.stdout
+            if file in (sys.stdout, sys.stderr):
+                # Use our wrapped streams for context attribution
+                file.write(sep.join(map(str, args)) + end)
+                if flush:
+                    file.flush()
+            else:
+                # User specified a different file, use original print behavior
+                func(*args, sep=sep, end=end, file=file, flush=flush)
         return wrapper
 
     builtins.print = print_wrapper(builtins.print)
