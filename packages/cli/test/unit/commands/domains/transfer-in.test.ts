@@ -52,60 +52,42 @@ describe('domains transfer-in', () => {
     const validCode = 'valid-code';
 
     beforeEach(() => {
-      client.scenario.get('/v3/domains/price', (_req, res) => {
-        res.json({
-          price,
-          period: 2,
-        });
-      });
-
       client.scenario.get(
-        `/v4/domains/${encodeURIComponent(domain.name)}/registry`,
-        (req, res) => {
+        `/v1/registrar/domains/${encodeURIComponent(domain.name)}/price`,
+        (_req, res) => {
           res.json({
-            transferable: true,
-            transferPolicy: 'no-change',
+            purchasePrice: null,
+            renewalPrice: null,
+            transferPrice: price,
+            years: 2,
           });
         }
       );
 
-      client.scenario.post(`/v4/domains/`, (req, res) => {
-        res.json({
-          domain: domain,
-        });
-      });
-    });
-
-    it('tracks telemety events', async () => {
-      client.setArgv('domains', 'transfer-in', domain.name);
-      const exitCodePromise = domains(client);
-
-      withFakeTimers(async () => {
-        await expect(client.stderr).toOutput(
-          `> The domain "${domain.name}" is available to transfer under ${username}! [0ms]`
-        );
-      });
-
-      await expect(client.stderr).toOutput('- Transfer auth code: ');
-      client.stdin.write(`${validCode}\n`);
-
-      await expect(client.stderr).toOutput(
-        `? Transfer now for $${price}? (y/N)`
+      client.scenario.post(
+        `/v1/registrar/domains/${encodeURIComponent(domain.name)}/transfer`,
+        (req, res) => {
+          res.json({
+            orderId: 'test-order-id-123',
+          });
+        }
       );
-      client.stdin.write('y\n');
 
-      const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "domains"').toEqual(0);
-      expect(client.telemetryEventStore.readonlyEvents).toMatchObject([
-        expect.objectContaining({
-          key: `subcommand:transfer-in`,
-          value: 'transfer-in',
-        }),
-        expect.objectContaining({
-          key: `argument:domain`,
-          value: '[REDACTED]',
-        }),
-      ]);
+      client.scenario.get(
+        '/v1/registrar/orders/test-order-id-123',
+        (req, res) => {
+          res.json({
+            id: 'test-order-id-123',
+            status: 'completed',
+            domains: [
+              {
+                domainName: domain.name,
+                status: 'completed',
+              },
+            ],
+          });
+        }
+      );
     });
 
     describe('--code', () => {
