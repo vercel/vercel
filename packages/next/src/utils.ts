@@ -3104,15 +3104,22 @@ export const onPrerenderRoute =
             )}`;
           }
 
-          // We follow the same logic as the HTML allowQuery as it's already
-          // going to vary based on if there's a static shell generated or if
-          // there's fallback root params. If there are fallback root params,
-          // and we can serve a fallback, then we should follow the same logic
-          // for the dynamic RSC routes.
-          const rdcRSCAllowQuery = htmlAllowQuery;
+          // If client param parsing is enabled, we follow the same logic as the
+          // HTML allowQuery as it's already going to vary based on if there's a
+          // static shell generated or if there's fallback root params. If there
+          // are fallback root params, and we can serve a fallback, then we
+          // should follow the same logic for the dynamic RSC routes.
+          //
+          // If client param parsing is not enabled, we have to use the
+          // allowQuery because the RSC payloads will contain dynamic segment
+          // values.
+          const rdcRSCAllowQuery = isAppClientParamParsingEnabled
+            ? htmlAllowQuery
+            : allowQuery;
 
           // Use the fallback value for the RSC route if the route doesn't
-          // vary based on the route parameters.
+          // vary based on the route parameters and there's an actual postponed
+          // state to fallback to.
           let fallback: FileBlob | null = null;
           if (
             rdcRSCAllowQuery &&
@@ -3183,12 +3190,19 @@ export const onPrerenderRoute =
               routeFileNoExt + prefetchSegmentDirSuffix
             );
 
-            // We follow the same logic as the HTML allowQuery as it's already
-            // going to vary based on if there's a static shell generated or if
-            // there's fallback root params. If there are fallback root params,
-            // and we can serve a fallback, then we should follow the same logic
-            // for the segment prerenders.
-            const segmentAllowQuery = htmlAllowQuery;
+            // If client param parsing is enabled, we follow the same logic as
+            // the HTML allowQuery as it's already going to vary based on if
+            // there's a static shell generated or if there's fallback root
+            // params. If there are fallback root params, and we can serve a
+            // fallback, then we should follow the same logic for the segment
+            // prerenders.
+            //
+            // If client param parsing is not enabled, we have to use the
+            // allowQuery because the segment payloads will contain dynamic
+            // segment values.
+            const segmentAllowQuery = isAppClientParamParsingEnabled
+              ? htmlAllowQuery
+              : allowQuery;
 
             for (const segmentPath of meta.segmentPaths) {
               const outputSegmentPath =
