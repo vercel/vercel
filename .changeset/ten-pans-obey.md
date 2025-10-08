@@ -1,5 +1,5 @@
 ---
-"cervel-beta": patch
+"@vercel/cervel-beta": patch
 "@vercel/express": patch
 ---
 
