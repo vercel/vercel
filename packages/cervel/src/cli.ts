@@ -6,9 +6,9 @@ const options = parseArgs(args);
 
 export const main = async () => {
   const { cwd, out, ...rest } = options.values;
-  const [command] = options.positionals;
+  const [command, entrypoint] = options.positionals;
   if (command === 'build') {
-    const { tsPromise } = await build({ cwd, out });
+    const { tsPromise } = await build({ cwd, out, entrypoint });
     await tsPromise;
   } else {
     await serve({ cwd, rest });

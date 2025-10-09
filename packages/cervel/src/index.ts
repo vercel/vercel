@@ -6,6 +6,7 @@ import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import { ParseArgsOptionsConfig } from 'util';
+import { writeFile } from 'fs/promises';
 
 const require = createRequire(import.meta.url);
 
@@ -22,6 +23,10 @@ export const build = async (args: {
     repoRootPath: args.cwd,
     out: args.out,
   });
+  await writeFile(
+    join(args.cwd, args.out, '.cervel.json'),
+    JSON.stringify({ handler: rolldownResult.result.handler }, null, 2)
+  );
 
   const tsPromise = typescript({
     ...args,
