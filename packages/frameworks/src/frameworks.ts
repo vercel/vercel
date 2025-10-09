@@ -2074,6 +2074,57 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Flask',
+    slug: 'flask',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/flask.svg',
+    tagline: 'The Python micro web framework',
+    description: 'A Flask app, ready for production',
+    website: 'https://flask.palletsprojects.com',
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: 'flask',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: 'flask',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: 'flask',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
@@ -2975,6 +3026,55 @@ export const frameworks = [
       },
     },
     dependency: 'h3',
+    getOutputDirName: async () => 'public',
+  },
+  {
+    name: 'NestJS',
+    slug: 'nestjs',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/nestjs.svg',
+    tagline:
+      'Framework for building efficient, scalable Node.js server-side applications',
+    description:
+      'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
+    website: 'https://nestjs.com/',
+    useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      every: [{ matchPackage: '@nestjs/core' }],
+      some: [
+        {
+          path: 'src/main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    dependency: 'nestjs',
     getOutputDirName: async () => 'public',
   },
   {
