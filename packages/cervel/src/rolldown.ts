@@ -71,6 +71,7 @@ export const rolldown = async (args: {
     },
   };
 
+  const tsconfig = await findNearestTsconfig(baseDir);
   const relativeOutputDir = args.out;
   const outputDir = join(baseDir, relativeOutputDir);
   let handler: string | null = null;
@@ -81,6 +82,7 @@ export const rolldown = async (args: {
     platform: 'node',
     external: /node_modules/,
     plugins: [absoluteImportPlugin],
+    tsconfig,
     output: {
       dir: outputDir,
       // FIXME: This is a bit messy, not sure what facadeModuleId even is and the only reason for renaming here
@@ -134,4 +136,15 @@ export const rolldown = async (args: {
     },
     cleanup,
   };
+};
+
+const findNearestTsconfig = async (workPath: string) => {
+  const tsconfigPath = join(workPath, 'tsconfig.json');
+  if (existsSync(tsconfigPath)) {
+    return tsconfigPath;
+  }
+  if (workPath === '/') {
+    return undefined;
+  }
+  return findNearestTsconfig(join(workPath, '..'));
 };
