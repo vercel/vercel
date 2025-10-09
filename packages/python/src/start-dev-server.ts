@@ -264,6 +264,20 @@ export const startDevServer: StartDevServer = async opts => {
           debug(`Using virtualenv at ${venvRoot}`);
         } else {
           debug('No virtualenv found');
+          try {
+            const yellow = '\x1b[33m';
+            const reset = '\x1b[0m';
+            const venvCmd =
+              process.platform === 'win32'
+                ? 'python -m venv .venv && .venv\\Scripts\\activate'
+                : 'python -m venv .venv && source .venv/bin/activate';
+            process.stderr.write(
+              `${yellow}Warning: no virtual environment detected in ${workPath}. Using system Python: ${pythonCmd}.${reset}\n` +
+                `If you are using a virtual environment, activate it before running "vercel dev", or create one: ${venvCmd}\n`
+            );
+          } catch (_) {
+            // ignore write errors
+          }
         }
       }
 

@@ -1,8 +1,23 @@
 # Auto-generated template used by vercel dev (Python, ASGI)
 # Serves static files from PUBLIC_DIR before delegating to the user ASGI app.
 import sys
+import os
 from os import path as _p
 from importlib import import_module
+
+
+# Simple ANSI coloring. Respect NO_COLOR environment variable.
+_NO_COLOR = 'NO_COLOR' in os.environ
+_RESET = "\x1b[0m"
+_YELLOW = "\x1b[33m"
+_GREEN = "\x1b[32m"
+_RED = "\x1b[31m"
+
+def _color(text: str, code: str) -> str:
+    if _NO_COLOR:
+        return text
+    return f"{code}{text}{_RESET}"
+
 
 # Optional StaticFiles import; tolerate missing deps
 StaticFiles = None
@@ -80,5 +95,5 @@ if __name__ == '__main__':
 
             asyncio.run(_run())
         except Exception:
-            print('No ASGI server found. Please install either "uvicorn" or "hypercorn" (e.g. "pip install uvicorn").', file=sys.stderr)
+            print(_color('No ASGI server found. Please install either "uvicorn" or "hypercorn" (e.g. "pip install uvicorn").', _RED), file=sys.stderr)
             sys.exit(1)
