@@ -923,14 +923,14 @@ async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<voi
   const exceededFunctions: string[] = [];
 
   for (const result of sortedResults) {
-    const exceeds = result.size > 250;
+    const exceeds = result.size > LAMBDA_SIZE_LIMIT_MB;
     
     if (exceeds) {
       exceededFunctions.push(result.path);
       output.print(
         `${chalk.red(result.path)}: ` +
         `${chalk.red.bold(result.size.toFixed(2))} MB ` +
-        `${chalk.red.bold('⚠️  Exceeds 250 MB uncompressed limit')}\n`
+        `${chalk.red.bold(`⚠️  Exceeds ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed limit`)}\n`
       );
     } else {
       output.print(
