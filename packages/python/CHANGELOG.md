@@ -1,5 +1,19 @@
 # @vercel/python
 
+## 5.0.9
+
+### Patch Changes
+
+- reverts fastapi background task commit ([#14074](https://github.com/vercel/vercel/pull/14074))
+
+## 5.0.8
+
+### Patch Changes
+
+- [python] FastAPI background tasks bugfix, enhanced probes and fixture ([#14050](https://github.com/vercel/vercel/pull/14050))
+
+- [python] flask zero-config ([#14055](https://github.com/vercel/vercel/pull/14055))
+
 ## 5.0.7
 
 ### Patch Changes

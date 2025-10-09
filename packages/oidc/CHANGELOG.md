@@ -1,5 +1,11 @@
 # @vercel/oidc
 
+## 3.0.2
+
+### Patch Changes
+
+- fix(oidc): add `"react-native"` as export condition ([#14066](https://github.com/vercel/vercel/pull/14066))
+
 ## 3.0.1
 
 ### Patch Changes

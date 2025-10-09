@@ -12,7 +12,6 @@
 /packages/functions                      @vercel/ci-cd @vercel/compute @kldavis4
 /packages/firewall                       @vercel/ci-cd @cramforce @sueplex @quuu @ctgowrie
 /packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
-/examples                                @vercel/ci-cd @leerob
 /examples/create-react-app               @vercel/ci-cd @Timer
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
 /packages/node                           @vercel/ci-cd @Kikobeats
@@ -21,4 +20,7 @@
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 
 # Unrestricted Paths
+# These paths are updated by the changeset CLI for "Version Packages" pull requests
 .changeset/
+/packages/*/CHANGELOG.md
+/packages/*/package.json

@@ -3,9 +3,28 @@
     { "path": "/", "status": 200, "mustContain": "Hello, World!" },
     { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" },
     { "path": "/bg-status?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "false" },
-    { "delay": 2000 },
+    { "delay": 3200 },
     { "path": "/bg-status?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "true", "retries": 10, "retryDelay": 1000 },
 
-    { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "queued" }
+    { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER-2", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER-3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER-4", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-file?token=RANDOMNESS_PLACEHOLDER-5", "status": 200, "mustContain": "queued" },
+    { "delay": 3200 },
+    { "path": "/bg-logs", "status": 200, "mustContain": "5 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S1&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S2&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S3&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S4&count=3", "status": 200, "mustContain": "queued" },
+    { "path": "/bg-files-sequential?token=RANDOMNESS_PLACEHOLDER-S5&count=3", "status": 200, "mustContain": "queued" },
+    { "delay": 10000 },
+    { "path": "/bg-logs", "status": 200, "mustContain": "20 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-files-concurrent?token=RANDOMNESS_PLACEHOLDER-C&count=10", "status": 200, "mustContain": "queued" },
+    { "delay": 3200 },
+    { "path": "/bg-logs", "status": 200, "mustContain": "30 log files", "retries": 10, "retryDelay": 1000 },
+
+    { "path": "/bg-crash?token=RANDOMNESS_PLACEHOLDER-K", "status": 200, "mustContain": "queued" }
   ]
 }
