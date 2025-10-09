@@ -1,2 +1,5 @@
 .now
 .vercel
+__pycache__/
+.venv/
+venv/
