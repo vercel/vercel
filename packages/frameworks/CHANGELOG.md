@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.11.2
+
+### Patch Changes
+
+- Add support for additional entrypoints in NestJS ([#14073](https://github.com/vercel/vercel/pull/14073))
+
 ## 3.11.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 5.0.10
+
+### Patch Changes
+
+- [python] streaming e2e tests ([#14079](https://github.com/vercel/vercel/pull/14079))
+
 ## 5.0.9
 
 ### Patch Changes
