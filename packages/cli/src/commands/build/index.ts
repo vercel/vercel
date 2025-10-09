@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs-extra';
 import minimatch from 'minimatch';
-import { dirname, join, normalize, relative, resolve, sep } from 'path';
+import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
 import { statSync } from 'fs';
 
@@ -879,7 +879,7 @@ async function doBuild(
 }
 
 function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
-  const funcPath = relative(outputDir, vcConfigPath)
+  const funcPath = normalizePath(relative(outputDir, vcConfigPath))
     .replace(/^functions\//, '')
     .replace(/\/\.vc-config\.json$/, '')
     .replace(/\.func$/, ''); // Remove .func suffix
@@ -988,7 +988,7 @@ function getTotalFileSizeInMB(files: string[]): { size: number } {
     try {
       const stats = statSync(file);
       if (stats.isFile()) {
-        size += stats.size * 1e-6;
+        size += stats.size / (1024 * 1024);
       }
     } catch {
       // File doesn't exist or can't be accessed
