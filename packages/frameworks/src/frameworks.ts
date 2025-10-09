@@ -202,7 +202,7 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    supersedes: ['hydrogen', 'vite'],
+    supersedes: ['fetch-export', 'hydrogen', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -552,6 +552,238 @@ export const frameworks = [
       }
       return base;
     },
+  },
+  {
+    name: 'Fetch Export',
+    slug: 'fetch-export',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/other.svg',
+    tagline: 'Web Standards API framework',
+    description:
+      'Supports any API framework with a default export which implements a `fetch` method.',
+    useRuntime: { src: 'index.js', use: '@vercel/fetch-export' },
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+    detectors: {
+      some: [
+        {
+          path: 'api.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'api.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'api.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'api.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'api.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'api.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'app.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'index.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'server.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/api.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.cjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.js',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.mts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent: 'export\\s+default\\b',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent: 'export\\s+default\\b',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder:
+          '`yarn install`, `pnpm install`, `npm install`, or `bun install`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
   },
   {
     name: 'Preact',
@@ -1831,7 +2063,7 @@ export const frameworks = [
     tagline: 'React framework for headless commerce',
     description: 'React framework for headless commerce',
     website: 'https://hydrogen.shopify.dev',
-    supersedes: ['vite'],
+    supersedes: ['fetch-export', 'vite'],
     useRuntime: { src: 'package.json', use: '@vercel/hydrogen' },
     envPrefix: 'PUBLIC_',
     detectors: {
@@ -2363,6 +2595,7 @@ export const frameworks = [
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
     website: 'https://hono.dev',
+    supersedes: ['fetch-export'],
     useRuntime: { src: 'index.js', use: '@vercel/hono' },
     defaultRoutes: [
       {
@@ -2812,6 +3045,7 @@ export const frameworks = [
     description:
       'H(TTP) server framework built on top of web standards for high performance and composability.',
     website: 'https://h3.dev/',
+    supersedes: ['fetch-export'],
     useRuntime: { src: 'index.js', use: '@vercel/h3' },
     defaultRoutes: [
       {
