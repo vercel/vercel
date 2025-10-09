@@ -4,6 +4,7 @@ import {
   type BuildV3,
   glob,
   BuildV2,
+  debug,
 } from '@vercel/build-utils';
 // @ts-expect-error - FIXME: framework build is not exported
 import { build as nodeBuild } from '@vercel/node';
@@ -78,6 +79,7 @@ export const build: BuildV3 = async args => {
 
 export const entrypointCallback = async (args: Parameters<BuildV2>[0]) => {
   const mainPackageEntrypoint = findMainPackageEntrypoint(args.files);
+
   // builds a glob pattern like {app,index,server,src/app,src/index,src/server}.{js,cjs,mjs,ts,cts,mts}
   const entrypointGlob = `{${validFilenames
     .map(entrypoint => `${entrypoint}`)
@@ -104,6 +106,7 @@ export const entrypointCallback = async (args: Parameters<BuildV2>[0]) => {
       `No entrypoint found in output directory: "${dir}". Searched for: \n${entrypointsForMessage}`
     );
   }
+
   const files = await glob(entrypointGlob, args.workPath);
   const { entrypoint: entrypointFromRoot, entrypointsNotMatchingRegex } =
     findEntrypoint(files);
@@ -162,6 +165,9 @@ export const findEntrypoint = (files: Record<string, FileFsRef>) => {
 
   const entrypoint = entrypointsMatchingRegex[0];
   if (entrypointsMatchingRegex.length > 1) {
+    debug(
+      `[@vercel/express] Multiple valid entrypoints found: ${entrypointsMatchingRegex.join(', ')}`
+    );
     console.warn(
       `Multiple entrypoints found: ${entrypointsMatchingRegex.join(', ')}. Using ${entrypoint}.`
     );

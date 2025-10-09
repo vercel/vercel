@@ -202,6 +202,7 @@ const failingFixtures: Record<
       outputDirectory: 'dist',
     },
   },
+  '07-invalid-ts': {},
 };
 
 describe('successful builds', () => {
@@ -308,6 +309,31 @@ describe('successful builds', () => {
 
         expect(
           build({
+            files,
+            workPath,
+            config: {
+              ...config,
+              projectSettings: {
+                ...config.projectSettings,
+                ...fixtureConfig.projectSettings,
+              },
+            },
+            meta,
+            // Entrypoint is just used as the BOA function name
+            entrypoint: 'this value is not used',
+            repoRootPath: workPath,
+          })
+        ).rejects.toThrowError();
+      });
+      it(`experimental should fail to build${fixtureName}`, async () => {
+        const workPath = join(__dirname, '../failing-fixtures', fixtureName);
+
+        const fileList = readDirectoryRecursively(workPath);
+
+        const files = createFiles(workPath, fileList);
+
+        expect(
+          experimentalBuild({
             files,
             workPath,
             config: {

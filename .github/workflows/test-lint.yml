@@ -7,7 +7,7 @@ env:
   TURBO_REMOTE_ONLY: 'true'
   TURBO_TEAM: 'vercel'
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
