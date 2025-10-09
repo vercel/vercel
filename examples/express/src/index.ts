@@ -14,8 +14,4 @@ app.get('/api/posts/:postId/comments/:commentId', (_req, res) => {
   res.json({ postId: _req.params.postId, commentId: _req.params.commentId })
 })
 
-app.get('/special/chars/!@#$%^&*()', (_req, res) => {
-  res.send('Special chars route')
-})
-
 export default app
