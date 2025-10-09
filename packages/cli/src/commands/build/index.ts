@@ -873,7 +873,7 @@ async function doBuild(
 
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
-    await analyzeVcConfigFiles(outputDir);
+    await analyzeVcConfigFiles(cwd, outputDir);
   }
 }
 
@@ -889,7 +889,7 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
     .join('/');
 }
 
-async function analyzeVcConfigFiles(outputDir: string): Promise<void> {
+async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<void> {
     // Find all .vc-config.json files
     const vcConfigFiles: string[] = [];
     const findVcConfigFiles = (dir: string) => {
@@ -921,20 +921,16 @@ async function analyzeVcConfigFiles(outputDir: string): Promise<void> {
       try {
         const parsed = JSON.parse(readFileSync(file, 'utf8'));
 
-        const assets = Array.isArray(parsed.assets)
-          ? parsed.assets
-              .filter((x: any) => x && typeof x.path === 'string')
-              .map((x: any) => x.path)
-          : [];
-
+        // filePathMap values are paths relative to the repository root (cwd)
         const filePathMap =
           parsed.filePathMap && typeof parsed.filePathMap === 'object'
-            ? Object.values(parsed.filePathMap).filter((x) => typeof x === 'string')
+            ? Object.values(parsed.filePathMap)
+                .filter((x) => typeof x === 'string')
+                .map((x: string) => join(cwd, x))
             : [];
 
         const allFiles = [
           ...filePathMap,
-          ...assets,
           join(dirname(file), 'index.js'),
           join(dirname(file), 'index.js.map'),
         ];
