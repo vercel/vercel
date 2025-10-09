@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { rm, readFile } from 'fs/promises';
 import { extname, join, relative } from 'path';
 import { build as rolldownBuild, RolldownPlugin } from 'rolldown';
+import { findNearestTsconfig } from './typescript.js';
 
 export const rolldown = async (args: {
   entrypoint: string;
@@ -136,15 +137,4 @@ export const rolldown = async (args: {
     },
     cleanup,
   };
-};
-
-const findNearestTsconfig = async (workPath: string) => {
-  const tsconfigPath = join(workPath, 'tsconfig.json');
-  if (existsSync(tsconfigPath)) {
-    return tsconfigPath;
-  }
-  if (workPath === '/') {
-    return undefined;
-  }
-  return findNearestTsconfig(join(workPath, '..'));
 };

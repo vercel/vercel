@@ -2,6 +2,7 @@ import { createRequire } from 'module';
 import { spawn } from 'child_process';
 import { extname, join } from 'path';
 import { Colors as c } from './utils.js';
+import { existsSync } from 'fs';
 
 const require_ = createRequire(import.meta.url);
 
@@ -35,11 +36,15 @@ async function doTypeCheck(
   args: { entrypoint: string; workPath: string },
   tscPath: string
 ): Promise<void> {
-  const entrypointPath = join(args.workPath, args.entrypoint);
-
   let stdout = '';
   let stderr = '';
 
+  /**
+   * This might be subject to change.
+   * - if no tscPath, skip typecheck
+   * - if tsconfig, provide the tsconfig path
+   * - else provide the entrypoint path
+   */
   const tscArgs = [
     tscPath,
     '--noEmit', // Force no emit even if tsconfig says otherwise
@@ -47,8 +52,14 @@ async function doTypeCheck(
     '--allowJs',
     '--esModuleInterop',
     '--skipLibCheck',
-    entrypointPath,
   ];
+  const tsconfig = await findNearestTsconfig(args.workPath);
+  if (tsconfig) {
+    tscArgs.push('--project', tsconfig);
+  } else {
+    tscArgs.push(args.entrypoint);
+  }
+  console.log(tscArgs);
 
   const child = spawn(process.execPath, tscArgs, {
     cwd: args.workPath,
@@ -93,4 +104,17 @@ const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
   } catch (e) {
     return null;
   }
+};
+
+export const findNearestTsconfig = async (
+  workPath: string
+): Promise<string | undefined> => {
+  const tsconfigPath = join(workPath, 'tsconfig.json');
+  if (existsSync(tsconfigPath)) {
+    return tsconfigPath;
+  }
+  if (workPath === '/') {
+    return undefined;
+  }
+  return findNearestTsconfig(join(workPath, '..'));
 };
