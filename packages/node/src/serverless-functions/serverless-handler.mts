@@ -147,7 +147,7 @@ async function compileUserCode(
 
   if (!server) {
     await new Promise(resolve => {
-      serverFound = resolve;
+      serverFound = resolve as () => void;
       const maxTimeToWaitForServer = 1000;
       setTimeout(resolve, maxTimeToWaitForServer);
     });
