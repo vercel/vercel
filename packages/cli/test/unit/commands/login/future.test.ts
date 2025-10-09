@@ -1,16 +1,18 @@
+globalThis.fetch = vi.fn();
 import { beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from 'node-fetch';
-import * as oauth from '../../../../src/util/oauth';
+import _fetch from 'node-fetch';
 import { randomUUID } from 'node:crypto';
+import * as oauth from '../../../../src/util/oauth';
 
-const fetch = vi.mocked(_fetch);
 vi.mock('node-fetch', async () => ({
   ...(await vi.importActual('node-fetch')),
   default: vi.fn(),
 }));
+const nodeFetch = vi.mocked(_fetch);
+const fetch = vi.mocked(globalThis.fetch);
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -27,7 +29,12 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
     );
   }
   fetch.mockResolvedValueOnce(finalResponse);
-  return finalResponse.json();
+  return finalResponse.json() as Promise<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    scope: string;
+  }>;
 }
 
 beforeEach(() => {
@@ -36,17 +43,15 @@ beforeEach(() => {
 
 describe('login', () => {
   it('successful login', async () => {
-    fetch.mockResolvedValueOnce(
-      mockResponse({
-        issuer: 'https://vercel.com',
-        device_authorization_endpoint: 'https://vercel.com',
-        token_endpoint: 'https://vercel.com',
-        revocation_endpoint: 'https://vercel.com',
-        jwks_uri: 'https://vercel.com',
-        introspection_endpoint: 'https://vercel.com',
-      })
-    );
-    const _as = await oauth.as();
+    const _as = {
+      issuer: 'https://vercel.com',
+      device_authorization_endpoint: 'https://vercel.com',
+      token_endpoint: 'https://vercel.com',
+      revocation_endpoint: 'https://vercel.com',
+      jwks_uri: 'https://vercel.com',
+      introspection_endpoint: 'https://vercel.com',
+    };
+    fetch.mockResolvedValueOnce(mockResponse(_as));
 
     const authorizationResult = {
       device_code: randomUUID(),
@@ -80,7 +85,11 @@ describe('login', () => {
     expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 
-    expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
+    // Some calls come from `client.fetch`, which uses `node-fetch` under the hood,
+    // so we need to account for both here.
+    expect(fetch.mock.calls.length + nodeFetch.mock.calls.length).toBe(
+      pollCount + 4
+    );
 
     expect(fetch).toHaveBeenNthCalledWith(
       2,

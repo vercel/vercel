@@ -12,10 +12,11 @@ import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
 
 import output from '../../output-manager';
+import { CredentialsStore } from '@vercel/cli-auth/credentials-store';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const CONFIG_FILE_PATH = join(VERCEL_DIR, 'config.json');
-const AUTH_CONFIG_FILE_PATH = join(VERCEL_DIR, 'auth.json');
+export const credentialsStore = CredentialsStore('com.vercel.cli');
 
 // reads "global config" file atomically
 export const readConfigFile = (): GlobalConfig => {
@@ -51,33 +52,24 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
 };
 
 // reads "auth config" file atomically
-export const readAuthConfigFile = (): AuthConfig => {
-  const config = loadJSON.sync(AUTH_CONFIG_FILE_PATH);
-  return config;
-};
+export const readAuthConfigFile = credentialsStore.get;
 
 export const writeToAuthConfigFile = (authConfig: AuthConfig) => {
-  if (authConfig.skipWrite) {
-    return;
-  }
   try {
-    return writeJSON.sync(AUTH_CONFIG_FILE_PATH, authConfig, {
-      indent: 2,
-      mode: 0o600,
-    });
+    return credentialsStore.update(authConfig);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (err.code === 'EPERM') {
         output.error(
           `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
+            credentialsStore.configPath
           )} (operation not permitted).`
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
         output.error(
           `Not able to create ${highlight(
-            AUTH_CONFIG_FILE_PATH
+            credentialsStore.configPath
           )} (bad file descriptor).`
         );
         process.exit(1);
@@ -93,7 +85,7 @@ export function getConfigFilePath() {
 }
 
 export function getAuthConfigFilePath() {
-  return AUTH_CONFIG_FILE_PATH;
+  return credentialsStore.configPath;
 }
 
 export function readLocalConfig(

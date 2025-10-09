@@ -78,5 +78,11 @@ export default async function login(
 
   telemetry.trackState('started');
 
-  return await future(client, telemetry);
+  try {
+    return await future(client, telemetry);
+  } catch (error: unknown) {
+    printError(error);
+    telemetry.trackState('error');
+    return 1;
+  }
 }

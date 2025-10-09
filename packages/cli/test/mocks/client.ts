@@ -80,6 +80,7 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
   localPort = 0;
   allowHalfOpen = false;
   readyState = 'readOnly' as const;
+  pending = false;
   // These are for the `ora` module
   clearLine() {
     return true;
@@ -134,6 +135,12 @@ class MockStream extends PassThrough implements NodeJS.WriteStream {
     return this;
   }
   ref() {
+    return this;
+  }
+  destroySoon() {
+    return this;
+  }
+  resetAndDestroy() {
     return this;
   }
   // END: Stub `WriteStream` interface to avoid TypeScript errors

@@ -9,13 +9,7 @@ import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
-import {
-  deviceAuthorizationRequest,
-  processDeviceAuthorizationResponse,
-  deviceAccessTokenRequest,
-  processTokenResponse,
-  isOAuthError,
-} from '../../util/oauth';
+import { isOAuthError, oauth } from '../../util/oauth';
 import o from '../../output-manager';
 import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 
@@ -23,21 +17,7 @@ export async function login(
   client: Client,
   telemetry: LoginTelemetryClient
 ): Promise<number> {
-  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
-
-  o.debug(
-    `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`
-  );
-
-  const [deviceAuthorizationError, deviceAuthorization] =
-    await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
-
-  if (deviceAuthorizationError) {
-    printError(deviceAuthorizationError);
-    telemetry.trackState('error');
-    return 1;
-  }
-
+  const oauthClient = await oauth.init();
   const {
     device_code,
     user_code,
@@ -45,7 +25,7 @@ export async function login(
     verification_uri_complete,
     expiresAt,
     interval,
-  } = deviceAuthorization;
+  } = await oauthClient.deviceAuthorizationRequest();
 
   let rlClosed = false;
   const rl = readline
@@ -89,7 +69,7 @@ export async function login(
   async function pollForToken(): Promise<Error | undefined> {
     while (Date.now() < expiresAt) {
       const [tokenResponseError, tokenResponse] =
-        await deviceAccessTokenRequest({ device_code });
+        await oauthClient.deviceAccessTokenRequest(device_code);
 
       if (tokenResponseError) {
         // 2x backoff on connection timeouts per spec https://datatracker.ietf.org/doc/html/rfc8628#section-3.5
@@ -108,7 +88,8 @@ export async function login(
         `'Device Access Token response:', ${await tokenResponse.clone().text()}`
       );
 
-      const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+      const [tokensError, tokens] =
+        await oauthClient.processTokenResponse(tokenResponse);
 
       if (isOAuthError(tokensError)) {
         const { code } = tokensError;
