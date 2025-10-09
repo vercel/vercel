@@ -3051,7 +3051,212 @@ export const frameworks = [
       every: [{ matchPackage: '@nestjs/core' }],
       some: [
         {
+          path: 'src/main.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/main.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/main.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
           path: 'src/main.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/main.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/main.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'server.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/app.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/index.mts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.js',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mjs',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.ts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.cts',
+          matchContent:
+            '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
+        },
+        {
+          path: 'src/server.mts',
           matchContent:
             '(?:from|require|import)\\s*(?:\\(\\s*)?["\']@nestjs/core["\']\\s*(?:\\))?',
         },
