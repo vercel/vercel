@@ -124,7 +124,7 @@ test(
     });
     await testPath(200, `/logo.svg`, (body: any, res: any) => {
       expect(res.headers.get('content-type')).toMatch(/image\/svg\+xml/);
-      expect(body).toMatch(/<svg[\s\S]*<circle[\s\S]*><\/svg>/m);
+      expect(body).toMatch(/<svg[\s\S]*<circle[\s\S]*\/>[\s\S]*<\/svg>/m);
     });
     await testPath(200, `/api/users`, /"users":\[/);
   })
@@ -142,7 +142,7 @@ test(
     });
     await testPath(200, `/logo.svg`, (body: any, res: any) => {
       expect(res.headers.get('content-type')).toMatch(/image\/svg\+xml/);
-      expect(body).toMatch(/<svg[\s\S]*<circle[\s\S]*><\/svg>/m);
+      expect(body).toMatch(/<svg[\s\S]*<circle[\s\S]*\/>[\s\S]*<\/svg>/m);
     });
     await testPath(200, `/api/users`, /"users":\[/);
   })
