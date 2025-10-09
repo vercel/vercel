@@ -59,7 +59,6 @@ async function doTypeCheck(
   } else {
     tscArgs.push(args.entrypoint);
   }
-  console.log(tscArgs);
 
   const child = spawn(process.execPath, tscArgs, {
     cwd: args.workPath,
