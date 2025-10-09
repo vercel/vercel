@@ -883,21 +883,27 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
     .replace(/^functions\//, '')
     .replace(/\/\.vc-config\.json$/, '')
     .replace(/\.func$/, ''); // Remove .func suffix
-  
-  return '/' + funcPath
-    .split('/')
-    .filter(part => part && part !== 'index')
-    .join('/');
+
+  return (
+    '/' +
+    funcPath
+      .split('/')
+      .filter(part => part && part !== 'index')
+      .join('/')
+  );
 }
 
 const LAMBDA_SIZE_LIMIT_MB = 250;
 
-async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<void> {
+async function analyzeVcConfigFiles(
+  cwd: string,
+  outputDir: string
+): Promise<void> {
   // Find all .vc-config.json files using @vercel/build-utils glob
   const filesObject = await glob('**/.vc-config.json', {
     cwd: outputDir,
   });
-  
+
   // Filter out .rsc.func symlinks to avoid duplicates
   const vcConfigFiles = Object.keys(filesObject)
     .filter(relativePath => !relativePath.includes('.rsc.func'))
@@ -916,7 +922,9 @@ async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<voi
   );
 
   // Filter out failed analyses
-  const validResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
+  const validResults = results.filter(
+    (r): r is NonNullable<typeof r> => r !== null
+  );
 
   // Print results sorted by size
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
@@ -924,18 +932,18 @@ async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<voi
 
   for (const result of sortedResults) {
     const exceeds = result.size > LAMBDA_SIZE_LIMIT_MB;
-    
+
     if (exceeds) {
       exceededFunctions.push(result.path);
       output.print(
         `${chalk.red(result.path)}: ` +
-        `${chalk.red.bold(result.size.toFixed(2))} MB ` +
-        `${chalk.red.bold(`⚠️  Exceeds ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed limit`)}\n`
+          `${chalk.red.bold(result.size.toFixed(2))} MB ` +
+          `${chalk.red.bold(`⚠️  Exceeds ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed limit`)}\n`
       );
     } else {
       output.print(
         `${chalk.cyan(result.path)}: ` +
-        `${chalk.bold(result.size.toFixed(2))} MB\n`
+          `${chalk.bold(result.size.toFixed(2))} MB\n`
       );
     }
   }
@@ -962,11 +970,12 @@ async function analyzeSingleFunction(
     const parsed = JSON.parse(content);
 
     // Extract file paths from .vc-config.json
-    const filePathMap = parsed.filePathMap && typeof parsed.filePathMap === 'object'
-      ? Object.values(parsed.filePathMap)
-          .filter((x): x is string => typeof x === 'string')
-          .map((x) => join(cwd, x))
-      : [];
+    const filePathMap =
+      parsed.filePathMap && typeof parsed.filePathMap === 'object'
+        ? Object.values(parsed.filePathMap)
+            .filter((x): x is string => typeof x === 'string')
+            .map(x => join(cwd, x))
+        : [];
 
     const stats = getTotalFileSizeInMB(filePathMap);
     const functionUrlPath = getFunctionUrlPath(file, outputDir);
@@ -983,7 +992,7 @@ async function analyzeSingleFunction(
 
 function getTotalFileSizeInMB(files: string[]): { size: number } {
   let size = 0;
-  
+
   for (const file of files) {
     try {
       const stats = statSync(file);
@@ -994,7 +1003,7 @@ function getTotalFileSizeInMB(files: string[]): { size: number } {
       // File doesn't exist or can't be accessed
     }
   }
-  
+
   return { size };
 }
 
