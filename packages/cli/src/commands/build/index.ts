@@ -882,7 +882,7 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
   const funcPath = relative(outputDir, vcConfigPath)
     .replace(/^functions\//, '')
     .replace(/\/\.vc-config\.json$/, '')
-    .replace(/\.(?:rsc\.)?func$/, ''); // Matches both .rsc.func and .func
+    .replace(/\.func$/, ''); // Remove .func suffix
   
   return '/' + funcPath
     .split('/')
@@ -890,18 +890,18 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
     .join('/');
 }
 
-const FUNCTION_ENTRY_FILES = ['index.js', 'index.js.map'] as const;
 const LAMBDA_SIZE_LIMIT_MB = 250;
 
 async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<void> {
   // Find all .vc-config.json files using @vercel/build-utils glob
   const filesObject = await glob('**/.vc-config.json', {
     cwd: outputDir,
-    follow: false,
   });
-  const vcConfigFiles = Object.keys(filesObject).map(relativePath =>
-    join(outputDir, relativePath)
-  );
+  
+  // Filter out .rsc.func symlinks to avoid duplicates
+  const vcConfigFiles = Object.keys(filesObject)
+    .filter(relativePath => !relativePath.includes('.rsc.func'))
+    .map(relativePath => join(outputDir, relativePath));
 
   if (vcConfigFiles.length === 0) {
     output.print('No functions to analyze.\n');
@@ -961,20 +961,14 @@ async function analyzeSingleFunction(
     const content = await fs.readFile(file, 'utf8');
     const parsed = JSON.parse(content);
 
-    // Extract file paths from config
+    // Extract file paths from .vc-config.json
     const filePathMap = parsed.filePathMap && typeof parsed.filePathMap === 'object'
       ? Object.values(parsed.filePathMap)
           .filter((x): x is string => typeof x === 'string')
           .map((x) => join(cwd, x))
       : [];
 
-    // Add entry point files
-    const allFiles = [
-      ...filePathMap,
-      ...FUNCTION_ENTRY_FILES.map(f => join(dirname(file), f)),
-    ];
-
-    const stats = getTotalFileSizeInMB(allFiles);
+    const stats = getTotalFileSizeInMB(filePathMap);
     const functionUrlPath = getFunctionUrlPath(file, outputDir);
 
     return {
