@@ -31,7 +31,7 @@ const MB = 1024 * 1024;
 
 export async function streamToBufferChunks(
   stream: NodeJS.ReadableStream,
-  chunkSize: number = 20 * MB
+  chunkSize: number = 100 * MB
 ): Promise<Buffer[]> {
   const chunks: Buffer[] = [];
   let currentChunk: Buffer[] = [];
