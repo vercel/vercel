@@ -895,8 +895,10 @@ const LAMBDA_SIZE_LIMIT_MB = 250;
 
 async function analyzeVcConfigFiles(cwd: string, outputDir: string): Promise<void> {
   // Find all .vc-config.json files using @vercel/build-utils glob
-  // glob returns a Files object where keys are relative paths
-  const filesObject = await glob('**/.vc-config.json', outputDir);
+  const filesObject = await glob('**/.vc-config.json', {
+    cwd: outputDir,
+    follow: false,
+  });
   const vcConfigFiles = Object.keys(filesObject).map(relativePath =>
     join(outputDir, relativePath)
   );
