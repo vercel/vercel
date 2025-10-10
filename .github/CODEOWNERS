@@ -16,7 +16,7 @@
 /examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
 /packages/node                           @vercel/ci-cd @Kikobeats
 /packages/related-projects               @vercel/ci-cd @Kikobeats @mknichel
-/packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management
+/packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management @vercel/ai-sdk
 /packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
 
 # Unrestricted Paths
