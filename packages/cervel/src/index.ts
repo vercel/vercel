@@ -6,9 +6,14 @@ import execa from 'execa';
 import { findEntrypoint } from './find-entrypoint.js';
 import { Colors as c } from './utils.js';
 import { ParseArgsOptionsConfig } from 'util';
-import { writeFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 
 const require = createRequire(import.meta.url);
+
+export const getBuildSummary = async (outputDir: string) => {
+  const buildSummary = await readFile(join(outputDir, '.cervel.json'), 'utf-8');
+  return JSON.parse(buildSummary);
+};
 
 export const build = async (args: {
   entrypoint?: string;

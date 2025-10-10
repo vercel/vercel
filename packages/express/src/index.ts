@@ -3,7 +3,7 @@ export * from './build';
 export {
   build as experimentalBuild,
   version as experimentalVersion,
-} from './experimental/build';
+} from './experimental';
 // @ts-expect-error - FIXME: startDevServer types are not exported
 import { startDevServer as nodeStartDevServer } from '@vercel/node';
 import { entrypointCallback } from './build';

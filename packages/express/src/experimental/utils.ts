@@ -80,7 +80,7 @@ export async function maybeExecBuildCommand(
     // I don't think we actually want to support vercel-build or now-build because those are hacks for controlling api folder builds
     const possibleScripts = ['build'];
 
-    await runPackageJsonScript(
+    return runPackageJsonScript(
       options.entrypointFsDirname,
       possibleScripts,
       options.spawnOpts,

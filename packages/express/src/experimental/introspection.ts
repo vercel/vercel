@@ -11,7 +11,7 @@ import { z } from 'zod';
 const require_ = createRequire(__filename);
 
 type RolldownResult = {
-  outputDir: string;
+  dir: string;
   handler: string;
   files: Files;
 };
@@ -20,9 +20,9 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const source = expressShimSource(rolldownResult);
+  const source = expressShimSource(args, rolldownResult);
   const shimPath = join(
-    rolldownResult.outputDir,
+    rolldownResult.dir,
     'node_modules',
     'express',
     'index.js'
@@ -96,7 +96,7 @@ export const introspectApp = async (
 };
 
 const cleanupShim = async (rolldownResult: RolldownResult) => {
-  await rm(join(rolldownResult.outputDir, 'node_modules'), {
+  await rm(join(rolldownResult.dir, 'node_modules'), {
     recursive: true,
     force: true,
   });
@@ -127,10 +127,7 @@ const processIntrospection = async (rolldownResult: RolldownResult) => {
     viewEngine: z.string().optional(),
   });
   try {
-    const introspectionPath = join(
-      rolldownResult.outputDir,
-      'introspection.json'
-    );
+    const introspectionPath = getIntrospectionPath(rolldownResult);
     const introspection = readFileSync(introspectionPath, 'utf8');
     return schema.parse(JSON.parse(introspection));
   } catch (error) {
@@ -146,8 +143,8 @@ const processIntrospection = async (rolldownResult: RolldownResult) => {
   }
 };
 
-const getIntrospectionPath = (options: { outputDir: string }) => {
-  return join(options.outputDir, 'introspection.json');
+const getIntrospectionPath = (options: { dir: string }) => {
+  return join(options.dir, 'introspection.json');
 };
 
 const invokeFunction = async (
@@ -158,10 +155,10 @@ const invokeFunction = async (
     try {
       const child = spawn(
         'node',
-        [join(rolldownResult.outputDir, rolldownResult.handler)],
+        [join(rolldownResult.dir, rolldownResult.handler)],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
-          cwd: rolldownResult.outputDir,
+          cwd: rolldownResult.dir,
           env: {
             ...process.env,
             ...(args.meta?.env || {}),
@@ -196,11 +193,14 @@ const invokeFunction = async (
   });
 };
 
-const expressShimSource = (args: { outputDir: string }) => {
+const expressShimSource = (
+  args: Parameters<BuildV2>[0],
+  rolldownResult: RolldownResult
+) => {
   const pathToExpress = require_.resolve('express', {
-    paths: [args.outputDir],
+    paths: [args.workPath],
   });
-  const introspectionPath = getIntrospectionPath(args);
+  const introspectionPath = getIntrospectionPath(rolldownResult);
   return `
 const fs = require('fs');
 const path = require('path');
@@ -218,14 +218,14 @@ originalExpress.static = (...args) => {
 }
 function expressWrapper() {
   app = originalExpress.apply(this, arguments);
+  // stub the listen method so the process doesn't hang
+  app.listen = () => {}
   return app;
 }
 
-// Copy all properties from the original express to the wrapper
 Object.setPrototypeOf(expressWrapper, originalExpress);
 Object.assign(expressWrapper, originalExpress);
 
-// Preserve the original prototype
 expressWrapper.prototype = originalExpress.prototype;
 
 module.exports = expressWrapper;
@@ -258,7 +258,6 @@ const extractRoutes = () => {
   views = app.settings.views
   viewEngine = app.settings['view engine']
 
-  // Ensure directory exists
   const dir = path.dirname(${JSON.stringify(introspectionPath)});
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -275,7 +274,7 @@ process.on('SIGINT', () => {
   extractRoutes()
   process.exit(0);
 });
-// Write routes to file on SIGTERM
+
 process.on('SIGTERM', () => {
   extractRoutes()
   process.exit(0);
