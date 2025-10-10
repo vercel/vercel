@@ -1,2 +1,8 @@
 .now
 .vercel
+__pycache__/
+.venv/
+venv/
+# Ensure 'public' directory is not ignored so we can test static files
+!public/
+!public/**

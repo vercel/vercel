@@ -7,9 +7,11 @@ import { debug } from '@vercel/build-utils';
 import {
   FASTAPI_CANDIDATE_ENTRYPOINTS,
   detectFastapiEntrypoint,
+  FLASK_CANDIDATE_ENTRYPOINTS,
+  detectFlaskEntrypoint,
 } from './entrypoint';
 import { getLatestPythonVersion } from './version';
-import { detectAsgiServer, isInVirtualEnv, useVirtualEnv } from './utils';
+import { isInVirtualEnv, useVirtualEnv } from './utils';
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -52,6 +54,7 @@ const ANSI_ESCAPE_RE = new RegExp(ANSI_PATTERN, 'g');
 const stripAnsi = (s: string) => s.replace(ANSI_ESCAPE_RE, '');
 
 const ASGI_SHIM_MODULE = 'vc_init_dev_asgi';
+const WSGI_SHIM_MODULE = 'vc_init_dev_wsgi';
 
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
@@ -117,7 +120,7 @@ function installGlobalCleanupHandlers() {
   });
 }
 
-function createDevStaticShim(
+function createDevAsgiShim(
   workPath: string,
   modulePath: string
 ): string | null {
@@ -137,24 +140,59 @@ function createDevStaticShim(
   }
 }
 
+function createDevWsgiShim(
+  workPath: string,
+  modulePath: string
+): string | null {
+  try {
+    const vercelPythonDir = join(workPath, '.vercel', 'python');
+    mkdirSync(vercelPythonDir, { recursive: true });
+    const shimPath = join(vercelPythonDir, `${WSGI_SHIM_MODULE}.py`);
+    const templatePath = join(__dirname, '..', `${WSGI_SHIM_MODULE}.py`);
+    const template = readFileSync(templatePath, 'utf8');
+    const shimSource = template.replace(/__VC_DEV_MODULE_PATH__/g, modulePath);
+    writeFileSync(shimPath, shimSource, 'utf8');
+    debug(`Prepared Python dev WSGI shim at ${shimPath}`);
+    return WSGI_SHIM_MODULE;
+  } catch (err: any) {
+    debug(`Failed to prepare dev WSGI shim: ${err?.message || err}`);
+    return null;
+  }
+}
+
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint: rawEntrypoint, workPath, meta = {}, config } = opts;
 
-  // Only start a dev server for FastAPI for now
-  if (config?.framework !== 'fastapi') {
+  // Only start a dev server for FastAPI or Flask for now
+  const framework = config?.framework;
+  if (framework !== 'fastapi' && framework !== 'flask') {
     return null;
   }
 
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const detected = await detectFastapiEntrypoint(workPath, rawEntrypoint);
-  if (!detected) {
-    throw new Error(
-      `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
+  let entry: string | null = null;
+  if (framework === 'fastapi') {
+    const detectedFastapi = await detectFastapiEntrypoint(
+      workPath,
+      rawEntrypoint
     );
+    if (!detectedFastapi) {
+      throw new Error(
+        `No FastAPI entrypoint found. Searched for: ${FASTAPI_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    entry = detectedFastapi;
+  } else {
+    const detectedFlask = await detectFlaskEntrypoint(workPath, rawEntrypoint);
+    if (!detectedFlask) {
+      throw new Error(
+        `No Flask entrypoint found. Searched for: ${FLASK_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    entry = detectedFlask;
   }
-  const entry = detected;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
@@ -162,7 +200,7 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   // Check for an existing persistent server
-  const serverKey = `${workPath}::${entry}`;
+  const serverKey = `${workPath}::${entry}::${framework}`;
   const existing = PERSISTENT_SERVERS.get(serverKey);
   if (existing) {
     return {
@@ -226,129 +264,205 @@ export const startDevServer: StartDevServer = async opts => {
           debug(`Using virtualenv at ${venvRoot}`);
         } else {
           debug('No virtualenv found');
+          try {
+            const yellow = '\x1b[33m';
+            const reset = '\x1b[0m';
+            const venvCmd =
+              process.platform === 'win32'
+                ? 'python -m venv .venv && .venv\\Scripts\\activate'
+                : 'python -m venv .venv && source .venv/bin/activate';
+            process.stderr.write(
+              `${yellow}Warning: no virtual environment detected in ${workPath}. Using system Python: ${pythonCmd}.${reset}\n` +
+                `If you are using a virtual environment, activate it before running "vercel dev", or create one: ${venvCmd}\n`
+            );
+          } catch (_) {
+            // ignore write errors
+          }
         }
       }
 
-      // Create a tiny ASGI shim that serves static files first (when present)
-      // and falls back to the user's app. Always applied for consistent behavior.
-      const devShimModule = createDevStaticShim(workPath, modulePath);
+      if (framework === 'fastapi') {
+        // Create a tiny ASGI shim that serves static files first (when present)
+        // and falls back to the user's app. Always applied for consistent behavior.
+        const devShimModule = createDevAsgiShim(workPath, modulePath);
 
-      // Add .vercel/python to PYTHONPATH so the shim can be imported
-      if (devShimModule) {
-        const vercelPythonDir = join(workPath, '.vercel', 'python');
-        const existingPythonPath = env.PYTHONPATH || '';
-        env.PYTHONPATH = existingPythonPath
-          ? `${vercelPythonDir}:${existingPythonPath}`
-          : vercelPythonDir;
-      }
+        // Add .vercel/python to PYTHONPATH so the shim can be imported
+        if (devShimModule) {
+          const vercelPythonDir = join(workPath, '.vercel', 'python');
+          const existingPythonPath = env.PYTHONPATH || '';
+          env.PYTHONPATH = existingPythonPath
+            ? `${vercelPythonDir}:${existingPythonPath}`
+            : vercelPythonDir;
+        }
 
-      detectAsgiServer(workPath, pythonCmd)
-        .then(async serverKind => {
-          if (resolved) return; // in case preflight was rejected
-          const host = '127.0.0.1';
-          const argv =
-            serverKind === 'uvicorn'
-              ? [
-                  '-u',
-                  '-m',
-                  'uvicorn',
-                  `${devShimModule || modulePath}:app`,
-                  '--host',
-                  host,
-                  '--port',
-                  '0',
-                  '--use-colors',
-                ]
-              : [
-                  '-u',
-                  '-m',
-                  'hypercorn',
-                  `${devShimModule || modulePath}:app`,
-                  '-b',
-                  `${host}:0`,
-                ];
-          debug(
-            `Starting dev server (${serverKind}): ${pythonCmd} ${argv.join(' ')}`
-          );
-          const child = spawn(pythonCmd, argv, {
-            cwd: workPath,
-            env,
-            stdio: ['inherit', 'pipe', 'pipe'],
-          });
-          childProcess = child;
-
-          stdoutLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line) {
-                process.stdout.write(line.endsWith('\n') ? line : line + '\n');
-              }
-            }
-          };
-          stderrLogListener = (buf: Buffer) => {
-            const s = buf.toString();
-            for (const line of s.split(/\r?\n/)) {
-              if (line) {
-                process.stderr.write(line.endsWith('\n') ? line : line + '\n');
-              }
-            }
-          };
-          child.stdout?.on('data', stdoutLogListener);
-          child.stderr?.on('data', stderrLogListener);
-
-          const readinessRegexes = [
-            /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-            /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
-            /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
-          ];
-
-          const onDetect = (chunk: Buffer) => {
-            const text = chunk.toString();
-            const clean = stripAnsi(text);
-            let portMatch: RegExpMatchArray | null = null;
-            for (const rx of readinessRegexes) {
-              const m = clean.match(rx);
-              if (m) {
-                portMatch = m;
-                break;
-              }
-            }
-            if (portMatch && child.pid) {
-              if (!resolved) {
-                resolved = true;
-                // Use removeListener for broad Node compatibility (and mocked emitters)
-                child.stdout?.removeListener('data', onDetect);
-                child.stderr?.removeListener('data', onDetect);
-                const port = Number(portMatch[1]);
-                resolveChildReady({ port, pid: child.pid });
-                resolve();
-              }
-            }
-          };
-
-          child.stdout?.on('data', onDetect);
-          child.stderr?.on('data', onDetect);
-
-          child.once('error', err => {
-            if (!resolved) {
-              rejectChildReady(err);
-              reject(err);
-            }
-          });
-          child.once('exit', (code, signal) => {
-            if (!resolved) {
-              const err = new Error(
-                `${serverKind} server exited before binding (code=${code}, signal=${signal})`
-              );
-              rejectChildReady(err);
-              reject(err);
-            }
-          });
-        })
-        .catch(err => {
-          rejectChildReady(err);
-          reject(err);
+        // Run the ASGI shim module directly
+        const moduleToRun = devShimModule || modulePath;
+        const argv = ['-u', '-m', moduleToRun];
+        debug(`Starting ASGI dev server: ${pythonCmd} ${argv.join(' ')}`);
+        const child = spawn(pythonCmd, argv, {
+          cwd: workPath,
+          env,
+          stdio: ['inherit', 'pipe', 'pipe'],
         });
+        childProcess = child;
+
+        stdoutLogListener = (buf: Buffer) => {
+          const s = buf.toString();
+          for (const line of s.split(/\r?\n/)) {
+            if (line) {
+              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          }
+        };
+        stderrLogListener = (buf: Buffer) => {
+          const s = buf.toString();
+          for (const line of s.split(/\r?\n/)) {
+            if (line) {
+              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          }
+        };
+        child.stdout?.on('data', stdoutLogListener);
+        child.stderr?.on('data', stderrLogListener);
+
+        const readinessRegexes = [
+          /Uvicorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+          /Hypercorn running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+          /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
+        ];
+
+        const onDetect = (chunk: Buffer) => {
+          const text = chunk.toString();
+          const clean = stripAnsi(text);
+          let portMatch: RegExpMatchArray | null = null;
+          for (const rx of readinessRegexes) {
+            const m = clean.match(rx);
+            if (m) {
+              portMatch = m;
+              break;
+            }
+          }
+          if (portMatch && child.pid) {
+            if (!resolved) {
+              resolved = true;
+              // Use removeListener for broad Node compatibility (and mocked emitters)
+              child.stdout?.removeListener('data', onDetect);
+              child.stderr?.removeListener('data', onDetect);
+              const port = Number(portMatch[1]);
+              resolveChildReady({ port, pid: child.pid });
+              resolve();
+            }
+          }
+        };
+
+        child.stdout?.on('data', onDetect);
+        child.stderr?.on('data', onDetect);
+
+        child.once('error', err => {
+          if (!resolved) {
+            rejectChildReady(err);
+            reject(err);
+          }
+        });
+        child.once('exit', (code, signal) => {
+          if (!resolved) {
+            const err = new Error(
+              `ASGI dev server exited before binding (code=${code}, signal=${signal})`
+            );
+            rejectChildReady(err);
+            reject(err);
+          }
+        });
+        // No promise chain; shim handles server selection and logging
+      } else {
+        // Flask (WSGI) dev server using Werkzeug
+        const devShimModule = createDevWsgiShim(workPath, modulePath);
+        // Add .vercel/python to PYTHONPATH so the shim can be imported
+        if (devShimModule) {
+          const vercelPythonDir = join(workPath, '.vercel', 'python');
+          const existingPythonPath = env.PYTHONPATH || '';
+          env.PYTHONPATH = existingPythonPath
+            ? `${vercelPythonDir}:${existingPythonPath}`
+            : vercelPythonDir;
+        }
+
+        const moduleToRun = devShimModule || modulePath;
+        // Execute the shim as a module so its __main__ runner handles Werkzeug/wsgiref
+        const argv = ['-u', '-m', moduleToRun];
+        debug(`Starting Flask dev server: ${pythonCmd} ${argv.join(' ')}`);
+        const child = spawn(pythonCmd, argv, {
+          cwd: workPath,
+          env,
+          stdio: ['inherit', 'pipe', 'pipe'],
+        });
+        childProcess = child;
+
+        stdoutLogListener = (buf: Buffer) => {
+          const s = buf.toString();
+          for (const line of s.split(/\r?\n/)) {
+            if (line) {
+              process.stdout.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          }
+        };
+        stderrLogListener = (buf: Buffer) => {
+          const s = buf.toString();
+          for (const line of s.split(/\r?\n/)) {
+            if (line) {
+              process.stderr.write(line.endsWith('\n') ? line : line + '\n');
+            }
+          }
+        };
+        child.stdout?.on('data', stdoutLogListener);
+        child.stderr?.on('data', stderrLogListener);
+
+        const readinessRegexes = [
+          /Werkzeug running on https?:\/\/(?:\[[^\]]+\]|[^:]+):(\d+)/i,
+          /(?:Running|Serving) on https?:\/\/(?:\[[^\]]+\]|[^:\s]+):(\d+)/i,
+        ];
+
+        const onDetect = (chunk: Buffer) => {
+          const text = chunk.toString();
+          const clean = stripAnsi(text);
+          let portMatch: RegExpMatchArray | null = null;
+          for (const rx of readinessRegexes) {
+            const m = clean.match(rx);
+            if (m) {
+              portMatch = m;
+              break;
+            }
+          }
+          if (portMatch && child.pid) {
+            if (!resolved) {
+              resolved = true;
+              child.stdout?.removeListener('data', onDetect);
+              child.stderr?.removeListener('data', onDetect);
+              const port = Number(portMatch[1]);
+              resolveChildReady({ port, pid: child.pid });
+              resolve();
+            }
+          }
+        };
+
+        child.stdout?.on('data', onDetect);
+        child.stderr?.on('data', onDetect);
+
+        child.once('error', err => {
+          if (!resolved) {
+            rejectChildReady(err);
+            reject(err);
+          }
+        });
+        child.once('exit', (code, signal) => {
+          if (!resolved) {
+            const err = new Error(
+              `Flask dev server exited before binding (code=${code}, signal=${signal})`
+            );
+            rejectChildReady(err);
+            reject(err);
+          }
+        });
+      }
     });
 
     const { port, pid } = await childReady;
