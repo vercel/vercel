@@ -1,5 +1,12 @@
 # @vercel/functions
 
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`40321aefaa7682cafd4379dc3fd7930529b5eaf1`](https://github.com/vercel/vercel/commit/40321aefaa7682cafd4379dc3fd7930529b5eaf1)]:
+  - @vercel/oidc@3.0.3
+
 ## 3.1.3
 
 ### Patch Changes

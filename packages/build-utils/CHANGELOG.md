@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 12.1.3
+
+### Patch Changes
+
+- Revert the prebuilt archive split from 20MB back to 100MB ([#14087](https://github.com/vercel/vercel/pull/14087))
+
 ## 12.1.2
 
 ### Patch Changes
