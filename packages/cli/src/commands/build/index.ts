@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import minimatch from 'minimatch';
 import { join, normalize, relative, resolve, sep } from 'path';
 import semver from 'semver';
+import { statSync } from 'fs';
 
 import {
   download,
@@ -27,6 +28,7 @@ import {
   type FlagDefinitions,
   type Meta,
   type PackageJson,
+  glob,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -869,6 +871,140 @@ async function doBuild(
       emoji('success')
     )}\n`
   );
+
+  // Analyze .vc-config.json files if environment variable is set
+  if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {
+    await analyzeVcConfigFiles(cwd, outputDir);
+  }
+}
+
+function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
+  const funcPath = normalizePath(relative(outputDir, vcConfigPath))
+    .replace(/^functions\//, '')
+    .replace(/\/\.vc-config\.json$/, '')
+    .replace(/\.func$/, ''); // Remove .func suffix
+
+  return (
+    '/' +
+    funcPath
+      .split('/')
+      .filter(part => part && part !== 'index')
+      .join('/')
+  );
+}
+
+const LAMBDA_SIZE_LIMIT_MB = 250;
+
+async function analyzeVcConfigFiles(
+  cwd: string,
+  outputDir: string
+): Promise<void> {
+  // Find all .vc-config.json files using @vercel/build-utils glob
+  const filesObject = await glob('**/.vc-config.json', {
+    cwd: outputDir,
+  });
+
+  // Filter out .rsc.func symlinks to avoid duplicates
+  const vcConfigFiles = Object.keys(filesObject)
+    .filter(relativePath => !relativePath.includes('.rsc.func'))
+    .map(relativePath => join(outputDir, relativePath));
+
+  if (vcConfigFiles.length === 0) {
+    output.print('No functions to analyze.\n');
+    return;
+  }
+
+  output.print(`Analyzing ${vcConfigFiles.length} function(s)...\n`);
+
+  // Analyze all functions in parallel
+  const results = await Promise.all(
+    vcConfigFiles.map(file => analyzeSingleFunction(file, cwd, outputDir))
+  );
+
+  // Filter out failed analyses
+  const validResults = results.filter(
+    (r): r is NonNullable<typeof r> => r !== null
+  );
+
+  // Print results sorted by size
+  const sortedResults = validResults.sort((a, b) => b.size - a.size);
+  const exceededFunctions: string[] = [];
+
+  for (const result of sortedResults) {
+    const exceeds = result.size > LAMBDA_SIZE_LIMIT_MB;
+
+    if (exceeds) {
+      exceededFunctions.push(result.path);
+      output.print(
+        `${chalk.red(result.path)}: ` +
+          `${chalk.red.bold(result.size.toFixed(2))} MB ` +
+          `${chalk.red.bold(`⚠️  Exceeds ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed limit`)}\n`
+      );
+    } else {
+      output.print(
+        `${chalk.cyan(result.path)}: ` +
+          `${chalk.bold(result.size.toFixed(2))} MB\n`
+      );
+    }
+  }
+
+  // Fail build if any function exceeds limit
+  if (exceededFunctions.length > 0) {
+    output.print('\n');
+    throw new NowBuildError({
+      code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
+      message: `Error: ${exceededFunctions.length} function(s) exceeded the unzipped maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      link: 'https://vercel.link/serverless-function-size',
+      action: 'Learn More',
+    });
+  }
+}
+
+async function analyzeSingleFunction(
+  file: string,
+  cwd: string,
+  outputDir: string
+): Promise<{ path: string; size: number } | null> {
+  try {
+    const content = await fs.readFile(file, 'utf8');
+    const parsed = JSON.parse(content);
+
+    // Extract file paths from .vc-config.json
+    const filePathMap =
+      parsed.filePathMap && typeof parsed.filePathMap === 'object'
+        ? Object.values(parsed.filePathMap)
+            .filter((x): x is string => typeof x === 'string')
+            .map(x => join(cwd, x))
+        : [];
+
+    const stats = getTotalFileSizeInMB(filePathMap);
+    const functionUrlPath = getFunctionUrlPath(file, outputDir);
+
+    return {
+      path: functionUrlPath,
+      size: stats.size,
+    };
+  } catch (error) {
+    output.warn(`Failed to analyze ${file}: ${error}`);
+    return null;
+  }
+}
+
+function getTotalFileSizeInMB(files: string[]): { size: number } {
+  let size = 0;
+
+  for (const file of files) {
+    try {
+      const stats = statSync(file);
+      if (stats.isFile()) {
+        size += stats.size / (1024 * 1024);
+      }
+    } catch {
+      // File doesn't exist or can't be accessed
+    }
+  }
+
+  return { size };
 }
 
 async function getFramework(
