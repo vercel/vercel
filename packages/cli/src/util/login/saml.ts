@@ -12,7 +12,7 @@ export default async function doSamlLogin(
 ) {
   if (!client.authConfig.refreshToken) {
     output.log('Token is outdated, please log in again.');
-    const exitCode = await login(await client);
+    const exitCode = await login(client, { shouldParseArgs: false });
     if (exitCode !== 0) return exitCode;
   }
 

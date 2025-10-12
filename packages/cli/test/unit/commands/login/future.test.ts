@@ -76,7 +76,7 @@ describe('login', () => {
     expect(teamBefore).toBeUndefined();
     const tokenBefore = client.authConfig.token;
 
-    const exitCodePromise = login(client);
+    const exitCodePromise = login(client, { shouldParseArgs: true });
     expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
 

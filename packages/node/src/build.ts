@@ -477,7 +477,22 @@ export const build = async ({
     );
   }
   if (entrypointCallback) {
-    entrypointPath = join(entrypointFsDirname, await entrypointCallback());
+    const entrypoint = await entrypointCallback();
+    entrypointPath = join(entrypointFsDirname, entrypoint);
+    const functionConfig = config.functions?.[entrypoint];
+    if (functionConfig) {
+      const normalizeArray = (value: any) =>
+        Array.isArray(value) ? value : value ? [value] : [];
+
+      config.includeFiles = [
+        ...normalizeArray(config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      config.excludeFiles = [
+        ...normalizeArray(config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
   }
 
   const isMiddleware = config.middleware === true;

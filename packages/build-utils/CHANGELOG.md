@@ -1,5 +1,23 @@
 # @vercel/build-utils
 
+## 12.1.3
+
+### Patch Changes
+
+- Revert the prebuilt archive split from 20MB back to 100MB ([#14087](https://github.com/vercel/vercel/pull/14087))
+
+## 12.1.2
+
+### Patch Changes
+
+- Reuse duplicated node builder logic ([#14031](https://github.com/vercel/vercel/pull/14031))
+
+## 12.1.1
+
+### Patch Changes
+
+- Change archive split from 100MB -> 20MB ([#14046](https://github.com/vercel/vercel/pull/14046))
+
 ## 12.1.0
 
 ### Minor Changes

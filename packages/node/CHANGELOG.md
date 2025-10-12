@@ -1,5 +1,42 @@
 # @vercel/node
 
+## 5.4.0
+
+### Minor Changes
+
+- Add vc dev support for NestJS ([#14080](https://github.com/vercel/vercel/pull/14080))
+
+### Patch Changes
+
+- Updated dependencies [[`a16adfbf0ed1b9272951b01923080990e558ac2d`](https://github.com/vercel/vercel/commit/a16adfbf0ed1b9272951b01923080990e558ac2d)]:
+  - @vercel/build-utils@12.1.3
+
+## 5.3.26
+
+### Patch Changes
+
+- Updated dependencies [[`df38583152228b40060a5b11ef63c6a33cb12249`](https://github.com/vercel/vercel/commit/df38583152228b40060a5b11ef63c6a33cb12249)]:
+  - @vercel/build-utils@12.1.2
+
+## 5.3.25
+
+### Patch Changes
+
+- Updated dependencies [[`0fd2477a7510c7856c6d7e6622c72b712c285fe7`](https://github.com/vercel/vercel/commit/0fd2477a7510c7856c6d7e6622c72b712c285fe7)]:
+  - @vercel/build-utils@12.1.1
+
+## 5.3.24
+
+### Patch Changes
+
+- Add support for public asset folder for Hono preset ([#13958](https://github.com/vercel/vercel/pull/13958))
+
+## 5.3.23
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
 ## 5.3.22
 
 ### Patch Changes

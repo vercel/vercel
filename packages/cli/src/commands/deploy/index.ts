@@ -710,8 +710,8 @@ export default async (client: Client): Promise<number> => {
     return 1;
   }
 
-  const guidanceMode =
-    parsedArguments.flags['--guidance'] ?? (await determineAgent()) !== false;
+  const { isAgent } = await determineAgent();
+  const guidanceMode = parsedArguments.flags['--guidance'] ?? isAgent;
   return printDeploymentStatus(deployment, deployStamp, noWait, guidanceMode);
 };
 

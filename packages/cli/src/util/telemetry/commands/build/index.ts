@@ -35,4 +35,10 @@ export class BuildTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagStandalone(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('standalone');
+    }
+  }
 }

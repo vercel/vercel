@@ -1,5 +1,39 @@
 # @vercel/client
 
+## 17.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`a16adfbf0ed1b9272951b01923080990e558ac2d`](https://github.com/vercel/vercel/commit/a16adfbf0ed1b9272951b01923080990e558ac2d)]:
+  - @vercel/build-utils@12.1.3
+
+## 17.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`df38583152228b40060a5b11ef63c6a33cb12249`](https://github.com/vercel/vercel/commit/df38583152228b40060a5b11ef63c6a33cb12249)]:
+  - @vercel/build-utils@12.1.2
+
+## 17.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`0fd2477a7510c7856c6d7e6622c72b712c285fe7`](https://github.com/vercel/vercel/commit/0fd2477a7510c7856c6d7e6622c72b712c285fe7)]:
+  - @vercel/build-utils@12.1.1
+
+## 17.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`07cefee4765af8797855092d387a834eaa8a987a`](https://github.com/vercel/vercel/commit/07cefee4765af8797855092d387a834eaa8a987a), [`6deaf1c665aeacd57d075d2b808a8b2880023b53`](https://github.com/vercel/vercel/commit/6deaf1c665aeacd57d075d2b808a8b2880023b53)]:
+  - @vercel/routing-utils@5.2.0
+
+## 17.0.0
+
+### Major Changes
+
+- Set prebuilt in the client options when sending requests to api-deployments ([#13950](https://github.com/vercel/vercel/pull/13950))
+
 ## 16.0.1
 
 ### Patch Changes

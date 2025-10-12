@@ -1,5 +1,59 @@
 # @vercel/frameworks
 
+## 3.11.2
+
+### Patch Changes
+
+- Add support for additional entrypoints in NestJS ([#14073](https://github.com/vercel/vercel/pull/14073))
+
+## 3.11.1
+
+### Patch Changes
+
+- [python] flask zero-config ([#14055](https://github.com/vercel/vercel/pull/14055))
+
+## 3.11.0
+
+### Minor Changes
+
+- Add zero config support for NestJS ([#14009](https://github.com/vercel/vercel/pull/14009))
+
+## 3.10.0
+
+### Minor Changes
+
+- Add h3 example ([#14021](https://github.com/vercel/vercel/pull/14021))
+
+### Patch Changes
+
+- [python] fastapi route redirects fix ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+## 3.9.3
+
+### Patch Changes
+
+- [python] update fastapi logo ([#13982](https://github.com/vercel/vercel/pull/13982))
+
+## 3.9.2
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+## 3.9.1
+
+### Patch Changes
+
+- [python] framework demo + removed experimental ([#13959](https://github.com/vercel/vercel/pull/13959))
+
+## 3.9.0
+
+### Minor Changes
+
+- Add h3 zero config support ([#13942](https://github.com/vercel/vercel/pull/13942))
+
 ## 3.8.5
 
 ### Patch Changes

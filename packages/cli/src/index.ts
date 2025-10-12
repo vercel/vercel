@@ -279,8 +279,8 @@ const main = async () => {
     },
   });
 
-  const agent = await determineAgent();
-  telemetry.trackAgenticUse(agent);
+  const { agent } = await determineAgent();
+  telemetry.trackAgenticUse(agent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -401,7 +401,7 @@ const main = async () => {
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
       try {
-        const result = await login(client);
+        const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
         if (result !== 0) return result;
       } catch (error) {
@@ -692,7 +692,8 @@ const main = async () => {
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
-          func = (c: Client) => require('./commands/login').default(c, true);
+          func = (c: Client) =>
+            require('./commands/login').default(c, { shouldParseArgs: true });
           break;
         case 'logout':
           telemetry.trackCliCommandLogout(userSuppliedSubCommand);

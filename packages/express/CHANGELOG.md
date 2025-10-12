@@ -1,5 +1,64 @@
 # @vercel/express
 
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies [[`444cd480027bd38815f55075e2dac400493faee2`](https://github.com/vercel/vercel/commit/444cd480027bd38815f55075e2dac400493faee2)]:
+  - @vercel/node@5.4.0
+
+## 0.0.24
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.26
+
+## 0.0.23
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.3.25
+
+## 0.0.22
+
+### Patch Changes
+
+- Include source files in build output trace ([#13984](https://github.com/vercel/vercel/pull/13984))
+
+## 0.0.21
+
+### Patch Changes
+
+- Use NodejsLambda instead of Lambda ([#13980](https://github.com/vercel/vercel/pull/13980))
+
+## 0.0.20
+
+### Patch Changes
+
+- Fix issue finding express dep ([#13978](https://github.com/vercel/vercel/pull/13978))
+
+## 0.0.19
+
+### Patch Changes
+
+- Add experimental o11y support for express when `VERCEL_EXPERIMENTAL_EXPRESS_BUILD=1` ([#13963](https://github.com/vercel/vercel/pull/13963))
+
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0`](https://github.com/vercel/vercel/commit/5eac17d9c045d3c9582d8a69fc1a6ec30fdaa0b0)]:
+  - @vercel/node@5.3.24
+
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`aaddc91799f5b26a626dd1a7c0e070f334d09be5`](https://github.com/vercel/vercel/commit/aaddc91799f5b26a626dd1a7c0e070f334d09be5)]:
+  - @vercel/node@5.3.23
+
 ## 0.0.16
 
 ### Patch Changes

@@ -1,5 +1,72 @@
 # @vercel/fs-detectors
 
+## 5.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`403588fa0039ae8e09a150a503690de214bdd040`](https://github.com/vercel/vercel/commit/403588fa0039ae8e09a150a503690de214bdd040)]:
+  - @vercel/frameworks@3.11.2
+
+## 5.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`60b7697ccd433859dc922ab1780b95304f76c5fc`](https://github.com/vercel/vercel/commit/60b7697ccd433859dc922ab1780b95304f76c5fc)]:
+  - @vercel/frameworks@3.11.1
+
+## 5.6.0
+
+### Minor Changes
+
+- Add zero config support for NestJS ([#14009](https://github.com/vercel/vercel/pull/14009))
+
+### Patch Changes
+
+- Updated dependencies [[`07cefee4765af8797855092d387a834eaa8a987a`](https://github.com/vercel/vercel/commit/07cefee4765af8797855092d387a834eaa8a987a), [`4d0d2ec6cea57e0ec6e55132f6a2007309e2916b`](https://github.com/vercel/vercel/commit/4d0d2ec6cea57e0ec6e55132f6a2007309e2916b), [`6deaf1c665aeacd57d075d2b808a8b2880023b53`](https://github.com/vercel/vercel/commit/6deaf1c665aeacd57d075d2b808a8b2880023b53)]:
+  - @vercel/routing-utils@5.2.0
+  - @vercel/frameworks@3.11.0
+
+## 5.5.8
+
+### Patch Changes
+
+- [python] Use static builder for /public for FastAPI ([#14027](https://github.com/vercel/vercel/pull/14027))
+
+- Updated dependencies [[`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c), [`a26744ba059edf435a31ac5967fa01aeb9d1647f`](https://github.com/vercel/vercel/commit/a26744ba059edf435a31ac5967fa01aeb9d1647f), [`da6ca6d80915221b7f60cd711e4fada41a828e4c`](https://github.com/vercel/vercel/commit/da6ca6d80915221b7f60cd711e4fada41a828e4c)]:
+  - @vercel/frameworks@3.10.0
+
+## 5.5.7
+
+### Patch Changes
+
+- Updated dependencies [[`3eb70a1571f5740859d25a0dcfb8d03c9042ba52`](https://github.com/vercel/vercel/commit/3eb70a1571f5740859d25a0dcfb8d03c9042ba52)]:
+  - @vercel/frameworks@3.9.3
+
+## 5.5.6
+
+### Patch Changes
+
+- Update info around H3 framework ([#13957](https://github.com/vercel/vercel/pull/13957))
+
+- Updated dependencies [[`c10395ad9dfd874f9a0f1d4a77748c67e4084339`](https://github.com/vercel/vercel/commit/c10395ad9dfd874f9a0f1d4a77748c67e4084339)]:
+  - @vercel/frameworks@3.9.2
+
+## 5.5.5
+
+### Patch Changes
+
+- Add support for inlclude/exclude files config from vercel.json ([#13946](https://github.com/vercel/vercel/pull/13946))
+
+- Updated dependencies [[`e1c2e723925598e69811da2004bf023658bfdb9e`](https://github.com/vercel/vercel/commit/e1c2e723925598e69811da2004bf023658bfdb9e)]:
+  - @vercel/frameworks@3.9.1
+
+## 5.5.4
+
+### Patch Changes
+
+- Updated dependencies [[`426aca07b47590a0f1b7631e92c8776d5f8d661d`](https://github.com/vercel/vercel/commit/426aca07b47590a0f1b7631e92c8776d5f8d661d)]:
+  - @vercel/frameworks@3.9.0
+
 ## 5.5.3
 
 ### Patch Changes

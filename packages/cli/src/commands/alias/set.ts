@@ -230,13 +230,6 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     return 1;
   }
 
-  if (error instanceof ERRORS.DomainServiceNotAvailable) {
-    output.error(
-      'The domain purchase service is not available. Try again later.'
-    );
-    return 1;
-  }
-
   if (error instanceof ERRORS.UnexpectedDomainPurchaseError) {
     output.error('There was an unexpected error while purchasing the domain.');
     return 1;
@@ -272,6 +265,13 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
       `You can't purchase the domain you're aliasing to since your card was declined.`
     );
     output.print('  Please add a valid payment method and retry.\n');
+    return 1;
+  }
+
+  if (error instanceof ERRORS.TLDNotSupportedViaCLI) {
+    output.error(
+      `The TLD for domain name ${error.meta.domain} is not supported via the CLI. Use the REST API or the dashboard to purchase.`
+    );
     return 1;
   }
 

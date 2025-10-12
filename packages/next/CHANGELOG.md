@@ -1,5 +1,37 @@
 # @vercel/next
 
+## 4.13.3
+
+### Patch Changes
+
+- Fix allowQuery logic for RDC navigations with fallback root params ([#14053](https://github.com/vercel/vercel/pull/14053))
+
+## 4.13.2
+
+### Patch Changes
+
+- Revert "Fix allowQuery logic for RDC navigations with fallback root params" ([#14051](https://github.com/vercel/vercel/pull/14051))
+
+## 4.13.1
+
+### Patch Changes
+
+- Fix allowQuery logic for RDC navigations with fallback root params ([#14040](https://github.com/vercel/vercel/pull/14040))
+
+## 4.13.0
+
+### Minor Changes
+
+- Let global error handlers handle errors that next.js passes up to the function runtime rather than directly exiting the process ([#13981](https://github.com/vercel/vercel/pull/13981))
+
+## 4.12.6
+
+### Patch Changes
+
+- Add diagnostics for .next/trace-turbopack and .next/trace-build ([#13961](https://github.com/vercel/vercel/pull/13961))
+
+- Fix segment route suffix capture in dynamic routes to ensure .segments/.+\.segment\.rsc routes are properly rewritten ([#13927](https://github.com/vercel/vercel/pull/13927))
+
 ## 4.12.5
 
 ### Patch Changes
