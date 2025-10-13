@@ -1,0 +1,46 @@
+{
+  "name": "@vercel/backends",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "homepage": "https://vercel.com/docs",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/backends"
+  },
+  "scripts": {
+    "build": "node ../../utils/build-builder.mjs",
+    "vitest-run": "vitest -c ../../vitest.config.mts",
+    "vitest-unit": "glob --absolute 'test/unit/**/*.test.ts' 'test/unit/**/*.test.mts'",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "edge-entry.js"
+  ],
+  "dependencies": {
+    "@vercel/nft": "0.30.1",
+    "@vercel/static-config": "3.1.2",
+    "fs-extra": "11.1.0",
+    "path-to-regexp": "8.3.0",
+    "rolldown": "1.0.0-beta.35",
+    "ts-morph": "12.0.0",
+    "zod": "3.22.4",
+    "@vercel/cervel-beta": "workspace:*",
+    "@vercel/node": "5.3.26"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "11",
+    "@types/jest": "27.5.1",
+    "@types/node": "14.18.33",
+    "@vercel/build-utils": "12.1.2",
+    "execa": "3.2.0",
+    "jest-junit": "16.0.0",
+    "vite": "^5.1.6",
+    "vitest": "^2.0.1"
+  }
+}

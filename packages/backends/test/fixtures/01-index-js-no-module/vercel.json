@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cervel build server.ts",
+  "devCommand": "cervel",
+  "framework": "express-experimental",
+  "outputDirectory": "dist"
+}

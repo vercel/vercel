@@ -1,3 +1,4 @@
+import { delimiter } from 'path';
 import { dirname, join } from 'path';
 import {
   download,
@@ -8,6 +9,7 @@ import {
   execCommand,
   getEnvForPackageManager,
   scanParentDirs,
+  getNodeBinPaths,
 } from '@vercel/build-utils';
 import type { BuildV2 } from '@vercel/build-utils';
 
@@ -72,19 +74,32 @@ export async function maybeExecBuildCommand(
 ) {
   const projectBuildCommand = args.config.projectSettings?.buildCommand;
   if (projectBuildCommand) {
-    await execCommand(projectBuildCommand, {
+    // Add node_modules/.bin to PATH so commands like 'cervel' can be found
+    const repoRoot = args.repoRootPath || args.workPath;
+    const nodeBinPaths = getNodeBinPaths({
+      base: repoRoot,
+      start: args.workPath,
+    });
+    const nodeBinPath = nodeBinPaths.join(delimiter);
+    const env = {
+      ...options.spawnOpts.env,
+      PATH: `${nodeBinPath}${delimiter}${options.spawnOpts.env?.PATH || process.env.PATH}`,
+    };
+
+    return execCommand(projectBuildCommand, {
       ...options.spawnOpts,
+      env,
       cwd: args.workPath,
     });
-  } else {
-    // I don't think we actually want to support vercel-build or now-build because those are hacks for controlling api folder builds
-    const possibleScripts = ['build'];
-
-    return runPackageJsonScript(
-      options.entrypointFsDirname,
-      possibleScripts,
-      options.spawnOpts,
-      args.config.projectSettings?.createdAt
-    );
   }
+
+  // I don't think we actually want to support vercel-build or now-build because those are hacks for controlling api folder builds
+  const possibleScripts = ['build'];
+
+  return runPackageJsonScript(
+    options.entrypointFsDirname,
+    possibleScripts,
+    options.spawnOpts,
+    args.config.projectSettings?.createdAt
+  );
 }

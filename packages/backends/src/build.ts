@@ -4,6 +4,8 @@ import { downloadInstallAndBundle, maybeExecBuildCommand } from './utils';
 import { build as cervelBuild, getBuildSummary } from '@vercel/cervel-beta';
 import { join } from 'path';
 
+const defaultOutputDirectory = join('.vercel', 'node');
+
 export const doBuild = async (
   args: BuildOptions,
   downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>
@@ -18,7 +20,7 @@ export const doBuild = async (
     }
     const buildResult = await cervelBuild({
       cwd: args.workPath,
-      out: join('.vercel', 'node'),
+      out: defaultOutputDirectory,
     });
     const { handler } = await getBuildSummary(
       buildResult.rolldownResult.outputDir
