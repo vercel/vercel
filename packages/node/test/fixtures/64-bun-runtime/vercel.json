@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/bun.ts": {
+      "runtime": "@vercel/bun"
+    }
+  },
+  "probes": [
+    {
+      "path": "/api/bun",
+      "mustContain": "\"runtime\":\"bun\""
+    },
+    {
+      "path": "/api/bun-2",
+      "mustContain": "\"runtime\":\"bun\""
+    }
+  ]
+}

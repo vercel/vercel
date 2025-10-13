@@ -223,4 +223,16 @@ describe('resolveBuilders()', () => {
       err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
     ).toEqual(true);
   });
+
+  it('should map @vercel/bun to @vercel/node', async () => {
+    const specs = new Set(['@vercel/bun']);
+    const result = await resolveBuilders(process.cwd(), specs);
+    if (!('builders' in result)) {
+      throw new Error('Expected `builders` to be defined');
+    }
+    expect(result.builders.has('@vercel/node')).toEqual(true);
+    expect(result.builders.get('@vercel/node')?.pkg).toMatchObject(
+      vercelNodePkg
+    );
+  });
 });

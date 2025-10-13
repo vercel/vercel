@@ -30,6 +30,7 @@ import type {
 import { Sema } from 'async-sema';
 import crc32 from 'buffer-crc32';
 import fs, { lstat, stat } from 'fs-extra';
+import minimatch from 'minimatch';
 import path from 'path';
 import semver from 'semver';
 import url from 'url';
@@ -1816,11 +1817,32 @@ export function addLocaleOrDefault(
     : pathname;
 }
 
+/**
+ * Check if a source file should use the Bun runtime based on the `vercel.json`
+ * routes configuration.
+ */
+export function shouldUseBunRuntime(
+  sourceFile: string,
+  config: Config
+): boolean {
+  if (config.functions) {
+    for (const [pattern, func] of Object.entries(config.functions)) {
+      if ((func as any).runtime === '@vercel/bun') {
+        if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
   supportsCancellation?: boolean;
+  runtime?: 'nodejs' | 'bun';
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
   isStreaming?: boolean;
@@ -1891,6 +1913,7 @@ export async function getPageLambdaGroups({
       maxDuration?: number;
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
+      runtime?: 'nodejs' | 'bun';
     } = {};
 
     if (
@@ -1917,6 +1940,22 @@ export async function getPageLambdaGroups({
       });
 
       opts = { ...vercelConfigOpts, ...opts };
+    }
+
+    if (config?.functions) {
+      const sourceFile = await getSourceFilePathFromPage({
+        workPath: entryPath,
+        page: normalizeSourceFilePageFromManifest(
+          routeName,
+          page,
+          inversedAppPathManifest
+        ),
+        pageExtensions,
+      });
+
+      if (shouldUseBunRuntime(sourceFile, config)) {
+        opts.runtime = 'bun';
+      }
     }
 
     const isGeneratedSteps =
@@ -1965,7 +2004,8 @@ export async function getPageLambdaGroups({
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
               JSON.stringify(opts.experimentalTriggers) &&
-            group.supportsCancellation === opts.supportsCancellation;
+            group.supportsCancellation === opts.supportsCancellation &&
+            group.runtime === opts.runtime;
 
           if (matches) {
             let newTracedFilesUncompressedSize =
@@ -2006,6 +2046,7 @@ export async function getPageLambdaGroups({
         pseudoLayer: Object.assign({}, initialPseudoLayer.pseudoLayer),
         experimentalTriggers: opts.experimentalTriggers,
         supportsCancellation: opts.supportsCancellation,
+        runtime: opts.runtime,
       };
       groups.push(newGroup);
       matchingGroup = newGroup;
@@ -3747,6 +3788,7 @@ export async function getNodeMiddleware({
     config,
   });
 
+  const useBun = shouldUseBunRuntime(sourceFile, config);
   const middlewareFile = path.join(
     entryPath,
     outputDirectory,
@@ -3810,7 +3852,7 @@ export async function getNodeMiddleware({
 
   const lambda = new NodejsLambda({
     ...vercelConfigOpts,
-    runtime: nodeVersion,
+    runtime: useBun ? 'bun1.x' : nodeVersion,
     handler: path.join(
       path.relative(baseDir, projectDir),
       '___next_launcher.cjs'
