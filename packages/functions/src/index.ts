@@ -9,5 +9,5 @@ export {
   experimental_attachDatabasePool,
 } from './db-connections';
 export type { RuntimeCache } from './cache/types';
-export { invalidateByTag, dangerouslyDeleteByTag } from './purge';
+export { invalidateByTag, dangerouslyDeleteByTag, addCacheTag } from './purge';
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';

@@ -10,6 +10,7 @@ Vercel Cache Purge APIs.
 
 - [dangerouslyDeleteByTag](index.PurgeApi.md#dangerouslydeletebytag)
 - [invalidateByTag](index.PurgeApi.md#invalidatebytag)
+- [addCacheTag](index.PurgeApi.md#addCacheTag)
 
 ## Properties
 
@@ -70,3 +71,31 @@ A promise that resolves when the invalidate is complete.
 #### Defined in
 
 [packages/functions/src/purge/types.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L20)
+
+---
+
+### addCacheTag
+
+• **addCacheTag**: (`tag`: `string` \| `string`[]) => [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+#### Type declaration
+
+▸ (`tag`): [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+Add tags to content
+
+##### Parameters
+
+| Name  | Type                   | Description                    |
+| :---- | :--------------------- | :----------------------------- |
+| `tag` | `string` \| `string`[] | Add tag or tags to content. |
+
+##### Returns
+
+[`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)<`void`\>
+
+A promise that resolves when the invalidate is complete.
+
+#### Defined in
+
+[packages/functions/src/purge/types.ts:20](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/types.ts#L42)
