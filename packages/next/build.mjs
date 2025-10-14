@@ -46,6 +46,11 @@ await copyFile(
   join(process.cwd(), 'dist/mappings.wasm')
 );
 
+await copyFile(
+  require.resolve('./adapter.js'),
+  join(process.cwd(), 'dist/adapter.js')
+)
+
 await esbuild({
   bundle: true,
   external: ['@vercel/build-utils', ...externals],

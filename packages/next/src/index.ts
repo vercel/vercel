@@ -509,6 +509,11 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  if (semver.gte(nextVersion, '16.0.0-canary.0')) {
+    console.log('setting adapter env variable');
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter.js');
+  }
+
   const shouldRunCompileStep =
     Boolean(buildCommand) || Boolean(buildScriptName);
 
@@ -580,6 +585,7 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildOutputVersion) {
+    console.log('using BOA output at', path.join(outputDirectory, 'output'));
     return {
       buildOutputPath: path.join(outputDirectory, 'output'),
       buildOutputVersion,
