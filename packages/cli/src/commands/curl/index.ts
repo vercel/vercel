@@ -213,6 +213,38 @@ export default async function curl(client: Client) {
     flags,
   });
 
+  // Validate custom environment if specified
+  if (flags['--environment']) {
+    try {
+      const query = new URLSearchParams();
+      if (client.config.currentTeam) {
+        query.set('teamId', client.config.currentTeam);
+      }
+      const response = await client.fetch<{
+        environments: Array<{ slug: string; name: string }>;
+      }>(
+        `/v9/projects/${linkedProject.project.id}/custom-environments${query.toString() ? `?${query}` : ''}`
+      );
+
+      const validEnvironments = response.environments.map(env => env.slug);
+
+      if (!validEnvironments.includes(flags['--environment'])) {
+        output.error(
+          `Environment "${flags['--environment']}" does not exist for this project.`
+        );
+        if (validEnvironments.length > 0) {
+          output.log(`Valid environments: ${validEnvironments.join(', ')}`);
+        } else {
+          output.log('This project has no custom environments configured.');
+        }
+        return 1;
+      }
+    } catch (error) {
+      output.debug(`Failed to validate environment: ${error}`);
+      // Continue without validation if the API call fails
+    }
+  }
+
   // Get deployment URL based on SHA or target
   let baseUrl: string;
   if (flags['--sha']) {
