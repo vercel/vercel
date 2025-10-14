@@ -1,5 +1,5 @@
 import { BuildV2, glob, debug, Files } from '@vercel/build-utils';
-import { isAbsolute, join, normalize, resolve, sep } from 'path';
+import { isAbsolute, join, normalize, resolve, sep, dirname } from 'path';
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { rm } from 'fs/promises';
@@ -131,13 +131,29 @@ const getIntrospectionPath = (options: { dir: string }) => {
   return join(options.dir, 'introspection.json');
 };
 
+const getPackageRoot = () => {
+  // Find the package.json to get the package root
+  try {
+    const packageJsonPath = require.resolve('@vercel/backends/package.json');
+    return dirname(packageJsonPath);
+  } catch {
+    // Fallback: check if we're in src (dev) or dist (bundled)
+    if (__dirname.includes('/src/')) {
+      // In dev: src/introspection -> ../../ -> package root
+      return resolve(join(__dirname, '..', '..'));
+    } else {
+      // After bundle: dist -> ../ -> package root
+      return resolve(join(__dirname, '..'));
+    }
+  }
+};
+
 const invokeFunction = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const loaderPath = resolve(
-    join(__dirname, '..', '..', 'express-loader-register.mjs')
-  );
+  const packageRoot = getPackageRoot();
+  const loaderPath = resolve(join(packageRoot, 'express-loader-register.mjs'));
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
 
   await new Promise(resolvePromise => {

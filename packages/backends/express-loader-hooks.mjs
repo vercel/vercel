@@ -1,22 +1,17 @@
 import { fileURLToPath } from 'node:url';
 
-export async function resolve(specifier, context, nextResolve) {
-  return nextResolve(specifier, context);
-}
-
 export async function load(url, context, nextLoad) {
   const result = await nextLoad(url, context);
 
   if (url.includes('node_modules/express') && url.includes('index.js')) {
-    // For CommonJS modules, we need to read the source ourselves
     const filePath = fileURLToPath(url);
 
-    // You can modify the source here before returning
     const modifiedSource = modifySource(filePath); // Add your modifications
 
     return {
       format: 'commonjs',
       source: modifiedSource,
+      // Don't continue loading the original source
       shortCircuit: true,
     };
   }
@@ -42,6 +37,9 @@ originalExpress.static = (...args) => {
 }
 function expressWrapper() {
   app = originalExpress.apply(this, arguments);
+  app.listen = (...args) => {
+    // noop to prevent the original listen method from being called
+  }
   return app;
 }
 
