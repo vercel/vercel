@@ -3,6 +3,9 @@
   "description": "Used by Vercel's CLIs to handle authentication",
   "version": "0.0.1",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "*.js",
     "*.js.map",
