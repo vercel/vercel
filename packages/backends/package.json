@@ -23,7 +23,8 @@
     "express-loader.js",
     "express-loader.mjs",
     "express-loader-register.mjs",
-    "express-loader-hooks.mjs"
+    "express-loader-hooks.mjs",
+    "express-introspection-source.js"
   ],
   "dependencies": {
     "@vercel/nft": "0.30.1",

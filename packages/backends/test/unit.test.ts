@@ -67,6 +67,8 @@ const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
 
 describe('successful builds', async () => {
   const fixtures = await readdir(join(__dirname, 'fixtures'));
+  // const fixtures = ['01-index-ts-module'];
+  // const fixtures = ['02-index-ts-module'];
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
       const workPath = join(__dirname, 'fixtures', fixtureName);

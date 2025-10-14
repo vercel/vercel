@@ -153,12 +153,13 @@ const invokeFunction = async (
   rolldownResult: RolldownResult
 ) => {
   const packageRoot = getPackageRoot();
-  const loaderPath = resolve(join(packageRoot, 'express-loader-register.mjs'));
+  const loaderPath = resolve(join(packageRoot, 'express-loader.js'));
   const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
 
   await new Promise(resolvePromise => {
     try {
-      const child = spawn('node', ['--import', loaderPath, handlerPath], {
+      // CommonJS loader detects Express by properties, works for both CJS and ESM
+      const child = spawn('node', ['-r', loaderPath, handlerPath], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: rolldownResult.dir,
         env: {
