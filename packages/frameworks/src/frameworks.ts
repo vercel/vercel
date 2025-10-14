@@ -2351,7 +2351,6 @@ export const frameworks = [
         value: 'dist',
       },
     },
-    dependency: 'nitro',
     getOutputDirName: async () => 'public',
   },
   {
