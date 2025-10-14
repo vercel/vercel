@@ -1,14 +1,10 @@
 import { BuildV2, glob, debug, Files } from '@vercel/build-utils';
 import { isAbsolute, join, normalize, resolve, sep } from 'path';
-import { outputFile } from 'fs-extra';
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { rm } from 'fs/promises';
-import { createRequire } from 'module';
 import { pathToRegexp } from 'path-to-regexp';
 import { z } from 'zod';
-
-const require_ = createRequire(__filename);
 
 type RolldownResult = {
   dir: string;
@@ -20,15 +16,6 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  const source = expressShimSource(args, rolldownResult);
-  const shimPath = join(
-    rolldownResult.dir,
-    'node_modules',
-    'express',
-    'index.js'
-  );
-  await outputFile(shimPath, source);
-
   debug('[@vercel/express] Running app to extract routes...');
   await invokeFunction(args, rolldownResult);
 
@@ -96,10 +83,7 @@ export const introspectApp = async (
 };
 
 const cleanupShim = async (rolldownResult: RolldownResult) => {
-  await rm(join(rolldownResult.dir, 'node_modules'), {
-    recursive: true,
-    force: true,
-  });
+  // return;
   await rm(getIntrospectionPath(rolldownResult), { force: true });
 };
 
@@ -151,21 +135,32 @@ const invokeFunction = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
-  await new Promise(resolve => {
+  const loaderPath = resolve(
+    join(__dirname, '..', '..', 'express-loader-register.mjs')
+  );
+  const handlerPath = join(rolldownResult.dir, rolldownResult.handler);
+
+  await new Promise(resolvePromise => {
     try {
-      const child = spawn(
-        'node',
-        [join(rolldownResult.dir, rolldownResult.handler)],
-        {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          cwd: rolldownResult.dir,
-          env: {
-            ...process.env,
-            ...(args.meta?.env || {}),
-            ...(args.meta?.buildEnv || {}),
-          },
-        }
-      );
+      const child = spawn('node', ['--import', loaderPath, handlerPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: rolldownResult.dir,
+        env: {
+          ...process.env,
+          ...(args.meta?.env || {}),
+          ...(args.meta?.buildEnv || {}),
+          VERCEL_EXPRESS_INTROSPECTION_PATH:
+            getIntrospectionPath(rolldownResult),
+        },
+      });
+
+      child.stdout?.on('data', data => {
+        console.log('[CHILD STDOUT]', data.toString());
+      });
+
+      child.stderr?.on('data', data => {
+        console.log('[CHILD STDERR]', data.toString());
+      });
 
       const timeout = setTimeout(() => {
         child.kill('SIGTERM');
@@ -177,109 +172,20 @@ const invokeFunction = async (
         console.log(
           `Unable to extract routes from express, route level observability will not be available`
         );
-        resolve(undefined);
+        resolvePromise(undefined);
       });
 
       child.on('close', () => {
         clearTimeout(timeout);
-        resolve(undefined);
+        resolvePromise(undefined);
       });
     } catch (error) {
       console.log(
         `Unable to extract routes from express, route level observability will not be available`
       );
-      resolve(undefined);
+      resolvePromise(undefined);
     }
   });
-};
-
-const expressShimSource = (
-  args: Parameters<BuildV2>[0],
-  rolldownResult: RolldownResult
-) => {
-  const pathToExpress = require_.resolve('express', {
-    paths: [args.workPath],
-  });
-  const introspectionPath = getIntrospectionPath(rolldownResult);
-  return `
-const fs = require('fs');
-const path = require('path');
-const originalExpress = require(${JSON.stringify(pathToExpress)});
-
-let app = null
-let staticPaths = [];
-let views = ''
-let viewEngine = ''
-const routes = {};
-const originalStatic = originalExpress.static
-originalExpress.static = (...args) => {
-  staticPaths.push(args[0]);
-  return originalStatic(...args);
-}
-function expressWrapper() {
-  app = originalExpress.apply(this, arguments);
-  // stub the listen method so the process doesn't hang
-  app.listen = () => {}
-  return app;
-}
-
-Object.setPrototypeOf(expressWrapper, originalExpress);
-Object.assign(expressWrapper, originalExpress);
-
-expressWrapper.prototype = originalExpress.prototype;
-
-module.exports = expressWrapper;
-
-let routesExtracted = false;
-
-const extractRoutes = () => {
-  if (routesExtracted) {
-    return;
-  }
-  routesExtracted = true;
-
-  const methods = ["all", "get", "post", "put", "delete", "patch", "options", "head"]
-  if (!app) {
-    return;
-  }
-  const router = app._router || app.router
-  for (const route of router.stack) {
-    if(route.route) {
-      const m = [];
-      for (const method of methods) {
-        if(route.route.methods[method]) {
-          m.push(method.toUpperCase());
-        }
-      }
-      routes[route.route.path] = { methods: m };
-    }
-  }
-
-  views = app.settings.views
-  viewEngine = app.settings['view engine']
-
-  const dir = path.dirname(${JSON.stringify(introspectionPath)});
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  fs.writeFileSync(${JSON.stringify(introspectionPath)}, JSON.stringify({routes, views, staticPaths, viewEngine}, null, 2));
-}
-
-process.on('exit', () => {
-  extractRoutes()
-});
-
-process.on('SIGINT', () => {
-  extractRoutes()
-  process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-  extractRoutes()
-  process.exit(0);
-});
-  `;
 };
 
 const convertExpressRoute = (

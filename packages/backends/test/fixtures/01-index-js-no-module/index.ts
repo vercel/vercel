@@ -10,5 +10,4 @@ app.get("/user/:id/posts", (req, res) => res.send("Hello World"));
 
 app.get("/blog/*slugs", (req, res) => res.send("Hello World"));
 
-
 export default app;

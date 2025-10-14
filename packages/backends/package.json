@@ -20,7 +20,10 @@
   },
   "files": [
     "dist",
-    "edge-entry.js"
+    "express-loader.js",
+    "express-loader.mjs",
+    "express-loader-register.mjs",
+    "express-loader-hooks.mjs"
   ],
   "dependencies": {
     "@vercel/nft": "0.30.1",

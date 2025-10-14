@@ -4,6 +4,6 @@
     "types": ["node", "jest"]
   },
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "express-loader.js"],
   "exclude": ["node_modules"]
 }

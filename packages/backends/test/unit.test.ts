@@ -1,36 +1,13 @@
-import { FileFsRef, Files } from '@vercel/build-utils/dist';
+import {
+  BuildResultV2Typical,
+  FileFsRef,
+  Files,
+} from '@vercel/build-utils/dist';
 import { build } from '../src';
-import { join, sep } from 'path';
+import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import { readdir } from 'fs/promises';
-
-const baseArgs = {
-  entrypoint: 'package.json',
-  // workPath: '/Users/jeffsee/code/express',
-  // repoRootPath: '/Users/jeffsee/code/express',
-  config: {
-    zeroConfig: true,
-    framework: 'express-experimental',
-    installCommand: undefined,
-    devCommand: 'cervel',
-    buildCommand: 'cervel build server.ts',
-    outputDirectory: 'dist',
-    nodeVersion: '22.x',
-    projectSettings: {
-      createdAt: 1755545582636,
-      framework: 'express-experimental',
-      installCommand: null,
-      devCommand: 'cervel',
-      buildCommand: 'cervel build server.ts',
-      outputDirectory: 'dist',
-      rootDirectory: null,
-      directoryListing: false,
-      nodeVersion: '22.x',
-    },
-  },
-  meta: { skipDownload: true, cliVersion: '48.2.8' },
-};
 
 const config = {
   outputDirectory: undefined,
@@ -97,16 +74,15 @@ describe('successful builds', async () => {
       const fileList = readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
-      const result = await build({
+      const result = (await build({
         files,
         workPath,
         config,
         meta,
-        // Entrypoint is just used as the BOA function name
         entrypoint: 'package.json',
         repoRootPath: workPath,
-      });
-      console.log(result.routes);
+      })) as BuildResultV2Typical;
+
       expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
         join(workPath, 'routes.json')
       );
