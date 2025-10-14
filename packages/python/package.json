@@ -7,7 +7,8 @@
   "files": [
     "dist",
     "vc_init.py",
-    "vc_init_dev_asgi.py"
+    "vc_init_dev_asgi.py",
+    "vc_init_dev_wsgi.py"
   ],
   "repository": {
     "type": "git",
