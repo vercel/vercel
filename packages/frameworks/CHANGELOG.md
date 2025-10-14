@@ -1,5 +1,15 @@
 # @vercel/frameworks
 
+## 3.12.0
+
+### Minor Changes
+
+- Update nitro framework detection to detect nitro package ([#14099](https://github.com/vercel/vercel/pull/14099))
+
+### Patch Changes
+
+- Add support for additional entrypoints in NestJS ([#14091](https://github.com/vercel/vercel/pull/14091))
+
 ## 3.11.1
 
 ### Patch Changes
