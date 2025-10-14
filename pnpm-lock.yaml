@@ -1634,8 +1634,8 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
       undici:
-        specifier: 5.28.4
-        version: 5.28.4
+        specifier: 5.29.0
+        version: 5.29.0
     devDependencies:
       '@babel/core':
         specifier: 7.24.4
@@ -8587,7 +8587,7 @@ packages:
       is-buffer: 2.0.5
       is-node-process: 1.2.0
       throttleit: 2.1.0
-      undici: 5.28.4
+      undici: 5.29.0
     dev: false
 
   /@vercel/fun@1.1.6:
@@ -18027,8 +18027,8 @@ packages:
     resolution: {integrity: sha512-goOacqME2GYyOZZfb5Lgtu+1IDmAlAEu5xnD3+xTzS10hT0vzpf0SPjkXwAw9Jm+4n/mQGDP3LO8CPbYROeBfQ==}
     dev: true
 
-  /undici@5.28.4:
-    resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
+  /undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.1
