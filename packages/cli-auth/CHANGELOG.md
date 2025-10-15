@@ -4,4 +4,4 @@
 
 ### Patch Changes
 
-- introduce `@vercel/cli-auth` ([#14091](https://github.com/vercel/vercel/pull/14091))
+- introduce `@vercel/cli-auth` ([#14103](https://github.com/vercel/vercel/pull/14103))
