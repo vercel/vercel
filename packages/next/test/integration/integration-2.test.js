@@ -654,7 +654,6 @@ describe('rewrite headers with rewrite', () => {
 
   it('should add rewrite headers to the original rewrite', () => {
     let route = routes.filter(r => r.headers?.['x-nextjs-rewritten-path']);
-    require('console').error(JSON.stringify(routes, null, 2));
     expect(route.length).toBe(1);
 
     expect(route[0].headers).toEqual({
