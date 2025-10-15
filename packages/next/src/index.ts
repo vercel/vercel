@@ -509,7 +509,10 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  if (semver.gte(nextVersion, '16.0.0-canary.0')) {
+  if (
+    !process.env.NEXT_BUILDER_INTEGRATION &&
+    semver.gte(nextVersion, '16.0.0-canary.0')
+  ) {
     console.log('setting adapter env variable');
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter.js');
   }
@@ -577,7 +580,7 @@ export const build: BuildV2 = async buildOptions => {
 
   try {
     const data = await readJSON(
-      path.join(outputDirectory, 'output/config.json')
+      path.join(entryPath, outputDirectory, 'output/config.json')
     );
     buildOutputVersion = data.version;
   } catch (_) {
@@ -585,9 +588,12 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildOutputVersion) {
-    console.log('using BOA output at', path.join(outputDirectory, 'output'));
+    console.log(
+      'using BOA output at',
+      path.join(entryPath, outputDirectory, 'output')
+    );
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }

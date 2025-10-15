@@ -1,4 +1,5 @@
 /* eslint-env jest */
+process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');

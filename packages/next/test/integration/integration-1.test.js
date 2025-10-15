@@ -1,3 +1,4 @@
+process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
@@ -227,6 +228,8 @@ it('should build using server build', async () => {
     workPath,
     buildResult: { output },
   } = await runBuildLambda(path.join(__dirname, 'server-build'));
+
+  require('console').error(JSON.stringify(Object.keys(output), null, 2));
 
   console.log = origLog;
   console.error = origError;
