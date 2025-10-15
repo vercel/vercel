@@ -516,6 +516,10 @@ export const build: BuildV2 = async buildOptions => {
     console.log('setting adapter env variable');
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
   }
+  console.log({
+    nextVersion,
+    envOptOut: process.env.NEXT_BUILDER_INTEGRATION,
+  });
 
   const shouldRunCompileStep =
     Boolean(buildCommand) || Boolean(buildScriptName);

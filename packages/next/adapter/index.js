@@ -21880,10 +21880,10 @@ var require_dist2 = __commonJS2({
           normalizeError: () => normalizeError
         });
         module2.exports = __toCommonJS2(src_exports2);
-        var import_node_util = __toESM22(require("util"));
+        var import_node_util2 = __toESM22(require("util"));
         var isObject = (obj) => typeof obj === "object" && obj !== null;
         var isError = (error) => {
-          return import_node_util.default.types.isNativeError(error);
+          return import_node_util2.default.types.isNativeError(error);
         };
         var isErrnoException3 = (error) => {
           return isError(error) && "code" in error;
@@ -25966,9 +25966,9 @@ var require_interop_require_default = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
+// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js
 var require_modern_browserslist_target = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/modern-browserslist-target.js"(exports2, module2) {
     "use strict";
     var MODERN_BROWSERSLIST_TARGET = [
       "chrome 111",
@@ -25980,9 +25980,9 @@ var require_modern_browserslist_target = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
+// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js
 var require_entry_constants = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
+  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/entry-constants.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -26014,9 +26014,9 @@ var require_entry_constants = __commonJS2({
   }
 });
 
-// ../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
+// ../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js
 var require_constants2 = __commonJS2({
-  "../../node_modules/.pnpm/next@https+++files-gu935k4is-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
+  "../../node_modules/.pnpm/next@https+++files-c67fwfyym-vtest314-ijjk-testing.vercel.app+_react-dom@19.1.1_react@19.1.1__react@19.1.1/node_modules/next/dist/shared/lib/constants.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", {
       value: true
@@ -32366,20 +32366,23 @@ async function validateSize(script, wasmFiles) {
 }
 
 // src/outputs.ts
+var import_node_child_process = require("node:child_process");
+var import_node_util = require("node:util");
+var exec = (0, import_node_util.promisify)(import_node_child_process.exec);
+var hardlink = (src, dest) => exec(`cp -lR '${src}' '${dest}'`).catch((err) => {
+  console.error(err.stdout, err.stderr);
+  throw err;
+});
 async function handlePublicFiles(publicFolder, vercelOutputDir) {
   const topLevelItems = await import_promises4.default.readdir(publicFolder).catch(() => []);
   const fsSema = new import_async_sema5.Sema(16, { capacity: topLevelItems.length });
   await Promise.all(
     topLevelItems.map(async (item) => {
       await fsSema.acquire();
-      const destination = import_node_path.default.join(
-        vercelOutputDir,
-        "static",
-        item
-      );
+      const destination = import_node_path.default.join(vercelOutputDir, "static", item);
       const destDirectory = import_node_path.default.dirname(destination);
       await import_promises4.default.mkdir(destDirectory, { recursive: true });
-      await import_promises4.default.rename(import_node_path.default.join(publicFolder, item), destination);
+      await hardlink(import_node_path.default.join(publicFolder, item), destination);
       fsSema.release();
     })
   );
@@ -32407,7 +32410,7 @@ async function handleStaticOutputs(outputs, {
       );
       const destDirectory = import_node_path.default.dirname(destination);
       await import_promises4.default.mkdir(destDirectory, { recursive: true });
-      await import_promises4.default.rename(output.filePath, destination);
+      await hardlink(output.filePath, destination);
       fsSema.release();
     })
   );
@@ -32575,7 +32578,7 @@ async function handlePrerenderOutputs(nodeOutputs, prerenderOutputs, {
         );
         if (output.fallback?.filePath && prerenderFallbackPath && // if postponed state is present we write the fallback file above
         !output.fallback.postponedState) {
-          await import_promises4.default.link(output.fallback.filePath, prerenderFallbackPath);
+          await hardlink(output.fallback.filePath, prerenderFallbackPath);
         }
       } catch (err) {
         console.error(`Failed to handle output:`, output);
@@ -32793,7 +32796,9 @@ var myAdapter = {
       dynamicRoutes.push({
         src: route.sourceRegex,
         dest: route.destination,
-        check: true
+        check: true,
+        has: route.has,
+        missing: route.missing
       });
     }
     vercelConfig.routes = [
