@@ -1,5 +1,5 @@
 module.exports = {
   experimental: {
-    ppr: 'incremental',
+    cacheComponents: true
   },
 };

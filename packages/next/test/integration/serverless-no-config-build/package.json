@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "next build && echo 'hello' > .next/world.txt"
+    "build": "next build --webpack && echo 'hello' > .next/world.txt"
   },
   "dependencies": {
     "next": "latest",

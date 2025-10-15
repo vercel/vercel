@@ -422,7 +422,7 @@ it('should handle edge functions in app with basePath', async () => {
   expect(output['test/test.rsc'].type).toBe('EdgeFunction');
 
   expect(output['test/_not-found']).toBeDefined();
-  expect(output['test/_not-found'].type).toBe('Prerender');
+  expect(output['test/_not-found'].type).toBe('EdgeFunction');
 
   const lambdas = new Set();
   const edgeFunctions = new Set();
