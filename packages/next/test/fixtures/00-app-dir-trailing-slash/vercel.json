@@ -158,7 +158,7 @@
     {
       "path": "/dashboard/deployments/123/",
       "status": 200,
-      "mustContain": "hello from app/dashboard/deployments/[id]. ID is: <!-- -->123"
+      "mustContain": "hello from app/dashboard/deployments/[id]. ID is:<!-- --> <!-- -->123"
     },
     {
       "path": "/",

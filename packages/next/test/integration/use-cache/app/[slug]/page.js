@@ -6,6 +6,14 @@ async function getCachedValue() {
   return Math.random();
 }
 
+export function generateStaticParams() {
+  return [
+    {
+      slug: 'first',
+    },
+  ];
+}
+
 export default async function Page() {
   return <div>This is a cached value: {await getCachedValue()}</div>;
 }

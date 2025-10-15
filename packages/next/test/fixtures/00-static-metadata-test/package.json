@@ -10,6 +10,6 @@
     "typescript": "^5.9.2"
   },
   "scripts": {
-    "vercel-build": "next build"
+    "vercel-build": "next build --webpack"
   }
 }

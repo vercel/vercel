@@ -7,7 +7,7 @@ export async function generateStaticParams() {
 export default async function BlogSlugPage({ params }) {
   return (
     <>
-      <p>{params.slug}</p>
+      <p>{(await params).slug}</p>
     </>
   );
 }
