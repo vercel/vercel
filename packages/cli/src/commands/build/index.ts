@@ -895,7 +895,7 @@ function getFunctionUrlPath(vcConfigPath: string, outputDir: string): string {
 
 const LAMBDA_SIZE_LIMIT_MB = 250;
 
-function printFileSizeBreakdown(files: Map<string, number>, cwd: string): void {
+function printFileSizeBreakdown(files: Map<string, number>): void {
   // Group files by package or directory structure
   const dependencies = new Map<string, number>();
 
@@ -912,7 +912,7 @@ function printFileSizeBreakdown(files: Map<string, number>, cwd: string): void {
     .slice(0, 10);
 
   if (sortedDeps.length > 0) {
-    output.print(chalk.yellow('  Largest dependencies:\n'));
+    output.print(chalk.yellow('  Large dependencies:\n'));
     for (const [dep, size] of sortedDeps) {
       if (size >= 0.5) {
         // Only show files >= 500KB
@@ -944,7 +944,9 @@ async function analyzeVcConfigFiles(
     return;
   }
 
-  output.print(`Analyzing ${vcConfigFiles.length} function(s)...\n`);
+  output.print(
+    `\nAnalyzing ${vcConfigFiles.length} function${vcConfigFiles.length === 1 ? '' : 's'}...\n`
+  );
 
   // Analyze all functions in parallel
   const results = await Promise.all(
@@ -956,37 +958,46 @@ async function analyzeVcConfigFiles(
     (r): r is NonNullable<typeof r> => r !== null
   );
 
-  // Print results sorted by size
+  // Separate exceeded and normal functions
   const sortedResults = validResults.sort((a, b) => b.size - a.size);
-  const exceededFunctions: string[] = [];
+  const exceededFunctions = sortedResults.filter(
+    r => r.size > LAMBDA_SIZE_LIMIT_MB
+  );
+  const normalFunctions = sortedResults.filter(
+    r => r.size <= LAMBDA_SIZE_LIMIT_MB
+  );
 
-  for (const result of sortedResults) {
-    const exceeds = result.size > LAMBDA_SIZE_LIMIT_MB;
+  // Show warning once if there are exceeded functions
+  if (exceededFunctions.length > 0) {
+    output.print(
+      `${chalk.red.bold(`⚠️  Max serverless function size of ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed reached`)}\n\n`
+    );
 
-    if (exceeds) {
-      exceededFunctions.push(result.path);
+    // List all affected functions
+    for (const result of exceededFunctions) {
       output.print(
-        `${chalk.red(result.path)}: ` +
-          `${chalk.red.bold(result.size.toFixed(2))} MB ` +
-          `${chalk.red.bold(`⚠️  Exceeds ${LAMBDA_SIZE_LIMIT_MB} MB uncompressed limit`)}\n`
+        `${chalk.red('Function :')} ${chalk.red.bold(result.path)}\n` +
+          `${chalk.red('Size     :')} ${chalk.red.bold(result.size.toFixed(2))} MB\n`
       );
 
       // Show breakdown of largest files/dependencies
-      printFileSizeBreakdown(result.files, cwd);
-    } else {
-      output.print(
-        `${chalk.cyan(result.path)}: ` +
-          `${chalk.bold(result.size.toFixed(2))} MB\n`
-      );
+      printFileSizeBreakdown(result.files);
+      output.print('\n');
     }
-  }
 
-  // Fail build if any function exceeds limit
-  if (exceededFunctions.length > 0) {
-    output.print('\n');
+    // Show summary of normal functions
+    if (normalFunctions.length > 0) {
+      output.print(chalk.cyan(`Other functions:\n`));
+      for (const result of normalFunctions) {
+        output.print(
+          `${chalk.cyan(result.path)}: ${chalk.bold(result.size.toFixed(2))} MB\n`
+        );
+      }
+    }
+
     throw new NowBuildError({
       code: 'NOW_SANDBOX_WORKER_MAX_LAMBDA_SIZE',
-      message: `Error: ${exceededFunctions.length} function(s) exceeded the unzipped maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
+      message: `${exceededFunctions.length} function${exceededFunctions.length === 1 ? '' : 's'} exceeded the uncompressed maximum size of ${LAMBDA_SIZE_LIMIT_MB} MB.`,
       link: 'https://vercel.link/serverless-function-size',
       action: 'Learn More',
     });
