@@ -514,7 +514,7 @@ export const build: BuildV2 = async buildOptions => {
     semver.gte(nextVersion, '16.0.0-canary.0')
   ) {
     console.log('setting adapter env variable');
-    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter.js');
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
   }
 
   const shouldRunCompileStep =

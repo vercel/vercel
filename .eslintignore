@@ -24,7 +24,7 @@ packages/client/lib
 packages/hydrogen/edge-entry.js
 
 # next
-packages/next/adapter.js
+packages/next/adapter/**
 packages/next/test/integration/middleware
 packages/next/test/integration/middleware-eval
 
