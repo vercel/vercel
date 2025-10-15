@@ -2707,12 +2707,18 @@ export const onPrerenderRoute =
       let normalized = path.posix.join(entryDirectory, route);
 
       if (nonDynamicSsg || isFallback || isOmitted) {
+        // the prerender-manifest can be inconsistent with
+        // locale being provided to dataRoute so normalize here
+        const pathToReplace = route.endsWith(routeFileNoExt + '.json')
+          ? origRouteFileNoExt
+          : routeFileNoExt;
+
         normalized = normalized.replace(
           new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
           // ensure we escape "$" correctly while replacing as "$" is a special
           // character, we need to do double escaping as first is for the initial
           // replace on the routeFile and then the second on the outputPath
-          `${routeFileNoExt.replace(/\$/g, '$$$$')}.json`
+          `${pathToReplace.replace(/\$/g, '$$$$')}.json`
         );
       }
 

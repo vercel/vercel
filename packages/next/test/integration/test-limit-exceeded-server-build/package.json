@@ -2,7 +2,7 @@
   "name": "test-limit",
   "version": "1.0.0",
   "scripts": {
-    "build": "next build"
+    "build": "next build --webpack"
   },
   "dependencies": {
     "chrome-aws-lambda": "8.0.0",
