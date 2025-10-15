@@ -14,7 +14,7 @@ import {
 import type { BuildV2 } from '@vercel/build-utils';
 
 export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
-  const { entrypoint, files, workPath, meta, config } = args;
+  const { entrypoint, files, workPath, meta, config, repoRootPath } = args;
   await download(files, workPath, meta);
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -32,7 +32,7 @@ export async function downloadInstallAndBundle(args: Parameters<BuildV2>[0]) {
     lockfileVersion,
     packageJsonPackageManager,
     turboSupportsCorepackHome,
-  } = await scanParentDirs(entrypointFsDirname, true);
+  } = await scanParentDirs(entrypointFsDirname, true, repoRootPath);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,

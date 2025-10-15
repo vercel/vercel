@@ -6,8 +6,23 @@ import {
 import { build } from '../src';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
-import fs from 'fs';
-import { readdir } from 'fs/promises';
+import { readdir, readFile, rm, stat } from 'fs/promises';
+import { existsSync } from 'fs';
+
+const clearOutputs = async (fixtureName: string) => {
+  await rm(join(__dirname, 'fixtures', fixtureName, '.vercel'), {
+    recursive: true,
+    force: true,
+  });
+  await rm(join(__dirname, 'fixtures', fixtureName, 'dist'), {
+    recursive: true,
+    force: true,
+  });
+  await rm(join(__dirname, 'fixtures', fixtureName, 'node_modules'), {
+    recursive: true,
+    force: true,
+  });
+};
 
 const config = {
   outputDirectory: undefined,
@@ -47,16 +62,19 @@ const createFiles = (workPath: string, fileList: string[]) => {
   return files;
 };
 
-const readDirectoryRecursively = (dirPath: string, basePath = ''): string[] => {
+const readDirectoryRecursively = async (
+  dirPath: string,
+  basePath = ''
+): Promise<string[]> => {
   const files: string[] = [];
-  const items = fs.readdirSync(dirPath);
+  const items = await readdir(dirPath);
 
   for (const item of items) {
     const fullPath = join(dirPath, item);
     const relativePath = basePath ? join(basePath, item) : item;
 
-    if (fs.statSync(fullPath).isDirectory()) {
-      files.push(...readDirectoryRecursively(fullPath, relativePath));
+    if ((await stat(fullPath)).isDirectory()) {
+      files.push(...(await readDirectoryRecursively(fullPath, relativePath)));
     } else {
       files.push(relativePath);
     }
@@ -69,9 +87,10 @@ describe('successful builds', async () => {
   const fixtures = await readdir(join(__dirname, 'fixtures'));
   for (const fixtureName of fixtures) {
     it(`builds ${fixtureName}`, async () => {
+      await clearOutputs(fixtureName);
       const workPath = join(__dirname, 'fixtures', fixtureName);
 
-      const fileList = readDirectoryRecursively(workPath);
+      const fileList = await readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
       const result = (await build({
@@ -82,6 +101,19 @@ describe('successful builds', async () => {
         entrypoint: 'package.json',
         repoRootPath: workPath,
       })) as BuildResultV2Typical;
+
+      const expectedFilePath = join(workPath, 'files.json');
+      if (existsSync(expectedFilePath)) {
+        const expectedFiles = await readFile(expectedFilePath, 'utf8');
+        const indexOutput = result.output.index;
+        if ('type' in indexOutput && indexOutput.type === 'Lambda') {
+          if (Array.isArray(files)) {
+            expect(files).toEqual(
+              expect.arrayContaining(JSON.parse(expectedFiles))
+            );
+          }
+        }
+      }
 
       expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
         join(workPath, 'routes.json')

@@ -16,13 +16,14 @@ export const introspectApp = async (
   args: Parameters<BuildV2>[0],
   rolldownResult: RolldownResult
 ) => {
+  const files = rolldownResult.files;
   debug('[@vercel/express] Running app to extract routes...');
   await invokeFunction(args, rolldownResult);
 
   const {
     routes: routesFromIntrospection,
     views,
-    staticPaths,
+    // staticPaths,
   } = await processIntrospection(rolldownResult);
   debug(
     `[@vercel/express] Extracted ${routesFromIntrospection.length} routes from introspection`
@@ -33,40 +34,41 @@ export const introspectApp = async (
   if (views) {
     try {
       debug(`[@vercel/express] Collecting view files from: ${views}`);
-      const validatedViews = validatePath(views, args.workPath);
-      const viewFiles = await glob(join(validatedViews, '**/*'), args.workPath);
+      // console.log({ validatedViews });
+      // const validatedViews = validatePath(views, args.workPath);
+      const viewFiles = await glob(join(views, '**/*'), args.workPath);
       debug(
         `[@vercel/express] Found ${Object.keys(viewFiles).length} view files`
       );
       for (const [p, f] of Object.entries(viewFiles)) {
-        rolldownResult.files[p] = f;
+        files[p] = f;
       }
     } catch (error) {
       console.log(`Skipping invalid views path: ${views}`);
     }
   }
 
-  if (staticPaths && staticPaths.length > 0) {
-    try {
-      debug(
-        `[@vercel/express] Collecting static files from: ${staticPaths.join(', ')}`
-      );
-      const validatedStaticPaths = staticPaths.map(path =>
-        validatePath(path, args.workPath)
-      );
-      let totalStaticFiles = 0;
-      for (const staticPath of validatedStaticPaths) {
-        const staticFiles = await glob(join(staticPath, '**/*'), args.workPath);
-        totalStaticFiles += Object.keys(staticFiles).length;
-        for (const [p, f] of Object.entries(staticFiles)) {
-          rolldownResult.files[p] = f;
-        }
-      }
-      debug(`[@vercel/express] Found ${totalStaticFiles} static files`);
-    } catch (error) {
-      console.log(`Skipping invalid static paths: ${staticPaths}`);
-    }
-  }
+  // if (staticPaths && staticPaths.length > 0) {
+  //   try {
+  //     debug(
+  //       `[@vercel/express] Collecting static files from: ${staticPaths.join(', ')}`
+  //     );
+  //     const validatedStaticPaths = staticPaths.map(path =>
+  //       validatePath(path, args.workPath)
+  //     );
+  //     let totalStaticFiles = 0;
+  //     for (const staticPath of validatedStaticPaths) {
+  //       const staticFiles = await glob(join(staticPath, '**/*'), args.workPath);
+  //       totalStaticFiles += Object.keys(staticFiles).length;
+  //       for (const [p, f] of Object.entries(staticFiles)) {
+  //         rolldownResult.files[p] = f;
+  //       }
+  //     }
+  //     debug(`[@vercel/express] Found ${totalStaticFiles} static files`);
+  //   } catch (error) {
+  //     console.log(`Skipping invalid static paths: ${staticPaths}`);
+  //   }
+  // }
 
   const routes = [
     {
@@ -79,7 +81,7 @@ export const introspectApp = async (
     },
   ];
 
-  return { routes };
+  return { routes, files };
 };
 
 const cleanupShim = async (rolldownResult: RolldownResult) => {
@@ -106,7 +108,18 @@ const processIntrospection = async (rolldownResult: RolldownResult) => {
             methods: string[];
           }[]
       ),
-    views: z.string().optional(),
+    views: z
+      .string()
+      .optional()
+      .transform(value => {
+        // If the app does
+        // app.set('views', join(__dirname, 'pug-views'));
+        // just  remove the dirname
+        if (value?.startsWith(rolldownResult.dir)) {
+          return value.replace(rolldownResult.dir + '/', '');
+        }
+        return value;
+      }),
     staticPaths: z.array(z.string()).optional(),
     viewEngine: z.string().optional(),
   });
@@ -259,3 +272,5 @@ const validatePath = (inputPath: string, workPath: string): string => {
 
   return normalizedPath;
 };
+
+validatePath('test', 'test');

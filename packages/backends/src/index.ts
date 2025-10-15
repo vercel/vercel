@@ -14,7 +14,10 @@ export const build: BuildV2 = async args => {
   const outputConfig = await doBuild(args, downloadResult);
 
   const { files } = await nodeFileTrace(args, outputConfig);
-  const { routes } = await introspectApp(args, { ...outputConfig, files });
+  const { routes } = await introspectApp(args, {
+    ...outputConfig,
+    files,
+  });
 
   const handler = relative(
     args.repoRootPath,

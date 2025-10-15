@@ -11,11 +11,10 @@ export const nodeFileTrace = async (
   }
 ) => {
   const { dir: outputDir, handler } = output;
+  const entry = join(outputDir, handler);
   const files: Files = {};
-  const nftResult = await nft([join(outputDir, handler)], {
-    // This didn't work as I expected it to, didn't find node_modules
-    // base: outputDir,
-    // processCwd: outputDir,
+  const nftResult = await nft([entry], {
+    base: args.repoRootPath,
     ignore: args.config.excludeFiles,
   });
 
@@ -29,7 +28,8 @@ export const nodeFileTrace = async (
   }
 
   for (const file of nftResult.fileList) {
-    const stats = lstatSync(file);
+    const fullPath = join(args.repoRootPath, file);
+    const stats = lstatSync(fullPath, {});
     files[file] = new FileFsRef({ fsPath: file, mode: stats.mode });
   }
 

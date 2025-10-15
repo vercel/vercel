@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cervel build index.ts",
+  "devCommand": "cervel",
+  "framework": "express-experimental",
+  "installCommand": "npm install",
+  "outputDirectory": "dist"
+}

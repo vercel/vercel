@@ -22,6 +22,7 @@ export const introspectApp = async (
         dest?: string;
         methods?: string[];
       }[];
+      files: Files;
     }>
   > = {
     'express-experimental': introspectExpressApp,
