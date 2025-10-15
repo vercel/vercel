@@ -1,5 +1,13 @@
 # @vercel/python
 
+## 5.0.10
+
+### Patch Changes
+
+- [python] flask start dev server ([#14103](https://github.com/vercel/vercel/pull/14103))
+
+- [python] streaming e2e tests ([#14103](https://github.com/vercel/vercel/pull/14103))
+
 ## 5.0.9
 
 ### Patch Changes
