@@ -2708,7 +2708,7 @@ export const onPrerenderRoute =
 
       if (nonDynamicSsg || isFallback || isOmitted) {
         normalized = normalized.replace(
-          new RegExp(`${escapeStringRegexp(origRouteFileNoExt)}.json$`),
+          new RegExp(`${escapeStringRegexp(routeFileNoExt)}.json$`),
           // ensure we escape "$" correctly while replacing as "$" is a special
           // character, we need to do double escaping as first is for the initial
           // replace on the routeFile and then the second on the outputPath
@@ -2723,6 +2723,16 @@ export const onPrerenderRoute =
     if (dataRoute) {
       outputPathData = normalizeDataRoute(dataRoute);
     }
+
+    console.log({
+      nonDynamicSsg,
+      isFallback,
+      isOmitted,
+      isBlocking,
+      routeKey,
+      routeFileNoExt,
+      origRouteFileNoExt,
+    });
 
     let outputPathPrefetchData: null | string = null;
     if (prefetchDataRoute) {
