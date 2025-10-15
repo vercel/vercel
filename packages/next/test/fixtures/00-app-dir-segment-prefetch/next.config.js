@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   experimental: {
-    cacheComponents: true,
+    ppr: true,
     dynamicIO: true,
     clientSegmentCache: true,
   },
