@@ -1,6 +1,8 @@
-export const dynamic = 'force-dynamic'
+import { headers } from 'next/headers'
 
-export default function ClientPage() {
+export default async function ClientPage() {
+  await headers()
+  
   return (
     <>
       <p>hello from app/client-nested</p>

@@ -1,10 +1,10 @@
 import React, { Suspense } from 'react'
 import { Dynamic } from '../../../components/dynamic'
+import { headers } from 'next/headers'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 60
-
-export default ({ params: { slug } }) => {
+export default async ({ params: { slug } }) => {
+  await headers()
+  
   return (
     <Suspense fallback={<Dynamic pathname={`/dynamic/force-dynamic/${slug}`} fallback />}>
       <Dynamic pathname={`/dynamic/force-dynamic/${slug}`} />

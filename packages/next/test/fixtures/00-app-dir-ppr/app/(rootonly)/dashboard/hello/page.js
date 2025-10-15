@@ -1,6 +1,8 @@
-export const dynamic = 'force-dynamic'
+import { headers } from 'next/headers' 
 
-export default function HelloPage(props) {
+export default async function HelloPage(props) {
+  await headers()
+
   return (
     <>
       <p>hello from app/dashboard/rootonly/hello</p>
