@@ -3,6 +3,7 @@ import type Client from '../client';
 import { pollForOrder } from './get-order';
 import { getDomain } from './get-domain';
 import getScope from '../get-scope';
+import type { ContactInformation } from './collect-contact-information';
 
 type OrderResponse = {
   orderId: string;
@@ -13,7 +14,8 @@ export default async function purchaseDomain(
   name: string,
   expectedPrice: number,
   years: number,
-  autoRenew: boolean = true
+  autoRenew: boolean = true,
+  contactInformation: ContactInformation
 ) {
   const { team, contextName } = await getScope(client);
   const teamParam = team ? `?teamId=${team.slug}` : '';
@@ -26,18 +28,7 @@ export default async function purchaseDomain(
           expectedPrice,
           autoRenew,
           years,
-          contactInformation: {
-            firstName: 'Vercel',
-            lastName: 'Whois',
-            email: 'domains@registrar.vercel.com',
-            phone: '+14153985463',
-            address1: '100 First Street, Suite 2400',
-            city: 'San Fransisco',
-            state: 'CA',
-            zip: '94105',
-            country: 'US',
-            companyName: 'Vercel Inc.',
-          },
+          contactInformation,
         },
         method: 'POST',
       }

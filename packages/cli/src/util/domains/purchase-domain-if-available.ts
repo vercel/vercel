@@ -10,6 +10,7 @@ import stamp from '../output/stamp';
 import * as ERRORS from '../errors-ts';
 import output from '../../output-manager';
 import param from '../output/param';
+import collectContactInformation from './collect-contact-information';
 
 const isTTY = process.stdout.isTTY;
 
@@ -72,7 +73,18 @@ export default async function purchaseDomainIfAvailable(
     }
 
     output.print(eraseLines(1));
-    const result = await purchaseDomain(client, domain, purchasePrice, years);
+
+    // Collect contact information
+    const contactInformation = await collectContactInformation(client);
+
+    const result = await purchaseDomain(
+      client,
+      domain,
+      purchasePrice,
+      years,
+      true,
+      contactInformation
+    );
     if (result instanceof Error) {
       return result;
     }

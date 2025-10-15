@@ -16,6 +16,7 @@ import { buySubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import collectContactInformation from '../../util/domains/collect-contact-information';
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({
@@ -89,30 +90,35 @@ export default async function buy(client: Client, argv: string[]) {
     )} to buy under ${chalk.bold(contextName)}! ${availableStamp()}`
   );
 
-  let autoRenew;
   if (skipConfirmation) {
-    autoRenew = true;
-  } else {
-    if (
-      !(await client.input.confirm(
-        `Buy now for ${chalk.bold(`$${purchasePrice}`)} (${`${years}yr${
-          years > 1 ? 's' : ''
-        }`})?`,
-        false
-      ))
-    ) {
-      return 0;
-    }
-
-    autoRenew = await client.input.confirm(
-      years === 1
-        ? `Auto renew yearly for ${chalk.bold(`$${renewalPrice}`)}?`
-        : `Auto renew every ${years} years for ${chalk.bold(
-            `$${renewalPrice}`
-          )}?`,
-      true
+    output.error(
+      'Domain purchase in CI mode is not supported. Please run this command interactively to provide contact information.'
     );
+    return 1;
   }
+
+  if (
+    !(await client.input.confirm(
+      `Buy now for ${chalk.bold(`$${purchasePrice}`)} (${`${years}yr${
+        years > 1 ? 's' : ''
+      }`})?`,
+      false
+    ))
+  ) {
+    return 0;
+  }
+
+  const autoRenew = await client.input.confirm(
+    years === 1
+      ? `Auto renew yearly for ${chalk.bold(`$${renewalPrice}`)}?`
+      : `Auto renew every ${years} years for ${chalk.bold(
+          `$${renewalPrice}`
+        )}?`,
+    true
+  );
+
+  // Collect contact information
+  const contactInformation = await collectContactInformation(client);
 
   let buyResult;
   const purchaseStamp = stamp();
@@ -124,7 +130,8 @@ export default async function buy(client: Client, argv: string[]) {
       domainName,
       purchasePrice,
       years,
-      autoRenew
+      autoRenew,
+      contactInformation
     );
   } catch (err: unknown) {
     output.error(
