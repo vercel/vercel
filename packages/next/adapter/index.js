@@ -32690,10 +32690,7 @@ var myAdapter = {
       }) : void 0,
       images: getImagesConfig(config)
     };
-    await handlePublicFiles(
-      import_node_path2.default.join(projectDir, "public"),
-      vercelOutputDir
-    );
+    await handlePublicFiles(import_node_path2.default.join(projectDir, "public"), vercelOutputDir);
     await handleStaticOutputs(outputs.staticFiles, {
       vercelConfig,
       vercelOutputDir
@@ -33196,36 +33193,67 @@ var myAdapter = {
         important: true
       },
       { handle: "error" },
-      // apply 404 output mapping
+      // Custom Next.js 404 page
       ...config.i18n ? [
         {
           src: `${import_node_path2.default.posix.join(
             "/",
             config.basePath,
             "/"
-          )}(?:${config.i18n.locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})?[/]?404/?`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/404")
+          )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
+          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale/404"),
+          status: 404,
+          caseSensitive: true
+        },
+        {
+          src: import_node_path2.default.posix.join("/", config.basePath, ".*"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            `/${config.i18n.defaultLocale}/404`
+          ),
+          status: 404
         }
       ] : [
         {
-          src: import_node_path2.default.posix.join("/", config.basePath, "404/?"),
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/404")
+          src: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            // if entryDirectory is populated we need to
+            // add optional handling for trailing slash so
+            // that the entryDirectory (basePath) itself matches
+            `.*`
+          ),
+          dest: import_node_path2.default.posix.join("/", config.basePath, "/404"),
+          status: 404
         }
       ],
-      // apply 500 output mapping
+      // custom 500 page if present
       ...config.i18n ? [
         {
           src: `${import_node_path2.default.posix.join(
             "/",
             config.basePath,
             "/"
-          )}(?:${config.i18n.locales.map((locale) => locale.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})?[/]?500/?`,
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/500")
+          )}(?<nextLocale>${config.i18n.locales.map((locale) => escapeStringRegexp(locale)).join("|")})(/.*|$)`,
+          dest: import_node_path2.default.posix.join("/", config.basePath, "/$nextLocale/500"),
+          status: 500,
+          caseSensitive: true
+        },
+        {
+          src: import_node_path2.default.posix.join("/", config.basePath, ".*"),
+          dest: import_node_path2.default.posix.join(
+            "/",
+            config.basePath,
+            `/${config.i18n.defaultLocale}/500`
+          ),
+          status: 500
         }
       ] : [
         {
-          src: import_node_path2.default.posix.join("/", config.basePath, "500/?"),
-          dest: import_node_path2.default.posix.join("/", config.basePath, "/500")
+          src: import_node_path2.default.posix.join("/", config.basePath, `.*`),
+          dest: import_node_path2.default.posix.join("/", config.basePath, "/500"),
+          status: 500
         }
       ]
     ];
